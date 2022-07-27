@@ -3,7 +3,7 @@
 
 #include <core/Containers.hpp>
 #include <GameCounter.hpp>
-#include "Spatial.hpp"
+#include "Entity.hpp"
 
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
@@ -18,7 +18,7 @@ class Scene;
 
 class Node {
     friend class Scene;
-    friend class Spatial;
+    friend class Entity;
 
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
@@ -44,7 +44,7 @@ public:
 
     Node(
         const char *name,
-        Ref<Spatial> &&spatial,
+        Ref<Entity> &&entity,
         const Transform &local_transform = Transform()
     );
 
@@ -63,9 +63,9 @@ public:
     /*! @returns A pointer to the Scene this Node and its children are attached to. May be null. */
     Scene *GetScene() const                { return m_scene; }
 
-    Ref<Spatial> &GetSpatial()             { return m_spatial; }
-    const Ref<Spatial> &GetSpatial() const { return m_spatial; }
-    void SetSpatial(Ref<Spatial> &&spatial);
+    Ref<Entity> &GetEntity()               { return m_entity; }
+    const Ref<Entity> &GetEntity() const   { return m_entity; }
+    void SetEntity(Ref<Entity> &&entity);
 
     /*! \brief Add a new child Node to this object
      * @returns The added Node
@@ -232,7 +232,7 @@ public:
     }
 
     /*! @returns The local-space (model) of the node's aabb. Only includes
-     * the Spatial's aabb.
+     * the Entity's aabb.
      */
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
 
@@ -249,7 +249,7 @@ protected:
     Node(
         Type type,
         const char *name,
-        Ref<Spatial> &&spatial,
+        Ref<Entity> &&entity,
         const Transform &local_transform = Transform()
     );
 
@@ -267,7 +267,7 @@ protected:
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
 
-    Ref<Spatial> m_spatial;
+    Ref<Entity> m_entity;
 
     std::vector<Node *> m_descendents;
 

@@ -31,7 +31,7 @@ using renderer::Result;
 class Mesh;
 class Material;
 class Engine;
-class Spatial;
+class Entity;
 
 class IndirectDrawState {
     static constexpr SizeType initial_count = 1 << 8;

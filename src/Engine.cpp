@@ -240,7 +240,7 @@ void Engine::PrepareSwapchain()
 
             render_pass.Init();
 
-            m_root_pipeline = std::make_unique<GraphicsPipeline>(
+            m_root_pipeline = std::make_unique<RendererInstance>(
                 shader.IncRef(),
                 render_pass.IncRef(),
                 RenderableAttributeSet{
@@ -512,12 +512,12 @@ void Engine::Compile()
     AssertThrow(terrain_thread.Start());
 }
 
-Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes)
+Ref<RendererInstance> Engine::FindOrCreateRendererInstance(const RenderableAttributeSet &renderable_attributes)
 {
-    const auto it = m_graphics_pipeline_mapping.Find(renderable_attributes);
+    const auto it = m_renderer_instance_mapping.Find(renderable_attributes);
 
-    if (it != m_graphics_pipeline_mapping.End()) {
-        return resources.graphics_pipelines.Lookup(it->second);
+    if (it != m_renderer_instance_mapping.End()) {
+        return resources.renderer_instances.Lookup(it->second);
     }
 
     auto &render_list_bucket = m_render_list_container.Get(renderable_attributes.bucket);
@@ -526,34 +526,34 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttri
     AssertThrow(shader != nullptr);
 
     // create a pipeline with the given params
-    return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
+    return AddRendererInstance(std::make_unique<RendererInstance>(
         std::move(shader),
         render_list_bucket.GetRenderPass().IncRef(),
         renderable_attributes
     ));
 }
     
-Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
+Ref<RendererInstance> Engine::AddRendererInstance(std::unique_ptr<RendererInstance> &&pipeline)
 {
-    auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
+    auto renderer_instance = resources.renderer_instances.Add(std::move(pipeline));
     
-    m_graphics_pipeline_mapping.Insert(
-        graphics_pipeline->GetRenderableAttributes(),
-        graphics_pipeline->GetId()
+    m_renderer_instance_mapping.Insert(
+        renderer_instance->GetRenderableAttributes(),
+        renderer_instance->GetId()
     );
 
     m_render_list_container
-        .Get(graphics_pipeline->GetRenderableAttributes().bucket)
-        .AddGraphicsPipeline(graphics_pipeline.IncRef());
+        .Get(renderer_instance->GetRenderableAttributes().bucket)
+        .AddRendererInstance(renderer_instance.IncRef());
 
-    return graphics_pipeline;
+    return renderer_instance;
 }
 
 void Engine::PreFrameUpdate(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    m_render_list_container.AddPendingGraphicsPipelines(this);
+    m_render_list_container.AddPendingRendererInstances(this);
 
     if (auto num_enqueued = render_scheduler.NumEnqueued()) {
         render_scheduler.Flush([frame](RenderFunctor &fn) {

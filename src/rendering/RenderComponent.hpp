@@ -7,7 +7,7 @@
 #include <GameCounter.hpp>
 #include <core/lib/AtomicSemaphore.hpp>
 #include <rendering/backend/RendererFrame.hpp>
-#include <scene/Spatial.hpp>
+#include <scene/Entity.hpp>
 #include <math/MathUtil.hpp>
 #include <Constants.hpp>
 #include <Threads.hpp>
@@ -62,11 +62,11 @@ public:
     virtual void ComponentRender(Engine *engine, Frame *frame) = 0;
 
     /*! \brief Called when an entity is added to the parent scene. Runs in RENDER thread. */
-    virtual void OnEntityAdded(Ref<Spatial> &entity) = 0;
+    virtual void OnEntityAdded(Ref<Entity> &entity) = 0;
     /*! \brief Called when an entity is removed from the parent scene. Runs in RENDER thread. */
-    virtual void OnEntityRemoved(Ref<Spatial> &entity) = 0;
+    virtual void OnEntityRemoved(Ref<Entity> &entity) = 0;
     /*! \brief Called when an entity has meaningful attributes changed. Runs in RENDER thread. */
-    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity) = 0;
+    virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) = 0;
 
 protected:
     const UInt   m_render_frame_slicing; // amount of frames to wait between render calls
@@ -142,9 +142,9 @@ public:
         }
     }
 
-    virtual void OnEntityAdded(Ref<Spatial> &entity) override {}
-    virtual void OnEntityRemoved(Ref<Spatial> &entity) override {}
-    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity) override {}
+    virtual void OnEntityAdded(Ref<Entity> &entity) override {}
+    virtual void OnEntityRemoved(Ref<Entity> &entity) override {}
+    virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override {}
 
 protected:
     virtual void OnComponentIndexChanged(Index new_index, Index prev_index) = 0;

@@ -114,7 +114,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
+            "models/testbed/testbed.obj", //sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -130,12 +130,12 @@ public:
             auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
             sphere->Scale(1.0f);
             sphere->SetName("sphere");
-            // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
-            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
-            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
-            sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+            // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
+            sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
+            sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            //sphere->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
+            sphere->GetChild(0)->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
             sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 30.0f, 50.0f));
             scene->GetRootNode()->AddChild(std::move(sphere));
 
@@ -143,38 +143,38 @@ public:
 
 
 
-        // auto character_entity = engine->resources.spatials.Add(std::make_unique<Spatial>());
+        // auto character_entity = engine->resources.entities.Add(std::make_unique<Spatial>());
         // character_entity->AddController<BasicCharacterController>();
         // scene->AddSpatial(std::move(character_entity));
 
         // auto tmp_terrain = engine->assets.Load<Node>("models/tmp_terrain.obj");
         // tmp_terrain->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         // tmp_terrain->Scale(500.0f);
-        // scene->AddSpatial(tmp_terrain->GetChild(0)->GetSpatial().IncRef());
+        // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
         // auto terrain_node = scene->GetRootNode()->AddChild();
-        // terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
-        // terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
+        // terrain_node->SetEntity(engine->resources.entities.Add(std::make_unique<Spatial>()));
+        // terrain_node->GetEntity()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
-        grass->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-        grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
+        grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        grass->GetChild(0)->GetEntity()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
-        // grass->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
+        // grass->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
 
 
-        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
+        material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         material_test_obj->Scale(3.45f);
         material_test_obj->Translate(Vector3(0, 22, 0));
         scene->GetRootNode()->AddChild(std::move(material_test_obj));
 
         // remove textures so we can manipulate the material and see our changes easier
-        //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
+        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
+        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, nullptr);
+        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
+        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
         
         auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
            engine->assets.Load<Texture>(
@@ -189,14 +189,14 @@ public:
         cubemap->GetImage().SetIsSRGB(true);
         cubemap.Init();
 
-        zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        zombie->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
-        zombie->GetChild(0)->GetSpatial()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        // zombie->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
+        zombie->GetChild(0)->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
         scene->GetRootNode()->AddChild(std::move(zombie));
-        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
-        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
+        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
+        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
         auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
@@ -214,10 +214,10 @@ public:
 
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
-        //test_model->Scale(10.0f);
-        test_model->Scale(0.15f);//14.075f);
+        test_model->Scale(10.0f);
+       // test_model->Scale(0.15f);//14.075f);
 
-        /*auto &terrain_material = test_model->GetChild(0)->GetSpatial()->GetMaterial();
+        /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
         terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
         terrain_material->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
@@ -232,7 +232,7 @@ public:
         // test_model->Scale(0.15f);
         if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
             for (auto &child : test->GetChildren()) {
-                if (auto &ent = child->GetSpatial()) {
+                if (auto &ent = child->GetEntity()) {
                     std::cout << "Adding debug controller to  " << child->GetName() << "\n";
                     ent->AddController<AABBDebugController>(engine);
                 }
@@ -241,7 +241,7 @@ public:
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
         quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-        auto quad_spatial = engine->resources.spatials.Add(std::make_unique<Spatial>(
+        auto quad_spatial = engine->resources.entities.Add(std::make_unique<Entity>(
             std::move(quad),
             engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
             engine->resources.materials.Add(std::make_unique<Material>()),
@@ -257,7 +257,7 @@ public:
         quad_spatial->SetScale(Vector3(150.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
         quad_spatial->SetTranslation(Vector3(0, -28.0f, 0));
-        scene->AddSpatial(std::move(quad_spatial));
+        scene->AddEntity(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
@@ -304,7 +304,7 @@ public:
         // skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
 
-        auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
+        auto &skybox_spatial = cube_obj->GetChild(0)->GetEntity();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
@@ -314,11 +314,11 @@ public:
             false
         );
 
-        scene->AddSpatial(cube_obj->GetChild(0)->GetSpatial().IncRef());
+        scene->AddEntity(cube_obj->GetChild(0)->GetEntity().IncRef());
 
-        //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
+        //test_model->GetChild(0)->GetEntity()->SetMaterial(std::move(metal_material));
 
-        //zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
+        //zombie->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
 
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
         //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
@@ -355,11 +355,11 @@ public:
 
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
-        monkey->GetChild(0)->GetSpatial()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
-        // scene->AddSpatial(monkey->GetChild(0)->GetSpatial().IncRef());
+        monkey->GetChild(0)->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
+        // scene->AddSpatial(monkey->GetChild(0)->GetEntity().IncRef());
         scene->GetRootNode()->AddChild(std::move(monkey));
 
-    //     auto outline_pipeline = std::make_unique<GraphicsPipeline>(
+    //     auto outline_pipeline = std::make_unique<RendererInstance>(
     //         engine->shader_manager.GetShader(ShaderKey::STENCIL_OUTLINE).IncRef(),
     //         engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
     //         RenderableAttributeSet{
@@ -369,7 +369,7 @@ public:
     //         }
     //     );
     //     outline_pipeline->SetBlendEnabled(true);
-    //     auto outline_pipeline_ref = engine->AddGraphicsPipeline(std::move(outline_pipeline));
+    //     auto outline_pipeline_ref = engine->AddRendererInstance(std::move(outline_pipeline));
 
         
 
@@ -436,7 +436,7 @@ public:
                 for (const auto &hit : results) {
                     // now ray test each result as triangle mesh to find exact hit point
 
-                    if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
+                    if (auto lookup_result = engine->resources.entities.Lookup(Entity::ID{hit.id})) {
                         if (auto &mesh = lookup_result->GetMesh()) {
                             ray.TestTriangleList(
                                 mesh->GetVertices(),
@@ -461,31 +461,22 @@ public:
 
         //ray_cast_timer += delta;
         
-        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
-       // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
-        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
+        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+       // zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
         // if (uint32_t(timer) % 2 == 0) {
-        //     zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
+        //     zombie->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
         // } else {
-        //     zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
+        //     zombie->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         // }
 
         if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
-            //suzanne->GetChild(0)->GetSpatial()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
+            //suzanne->GetChild(0)->GetEntity()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
 
-            //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
+            //outline_pipeline_ref->AddSpatial(engine->resources.entities.IncRef(suzanne->GetChild(0)->GetEntity()));
 
-            suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
-            // const auto &aabb = suzanne->GetWorldAabb();
-
-            // Vector3 max_ss = scene->GetCamera()->GetProjectionMatrix() * scene->GetCamera()->GetViewMatrix() * aabb.max;
-            // Vector3 min_ss = scene->GetCamera()->GetProjectionMatrix() * scene->GetCamera()->GetViewMatrix() * aabb.min;
-
-            // std::cout << "min, max in screenspace: " << min_ss << ",   " << max_ss << "\n";
-
-            //  suzanne->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 5.0f);
-
+            //suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
         }
 
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
@@ -493,7 +484,7 @@ public:
          if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
             // std::cout << scene->GetCamera()->TransformWorldToNDC(sphere->GetWorldTranslation()) << "\n";
 
-            //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
+            //if (auto &material = sphere->GetChild(0)->GetEntity()->GetMaterial()) {
             //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
             //    material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
             //}
@@ -506,16 +497,16 @@ public:
         // material_test_obj->SetLocalTranslation({16, 5.25f,12});
         //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
 
-        /*material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
+        /*material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
             std::sin(timer) * 0.5f + 0.5f,
             std::cos(timer) * 0.5f + 0.5f,
             ((std::sin(timer) * 0.5f + 0.5f) + (std::cos(timer) * 0.5f + 0.5f)) * 0.5f,
             1.0f
         ));*/
 
-        // material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);//std::sin(timer) * 0.5f + 0.5f);
-        // material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
-        // material_test_obj->GetChild(0)->GetSpatial()->Update(engine, delta);
+        // material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);//std::sin(timer) * 0.5f + 0.5f);
+        // material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
+        // material_test_obj->GetChild(0)->GetEntity()->Update(engine, delta);
 
         // zombie->Update(engine, delta);
 
@@ -786,7 +777,7 @@ int main()
             ))
         );
 
-        /*auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+        /*auto pipeline = std::make_unique<v2::RendererInstance>(
             engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef(),
             engine->GetRenderListContainer().Get(v2::BUCKET_SKYBOX).GetRenderPass().IncRef(),
             renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
@@ -796,11 +787,11 @@ int main()
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
         
-        engine->AddGraphicsPipeline(std::move(pipeline));*/
+        engine->AddRendererInstance(std::move(pipeline));*/
     }
     
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+        auto pipeline = std::make_unique<v2::RendererInstance>(
             engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
             engine->GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
             v2::RenderableAttributeSet{
@@ -810,7 +801,7 @@ int main()
         );
         pipeline->SetBlendEnabled(true);
         
-        engine->AddGraphicsPipeline(std::move(pipeline));
+        engine->AddRendererInstance(std::move(pipeline));
     }
     
 
@@ -839,7 +830,7 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    my_game->material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 7, 0 }});
+    my_game->material_test_obj->GetChild(0)->GetEntity()->SetTransform({{ 0, 7, 0 }});
 
 
     v2::ProbeGrid probe_system({
@@ -850,13 +841,13 @@ int main()
     auto my_tlas = std::make_unique<v2::Tlas>();
 
     my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
-        engine->resources.meshes.IncRef(my_game->material_test_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        my_game->material_test_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine->resources.meshes.IncRef(my_game->material_test_obj->GetChild(0)->GetEntity()->GetMesh()),
+        my_game->material_test_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
     
     my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
-        engine->resources.meshes.IncRef(my_game->cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        my_game->cube_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine->resources.meshes.IncRef(my_game->cube_obj->GetChild(0)->GetEntity()->GetMesh()),
+        my_game->cube_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
 
     my_tlas->Init(engine);
@@ -1032,7 +1023,7 @@ int main()
 
         frame = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
         auto *command_buffer = frame->GetCommandBuffer();
-        const uint32_t frame_index = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
+        const auto frame_index = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
         engine->PreFrameUpdate(frame);
 

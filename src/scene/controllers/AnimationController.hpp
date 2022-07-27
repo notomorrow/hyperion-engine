@@ -37,7 +37,7 @@ public:
 
 private:
     bool FindSkeleton(Node *node);
-    bool FindSkeletonDirect(Spatial *spatial);
+    bool FindSkeletonDirect(Entity *entity);
     
     UInt m_animation_index = ~0u;
 

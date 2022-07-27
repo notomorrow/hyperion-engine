@@ -226,17 +226,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         const auto scene_ref = engine->resources.scenes.Lookup(scene_id);
 
         for (auto &it : entity_distances) {
-            if (auto ent = engine->resources.spatials.Lookup(Spatial::ID{it.first})) {
-                if (auto &mat = ent->GetMaterial()) {
-                //std::cout << " " << ent->GetMaterial()->GetName() << "  (" << ent->GetMaterial()->GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO) << ")  ";
-                    if (!std::strcmp(mat->GetName(), "floor")) {
-                        std::cout << "[frame " << frame_index << "]  Floor visible? : " << !!it.second.command.instanceCount << "\n";
-                    }
-                    continue;
-                } else {
-                    continue;
-                }
-
+            if (auto ent = engine->resources.entities.Lookup(Entity::ID{it.first})) {
                 Vector4 screenspace_aabb = Vector4(it.second.aabb_max);
 
                 const auto &world_aabb = ent->GetDrawProxy().bounding_box;
@@ -286,9 +276,11 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
                 // AssertThrow(UInt(it.second.aabb_max.x) == cull_bits);
                 if (!MathUtil::ApproxEqual(Vector(it.second.aabb_max), projected_corner))
                 {
+
                     DebugLog(
                         LogType::Error,
-                        "NOT EQUAL!!! "
+                        "Mesh: %s    NOT EQUAL!!! ",
+                        ent->GetMaterial() ? ent->GetMaterial()->GetName() : ""
                     );
                     std::cout << "\t Shader Projection: " << Vector(it.second.aabb_max) << "\n";
                     std::cout << "\t C++ Projection: " << projected_corner << "\n";
@@ -337,7 +329,7 @@ void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
     descriptor_set->ApplyUpdates(engine->GetDevice());
 }
 
-GraphicsPipeline::GraphicsPipeline(
+RendererInstance::RendererInstance(
     Ref<Shader> &&shader,
     Ref<RenderPass> &&render_pass,
     const RenderableAttributeSet &renderable_attributes
@@ -351,12 +343,12 @@ GraphicsPipeline::GraphicsPipeline(
 {
 }
 
-GraphicsPipeline::~GraphicsPipeline()
+RendererInstance::~RendererInstance()
 {
     Teardown();
 }
 
-void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
+void RendererInstance::RemoveFramebuffer(Framebuffer::ID id)
 {
     const auto it = std::find_if(
         m_fbos.begin(),
@@ -373,116 +365,116 @@ void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
     m_fbos.erase(it);
 }
 
-void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
+void RendererInstance::AddEntity(Ref<Entity> &&entity)
 {
-    AssertThrow(spatial != nullptr);
-    // AssertThrow(spatial->IsReady());
+    AssertThrow(entity != nullptr);
+    // AssertThrow(entity->IsReady());
 
-    // AssertThrow(spatial->IsRenderable());
+    // AssertThrow(entity->IsRenderable());
 
     // FIXME: thread safety. this could be called from any thread
     AssertThrowMsg(
-        (m_renderable_attributes.vertex_attributes & spatial->GetRenderableAttributes().vertex_attributes) == spatial->GetRenderableAttributes().vertex_attributes,
-        "Pipeline vertex attributes does not satisfy the required vertex attributes of the spatial."
+        (m_renderable_attributes.vertex_attributes & entity->GetRenderableAttributes().vertex_attributes) == entity->GetRenderableAttributes().vertex_attributes,
+        "Pipeline vertex attributes does not satisfy the required vertex attributes of the entity."
     );
 
     // if (IsInitCalled()) {
-    //     spatial->Init(GetEngine());
+    //     entity->Init(GetEngine());
     // }
 
-    spatial->OnAddedToPipeline(this);
+    entity->OnAddedToPipeline(this);
     
-    std::lock_guard guard(m_enqueued_spatials_mutex);
+    std::lock_guard guard(m_enqueued_entities_mutex);
 
     // remove from 'pending removal' list
     auto it = std::find(
-        m_spatials_pending_removal.begin(),
-        m_spatials_pending_removal.end(),
-        spatial
+        m_entities_pending_removal.begin(),
+        m_entities_pending_removal.end(),
+        entity
     );
 
-    if (it != m_spatials_pending_removal.end()) {
-        m_spatials_pending_removal.erase(it);
+    if (it != m_entities_pending_removal.end()) {
+        m_entities_pending_removal.erase(it);
     }
     
-    m_spatials_pending_addition.push_back(std::move(spatial));
+    m_entities_pending_addition.push_back(std::move(entity));
     
-    UpdateEnqueuedSpatialsFlag();
+    UpdateEnqueuedEntitiesFlag();
 }
 
-void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed)
+void RendererInstance::RemoveEntity(Ref<Entity> &&entity, bool call_on_removed)
 {
-    // TODO:: Make all GraphicsPipeline operations operate in the RENDER
+    // TODO:: Make all RendererInstance operations operate in the RENDER
     // thread. Deferred rendering will be some derived version of a RenderComponent, so
-    // it will acquire spatials that way and hand them off from the render thread here.
+    // it will acquire entities that way and hand them off from the render thread here.
 
-    // we cannot touch m_spatials from any thread other than the render thread
+    // we cannot touch m_entities from any thread other than the render thread
     // we'll have to assume it's here, and check later :/ 
 
-    // auto spatials_it = std::find_if(
-    //     m_spatials.begin(),
-    //     m_spatials.end(),
+    // auto entities_it = std::find_if(
+    //     m_entities.begin(),
+    //     m_entities.end(),
     //     [&id](const auto &item) {
     //         AssertThrow(item != nullptr);
     //         return item->GetId() == id;
     //     }
     // );
 
-    // if (spatials_it != m_spatials.end()) {
-    //     auto &&found_spatial = *spatials_it;
+    // if (entities_it != m_entities.end()) {
+    //     auto &&found_entity = *entities_it;
 
 
         // add it to pending removal list
-        std::lock_guard guard(m_enqueued_spatials_mutex);
+        std::lock_guard guard(m_enqueued_entities_mutex);
 
         const auto pending_removal_it = std::find(
-            m_spatials_pending_removal.begin(),
-            m_spatials_pending_removal.end(),
-            spatial
+            m_entities_pending_removal.begin(),
+            m_entities_pending_removal.end(),
+            entity
         );
 
-        if (pending_removal_it == m_spatials_pending_removal.end()) {
+        if (pending_removal_it == m_entities_pending_removal.end()) {
             if (call_on_removed) {
-                spatial->OnRemovedFromPipeline(this);
+                entity->OnRemovedFromPipeline(this);
             }
 
             auto pending_addition_it = std::find(
-                m_spatials_pending_addition.begin(),
-                m_spatials_pending_addition.end(),
-                spatial
+                m_entities_pending_addition.begin(),
+                m_entities_pending_addition.end(),
+                entity
             );
 
-            if (pending_addition_it != m_spatials_pending_addition.end()) {
+            if (pending_addition_it != m_entities_pending_addition.end()) {
                 
                 // directly remove from list of ones pending addition
-                m_spatials_pending_addition.erase(pending_addition_it);
+                m_entities_pending_addition.erase(pending_addition_it);
             } else {
                 /*m_cached_render_data.push_back(CachedRenderData{
                     .cycles_remaining = max_frames_in_flight + 1,
-                    .spatial_id       = spatial->GetId(),
-                    .material = spatial->GetMaterial() != nullptr
-                        ? spatial->GetMaterial().IncRef()
+                    .entity_id       = entity->GetId(),
+                    .material = entity->GetMaterial() != nullptr
+                        ? entity->GetMaterial().IncRef()
                         : nullptr,
-                    .mesh     = spatial->GetMesh() != nullptr
-                        ? spatial->GetMesh().IncRef()
+                    .mesh     = entity->GetMesh() != nullptr
+                        ? entity->GetMesh().IncRef()
                         : nullptr,
-                    .skeleton = spatial->GetSkeleton() != nullptr
-                        ? spatial->GetSkeleton().IncRef()
+                    .skeleton = entity->GetSkeleton() != nullptr
+                        ? entity->GetSkeleton().IncRef()
                         : nullptr,
-                    .shader   = spatial->GetShader() != nullptr
-                        ? spatial->GetShader().IncRef()
+                    .shader   = entity->GetShader() != nullptr
+                        ? entity->GetShader().IncRef()
                         : nullptr
                 });*/
 
-                m_spatials_pending_removal.push_back(std::move(spatial));
+                m_entities_pending_removal.push_back(std::move(entity));
             }
 
-            UpdateEnqueuedSpatialsFlag();
+            UpdateEnqueuedEntitiesFlag();
         } else {
             DebugLog(
                 LogType::Info,
-                "Spatial #%u is already pending removal from pipeline #%u\n",
-                spatial->GetId().value,
+                "Entity #%u is already pending removal from pipeline #%u\n",
+                entity->GetId().value,
                 GetId().value
             );
         }
@@ -490,61 +482,61 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
         // return;
     // }
 
-    // not found in main spatials list, check pending addition/removal
+    // not found in main entities list, check pending addition/removal
 
-    // std::lock_guard guard(m_enqueued_spatials_mutex);
+    // std::lock_guard guard(m_enqueued_entities_mutex);
 
 
     
 }
 
-// void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
+// void RendererInstance::OnEntityRemoved(Entity *entity)
 // {
-//     RemoveSpatial(spatial->GetId(), false);
+//     RemoveEntity(entity->GetId(), false);
 // }
 
-void GraphicsPipeline::BuildDrawCommandsBuffer(Engine *engine, UInt frame_index)
+void RendererInstance::BuildDrawCommandsBuffer(Engine *engine, UInt frame_index)
 {
 }
 
-void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index)
+void RendererInstance::PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    std::lock_guard guard(m_enqueued_spatials_mutex);
+    std::lock_guard guard(m_enqueued_entities_mutex);
 
-    if (!m_spatials_pending_removal.empty()) {
-        for (auto it = m_spatials_pending_removal.begin(); it != m_spatials_pending_removal.end();) {
-            const auto spatials_it = std::find(m_spatials.begin(), m_spatials.end(), *it); // oof
+    if (!m_entities_pending_removal.empty()) {
+        for (auto it = m_entities_pending_removal.begin(); it != m_entities_pending_removal.end();) {
+            const auto entities_it = std::find(m_entities.begin(), m_entities.end(), *it); // oof
             
-            if (spatials_it != m_spatials.end()) {
-                m_spatials.erase(spatials_it);
+            if (entities_it != m_entities.end()) {
+                m_entities.erase(entities_it);
             }
 
-            it = m_spatials_pending_removal.erase(it);
+            it = m_entities_pending_removal.erase(it);
         }
     }
 
-    if (!m_spatials_pending_addition.empty()) {
-        // we only add spatials that are fully ready,
+    if (!m_entities_pending_addition.empty()) {
+        // we only add entities that are fully ready,
         // keeping ones that aren't finished initializing in the vector,
         // they should be finished on the next pass
         
-        auto it = m_spatials_pending_addition.begin();
+        auto it = m_entities_pending_addition.begin();
         
-        while (it != m_spatials_pending_addition.end()) {
+        while (it != m_entities_pending_addition.end()) {
             AssertThrow(*it != nullptr);
 
             if ((*it)->GetMesh() == nullptr // TODO: I don't believe it's threadsafe to just check if this is null like this
-                || std::find(m_spatials.begin(), m_spatials.end(), *it) != m_spatials.end()) { // :(
-                it = m_spatials_pending_addition.erase(it);
+                || std::find(m_entities.begin(), m_entities.end(), *it) != m_entities.end()) { // :(
+                it = m_entities_pending_addition.erase(it);
                 
                 continue;
             }
             
             if ((*it)->IsReady() && (*it)->GetMesh()->IsReady()) {
-                m_spatials.push_back(std::move(*it));
-                it = m_spatials_pending_addition.erase(it);
+                m_entities.push_back(std::move(*it));
+                it = m_entities_pending_addition.erase(it);
                 
                 continue;
             }
@@ -554,10 +546,10 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_
         }
     }
 
-    UpdateEnqueuedSpatialsFlag();
+    UpdateEnqueuedEntitiesFlag();
 }
 
-void GraphicsPipeline::Init(Engine *engine)
+void RendererInstance::Init(Engine *engine)
 {
     if (IsInitCalled()) {
         return;
@@ -578,10 +570,10 @@ void GraphicsPipeline::Init(Engine *engine)
         AssertThrow(m_shader != nullptr);
         m_shader.Init();
 
-        for (auto &&spatial : m_spatials) {
-            AssertThrow(spatial != nullptr);
+        for (auto &&entity : m_entities) {
+            AssertThrow(entity != nullptr);
 
-            spatial->Init(engine);
+            entity->Init(engine);
         }
 
         m_indirect_renderer.Create(engine);
@@ -638,26 +630,26 @@ void GraphicsPipeline::Init(Engine *engine)
 
             m_indirect_renderer.Destroy(engine);
 
-            for (auto &&spatial : m_spatials) {
-                AssertThrow(spatial != nullptr);
+            for (auto &&entity : m_entities) {
+                AssertThrow(entity != nullptr);
 
-                spatial->OnRemovedFromPipeline(this);
+                entity->OnRemovedFromPipeline(this);
             }
 
-            m_spatials.clear();
+            m_entities.clear();
             
-            std::lock_guard guard(m_enqueued_spatials_mutex);
+            std::lock_guard guard(m_enqueued_entities_mutex);
 
-            for (auto &&spatial : m_spatials_pending_addition) {
-                if (spatial == nullptr) {
+            for (auto &&entity : m_entities_pending_addition) {
+                if (entity == nullptr) {
                     continue;
                 }
 
-                spatial->OnRemovedFromPipeline(this);
+                entity->OnRemovedFromPipeline(this);
             }
 
-            m_spatials_pending_addition.clear();
-            m_spatials_pending_removal.clear();
+            m_entities_pending_addition.clear();
+            m_entities_pending_removal.clear();
 
             m_shader.Reset();
 
@@ -684,7 +676,7 @@ void GraphicsPipeline::Init(Engine *engine)
     }));
 }
 
-void GraphicsPipeline::CollectDrawCalls(
+void RendererInstance::CollectDrawCalls(
     Engine *engine,
     Frame *frame,
     const CullData &cull_data
@@ -694,8 +686,8 @@ void GraphicsPipeline::CollectDrawCalls(
 
     AssertReady();
 
-    if (m_enqueued_spatials_flag.load()) {
-        PerformEnqueuedSpatialUpdates(engine, frame->GetFrameIndex());
+    if (m_enqueued_entities_flag.load()) {
+        PerformEnqueuedEntityUpdates(engine, frame->GetFrameIndex());
     }
 
     const auto scene_binding = engine->render_state.GetScene();
@@ -708,13 +700,13 @@ void GraphicsPipeline::CollectDrawCalls(
 
     m_indirect_renderer.GetDrawState().ResetDrawables();
 
-    for (auto &&spatial : m_spatials) {
-        if (spatial->GetMesh() == nullptr) {
+    for (auto &&entity : m_entities) {
+        if (entity->GetMesh() == nullptr) {
             continue;
         }
 
         if (perform_culling) {
-            if (auto *octant = spatial->GetOctree()) {
+            if (auto *octant = entity->GetOctree()) {
                 const auto &visibility_state = octant->GetVisibilityState();
 
                 if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
@@ -732,7 +724,7 @@ void GraphicsPipeline::CollectDrawCalls(
             }
         }
 
-        m_indirect_renderer.GetDrawState().PushDrawable(EntityDrawProxy(spatial->GetDrawProxy()));
+        m_indirect_renderer.GetDrawState().PushDrawable(EntityDrawProxy(entity->GetDrawProxy()));
     }
 
     m_indirect_renderer.ExecuteCullShaderInBatches(
@@ -749,7 +741,7 @@ void GraphicsPipeline::CollectDrawCalls(
     // );
 }
 
-void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
+void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -802,7 +794,7 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
             );
 
             for (auto &drawable : m_indirect_renderer.GetDrawState().GetDrawables()) {
-                const UInt entity_index = drawable.entity_id != Spatial::empty_id
+                const UInt entity_index = drawable.entity_id != Entity::empty_id
                     ? drawable.entity_id.value - 1
                     : 0;
 
@@ -855,7 +847,7 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
 }
 
 
-void GraphicsPipeline::Render(Engine *engine, Frame *frame)
+void RendererInstance::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -880,8 +872,8 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
         }
     }*/
 
-    if (m_enqueued_spatials_flag.load()) {
-        PerformEnqueuedSpatialUpdates(engine, frame->GetFrameIndex());
+    if (m_enqueued_entities_flag.load()) {
+        PerformEnqueuedEntityUpdates(engine, frame->GetFrameIndex());
     }
 
     auto *instance = engine->GetInstance();
@@ -938,9 +930,9 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             // check visibility state
             const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
             
-            for (auto &&spatial : m_spatials) {
+            for (auto &&entity : m_entities) {
                 if (perform_culling) {
-                    if (auto *octant = spatial->GetOctree()) {
+                    if (auto *octant = entity->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
 
                         if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
@@ -955,26 +947,26 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     } else {
                         DebugLog(
                             LogType::Warn,
-                            "In pipeline #%u: spatial #%u not in octree!\n",
+                            "In pipeline #%u: entity #%u not in octree!\n",
                             m_id.value,
-                            spatial->GetId().value
+                            entity->GetId().value
                         );
 
                         continue;
                     }
                 }
 
-                const auto spatial_index = spatial->GetId().value - 1;
+                const auto entity_index = entity->GetId().value - 1;
 
                 UInt material_index = 0;
 
-                if (spatial->GetMaterial() != nullptr && spatial->GetMaterial()->IsReady()) {
+                if (entity->GetMaterial() != nullptr && entity->GetMaterial()->IsReady()) {
                     // TODO: rather than checking each call we should just add once
-                    material_index = spatial->GetMaterial()->GetId().value - 1;
+                    material_index = entity->GetMaterial()->GetId().value - 1;
                 }
 
-                const auto skeleton_index = spatial->GetSkeleton() != nullptr
-                    ? spatial->GetSkeleton()->GetId().value - 1
+                const auto skeleton_index = entity->GetSkeleton() != nullptr
+                    ? entity->GetSkeleton()->GetId().value - 1
                     : 0;
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
@@ -985,7 +977,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
                     FixedArray {
                         UInt32(material_index * sizeof(MaterialShaderData)),
-                        UInt32(spatial_index  * sizeof(ObjectShaderData)),
+                        UInt32(entity_index  * sizeof(ObjectShaderData)),
                         UInt32(skeleton_index * sizeof(SkeletonShaderData))
                     }
                 );
@@ -997,13 +989,13 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,        DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES },
                     FixedArray {
                         UInt32(material_index * sizeof(MaterialShaderData)),
-                        UInt32(spatial_index  * sizeof(ObjectShaderData)),
+                        UInt32(entity_index  * sizeof(ObjectShaderData)),
                         UInt32(skeleton_index * sizeof(SkeletonShaderData))
                     }
                 );
 #endif
 
-                spatial->GetMesh()->Render(engine, secondary);
+                entity->GetMesh()->Render(engine, secondary);
             }
 
             // DebugLog(

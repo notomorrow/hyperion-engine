@@ -144,7 +144,7 @@ void CubemapRenderer::InitGame(Engine *engine)
     // add all entities from environment scene
     AssertThrow(GetParent()->GetScene() != nullptr);
 
-    for (auto &it : GetParent()->GetScene()->GetSpatials()) {
+    for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
 
         if (entity == nullptr) {
@@ -154,43 +154,43 @@ void CubemapRenderer::InitGame(Engine *engine)
         if (entity->GetRenderableAttributes().vertex_attributes &
             m_pipeline->GetRenderableAttributes().vertex_attributes) {
 
-            m_pipeline->AddSpatial(it.second.IncRef());
+            m_pipeline->AddEntity(it.second.IncRef());
         }
     }
 }
 
-void CubemapRenderer::OnEntityAdded(Ref<Spatial> &spatial)
+void CubemapRenderer::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    if (spatial->GetRenderableAttributes().vertex_attributes &
+    if (entity->GetRenderableAttributes().vertex_attributes &
         m_pipeline->GetRenderableAttributes().vertex_attributes) {
-        m_pipeline->AddSpatial(spatial.IncRef());
+        m_pipeline->AddEntity(entity.IncRef());
     }
 }
 
-void CubemapRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
+void CubemapRenderer::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    m_pipeline->RemoveSpatial(spatial.IncRef());
+    m_pipeline->RemoveEntity(entity.IncRef());
 }
 
-void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
+void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    if (spatial->GetRenderableAttributes().vertex_attributes &
+    if (entity->GetRenderableAttributes().vertex_attributes &
         m_pipeline->GetRenderableAttributes().vertex_attributes) {
-        m_pipeline->AddSpatial(spatial.IncRef());
+        m_pipeline->AddEntity(entity.IncRef());
     } else {
-        m_pipeline->RemoveSpatial(spatial.IncRef());
+        m_pipeline->RemoveEntity(entity.IncRef());
     }
 }
 
@@ -335,7 +335,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 
 void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(
+    auto pipeline = std::make_unique<RendererInstance>(
         m_shader.IncRef(),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -354,7 +354,7 @@ void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
         pipeline->AddFramebuffer(framebuffer.IncRef());
     }
 
-    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
     m_pipeline.Init();
 }
 

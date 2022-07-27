@@ -2,7 +2,7 @@
 #define HYPERION_V2_PAGING_CONTROLLER_H
 
 #include "../Controller.hpp"
-#include <scene/Spatial.hpp>
+#include <scene/Entity.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <core/lib/FlatSet.hpp>
@@ -48,7 +48,7 @@ struct PatchInfo {
 
 struct Patch {
     PatchInfo    info;
-    Ref<Spatial> entity;
+    Ref<Entity> entity;
 
     Vector2 GetCenter() const { return info.coord - 0.5f; }
 };

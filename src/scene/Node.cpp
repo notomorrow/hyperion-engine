@@ -21,12 +21,12 @@ Node::Node(
 
 Node::Node(
     const char *name,
-    Ref<Spatial> &&spatial,
+    Ref<Entity> &&entity,
     const Transform &local_transform
 ) : Node(
         Type::NODE,
         name,
-        std::move(spatial),
+        std::move(entity),
         local_transform
     )
 {
@@ -35,14 +35,14 @@ Node::Node(
 Node::Node(
     Type type,
     const char *name,
-    Ref<Spatial> &&spatial,
+    Ref<Entity> &&entity,
     const Transform &local_transform
 ) : m_type(type),
     m_parent_node(nullptr),
     m_local_transform(local_transform),
     m_scene(nullptr)
 {
-    SetSpatial(std::move(spatial));
+    SetEntity(std::move(entity));
 
     const size_t len = std::strlen(name);
     m_name = new char[len + 1];
@@ -51,7 +51,7 @@ Node::Node(
 
 Node::~Node()
 {
-    SetSpatial(nullptr);
+    SetEntity(nullptr);
 
     delete[] m_name;
 }
@@ -71,14 +71,14 @@ void Node::SetName(const char *name)
 
 void Node::SetScene(Scene *scene)
 {
-    if (m_scene != nullptr && m_spatial != nullptr) {
-        m_scene->RemoveSpatial(m_spatial);
+    if (m_scene != nullptr && m_entity != nullptr) {
+        m_scene->RemoveEntity(m_entity);
     }
 
     m_scene = scene;
 
-    if (m_scene != nullptr && m_spatial != nullptr) {
-        m_scene->AddSpatial(m_spatial.IncRef());
+    if (m_scene != nullptr && m_entity != nullptr) {
+        m_scene->AddEntity(m_entity.IncRef());
     }
 
     for (auto &child : m_child_nodes) {
@@ -290,35 +290,35 @@ void Node::SetLocalTransform(const Transform &transform)
     UpdateWorldTransform();
 }
 
-void Node::SetSpatial(Ref<Spatial> &&spatial)
+void Node::SetEntity(Ref<Entity> &&entity)
 {
-    if (m_spatial == spatial) {
+    if (m_entity == entity) {
         return;
     }
 
-    if (m_spatial != nullptr) {
+    if (m_entity != nullptr) {
         if (m_scene != nullptr) {
-            m_scene->RemoveSpatial(m_spatial);
+            m_scene->RemoveEntity(m_entity);
         }
 
-        m_spatial->SetParent(nullptr);
+        m_entity->SetParent(nullptr);
     }
 
-    if (spatial != nullptr) {
-        m_spatial = std::move(spatial);
+    if (entity != nullptr) {
+        m_entity = std::move(entity);
 
         if (m_scene != nullptr) {
-            m_scene->AddSpatial(m_spatial.IncRef());
+            m_scene->AddEntity(m_entity.IncRef());
         }
 
-        m_spatial->SetParent(this);
-        m_spatial.Init();
+        m_entity->SetParent(this);
+        m_entity.Init();
 
-        m_local_aabb = m_spatial->GetLocalAabb();
+        m_local_aabb = m_entity->GetLocalAabb();
     } else {
         m_local_aabb = BoundingBox();
 
-        m_spatial = nullptr;
+        m_entity = nullptr;
     }
 
     UpdateWorldTransform();
@@ -348,8 +348,8 @@ void Node::UpdateWorldTransform()
         m_parent_node->m_world_aabb.Extend(m_world_aabb);
     }
 
-    if (m_spatial != nullptr) {
-        m_spatial->SetTransform(m_world_transform);
+    if (m_entity != nullptr) {
+        m_entity->SetTransform(m_world_transform);
     }
 }
 
@@ -360,11 +360,11 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
     bool has_entity_hit = false;
 
     if (has_node_hit) {
-        if (m_spatial != nullptr) {
+        if (m_entity != nullptr) {
             has_entity_hit = ray.TestAabb(
-                m_spatial->GetWorldAabb(),
-                m_spatial->GetId().value,
-                m_spatial.ptr,
+                m_entity->GetWorldAabb(),
+                m_entity->GetId().value,
+                m_entity.ptr,
                 out_results
             );
         }

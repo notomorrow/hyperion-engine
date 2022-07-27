@@ -365,8 +365,8 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
-            auto spatial = resources.spatials.Add(
-                std::make_unique<Spatial>(
+            auto entity = resources.entities.Add(
+                std::make_unique<Entity>(
                     std::move(mesh),
                     std::move(shader),
                     std::move(material),
@@ -379,7 +379,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             );
             
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
-            node->SetSpatial(std::move(spatial));
+            node->SetEntity(std::move(entity));
 
             top->AddChild(std::move(node));
         });

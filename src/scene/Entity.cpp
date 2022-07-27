@@ -1,4 +1,4 @@
-#include "Spatial.hpp"
+#include "Entity.hpp"
 #include <math/BoundingSphere.hpp>
 #include <rendering/Renderer.hpp>
 #include <scene/Scene.hpp>
@@ -6,12 +6,12 @@
 
 namespace hyperion::v2 {
 
-Spatial::Spatial(
+Entity::Entity(
     Ref<Mesh> &&mesh,
     Ref<Shader> &&shader,
     Ref<Material> &&material,
     const ComponentInitInfo &init_info
-) : Spatial(
+) : Entity(
       std::move(mesh),
       std::move(shader),
       std::move(material),
@@ -22,7 +22,7 @@ Spatial::Spatial(
     // RebuildRenderableAttributes();
 }
 
-Spatial::Spatial(
+Entity::Entity(
     Ref<Mesh> &&mesh,
     Ref<Shader> &&shader,
     Ref<Material> &&material,
@@ -46,12 +46,12 @@ Spatial::Spatial(
     }
 }
 
-Spatial::~Spatial()
+Entity::~Entity()
 {
     Teardown();
 }
 
-void Spatial::Init(Engine *engine)
+void Entity::Init(Engine *engine)
 {
     if (IsInitCalled()) {
         return;
@@ -93,7 +93,7 @@ void Spatial::Init(Engine *engine)
     }));
 }
 
-void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
+void Entity::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -118,7 +118,7 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
     }
 }
 
-void Spatial::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
+void Entity::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
 {
     for (auto &it : m_controllers) {
         if (!it.second->ReceivesUpdate()) {
@@ -129,7 +129,7 @@ void Spatial::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
     }
 }
 
-void Spatial::EnqueueRenderUpdates()
+void Entity::EnqueueRenderUpdates()
 {
     AssertReady();
 
@@ -188,7 +188,7 @@ void Spatial::EnqueueRenderUpdates()
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-void Spatial::UpdateOctree()
+void Entity::UpdateOctree()
 {
     AssertThrow(IsInitCalled());
 
@@ -198,7 +198,7 @@ void Spatial::UpdateOctree()
         if (!update_result) {
             DebugLog(
                 LogType::Warn,
-                "Could not update Spatial #%u in octree: %s\n",
+                "Could not update Entity #%u in octree: %s\n",
                 m_id.value,
                 update_result.message
             );
@@ -208,7 +208,7 @@ void Spatial::UpdateOctree()
     m_needs_octree_update = false;
 }
 
-void Spatial::SetMesh(Ref<Mesh> &&mesh)
+void Entity::SetMesh(Ref<Mesh> &&mesh)
 {
     if (m_mesh == mesh) {
         return;
@@ -228,7 +228,7 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
     m_primary_pipeline.changed = true;
 }
 
-void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
+void Entity::SetSkeleton(Ref<Skeleton> &&skeleton)
 {
     if (m_skeleton == skeleton) {
         return;
@@ -248,7 +248,7 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
     m_primary_pipeline.changed = true;
 }
 
-void Spatial::SetShader(Ref<Shader> &&shader)
+void Entity::SetShader(Ref<Shader> &&shader)
 {
     if (m_shader == shader) {
         return;
@@ -272,7 +272,7 @@ void Spatial::SetShader(Ref<Shader> &&shader)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::SetMaterial(Ref<Material> &&material)
+void Entity::SetMaterial(Ref<Material> &&material)
 {
     if (m_material == material) {
         return;
@@ -291,7 +291,7 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::SetParent(Node *node)
+void Entity::SetParent(Node *node)
 {
     if (m_node != nullptr) {
         for (auto &controller : m_controllers) {
@@ -310,14 +310,14 @@ void Spatial::SetParent(Node *node)
     }
 }
 
-void Spatial::SetScene(Scene *scene)
+void Entity::SetScene(Scene *scene)
 {
     m_scene = scene;
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
+void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
 {
     if (m_renderable_attributes == renderable_attributes) {
         return;
@@ -327,7 +327,7 @@ void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_a
     m_primary_pipeline.changed = true;
 }
 
-void Spatial::RebuildRenderableAttributes()
+void Entity::RebuildRenderableAttributes()
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
 
@@ -357,7 +357,7 @@ void Spatial::RebuildRenderableAttributes()
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Spatial::SetMeshAttributes(
+void Entity::SetMeshAttributes(
     VertexAttributeSet vertex_attributes,
     FaceCullMode face_cull_mode,
     bool depth_write,
@@ -373,7 +373,7 @@ void Spatial::SetMeshAttributes(
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Spatial::SetMeshAttributes(
+void Entity::SetMeshAttributes(
     FaceCullMode face_cull_mode,
     bool depth_write,
     bool depth_test
@@ -387,7 +387,7 @@ void Spatial::SetMeshAttributes(
     );
 }
 
-void Spatial::SetStencilAttributes(const StencilState &stencil_state)
+void Entity::SetStencilAttributes(const StencilState &stencil_state)
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
     new_renderable_attributes.stencil_state = stencil_state;
@@ -395,7 +395,7 @@ void Spatial::SetStencilAttributes(const StencilState &stencil_state)
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Spatial::SetBucket(Bucket bucket)
+void Entity::SetBucket(Bucket bucket)
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
     new_renderable_attributes.bucket = bucket;
@@ -403,7 +403,7 @@ void Spatial::SetBucket(Bucket bucket)
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Spatial::SetTranslation(const Vector3 &translation)
+void Entity::SetTranslation(const Vector3 &translation)
 {
     if (m_node != nullptr) {
         // indirectly calls SetTransform() on this
@@ -416,7 +416,7 @@ void Spatial::SetTranslation(const Vector3 &translation)
     }
 }
 
-void Spatial::SetScale(const Vector3 &scale)
+void Entity::SetScale(const Vector3 &scale)
 {
     if (m_node != nullptr) {
         // indirectly calls SetTransform() on this
@@ -429,7 +429,7 @@ void Spatial::SetScale(const Vector3 &scale)
     }
 }
 
-void Spatial::SetRotation(const Quaternion &rotation)
+void Entity::SetRotation(const Quaternion &rotation)
 {
     if (m_node != nullptr) {
         // indirectly calls SetTransform() on this
@@ -442,7 +442,7 @@ void Spatial::SetRotation(const Quaternion &rotation)
     }
 }
 
-void Spatial::SetTransform(const Transform &transform)
+void Entity::SetTransform(const Transform &transform)
 {
     if (m_transform == transform) {
         return;
@@ -464,12 +464,12 @@ void Spatial::SetTransform(const Transform &transform)
     }
 }
 
-void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
+void Entity::OnAddedToPipeline(RendererInstance *pipeline)
 {
     m_pipelines.Insert(pipeline);
 }
 
-void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
+void Entity::OnRemovedFromPipeline(RendererInstance *pipeline)
 {
     if (pipeline == m_primary_pipeline.pipeline) {
         m_primary_pipeline = {
@@ -481,7 +481,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
     m_pipelines.Erase(pipeline);
 }
 
-// void Spatial::RemoveFromPipelines()
+// void Entity::RemoveFromPipelines()
 // {
 //     auto pipelines = m_pipelines;
 
@@ -490,7 +490,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 //             continue;
 //         }
 
-//         pipeline->OnSpatialRemoved(this);
+//         pipeline->OnEntityRemoved(this);
 //     }
 
 //     m_pipelines.Clear();
@@ -501,7 +501,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 //     };
 // }
 
-// void Spatial::RemoveFromPipeline(Engine *, GraphicsPipeline *pipeline)
+// void Entity::RemoveFromPipeline(Engine *, RendererInstance *pipeline)
 // {
 //     if (pipeline == m_primary_pipeline.pipeline) {
 //         m_primary_pipeline = {
@@ -510,12 +510,12 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 //         };
 //     }
 
-//     pipeline->OnSpatialRemoved(this);
+//     pipeline->OnEntityRemoved(this);
 
 //     OnRemovedFromPipeline(pipeline);
 // }
 
-void Spatial::OnAddedToOctree(Octree *octree)
+void Entity::OnAddedToOctree(Octree *octree)
 {
     AssertThrow(m_octree == nullptr);
 
@@ -524,7 +524,7 @@ void Spatial::OnAddedToOctree(Octree *octree)
     }
     
 #if HYP_OCTREE_DEBUG
-    DebugLog(LogType::Info, "Spatial #%lu added to octree\n", m_id.value);
+    DebugLog(LogType::Info, "Entity #%lu added to octree\n", m_id.value);
 #endif
 
     m_octree = octree;
@@ -538,7 +538,7 @@ void Spatial::OnAddedToOctree(Octree *octree)
     // m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::OnRemovedFromOctree(Octree *octree)
+void Entity::OnRemovedFromOctree(Octree *octree)
 {
     AssertThrow(octree == m_octree);
 
@@ -547,21 +547,21 @@ void Spatial::OnRemovedFromOctree(Octree *octree)
     }
     
 #if HYP_OCTREE_DEBUG
-    DebugLog(LogType::Info, "Spatial #%lu removed from octree\n", m_id.value);
+    DebugLog(LogType::Info, "Entity #%lu removed from octree\n", m_id.value);
 #endif
 
     m_octree = nullptr;
     // m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::OnMovedToOctant(Octree *octree)
+void Entity::OnMovedToOctant(Octree *octree)
 {
     AssertThrow(m_octree != nullptr);
 
     DebugLog(LogType::Debug, "  %u MOVED\n", m_id.value);
     
 #if HYP_OCTREE_DEBUG
-    DebugLog(LogType::Info, "Spatial #%lu moved to new octant\n", m_id.value);
+    DebugLog(LogType::Info, "Entity #%lu moved to new octant\n", m_id.value);
 #endif
 
     m_octree = octree;
@@ -576,26 +576,27 @@ void Spatial::OnMovedToOctant(Octree *octree)
 }
 
 
-void Spatial::AddToOctree(Engine *engine, Octree &octree)
+void Entity::AddToOctree(Engine *engine, Octree &octree)
 {
     AssertThrow(m_octree == nullptr);
 
     if (!octree.Insert(engine, this)) {
-        DebugLog(LogType::Warn, "Spatial #%lu could not be added to octree\n", m_id.value);
+        DebugLog(LogType::Warn, "Entity #%lu could not be added to octree\n", m_id.value);
     }
 }
 
-void Spatial::RemoveFromOctree(Engine *engine)
+void Entity::RemoveFromOctree(Engine *engine)
 {
     DebugLog(
         LogType::Debug,
-        "Remove spatial #%u from octree\n",
+        "Remove entity #%u from octree\n",
         GetId().value
     );
-    m_octree.load()->OnSpatialRemoved(engine, this);
+
+    m_octree.load()->OnEntityRemoved(engine, this);
 }
 
-bool Spatial::IsReady() const
+bool Entity::IsReady() const
 {
     /*if (!Base::IsReady()) {
         return false;

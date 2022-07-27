@@ -80,7 +80,7 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
         if (auto *scene = GetOwner()->GetScene()) {
             DebugLog(LogType::Debug, "Remove terrain Entity with id #%u\n", patch->entity->GetId().value);
 
-            scene->RemoveSpatial(patch->entity);
+            scene->RemoveEntity(patch->entity);
         }
 
         patch->entity = nullptr;
@@ -104,7 +104,7 @@ void TerrainPagingController::AddEnqueuedChunks()
 
         auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
         
-        auto entity = std::make_unique<Spatial>(
+        auto entity = std::make_unique<Entity>(
             std::move(mesh),
             shader.IncRef(),
             m_material.IncRef(),
@@ -123,13 +123,13 @@ void TerrainPagingController::AddEnqueuedChunks()
 
         if (auto *patch = GetPatch(patch_info.coord)) {
             if (patch->entity == nullptr) {
-                patch->entity = GetEngine()->resources.spatials.Add(std::move(entity));
+                patch->entity = GetEngine()->resources.entities.Add(std::move(entity));
 
                 ++num_chunks_added;
 
                 if (auto *scene = GetOwner()->GetScene()) {
                     DebugLog(LogType::Debug, "Add terrain Entity with id #%u\n", patch->entity->GetId().value);
-                    scene->AddSpatial(patch->entity.IncRef());
+                    scene->AddEntity(patch->entity.IncRef());
                 }
             } else {
                 DebugLog(

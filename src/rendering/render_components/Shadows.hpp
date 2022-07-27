@@ -118,9 +118,9 @@ public:
 private:
     void UpdateSceneCamera(Engine *engine);
 
-    virtual void OnEntityAdded(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRemoved(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial) override;
+    virtual void OnEntityAdded(Ref<Entity> &entity) override;
+    virtual void OnEntityRemoved(Ref<Entity> &entity) override;
+    virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     ShadowPass m_shadow_pass;

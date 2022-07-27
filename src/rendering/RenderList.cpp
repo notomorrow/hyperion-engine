@@ -16,7 +16,7 @@ const std::array<TextureFormatDefault, num_gbuffer_textures> RenderListContainer
 
 RenderListContainer::RenderListContainer()
 {
-    for (size_t i = 0; i < m_buckets.size(); i++) {
+    for (size_t i = 0; i < m_buckets.Size(); i++) {
         m_buckets[i].SetBucket(Bucket(i));
     }
 }
@@ -28,10 +28,10 @@ void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
     }
 }
 
-void RenderListContainer::AddPendingGraphicsPipelines(Engine *engine)
+void RenderListContainer::AddPendingRendererInstances(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
-        bucket.AddPendingGraphicsPipelines(engine);
+        bucket.AddPendingRendererInstances(engine);
     }
 }
 
@@ -58,52 +58,44 @@ RenderListContainer::RenderListBucket::~RenderListBucket()
 {
 }
 
-void RenderListContainer::RenderListBucket::AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
+void RenderListContainer::RenderListBucket::AddRendererInstance(Ref<RendererInstance> &&renderer_instance)
 {
-    AddFramebuffersToPipeline(graphics_pipeline);
+    AddFramebuffersToPipeline(renderer_instance);
 
-    graphics_pipeline.Init();
+    renderer_instance.Init();
 
-    std::lock_guard guard(graphics_pipelines_mutex);
+    std::lock_guard guard(renderer_instances_mutex);
 
-    graphics_pipelines_pending_addition.push_back(std::move(graphics_pipeline));
-    graphics_pipelines_changed = true;
+    renderer_instances_pending_addition.PushBack(std::move(renderer_instance));
+    renderer_instances_changed.Set(true);
 }
 
-void RenderListContainer::RenderListBucket::AddPendingGraphicsPipelines(Engine *engine)
+void RenderListContainer::RenderListBucket::AddPendingRendererInstances(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    if (!graphics_pipelines_changed) {
+    if (!renderer_instances_changed.Get()) {
         return;
     }
 
-    DebugLog(LogType::Debug, "Adding %llu pending graphics pipelines\n", graphics_pipelines_pending_addition.size());
+    DebugLog(LogType::Debug, "Adding %llu pending graphics pipelines\n", renderer_instances_pending_addition.Size());
 
-    std::lock_guard guard(graphics_pipelines_mutex);
+    std::lock_guard guard(renderer_instances_mutex);
     DebugLog(LogType::Debug, "Adding pending graphics pipelines, locked mutex.\n");
-
-    graphics_pipelines.reserve(graphics_pipelines.size() + graphics_pipelines_pending_addition.size());
     
-    graphics_pipelines.insert(
-        graphics_pipelines.end(),
-        std::make_move_iterator(graphics_pipelines_pending_addition.begin()),
-        std::make_move_iterator(graphics_pipelines_pending_addition.end())
-    );
-
-    graphics_pipelines_pending_addition.clear();
-
-    graphics_pipelines_changed = false;
+    renderer_instances.Concat(std::move(renderer_instances_pending_addition));
+    renderer_instances_pending_addition = {};
+    renderer_instances_changed.Set(false);
 }
 
 void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines()
 {
-    for (auto &pipeline : graphics_pipelines) {
+    for (auto &pipeline : renderer_instances) {
         AddFramebuffersToPipeline(pipeline);
     }
 }
 
-void RenderListContainer::RenderListBucket::AddFramebuffersToPipeline(Ref<GraphicsPipeline> &pipeline)
+void RenderListContainer::RenderListBucket::AddFramebuffersToPipeline(Ref<RendererInstance> &pipeline)
 {
     for (auto &framebuffer : framebuffers) {
         pipeline->AddFramebuffer(framebuffer.IncRef());
@@ -134,12 +126,12 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             nullptr
         );
         
-        attachments.push_back(std::make_unique<renderer::Attachment>(
+        attachments.PushBack(std::make_unique<renderer::Attachment>(
             std::move(framebuffer_image),
             RenderPassStage::SHADER
         ));
 
-        HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
@@ -155,12 +147,12 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
                 nullptr
             );
 
-            attachments.push_back(std::make_unique<renderer::Attachment>(
+            attachments.PushBack(std::make_unique<renderer::Attachment>(
                 std::move(framebuffer_image),
                 RenderPassStage::SHADER
             ));
 
-            HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
+            HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
                 engine->GetInstance()->GetDevice(),
                 renderer::LoadOperation::CLEAR,
                 renderer::StoreOperation::STORE,
@@ -189,7 +181,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
         } else {
-            attachments.push_back(std::make_unique<renderer::Attachment>(
+            attachments.PushBack(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
                     engine->GetDefaultFormat(gbuffer_textures[depth_texture_index]),
@@ -198,7 +190,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
                 RenderPassStage::SHADER
             ));
 
-            HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
+            HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
                 engine->GetInstance()->GetDevice(),
                 renderer::LoadOperation::CLEAR,
                 renderer::StoreOperation::STORE,
@@ -218,7 +210,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
 void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
 {
-    AssertThrow(framebuffers.empty());
+    AssertThrow(framebuffers.Empty());
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
@@ -227,11 +219,11 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
             framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 
-        framebuffers.push_back(engine->resources.framebuffers.Add(
+        framebuffers.PushBack(engine->resources.framebuffers.Add(
             std::move(framebuffer)
         ));
 
-        framebuffers.back().Init();
+        framebuffers.Back().Init();
     }
 }
 
@@ -239,13 +231,13 @@ void RenderListContainer::RenderListBucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 
-    graphics_pipelines.clear();
+    renderer_instances.Clear();
 
-    graphics_pipelines_mutex.lock();
-    graphics_pipelines_pending_addition.clear();
-    graphics_pipelines_mutex.unlock();
+    renderer_instances_mutex.lock();
+    renderer_instances_pending_addition.Clear();
+    renderer_instances_mutex.unlock();
 
-    framebuffers.clear();
+    framebuffers.Clear();
 
     for (const auto &attachment : attachments) {
         HYPERION_PASS_ERRORS(

@@ -18,11 +18,11 @@ namespace hyperion::v2 {
 using ControllerId = UInt32;
 
 class Node;
-class Spatial;
+class Entity;
 class Engine;
 
 class Controller {
-    friend class Spatial;
+    friend class Entity;
 
 public:
     Controller(const char *name, bool received_update = true);
@@ -31,7 +31,7 @@ public:
     virtual ~Controller();
 
     const char *GetName() const { return m_name; }
-    Spatial *GetOwner() const   { return m_owner; }
+    Entity *GetOwner() const   { return m_owner; }
     bool ReceivesUpdate() const { return m_receives_update; }
 
 protected:
@@ -47,7 +47,7 @@ protected:
 
 private:
     char    *m_name;
-    Spatial *m_owner;
+    Entity *m_owner;
     bool     m_receives_update;
 };
 

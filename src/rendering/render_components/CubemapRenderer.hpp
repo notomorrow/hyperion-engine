@@ -72,9 +72,9 @@ private:
     void CreateRenderPass(Engine *engine);
     void CreateFramebuffers(Engine *engine);
 
-    virtual void OnEntityAdded(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRemoved(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial) override;
+    virtual void OnEntityAdded(Ref<Entity> &entity) override;
+    virtual void OnEntityRemoved(Ref<Entity> &entity) override;
+    virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     Extent2D                                           m_cubemap_dimensions;
@@ -84,7 +84,7 @@ private:
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Ref<Shader>                                        m_shader;
     Ref<RenderPass>                                    m_render_pass;
-    Ref<GraphicsPipeline>                              m_pipeline;
+    Ref<RendererInstance>                              m_pipeline;
     std::vector<std::unique_ptr<Attachment>>           m_attachments;
     std::array<Ref<Texture>, max_frames_in_flight>     m_cubemaps;
     UniformBuffer                                      m_cubemap_render_uniform_buffer;

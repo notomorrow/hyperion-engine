@@ -53,8 +53,8 @@ void AnimationController::OnRemovedFromNode(Node *node)
 
 bool AnimationController::FindSkeleton(Node *node)
 {
-    if (auto &spatial = node->GetSpatial()) {
-        if (FindSkeletonDirect(spatial.ptr)) {
+    if (auto &entity = node->GetEntity()) {
+        if (FindSkeletonDirect(entity.ptr)) {
             return true;
         }
     }
@@ -68,9 +68,9 @@ bool AnimationController::FindSkeleton(Node *node)
     );
 }
 
-bool AnimationController::FindSkeletonDirect(Spatial *spatial)
+bool AnimationController::FindSkeletonDirect(Entity *entity)
 {
-    if (auto &skeleton = spatial->GetSkeleton()) {
+    if (auto &skeleton = entity->GetSkeleton()) {
         m_skeleton = skeleton.IncRef();
 
         return true;
