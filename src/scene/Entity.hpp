@@ -31,14 +31,14 @@ using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 using renderer::FaceCullMode;
 
-class GraphicsPipeline;
+class RendererInstance;
 class Octree;
 class Scene;
-class Spatial;
+class Entity;
 class Mesh;
 
 template<>
-struct ComponentInitInfo<STUB_CLASS(Spatial)> {
+struct ComponentInitInfo<STUB_CLASS(Entity)> {
     enum Flags : ComponentFlagBits {
         ENTITY_FLAGS_NONE              = 0x0,
         ENTITY_FLAGS_RAY_TESTS_ENABLED = 0x1
@@ -47,34 +47,34 @@ struct ComponentInitInfo<STUB_CLASS(Spatial)> {
     ComponentFlagBits flags = ENTITY_FLAGS_RAY_TESTS_ENABLED;
 };
 
-class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)>,
-                public HasDrawProxy<STUB_CLASS(Spatial)>
+class Entity : public EngineComponentBase<STUB_CLASS(Entity)>,
+                public HasDrawProxy<STUB_CLASS(Entity)>
 {
     friend class Octree;
-    friend class GraphicsPipeline;
+    friend class RendererInstance;
     friend class Controller;
     friend class Node;
     friend class Scene;
 
 public:
-    Spatial(
-        Ref<Mesh> &&mesh                                    = nullptr,
-        Ref<Shader> &&shader                                = nullptr,
-        Ref<Material> &&material                            = nullptr,
-        const ComponentInitInfo &init_info                  = {}
+    Entity(
+        Ref<Mesh> &&mesh = nullptr,
+        Ref<Shader> &&shader = nullptr,
+        Ref<Material> &&material = nullptr,
+        const ComponentInitInfo &init_info = {}
     );
 
-    Spatial(
+    Entity(
         Ref<Mesh> &&mesh,
         Ref<Shader> &&shader,
         Ref<Material> &&material,
         const RenderableAttributeSet &renderable_attributes,
-        const ComponentInitInfo &init_info                  = {}
+        const ComponentInitInfo &init_info = {}
     );
 
-    Spatial(const Spatial &other) = delete;
-    Spatial &operator=(const Spatial &other) = delete;
-    ~Spatial();
+    Entity(const Entity &other) = delete;
+    Entity &operator=(const Entity &other) = delete;
+    ~Entity();
 
     Octree *GetOctree() const { return m_octree; }
 
@@ -123,7 +123,7 @@ public:
 
     void SetStencilAttributes(const StencilState &stencil_state);
 
-    GraphicsPipeline *GetPrimaryRendererInstance() const
+    RendererInstance *GetPrimaryRendererInstance() const
         { return m_primary_pipeline.pipeline; }
 
     const auto &GetRendererInstances() const
@@ -196,11 +196,11 @@ private:
     void EnqueueRenderUpdates();
     void UpdateOctree();
     
-    void OnAddedToPipeline(GraphicsPipeline *pipeline);
-    void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
+    void OnAddedToPipeline(RendererInstance *pipeline);
+    void OnRemovedFromPipeline(RendererInstance *pipeline);
     
     // void RemoveFromPipelines();
-    // void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
+    // void RemoveFromPipeline(Engine *engine, RendererInstance *pipeline);
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
@@ -227,14 +227,14 @@ private:
     bool                   m_needs_octree_update{false};
 
     struct {
-        GraphicsPipeline *pipeline = nullptr;
+        RendererInstance *pipeline = nullptr;
         bool changed               = false;
     } m_primary_pipeline;
 
-    /* Retains a list of pointers to pipelines that this Spatial is used by,
-     * for easy removal when RemoveSpatial() is called.
+    /* Retains a list of pointers to pipelines that this Entity is used by,
+     * for easy removal when RemoveEntity() is called.
      */
-    FlatSet<GraphicsPipeline *> m_pipelines;
+    FlatSet<RendererInstance *> m_pipelines;
 
     mutable ShaderDataState     m_shader_data_state;
     ScheduledFunctionId         m_render_update_id,

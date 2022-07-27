@@ -3,7 +3,7 @@
 
 #include <core/Containers.hpp>
 #include <animation/Skeleton.hpp>
-#include <scene/Spatial.hpp>
+#include <scene/Entity.hpp>
 #include "Shader.hpp"
 #include "Framebuffer.hpp"
 #include "RenderPass.hpp"
@@ -75,20 +75,20 @@ private:
 };
 
 // TODO: rename to Renderer
-class GraphicsPipeline : public EngineComponentBase<STUB_CLASS(GraphicsPipeline)> {
+class RendererInstance : public EngineComponentBase<STUB_CLASS(RendererInstance)> {
     friend class Engine;
-    friend class Spatial;
+    friend class Entity;
 
 public:
-    GraphicsPipeline(
+    RendererInstance(
         Ref<Shader> &&shader,
         Ref<RenderPass> &&render_pass,
         const RenderableAttributeSet &renderable_attributes
     );
 
-    GraphicsPipeline(const GraphicsPipeline &other) = delete;
-    GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
-    ~GraphicsPipeline();
+    RendererInstance(const RendererInstance &other) = delete;
+    RendererInstance &operator=(const RendererInstance &other) = delete;
+    ~RendererInstance();
 
     renderer::GraphicsPipeline *GetPipeline() const         { return m_pipeline.get(); }
     Shader *GetShader() const                               { return m_shader.ptr; }
@@ -119,10 +119,10 @@ public:
     UInt GetMultiviewIndex() const                          { return m_multiview_index; }
     void SetMultiviewIndex(UInt multiview_index)            { m_multiview_index = multiview_index; }
 
-    void AddSpatial(Ref<Spatial> &&spatial);
-    void RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed = true);
-    auto &GetSpatials()                                              { return m_spatials; }
-    const auto &GetSpatials() const                                  { return m_spatials; }
+    void AddEntity(Ref<Entity> &&entity);
+    void RemoveEntity(Ref<Entity> &&entity, bool call_on_removed = true);
+    auto &GetEntities()                                              { return m_entities; }
+    const auto &GetEntities() const                                  { return m_entities; }
 
     void AddFramebuffer(Ref<Framebuffer> &&fbo) { m_fbos.push_back(std::move(fbo)); }
     void RemoveFramebuffer(Framebuffer::ID id);
@@ -153,7 +153,7 @@ public:
 private:
     struct CachedRenderData {
         UInt          cycles_remaining{max_frames_in_flight + 1};
-        Spatial::ID   spatial_id;
+        Entity::ID    entity_id;
         Ref<Material> material;
         Ref<Mesh>     mesh;
         Ref<Skeleton> skeleton;
@@ -162,12 +162,12 @@ private:
 
     void BuildDrawCommandsBuffer(Engine *engine, UInt frame_index);
 
-    void PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index);
+    void PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index);
     
-    void UpdateEnqueuedSpatialsFlag()
+    void UpdateEnqueuedEntitiesFlag()
     {
-        m_enqueued_spatials_flag.store(
-           !m_spatials_pending_addition.empty() || !m_spatials_pending_removal.empty()
+        m_enqueued_entities_flag.store(
+           !m_entities_pending_addition.empty() || !m_entities_pending_removal.empty()
         );
     }
 
@@ -182,16 +182,16 @@ private:
     
     std::vector<Ref<Framebuffer>>     m_fbos;
 
-    std::vector<Ref<Spatial>>         m_spatials; // lives in RENDER thread
-    std::vector<Ref<Spatial>>         m_spatials_pending_addition; // shared
-    std::vector<Ref<Spatial>>         m_spatials_pending_removal; // shared
+    std::vector<Ref<Entity>>         m_entities; // lives in RENDER thread
+    std::vector<Ref<Entity>>         m_entities_pending_addition; // shared
+    std::vector<Ref<Entity>>         m_entities_pending_removal; // shared
 
     std::vector<CachedRenderData>     m_cached_render_data;
 
     PerFrameData<CommandBuffer>      *m_per_frame_data;
 
-    std::mutex                        m_enqueued_spatials_mutex;
-    std::atomic_bool                  m_enqueued_spatials_flag{false};
+    std::mutex                        m_enqueued_entities_mutex;
+    std::atomic_bool                  m_enqueued_entities_flag{false};
 
 };
 

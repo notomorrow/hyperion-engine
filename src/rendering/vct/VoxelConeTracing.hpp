@@ -69,9 +69,9 @@ private:
     void CreateFramebuffers(Engine *engine);
     void CreateDescriptors(Engine *engine);
 
-    virtual void OnEntityAdded(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRemoved(Ref<Spatial> &spatial) override;
-    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial) override;
+    virtual void OnEntityAdded(Ref<Entity> &entity) override;
+    virtual void OnEntityRemoved(Ref<Entity> &entity) override;
+    virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     Params                                             m_params;
@@ -80,7 +80,7 @@ private:
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Ref<Shader>                                        m_shader;
     Ref<RenderPass>                                    m_render_pass;
-    Ref<GraphicsPipeline>                              m_pipeline;
+    Ref<RendererInstance>                              m_pipeline;
     Ref<ComputePipeline>                               m_clear_voxels;
                                                        
     Ref<Texture>                                       m_voxel_image;

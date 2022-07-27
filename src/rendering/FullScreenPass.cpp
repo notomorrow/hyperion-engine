@@ -166,7 +166,7 @@ void FullScreenPass::CreatePipeline(Engine *engine)
 
 void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet &renderable_attributes)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(
+    auto pipeline = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         renderable_attributes
@@ -176,7 +176,7 @@ void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet
         pipeline->AddFramebuffer(framebuffer.IncRef());
     }
 
-    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
     m_pipeline.Init();
 }
 

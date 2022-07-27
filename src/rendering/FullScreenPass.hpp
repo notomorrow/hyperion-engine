@@ -62,7 +62,7 @@ public:
                                                       
     RenderPass *GetRenderPass() const                 { return m_render_pass.ptr; }
                                                       
-    GraphicsPipeline *GetGraphicsPipeline() const     { return m_pipeline.ptr; }
+    RendererInstance *GetGraphicsPipeline() const     { return m_pipeline.ptr; }
                                                       
     UInt GetSubDescriptorIndex() const                { return m_sub_descriptor_index; }
 
@@ -86,7 +86,7 @@ protected:
     std::array<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
     Ref<Shader>                                                      m_shader;
     Ref<RenderPass>                                                  m_render_pass;
-    Ref<GraphicsPipeline>                                            m_pipeline;
+    Ref<RendererInstance>                                            m_pipeline;
                                                                      
     std::vector<std::unique_ptr<Attachment>>                         m_attachments;
 

@@ -2,7 +2,7 @@
 #define HYPERION_V2_OCTREE_H
 
 #include <core/Containers.hpp>
-#include "Spatial.hpp"
+#include "Entity.hpp"
 #include "VisibilityState.hpp"
 
 #include <math/Vector3.hpp>
@@ -23,10 +23,10 @@ class Camera;
 
 namespace hyperion::v2 {
 
-class Spatial;
+class Entity;
 
 class Octree {
-    friend class Spatial;
+    friend class Entity;
 
     enum {
         DEPTH_SEARCH_INF       = -1,
@@ -34,7 +34,7 @@ class Octree {
     };
 
     struct Callback {
-        using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
+        using CallbackFunction = std::function<void(Engine *, Octree *, Entity *)>;
     };
 
     static constexpr float growth_factor = 1.5f;
@@ -70,7 +70,7 @@ public:
     };
 
     struct Node {
-        Spatial         *spatial;
+        Entity          *entity;
         BoundingBox      aabb;
         VisibilityState *visibility_state = nullptr;
     };
@@ -83,7 +83,7 @@ public:
                           on_remove_node;
         } events;
 
-        std::unordered_map<Spatial *, Octree *> node_to_octree;
+        std::unordered_map<Entity *, Octree *>  node_to_octree;
         std::atomic_uint32_t                    visibility_cursor{0};
     };
 
@@ -108,13 +108,13 @@ public:
     const BoundingBox &GetAabb() const                { return m_aabb; }
 
     void Clear(Engine *engine);
-    Result Insert(Engine *engine, Spatial *spatial);
-    Result Remove(Engine *engine, Spatial *spatial);
-    Result Update(Engine *engine, Spatial *spatial);
+    Result Insert(Engine *engine, Entity *entity);
+    Result Remove(Engine *engine, Entity *entity);
+    Result Update(Engine *engine, Entity *entity);
     Result Rebuild(Engine *engine, const BoundingBox &new_aabb);
 
-    void CollectEntities(std::vector<Spatial *> &out) const;
-    void CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Spatial *> &out) const;
+    void CollectEntities(std::vector<Entity *> &out) const;
+    void CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Entity *> &out) const;
     bool GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> &out) const;
 
     void NextVisibilityState();
@@ -125,17 +125,17 @@ public:
 private:
     void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
     void Clear(Engine *engine, std::vector<Node> &out_nodes);
-    Result Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
+    Result Move(Engine *engine, Entity *entity, const std::vector<Node>::iterator *it = nullptr);
 
     void CopyVisibilityState(const VisibilityState &visibility_state);
 
-    auto FindNode(Spatial *spatial)
+    auto FindNode(Entity *entity)
     {
         return std::find_if(
             m_nodes.begin(),
             m_nodes.end(),
-            [spatial](const Node &node) {
-                return node.spatial == spatial;
+            [entity](const Node &node) {
+                return node.entity == entity;
             }
         );
     }
@@ -153,14 +153,14 @@ private:
 
     /* Remove any potentially empty octants above the node */
     void CollapseParents(Engine *engine);
-    Result InsertInternal(Engine *engine, Spatial *spatial);
-    Result UpdateInternal(Engine *engine, Spatial *spatial);
-    Result RemoveInternal(Engine *engine, Spatial *spatial);
+    Result InsertInternal(Engine *engine, Entity *entity);
+    Result UpdateInternal(Engine *engine, Entity *entity);
+    Result RemoveInternal(Engine *engine, Entity *entity);
     Result RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb);
     void UpdateVisibilityState(Scene *scene);
 
-    /* Called from Spatial - remove the pointer */
-    void OnSpatialRemoved(Engine *engine, Spatial *spatial);
+    /* Called from entity - remove the pointer */
+    void OnEntityRemoved(Engine *engine, Entity *entity);
     
     std::vector<Node>      m_nodes;
     Octree                *m_parent;

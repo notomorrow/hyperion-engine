@@ -225,8 +225,8 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
 
-            auto spatial = resources.spatials.Add(
-                std::make_unique<Spatial>(
+            auto entity = resources.entities.Add(
+                std::make_unique<Entity>(
                     std::move(mesh),
                     std::move(shader),
                     std::move(material),
@@ -239,12 +239,12 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             );
 
             if (skeleton_ref != nullptr) {
-                spatial->AddController<AnimationController>();
-                spatial->SetSkeleton(skeleton_ref.IncRef());
+                entity->AddController<AnimationController>();
+                entity->SetSkeleton(skeleton_ref.IncRef());
             }
             
             auto node = std::make_unique<Node>();
-            node->SetSpatial(std::move(spatial));
+            node->SetEntity(std::move(entity));
 
             top->AddChild(std::move(node));
         }

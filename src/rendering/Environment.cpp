@@ -143,30 +143,30 @@ void Environment::Update(Engine *engine, GameCounter::TickUnit delta)
     }
 }
 
-void Environment::OnEntityAdded(Ref<Spatial> &entity)
+void Environment::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatials_pending_addition.Push(entity.IncRef());
+    m_entities_pending_addition.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
 
-void Environment::OnEntityRemoved(Ref<Spatial> &entity)
+void Environment::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatials_pending_removal.Push(entity.IncRef());
+    m_entities_pending_removal.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
 
 // only called when meaningful attributes have changed
-void Environment::OnEntityRenderableAttributesChanged(Ref<Spatial> &entity)
+void Environment::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatial_renderable_attribute_updates.Push(entity.IncRef());
+    m_entity_renderable_attribute_updates.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
@@ -237,35 +237,35 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
         m_has_render_component_updates.store(false);
     }
 
-    if (m_has_spatial_updates) {
+    if (m_has_entity_updates) {
         // perform updates to all RenderComponents in the render thread
-        std::lock_guard guard(m_spatial_update_mutex);
+        std::lock_guard guard(m_entity_update_mutex);
 
-        while (m_spatials_pending_addition.Any()) {
+        while (m_entities_pending_addition.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityAdded(m_spatials_pending_addition.Front());
+                it.second->OnEntityAdded(m_entities_pending_addition.Front());
             }
 
-            m_spatials_pending_addition.Pop();
+            m_entities_pending_addition.Pop();
         }
 
-        while (m_spatial_renderable_attribute_updates.Any()) {
+        while (m_entity_renderable_attribute_updates.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityRenderableAttributesChanged(m_spatial_renderable_attribute_updates.Front());
+                it.second->OnEntityRenderableAttributesChanged(m_entity_renderable_attribute_updates.Front());
             }
 
-            m_spatial_renderable_attribute_updates.Pop();
+            m_entity_renderable_attribute_updates.Pop();
         }
 
-        while (m_spatials_pending_removal.Any()) {
+        while (m_entities_pending_removal.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityRemoved(m_spatials_pending_removal.Front());
+                it.second->OnEntityRemoved(m_entities_pending_removal.Front());
             }
 
-            m_spatials_pending_removal.Pop();
+            m_entities_pending_removal.Pop();
         }
 
-        m_has_spatial_updates = false;
+        m_has_entity_updates = false;
     }
 
     for (const auto &component : m_render_components) {

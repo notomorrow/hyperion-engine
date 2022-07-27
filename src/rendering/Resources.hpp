@@ -35,9 +35,9 @@ struct Resources {
     HYP_DEF_REF_COUNTED(RenderPass,        render_passes);
     HYP_DEF_REF_COUNTED(Material,          materials);
     HYP_DEF_REF_COUNTED(Light,             lights);
-    HYP_DEF_REF_COUNTED(GraphicsPipeline,  graphics_pipelines);
+    HYP_DEF_REF_COUNTED(RendererInstance,  renderer_instances);
     HYP_DEF_REF_COUNTED(ComputePipeline,   compute_pipelines);
-    HYP_DEF_REF_COUNTED(Spatial,           spatials);
+    HYP_DEF_REF_COUNTED(Entity,           entities);
     HYP_DEF_REF_COUNTED(Mesh,              meshes);
     HYP_DEF_REF_COUNTED(Skeleton,          skeletons);
     HYP_DEF_REF_COUNTED(Scene,             scenes);

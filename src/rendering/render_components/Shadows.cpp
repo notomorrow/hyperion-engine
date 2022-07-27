@@ -113,7 +113,7 @@ void ShadowPass::CreateDescriptors(Engine *engine)
 
 void ShadowPass::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(
+    auto pipeline = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -126,7 +126,7 @@ void ShadowPass::CreatePipeline(Engine *engine)
     pipeline->AddFramebuffer(m_framebuffers[0].IncRef());
     pipeline->AddFramebuffer(m_framebuffers[1].IncRef());
     
-    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
     m_pipeline.Init();
 }
 
@@ -254,7 +254,7 @@ void ShadowRenderer::InitGame(Engine *engine)
     AssertReady();
 
 
-    for (auto &it : GetParent()->GetScene()->GetSpatials()) {
+    for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
 
         if (entity == nullptr) {
@@ -264,46 +264,46 @@ void ShadowRenderer::InitGame(Engine *engine)
         if (BucketRendersShadows(entity->GetBucket())
             && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
 
-            m_shadow_pass.GetGraphicsPipeline()->AddSpatial(it.second.IncRef());
+            m_shadow_pass.GetGraphicsPipeline()->AddEntity(it.second.IncRef());
         }
     }
 }
 
-void ShadowRenderer::OnEntityAdded(Ref<Spatial> &spatial)
+void ShadowRenderer::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    if (BucketRendersShadows(spatial->GetBucket())
-        && (spatial->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
-        m_shadow_pass.GetGraphicsPipeline()->AddSpatial(spatial.IncRef());
+    if (BucketRendersShadows(entity->GetBucket())
+        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetGraphicsPipeline()->AddEntity(entity.IncRef());
     }
 }
 
-void ShadowRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
+void ShadowRenderer::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    m_shadow_pass.GetGraphicsPipeline()->RemoveSpatial(spatial.IncRef());
+    m_shadow_pass.GetGraphicsPipeline()->RemoveEntity(entity.IncRef());
 }
 
-void ShadowRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
+void ShadowRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    const auto &renderable_attributes = spatial->GetRenderableAttributes();
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
 
     // TODO: better handling
-    if (BucketRendersShadows(spatial->GetBucket())
-        && (spatial->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
-        m_shadow_pass.GetGraphicsPipeline()->AddSpatial(spatial.IncRef());
+    if (BucketRendersShadows(entity->GetBucket())
+        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetGraphicsPipeline()->AddEntity(entity.IncRef());
     } else {
-        m_shadow_pass.GetGraphicsPipeline()->RemoveSpatial(spatial.IncRef());
+        m_shadow_pass.GetGraphicsPipeline()->RemoveEntity(entity.IncRef());
     }
 }
 

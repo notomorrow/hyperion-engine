@@ -36,8 +36,8 @@ void AABBDebugController::OnAdded()
     auto shader            = m_engine->shader_manager.GetShader(ShaderManager::Key::DEBUG_AABB).IncRef();
     const auto shader_id   = shader != nullptr ? shader->GetId() : Shader::empty_id;
 
-    m_aabb_entity = m_engine->resources.spatials.Add(
-        std::make_unique<Spatial>(
+    m_aabb_entity = m_engine->resources.entities.Add(
+        std::make_unique<Entity>(
             m_engine->resources.meshes.Add(std::move(mesh)),
             std::move(shader),
             std::move(material),
@@ -51,7 +51,7 @@ void AABBDebugController::OnAdded()
                 .depth_write       = false,
                 .depth_test        = false
             },
-            Spatial::ComponentInitInfo {
+            Entity::ComponentInitInfo {
                 .flags = 0x0 // no flags
             }
         )
@@ -59,14 +59,14 @@ void AABBDebugController::OnAdded()
 
     m_aabb_entity.Init();
 
-    scene->AddSpatial(m_aabb_entity.IncRef());
+    scene->AddEntity(m_aabb_entity.IncRef());
 }
 
 void AABBDebugController::OnRemoved()
 {
     if (m_aabb_entity != nullptr) {
         if (auto *scene = m_aabb_entity->GetScene()) {
-            scene->RemoveSpatial(m_aabb_entity);
+            scene->RemoveEntity(m_aabb_entity);
         }
 
         m_aabb_entity = nullptr;

@@ -3,23 +3,23 @@
 
 namespace hyperion::v2 {
 
-AccelerationStructureBuilder::AccelerationStructureBuilder(std::vector<Ref<Spatial>> &&spatials)
-    : m_spatials(std::move(spatials))
+AccelerationStructureBuilder::AccelerationStructureBuilder(std::vector<Ref<Entity>> &&entities)
+    : m_entities(std::move(entities))
 {
 }
 
 std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStructureBuilder::Build(Engine *engine)
 {
-    if (m_spatials.empty()) {
+    if (m_entities.empty()) {
         return {};
     }
 
-    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> acceleration_structures(m_spatials.size());
+    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> acceleration_structures(m_entities.size());
 
-    for (auto &spatial : m_spatials) {
+    for (auto &entity : m_entities) {
         std::unique_ptr<AccelerationGeometry> geometry;
 
-        if (auto &mesh = spatial->GetMesh()) {
+        if (auto &mesh = entity->GetMesh()) {
             geometry = std::make_unique<AccelerationGeometry>(
                 mesh->BuildPackedVertices(),
                 mesh->BuildPackedIndices()
@@ -27,7 +27,7 @@ std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStruc
         }
 
         auto acceleration_structure = std::make_unique<BottomLevelAccelerationStructure>();
-        acceleration_structure->SetTransform(spatial->GetTransform().GetMatrix());
+        acceleration_structure->SetTransform(entity->GetTransform().GetMatrix());
         acceleration_structure->AddGeometry(std::move(geometry));
 
         HYPERION_ASSERT_RESULT(acceleration_structure->Create(engine->GetDevice(), engine->GetInstance()));
@@ -35,7 +35,7 @@ std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStruc
         acceleration_structures.push_back(std::move(acceleration_structure));
     }
 
-    m_spatials.clear();
+    m_entities.clear();
 
     return acceleration_structures;
 }

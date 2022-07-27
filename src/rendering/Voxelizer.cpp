@@ -106,7 +106,7 @@ void Voxelizer::Init(Engine *engine)
 
 void Voxelizer::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(
+    auto pipeline = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -121,12 +121,12 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
-    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
-        for (auto &spatial : pipeline->GetSpatials()) {
-            if (spatial != nullptr) {
-                m_pipeline->AddSpatial(spatial.IncRef());
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &entity : pipeline->GetEntities()) {
+            if (entity != nullptr) {
+                m_pipeline->AddEntity(entity.IncRef());
             }
         }
     }

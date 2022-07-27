@@ -3,7 +3,7 @@
 
 #include "../Controller.hpp"
 
-#include <scene/Spatial.hpp>
+#include <scene/Entity.hpp>
 #include <math/BoundingBox.hpp>
 
 namespace hyperion::v2 {
@@ -21,7 +21,7 @@ public:
 
 protected:
     Engine      *m_engine;
-    Ref<Spatial> m_aabb_entity;
+    Ref<Entity> m_aabb_entity;
     BoundingBox  m_aabb;
 };
 

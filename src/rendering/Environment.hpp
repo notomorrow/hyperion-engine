@@ -101,10 +101,10 @@ public:
         m_has_render_component_updates = true;
     }
 
-    void OnEntityAdded(Ref<Spatial> &entity);
-    void OnEntityRemoved(Ref<Spatial> &entity);
+    void OnEntityAdded(Ref<Entity> &entity);
+    void OnEntityRemoved(Ref<Entity> &entity);
     // only called when meaningful attributes have changed
-    void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity);
+    void OnEntityRenderableAttributesChanged(Ref<Entity> &entity);
 
     float GetGlobalTimer() const { return m_global_timer; }
 
@@ -116,11 +116,11 @@ public:
 private:
     Scene *m_scene;
 
-    Queue<Ref<Spatial>>                                           m_spatials_pending_addition;
-    Queue<Ref<Spatial>>                                           m_spatials_pending_removal;
-    Queue<Ref<Spatial>>                                           m_spatial_renderable_attribute_updates;
-    std::atomic_bool                                              m_has_spatial_updates{false};
-    std::mutex                                                    m_spatial_update_mutex;
+    Queue<Ref<Entity>>                                            m_entities_pending_addition;
+    Queue<Ref<Entity>>                                            m_entities_pending_removal;
+    Queue<Ref<Entity>>                                            m_entity_renderable_attribute_updates;
+    std::atomic_bool                                              m_has_entity_updates{false};
+    std::mutex                                                    m_entity_update_mutex;
 
     ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
     ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;

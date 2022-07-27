@@ -85,7 +85,7 @@ void VoxelConeTracing::InitGame(Engine *engine)
     // add all entities from environment scene
     AssertThrow(GetParent()->GetScene() != nullptr);
 
-    for (auto &it : GetParent()->GetScene()->GetSpatials()) {
+    for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
 
         if (entity == nullptr) {
@@ -95,46 +95,46 @@ void VoxelConeTracing::InitGame(Engine *engine)
         if (BucketHasGlobalIllumination(entity->GetBucket())
             && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
 
-            m_pipeline->AddSpatial(it.second.IncRef());
+            m_pipeline->AddEntity(it.second.IncRef());
         }
     }
 }
 
-void VoxelConeTracing::OnEntityAdded(Ref<Spatial> &spatial)
+void VoxelConeTracing::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    if (BucketHasGlobalIllumination(spatial->GetBucket())
-        && (spatial->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
-        m_pipeline->AddSpatial(spatial.IncRef());
+    if (BucketHasGlobalIllumination(entity->GetBucket())
+        && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+        m_pipeline->AddEntity(entity.IncRef());
     }
 }
 
-void VoxelConeTracing::OnEntityRemoved(Ref<Spatial> &spatial)
+void VoxelConeTracing::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    m_pipeline->RemoveSpatial(spatial.IncRef());
+    m_pipeline->RemoveEntity(entity.IncRef());
 }
 
-void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
+void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    const auto &renderable_attributes = spatial->GetRenderableAttributes();
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
 
     // TODO: better handling
-    if (BucketHasGlobalIllumination(spatial->GetBucket())
-        && (spatial->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
-        m_pipeline->AddSpatial(spatial.IncRef());
+    if (BucketHasGlobalIllumination(entity->GetBucket())
+        && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+        m_pipeline->AddEntity(entity.IncRef());
     } else {
-        m_pipeline->RemoveSpatial(spatial.IncRef());
+        m_pipeline->RemoveEntity(entity.IncRef());
     }
 }
 
@@ -250,7 +250,7 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 
 void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(
+    auto pipeline = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -267,7 +267,7 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
         pipeline->AddFramebuffer(framebuffer.IncRef());
     }
     
-    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
     m_pipeline.Init();
 }
 

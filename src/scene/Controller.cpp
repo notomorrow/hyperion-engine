@@ -1,5 +1,5 @@
 #include "Controller.hpp"
-#include <scene/Spatial.hpp>
+#include <scene/Entity.hpp>
 
 namespace hyperion::v2 {
 

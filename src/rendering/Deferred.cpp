@@ -406,8 +406,8 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
         // create depth pyramid image
         m_depth_pyramid[i] = std::make_unique<StorageImage>(
             Extent3D {
-                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().width)),
-                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
+                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().width)),
+                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().height)),
                 1
             },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,
@@ -1025,19 +1025,19 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect)
 {
     if (collect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             pipeline->PerformRendering(engine, frame);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             pipeline->PerformRendering(engine, frame);
         }
     }
@@ -1046,11 +1046,11 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame, bool co
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect)
 {
     if (collect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             pipeline->PerformRendering(engine, frame);
         }
     }

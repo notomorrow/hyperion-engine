@@ -34,7 +34,7 @@ public:
     ~Voxelizer();
 
     Scene *GetScene() const { return m_scene.ptr; }
-    GraphicsPipeline *GetGraphicsPipeline() const { return m_pipeline.ptr; }
+    RendererInstance *GetGraphicsPipeline() const { return m_pipeline.ptr; }
 
     UInt32 NumFragments() const { return m_num_fragments; }
 
@@ -60,7 +60,7 @@ private:
     Ref<Framebuffer> m_framebuffer;
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
-    Ref<GraphicsPipeline> m_pipeline;
+    Ref<RendererInstance> m_pipeline;
 
     std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 

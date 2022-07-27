@@ -129,7 +129,7 @@ struct DebugMarker {
     }
 };
 
-struct IndirectDrawState;
+class IndirectDrawState;
 
 struct RenderState {
     struct SceneBinding {
@@ -170,28 +170,6 @@ struct RenderState {
     SceneBinding GetScene() const
     {
         return scene_ids.empty() ? SceneBinding{} : scene_ids.top();
-    }
-};
-
-struct GraphicsPipelineAttributeSet {
-    Ref<Shader>        shader;
-    VertexAttributeSet vertex_attributes;
-    Bucket             bucket;
-
-    bool operator<(const GraphicsPipelineAttributeSet &other) const
-    {
-        const auto shader_id = shader ? shader->GetId() : Shader::ID{0};
-        const auto other_shader_id = other.shader ? other.shader->GetId() : Shader::ID{0};
-
-        return std::tie(shader_id, vertex_attributes, bucket) <
-            std::tie(other_shader_id, other.vertex_attributes, other.bucket);
-    }
-
-    bool operator==(const GraphicsPipelineAttributeSet &other) const
-    {
-        return shader == other.shader
-            && vertex_attributes == other.vertex_attributes
-            && bucket == other.bucket;
     }
 };
 
@@ -249,8 +227,8 @@ public:
     auto &GetDummyData()                                           { return m_dummy_data; }
     const auto &GetDummyData() const                               { return m_dummy_data; }
     
-    ComponentRegistry<Spatial> &GetComponentRegistry()             { return m_component_registry; }
-    const ComponentRegistry<Spatial> &GetComponentRegistry() const { return m_component_registry; }
+    ComponentRegistry<Entity> &GetComponentRegistry()             { return m_component_registry; }
+    const ComponentRegistry<Entity> &GetComponentRegistry() const { return m_component_registry; }
     
     World &GetWorld()                                              { return m_world; }
     const World &GetWorld() const                                  { return m_world; }
@@ -328,8 +306,8 @@ public:
     Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
-    Ref<GraphicsPipeline> FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes);
-    Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline);
+    Ref<RendererInstance> FindOrCreateRendererInstance(const RenderableAttributeSet &renderable_attributes);
+    Ref<RendererInstance> AddRendererInstance(std::unique_ptr<RendererInstance> &&pipeline);
 
     void Initialize();
     void Compile();
@@ -339,16 +317,16 @@ public:
     void RenderDeferred(Frame *frame);
     void RenderFinalPass(Frame *frame) const;
 
-    ShaderGlobals          *shader_globals;
+    ShaderGlobals           *shader_globals;
 
-    EngineCallbacks         callbacks;
-    Resources               resources;
-    Assets                  assets;
-    ShaderManager           shader_manager;
-
-    RenderState             render_state;
+    EngineCallbacks          callbacks;
+    Resources                resources;
+    Assets                   assets;
+    ShaderManager            shader_manager;
+                             
+    RenderState              render_state;
     
-    std::atomic_bool        m_running{false};
+    std::atomic_bool         m_running{false};
 
     Scheduler<RenderFunctor> render_scheduler;
 
@@ -364,7 +342,7 @@ private:
     void FindTextureFormatDefaults();
     
     std::unique_ptr<Instance>         m_instance;
-    std::unique_ptr<GraphicsPipeline> m_root_pipeline;
+    std::unique_ptr<RendererInstance> m_root_pipeline;
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 16> m_texture_format_defaults;
 
@@ -374,9 +352,9 @@ private:
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
 
-    FlatMap<RenderableAttributeSet, GraphicsPipeline::ID> m_graphics_pipeline_mapping;
+    FlatMap<RenderableAttributeSet, RendererInstance::ID> m_renderer_instance_mapping;
 
-    ComponentRegistry<Spatial> m_component_registry;
+    ComponentRegistry<Entity> m_component_registry;
 
     DummyData m_dummy_data;
 

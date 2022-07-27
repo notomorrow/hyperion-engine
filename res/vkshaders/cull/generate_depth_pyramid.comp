@@ -41,10 +41,13 @@ void main()
 
     float depth = Texture2DLod(depth_pyramid_sampler, mip_in, texcoord, 0.0).r;
 #else
-    vec2  texcoord = vec2(coord) / vec2(mip_dimensions);
+    // vec2  texcoord = vec2(coord) / vec2(mip_dimensions);
 
-    float depth = 0.0;
+    vec2 texcoord = vec2(uvec2(vec2(coord) + vec2(0.5))) / vec2(mip_dimensions);
 
+    //vec4 depths = Texture2DGather(depth_pyramid_sampler, mip_in, texcoord);//0.0;
+    //float depth = HYP_DEPTH_CMP(HYP_DEPTH_CMP(HYP_DEPTH_CMP(depths.x, depths.y), depths.z), depths.w);
+    float depth = -999.0;
     for (int i = 0; i < HYP_NUM_DEPTH_PYRAMID_OFFSETS; i++) {
         depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texcoord, depth_pyramid_offsets[i]));
     }

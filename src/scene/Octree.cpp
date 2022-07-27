@@ -1,5 +1,5 @@
 #include "Octree.hpp"
-#include "Spatial.hpp"
+#include "Entity.hpp"
 #include "../Engine.hpp"
 #include <Threads.hpp>
 
@@ -197,10 +197,10 @@ void Octree::Clear(Engine *engine, std::vector<Node> &out_nodes)
 void Octree::ClearInternal(Engine *engine, std::vector<Node> &out_nodes)
 {
     for (auto &node : m_nodes) {
-        node.spatial->OnRemovedFromOctree(this);
+        node.entity->OnRemovedFromOctree(this);
 
         if (m_root != nullptr) {
-            auto it = m_root->node_to_octree.find(node.spatial);
+            auto it = m_root->node_to_octree.find(node.entity);
 
             if (it != m_root->node_to_octree.end()) {
                 m_root->node_to_octree.erase(it);
@@ -223,20 +223,20 @@ void Octree::ClearInternal(Engine *engine, std::vector<Node> &out_nodes)
     }
 }
 
-Octree::Result Octree::Insert(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Insert(Engine *engine, Entity *entity)
 {
-    AssertThrow(spatial != nullptr);
+    AssertThrow(entity != nullptr);
 
-    const auto &spatial_aabb = spatial->GetWorldAabb();
+    const auto &entity_aabb = entity->GetWorldAabb();
 
-    if (!m_aabb.Contains(spatial_aabb)) {
-        auto rebuild_result = RebuildExtendInternal(engine, spatial_aabb);
+    if (!m_aabb.Contains(entity_aabb)) {
+        auto rebuild_result = RebuildExtendInternal(engine, entity_aabb);
 
         if (!rebuild_result) {
             DebugLog(
                 LogType::Warn,
-                "Failed to rebuild octree when inserting spatial #%lu\n",
-                spatial->GetId().value
+                "Failed to rebuild octree when inserting entity #%lu\n",
+                entity->GetId().value
             );
 
             return rebuild_result;
@@ -244,44 +244,44 @@ Octree::Result Octree::Insert(Engine *engine, Spatial *spatial)
     }
 
     for (Octant &octant : m_octants) {
-        if (octant.aabb.Contains(spatial_aabb)) {
+        if (octant.aabb.Contains(entity_aabb)) {
             if (!m_is_divided) {
                 Divide(engine);
             }
 
             AssertThrow(octant.octree != nullptr);
 
-            return octant.octree->Insert(engine, spatial);
+            return octant.octree->Insert(engine, entity);
         }
     }
 
-    return InsertInternal(engine, spatial);
+    return InsertInternal(engine, entity);
 }
 
-Octree::Result Octree::InsertInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::InsertInternal(Engine *engine, Entity *entity)
 {
     m_nodes.push_back(Node {
-        .spatial          = spatial,
-        .aabb             = spatial->GetWorldAabb(),
+        .entity           = entity,
+        .aabb             = entity->GetWorldAabb(),
         .visibility_state = &m_visibility_state
     });
 
     if (m_root != nullptr) {
-        AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
+        AssertThrowMsg(m_root->node_to_octree.find(entity) == m_root->node_to_octree.end(), "Entity must not already be in octree hierarchy.");
 
-        m_root->node_to_octree[spatial] = this;
-        m_root->events.on_insert_node(engine, this, spatial);
+        m_root->node_to_octree[entity] = this;
+        m_root->events.on_insert_node(engine, this, entity);
     }
 
-    spatial->OnAddedToOctree(this);
+    entity->OnAddedToOctree(this);
 
     return {};
 }
 
-Octree::Result Octree::Remove(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Remove(Engine *engine, Entity *entity)
 {
     if (m_root != nullptr) {
-        const auto it = m_root->node_to_octree.find(spatial);
+        const auto it = m_root->node_to_octree.find(entity);
 
         if (it == m_root->node_to_octree.end()) {
             return {Result::OCTREE_ERR, "Not found in node map"};
@@ -290,29 +290,29 @@ Octree::Result Octree::Remove(Engine *engine, Spatial *spatial)
         if (auto *octree = it->second) {
             m_root->node_to_octree.erase(it);
 
-            return octree->RemoveInternal(engine, spatial);
+            return octree->RemoveInternal(engine, entity);
         }
 
         return {Result::OCTREE_ERR, "Could not be removed from any sub octants"};
     }
 
-    if (!m_aabb.Contains(spatial->GetWorldAabb())) {
+    if (!m_aabb.Contains(entity->GetWorldAabb())) {
         return {Result::OCTREE_ERR, "AABB does not contain object aabb"};
     }
 
-    return RemoveInternal(engine, spatial);
+    return RemoveInternal(engine, entity);
 }
 
-Octree::Result Octree::RemoveInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::RemoveInternal(Engine *engine, Entity *entity)
 {
-    const auto it = FindNode(spatial);
+    const auto it = FindNode(entity);
 
     if (it == m_nodes.end()) {
         if (m_is_divided) {
             for (auto &octant : m_octants) {
                 AssertThrow(octant.octree != nullptr);
 
-                if (octant.octree->RemoveInternal(engine, spatial)) {
+                if (octant.octree->RemoveInternal(engine, entity)) {
                     return {};
                 }
             }
@@ -322,11 +322,11 @@ Octree::Result Octree::RemoveInternal(Engine *engine, Spatial *spatial)
     }
 
     if (m_root != nullptr) {
-        m_root->events.on_remove_node(engine, this, spatial);
-        m_root->node_to_octree.erase(spatial);
+        m_root->events.on_remove_node(engine, this, entity);
+        m_root->node_to_octree.erase(entity);
     }
 
-    spatial->OnRemovedFromOctree(this);
+    entity->OnRemovedFromOctree(this);
 
     m_nodes.erase(it);
 
@@ -359,9 +359,9 @@ Octree::Result Octree::RemoveInternal(Engine *engine, Spatial *spatial)
     return {};
 }
 
-Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it)
+Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<Node>::iterator *it)
 {
-    const auto &new_aabb = spatial->GetWorldAabb();
+    const auto &new_aabb = entity->GetWorldAabb();
 
     const bool is_root = IsRoot();
     const bool contains = m_aabb.Contains(new_aabb);
@@ -377,7 +377,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
             DebugLog(
                 LogType::Debug,
                 "In root, but does not contain node aabb, so rebuilding octree. %lu\n",
-                spatial->GetId().value
+                entity->GetId().value
             );
 #endif
 
@@ -388,8 +388,8 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
 #if HYP_OCTREE_DEBUG
             DebugLog(
                 LogType::Debug,
-                "Moving spatial #%lu into the closest fitting (or root) parent\n",
-                spatial->GetId().value
+                "Moving entity #%lu into the closest fitting (or root) parent\n",
+                entity->GetId().value
             );
 #endif
 
@@ -407,15 +407,15 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
                 
                 if (it != nullptr) {
                     if (m_root != nullptr) {
-                        m_root->events.on_remove_node(engine, this, spatial);
-                        m_root->node_to_octree.erase(spatial);
+                        m_root->events.on_remove_node(engine, this, entity);
+                        m_root->node_to_octree.erase(entity);
                     }
 
                     m_nodes.erase(*it);
                 }
 
 
-                inserted = bool(parent->Move(engine, spatial));
+                inserted = bool(parent->Move(engine, entity));
 
                 break;
             }
@@ -438,13 +438,13 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
                 DebugLog(
                     LogType::Debug,
                     "In child, no parents contain AABB so calling Move() on last valid octant (root). This will invalidate `this`.. %lu\n",
-                    spatial->GetId().value
+                    entity->GetId().value
                 );
 #endif
 
         AssertThrow(last_parent != nullptr);
 
-        return last_parent->Move(engine, spatial);
+        return last_parent->Move(engine, entity);
     }
 
     // CONTAINS AABB HERE
@@ -452,16 +452,16 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
     for (Octant &octant : m_octants) {
         if (octant.aabb.Contains(new_aabb)) {
             /* we /can/ go a level deeper than current, so no matter what we dispatch the
-             * event that the spatial was 'removed' from this octant, as it will be added
+             * event that the entity was 'removed' from this octant, as it will be added
              * deeper regardless.
-             * note: we don't call OnRemovedFromOctree() on the spatial, we don't want the Spatial's
+             * note: we don't call OnRemovedFromOctree() on the entity, we don't want the Entity's
              * m_octree ptr to be nullptr at any point, which could cause flickering when we go to render
              * stuff. that's the purpose for this whole method, to set it in one pass
              */
             if (it != nullptr) {
                 if (m_root != nullptr) {
-                    m_root->events.on_remove_node(engine, this, spatial);
-                    m_root->node_to_octree.erase(spatial);
+                    m_root->events.on_remove_node(engine, this, entity);
+                    m_root->node_to_octree.erase(entity);
                 }
 
                 m_nodes.erase(*it);
@@ -473,7 +473,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
             
             AssertThrow(octant.octree != nullptr);
 
-            const auto octant_move_result = octant.octree->Move(engine, spatial, nullptr);
+            const auto octant_move_result = octant.octree->Move(engine, entity, nullptr);
             AssertThrow(octant_move_result);
 
             return octant_move_result;
@@ -481,62 +481,62 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
     }
 
     if (it != nullptr) { /* Not moved */
-        auto &spatial_it = *it;
+        auto &entity_it = *it;
 
-        spatial_it->aabb             = new_aabb;
-        spatial_it->visibility_state = &m_visibility_state;
+        entity_it->aabb             = new_aabb;
+        entity_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
         // force this octant to be visible to prevent flickering
         CopyVisibilityState(engine->GetWorld().GetOctree().GetVisibilityState());
 
         m_nodes.push_back(Node {
-            .spatial          = spatial,
-            .aabb             = spatial->GetWorldAabb(),
+            .entity          = entity,
+            .aabb             = entity->GetWorldAabb(),
             .visibility_state = &m_visibility_state
         });
 
         if (m_root != nullptr) {
-            AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
+            AssertThrowMsg(m_root->node_to_octree.find(entity) == m_root->node_to_octree.end(), "Entity must not already be in octree hierarchy.");
 
-            m_root->node_to_octree[spatial] = this;
-            m_root->events.on_insert_node(engine, this, spatial);
+            m_root->node_to_octree[entity] = this;
+            m_root->events.on_insert_node(engine, this, entity);
         }
 
-        spatial->OnMovedToOctant(this);
+        entity->OnMovedToOctant(this);
     }
     
     return {};
 }
 
-Octree::Result Octree::Update(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Update(Engine *engine, Entity *entity)
 {
     if (m_root != nullptr) {
-        const auto it = m_root->node_to_octree.find(spatial);
+        const auto it = m_root->node_to_octree.find(entity);
 
         if (it == m_root->node_to_octree.end()) {
             return {Result::OCTREE_ERR, "Object not found in node map!"};
         }
 
         if (auto *octree = it->second) {
-            return octree->UpdateInternal(engine, spatial);
+            return octree->UpdateInternal(engine, entity);
         }
 
         return {Result::OCTREE_ERR, "Object has no octree in node map!"};
     }
 
-    return UpdateInternal(engine, spatial);
+    return UpdateInternal(engine, entity);
 }
 
-Octree::Result Octree::UpdateInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::UpdateInternal(Engine *engine, Entity *entity)
 {
-    const auto it = FindNode(spatial);
+    const auto it = FindNode(entity);
 
     if (it == m_nodes.end()) {
         if (m_is_divided) {
             for (auto &octant : m_octants) {
                 AssertThrow(octant.octree != nullptr);
 
-                if (octant.octree->UpdateInternal(engine, spatial)) {
+                if (octant.octree->UpdateInternal(engine, entity)) {
                     return {};
                 }
             }
@@ -545,7 +545,7 @@ Octree::Result Octree::UpdateInternal(Engine *engine, Spatial *spatial)
         return {Result::OCTREE_ERR, "Could not update in any sub octants"};
     }
 
-    const auto &new_aabb = spatial->GetWorldAabb();
+    const auto &new_aabb = entity->GetWorldAabb();
     const auto &old_aabb = it->aabb;
 
     if (new_aabb == old_aabb) {
@@ -558,7 +558,7 @@ Octree::Result Octree::UpdateInternal(Engine *engine, Spatial *spatial)
      * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
      */
 
-    return Move(engine, spatial, &it);
+    return Move(engine, entity, &it);
 }
 
 Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
@@ -572,20 +572,20 @@ Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
     m_aabb = new_aabb;
 
     for (auto &node : new_nodes) {
-        if (auto *spatial = node.spatial) {
-            if (spatial->GetScene() == nullptr) {
+        if (auto *entity = node.entity) {
+            if (entity->GetScene() == nullptr) {
                 DebugLog(
                     LogType::Error,
-                    "Spatial #%u was not attached to a Scene!\n",
-                    spatial->GetId().value
+                    "Entity #%u was not attached to a Scene!\n",
+                    entity->GetId().value
                 );
 
                 continue;
             }
             
-            //CopyVisibilityState(spatial->GetScene()->GetOctree().GetVisibilityState());
+            //CopyVisibilityState(entity->GetScene()->GetOctree().GetVisibilityState());
 
-            auto insert_result = Insert(engine, node.spatial);
+            auto insert_result = Insert(engine, node.entity);
 
             if (!insert_result) {
                 return insert_result;
@@ -600,7 +600,7 @@ Octree::Result Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &
 {
     // have to grow the aabb by rebuilding the octree
     BoundingBox new_aabb(m_aabb);
-    // extend the new aabb to include the spatial
+    // extend the new aabb to include the entity
     new_aabb.Extend(extend_include_aabb);
     // grow our new aabb by a predetermined growth factor,
     // to keep it from constantly resizing
@@ -625,12 +625,12 @@ void Octree::CopyVisibilityState(const VisibilityState &visibility_state)
     m_visibility_state.bits |= visibility_state.bits.load();
 }
 
-void Octree::CollectEntities(std::vector<Spatial *> &out) const
+void Octree::CollectEntities(std::vector<Entity *> &out) const
 {
     out.reserve(out.size() + m_nodes.size());
 
     for (auto &node : m_nodes) {
-        out.push_back(node.spatial);
+        out.push_back(node.entity);
     }
 
     if (m_is_divided) {
@@ -642,7 +642,7 @@ void Octree::CollectEntities(std::vector<Spatial *> &out) const
     }
 }
 
-void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Spatial *> &out) const
+void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Entity *> &out) const
 {
     const BoundingBox inclusion_aabb(position - radius, position + radius);
 
@@ -654,7 +654,7 @@ void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::
 
     for (auto &node : m_nodes) {
         if (inclusion_aabb.Intersects(node.aabb)) {
-            out.push_back(node.spatial);
+            out.push_back(node.entity);
         }
     }
 
@@ -750,14 +750,14 @@ void Octree::UpdateVisibilityState(Scene *scene)
     }
 }
 
-void Octree::OnSpatialRemoved(Engine *engine, Spatial *spatial)
+void Octree::OnEntityRemoved(Engine *engine, Entity *entity)
 {
-    if (spatial == nullptr) {
+    if (entity == nullptr) {
         return;
     }
     
-    if (!Remove(engine, spatial)) {
-        DebugLog(LogType::Error, "Failed to find Spatial #%lu in octree\n", spatial->GetId().value);
+    if (!Remove(engine, entity)) {
+        DebugLog(LogType::Error, "Failed to find Entity #%lu in octree\n", entity->GetId().value);
     }
 }
 
@@ -767,20 +767,20 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
 
     if (ray.TestAabb(m_aabb)) {
         for (auto &node : m_nodes) {
-            AssertThrow(node.spatial != nullptr);
+            AssertThrow(node.entity != nullptr);
 
-            if (!(node.spatial->GetInitInfo().flags & Spatial::ComponentInitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED)) {
+            if (!(node.entity->GetInitInfo().flags & Entity::ComponentInitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED)) {
                 continue;
             }
 
-            if (!BucketRayTestsEnabled(node.spatial->GetBucket())) {
+            if (!BucketRayTestsEnabled(node.entity->GetBucket())) {
                 continue;
             }
 
             if (ray.TestAabb(
                 node.aabb,
-                node.spatial->GetId().value,
-                static_cast<void *>(node.spatial),
+                node.entity->GetId().value,
+                static_cast<void *>(node.entity),
                 out_results
             )) {
                 has_hit = true;

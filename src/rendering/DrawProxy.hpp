@@ -34,7 +34,7 @@ using renderer::Extent2D;
 class Mesh;
 class Material;
 class Engine;
-class Spatial;
+class Entity;
 
 struct alignas(16) ObjectInstance {
     UInt32  entity_id;
@@ -49,7 +49,7 @@ template <class T>
 struct Drawable {};
 
 template <>
-struct Drawable<STUB_CLASS(Spatial)> {
+struct Drawable<STUB_CLASS(Entity)> {
     // rendering objects (sent from game thread to
     // rendering thread when updates are enqueued)
     // engine will hold onto RenderResources like Mesh and Material
@@ -70,7 +70,7 @@ struct Drawable<STUB_CLASS(Spatial)> {
     ObjectInstance object_instance;
 };
 
-using EntityDrawProxy = Drawable<STUB_CLASS(Spatial)>;
+using EntityDrawProxy = Drawable<STUB_CLASS(Entity)>;
 
 template <>
 struct Drawable<STUB_CLASS(Camera)> {
