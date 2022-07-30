@@ -95,7 +95,7 @@ void Voxelizer::Init(Engine *engine)
 
             m_attachments.clear();
 
-            m_pipeline.Reset();
+            m_renderer_instance.Reset();
 
             m_num_fragments = 0;
 
@@ -121,17 +121,17 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
-    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
+    m_renderer_instance = engine->AddRendererInstance(std::move(pipeline));
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
         for (auto &entity : pipeline->GetEntities()) {
             if (entity != nullptr) {
-                m_pipeline->AddEntity(entity.IncRef());
+                m_renderer_instance->AddEntity(entity.IncRef());
             }
         }
     }
 
-    m_pipeline.Init();
+    m_renderer_instance.Init();
 }
 
 void Voxelizer::CreateShader(Engine *engine)
@@ -231,13 +231,13 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
         engine->render_state.BindScene(m_scene);
 
-        m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
+        m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
             .count_mode = count_mode
         };
 
         m_framebuffer->BeginCapture(command_buffer);
-        m_pipeline->Render(engine, &frame);
+        m_renderer_instance->Render(engine, &frame);
         m_framebuffer->EndCapture(command_buffer);
 
         engine->render_state.UnbindScene();

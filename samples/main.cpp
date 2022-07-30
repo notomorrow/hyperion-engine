@@ -114,7 +114,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/testbed/testbed.obj", //sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
+            "models/sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -158,7 +158,7 @@ public:
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
-        grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         grass->GetChild(0)->GetEntity()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
@@ -194,7 +194,8 @@ public:
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        scene->GetRootNode()->AddChild(std::move(zombie));
+        //scene->GetRootNode()->AddChild(std::move(zombie));
+
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
@@ -214,8 +215,8 @@ public:
 
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
-        test_model->Scale(10.0f);
-       // test_model->Scale(0.15f);//14.075f);
+        //test_model->Scale(10.0f);
+        test_model->Scale(0.15f);//14.075f);
 
         /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
         terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
@@ -301,7 +302,7 @@ public:
 
         auto skybox_material = engine->resources.materials.Add(std::make_unique<Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-        // skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
+        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
 
         auto &skybox_spatial = cube_obj->GetChild(0)->GetEntity();

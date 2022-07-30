@@ -660,13 +660,6 @@ protected:
 struct alignas(4) IndirectDrawCommand {
     // native vk object
     VkDrawIndexedIndirectCommand command;
-    // additional data...
-
-    UInt32  entity_id;
-    Float   max_depth;
-    Float   clip_min_z;
-    ShaderVec4<Float> aabb_max;
-    ShaderVec4<Float> aabb_min;
 };
 
 static_assert(std::is_standard_layout_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");

@@ -20,11 +20,6 @@ namespace hyperion::v2 {
 
 class Engine;
 
-template <class T>
-struct RefManager {
-
-};
-
 template <class Group>
 struct CallbackRef {
     UInt id;

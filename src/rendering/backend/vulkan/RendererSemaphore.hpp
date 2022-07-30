@@ -26,9 +26,9 @@ public:
     Semaphore &operator=(const Semaphore &other) = delete;
     ~Semaphore();
 
-    inline VkSemaphore &GetSemaphore() { return m_semaphore; }
-    inline VkSemaphore GetSemaphore() const { return m_semaphore; }
-    inline VkPipelineStageFlags GetStageFlags() const { return m_pipeline_stage; }
+    VkSemaphore &GetSemaphore() { return m_semaphore; }
+    VkSemaphore GetSemaphore() const { return m_semaphore; }
+    VkPipelineStageFlags GetStageFlags() const { return m_pipeline_stage; }
 
     Result Create(Device *device);
     Result Destroy(Device *device);
@@ -48,7 +48,7 @@ struct SemaphoreRef {
     {
     }
 
-    inline bool operator<(const SemaphoreRef &other) const
+    bool operator<(const SemaphoreRef &other) const
         { return uintptr_t(semaphore.GetSemaphore()) < uintptr_t(other.semaphore.GetSemaphore()); }
 };
 
@@ -99,7 +99,7 @@ struct SemaphoreRefHolder {
     bool operator==(const SemaphoreRefHolder &other) const
         { return ref == other.ref; }
 
-    inline void Reset()
+    void Reset()
     {
         if (ref != nullptr && !--ref->count) {
             /* ref->semaphore should have had Destroy() called on it by now,
@@ -109,11 +109,11 @@ struct SemaphoreRefHolder {
         }
     }
 
-    inline Semaphore &Get() { return ref->semaphore; }
-    inline const Semaphore &Get() const { return ref->semaphore; }
-    inline VkSemaphore &GetSemaphore() { return ref->semaphore.GetSemaphore(); }
-    inline const VkSemaphore &GetSemaphore() const { return ref->semaphore.GetSemaphore(); }
-    inline VkPipelineStageFlags GetStageFlags() const { return ref->semaphore.GetStageFlags(); }
+    Semaphore &Get() { return ref->semaphore; }
+    const Semaphore &Get() const { return ref->semaphore; }
+    VkSemaphore &GetSemaphore() { return ref->semaphore.GetSemaphore(); }
+    const VkSemaphore &GetSemaphore() const { return ref->semaphore.GetSemaphore(); }
+    VkPipelineStageFlags GetStageFlags() const { return ref->semaphore.GetStageFlags(); }
 
     template <SemaphoreType ToType>
     SemaphoreRefHolder<ToType> ConvertHeldType() const
@@ -144,19 +144,19 @@ public:
     SemaphoreChain &operator=(SemaphoreChain &&other) noexcept = default;
     ~SemaphoreChain();
 
-    inline auto &GetWaitSemaphores() { return m_wait_semaphores; }
-    inline const auto &GetWaitSemaphores() const { return m_wait_semaphores; }
-    inline auto &GetSignalSemaphores() { return m_signal_semaphores; }
-    inline const auto &GetSignalSemaphores() const { return m_signal_semaphores; }
+    auto &GetWaitSemaphores() { return m_wait_semaphores; }
+    const auto &GetWaitSemaphores() const { return m_wait_semaphores; }
+    auto &GetSignalSemaphores() { return m_signal_semaphores; }
+    const auto &GetSignalSemaphores() const { return m_signal_semaphores; }
 
-    inline bool HasWaitSemaphore(const WaitSemaphore &wait_semaphore) const
+    bool HasWaitSemaphore(const WaitSemaphore &wait_semaphore) const
     {
         return std::any_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [&wait_semaphore](const WaitSemaphore &item) {
             return wait_semaphore == item;
         });
     }
 
-    inline bool HasSignalSemaphore(const SignalSemaphore &signal_semaphore) const
+    bool HasSignalSemaphore(const SignalSemaphore &signal_semaphore) const
     {
         return std::any_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [&signal_semaphore](const SignalSemaphore &item) {
             return signal_semaphore == item;
@@ -178,16 +178,16 @@ public:
      */
     SemaphoreChain &SignalsTo(SemaphoreChain &waitee);
 
-    inline const SemaphoreView &GetSignalSemaphoresView() const
+    const SemaphoreView &GetSignalSemaphoresView() const
         { return m_signal_semaphores_view; }
 
-    inline const SemaphoreStageView &GetSignalSemaphoreStagesView() const
+    const SemaphoreStageView &GetSignalSemaphoreStagesView() const
         { return m_signal_semaphores_stage_view; }
 
-    inline const SemaphoreView &GetWaitSemaphoresView() const
+    const SemaphoreView &GetWaitSemaphoresView() const
         { return m_wait_semaphores_view; }
 
-    inline const SemaphoreStageView &GetWaitSemaphoreStagesView() const
+    const SemaphoreStageView &GetWaitSemaphoreStagesView() const
         { return m_wait_semaphores_stage_view; }
 
     Result Create(Device *device);

@@ -24,6 +24,11 @@ struct CullData {
             && depth_pyramid_image_views[1] == other.depth_pyramid_image_views[1]
             && depth_pyramid_dimensions == other.depth_pyramid_dimensions;
     }
+
+    bool operator!=(const CullData &other) const
+    {
+        return !operator==(other);
+    }
 };
 
 } // namespace hyperion::v2

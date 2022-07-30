@@ -16,9 +16,9 @@ using renderer::Sampler;
 
 class Engine;
 
-class DummyData {
+class PlaceholderData {
 public:
-    DummyData();
+    PlaceholderData();
 
 #define HYP_DEF_DUMMY_DATA(type, getter, member) \
     public: \

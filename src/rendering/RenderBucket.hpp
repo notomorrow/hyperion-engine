@@ -19,28 +19,28 @@ enum Bucket {
 };
 
 HYP_FORCE_INLINE
-static inline bool BucketRayTestsEnabled(Bucket bucket)
+static bool BucketRayTestsEnabled(Bucket bucket)
 {
     return bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT;
 }
 
 HYP_FORCE_INLINE
-static inline bool BucketRendersShadows(Bucket bucket)
+static bool BucketRendersShadows(Bucket bucket)
 {
     return bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT;
 }
 
 HYP_FORCE_INLINE
-static inline bool BucketHasGlobalIllumination(Bucket bucket)
+static bool BucketHasGlobalIllumination(Bucket bucket)
 {
     return bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT;
 }
 
 HYP_FORCE_INLINE
-static inline bool BucketFrustumCullingEnabled(Bucket bucket)
+static bool BucketFrustumCullingEnabled(Bucket bucket)
 {
     return bucket == BUCKET_SHADOW
         || bucket == BUCKET_OPAQUE

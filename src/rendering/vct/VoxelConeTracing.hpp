@@ -62,7 +62,7 @@ public:
 
 private:
     void CreateImagesAndBuffers(Engine *engine);
-    void CreateGraphicsPipeline(Engine *engine);
+    void CreateRendererInstance(Engine *engine);
     void CreateComputePipelines(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
@@ -80,7 +80,7 @@ private:
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Ref<Shader>                                        m_shader;
     Ref<RenderPass>                                    m_render_pass;
-    Ref<RendererInstance>                              m_pipeline;
+    Ref<RendererInstance>                              m_renderer_instance;
     Ref<ComputePipeline>                               m_clear_voxels;
                                                        
     Ref<Texture>                                       m_voxel_image;

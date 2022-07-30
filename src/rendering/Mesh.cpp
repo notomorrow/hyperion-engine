@@ -97,8 +97,6 @@ void Mesh::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](...) {
-        // AssertThrow(GetId().value != 0);
-
         auto *engine = GetEngine();
 
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());

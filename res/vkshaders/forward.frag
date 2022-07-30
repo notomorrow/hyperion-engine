@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
+#extension GL_EXT_samplerless_texture_functions : enable
 
 #include "include/defines.inc"
 
@@ -13,7 +14,6 @@ layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 layout(location=12) in vec3 v_view_space_position;
-// layout(location=13) in vec3 v_fragment_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
@@ -35,9 +35,13 @@ layout(location=5) out vec4 gbuffer_bitangents;
 #endif
 
 //tmp
+#include "include/aabb.inc"
 
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
+
 
 void main()
 {
@@ -112,21 +116,9 @@ void main()
         gbuffer_albedo.rgb = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], v_position.xyz, R, 7.0).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
     }*/
 
-
-    // if (v_fragment_position.x >= object.screenspace_aabb.x && v_fragment_position.x < object.screenspace_aabb.z
-    //     && v_fragment_position.y >= object.screenspace_aabb.y && v_fragment_position.y < object.screenspace_aabb.w)
-    // {
-    //     gbuffer_albedo = vec4(1.0, 0.0, 0.0, 1.0);
-    // }
-
-    // gbuffer_albedo.rgb = vec3(distance(object.world_bounding_sphere.xyz, scene.camera_position.xyz) * 0.01);
-
-    
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);
     gbuffer_material   = vec4(roughness, metalness, 0.0, ao);
     gbuffer_tangents   = EncodeNormal(v_tangent);
     gbuffer_bitangents = EncodeNormal(v_bitangent);
-
-    // gbuffer_albedo.rgb = v_tangent.xyz * 0.5 + 0.5;
 }

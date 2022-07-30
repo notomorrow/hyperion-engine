@@ -244,8 +244,8 @@ namespace vm {
 class VM;
 struct VMState;
 //struct Value;
-struct ExecutionThread;
-struct InstructionHandler;
+class ExecutionThread;
+class InstructionHandler;
 class ImmutableString;
 
 } // namespace vm

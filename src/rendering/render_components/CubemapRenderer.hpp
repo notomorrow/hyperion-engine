@@ -67,7 +67,7 @@ private:
     }
 
     void CreateImagesAndBuffers(Engine *engine);
-    void CreateGraphicsPipelines(Engine *engine);
+    void CreateRendererInstance(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateFramebuffers(Engine *engine);
@@ -84,7 +84,7 @@ private:
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Ref<Shader>                                        m_shader;
     Ref<RenderPass>                                    m_render_pass;
-    Ref<RendererInstance>                              m_pipeline;
+    Ref<RendererInstance>                              m_renderer_instance;
     std::vector<std::unique_ptr<Attachment>>           m_attachments;
     std::array<Ref<Texture>, max_frames_in_flight>     m_cubemaps;
     UniformBuffer                                      m_cubemap_render_uniform_buffer;

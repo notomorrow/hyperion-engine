@@ -25,7 +25,7 @@ BoundingBox::BoundingBox(const BoundingBox &other)
 
 std::array<Vector3, 8> BoundingBox::GetCorners() const
 {
-    return std::array<Vector3, 8> {
+    return {
         Vector3(min.x, min.y, min.z),
         Vector3(max.x, min.y, min.z),
         Vector3(max.x, max.y, min.z),

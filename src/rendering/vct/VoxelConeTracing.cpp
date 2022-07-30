@@ -49,7 +49,7 @@ void VoxelConeTracing::Init(Engine *engine)
         CreateRenderPass(engine);
         CreateFramebuffers(engine);
         CreateDescriptors(engine);
-        CreateGraphicsPipeline(engine);
+        CreateRendererInstance(engine);
         CreateComputePipelines(engine);
         
         SetReady(true);
@@ -60,7 +60,7 @@ void VoxelConeTracing::Init(Engine *engine)
             m_shader.Reset();
             m_framebuffers = {};
             m_render_pass.Reset();
-            m_pipeline.Reset();
+            m_renderer_instance.Reset();
             m_clear_voxels.Reset();
             m_voxel_image.Reset();
 
@@ -93,9 +93,9 @@ void VoxelConeTracing::InitGame(Engine *engine)
         }
 
         if (BucketHasGlobalIllumination(entity->GetBucket())
-            && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+            && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
 
-            m_pipeline->AddEntity(it.second.IncRef());
+            m_renderer_instance->AddEntity(it.second.IncRef());
         }
     }
 }
@@ -107,8 +107,8 @@ void VoxelConeTracing::OnEntityAdded(Ref<Entity> &entity)
     AssertReady();
 
     if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
-        m_pipeline->AddEntity(entity.IncRef());
+        && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
+        m_renderer_instance->AddEntity(entity.IncRef());
     }
 }
 
@@ -118,7 +118,7 @@ void VoxelConeTracing::OnEntityRemoved(Ref<Entity> &entity)
 
     AssertReady();
 
-    m_pipeline->RemoveEntity(entity.IncRef());
+    m_renderer_instance->RemoveEntity(entity.IncRef());
 }
 
 void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
@@ -131,10 +131,10 @@ void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 
     // TODO: better handling
     if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
-        m_pipeline->AddEntity(entity.IncRef());
+        && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
+        m_renderer_instance->AddEntity(entity.IncRef());
     } else {
-        m_pipeline->RemoveEntity(entity.IncRef());
+        m_renderer_instance->RemoveEntity(entity.IncRef());
     }
 }
 
@@ -177,14 +177,14 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
         engine->GetInstance()->GetDescriptorPool().Bind(
             engine->GetDevice(),
             command_buffer,
-            m_pipeline->GetPipeline(),
+            m_renderer_instance->GetPipeline(),
             {{.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}}
         ),
         result
     );
 
     m_framebuffers[frame_index]->BeginCapture(command_buffer);
-    m_pipeline->Render(engine, frame);
+    m_renderer_instance->Render(engine, frame);
     m_framebuffers[frame_index]->EndCapture(command_buffer);
 
     engine->render_state.UnbindScene();
@@ -248,9 +248,9 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
     });
 }
 
-void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
+void VoxelConeTracing::CreateRendererInstance(Engine *engine)
 {
-    auto pipeline = std::make_unique<RendererInstance>(
+    auto renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -259,16 +259,16 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
         }
     );
 
-    pipeline->SetDepthWrite(false);
-    pipeline->SetDepthTest(false);
-    pipeline->SetFaceCullMode(FaceCullMode::NONE);
+    renderer_instance->SetDepthWrite(false);
+    renderer_instance->SetDepthTest(false);
+    renderer_instance->SetFaceCullMode(FaceCullMode::NONE);
 
     for (auto &framebuffer : m_framebuffers) {
-        pipeline->AddFramebuffer(framebuffer.IncRef());
+        renderer_instance->AddFramebuffer(framebuffer.IncRef());
     }
     
-    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
-    m_pipeline.Init();
+    m_renderer_instance = engine->AddRendererInstance(std::move(renderer_instance));
+    m_renderer_instance.Init();
 }
 
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)
