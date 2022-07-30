@@ -53,7 +53,7 @@ Engine::~Engine()
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
 
-    m_dummy_data.Destroy(this);
+    m_placeholder_data.Destroy(this);
 
     HYP_FLUSH_RENDER_QUEUE(this); // just to clear anything remaining up 
 
@@ -275,7 +275,7 @@ void Engine::Initialize()
     shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
     shader_globals->Create(this);
 
-    m_dummy_data.Create(this);
+    m_placeholder_data.Create(this);
 
     m_world.Init(this);
     
@@ -379,7 +379,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::SamplerDescriptor>(renderer::DescriptorKey::SAMPLER);
 
     material_sampler_descriptor->SetSubDescriptor({
-        .sampler = &GetDummyData().GetSamplerLinear()
+        .sampler = &GetPlaceholderData().GetSamplerLinear()
     });
 
     auto *material_textures_descriptor = m_instance->GetDescriptorPool()
@@ -389,7 +389,7 @@ void Engine::Initialize()
     for (UInt i = 0; i < DescriptorSet::max_material_texture_samplers; i++) {
         material_textures_descriptor->SetSubDescriptor({
             .element_index = i,
-            .image_view    = &GetDummyData().GetImageView2D1x1R8()
+            .image_view    = &GetPlaceholderData().GetImageView2D1x1R8()
         });
     }
 #endif
@@ -409,7 +409,7 @@ void Engine::Initialize()
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
             ->SetSubDescriptor({
                 .element_index = 0,
-                .image_view    = &GetDummyData().GetImageViewCube1x1R8()
+                .image_view    = &GetPlaceholderData().GetImageViewCube1x1R8()
             });
 
         descriptor_set
@@ -431,8 +431,8 @@ void Engine::Initialize()
         for (UInt i = 0; i < Environment::max_shadow_maps; i++) {
             shadow_map_descriptor->SetSubDescriptor({
                 .element_index = i,
-                .image_view    = &GetDummyData().GetImageView2D1x1R8(),
-                .sampler       = &GetDummyData().GetSamplerNearest()
+                .image_view    = &GetPlaceholderData().GetImageView2D1x1R8(),
+                .sampler       = &GetPlaceholderData().GetSamplerNearest()
             });
         }
     }
@@ -572,41 +572,7 @@ void Engine::ResetRenderState()
 
 void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
 {
-    if (auto deletion_flags = m_renderable_deletion_flag.load()) {
-        std::lock_guard guard(m_renderable_deletion_mutex);
-
-        if (deletion_flags & RENDERABLE_DELETION_TEXTURES) {
-            if (PerformEnqueuedDeletions<Texture>()) {
-                deletion_flags &= ~RENDERABLE_DELETION_TEXTURES;
-            }
-        }
-
-        //if (deletion_flags & RENDERABLE_DELETION_MATERIALS) {
-        //    if (PerformEnqueuedDeletions<Material>()) {
-        //        deletion_flags &= ~RENDERABLE_DELETION_MATERIALS;
-        //    }
-        //}
-
-        if (deletion_flags & RENDERABLE_DELETION_MESHES) {
-            if (PerformEnqueuedDeletions<Mesh>()) {
-                deletion_flags &= ~RENDERABLE_DELETION_MESHES;
-            }
-        }
-
-        if (deletion_flags & RENDERABLE_DELETION_SKELETONS) {
-            if (PerformEnqueuedDeletions<Skeleton>()) {
-                deletion_flags &= ~RENDERABLE_DELETION_SKELETONS;
-            }
-        }
-
-        if (deletion_flags & RENDERABLE_DELETION_SHADERS) {
-            if (PerformEnqueuedDeletions<Shader>()) {
-                deletion_flags &= ~RENDERABLE_DELETION_SHADERS;
-            }
-        }
-
-        m_renderable_deletion_flag.store(deletion_flags);
-    }
+    m_safe_deleter.PerformEnqueuedDeletions();
 
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);

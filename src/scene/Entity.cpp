@@ -85,10 +85,9 @@ void Entity::Init(Engine *engine)
 
             m_material.Reset();
 
-            engine->SafeReleaseRenderable(std::move(m_skeleton));
-            //engine->SafeReleaseRenderable(std::move(m_material));
-            engine->SafeReleaseRenderable(std::move(m_mesh));
-            engine->SafeReleaseRenderable(std::move(m_shader));
+            engine->SafeReleaseRenderResource<Skeleton>(std::move(m_skeleton));
+            engine->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
+            engine->SafeReleaseRenderResource<Shader>(std::move(m_shader));
         }));
     }));
 }
@@ -215,7 +214,7 @@ void Entity::SetMesh(Ref<Mesh> &&mesh)
     }
 
     if (m_mesh != nullptr) {
-        GetEngine()->SafeReleaseRenderable(std::move(m_mesh));
+        GetEngine()->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
     }
 
     m_mesh = std::move(mesh);
@@ -225,7 +224,7 @@ void Entity::SetMesh(Ref<Mesh> &&mesh)
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
-    m_primary_pipeline.changed = true;
+    m_primary_renderer_instance.changed = true;
 }
 
 void Entity::SetSkeleton(Ref<Skeleton> &&skeleton)
@@ -235,7 +234,7 @@ void Entity::SetSkeleton(Ref<Skeleton> &&skeleton)
     }
 
     if (m_skeleton != nullptr) {
-        GetEngine()->SafeReleaseRenderable(std::move(m_skeleton));
+        GetEngine()->SafeReleaseRenderResource<Skeleton>(std::move(m_skeleton));
     }
 
     m_skeleton = std::move(skeleton);
@@ -245,7 +244,7 @@ void Entity::SetSkeleton(Ref<Skeleton> &&skeleton)
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
-    m_primary_pipeline.changed = true;
+    m_primary_renderer_instance.changed = true;
 }
 
 void Entity::SetShader(Ref<Shader> &&shader)
@@ -255,7 +254,7 @@ void Entity::SetShader(Ref<Shader> &&shader)
     }
 
     if (m_shader != nullptr) {
-        GetEngine()->SafeReleaseRenderable(std::move(m_shader));
+        GetEngine()->SafeReleaseRenderResource<Shader>(std::move(m_shader));
     }
 
     m_shader = std::move(shader);
@@ -279,7 +278,7 @@ void Entity::SetMaterial(Ref<Material> &&material)
     }
 
     //if (m_material != nullptr) {
-    //    GetEngine()->SafeReleaseRenderable(std::move(m_material));
+    //    GetEngine()->SafeReleaseRenderResource(std::move(m_material));
     //}
 
     m_material = std::move(material);
@@ -324,7 +323,7 @@ void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_at
     }
 
     m_renderable_attributes    = renderable_attributes;
-    m_primary_pipeline.changed = true;
+    m_primary_renderer_instance.changed = true;
 }
 
 void Entity::RebuildRenderableAttributes()
@@ -466,54 +465,20 @@ void Entity::SetTransform(const Transform &transform)
 
 void Entity::OnAddedToPipeline(RendererInstance *pipeline)
 {
-    m_pipelines.Insert(pipeline);
+    m_renderer_instances.Insert(pipeline);
 }
 
 void Entity::OnRemovedFromPipeline(RendererInstance *pipeline)
 {
-    if (pipeline == m_primary_pipeline.pipeline) {
-        m_primary_pipeline = {
-            .pipeline = nullptr,
+    if (pipeline == m_primary_renderer_instance.renderer_instance) {
+        m_primary_renderer_instance = {
+            .renderer_instance = nullptr,
             .changed  = true
         };
     }
 
-    m_pipelines.Erase(pipeline);
+    m_renderer_instances.Erase(pipeline);
 }
-
-// void Entity::RemoveFromPipelines()
-// {
-//     auto pipelines = m_pipelines;
-
-//     for (auto *pipeline : pipelines) {
-//         if (pipeline == nullptr) {
-//             continue;
-//         }
-
-//         pipeline->OnEntityRemoved(this);
-//     }
-
-//     m_pipelines.Clear();
-    
-//     m_primary_pipeline = {
-//         .pipeline = nullptr,
-//         .changed  = true
-//     };
-// }
-
-// void Entity::RemoveFromPipeline(Engine *, RendererInstance *pipeline)
-// {
-//     if (pipeline == m_primary_pipeline.pipeline) {
-//         m_primary_pipeline = {
-//             .pipeline = nullptr,
-//             .changed  = true
-//         };
-//     }
-
-//     pipeline->OnEntityRemoved(this);
-
-//     OnRemovedFromPipeline(pipeline);
-// }
 
 void Entity::OnAddedToOctree(Octree *octree)
 {

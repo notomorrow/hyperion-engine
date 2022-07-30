@@ -124,10 +124,10 @@ public:
     void SetStencilAttributes(const StencilState &stencil_state);
 
     RendererInstance *GetPrimaryRendererInstance() const
-        { return m_primary_pipeline.pipeline; }
+        { return m_primary_renderer_instance.renderer_instance; }
 
     const auto &GetRendererInstances() const
-        { return m_pipelines; }
+        { return m_renderer_instances; }
 
     Bucket GetBucket() const                     { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
@@ -227,14 +227,14 @@ private:
     bool                   m_needs_octree_update{false};
 
     struct {
-        RendererInstance *pipeline = nullptr;
-        bool changed               = false;
-    } m_primary_pipeline;
+        RendererInstance *renderer_instance = nullptr;
+        bool changed                        = false;
+    } m_primary_renderer_instance;
 
-    /* Retains a list of pointers to pipelines that this Entity is used by,
+    /* Retains a list of pointers to RendererInstances that this Entity is used by,
      * for easy removal when RemoveEntity() is called.
      */
-    FlatSet<RendererInstance *> m_pipelines;
+    FlatSet<RendererInstance *> m_renderer_instances;
 
     mutable ShaderDataState     m_shader_data_state;
     ScheduledFunctionId         m_render_update_id,

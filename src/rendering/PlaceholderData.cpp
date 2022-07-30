@@ -1,9 +1,9 @@
-#include "DummyData.hpp"
+#include "PlaceholderData.hpp"
 
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
-DummyData::DummyData()
+PlaceholderData::PlaceholderData()
     : m_image_2d_1x1_r8(
           renderer::Extent2D(1, 1),
           renderer::Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8,
@@ -27,7 +27,7 @@ DummyData::DummyData()
 {
 }
 
-void DummyData::Create(Engine *engine)
+void PlaceholderData::Create(Engine *engine)
 {
     auto *device = engine->GetDevice();
 
@@ -39,7 +39,7 @@ void DummyData::Create(Engine *engine)
     HYPERION_ASSERT_RESULT(m_sampler_nearest.Create(device));
 }
 
-void DummyData::Destroy(Engine *engine)
+void PlaceholderData::Destroy(Engine *engine)
 {
     auto *device = engine->GetDevice();
 

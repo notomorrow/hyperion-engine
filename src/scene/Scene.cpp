@@ -201,8 +201,8 @@ void Scene::AddPendingEntities()
                     entity->EnqueueRenderUpdates();
                 }
 
-                entity->m_primary_pipeline = {
-                    .pipeline = pipeline.ptr,
+                entity->m_primary_renderer_instance = {
+                    .renderer_instance = pipeline.ptr,
                     .changed  = false
                 };
             } else {
@@ -299,7 +299,7 @@ void Scene::Update(
         entity->Update(engine, delta);
         AssertThrow(entity != nullptr);
 
-        if (entity->m_primary_pipeline.changed) {
+        if (entity->m_primary_renderer_instance.changed) {
             RequestPipelineChanges(entity);
         }
     }
@@ -315,7 +315,7 @@ void Scene::RequestPipelineChanges(Ref<Entity> &entity)
     AssertThrow(entity->GetScene() == this);
 
     if (entity->GetPrimaryRendererInstance() != nullptr) {
-        RemoveFromPipeline(entity, entity->m_primary_pipeline.pipeline);
+        RemoveFromPipeline(entity, entity->m_primary_renderer_instance.renderer_instance);
     }
     
     if (auto pipeline = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
@@ -324,8 +324,8 @@ void Scene::RequestPipelineChanges(Ref<Entity> &entity)
         }
         
         // TODO: wrapper function
-        entity->m_primary_pipeline = {
-            .pipeline = pipeline.ptr,
+        entity->m_primary_renderer_instance = {
+            .renderer_instance = pipeline.ptr,
             .changed  = false
         };
     } else {
@@ -344,15 +344,15 @@ void Scene::RemoveFromPipeline(Ref<Entity> &entity, RendererInstance *pipeline)
 
 void Scene::RemoveFromPipelines(Ref<Entity> &entity)
 {
-    auto pipelines = entity->m_pipelines;
+    auto renderer_instances = entity->m_renderer_instances;
 
-    for (auto *pipeline : pipelines) {
-        if (pipeline == nullptr) {
+    for (auto *renderer_instance : renderer_instances) {
+        if (renderer_instance == nullptr) {
             continue;
         }
 
         // have to inc ref so it can hold it in a temporary container
-        pipeline->RemoveEntity(entity.IncRef());
+        renderer_instance->RemoveEntity(entity.IncRef());
     }
 }
 

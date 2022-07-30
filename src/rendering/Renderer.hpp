@@ -41,40 +41,6 @@ using renderer::StorageBuffer;
 
 class Engine;
 
-struct alignas(16) IndirectParams {
-};
-
-class IndirectRenderer {
-public:
-    IndirectRenderer();
-    ~IndirectRenderer();
-
-    IndirectDrawState &GetDrawState()             { return m_indirect_draw_state; }
-    const IndirectDrawState &GetDrawState() const { return m_indirect_draw_state; }
-
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
-
-    void ExecuteCullShaderInBatches(
-        Engine *engine,
-        Frame *frame,
-        const CullData &cull_data
-    );
-
-private:
-    void RebuildDescriptors(Engine *engine, Frame *frame);
-
-    IndirectDrawState                                                m_indirect_draw_state;
-    Ref<ComputePipeline>                                             m_object_visibility;
-    FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
-    FixedArray<UniformBuffer, max_frames_in_flight>                  m_indirect_params_buffers;
-    CullData                                                         m_cached_cull_data;
-    FixedArray<bool, max_frames_in_flight>                           m_cached_cull_data_updated;
-
-    UInt m_indirect_debug_counter = 0;
-};
-
-// TODO: rename to Renderer
 class RendererInstance : public EngineComponentBase<STUB_CLASS(RendererInstance)> {
     friend class Engine;
     friend class Entity;
@@ -121,14 +87,13 @@ public:
 
     void AddEntity(Ref<Entity> &&entity);
     void RemoveEntity(Ref<Entity> &&entity, bool call_on_removed = true);
-    auto &GetEntities()                                              { return m_entities; }
-    const auto &GetEntities() const                                  { return m_entities; }
+    auto &GetEntities()                                     { return m_entities; }
+    const auto &GetEntities() const                         { return m_entities; }
 
-    void AddFramebuffer(Ref<Framebuffer> &&fbo) { m_fbos.push_back(std::move(fbo)); }
+    void AddFramebuffer(Ref<Framebuffer> &&fbo)             { m_fbos.push_back(std::move(fbo)); }
     void RemoveFramebuffer(Framebuffer::ID id);
-
-    auto &GetFramebuffers()             { return m_fbos; } 
-    const auto &GetFramebuffers() const { return m_fbos; }
+    auto &GetFramebuffers()                                 { return m_fbos; } 
+    const auto &GetFramebuffers() const                     { return m_fbos; }
     
     /* Build pipeline */
     void Init(Engine *engine);

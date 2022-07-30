@@ -134,8 +134,8 @@ public:
         { return a.DistanceSquared(b) < epsilon<std::remove_all_extents_t<decltype(T::values)>>; }
 
     template <class T>
-    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b)
-        { return Abs(a - b) <= epsilon<T>; }
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b, T eps = epsilon<T>)
+        { return Abs(a - b) <= eps; }
 
     template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Random(const T &a, const T &b)
@@ -334,7 +334,16 @@ public:
 
     static inline constexpr UInt64 PreviousPowerOf2(UInt64 value)
     {
-        return NextPowerOf2(value) / 2;
+        // dumb implementation
+        UInt64 result = 1;
+
+        while (result * 2 < value) {
+            result *= 2;
+        }
+
+        return result;
+
+        //return NextPowerOf2(value) / 2;
     }
 
     template <class T, class U>

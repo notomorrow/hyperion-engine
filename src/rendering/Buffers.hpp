@@ -110,7 +110,7 @@ struct alignas(256) ObjectShaderData {
 static_assert(sizeof(ObjectShaderData) == 256);
 
 struct MaterialShaderData {
-    static constexpr SizeType max_bound_textures = 16u;
+    static constexpr UInt max_bound_textures = 16u;
 
     // 0
     Vector4 albedo;

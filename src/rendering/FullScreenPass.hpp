@@ -9,6 +9,7 @@
 #include <Constants.hpp>
 
 #include <Types.hpp>
+#include <core/Containers.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -52,7 +53,6 @@ public:
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     ~FullScreenPass();
-
     
     CommandBuffer *GetCommandBuffer(UInt index) const { return m_command_buffers[index].get(); }
     Framebuffer *GetFramebuffer(UInt index) const     { return m_framebuffers[index].ptr; }
@@ -62,7 +62,7 @@ public:
                                                       
     RenderPass *GetRenderPass() const                 { return m_render_pass.ptr; }
                                                       
-    RendererInstance *GetGraphicsPipeline() const     { return m_pipeline.ptr; }
+    RendererInstance *GetRendererInstance() const     { return m_renderer_instance.ptr; }
                                                       
     UInt GetSubDescriptorIndex() const                { return m_sub_descriptor_index; }
 
@@ -82,13 +82,13 @@ public:
     void Record(Engine *engine, UInt frame_index);
 
 protected:
-    std::array<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
-    std::array<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
+    FixedArray<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
+    FixedArray<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
     Ref<Shader>                                                      m_shader;
     Ref<RenderPass>                                                  m_render_pass;
-    Ref<RendererInstance>                                            m_pipeline;
+    Ref<RendererInstance>                                            m_renderer_instance;
                                                                      
-    std::vector<std::unique_ptr<Attachment>>                         m_attachments;
+    DynArray<std::unique_ptr<Attachment>>                            m_attachments;
 
     PushConstantData                                                 m_push_constant_data;
 

@@ -30,15 +30,6 @@ struct IndirectDrawCommand {
     uint first_index;
     int  vertex_offset;
     uint first_instance;
-
-    // custom fields (alll temp)
-    uint  entity_id;
-    float max_depth;
-    float clip_min_z;
-
-    vec4 aabb_max;
-    vec4 aabb_min;
-
 };
 
 struct ObjectInstance {
@@ -58,8 +49,6 @@ layout(set = 0, binding = 4, row_major) writeonly buffer IndirectDrawCommandsBuf
     IndirectDrawCommand indirect_draw_commands[];
 };
 
-// I wrote compute culling on the GPU and all I got was this lousy t-shirt
-
 layout(set = 0, binding = 5) uniform texture2D depth_pyramid;
 layout(set = 0, binding = 6) uniform sampler   depth_pyramid_sampler;
 
@@ -77,15 +66,13 @@ bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
     return max(dim.x, dim.y) >= 4.0;
 }
 
-uint GetCullBits(vec4 pos)
+float GetDepthAtTexel(vec2 texcoord, ivec2 offset, float mip)
 {
-    return uint(pos.x < -pos.w)
-        | (uint(pos.x > pos.w)  * 2)
-        | (uint(pos.y < -pos.w) * 4)
-        | (uint(pos.y > pos.w)  * 8)
-        | (uint(pos.z < -pos.w) * 16)
-        | (uint(pos.z > pos.w)  * 32)
-        | (uint(pos.w <= 0)     * 64);
+    vec2 mip_dimensions = vec2(push_constants.depth_pyramid_dimensions);
+
+    const vec2 coord = texcoord + (vec2(offset) * (vec2(1.0) / mip_dimensions));
+
+    return Texture2DLod(depth_pyramid_sampler, depth_pyramid, coord, mip).r;
 }
 
 void main()
@@ -103,20 +90,11 @@ void main()
 
     uint num_instances = 0;
 
-    vec4 clip_pos = vec4(0.0);
-    vec4 projected_corner = vec4(0.0);
-    vec3 clip_min = vec3(1, 1, 1);
-    vec3 clip_max = vec3(-1, -1, 0);
-
-    float max_depth = 999.0;
-
     AABB aabb;
     aabb.max = object_instance.aabb_max.xyz;
     aabb.min = object_instance.aabb_min.xyz;
 
-    vec4 screenspace_aabb = vec4(-99.0);
-
-    uint cull_bits = 999;
+    uint cull_bits = 0x7F;
 
     // entity id should not ever be zero/unset
     if (all(bvec2(entity_id, push_constants.scene_id))) {
@@ -124,20 +102,13 @@ void main()
         mat4 view = scene.view;
         mat4 proj = scene.projection;
 
-        projected_corner = proj * view * vec4(AABBGetCorner(aabb, 0), 1.0);
-        cull_bits = GetCullBits(projected_corner);
-
-        clip_pos = projected_corner;
-        clip_pos.z = max(clip_pos.z, 0.0);
-        clip_pos.xyz /= clip_pos.w;
-        clip_pos.xy = clamp(clip_pos.xy, -1.0, 1.0);
-
-        clip_min = clip_pos.xyz;
-        clip_max = clip_min;
+        vec4 clip_pos = vec4(0.0);
+        vec3 clip_min = vec3(1.0, 1.0, 1.0);
+        vec3 clip_max = vec3(-1.0, -1.0, 0.0);
 
         // transform worldspace aabb to screenspace
-        for (int i = 1; i < 8; i++) {
-            projected_corner = proj * view * vec4(AABBGetCorner(aabb, i), 1.0);
+        for (int i = 0; i < 8; i++) {
+            vec4 projected_corner = proj * view * vec4(AABBGetCorner(aabb, i), 1.0);
             cull_bits &= GetCullBits(projected_corner);
 
             clip_pos = projected_corner;
@@ -149,124 +120,27 @@ void main()
             clip_max = max(clip_pos.xyz, clip_max);
         }
 
-        // if (AABBContainsPoint(aabb, scene.camera_position.xyz)) {
-        //     ++num_instances;
-        // } else {
-        // else if (IsPixelVisible(clip_min, clip_max) && cull_bits == 0)
+        if (cull_bits == 0) {
+            clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
+            clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
 
-            // num_instances += int(cull_bits == 0);
+            // Calculate hi-Z buffer mip
+            vec2 size = (clip_max.xy - clip_min.xy) * float(max(push_constants.depth_pyramid_dimensions.x, push_constants.depth_pyramid_dimensions.y));
+            float mip = ceil(log2(max(size.x, size.y) * 0.5));
 
-            if (true) {
-
-                clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
-                clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
-
-                //clip_min.y = 1.0 - clip_min.y;
-                //clip_max.y = 1.0 - clip_max.y;
-
-                screenspace_aabb = vec4(clip_min.xy, clip_max.xy);
-
-                // Calculate hi-Z buffer mip
-                vec2 size = (clip_max.xy - clip_min.xy) * float(max(push_constants.depth_pyramid_dimensions.x, push_constants.depth_pyramid_dimensions.y));
-                float mip = ceil(log2(max(size.x, size.y) / 2.0));
-        
-                // mip = clamp(mip, 0, 9.0);
-        
-                // Texel footprint for the lower (finer-grained) level
-                /*float level_lower = max(mip - 1, 0);
-                vec2 scale = exp2(-level_lower) * vec2(push_constants.depth_pyramid_dimensions);
-                vec2 a = floor(screenspace_aabb.xy * scale);
-                vec2 b = ceil(screenspace_aabb.zw * scale);
-                vec2 dims = b - a;
-        
-                // Use the lower level if we only touch <= 2 texels in both dimensions
-                if (dims.x <= 2 && dims.y <= 2) {
-                    mip = level_lower;
-                }*/
-
-                vec2 mip_image_size = textureSize(sampler2D(depth_pyramid, depth_pyramid_sampler), int(mip));
-                vec2 sample_coord = (screenspace_aabb.xy + screenspace_aabb.zw) * 0.5;
-                ivec2 sample_texel_coord = ivec2(sample_coord * mip_image_size);//ivec2(sample_coord * (mip_image_size - vec2(1.0)) + vec2(0.5));
-
-#if HYP_FEATURES_MINMAX_SAMPLER
-                max_depth = Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord, mip).r;
-#else
-                const vec4 depths = {
-                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_min.xy, mip).r,
-                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_max.x, clip_min.y), mip).r,
-                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, mip).r,
-                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), mip).r
-                };
-
-                // const vec4 depths = {
-                //     Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xy, mip).r,
-                //     Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.zy, mip).r,
-                //     Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xw, mip).r,
-                //     Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.zw, mip).r
-                // };
-
-                // const float depth_value = Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(0.0), 0.0).r;
-        
-                // //find the max depth
-                max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
-#endif
-
-                num_instances += int(clip_min.z <= max_depth);
-            }
-        // }
-
-        /*vec3 sphere_center  = object_instance.bounding_sphere.xyz;
-        float sphere_radius = object_instance.bounding_sphere.w;
-
-        sphere_center = (view * vec4(sphere_center, 1.0)).xyz;
-        sphere_center.y *= -1.0;
-
-        vec4 screenspace_aabb;
-        if (ProjectSphereToScreenSpaceAABB(
-            sphere_center,
-            sphere_radius,
-            scene.camera_near,
-            proj[0][0],
-            proj[1][1],
-            screenspace_aabb
-        )) {
-            float width  = (screenspace_aabb.z - screenspace_aabb.x) * float(push_constants.depth_pyramid_dimensions.x);
-            float height = (screenspace_aabb.w - screenspace_aabb.y) * float(push_constants.depth_pyramid_dimensions.y);
-
-            float level  = floor(log2(max(width, height)));
-
-            float depth = Texture2DLod(
-                depth_pyramid_sampler,
-                depth_pyramid,
-                vec2(screenspace_aabb.xy + screenspace_aabb.zw) * 0.5,
-                level
-            ).r;
+            vec2 sample_coord = (clip_min.xy + clip_max.xy) * 0.5;
 
             const vec4 depths = {
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xy, level).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.zy, level).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xw, level).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.zw, level).r
+                Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_min.xy, mip).r,
+                Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_max.x, clip_min.y), mip).r,
+                Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), mip).r,
+                Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, mip).r
             };
 
-            //find the max depth
-            const float max_depth = min(min(min(depths.x, depths.y), depths.z), depths.w);
-
-            float depth_sphere = scene.camera_near / (sphere_center.z - sphere_radius);
-
-            num_instances += int(depth_sphere <= max_depth);
-            // num_instances++;
-        } else {
-            num_instances++;
-        }*/
-
-        // convert worldspace aabb into screenspace aabb.
-
-        // get optimal mip level of depth pyramid
-
-        // compare depths from sampled depth pyramid.
-        // if 
-
+            // //find the max depth
+            float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
+            num_instances += int(clip_min.z <= max_depth);
+        }
     }
 
     indirect_draw_commands[draw_command_index].index_count    = object_instance.num_indices;
@@ -274,13 +148,4 @@ void main()
     indirect_draw_commands[draw_command_index].first_index    = 0;
     indirect_draw_commands[draw_command_index].vertex_offset  = 0;
     indirect_draw_commands[draw_command_index].first_instance = 0;
-
-    indirect_draw_commands[draw_command_index].entity_id      = object_instance.entity_id;
-    indirect_draw_commands[draw_command_index].max_depth      = max_depth;
-    indirect_draw_commands[draw_command_index].clip_min_z     = clip_min.z;
-    // indirect_draw_commands[draw_command_index].aabb_max = vec4(float(cull_bits), 0.0, 0.0, 1.0);//vec4(aabb.max, 1.0);
-    // indirect_draw_commands[draw_command_index].aabb_min = vec4(aabb.min, 1.0);//vec4(aabb.min, 1.0);
-    // indirect_draw_commands[draw_command_index].cull_bits = cull_bits;//vec4(aabb.min, 1.0);
-
-    indirect_draw_commands[draw_command_index].aabb_max = projected_corner;
 }

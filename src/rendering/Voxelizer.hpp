@@ -33,10 +33,10 @@ public:
     Voxelizer &operator=(const Voxelizer &other) = delete;
     ~Voxelizer();
 
-    Scene *GetScene() const { return m_scene.ptr; }
-    RendererInstance *GetGraphicsPipeline() const { return m_pipeline.ptr; }
+    Scene *GetScene() const                       { return m_scene.ptr; }
+    RendererInstance *GetRendererInstance() const { return m_renderer_instance.ptr; }
 
-    UInt32 NumFragments() const { return m_num_fragments; }
+    UInt32 NumFragments() const                   { return m_num_fragments; }
 
     void Init(Engine *engine);
     void Render(Engine *engine);
@@ -60,7 +60,7 @@ private:
     Ref<Framebuffer> m_framebuffer;
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
-    Ref<RendererInstance> m_pipeline;
+    Ref<RendererInstance> m_renderer_instance;
 
     std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 

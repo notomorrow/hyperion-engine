@@ -1,6 +1,17 @@
 #ifndef HYP_AABB_GLSL
 #define HYP_AABB_GLSL
 
+const vec3 aabb_corners[8] = {
+    vec3(0.0),
+    vec3(1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, 1.0),
+    vec3(1.0, 1.0, 0.0),
+    vec3(0.0, 1.0, 1.0),
+    vec3(1.0, 0.0, 1.0),
+    vec3(1.0)
+};
+
 struct AABB {
     vec3 min;
     vec3 max;
@@ -33,11 +44,30 @@ float AABBGetGreatestExtent(AABB aabb)
 // https://github.com/nvpro-samples/gl_occlusion_culling/blob/master/cull-common.h
 vec3 AABBGetCorner(AABB aabb, int index)
 {
-    int mask = 1 << index;
+    const vec3 extent = AABBGetExtent(aabb);
 
-    bvec3 use_max = bvec3((mask & 1) != 0, (mask & 2) != 0, (mask & 4) != 0);
+    return aabb.min + aabb_corners[index] * extent;
 
-    return mix(aabb.min, aabb.max, use_max);
+    /*const vec3 corners[8] = {
+        aabb.min,
+        aabb.min + vec3(extent.x, 0.f, 0.f),
+        aabb.min + vec3(0.f, extent.y, 0.f),
+        aabb.min + vec3(0.f, 0.f, extent.z),
+        aabb.min + vec3(extent.xy, 0.f),
+        aabb.min + vec3(0.f, extent.yz),
+        aabb.min + vec3(extent.x, 0.f, extent.z),
+        aabb.max
+    };
+
+    return corners[index];*/
+
+    /*uint mask = 1u << index;
+
+    return vec3(
+        mix(aabb.min.x, aabb.max.x, float((mask & 1u) != 0)),
+        mix(aabb.min.y, aabb.max.y, float((mask & 2u) != 0)),
+        mix(aabb.min.z, aabb.max.z, float((mask & 4u) != 0))
+    );*/
 }
 
 void AABBToSphere(AABB aabb, out vec3 center, out float radius)

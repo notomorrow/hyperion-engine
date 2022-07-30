@@ -3,6 +3,8 @@
 
 #include "Base.hpp"
 #include "DrawProxy.hpp"
+#include "Compute.hpp"
+#include "CullData.hpp"
 
 #include <core/lib/Queue.hpp>
 #include <core/lib/FixedArray.hpp>
@@ -34,9 +36,11 @@ class Engine;
 class Entity;
 
 class IndirectDrawState {
-    static constexpr SizeType initial_count = 1 << 8;
-
 public:
+    static constexpr UInt batch_size    = 256u;
+    static constexpr UInt initial_count = batch_size;
+
+
     IndirectDrawState();
     ~IndirectDrawState();
 
@@ -71,6 +75,37 @@ private:
     FixedArray<std::unique_ptr<StorageBuffer>, max_frames_in_flight>  m_instance_buffers;
     bool m_is_dirty = false;
 
+};
+
+struct alignas(16) IndirectParams {
+};
+
+class IndirectRenderer {
+public:
+    IndirectRenderer();
+    ~IndirectRenderer();
+
+    IndirectDrawState &GetDrawState()             { return m_indirect_draw_state; }
+    const IndirectDrawState &GetDrawState() const { return m_indirect_draw_state; }
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+
+    void ExecuteCullShaderInBatches(
+        Engine *engine,
+        Frame *frame,
+        const CullData &cull_data
+    );
+
+private:
+    void RebuildDescriptors(Engine *engine, Frame *frame);
+
+    IndirectDrawState                                                m_indirect_draw_state;
+    Ref<ComputePipeline>                                             m_object_visibility;
+    FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<UniformBuffer, max_frames_in_flight>                  m_indirect_params_buffers;
+    CullData                                                         m_cached_cull_data;
+    FixedArray<bool, max_frames_in_flight>                           m_cached_cull_data_updated;
 };
 
 } // namespace hyperion::v2

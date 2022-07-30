@@ -67,22 +67,22 @@ public:
     DynArray &operator=(const DynArray &other);
     DynArray &operator=(DynArray &&other) noexcept;
 
-    [[nodiscard]] SizeType Size() const                                       { return m_size - m_start_offset; }
+    [[nodiscard]] SizeType Size() const                             { return m_size - m_start_offset; }
 
-    [[nodiscard]] ValueType *Data()                                           { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }
-    [[nodiscard]] const ValueType *Data() const                               { return &reinterpret_cast<const T *>(m_buffer)[m_start_offset]; }
+    [[nodiscard]] ValueType *Data()                                 { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }
+    [[nodiscard]] const ValueType *Data() const                     { return &reinterpret_cast<const T *>(m_buffer)[m_start_offset]; }
 
-    [[nodiscard]] ValueType &Front()                                          { return m_buffer[m_start_offset].Get(); }
-    [[nodiscard]] const ValueType &Front() const                              { return m_buffer[m_start_offset].Get(); }
+    [[nodiscard]] ValueType &Front()                                { return m_buffer[m_start_offset].Get(); }
+    [[nodiscard]] const ValueType &Front() const                    { return m_buffer[m_start_offset].Get(); }
 
-    [[nodiscard]] ValueType &Back()                                           { return m_buffer[m_size - 1].Get(); }
-    [[nodiscard]] const ValueType &Back() const                               { return m_buffer[m_size - 1].Get(); }
+    [[nodiscard]] ValueType &Back()                                 { return m_buffer[m_size - 1].Get(); }
+    [[nodiscard]] const ValueType &Back() const                     { return m_buffer[m_size - 1].Get(); }
 
-    [[nodiscard]] bool Empty() const                                          { return Size() == 0; }
-    [[nodiscard]] bool Any() const                                            { return Size() != 0; }
+    [[nodiscard]] bool Empty() const                                { return Size() == 0; }
+    [[nodiscard]] bool Any() const                                  { return Size() != 0; }
 
-    ValueType &operator[](SizeType index)                                     { return m_buffer[m_start_offset + index].Get(); }
-    [[nodiscard]] const ValueType &operator[](SizeType index) const           { return m_buffer[m_start_offset + index].Get(); }
+    ValueType &operator[](SizeType index)                           { return m_buffer[m_start_offset + index].Get(); }
+    [[nodiscard]] const ValueType &operator[](SizeType index) const { return m_buffer[m_start_offset + index].Get(); }
 
     void Reserve(SizeType capacity);
     void Refit();
@@ -149,8 +149,9 @@ protected:
     // dynamic memory
     union {
         Storage   *m_buffer;
-        ValueType *m_buffer_values;
+        ValueType *m_values;
     };
+
     Storage  m_inline_buffer[inline_storage_size];
     bool     m_is_dynamic;
 
@@ -262,7 +263,7 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
         }
     } else {
         // capacity already fits, no need to reallocate memory.
-        for (SizeType i = m_start_offset, j = other.m_start_offset; j < other.m_size; i++, j++) {
+        for (SizeType i = m_start_offset, j = other.m_start_offset; j < other.m_size; ++i, ++j) {
             m_buffer[i].Get() = other.m_buffer[j].Get();
         }
 
@@ -629,9 +630,9 @@ void DynArray<T>::Shift(SizeType count)
 template <class T>
 auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
 {
-    if (iter == End()) {
-        return End();
-    }
+    //if (iter == End()) {
+    //    return End();
+    //}
 
     const Int64 dist = iter - Begin();
 

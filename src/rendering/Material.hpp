@@ -4,6 +4,8 @@
 #include "Texture.hpp"
 #include "Shader.hpp"
 
+#include <Types.hpp>
+
 #include <util/EnumOptions.hpp>
 #include <HashCode.hpp>
 
@@ -21,8 +23,8 @@ namespace hyperion::v2 {
 
 class Material : public EngineComponentBase<STUB_CLASS(Material)> {
 public:
-    static constexpr size_t max_parameters = 32;
-    static constexpr size_t max_textures = 32;
+    static constexpr UInt max_parameters = 32u;
+    static constexpr UInt max_textures   = 32u;
 
     enum TextureKey : uint64_t {
         MATERIAL_TEXTURE_NONE = 0,

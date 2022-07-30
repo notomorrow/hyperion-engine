@@ -12,7 +12,7 @@ namespace hyperion {
 template <class T>
 class AtomicVar {
     static_assert(
-        std::is_integral_v<T> || std::is_pointer_v<T> || std::is_pod_v<T>,
+        std::is_integral_v<T> || std::is_pointer_v<T> || std::is_standard_layout_v<T>,
         "T must be a type suitable for atomic intrinsics"
     );
 

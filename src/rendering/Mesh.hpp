@@ -65,11 +65,11 @@ public:
     Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();
 
-    inline VertexBuffer *GetVertexBuffer() const                   { return m_vbo.get(); }
-    inline IndexBuffer *GetIndexBuffer() const                     { return m_ibo.get(); }
-
-    inline const std::vector<Vertex> &GetVertices() const          { return m_vertices; }
-    inline const std::vector<Index> &GetIndices() const            { return m_indices; }
+    VertexBuffer *GetVertexBuffer() const                          { return m_vbo.get(); }
+    IndexBuffer *GetIndexBuffer() const                            { return m_ibo.get(); }
+                                                                   
+    const std::vector<Vertex> &GetVertices() const                 { return m_vertices; }
+    const std::vector<Index> &GetIndices() const                   { return m_indices; }
 
     SizeType NumIndices() const                                    { return m_indices_count; }
 
@@ -77,7 +77,7 @@ public:
     void SetVertexAttributes(const VertexAttributeSet &attributes) { m_vertex_attributes = attributes; }
 
     Flags GetFlags() const                                         { return m_flags; }
-    inline void SetFlags(Flags flags)                              { m_flags = flags; }
+    void SetFlags(Flags flags)                                     { m_flags = flags; }
 
     Topology GetTopology() const                                   { return m_topology; }
 
@@ -109,8 +109,8 @@ public:
 private:
     std::vector<float> BuildVertexBuffer();
 
-    std::unique_ptr<VertexBuffer>         m_vbo;
-    std::unique_ptr<IndexBuffer>          m_ibo;
+    std::unique_ptr<VertexBuffer> m_vbo;
+    std::unique_ptr<IndexBuffer>  m_ibo;
 
     size_t m_indices_count = 0;
 

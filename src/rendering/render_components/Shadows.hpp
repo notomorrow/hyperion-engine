@@ -69,7 +69,7 @@ public:
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
-    void CreatePipeline(Engine *engine);
+    void CreateRendererInstance(Engine *engine);
     void CreateDescriptors(Engine *engine);
     void Create(Engine *engine);
 

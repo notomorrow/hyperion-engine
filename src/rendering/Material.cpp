@@ -60,12 +60,12 @@ void Material::Init(Engine *engine)
 
             for (size_t i = 0; i < m_textures.Size(); i++) {
                 if (auto &texture = m_textures.ValueAt(i)) {
-                    engine->SafeReleaseRenderable(std::move(texture));
+                    engine->SafeReleaseRenderResource<Texture>(std::move(texture));
                 }
             }
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
-            // TODO: SafeReleaseRenderable for descriptor set
+            // TODO: SafeReleaseRenderResource for descriptor set
             EnqueueDescriptorSetDestroy();
 #endif
 
@@ -112,7 +112,7 @@ void Material::EnqueueDescriptorSetCreate()
             auto *sampler_descriptor = descriptor_set->AddDescriptor<SamplerDescriptor>(DescriptorKey::SAMPLER);
 
             sampler_descriptor->SetSubDescriptor({
-                .sampler = &engine->GetDummyData().GetSamplerLinear() // TODO: get proper sampler based on req's of image
+                .sampler = &engine->GetPlaceholderData().GetSamplerLinear() // TODO: get proper sampler based on req's of image
             });
             
             auto *image_descriptor = descriptor_set->AddDescriptor<ImageDescriptor>(DescriptorKey::TEXTURES);
@@ -126,7 +126,7 @@ void Material::EnqueueDescriptorSetCreate()
                 } else {
                     image_descriptor->SetSubDescriptor({
                         .element_index = texture_index,
-                        .image_view    = &engine->GetDummyData().GetImageView2D1x1R8()
+                        .image_view    = &engine->GetPlaceholderData().GetImageView2D1x1R8()
                     });
                 }
             }
@@ -166,7 +166,7 @@ void Material::EnqueueRenderUpdates()
 {
     AssertReady();
     
-    std::array<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids{};
+    FixedArray<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids{};
 
     const size_t num_bound_textures = max_textures_to_set;
     
@@ -176,7 +176,7 @@ void Material::EnqueueRenderUpdates()
         }
     }
 
-    GetEngine()->GetRenderScheduler().Enqueue([this, bound_texture_ids](...) {
+    GetEngine()->GetRenderScheduler().Enqueue([this, ids = std::move(bound_texture_ids)](...) mutable {
         MaterialShaderData shader_data {
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -188,8 +188,8 @@ void Material::EnqueueRenderUpdates()
         shader_data.texture_usage = 0;
 
         if (num_bound_textures != 0) {
-            for (size_t i = 0; i < bound_texture_ids.size(); i++) {
-                if (bound_texture_ids[i] != Texture::empty_id) {
+            for (SizeType i = 0; i < ids.Size(); i++) {
+                if (ids[i] != Texture::empty_id) {
 #if HYP_FEATURES_BINDLESS_TEXTURES
                     shader_data.texture_index[i] = bound_texture_ids[i].value - 1;
 #else
@@ -278,7 +278,7 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
     }
 
     if (m_textures[key] != nullptr) {
-        GetEngine()->SafeReleaseRenderable(std::move(m_textures[key]));
+        GetEngine()->SafeReleaseRenderResource<Texture>(std::move(m_textures[key]));
     }
 
     if (texture && IsReady()) {

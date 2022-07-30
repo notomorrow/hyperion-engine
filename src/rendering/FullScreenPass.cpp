@@ -107,12 +107,12 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
         nullptr
     );
 
-    m_attachments.push_back(std::make_unique<Attachment>(
+    m_attachments.PushBack(std::make_unique<Attachment>(
         std::move(framebuffer_image),
         renderer::RenderPassStage::SHADER
     ));
 
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
+    HYPERION_ASSERT_RESULT(m_attachments.Back()->AddAttachmentRef(
         engine->GetInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
@@ -142,7 +142,7 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
 
             AssertThrowMsg(framebuffer.GetAttachmentRefs().size() == 1, "> 1 attachments not supported currently for full screen passes");
 
-            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
+            for (const auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
                 m_sub_descriptor_index = descriptor->SetSubDescriptor({
                     .element_index = m_sub_descriptor_index,
                     .image_view    = attachment_ref->GetImageView(),
@@ -176,8 +176,8 @@ void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet
         pipeline->AddFramebuffer(framebuffer.IncRef());
     }
 
-    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
-    m_pipeline.Init();
+    m_renderer_instance = engine->AddRendererInstance(std::move(pipeline));
+    m_renderer_instance.Init();
 }
 
 void FullScreenPass::Destroy(Engine *engine)
@@ -188,8 +188,8 @@ void FullScreenPass::Destroy(Engine *engine)
                 m_framebuffers[i]->RemoveAttachmentRef(attachment.get());
             }
 
-            if (m_pipeline != nullptr) {
-                m_pipeline->RemoveFramebuffer(m_framebuffers[i]->GetId());
+            if (m_renderer_instance != nullptr) {
+                m_renderer_instance->RemoveFramebuffer(m_framebuffers[i]->GetId());
             }
         }
     }
@@ -202,7 +202,7 @@ void FullScreenPass::Destroy(Engine *engine)
 
     m_framebuffers = {};
     m_render_pass.Reset();
-    m_pipeline.Reset();
+    m_renderer_instance.Reset();
 
     engine->render_scheduler.Enqueue([this, engine](...) {
         auto result = renderer::Result::OK;
@@ -223,7 +223,7 @@ void FullScreenPass::Destroy(Engine *engine)
             HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
         }
 
-        m_attachments.clear();
+        m_attachments.Clear();
 
         return result;
     });
@@ -241,49 +241,49 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
 
     auto record_result = command_buffer->Record(
         engine->GetInstance()->GetDevice(),
-        m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
+        m_renderer_instance->GetPipeline()->GetConstructionInfo().render_pass,
         [this, engine, frame_index](CommandBuffer *cmd) {
-            m_pipeline->GetPipeline()->push_constants = m_push_constant_data;
-            m_pipeline->GetPipeline()->Bind(cmd);
+            m_renderer_instance->GetPipeline()->push_constants = m_push_constant_data;
+            m_renderer_instance->GetPipeline()->Bind(cmd);
 
             const auto scene_binding = engine->render_state.GetScene();
             const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
-                m_pipeline->GetPipeline(),
+                m_renderer_instance->GetPipeline(),
                 DescriptorSet::global_buffer_mapping[frame_index],
                 DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
             );
 
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
-                m_pipeline->GetPipeline(),
+                m_renderer_instance->GetPipeline(),
                 DescriptorSet::scene_buffer_mapping[frame_index],
                 DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
                 FixedArray {
-                    UInt32(sizeof(SceneShaderData) * scene_index),
-                    UInt32(sizeof(LightShaderData) * 0)
+                    static_cast<UInt32>(sizeof(SceneShaderData) * scene_index),
+                    static_cast<UInt32>(sizeof(LightShaderData) * 0)
                 }
             );
             
 #if HYP_FEATURES_BINDLESS_TEXTURES
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
-                m_pipeline->GetPipeline(),
+                m_renderer_instance->GetPipeline(),
                 DescriptorSet::bindless_textures_mapping[frame_index],
                 DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
             );
 #else
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
-                m_pipeline->GetPipeline(),
+                m_renderer_instance->GetPipeline(),
                 DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
             );
 #endif
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
-                m_pipeline->GetPipeline(),
+                m_renderer_instance->GetPipeline(),
                 DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
             );
 

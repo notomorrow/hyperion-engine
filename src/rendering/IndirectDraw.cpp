@@ -127,7 +127,7 @@ void IndirectDrawState::PushDrawable(EntityDrawProxy &&drawable)
     drawable.object_instance = ObjectInstance {
         .entity_id          = static_cast<UInt32>(drawable.entity_id.value),
         .draw_command_index = static_cast<UInt32>(m_drawables.Size()),
-        .batch_index        = static_cast<UInt32>(m_object_instances.Size() / 256u),
+        .batch_index        = static_cast<UInt32>(m_object_instances.Size() / batch_size),
         .num_indices        = static_cast<UInt32>(drawable.mesh->NumIndices()),
         .aabb_max           = drawable.bounding_box.max.ToVector4(),
         .aabb_min           = drawable.bounding_box.min.ToVector4()
@@ -243,6 +243,208 @@ void IndirectDrawState::UpdateBufferData(Engine *engine, Frame *frame, bool *out
     );
 
     m_is_dirty = false;
+}
+
+
+
+IndirectRenderer::IndirectRenderer()
+    : m_cached_cull_data_updated({ false })
+{
+}
+
+IndirectRenderer::~IndirectRenderer()
+{
+}
+
+void IndirectRenderer::Create(Engine *engine)
+{
+    HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
+
+    const IndirectParams initial_params{};
+
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        HYPERION_ASSERT_RESULT(m_indirect_params_buffers[frame_index].Create(
+            engine->GetDevice(),
+            sizeof(IndirectParams)
+        ));
+
+        m_indirect_params_buffers[frame_index].Copy(
+            engine->GetDevice(),
+            sizeof(IndirectParams),
+            &initial_params
+        );
+
+        m_descriptor_sets[frame_index] = std::make_unique<DescriptorSet>();
+
+        // global object data
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
+            ->SetSubDescriptor({
+                .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get(),
+                .range  = static_cast<UInt>(sizeof(ObjectShaderData))
+            });
+
+        // global scene data
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
+            ->SetSubDescriptor({
+                .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
+                .range  = static_cast<UInt>(sizeof(SceneShaderData))
+            });
+
+        // params buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::UniformBufferDescriptor>(2)
+            ->SetSubDescriptor({
+                .buffer = &m_indirect_params_buffers[frame_index]
+            });
+
+        // instances buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
+            ->SetSubDescriptor({
+                .buffer = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+            });
+
+        // indirect commands
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(4)
+            ->SetSubDescriptor({
+                .buffer = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+            });
+
+        // depth pyramid image (set to placeholder)
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(5)
+            ->SetSubDescriptor({
+                .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+            });
+
+        // sampler
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(6)
+            ->SetSubDescriptor({
+                .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
+            });
+
+        HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
+            engine->GetDevice(),
+            &engine->GetInstance()->GetDescriptorPool()
+        ));
+    }
+
+    // create compute pipeline for object visibility (for indirect render)
+    // TODO: cache pipelines: re-use this
+    m_object_visibility = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/cull/object_visibility.comp.spv")).Read()}}
+            }
+        )),
+        DynArray<const DescriptorSet *> { m_descriptor_sets[0].get() }
+    ));
+
+    m_object_visibility.Init();
+}
+
+void IndirectRenderer::Destroy(Engine *engine)
+{
+    for (auto &params_buffer : m_indirect_params_buffers) {
+        HYPERION_ASSERT_RESULT(params_buffer.Destroy(engine->GetDevice()));
+    }
+
+    for (auto &descriptor_set : m_descriptor_sets) {
+        HYPERION_ASSERT_RESULT(descriptor_set->Destroy(engine->GetDevice()));
+    }
+
+    m_object_visibility.Reset();
+
+    HYPERION_ASSERT_RESULT(m_indirect_draw_state.Destroy(engine));
+}
+
+void IndirectRenderer::ExecuteCullShaderInBatches(
+    Engine *engine,
+    Frame *frame,
+    const CullData &cull_data
+)
+{
+    auto *command_buffer     = frame->GetCommandBuffer();
+    const auto frame_index   = frame->GetFrameIndex();
+
+    const UInt num_drawables = static_cast<UInt>(m_indirect_draw_state.GetDrawables().Size());
+    const UInt num_batches   = (num_drawables / IndirectDrawState::batch_size) + 1;
+
+    if (num_drawables == 0) {
+        return;
+    }
+
+    bool was_buffer_resized = false;
+    m_indirect_draw_state.UpdateBufferData(engine, frame, &was_buffer_resized);
+
+    if (was_buffer_resized) {
+        RebuildDescriptors(engine, frame);
+    }
+
+    if (m_cached_cull_data != cull_data) {
+        m_cached_cull_data = cull_data;
+        m_cached_cull_data_updated = { true, true };
+    }
+
+    if (m_cached_cull_data_updated[frame_index]) {
+        m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
+            .element_index = 0,
+            .image_view    = m_cached_cull_data.depth_pyramid_image_views[frame_index]
+        });
+
+        m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
+
+        m_cached_cull_data_updated[frame_index] = false;
+    }
+
+    const auto scene_id    = engine->render_state.GetScene().id;
+    const UInt scene_index = scene_id ? scene_id.value - 1 : 0;
+
+    // bind our descriptor set to binding point 0
+    command_buffer->BindDescriptorSet(
+        engine->GetInstance()->GetDescriptorPool(),
+        m_object_visibility->GetPipeline(),
+        m_descriptor_sets[frame_index].get(),
+        static_cast<DescriptorSet::Index>(0),
+        FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
+    );
+
+    UInt count_remaining = num_drawables;
+
+    for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
+        const UInt num_drawables_in_batch = MathUtil::Min(count_remaining, IndirectDrawState::batch_size);
+
+        m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
+            .object_visibility_data = {
+                .batch_offset             = batch_index * IndirectDrawState::batch_size,
+                .num_drawables            = num_drawables_in_batch,
+                .scene_id                 = static_cast<UInt32>(scene_id.value),
+                .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
+            }
+        });
+
+        m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { 1, 1, 1 });
+
+        count_remaining -= num_drawables_in_batch;
+    }
+}
+
+void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
+{
+    const auto frame_index = frame->GetFrameIndex();
+
+    auto &descriptor_set = m_descriptor_sets[frame_index];
+
+    descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(3)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+    });
+
+    descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(4)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+    });
+
+    descriptor_set->ApplyUpdates(engine->GetDevice());
 }
 
 } // namespace hyperion::v2

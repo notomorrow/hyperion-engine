@@ -53,7 +53,7 @@ void ShadowPass::CreateRenderPass(Engine *engine)
 
     AttachmentRef *attachment_ref;
 
-    m_attachments.push_back(std::make_unique<Attachment>(
+    m_attachments.PushBack(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             m_dimensions,
             engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
@@ -62,7 +62,7 @@ void ShadowPass::CreateRenderPass(Engine *engine)
         RenderPassStage::SHADER
     ));
 
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
+    HYPERION_ASSERT_RESULT(m_attachments.Back()->AddAttachmentRef(
         engine->GetInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
@@ -111,9 +111,9 @@ void ShadowPass::CreateDescriptors(Engine *engine)
     }
 }
 
-void ShadowPass::CreatePipeline(Engine *engine)
+void ShadowPass::CreateRendererInstance(Engine *engine)
 {
-    auto pipeline = std::make_unique<RendererInstance>(
+    auto renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
@@ -122,12 +122,12 @@ void ShadowPass::CreatePipeline(Engine *engine)
         }
     );
 
-    pipeline->SetFaceCullMode(FaceCullMode::FRONT);
-    pipeline->AddFramebuffer(m_framebuffers[0].IncRef());
-    pipeline->AddFramebuffer(m_framebuffers[1].IncRef());
+    renderer_instance->SetFaceCullMode(FaceCullMode::FRONT);
+    renderer_instance->AddFramebuffer(m_framebuffers[0].IncRef());
+    renderer_instance->AddFramebuffer(m_framebuffers[1].IncRef());
     
-    m_pipeline = engine->AddRendererInstance(std::move(pipeline));
-    m_pipeline.Init();
+    m_renderer_instance = engine->AddRendererInstance(std::move(renderer_instance));
+    m_renderer_instance.Init();
 }
 
 void ShadowPass::Create(Engine *engine)
@@ -171,7 +171,7 @@ void ShadowPass::Create(Engine *engine)
         m_command_buffers[i] = std::move(command_buffer);
     }
 
-    CreatePipeline(engine);
+    CreateRendererInstance(engine);
     CreateDescriptors(engine);
 
     HYP_FLUSH_RENDER_QUEUE(engine); // force init stuff
@@ -192,7 +192,7 @@ void ShadowPass::Render(Engine *engine, Frame *frame)
     engine->render_state.BindScene(m_scene);
 
     m_framebuffers[frame->GetFrameIndex()]->BeginCapture(frame->GetCommandBuffer());
-    m_pipeline->Render(engine, frame);
+    m_renderer_instance->Render(engine, frame);
     m_framebuffers[frame->GetFrameIndex()]->EndCapture(frame->GetCommandBuffer());
 
     engine->render_state.UnbindScene();
@@ -262,9 +262,9 @@ void ShadowRenderer::InitGame(Engine *engine)
         }
 
         if (BucketRendersShadows(entity->GetBucket())
-            && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+            && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().vertex_attributes)) {
 
-            m_shadow_pass.GetGraphicsPipeline()->AddEntity(it.second.IncRef());
+            m_shadow_pass.GetRendererInstance()->AddEntity(it.second.IncRef());
         }
     }
 }
@@ -276,8 +276,8 @@ void ShadowRenderer::OnEntityAdded(Ref<Entity> &entity)
     AssertReady();
 
     if (BucketRendersShadows(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
-        m_shadow_pass.GetGraphicsPipeline()->AddEntity(entity.IncRef());
+        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetRendererInstance()->AddEntity(entity.IncRef());
     }
 }
 
@@ -287,7 +287,7 @@ void ShadowRenderer::OnEntityRemoved(Ref<Entity> &entity)
 
     AssertReady();
 
-    m_shadow_pass.GetGraphicsPipeline()->RemoveEntity(entity.IncRef());
+    m_shadow_pass.GetRendererInstance()->RemoveEntity(entity.IncRef());
 }
 
 void ShadowRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
@@ -295,15 +295,12 @@ void ShadowRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
-
-    const auto &renderable_attributes = entity->GetRenderableAttributes();
-
-    // TODO: better handling
+    
     if (BucketRendersShadows(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
-        m_shadow_pass.GetGraphicsPipeline()->AddEntity(entity.IncRef());
+        && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetRendererInstance()->AddEntity(entity.IncRef());
     } else {
-        m_shadow_pass.GetGraphicsPipeline()->RemoveEntity(entity.IncRef());
+        m_shadow_pass.GetRendererInstance()->RemoveEntity(entity.IncRef());
     }
 }
 
