@@ -137,7 +137,7 @@ void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
 
     UpdateMatrices();
 
-    // enqueue render update to update the drawable proxy object
+    // enqueue render update to update the draw_proxy proxy object
     EnqueueDrawProxyUpdate(engine, CameraDrawProxy {
         .view       = m_view_mat,
         .projection = m_proj_mat,

@@ -2,6 +2,7 @@
 #define HYPERION_V2_LIB_FLAT_MAP_H
 
 #include "FlatSet.hpp"
+#include "DynArray.hpp"
 #include "ContainerBase.hpp"
 
 #include <algorithm>
@@ -38,14 +39,14 @@ public:
     using Pair = KeyValuePair<Key, Value>;
 
 private:
-    std::vector<Pair> m_vector;
+    DynArray<Pair> m_vector;
 
 public:
     using KeyType       = Key;
     using ValueType     = Value;
 
-    using Iterator      = typename FlatSet<Pair>::Iterator;
-    using ConstIterator = typename FlatSet<Pair>::ConstIterator;
+    using Iterator      = typename decltype(m_vector)::Iterator;
+    using ConstIterator = typename decltype(m_vector)::ConstIterator;
     using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
 
     FlatMap();
@@ -88,17 +89,17 @@ public:
     bool Erase(Iterator it);
     bool Erase(const Key &key);
 
-    [[nodiscard]] size_t Size() const                   { return m_vector.size(); }
-    [[nodiscard]] Pair *Data()                          { return m_vector.data(); }
-    [[nodiscard]] Pair * const Data() const             { return m_vector.data(); }
-    [[nodiscard]] bool Empty() const                    { return m_vector.empty(); }
+    [[nodiscard]] size_t Size() const                   { return m_vector.Size(); }
+    [[nodiscard]] Pair *Data()                          { return m_vector.Data(); }
+    [[nodiscard]] Pair * const Data() const             { return m_vector.Data(); }
+    [[nodiscard]] bool Empty() const                    { return m_vector.Empty(); }
 
-    void Clear()                                        { m_vector.clear(); }
+    void Clear()                                        { m_vector.Clear(); }
     
-    [[nodiscard]] Pair &Front()                         { return m_vector.front(); }
-    [[nodiscard]] const Pair &Front() const             { return m_vector.front(); }
-    [[nodiscard]] Pair &Back()                          { return m_vector.back(); }
-    [[nodiscard]] const Pair &Back() const              { return m_vector.back(); }
+    [[nodiscard]] Pair &Front()                         { return m_vector.Front(); }
+    [[nodiscard]] const Pair &Front() const             { return m_vector.Front(); }
+    [[nodiscard]] Pair &Back()                          { return m_vector.Back(); }
+    [[nodiscard]] const Pair &Back() const              { return m_vector.Back(); }
 
     [[nodiscard]] FlatSet<Key> Keys() const;
     [[nodiscard]] FlatSet<Value> Values() const;
@@ -117,7 +118,10 @@ public:
         return Insert(key, Value{}).first->second;
     }
 
-    HYP_DEF_STL_ITERATOR(m_vector)
+    HYP_DEF_STL_BEGIN_END(
+        m_vector.Begin(),
+        m_vector.End()
+    )
 };
 
 template <class Key, class Value>
@@ -187,10 +191,10 @@ bool FlatMap<Key, Value>::Contains(const Key &key) const
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertResult
 {
-    const auto lower_bound = FlatMap<Key, Value>::Base::LowerBound(key);
+    const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, Pair { key, value });
+        auto it = m_vector.Insert(lower_bound, Pair { key, value });
 
         return {it, true};
     }
@@ -201,10 +205,10 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 {
-    const auto lower_bound = FlatMap<Key, Value>::Base::LowerBound(key);
+    const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, Pair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, Pair { key, std::forward<Value>(value) });
 
         return {it, true};
     }
@@ -215,10 +219,10 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(KeyValuePair<Key, Value> &&pair) -> InsertResult
 {
-    const auto lower_bound = FlatMap<Key, Value>::Base::LowerBound(pair.first);
+    const auto lower_bound = m_vector.LowerBound(pair.first);// FlatMap<Key, Value>::Base::LowerBound(pair.first);
 
     if (lower_bound == End() || !(lower_bound->first == pair.first)) {
-        auto it = m_vector.insert(lower_bound, std::move(pair));
+        auto it = m_vector.Insert(lower_bound, std::move(pair));
 
         return {it, true};
     }
@@ -229,10 +233,10 @@ auto FlatMap<Key, Value>::Insert(KeyValuePair<Key, Value> &&pair) -> InsertResul
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResult
 {
-    const auto lower_bound = FlatMap<Key, Value>::Base::LowerBound(key);
+    const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, Pair { key, value });
+        auto it = m_vector.Insert(lower_bound, Pair { key, value });
 
         return {it, true};
     }
@@ -245,10 +249,10 @@ auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 {
-    const auto lower_bound = FlatMap<Key, Value>::Base::LowerBound(key);
+    const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, Pair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, Pair { key, std::forward<Value>(value) });
 
         return {it, true};
     }
@@ -289,7 +293,7 @@ bool FlatMap<Key, Value>::Erase(Iterator it)
         return false;
     }
 
-    m_vector.erase(it);
+    m_vector.Erase(it);
 
     return true;
 }

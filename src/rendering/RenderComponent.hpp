@@ -25,17 +25,24 @@ class Frame;
 namespace hyperion::v2 {
 
 class Engine;
-class Environment;
+class RenderEnvironment;
 
 using renderer::Frame;
+
+enum RenderComponentName : UInt {
+    RENDER_COMPONENT_VCT,
+    RENDER_COMPONENT_SHADOWS,
+    RENDER_COMPONENT_CUBEMAP
+};
 
 class RenderComponentBase {
 public:
     using Index = UInt;
 
     /*! @param render_frame_slicing Number of frames to wait between render calls */
-    RenderComponentBase(UInt render_frame_slicing = 0)
-        : m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
+    RenderComponentBase(RenderComponentName name, UInt render_frame_slicing = 0)
+        : m_name(name),
+          m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
           m_render_frame_slicing_counter(MathUtil::MaxSafeValue<UInt>()),
           m_index(~0u),
           m_parent(nullptr)
@@ -46,8 +53,10 @@ public:
     RenderComponentBase &operator=(const RenderComponentBase &other) = delete;
     virtual ~RenderComponentBase() = default;
 
-    Environment *GetParent() const              { return m_parent; }
-    void SetParent(Environment *parent)         { m_parent = parent; }
+    RenderComponentName GetName() const         { return m_name; }
+
+    RenderEnvironment *GetParent() const        { return m_parent; }
+    void SetParent(RenderEnvironment *parent)   { m_parent = parent; }
 
     bool IsValidComponent() const               { return m_index != ~0u; }
 
@@ -69,17 +78,19 @@ public:
     virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) = 0;
 
 protected:
-    const UInt   m_render_frame_slicing; // amount of frames to wait between render calls
-    UInt         m_render_frame_slicing_counter; // amount of frames to wait between render calls
-    Index        m_index;
-    Environment *m_parent;
+    RenderComponentName m_name;
+    const UInt          m_render_frame_slicing; // amount of frames to wait between render calls
+    UInt                m_render_frame_slicing_counter; // amount of frames to wait between render calls
+    Index               m_index;
+    RenderEnvironment  *m_parent;
 };
 
 template <class Derived>
 class RenderComponent : public RenderComponentBase {
 public:
+    /* Derived class must have static component_name member of type RenderComponentName, to forward to RenderComponentBase. */
     RenderComponent(UInt render_frame_slicing = 0)
-        : RenderComponentBase(render_frame_slicing),
+        : RenderComponentBase(Derived::component_name, render_frame_slicing),
           m_component_is_render_init(false),
           m_component_is_game_init(false)
     {

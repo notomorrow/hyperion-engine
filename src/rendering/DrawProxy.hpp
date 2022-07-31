@@ -46,17 +46,17 @@ struct alignas(16) ObjectInstance {
 };
 
 template <class T>
-struct Drawable {};
+struct DrawProxy {};
 
 template <>
-struct Drawable<STUB_CLASS(Entity)> {
+struct DrawProxy<STUB_CLASS(Entity)> {
     // rendering objects (sent from game thread to
     // rendering thread when updates are enqueued)
     // engine will hold onto RenderResources like Mesh and Material
     // for at least {max_frames_in_flight} frames, so we will have
-    // rendered the Drawable before the ptr is invalidated.
-    Mesh           *mesh     = nullptr;
-    Material       *material = nullptr;
+    // rendered the DrawProxy before the ptr is invalidated.
+    Mesh          *mesh     = nullptr;
+    Material      *material = nullptr;
 
     IDBase         entity_id,
                    scene_id,
@@ -70,10 +70,10 @@ struct Drawable<STUB_CLASS(Entity)> {
     ObjectInstance object_instance;
 };
 
-using EntityDrawProxy = Drawable<STUB_CLASS(Entity)>;
+using EntityDrawProxy = DrawProxy<STUB_CLASS(Entity)>;
 
 template <>
-struct Drawable<STUB_CLASS(Camera)> {
+struct DrawProxy<STUB_CLASS(Camera)> {
     Matrix4  view;
     Matrix4  projection;
     Vector3  position;
@@ -84,58 +84,58 @@ struct Drawable<STUB_CLASS(Camera)> {
     Float    fov;
 };
 
-using CameraDrawProxy = Drawable<STUB_CLASS(Camera)>;
+using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
 
 template <class T>
 class HasDrawProxy {
 public:
     HasDrawProxy()
-        : m_drawable{}
+        : m_draw_proxy{}
     {
     }
 
-    HasDrawProxy(const Drawable<T> &drawable)
-        : m_drawable(drawable)
+    HasDrawProxy(const DrawProxy<T> &draw_proxy)
+        : m_draw_proxy(draw_proxy)
     {
     }
 
-    HasDrawProxy(Drawable<T> &&drawable)
-        : m_drawable(std::move(drawable))
+    HasDrawProxy(DrawProxy<T> &&draw_proxy)
+        : m_draw_proxy(std::move(draw_proxy))
     {
     }
 
     template <class ...Args>
     HasDrawProxy(Args &&... args)
-        : m_drawable(std::forward<Args>(args)...)
+        : m_draw_proxy(std::forward<Args>(args)...)
     {
     }
 
     HasDrawProxy(const HasDrawProxy &other)
-        : m_drawable(other.m_drawable)
+        : m_draw_proxy(other.m_draw_proxy)
     {
     }
 
     HasDrawProxy &operator=(const HasDrawProxy &other)
     {
-        m_drawable = other.m_drawable;
+        m_draw_proxy = other.m_draw_proxy;
         return *this;
     }
 
     HasDrawProxy(HasDrawProxy &&other) noexcept
-        : m_drawable(std::move(other.m_drawable))
+        : m_draw_proxy(std::move(other.m_draw_proxy))
     {
     }
 
     HasDrawProxy &operator=(HasDrawProxy &&other) noexcept
     {
-        m_drawable = std::move(other.m_drawable);
+        m_draw_proxy = std::move(other.m_draw_proxy);
         return *this;
     }
 
     ~HasDrawProxy() = default;
 
     /*! \brief Get the DrawProxy for this object. Only call from render thread. */
-    const Drawable<T> &GetDrawProxy() const { return m_drawable; }
+    const DrawProxy<T> &GetDrawProxy() const { return m_draw_proxy; }
 
 protected:
     /*! Enqueue an update /for/ the render thread to update the draw proxy.
@@ -143,11 +143,11 @@ protected:
         so use this.
     */
     template <class EngineImpl>
-    void EnqueueDrawProxyUpdate(EngineImpl *engine, Drawable<T> &&drawable)
+    void EnqueueDrawProxyUpdate(EngineImpl *engine, DrawProxy<T> &&draw_proxy)
     {
-        engine->render_scheduler.Enqueue([this, _drawable = std::move(drawable)](...) mutable {
-            // just update drawable object on render thread
-            HasDrawProxy::m_drawable = _drawable;
+        engine->render_scheduler.Enqueue([this, _drawable = std::move(draw_proxy)](...) mutable {
+            // just update draw_proxy object on render thread
+            HasDrawProxy::m_draw_proxy = _drawable;
 
             HYPERION_RETURN_OK;
         });
@@ -156,7 +156,7 @@ protected:
     // Only touch from render thread.
     // Update this when updates are enqueued, so just update
     // the shader data state to dirty to refresh this.
-    Drawable<T> m_drawable;
+    DrawProxy<T> m_draw_proxy;
 };
 
 } // namespace hyperion::v2

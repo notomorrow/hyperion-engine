@@ -38,6 +38,8 @@ static_assert(MathUtil::IsPowerOfTwo(sizeof(VoxelUniforms)));
 
 class VoxelConeTracing : public EngineComponentBase<STUB_CLASS(VoxelConeTracing)>, public RenderComponent<VoxelConeTracing> {
 public:
+    static constexpr RenderComponentName component_name = RENDER_COMPONENT_VCT;
+
     static const Extent3D voxel_map_size;
 
     struct Params {

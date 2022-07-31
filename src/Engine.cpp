@@ -5,7 +5,8 @@
 
 #include <rendering/PostFX.hpp>
 #include <rendering/Compute.hpp>
-#include <rendering/Environment.hpp>
+#include <rendering/RenderEnvironment.hpp>
+#include <rendering/vct/VoxelConeTracing.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
 
@@ -428,13 +429,35 @@ void Engine::Initialize()
         auto *shadow_map_descriptor = descriptor_set
             ->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
         
-        for (UInt i = 0; i < Environment::max_shadow_maps; i++) {
+        for (UInt i = 0; i < RenderEnvironment::max_shadow_maps; i++) {
             shadow_map_descriptor->SetSubDescriptor({
                 .element_index = i,
                 .image_view    = &GetPlaceholderData().GetImageView2D1x1R8(),
                 .sampler       = &GetPlaceholderData().GetSamplerNearest()
             });
         }
+    }
+
+    // add VCT descriptor placeholders
+    auto *vct_descriptor_set = GetInstance()->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
+
+    vct_descriptor_set
+        ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
+        ->SetSubDescriptor({ .element_index = 0u, .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8Storage() });
+
+    vct_descriptor_set
+        ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
+        ->SetSubDescriptor({ .element_index = 0u, .buffer = GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(GetDevice(), sizeof(VoxelUniforms))});
+    
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto *descriptor_set_globals = GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+        descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view    = &GetPlaceholderData().GetImageView3D1x1x1R8Storage(),
+                .sampler       = &GetPlaceholderData().GetSamplerLinear()
+            });
     }
 
     /* for textures */

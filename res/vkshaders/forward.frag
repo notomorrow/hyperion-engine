@@ -116,6 +116,105 @@ void main()
         gbuffer_albedo.rgb = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], v_position.xyz, R, 7.0).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
     }*/
 
+    AABB aabb;
+    aabb.min = object.world_aabb_min.xyz;
+    aabb.max = object.world_aabb_max.xyz;
+
+
+    vec4 screenspace_aabb = vec4(-99.0);
+    vec4 clip_pos = vec4(0.0);
+    vec4 projected_corner = vec4(0.0);
+    vec3 clip_min = vec3(1, 1, 1);
+    vec3 clip_max = vec3(-1, -1, 0);
+    float mip = 0.0;
+
+
+    uint cull_bits = 999;
+
+    // get view/proj matrices from scene.
+    mat4 view = scene.view;
+    mat4 proj = scene.projection;
+
+    projected_corner = proj * view * vec4(AABBGetCorner(aabb, 0), 1.0);
+
+    clip_pos = projected_corner;
+    clip_pos.z = min(1.0, max(clip_pos.z, 0.0));
+    clip_pos.xyz /= clip_pos.w;
+    clip_pos.xy = clamp(clip_pos.xy, vec2(-1.0), vec2(1.0));
+
+    clip_min = clip_pos.xyz;
+    clip_max = clip_min;
+
+    // transform worldspace aabb to screenspace
+    for (int i = 1; i < 8; i++) {
+        projected_corner = proj * view * vec4(AABBGetCorner(aabb, i), 1.0);
+
+        clip_pos = projected_corner;
+        clip_pos.z = min(1.0, max(clip_pos.z, 0.0));
+        clip_pos.xyz /= clip_pos.w;
+        clip_pos.xy = clamp(clip_pos.xy, vec2(-1.0), vec2(1.0));
+
+        clip_min = min(clip_pos.xyz, clip_min);
+        clip_max = max(clip_pos.xyz, clip_max);
+    }
+
+    //clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
+    //clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
+
+
+    vec2 viewport = vec2(textureSize(depth_pyramid_result, 0));
+    vec2 scr_pos_min = (clip_min.xy * .5f + .5f) * viewport;
+    vec2 scr_pos_max = (clip_max.xy * .5f + .5f) * viewport;
+    vec2 scr_rect = (clip_max.xy - clip_min.xy) * .5f * viewport;
+    float scr_size = max(scr_rect.x, scr_rect.y);
+    int mip_level = int(ceil(log2(scr_size)));
+    uvec2 dim = (uvec2(scr_pos_max) >> mip_level) - (uvec2(scr_pos_min) >> mip_level);
+    int use_lower = int(step(dim.x, 2.f) * step(dim.y, 2.f));
+    mip_level = use_lower * max(0, mip_level - 1) + (1 - use_lower) * mip_level;
+
+    vec2 uv_scale = vec2(uvec2(textureSize(depth_pyramid_result, 0)) >> mip_level) / textureSize(depth_pyramid_result, 0) / vec2(1024 >> mip_level);
+    vec2 uv_min = scr_pos_min * uv_scale;
+    vec2 uv_max = scr_pos_max * uv_scale;
+
+    // Calculate hi-Z buffer mip
+    // vec2 size = (clip_max.xy - clip_min.xy) * textureSize(depth_pyramid_result, 0);
+    // mip = ceil(log2(max(size.x, size.y)));
+    
+    
+    mip = float(mip_level);
+
+    /*vec4 fragment_position = scene.projection * scene.view * vec4(v_position.xyz, 1.0);
+    fragment_position.xy = fragment_position.xy * vec2(0.5) + vec2(0.5);
+
+    if (clip_min.z <= fragment_position.z)
+    {
+        discard;
+    }*/
+
+    const vec4 depths = {
+        Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, uv_min.xy, mip).r,
+        Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, vec2(uv_min.x, uv_max.y), mip).r,
+        Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, vec2(uv_max.x, uv_min.y), mip).r,
+        Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, uv_max.xy, mip).r
+    };
+
+    
+    // const vec4 depths = {
+    //     Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, clip_min.xy * 0.5 + 0.5, mip).r,
+    //     Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, vec2(clip_max.x, clip_min.y) * 0.5 + 0.5, mip).r,
+    //     Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, clip_max.xy * 0.5 + 0.5, mip).r,
+    //     Texture2DLod(gbuffer_depth_sampler, depth_pyramid_result, vec2(clip_min.x, clip_max.y) * 0.5 + 0.5, mip).r
+    // };
+
+    float max_depth = max(0, max(max(max(depths.x, depths.y), depths.z), depths.w));
+    //screenspace_aabb = vec4(clip_min.xy, clip_max.xy);
+    bool is_visible = clip_min.z <= max_depth;
+    //gbuffer_albedo = vec4(max_depth-clip_min.z, 0, float(!is_visible), 0);//vec4(clip_max.xy - clip_min.xy, 0, 0);
+    // gbuffer_albedo = ReconstructPositionFromDepth(inverse(proj * view), clip_min.xy, depths[0]);
+    // gbuffer_albedo.a = 0.0;
+    // gbuffer_albedo = vec4(uv_min, 0, 0);
+    
+
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);
     gbuffer_material   = vec4(roughness, metalness, 0.0, ao);

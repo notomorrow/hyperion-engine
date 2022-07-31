@@ -1,6 +1,6 @@
 #include "Shadows.hpp"
 #include <Engine.hpp>
-#include <rendering/Environment.hpp>
+#include <rendering/RenderEnvironment.hpp>
 
 #include <camera/OrthoCamera.hpp>
 

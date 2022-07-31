@@ -450,6 +450,7 @@ struct alignas(4) ShaderVec2 {
 
     ShaderVec2() = default;
     ShaderVec2(const ShaderVec2 &other) = default;
+    ShaderVec2(T x, T y) : x(x), y(y) {}
     ShaderVec2(const Vector2 &vec)
         : x(vec.x),
           y(vec.y)
@@ -473,6 +474,7 @@ struct alignas(4) ShaderVec3 {
 
     ShaderVec3() = default;
     ShaderVec3(const ShaderVec3 &other) = default;
+    ShaderVec3(T x, T y, T z) : x(x), y(y), z(z) {}
     ShaderVec3(const Vector3 &vec)
         : x(vec.x),
           y(vec.y),
@@ -498,6 +500,7 @@ struct alignas(4) ShaderVec4 {
 
     ShaderVec4() = default;
     ShaderVec4(const ShaderVec4 &other) = default;
+    ShaderVec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     ShaderVec4(const Vector4 &vec)
         : x(vec.x),
           y(vec.y),

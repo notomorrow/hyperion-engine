@@ -59,7 +59,7 @@ void Entity::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    m_drawable.entity_id = m_id;
+    m_draw_proxy.entity_id = m_id;
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](...) {
         auto *engine = GetEngine();
@@ -148,7 +148,7 @@ void Entity::EnqueueRenderUpdates()
         ? m_scene->GetId()
         : Scene::empty_id;
 
-    const EntityDrawProxy drawable {
+    const EntityDrawProxy draw_proxy {
         .mesh         = m_mesh.ptr,
         .material     = m_material.ptr,
         .entity_id    = m_id,
@@ -159,9 +159,9 @@ void Entity::EnqueueRenderUpdates()
         .bounding_box = m_world_aabb
     };
 
-    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, drawable](...) {
-        // update m_drawable on render thread.
-        m_drawable = drawable;
+    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, draw_proxy](...) {
+        // update m_draw_proxy on render thread.
+        m_draw_proxy = draw_proxy;
 
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
@@ -173,11 +173,11 @@ void Entity::EnqueueRenderUpdates()
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
                 .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
 
-                .entity_id      = drawable.entity_id.value,
-                .scene_id       = drawable.scene_id.value,
-                .mesh_id        = drawable.mesh_id.value,
-                .material_id    = drawable.material_id.value,
-                .skeleton_id    = drawable.skeleton_id.value
+                .entity_id      = draw_proxy.entity_id.value,
+                .scene_id       = draw_proxy.scene_id.value,
+                .mesh_id        = draw_proxy.mesh_id.value,
+                .material_id    = draw_proxy.material_id.value,
+                .skeleton_id    = draw_proxy.skeleton_id.value
             }
         );
 

@@ -1,23 +1,25 @@
-#include "Environment.hpp"
+#include "RenderEnvironment.hpp"
 #include <Engine.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 
 namespace hyperion::v2 {
 
-Environment::Environment(Scene *scene)
+RenderEnvironment::RenderEnvironment(Scene *scene)
     : EngineComponentBase(),
       m_scene(scene),
-      m_global_timer(0.0f)
+      m_global_timer(0.0f),
+      m_current_enabled_render_components_mask(0),
+      m_next_enabled_render_components_mask(0)
 {
 }
 
-Environment::~Environment()
+RenderEnvironment::~RenderEnvironment()
 {
     Teardown();
 }
 
-void Environment::Init(Engine *engine)
+void RenderEnvironment::Init(Engine *engine)
 {
     if (IsInitCalled()) {
         return;
@@ -28,8 +30,10 @@ void Environment::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ENVIRONMENTS, [this](...) {
         auto *engine = GetEngine();
 
+        const auto update_marker_value = m_update_marker.load();
+
         { // lights
-            if (m_has_light_updates.load()) {
+            if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
                 std::lock_guard guard(m_light_update_mutex);
 
                 while (m_lights_pending_addition.Any()) {
@@ -56,7 +60,7 @@ void Environment::Init(Engine *engine)
                     m_lights_pending_removal.Pop();
                 }
 
-                m_has_light_updates.store(false);
+                m_update_marker &= ~RENDER_ENVIRONMENT_UPDATES_LIGHTS;
             }
 
             for (auto &it: m_lights) {
@@ -75,24 +79,26 @@ void Environment::Init(Engine *engine)
 
             m_lights.Clear();
 
-            if (m_has_light_updates.load()) {
+            const auto update_marker_value = m_update_marker.load();
+
+            if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
                 std::lock_guard guard(m_light_update_mutex);
 
                 m_lights_pending_addition.Clear();
                 m_lights_pending_removal.Clear();
-
-                m_has_light_updates.store(false);
             }
 
             m_render_components.Clear();
 
-            if (m_has_render_component_updates.load()) {
+            if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
                 std::lock_guard guard(m_render_component_mutex);
 
                 m_render_components_pending_addition.Clear();
                 m_render_components_pending_removal.Clear();
+            }
 
-                m_has_render_component_updates.store(false);
+            if (update_marker_value) {
+                m_update_marker.store(RENDER_ENVIRONMENT_UPDATES_NONE);
             }
 
             HYP_FLUSH_RENDER_QUEUE(engine);
@@ -102,7 +108,7 @@ void Environment::Init(Engine *engine)
     }));
 }
 
-void Environment::AddLight(Ref<Light> &&light)
+void RenderEnvironment::AddLight(Ref<Light> &&light)
 {
     if (light != nullptr && IsReady()) {
         light.Init();
@@ -111,20 +117,20 @@ void Environment::AddLight(Ref<Light> &&light)
     std::lock_guard guard(m_light_update_mutex);
 
     m_lights_pending_addition.Push(std::move(light));
-
-    m_has_light_updates.store(true);
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_LIGHTS;
 }
 
-void Environment::RemoveLight(Ref<Light> &&light)
+void RenderEnvironment::RemoveLight(Ref<Light> &&light)
 {
     std::lock_guard guard(m_light_update_mutex);
 
     m_lights_pending_removal.Push(std::move(light));
-
-    m_has_light_updates.store(true);
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_LIGHTS;
 }
 
-void Environment::Update(Engine *engine, GameCounter::TickUnit delta)
+void RenderEnvironment::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -143,41 +149,45 @@ void Environment::Update(Engine *engine, GameCounter::TickUnit delta)
     }
 }
 
-void Environment::OnEntityAdded(Ref<Entity> &entity)
+void RenderEnvironment::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
     m_entities_pending_addition.Push(entity.IncRef());
-
-    m_has_render_component_updates.store(true);
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }
 
-void Environment::OnEntityRemoved(Ref<Entity> &entity)
+void RenderEnvironment::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
     m_entities_pending_removal.Push(entity.IncRef());
-
-    m_has_render_component_updates.store(true);
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }
 
 // only called when meaningful attributes have changed
-void Environment::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
+void RenderEnvironment::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
     m_entity_renderable_attribute_updates.Push(entity.IncRef());
-
-    m_has_render_component_updates.store(true);
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }
 
-void Environment::RenderComponents(Engine *engine, Frame *frame)
+void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 
-    if (m_has_light_updates.load()) {
+    m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;
+
+    const auto update_marker_value = m_update_marker.load();
+
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
         std::lock_guard guard(m_light_update_mutex);
 
         while (m_lights_pending_addition.Any()) {
@@ -208,36 +218,9 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
 
             m_lights_pending_removal.Pop();
         }
-
-        m_has_light_updates.store(false);
     }
 
-    if (m_has_render_component_updates.load()) {
-        AtomicLocker locker(m_updating_render_components);
-
-        std::lock_guard guard(m_render_component_mutex);
-
-        for (auto &it : m_render_components_pending_addition) {
-            AssertThrow(it.second != nullptr);
-
-            it.second->SetComponentIndex(0); // just using zero for now, when multiple of same components are supported, we will extend this
-            it.second->ComponentInit(engine);
-
-            m_render_components.Set(it.first, std::move(it.second));
-        }
-
-        m_render_components_pending_addition.Clear();
-
-        for (auto &it : m_render_components_pending_removal) {
-            m_render_components.Remove(it);
-        }
-
-        m_render_components_pending_removal.Clear();
-
-        m_has_render_component_updates.store(false);
-    }
-
-    if (m_has_entity_updates) {
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
         // perform updates to all RenderComponents in the render thread
         std::lock_guard guard(m_entity_update_mutex);
 
@@ -264,12 +247,42 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
 
             m_entities_pending_removal.Pop();
         }
-
-        m_has_entity_updates = false;
     }
 
     for (const auto &component : m_render_components) {
+        m_next_enabled_render_components_mask |= 1u << static_cast<UInt32>(component.second->GetName());
         component.second->ComponentRender(engine, frame);
+    }
+
+    // add RenderComponents deferred so that the render scheduler can complete
+    // initialization tasks before we call ComponentRender() on the newly added RenderComponents
+
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
+        AtomicLocker locker(m_updating_render_components);
+
+        std::lock_guard guard(m_render_component_mutex);
+
+        for (auto &it : m_render_components_pending_addition) {
+            AssertThrow(it.second != nullptr);
+
+            it.second->SetComponentIndex(0); // just using zero for now, when multiple of same components are supported, we will extend this
+            it.second->ComponentInit(engine);
+
+            m_render_components.Set(it.first, std::move(it.second));
+        }
+
+        m_render_components_pending_addition.Clear();
+
+        for (const auto &it : m_render_components_pending_removal) {
+            m_next_enabled_render_components_mask &= ~(1u << static_cast<UInt32>(it.second));
+            m_render_components.Remove(it.first);
+        }
+
+        m_render_components_pending_removal.Clear();
+    }
+
+    if (update_marker_value != RENDER_ENVIRONMENT_UPDATES_NONE) {
+        m_update_marker.store(RENDER_ENVIRONMENT_UPDATES_NONE);
     }
 }
 

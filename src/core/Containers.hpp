@@ -2,6 +2,15 @@
 #define HYPERION_V2_CORE_CONTAINERS_H
 
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/TypeMap.hpp>
+#include <core/lib/StaticMap.hpp>
+#include <core/lib/FlatSet.hpp>
+#include <core/lib/DynArray.hpp>
+#include <core/lib/FixedArray.hpp>
+#include <core/lib/HeapArray.hpp>
+#include <core/lib/FixedString.hpp>
+#include <core/lib/String.hpp>
+#include <core/lib/Queue.hpp>
 #include <math/MathUtil.hpp>
 #include <Types.hpp>
 

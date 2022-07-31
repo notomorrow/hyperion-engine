@@ -88,6 +88,8 @@ private:
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)>, public RenderComponent<ShadowRenderer> {
 public:
+    static constexpr RenderComponentName component_name = RENDER_COMPONENT_SHADOWS;
+
     ShadowRenderer(Ref<Light> &&light);
     ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance);
     ShadowRenderer(const ShadowRenderer &other) = delete;

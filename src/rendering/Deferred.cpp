@@ -347,9 +347,6 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         m_indirect_pass.m_push_constant_data.deferred_data = {
             .flags = (DeferredRenderer::ssr_enabled && m_ssr.IsRendered())
                 ? DEFERRED_FLAGS_SSR_ENABLED
-                : 0,
-            .depth_pyramid_num_mips = m_dpr.IsRendered()
-                ? static_cast<UInt32>(m_dpr.GetMips()[frame_index].Size())
                 : 0
         };
 

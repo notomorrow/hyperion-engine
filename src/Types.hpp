@@ -29,6 +29,7 @@ using Float64  = double;
 static_assert(sizeof(Float64) == 8, "Expected double to be 64-bit!");
 
 using Float    = Float32;
+using Double   = Float64;
 
 using SizeType = decltype(sizeof(void *));
 
