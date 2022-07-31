@@ -118,23 +118,23 @@ static bool ResizeBuffer(
     return false;
 }
 
-void IndirectDrawState::PushDrawable(EntityDrawProxy &&drawable)
+void IndirectDrawState::PushDrawable(EntityDrawProxy &&draw_proxy)
 {
-    if (drawable.mesh == nullptr) {
+    if (draw_proxy.mesh == nullptr) {
         return;
     }
 
-    drawable.object_instance = ObjectInstance {
-        .entity_id          = static_cast<UInt32>(drawable.entity_id.value),
-        .draw_command_index = static_cast<UInt32>(m_drawables.Size()),
+    draw_proxy.object_instance = ObjectInstance {
+        .entity_id          = static_cast<UInt32>(draw_proxy.entity_id.value),
+        .draw_command_index = static_cast<UInt32>(m_draw_proxys.Size()),
         .batch_index        = static_cast<UInt32>(m_object_instances.Size() / batch_size),
-        .num_indices        = static_cast<UInt32>(drawable.mesh->NumIndices()),
-        .aabb_max           = drawable.bounding_box.max.ToVector4(),
-        .aabb_min           = drawable.bounding_box.min.ToVector4()
+        .num_indices        = static_cast<UInt32>(draw_proxy.mesh->NumIndices()),
+        .aabb_max           = draw_proxy.bounding_box.max.ToVector4(),
+        .aabb_min           = draw_proxy.bounding_box.min.ToVector4()
     };
 
-    m_object_instances.PushBack(std::move(drawable.object_instance));
-    m_drawables.PushBack(std::move(drawable));
+    m_object_instances.PushBack(std::move(draw_proxy.object_instance));
+    m_draw_proxys.PushBack(std::move(draw_proxy));
 
     m_is_dirty = true;
 }
@@ -151,7 +151,7 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
         engine,
         frame,
         m_indirect_buffers,
-        m_drawables.Size() * sizeof(IndirectDrawCommand)
+        m_draw_proxys.Size() * sizeof(IndirectDrawCommand)
     );
 
     if (!was_created_or_resized) {
@@ -197,7 +197,7 @@ bool IndirectDrawState::ResizeInstancesBuffer(Engine *engine, Frame *frame)
         engine,
         frame,
         m_instance_buffers,
-        m_drawables.Size() * sizeof(ObjectInstance)
+        m_draw_proxys.Size() * sizeof(ObjectInstance)
     );
 }
 
@@ -217,7 +217,7 @@ void IndirectDrawState::ResetDrawables()
 {
     // assume render thread
 
-    m_drawables.Clear();
+    m_draw_proxys.Clear();
     m_object_instances.Clear();
 }
 
@@ -364,10 +364,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     auto *command_buffer     = frame->GetCommandBuffer();
     const auto frame_index   = frame->GetFrameIndex();
 
-    const UInt num_drawables = static_cast<UInt>(m_indirect_draw_state.GetDrawables().Size());
-    const UInt num_batches   = (num_drawables / IndirectDrawState::batch_size) + 1;
+    const UInt num_draw_proxys = static_cast<UInt>(m_indirect_draw_state.GetDrawables().Size());
+    const UInt num_batches   = (num_draw_proxys / IndirectDrawState::batch_size) + 1;
 
-    if (num_drawables == 0) {
+    if (num_draw_proxys == 0) {
         return;
     }
 
@@ -406,15 +406,15 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
     );
 
-    UInt count_remaining = num_drawables;
+    UInt count_remaining = num_draw_proxys;
 
     for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
-        const UInt num_drawables_in_batch = MathUtil::Min(count_remaining, IndirectDrawState::batch_size);
+        const UInt num_draw_proxys_in_batch = MathUtil::Min(count_remaining, IndirectDrawState::batch_size);
 
         m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
             .object_visibility_data = {
                 .batch_offset             = batch_index * IndirectDrawState::batch_size,
-                .num_drawables            = num_drawables_in_batch,
+                .num_draw_proxys            = num_draw_proxys_in_batch,
                 .scene_id                 = static_cast<UInt32>(scene_id.value),
                 .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
             }
@@ -422,7 +422,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
         m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { 1, 1, 1 });
 
-        count_remaining -= num_drawables_in_batch;
+        count_remaining -= num_draw_proxys_in_batch;
     }
 }
 

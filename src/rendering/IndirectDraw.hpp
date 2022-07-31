@@ -50,13 +50,13 @@ public:
     IndirectBuffer *GetIndirectBuffer(UInt frame_index) const
         { return m_indirect_buffers[frame_index].get(); }
 
-    DynArray<EntityDrawProxy> &GetDrawables()             { return m_drawables; }
-    const DynArray<EntityDrawProxy> &GetDrawables() const { return m_drawables; }
+    DynArray<EntityDrawProxy> &GetDrawables()             { return m_draw_proxys; }
+    const DynArray<EntityDrawProxy> &GetDrawables() const { return m_draw_proxys; }
 
     Result Create(Engine *engine);
     Result Destroy(Engine *engine);
 
-    void PushDrawable(EntityDrawProxy &&drawable);
+    void PushDrawable(EntityDrawProxy &&draw_proxy);
     void ResetDrawables();
 
     void UpdateBufferData(Engine *engine, Frame *frame, bool *out_was_resized);
@@ -69,7 +69,7 @@ private:
     bool ResizeIfNeeded(Engine *engine, Frame *frame);
 
     DynArray<ObjectInstance>      m_object_instances;
-    DynArray<EntityDrawProxy>      m_drawables;
+    DynArray<EntityDrawProxy>      m_draw_proxys;
 
     FixedArray<std::unique_ptr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
     FixedArray<std::unique_ptr<StorageBuffer>, max_frames_in_flight>  m_instance_buffers;

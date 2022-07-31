@@ -49,7 +49,8 @@ inline std::vector<wchar_t> ToWide(const char *str)
     return buffer;
 }
 
-#define UTF8_TOWIDE(str) utf::ToWide(str).data()
+#define HYP_UTF8_WIDE
+#define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
 
 #else
 typedef std::string stdstring;
@@ -68,6 +69,8 @@ static auto &fputs = std::fputs;
 #endif
 
 typedef uint32_t u32char;
+typedef uint16_t u16char;
+typedef uint8_t  u8char;
 
 inline void init()
 {
@@ -92,18 +95,23 @@ inline bool utf32_isalpha(u32char ch)
                             (ch >= (u32char)'a' && ch <= (u32char)'z'));
 }
 
-inline int utf8_strlen(const char *str)
+inline int utf8_strlen(const char *str, int *out_count = nullptr)
 {
     int max = std::strlen(str);
     int count = 0;
+    int i;
 
-    for (int i = 0; i < max; i++, count++) {
+    for (i = 0; i < max; i++, count++) {
         unsigned char c = (unsigned char)str[i];
         if (c >= 0 && c <= 127) i += 0;
         else if ((c & 0xE0) == 0xC0) i += 1;
         else if ((c & 0xF0) == 0xE0) i += 2;
         else if ((c & 0xF8) == 0xF0) i += 3;
         else return -1;//invalid utf8
+    }
+
+    if (out_count) {
+        *out_count = i;
     }
 
     return count;
@@ -114,6 +122,24 @@ inline int utf32_strlen(const u32char *str)
     int counter = 0;
     const u32char *pos = str;
     for (; *pos; ++pos, counter++);
+    return counter;
+}
+
+template <class T>
+int utf_strlen(const T *str, int *out_count = nullptr)
+{
+    if constexpr (std::is_same_v<std::make_unsigned_t<T>, u8char>) {
+        return utf8_strlen(str, out_count);
+    }
+
+    int counter = 0;
+    const T *pos = str;
+    for (; *pos; ++pos, counter++);
+
+    if (out_count != nullptr) {
+        *out_count = counter;
+    }
+
     return counter;
 }
 
@@ -180,6 +206,27 @@ inline int utf32_strcmp(const u32char *lhs, const u32char *rhs)
 {
     const u32char *s1 = lhs;
     const u32char *s2 = rhs;
+
+    for (; *s1 || *s2; s1++, s2++) {
+        if (*s1 < *s2) {
+            return -1;
+        } else if (*s1 > *s2) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+template <class T>
+int utf_strcmp(const T *lhs, const T *rhs)
+{
+    if constexpr (sizeof(T) == 1) {
+        return utf8_strcmp(lhs, rhs);
+    }
+
+    const T *s1 = lhs;
+    const T *s2 = rhs;
 
     for (; *s1 || *s2; s1++, s2++) {
         if (*s1 < *s2) {
@@ -393,6 +440,55 @@ inline u32char utf8_charat(const char *str, int index)
 inline void utf8_charat(const char *str, char *dst, int index)
     { char32to8(utf8_charat(str, index), dst); }
 
+
+#define HYP_UTF_MASK16(ch)             ((uint16_t)(0xffff & (ch)))
+#define HYP_UTF_IS_LEAD_SURROGATE(ch)  ((ch) >= 0xd800u && (ch) <= 0xdbffu)
+#define HYP_UTF_IS_TRAIL_SURROGATE(ch) ((ch) >= 0xdc00u && (ch) <= 0xdfffu)
+#define HYP_UTF_SURROGATE_OFFSET       (0x10000u - (0xd800u << 10) - 0xdc00u)
+
+using namespace hyperion;
+
+inline u8char *utf8_append(uint32_t cp, u8char *result)
+{
+    if (cp < 0x80) {
+        *(result++) = static_cast<u8char>(cp);
+    } else if (cp < 0x800) {
+        *(result++) = static_cast<u8char>((cp >> 6)            | 0xc0);
+        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
+    } else if (cp < 0x10000) {
+        *(result++) = static_cast<u8char>((cp >> 12)           | 0xe0);
+        *(result++) = static_cast<u8char>(((cp >> 6) & 0x3f)   | 0x80);
+        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
+    } else {
+        *(result++) = static_cast<u8char>((cp >> 18)           | 0xf0);
+        *(result++) = static_cast<u8char>(((cp >> 12) & 0x3f)  | 0x80);
+        *(result++) = static_cast<u8char>(((cp >> 6) & 0x3f)   | 0x80);
+        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
+    }
+
+    return result;
+}
+
+
+inline u8char *utf16to8(u16char *start, u16char *end, u8char *result)
+{
+    while (start != end) {
+        UInt32 cp = HYP_UTF_MASK16(*start++);
+        // Take care of surrogate pairs first
+        if (HYP_UTF_IS_LEAD_SURROGATE(cp)) {
+            const UInt32 trail_surrogate = HYP_UTF_MASK16(*start++);
+            AssertThrow(HYP_UTF_IS_TRAIL_SURROGATE(trail_surrogate));
+            cp = (cp << 10) + trail_surrogate + HYP_UTF_SURROGATE_OFFSET;
+        } else {
+            // Lone trail surrogate
+            AssertThrow(!HYP_UTF_IS_TRAIL_SURROGATE(cp));
+        }
+
+        result = utf8_append(cp, result);
+    }
+
+    return result;
+}
 
 
 class Utf8String {

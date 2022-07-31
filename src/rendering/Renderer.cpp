@@ -471,17 +471,17 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
                 }
             );
 
-            for (auto &drawable : m_indirect_renderer.GetDrawState().GetDrawables()) {
-                const UInt entity_index = drawable.entity_id != Entity::empty_id
-                    ? drawable.entity_id.value - 1
+            for (auto &draw_proxy : m_indirect_renderer.GetDrawState().GetDrawables()) {
+                const UInt entity_index = draw_proxy.entity_id != Entity::empty_id
+                    ? draw_proxy.entity_id.value - 1
                     : 0;
 
-                const UInt skeleton_index = drawable.skeleton_id != Skeleton::empty_id
-                    ? drawable.skeleton_id.value - 1
+                const UInt skeleton_index = draw_proxy.skeleton_id != Skeleton::empty_id
+                    ? draw_proxy.skeleton_id.value - 1
                     : 0;
 
-                const UInt material_index = drawable.material_id != Material::empty_id
-                    ? drawable.material_id.value - 1
+                const UInt material_index = draw_proxy.material_id != Material::empty_id
+                    ? draw_proxy.material_id.value - 1
                     : 0;
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
@@ -510,11 +510,11 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
                 );
 #endif
 
-                drawable.mesh->RenderIndirect(
+                draw_proxy.mesh->RenderIndirect(
                     engine,
                     secondary,
                     m_indirect_renderer.GetDrawState().GetIndirectBuffer(frame_index),
-                    drawable.object_instance.draw_command_index * sizeof(IndirectDrawCommand)
+                    draw_proxy.object_instance.draw_command_index * sizeof(IndirectDrawCommand)
                 );
             }
 

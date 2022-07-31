@@ -6,7 +6,7 @@
 #include <camera/PerspectiveCamera.hpp>
 
 
-#include <rendering/Environment.hpp>
+#include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion::v2 {

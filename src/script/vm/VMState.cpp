@@ -48,10 +48,10 @@ void VMState::ThrowException(ExecutionThread *thread, const Exception &exception
         // exception cannot be handled, no try block found
         if (thread->m_id == 0) {
             utf::printf(UTF8_CSTR("unhandled exception in main thread: %" PRIutf8s "\n"),
-                UTF8_TOWIDE(exception.ToString()));
+                HYP_UTF8_TOWIDE(exception.ToString()));
         } else {
             utf::printf(UTF8_CSTR("unhandled exception in thread #%d: %" PRIutf8s "\n"),
-                thread->m_id + 1, UTF8_TOWIDE(exception.ToString()));
+                thread->m_id + 1, HYP_UTF8_TOWIDE(exception.ToString()));
         }
 
         good = false;

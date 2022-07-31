@@ -43,8 +43,8 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
         // create depth pyramid image
         m_depth_pyramid[i] = std::make_unique<StorageImage>(
             Extent3D {
-                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().width)),
-                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().height)),
+                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().width)),
+                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
                 1
             },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,
@@ -186,8 +186,8 @@ void DepthPyramidRenderer::Render(Engine *engine, Frame *frame)
         const auto prev_mip_width  = mip_width,
                    prev_mip_height = mip_height;
 
-        mip_width  = MathUtil::Max(1, depth_pyramid_extent.width >> mip_level);
-        mip_height = MathUtil::Max(1, depth_pyramid_extent.height >> mip_level);
+        mip_width  = MathUtil::Max(1, depth_pyramid_extent.width >> (mip_level));
+        mip_height = MathUtil::Max(1, depth_pyramid_extent.height >> (mip_level));
 
         // bind descriptor set to compute pipeline
         primary->BindDescriptorSet(
@@ -202,15 +202,13 @@ void DepthPyramidRenderer::Render(Engine *engine, Frame *frame)
             primary,
             Pipeline::PushConstantData {
                 .depth_pyramid_data = {
-                    .mip_width        = mip_width,
-                    .mip_height       = mip_height,
-                    .prev_mip_width   = prev_mip_width,
-                    .prev_mip_height  = prev_mip_height,
-                    .mip_level        = mip_level
+                    .mip_dimensions      = renderer::ShaderVec2<UInt32>(mip_width, mip_height),
+                    .prev_mip_dimensions = renderer::ShaderVec2<UInt32>(prev_mip_width, prev_mip_height),
+                    .mip_level           = mip_level
                 }
             }
         );
-
+        
         // dispatch to generate this mip level
         m_generate_depth_pyramid->GetPipeline()->Dispatch(
             primary,

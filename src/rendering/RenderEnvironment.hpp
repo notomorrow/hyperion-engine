@@ -8,6 +8,7 @@
 #include <core/lib/ComponentSet.hpp>
 #include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
+#include <core/lib/Pair.hpp>
 #include <Types.hpp>
 
 #include <mutex>
@@ -24,14 +25,23 @@ namespace hyperion::v2 {
 class Engine;
 class Scene;
 
-class Environment : public EngineComponentBase<STUB_CLASS(Environment)> {
+using RenderEnvironmentUpdates = UInt8;
+
+enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates {
+    RENDER_ENVIRONMENT_UPDATES_NONE              = 0x0,
+    RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS = 0x1,
+    RENDER_ENVIRONMENT_UPDATES_LIGHTS            = 0x2,
+    RENDER_ENVIRONMENT_UPDATES_ENTITIES          = 0x4
+};
+
+class RenderEnvironment : public EngineComponentBase<STUB_CLASS(RenderEnvironment)> {
 public:
     static constexpr UInt max_shadow_maps = 1; /* tmp */
 
-    Environment(Scene *scene);
-    Environment(const Environment &other) = delete;
-    Environment &operator=(const Environment &other) = delete;
-    ~Environment();
+    RenderEnvironment(Scene *scene);
+    RenderEnvironment(const RenderEnvironment &other) = delete;
+    RenderEnvironment &operator=(const RenderEnvironment &other) = delete;
+    ~RenderEnvironment();
 
     Scene *GetScene() const                               { return m_scene; }
 
@@ -53,8 +63,8 @@ public:
 
         component->SetParent(this);
         m_render_components_pending_addition.Set<T>(std::move(component));
-
-        m_has_render_component_updates = true;
+        
+        m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
 
     template <class T, class ...Args>
@@ -96,10 +106,12 @@ public:
 
         std::lock_guard guard(m_render_component_mutex);
 
-        m_render_components_pending_removal.Insert(decltype(m_render_components)::GetComponentId<T>());
-
-        m_has_render_component_updates = true;
+        m_render_components_pending_removal.Insert(Pair { decltype(m_render_components)::GetComponentId<T>(), T::ComponentName });
+        m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
+
+    // only touch from render thread
+    UInt32 GetEnabledRenderComponentsMask() const { return m_current_enabled_render_components_mask; }
 
     void OnEntityAdded(Ref<Entity> &entity);
     void OnEntityRemoved(Ref<Entity> &entity);
@@ -114,23 +126,26 @@ public:
     void RenderComponents(Engine *engine, Frame *frame);
 
 private:
+    using RenderComponentPendingRemovalEntry = Pair<ComponentSetUnique<RenderComponentBase>::ComponentId, RenderComponentName>;
+
     Scene *m_scene;
+
+    std::atomic<RenderEnvironmentUpdates>                         m_update_marker{RENDER_ENVIRONMENT_UPDATES_NONE};
 
     Queue<Ref<Entity>>                                            m_entities_pending_addition;
     Queue<Ref<Entity>>                                            m_entities_pending_removal;
     Queue<Ref<Entity>>                                            m_entity_renderable_attribute_updates;
-    std::atomic_bool                                              m_has_entity_updates{false};
     std::mutex                                                    m_entity_update_mutex;
 
     ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
     ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
-    FlatSet<ComponentSetUnique<RenderComponentBase>::ComponentId> m_render_components_pending_removal;
-    std::atomic_bool                                              m_has_render_component_updates{false};
+    FlatSet<RenderComponentPendingRemovalEntry>                   m_render_components_pending_removal;
+    UInt32                                                        m_current_enabled_render_components_mask;
+    UInt32                                                        m_next_enabled_render_components_mask;
 
     FlatMap<Light::ID, Ref<Light>>                                m_lights;
     Queue<Ref<Light>>                                             m_lights_pending_addition;
     Queue<Ref<Light>>                                             m_lights_pending_removal;
-    std::atomic_bool                                              m_has_light_updates{false};
     std::mutex                                                    m_light_update_mutex;
 
     float                                                         m_global_timer;

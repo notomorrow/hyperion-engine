@@ -1,4 +1,4 @@
-
+﻿
 #include "system/SdlSystem.hpp"
 #include "system/Debug.hpp"
 #include "rendering/backend/RendererInstance.hpp"
@@ -54,7 +54,7 @@
 #include <thread>
 #include <list>
 
-#include "rendering/Environment.hpp"
+#include "rendering/RenderEnvironment.hpp"
 #include "rendering/render_components/CubemapRenderer.hpp"
 
 #include <script/ScriptBindings.hpp>
@@ -232,12 +232,12 @@ public:
 
         // test_model->Scale(0.15f);
         if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
-            for (auto &child : test->GetChildren()) {
+            /*for (auto &child : test->GetChildren()) {
                 if (auto &ent = child->GetEntity()) {
                     std::cout << "Adding debug controller to  " << child->GetName() << "\n";
                     ent->AddController<AABBDebugController>(engine);
                 }
-            }
+            }*/
         }
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
@@ -246,7 +246,7 @@ public:
             std::move(quad),
             engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
             engine->resources.materials.Add(std::make_unique<Material>()),
-            RenderableAttributeSet{
+            RenderableAttributeSet {
                 .bucket            = Bucket::BUCKET_OPAQUE,
                 .shader_id         = engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)->GetId(),
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
@@ -271,16 +271,15 @@ public:
             Vector3 {0, 15, 0},
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
+        scene->ForceUpdate();
 
 #if HYPERION_VK_TEST_VCT
-        vct->SetParent(scene->GetEnvironment());
-        vct->InitGame(engine); // temp
+        scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+            VoxelConeTracing::Params {
+                BoundingBox(-64.0f, 64.0f)
+            }
+        );
 #endif
-        // scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
-        //     VoxelConeTracing::Params {
-        //         BoundingBox(-64.0f, 64.0f)
-        //     }
-        // );
 
 
         tex1 = engine->resources.textures.Add(
@@ -809,11 +808,11 @@ int main()
     my_game->Init(engine, window);
 
 #if HYPERION_VK_TEST_VCT
-    vct = new v2::VoxelConeTracing({
+    /*vct = new v2::VoxelConeTracing({
         .aabb = BoundingBox(Vector3(-128), Vector3(128))
     });
 
-    vct->Init(engine);
+    vct->Init(engine);*/
 #endif
 
 
@@ -1066,10 +1065,10 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.005f) {
-            vct->OnRender(engine, frame);
-           tmp_render_timer = 0.001f;
-        }
+        //if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.005f) {
+        //    vct->OnRender(engine, frame);
+        //   tmp_render_timer = 0.001f;
+       // }
         tmp_render_timer += 0.001f;
 #endif
 
@@ -1116,7 +1115,7 @@ int main()
 
     engine->game_thread.Join();
 
-    delete vct;
+    //delete vct;
 
     delete my_game;
 

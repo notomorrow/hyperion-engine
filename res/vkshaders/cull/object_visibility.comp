@@ -63,7 +63,7 @@ bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
 {
     vec2 dim = (clip_max.xy - clip_min.xy) * 0.5 * vec2(push_constants.depth_pyramid_dimensions);
 
-    return max(dim.x, dim.y) >= 4.0;
+    return max(dim.x, dim.y) < 16.0;
 }
 
 float GetDepthAtTexel(vec2 texcoord, ivec2 offset, float mip)
@@ -126,7 +126,7 @@ void main()
 
             // Calculate hi-Z buffer mip
             vec2 size = (clip_max.xy - clip_min.xy) * float(max(push_constants.depth_pyramid_dimensions.x, push_constants.depth_pyramid_dimensions.y));
-            float mip = ceil(log2(max(size.x, size.y) * 0.5));
+            float mip = ceil(log2(max(size.x, size.y)));
 
             vec2 sample_coord = (clip_min.xy + clip_max.xy) * 0.5;
 
@@ -136,6 +136,13 @@ void main()
                 Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), mip).r,
                 Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, mip).r
             };
+            
+            // const vec4 depths = {
+            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[0], mip).r,
+            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[1], mip).r,
+            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[2], mip).r,
+            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[3], mip).r
+            // };
 
             // //find the max depth
             float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);

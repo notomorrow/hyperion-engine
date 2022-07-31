@@ -18,7 +18,7 @@
 
 namespace hyperion::v2 {
 
-class Environment;
+class RenderEnvironment;
 class World;
 
 class Scene : public EngineComponentBase<STUB_CLASS(Scene)> {
@@ -47,7 +47,7 @@ public:
 
     Node *GetRootNode() const                            { return m_root_node.get(); }
 
-    Environment *GetEnvironment() const                  { return m_environment; }
+    RenderEnvironment *GetEnvironment() const                  { return m_environment; }
 
     World *GetWorld() const                              { return m_world; }
     void SetWorld(World *world);
@@ -56,6 +56,8 @@ public:
     void SetParentId(Scene::ID id)                       { m_parent_id = id; }
     
     void Init(Engine *engine);
+
+    void ForceUpdate();
 
     BoundingBox m_aabb;
 
@@ -78,7 +80,7 @@ private:
 
     std::unique_ptr<Camera>      m_camera;
     std::unique_ptr<Node>        m_root_node;
-    Environment                 *m_environment;
+    RenderEnvironment                 *m_environment;
     World                       *m_world;
     std::array<Ref<Texture>,     max_environment_textures> m_environment_textures;
 

@@ -78,20 +78,17 @@ public:
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 flags;
-                UInt32 depth_pyramid_num_mips;
             } deferred_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
-                UInt32 mip_width,
-                       mip_height,
-                       prev_mip_width,
-                       prev_mip_height,
-                       mip_level;
+                ShaderVec2<UInt32> mip_dimensions;
+                ShaderVec2<UInt32> prev_mip_dimensions;
+                UInt32 mip_level;
             } depth_pyramid_data;
             
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 batch_offset;
-                UInt32 num_drawables;
+                UInt32 num_draw_proxys;
                 UInt32 scene_id;
                 ShaderVec2<UInt32> depth_pyramid_dimensions;
             } object_visibility_data;

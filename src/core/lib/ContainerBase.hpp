@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_LIB_CONTAINER_BASE_H
 #define HYPERION_V2_LIB_CONTAINER_BASE_H
 
+#include "Pair.hpp"
 #include <util/Defines.hpp>
 
 #include <algorithm>

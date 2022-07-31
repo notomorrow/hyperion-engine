@@ -5,7 +5,7 @@
 #include <Engine.hpp>
 #include <camera/OrthoCamera.hpp>
 
-#include <rendering/Environment.hpp>
+#include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
@@ -32,7 +32,7 @@ void VoxelConeTracing::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](...) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
         auto *engine = GetEngine();
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
@@ -48,13 +48,13 @@ void VoxelConeTracing::Init(Engine *engine)
         CreateShader(engine);
         CreateRenderPass(engine);
         CreateFramebuffers(engine);
-        CreateDescriptors(engine);
         CreateRendererInstance(engine);
+        CreateDescriptors(engine);
         CreateComputePipelines(engine);
         
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](...) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
             auto *engine = GetEngine();
 
             m_shader.Reset();
@@ -334,19 +334,20 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
     descriptor_set
-        ->AddDescriptor<renderer::StorageImageDescriptor>(0)
-        ->SetSubDescriptor({.image_view = &m_voxel_image->GetImageView()});
+        ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
+        ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_voxel_image->GetImageView() });
 
     descriptor_set
-        ->AddDescriptor<renderer::UniformBufferDescriptor>(1)
-        ->SetSubDescriptor({.buffer = &m_uniform_buffer});
+        ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
+        ->SetSubDescriptor({ .element_index = 0u, .buffer = &m_uniform_buffer });
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        descriptor_set_globals->AddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
+        descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
             ->SetSubDescriptor({
-                .image_view = &m_voxel_image->GetImageView(),
-                .sampler    = &m_voxel_image->GetSampler()
+                .element_index = 0u,
+                .image_view    = &m_voxel_image->GetImageView(),
+                .sampler       = &m_voxel_image->GetSampler()
             });
     }
 }

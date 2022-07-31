@@ -28,6 +28,8 @@ using renderer::Extent2D;
 
 class CubemapRenderer : public EngineComponentBase<STUB_CLASS(CubemapRenderer)>, public RenderComponent<CubemapRenderer> {
 public:
+    static constexpr RenderComponentName component_name = RENDER_COMPONENT_CUBEMAP;
+
     CubemapRenderer(
         const Extent2D &cubemap_dimensions = Extent2D { 512, 512 },
         const Vector3 &origin              = Vector3::Zero(),

@@ -150,7 +150,9 @@ struct alignas(256) SceneShaderData {
     float camera_near;
     float camera_far;
 
-    HYP_PAD_STRUCT_HERE(float, 2);
+    UInt32 enabled_render_components_mask;
+
+    HYP_PAD_STRUCT_HERE(float, 1);
 
     UInt32 environment_texture_index;
     UInt32 environment_texture_usage;

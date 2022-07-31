@@ -14,7 +14,7 @@ struct Scene {
     // 148
     float camera_far;
 
-    float _pad0;
+    uint enabled_render_components_mask;
     float _pad1;
     
     // 152
@@ -65,5 +65,16 @@ layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_ma
 layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform ShadowData {
     ShadowMap matrices[113];
 } shadow_data;
+
+
+// RenderComponentName enum
+#define HYP_RENDER_COMPONENT_VCT     0
+#define HYP_RENDER_COMPONENT_SHADOWS 1
+#define HYP_RENDER_COMPONENT_CUBEMAP 2
+
+bool IsRenderComponentEnabled(uint name)
+{
+    return bool(scene.enabled_render_components_mask & (1 << name));
+}
 
 #endif

@@ -214,8 +214,8 @@ public:
     auto &GetShaderData()                                          { return shader_globals; }
     const auto &GetShaderData() const                              { return shader_globals; }
     
-    auto &GetPlaceholderData()                                     { return m_placeholder_data; }
-    const auto &GetPlaceholderData() const                         { return m_placeholder_data; }
+    PlaceholderData &GetPlaceholderData()                          { return m_placeholder_data; }
+    const PlaceholderData &GetPlaceholderData() const              { return m_placeholder_data; }
     
     ComponentRegistry<Entity> &GetComponentRegistry()              { return m_component_registry; }
     const ComponentRegistry<Entity> &GetComponentRegistry() const  { return m_component_registry; }

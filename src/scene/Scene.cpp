@@ -1,6 +1,6 @@
 #include "Scene.hpp"
 #include <Engine.hpp>
-#include <rendering/Environment.hpp>
+#include <rendering/RenderEnvironment.hpp>
 #include <rendering/render_components/CubemapRenderer.hpp>
 
 namespace hyperion::v2 {
@@ -9,7 +9,7 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
       m_root_node(std::make_unique<Node>("root")),
-      m_environment(new Environment(this)),
+      m_environment(new RenderEnvironment(this)),
       m_world(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
@@ -263,6 +263,11 @@ void Scene::RemovePendingEntities()
     m_entities_pending_removal.Clear();
 }
 
+void Scene::ForceUpdate()
+{
+    Update(GetEngine(), 0.01f);
+}
+
 void Scene::Update(
     Engine *engine,
     GameCounter::TickUnit delta,
@@ -360,36 +365,21 @@ void Scene::EnqueueRenderUpdates()
 {
     struct {
         BoundingBox aabb;
-        Matrix4     view;
-        Matrix4     projection;
-        Float       camera_near;
-        Float       camera_far;
-        Vector3     translation;
-        Int         width;
-        Int         height;
         Float       global_timer;
     } params = {
         .aabb            = m_aabb,
         .global_timer    = m_environment->GetGlobalTimer()
     };
 
-    if (m_camera != nullptr) {
-        params.view        = m_camera->GetViewMatrix();
-        params.projection  = m_camera->GetProjectionMatrix();
-        params.camera_near = m_camera->GetNear();
-        params.camera_far  = m_camera->GetFar();
-        params.translation = m_camera->GetTranslation();
-        params.width       = m_camera->GetWidth();
-        params.height      = m_camera->GetHeight();
-    }
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
         SceneShaderData shader_data {
-            .aabb_max                    = params.aabb.max.ToVector4(),
-            .aabb_min                    = params.aabb.min.ToVector4(),
-            .global_timer                = params.global_timer,
-            .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
-            .num_lights                  = static_cast<UInt32>(m_environment->NumLights())
+            .enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask(),
+            .aabb_max                       = params.aabb.max.ToVector4(),
+            .aabb_min                       = params.aabb.min.ToVector4(),
+            .global_timer                   = params.global_timer,
+            .num_environment_shadow_maps    = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
+            .num_lights                     = static_cast<UInt32>(m_environment->NumLights())
         };
 
         if (m_camera != nullptr) {

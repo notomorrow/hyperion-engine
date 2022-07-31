@@ -34,7 +34,7 @@ void main()
     vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     const float roughness = material.r;
-    const float metalness = material.g;    
+    const float metalness = material.g;
 
     bool perform_lighting = albedo.a > 0.0;
 
