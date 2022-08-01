@@ -43,8 +43,8 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
         // create depth pyramid image
         m_depth_pyramid[i] = std::make_unique<StorageImage>(
             Extent3D {
-                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().width)),
-                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
+                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().width)),
+                static_cast<UInt>(MathUtil::NextPowerOf2(depth_image->GetExtent().height)),
                 1
             },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,

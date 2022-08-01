@@ -88,7 +88,7 @@ public:
             
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 batch_offset;
-                UInt32 num_draw_proxys;
+                UInt32 num_draw_proxies;
                 UInt32 scene_id;
                 ShaderVec2<UInt32> depth_pyramid_dimensions;
             } object_visibility_data;

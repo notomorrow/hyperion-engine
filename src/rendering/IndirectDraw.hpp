@@ -50,30 +50,33 @@ public:
     IndirectBuffer *GetIndirectBuffer(UInt frame_index) const
         { return m_indirect_buffers[frame_index].get(); }
 
-    DynArray<EntityDrawProxy> &GetDrawables()             { return m_draw_proxys; }
-    const DynArray<EntityDrawProxy> &GetDrawables() const { return m_draw_proxys; }
+    DynArray<EntityDrawProxy> &GetDrawProxies()             { return m_draw_proxies; }
+    const DynArray<EntityDrawProxy> &GetDrawProxies() const { return m_draw_proxies; }
 
     Result Create(Engine *engine);
     Result Destroy(Engine *engine);
 
-    void PushDrawable(EntityDrawProxy &&draw_proxy);
+    void PushDrawable(const EntityDrawProxy &draw_proxy);
     void ResetDrawables();
+    void Reserve(Engine *engine, Frame *frame, SizeType count);
 
     void UpdateBufferData(Engine *engine, Frame *frame, bool *out_was_resized);
 
 private:
-    bool ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame);
-    bool ResizeInstancesBuffer(Engine *engine, Frame *frame);
+    bool ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame, SizeType count);
+    bool ResizeInstancesBuffer(Engine *engine, Frame *frame, SizeType count);
 
     // returns true if resize happened.
-    bool ResizeIfNeeded(Engine *engine, Frame *frame);
+    bool ResizeIfNeeded(Engine *engine, Frame *frame, SizeType count);
 
     DynArray<ObjectInstance>      m_object_instances;
-    DynArray<EntityDrawProxy>      m_draw_proxys;
+    DynArray<EntityDrawProxy>     m_draw_proxies;
 
     FixedArray<std::unique_ptr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
     FixedArray<std::unique_ptr<StorageBuffer>, max_frames_in_flight>  m_instance_buffers;
-    bool m_is_dirty = false;
+    FixedArray<std::unique_ptr<StagingBuffer>, max_frames_in_flight>  m_staging_buffers;
+    FixedArray<bool, max_frames_in_flight>                            m_is_dirty;
+    UInt m_max_entity_id = 0;
 
 };
 

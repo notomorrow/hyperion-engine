@@ -2,20 +2,20 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 0.5
+#define HYP_SSR_MAX_BLUR_INCREMENT 1.5
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_sample_image;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba8) uniform readonly image2D ssr_sample_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radius;
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba16f) uniform writeonly image2D ssr_blur;
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE ssr_sample_image
 #elif defined(HYP_SSR_BLUR_VERTICAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba16f) uniform readonly image2D ssr_blur_hor_image;
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba16f) uniform writeonly image2D ssr_blur;
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform readonly image2D ssr_blur_hor_image;
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE ssr_blur_hor_image
 #else
     #error No blur direction defined
@@ -63,7 +63,7 @@ void GaussianBlurAccum(
 )
 {
     for (int i = 1; i < GAUSS_TABLE_SIZE; i++) {
-        const float d = float(i * HYP_SSR_MAX_BLUR_INCREMENT);
+        const float d = float(i) * HYP_SSR_MAX_BLUR_INCREMENT;
 
     #if defined(HYP_SSR_BLUR_HORIZONTAL)
         const ivec2 blur_step = ivec2(d, 0);

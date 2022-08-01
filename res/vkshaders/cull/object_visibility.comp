@@ -15,10 +15,6 @@ layout(local_size_x = 256) in;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std430, set = 0, binding = 0, row_major) readonly buffer ObjectBuffer {
-    Object object;
-} objects[];
-
 layout(std140, set = 0, binding = 1, row_major) readonly buffer SceneBuffer {
     Scene scene;
 };
@@ -30,6 +26,8 @@ struct IndirectDrawCommand {
     uint first_index;
     int  vertex_offset;
     uint first_instance;
+
+    HYP_PAD_STRUCT_HERE(float, 7);
 };
 
 struct ObjectInstance {
@@ -37,6 +35,7 @@ struct ObjectInstance {
     uint draw_command_index;
     uint batch_index;
     uint num_indices;
+    //uvec2 user_data;
     vec4 aabb_max;
     vec4 aabb_min;
 };
@@ -45,7 +44,7 @@ layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer 
     ObjectInstance instances[];
 };
 
-layout(set = 0, binding = 4, row_major) writeonly buffer IndirectDrawCommandsBuffer {
+layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer {
     IndirectDrawCommand indirect_draw_commands[];
 };
 
@@ -66,13 +65,16 @@ bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
     return max(dim.x, dim.y) < 16.0;
 }
 
-float GetDepthAtTexel(vec2 texcoord, ivec2 offset, float mip)
+float GetDepthAtTexel(vec2 texcoord, int mip)
 {
-    vec2 mip_dimensions = vec2(push_constants.depth_pyramid_dimensions);
+    ivec2 mip_dimensions = textureSize(sampler2D(depth_pyramid, depth_pyramid_sampler), mip);
 
-    const vec2 coord = texcoord + (vec2(offset) * (vec2(1.0) / mip_dimensions));
-
-    return Texture2DLod(depth_pyramid_sampler, depth_pyramid, coord, mip).r;
+    return Texture2DTexelLod(
+        depth_pyramid_sampler,
+        depth_pyramid,
+        clamp(ivec2(texcoord * mip_dimensions), ivec2(0), mip_dimensions - ivec2(1)),
+        mip
+    ).r;
 }
 
 void main()
@@ -124,25 +126,20 @@ void main()
             clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
             clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
 
+            vec2 dimensions = vec2(textureSize(sampler2D(depth_pyramid, depth_pyramid_sampler), 0));//vec2(push_constants.depth_pyramid_dimensions);
+
             // Calculate hi-Z buffer mip
-            vec2 size = (clip_max.xy - clip_min.xy) * float(max(push_constants.depth_pyramid_dimensions.x, push_constants.depth_pyramid_dimensions.y));
-            float mip = ceil(log2(max(size.x, size.y)));
+            vec2 size = (clip_max.xy - clip_min.xy) * max(dimensions.x, dimensions.y);
+            int mip = int(ceil(log2(max(size.x, size.y))));
 
             vec2 sample_coord = (clip_min.xy + clip_max.xy) * 0.5;
 
             const vec4 depths = {
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_min.xy, mip).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_max.x, clip_min.y), mip).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), mip).r,
-                Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, mip).r
+                GetDepthAtTexel(clip_min.xy, mip).r,
+                GetDepthAtTexel(vec2(clip_max.x, clip_min.y), mip).r,
+                GetDepthAtTexel(vec2(clip_min.x, clip_max.y), mip).r,
+                GetDepthAtTexel(clip_max.xy, mip).r
             };
-            
-            // const vec4 depths = {
-            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[0], mip).r,
-            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[1], mip).r,
-            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[2], mip).r,
-            //     GetDepthAtTexel(sample_coord, depth_pyramid_offsets[3], mip).r
-            // };
 
             // //find the max depth
             float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);

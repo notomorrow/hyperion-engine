@@ -13,7 +13,7 @@
 
 #include <array>
 
-#define HYP_OCTREE_DEBUG 1
+#define HYP_OCTREE_DEBUG 0
 
 namespace hyperion {
 

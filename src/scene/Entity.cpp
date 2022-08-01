@@ -483,10 +483,6 @@ void Entity::OnRemovedFromPipeline(RendererInstance *pipeline)
 void Entity::OnAddedToOctree(Octree *octree)
 {
     AssertThrow(m_octree == nullptr);
-
-    if (m_id.value == 1) {
-        DebugLog(LogType::Debug, "  1 ADDED\n");
-    }
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Entity #%lu added to octree\n", m_id.value);
@@ -506,10 +502,6 @@ void Entity::OnAddedToOctree(Octree *octree)
 void Entity::OnRemovedFromOctree(Octree *octree)
 {
     AssertThrow(octree == m_octree);
-
-    if (m_id.value == 1) {
-        DebugLog(LogType::Debug, "  1 REMOVED\n");
-    }
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Entity #%lu removed from octree\n", m_id.value);
@@ -522,8 +514,6 @@ void Entity::OnRemovedFromOctree(Octree *octree)
 void Entity::OnMovedToOctant(Octree *octree)
 {
     AssertThrow(m_octree != nullptr);
-
-    DebugLog(LogType::Debug, "  %u MOVED\n", m_id.value);
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Entity #%lu moved to new octant\n", m_id.value);

@@ -114,7 +114,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
+            "models/sponza/sponza.obj", //testbed/testbed.obj", //sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -190,11 +190,11 @@ public:
         cubemap.Init();
 
         zombie->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-        zombie->Scale(0.25f);
+        zombie->Scale(1.25f);
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        //scene->GetRootNode()->AddChild(std::move(zombie));
+        scene->GetRootNode()->AddChild(std::move(zombie));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -276,7 +276,7 @@ public:
 #if HYPERION_VK_TEST_VCT
         scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
             VoxelConeTracing::Params {
-                BoundingBox(-64.0f, 64.0f)
+                BoundingBox(-128, 128)
             }
         );
 #endif
