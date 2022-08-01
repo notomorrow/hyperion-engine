@@ -22,6 +22,7 @@ using renderer::UniformBuffer;
 using renderer::CommandBuffer;
 using renderer::Extent3D;
 using renderer::Extent2D;
+using renderer::Frame;
 
 class Engine;
 
@@ -120,8 +121,8 @@ public:
     void Init(Engine *engine);
     void Destroy(Engine *engine);
 
-    void RenderProbes(Engine *engine, CommandBuffer *command_buffer);
-    void ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer);
+    void RenderProbes(Engine *engine, Frame *frame);
+    void ComputeIrradiance(Engine *engine, Frame *frame);
 
 private:
     void CreatePipeline(Engine *engine);

@@ -6,13 +6,14 @@
 #include "RenderableAttributes.hpp"
 
 #include <math/BoundingBox.hpp>
+#include <math/Vertex.hpp>
 
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
-#include <math/Vertex.hpp>
+#include <core/lib/DynArray.hpp>
 
 #include <cstdint>
 #include <vector>
