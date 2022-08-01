@@ -106,5 +106,5 @@ void main()
         result = albedo;
     }
 
-    output_color = result;
+    //output_color = result;
 }

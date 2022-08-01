@@ -10,6 +10,9 @@
 #define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
 #define PROBE_NORMAL_BIAS (0.01)
 
+#define PROBE_SIDE_LENGTH_DEPTH      16
+#define PROBE_SIDE_LENGTH_IRRADIANCE 8
+
 uvec3 ProbeIndexToGridPosition(uint index)
 {
     const uint probe_count_xy = probe_system.probe_counts.x * probe_system.probe_counts.y;
@@ -48,6 +51,55 @@ uvec3 BaseGridCoord(vec3 P)
     return PROBE_TOTAL_COUNT == 0
         ? uvec3(0)
         : clamp(uvec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), uvec3(0), probe_system.probe_counts.xyz - uvec3(1));
+}
+
+vec2 EncodeOctahedralCoord(in vec3 v)
+{
+#define NON_ZERO_SIGN(n) (n >= 0.0 ? 1.0 : -1.0)
+    float l1norm = abs(v.x) + abs(v.y) + abs(v.z);
+    vec2 vec = v.xy * (1.0 / l1norm);
+
+    if (v.z < 0.0) {
+        vec = (1.0 - abs(vec.yx)) * vec2(NON_ZERO_SIGN(vec.x), NON_ZERO_SIGN(vec.y));
+    }
+#undef NON_ZERO_SIGN
+
+    return vec;
+}
+
+vec3 DecodeOctahedralCoord(vec2 coord)
+{
+#define NON_ZERO_SIGN(n) (n >= 0.0 ? 1.0 : -1.0)
+    vec3 vec = vec3(coord.x, coord.y, 1.0 - abs(coord.x) - abs(coord.y));
+    
+    if (vec.z < 0.0) {
+        vec.xy = (1.0 - abs(vec.yx)) * vec2(NON_ZERO_SIGN(vec.x), NON_ZERO_SIGN(vec.y));
+    }
+#undef NON_ZERO_SIGN
+    
+    return normalize(vec);
+}
+
+vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, uint probe_side_length)
+{
+    vec2 normalizedOctCoord = EncodeOctahedralCoord(normalize(dir));
+    vec2 normalizedOctCoordZeroOne = (normalizedOctCoord + vec2(1.0f)) * 0.5f;
+
+    // Length of a probe side, plus one pixel on each edge for the border
+    float probeWithBorderSide = float(probe_side_length) + 2.0f;
+
+    vec2 octCoordNormalizedToTextureDimensions = (normalizedOctCoordZeroOne * float(probe_side_length)) / vec2(image_dimensions);
+
+    uint probesPerRow = (image_dimensions.x - 2) / uint(probeWithBorderSide);
+
+    // Add (2,2) back to texCoord within larger texture. Compensates for 1 pix 
+    // border around texture and further 1 pix border around top left probe.
+    vec2 probeTopLeftPosition = vec2(mod(probe_index, probesPerRow) * probeWithBorderSide,
+        (probe_index / probesPerRow) * probeWithBorderSide) + vec2(2.0f, 2.0f);
+
+    vec2 normalizedProbeTopLeftPosition = vec2(probeTopLeftPosition) / vec2(image_dimensions);
+
+    return vec2(normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions);
 }
 
 vec3 SphericalFibonacci(uint index, uint n)
