@@ -27,15 +27,15 @@ bool Ray::TestAABB(const BoundingBox &aabb, RayHitID hit_id, const void *user_da
         return RayHit::no_hit;
     }
 
-    float t1 = (aabb.min.x - position.x) / direction.x;
-    float t2 = (aabb.max.x - position.x) / direction.x;
-    float t3 = (aabb.min.y - position.y) / direction.y;
-    float t4 = (aabb.max.y - position.y) / direction.y;
-    float t5 = (aabb.min.z - position.z) / direction.z;
-    float t6 = (aabb.max.z - position.z) / direction.z;
+    const float t1 = (aabb.min.x - position.x) / direction.x;
+    const float t2 = (aabb.max.x - position.x) / direction.x;
+    const float t3 = (aabb.min.y - position.y) / direction.y;
+    const float t4 = (aabb.max.y - position.y) / direction.y;
+    const float t5 = (aabb.min.z - position.z) / direction.z;
+    const float t6 = (aabb.max.z - position.z) / direction.z;
 
-    float tmin = MathUtil::Max(MathUtil::Max(MathUtil::Min(t1, t2), MathUtil::Min(t3, t4)), MathUtil::Min(t5, t6));
-    float tmax = MathUtil::Min(MathUtil::Min(MathUtil::Max(t1, t2), MathUtil::Max(t3, t4)), MathUtil::Max(t5, t6));
+    const float tmin = MathUtil::Max(MathUtil::Max(MathUtil::Min(t1, t2), MathUtil::Min(t3, t4)), MathUtil::Min(t5, t6));
+    const float tmax = MathUtil::Min(MathUtil::Min(MathUtil::Max(t1, t2), MathUtil::Max(t3, t4)), MathUtil::Max(t5, t6));
 
     // if tmax < 0, ray (line) is intersecting AABB, but whole AABB is behing us
     if (tmax < 0) {

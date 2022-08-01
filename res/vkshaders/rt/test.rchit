@@ -5,7 +5,6 @@
 #extension GL_EXT_buffer_reference2    : require
 
 #include "../include/defines.inc"
-#include "../include/scene.inc"
 #include "../include/vertex.inc"
 #include "../include/rt/mesh.inc"
 #include "../include/rt/payload.inc"

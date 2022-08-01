@@ -42,12 +42,14 @@ struct Ray
         const std::vector<UInt32> &indices,
         const Transform &transform
     ) const;
+
     bool TestTriangleList(
         const std::vector<Vertex> &vertices,
         const std::vector<UInt32> &indices,
         const Transform &transform,
         RayTestResults &out_results
     ) const;
+
     bool TestTriangleList(
         const std::vector<Vertex> &vertices,
         const std::vector<UInt32> &indices,
@@ -55,6 +57,7 @@ struct Ray
         RayHitID hit_id,
         RayTestResults &out_results
     ) const;
+
     bool TestTriangleList(
         const std::vector<Vertex> &vertices,
         const std::vector<UInt32> &indices,

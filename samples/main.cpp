@@ -73,7 +73,7 @@ using namespace hyperion::v2;
 
 
 #define HYPERION_VK_TEST_VCT 1
-#define HYPERION_VK_TEST_RAYTRACING 0
+#define HYPERION_VK_TEST_RAYTRACING 1
 #define HYPERION_RUN_TESTS 1
 
 namespace hyperion::v2 {
@@ -800,16 +800,20 @@ int main()
         my_game->OnFrameBegin(engine, frame);
 
         rt->Bind(frame->GetCommandBuffer());
-        engine->GetInstance()->GetDescriptorPool().Bind(
-            engine->GetDevice(),
-            frame->GetCommandBuffer(),
+    
+        const auto scene_binding = engine->render_state.GetScene().id;
+        const auto scene_index   = scene_binding ? scene_binding.value - 1 : 0u;
+        frame->GetCommandBuffer()->BindDescriptorSet(
+            engine->GetInstance()->GetDescriptorPool(),
             rt.get(),
-            {
-                {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, .count = 1},
-                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                {.offsets = {0, 0}}
+            DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()],
+            DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+            FixedArray {
+                UInt32(sizeof(v2::SceneShaderData) * scene_index),
+                UInt32(sizeof(v2::LightShaderData) * 0)
             }
         );
+
         engine->GetInstance()->GetDescriptorPool().Bind(
             engine->GetDevice(),
             frame->GetCommandBuffer(),
