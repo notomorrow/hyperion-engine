@@ -30,7 +30,7 @@ void ScreenspaceReflectionRenderer::Create(Engine *engine)
             m_ssr_image_outputs[i][j] = SSRImageOutput {
                 .image = std::make_unique<StorageImage>(
                     Extent3D(m_extent),
-                    Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                     Image::Type::TEXTURE_TYPE_2D,
                     nullptr
                 ),
@@ -209,7 +209,7 @@ void ScreenspaceReflectionRenderer::Render(
             .width                  = m_extent.width,
             .height                 = m_extent.height,
             .ray_step               = 0.75f,
-            .num_iterations         = 80.0f,
+            .num_iterations         = 40.0f,
             .max_ray_distance       = 128.0f,
             .distance_bias          = 0.1f,
             .offset                 = 0.01f,

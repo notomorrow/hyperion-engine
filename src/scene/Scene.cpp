@@ -100,12 +100,14 @@ void Scene::SetWorld(World *world)
         }
 
         AssertThrow(entity->m_octree == nullptr);
-        
+
+#if HYP_OCTREE_DEBUG
         DebugLog(
             LogType::Debug,
             "Add entity #%u to octree\n",
             entity->GetId().value
         );
+#endif
 
         entity->AddToOctree(GetEngine(), m_world->GetOctree());
     }
@@ -218,11 +220,14 @@ void Scene::AddPendingEntities()
 
         if (entity->m_octree == nullptr) {
             if (m_world != nullptr) {
+#if HYP_OCTREE_DEBUG
                 DebugLog(
                     LogType::Debug,
                     "Add entity #%u to octree\n",
                     entity->GetId().value
                 );
+#endif
+
                 entity->AddToOctree(GetEngine(), m_world->GetOctree());
             }
         }

@@ -30,6 +30,8 @@ using renderer::StagingBuffer;
 using renderer::Frame;
 using renderer::Result;
 using renderer::Extent2D;
+using renderer::ShaderVec2;
+using renderer::ShaderVec4;
 
 class Mesh;
 class Material;
@@ -37,12 +39,12 @@ class Engine;
 class Entity;
 
 struct alignas(16) ObjectInstance {
-    UInt32  entity_id;
-    UInt32  draw_command_index;
-    UInt32  batch_index;
-    UInt32  num_indices;
-    Vector4 aabb_max;
-    Vector4 aabb_min;
+    UInt32             entity_id;
+    UInt32             draw_command_index;
+    UInt32             batch_index;
+    UInt32             num_indices;
+    Vector4            aabb_max;
+    Vector4            aabb_min;
 };
 
 template <class T>
@@ -67,7 +69,9 @@ struct DrawProxy<STUB_CLASS(Entity)> {
     BoundingBox    bounding_box;
 
     // object instance in GPU
-    ObjectInstance object_instance;
+    UInt32         draw_command_index = 0;
+
+    void          *user_data = nullptr;
 };
 
 using EntityDrawProxy = DrawProxy<STUB_CLASS(Entity)>;

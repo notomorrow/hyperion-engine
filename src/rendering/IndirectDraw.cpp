@@ -68,6 +68,17 @@ Result IndirectDrawState::Destroy(Engine *engine)
         );
     }
 
+    for (auto &buffer : m_staging_buffers) {
+        if (buffer == nullptr) {
+            continue;
+        }
+
+        HYPERION_PASS_ERRORS(
+            buffer->Destroy(engine->GetDevice()),
+            result
+        );
+    }
+
     return result;
 }
 
@@ -100,17 +111,17 @@ static bool ResizeBuffer(
     }
 
     if (needs_create) {
-        const SizeType new_buffer_size_pow2 = MathUtil::NextPowerOf2(new_buffer_size);
+        //const SizeType new_buffer_size_pow2 = MathUtil::NextPowerOf2(new_buffer_size);
 
         DebugLog(
             LogType::Debug,
             "Resize indirect draw commands at frame index %u from %llu -> %llu\n",
             frame_index,
             current_buffer_size,
-            new_buffer_size_pow2
+            new_buffer_size//new_buffer_size_pow2
         );
 
-        HYPERION_ASSERT_RESULT(buffers[frame_index]->Create(engine->GetDevice(), new_buffer_size_pow2));
+        HYPERION_ASSERT_RESULT(buffers[frame_index]->Create(engine->GetDevice(), new_buffer_size));
 
         return true;
     }
@@ -118,40 +129,41 @@ static bool ResizeBuffer(
     return false;
 }
 
-void IndirectDrawState::PushDrawable(EntityDrawProxy &&draw_proxy)
+void IndirectDrawState::PushDrawable(const EntityDrawProxy &draw_proxy)
 {
     if (draw_proxy.mesh == nullptr) {
         return;
     }
 
-    draw_proxy.object_instance = ObjectInstance {
+    UInt64 user_data = reinterpret_cast<UInt64>(draw_proxy.user_data);
+
+    m_max_entity_id = MathUtil::Max(m_max_entity_id, static_cast<UInt32>(draw_proxy.entity_id.value));
+
+    const auto draw_command_index = draw_proxy.entity_id.value - 1;//static_cast<UInt>(m_draw_proxies.Size());
+
+    m_object_instances.PushBack(ObjectInstance {
         .entity_id          = static_cast<UInt32>(draw_proxy.entity_id.value),
-        .draw_command_index = static_cast<UInt32>(m_draw_proxys.Size()),
+        .draw_command_index = draw_command_index,
         .batch_index        = static_cast<UInt32>(m_object_instances.Size() / batch_size),
         .num_indices        = static_cast<UInt32>(draw_proxy.mesh->NumIndices()),
         .aabb_max           = draw_proxy.bounding_box.max.ToVector4(),
         .aabb_min           = draw_proxy.bounding_box.min.ToVector4()
-    };
+    });
 
-    m_object_instances.PushBack(std::move(draw_proxy.object_instance));
-    m_draw_proxys.PushBack(std::move(draw_proxy));
+    m_draw_proxies.PushBack(draw_proxy);
 
-    m_is_dirty = true;
+    m_draw_proxies.Back().draw_command_index = draw_command_index;
+
+    m_is_dirty = { true, true };
 }
 
-bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame)
+bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame, SizeType count)
 {
-    const bool needs_update = m_is_dirty || m_indirect_buffers[frame->GetFrameIndex()] == nullptr;
-
-    if (!needs_update) {
-        return false;
-    }
-
     const bool was_created_or_resized = ResizeBuffer<IndirectBuffer>(
         engine,
         frame,
         m_indirect_buffers,
-        m_draw_proxys.Size() * sizeof(IndirectDrawCommand)
+        count * sizeof(IndirectDrawCommand)
     );
 
     if (!was_created_or_resized) {
@@ -159,56 +171,65 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
     }
 
     // upload zeros to the buffer using a staging buffer.
-    // auto staging_buffer = std::make_unique<StagingBuffer>();
+    if (m_staging_buffers[frame->GetFrameIndex()] != nullptr) {
+        HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Destroy(engine->GetDevice()));
+    } else {
+        m_staging_buffers[frame->GetFrameIndex()].reset(new StagingBuffer());
+    }
 
-    // HYPERION_ASSERT_RESULT(staging_buffer->Create(
-    //     engine->GetDevice(),
-    //     m_indirect_buffers[frame->GetFrameIndex()]->size
-    // ));
+    HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Create(
+        engine->GetDevice(),
+        m_indirect_buffers[frame->GetFrameIndex()]->size
+    ));
 
-    // staging_buffer->Memset(
-    //     engine->GetDevice(),
-    //     staging_buffer->size,
-    //     0 // fill buffer with zeros
-    // );
+    m_staging_buffers[frame->GetFrameIndex()]->Memset(
+        engine->GetDevice(),
+        m_staging_buffers[frame->GetFrameIndex()]->size,
+        0 // fill buffer with zeros
+    );
 
-    // m_indirect_buffers[frame->GetFrameIndex()]->CopyFrom(
-    //     frame->GetCommandBuffer(),
-    //     staging_buffer.get(),
-    //     staging_buffer->size
-    // );
-
-    // engine->render_scheduler.Enqueue([engine, creation_frame = frame->GetFrameIndex(), buffer = staging_buffer.release()]() {
-    //     return buffer->Destroy(engine->GetDevice());
-    // });
+    m_indirect_buffers[frame->GetFrameIndex()]->CopyFrom(
+        frame->GetCommandBuffer(),
+        m_staging_buffers[frame->GetFrameIndex()].get(),
+        m_staging_buffers[frame->GetFrameIndex()]->size
+    );
 
     return true;
 }
 
-bool IndirectDrawState::ResizeInstancesBuffer(Engine *engine, Frame *frame)
+bool IndirectDrawState::ResizeInstancesBuffer(Engine *engine, Frame *frame, SizeType count)
 {
-    const bool needs_update = m_is_dirty || m_instance_buffers[frame->GetFrameIndex()] == nullptr;
-
-    if (!needs_update) {
-        return false;
-    }
-
-    return ResizeBuffer<StorageBuffer>(
+    const bool was_resized = ResizeBuffer<StorageBuffer>(
         engine,
         frame,
         m_instance_buffers,
-        m_draw_proxys.Size() * sizeof(ObjectInstance)
+        count * sizeof(ObjectInstance)
     );
+
+    if (was_resized) {
+        m_instance_buffers[frame->GetFrameIndex()]->Memset(
+            engine->GetDevice(),
+            m_instance_buffers[frame->GetFrameIndex()]->size,
+            0
+        );
+    }
+
+    return was_resized;
 }
 
-bool IndirectDrawState::ResizeIfNeeded(Engine *engine, Frame *frame)
+bool IndirectDrawState::ResizeIfNeeded(Engine *engine, Frame *frame, SizeType count)
 {
     // assume render thread
 
     bool resize_happened = false;
-
-    resize_happened |= ResizeIndirectDrawCommandsBuffer(engine, frame);
-    resize_happened |= ResizeInstancesBuffer(engine, frame);
+    
+    if (m_is_dirty[frame->GetFrameIndex()] || m_indirect_buffers[frame->GetFrameIndex()] == nullptr) {
+        resize_happened |= ResizeIndirectDrawCommandsBuffer(engine, frame, count);
+    }
+    
+    if (m_is_dirty[frame->GetFrameIndex()] || m_instance_buffers[frame->GetFrameIndex()] == nullptr) {
+        resize_happened |= ResizeInstancesBuffer(engine, frame, count);
+    }
 
     return resize_happened;
 }
@@ -217,23 +238,40 @@ void IndirectDrawState::ResetDrawables()
 {
     // assume render thread
 
-    m_draw_proxys.Clear();
+    m_max_entity_id = 0u;
+
+    m_draw_proxies.Clear();
     m_object_instances.Clear();
+
+    m_is_dirty = { true, true };
+}
+
+void IndirectDrawState::Reserve(Engine *engine, Frame *frame, SizeType count)
+{
+    m_draw_proxies.Reserve(count);
+    m_object_instances.Reserve(count);
+
+    bool resize_happened = false;
+    
+    resize_happened |= ResizeIndirectDrawCommandsBuffer(engine, frame, count);
+    resize_happened |= ResizeInstancesBuffer(engine, frame, count);
+
+    m_is_dirty[frame->GetFrameIndex()] |= resize_happened;
 }
 
 void IndirectDrawState::UpdateBufferData(Engine *engine, Frame *frame, bool *out_was_resized)
 {
     // assume render thread
 
-    if ((*out_was_resized = ResizeIfNeeded(engine, frame))) {
-        m_is_dirty = true;
+    const auto frame_index = frame->GetFrameIndex();
+
+    if ((*out_was_resized = ResizeIfNeeded(engine, frame, m_max_entity_id))) {
+        m_is_dirty[frame_index] = true;
     }
 
-    if (!m_is_dirty) {
+    if (!m_is_dirty[frame_index]) {
         return;
     }
-
-    const auto frame_index = frame->GetFrameIndex();
 
     // update data for object instances (cpu - gpu)
     m_instance_buffers[frame_index]->Copy(
@@ -242,7 +280,7 @@ void IndirectDrawState::UpdateBufferData(Engine *engine, Frame *frame, bool *out
         m_object_instances.Data()
     );
 
-    m_is_dirty = false;
+    m_is_dirty[frame_index] = false;
 }
 
 
@@ -361,13 +399,13 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     const CullData &cull_data
 )
 {
-    auto *command_buffer     = frame->GetCommandBuffer();
-    const auto frame_index   = frame->GetFrameIndex();
+    auto *command_buffer        = frame->GetCommandBuffer();
+    const auto frame_index      = frame->GetFrameIndex();
 
-    const UInt num_draw_proxys = static_cast<UInt>(m_indirect_draw_state.GetDrawables().Size());
-    const UInt num_batches   = (num_draw_proxys / IndirectDrawState::batch_size) + 1;
+    const UInt num_draw_proxies = static_cast<UInt>(m_indirect_draw_state.GetDrawProxies().Size());
+    const UInt num_batches      = (num_draw_proxies / IndirectDrawState::batch_size) + 1;
 
-    if (num_draw_proxys == 0) {
+    if (num_draw_proxies == 0) {
         return;
     }
 
@@ -406,15 +444,15 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
     );
 
-    UInt count_remaining = num_draw_proxys;
+    UInt count_remaining = num_draw_proxies;
 
     for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
-        const UInt num_draw_proxys_in_batch = MathUtil::Min(count_remaining, IndirectDrawState::batch_size);
+        const UInt num_draw_proxies_in_batch = MathUtil::Min(count_remaining, IndirectDrawState::batch_size);
 
         m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
             .object_visibility_data = {
                 .batch_offset             = batch_index * IndirectDrawState::batch_size,
-                .num_draw_proxys            = num_draw_proxys_in_batch,
+                .num_draw_proxies         = num_draw_proxies_in_batch,
                 .scene_id                 = static_cast<UInt32>(scene_id.value),
                 .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
             }
@@ -422,8 +460,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
         m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { 1, 1, 1 });
 
-        count_remaining -= num_draw_proxys_in_batch;
+        count_remaining -= num_draw_proxies_in_batch;
     }
+
+    //std::cout << (void*)this <<  "   num_draw_proxies : " << num_draw_proxies << "\n";
 }
 
 void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)

@@ -377,6 +377,7 @@ void RendererInstance::CollectDrawCalls(
     UInt num_culled_objects = 0;
 
     m_indirect_renderer.GetDrawState().ResetDrawables();
+    //m_indirect_renderer.GetDrawState().Reserve(engine, frame, m_entities.size());
 
     for (auto &&entity : m_entities) {
         if (entity->GetMesh() == nullptr) {
@@ -388,21 +389,24 @@ void RendererInstance::CollectDrawCalls(
                 const auto &visibility_state = octant->GetVisibilityState();
 
                 if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
-                    ++num_culled_objects;
+                    //++num_culled_objects;
                     continue;
+
+                    //draw_proxy.user_data = reinterpret_cast<void *>(UInt64(1));
+
                 }
 
-                if (!visibility_state.Get(scene_id)) {
-                    ++num_culled_objects;
-                    continue;
-                }
+                //if (!visibility_state.Get(scene_id)) {
+               //     ++num_culled_objects;
+                //    continue;
+               // }
             } else {
                 ++num_culled_objects;
                 continue;
             }
         }
-
-        m_indirect_renderer.GetDrawState().PushDrawable(EntityDrawProxy(entity->GetDrawProxy()));
+        
+        m_indirect_renderer.GetDrawState().PushDrawable(entity->GetDrawProxy());
     }
 
     m_indirect_renderer.ExecuteCullShaderInBatches(
@@ -471,7 +475,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
                 }
             );
 
-            for (auto &draw_proxy : m_indirect_renderer.GetDrawState().GetDrawables()) {
+            for (auto &draw_proxy : m_indirect_renderer.GetDrawState().GetDrawProxies()) {
                 const UInt entity_index = draw_proxy.entity_id != Entity::empty_id
                     ? draw_proxy.entity_id.value - 1
                     : 0;
@@ -514,7 +518,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
                     engine,
                     secondary,
                     m_indirect_renderer.GetDrawState().GetIndirectBuffer(frame_index),
-                    draw_proxy.object_instance.draw_command_index * sizeof(IndirectDrawCommand)
+                    draw_proxy.draw_command_index * sizeof(IndirectDrawCommand)
                 );
             }
 

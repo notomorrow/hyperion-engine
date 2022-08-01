@@ -210,7 +210,7 @@ void main()
     //screenspace_aabb = vec4(clip_min.xy, clip_max.xy);
     bool is_visible = clip_min.z <= max_depth;
     //gbuffer_albedo = vec4(max_depth-clip_min.z, 0, float(!is_visible), 0);//vec4(clip_max.xy - clip_min.xy, 0, 0);
-    // gbuffer_albedo = ReconstructPositionFromDepth(inverse(proj * view), clip_min.xy, depths[0]);
+    // gbuffer_albedo = ReconstructWorldSpacePositionFromDepth(inverse(proj * view), clip_min.xy, depths[0]);
     // gbuffer_albedo.a = 0.0;
     // gbuffer_albedo = vec4(uv_min, 0, 0);
     

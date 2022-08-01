@@ -2,7 +2,7 @@
 
 #include "ssr_header.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform writeonly image2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba8) uniform writeonly image2D ssr_uvs;
 
 
 #define SSR_MAX_ITERATIONS 80
@@ -16,64 +16,46 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform writeonly
 #define SSR_Z_THICKNESS_THRESHOLD 0.1
 #define SSR_JITTER_OFFSET 0.0
 
-float linearDepth(float depth)
+float FetchDepth(vec2 uv)
 {
-    //depth = depth * 0.5 + 0.5;
-    //return scene.camera_near * scene.camera_far / (scene.camera_far + depth * (scene.camera_near - scene.camera_far));
-    return scene.projection[3][2] / (depth * scene.projection[2][3] - scene.projection[2][2]);
-
-}
-
-float fetchDepth(vec2 uv)
-{
-    vec4 depthTexel = SampleGBuffer(gbuffer_depth_texture, uv);
-
-    return depthTexel.r;// * 2.0 - 1.0;
-}
-
-bool rayIntersectDepth(float rayZNear, float rayZFar, vec2 hitPixel)
-{
-    // Swap if bigger
-    if (rayZFar > rayZNear)
-    {
-        float t = rayZFar; rayZFar = rayZNear; rayZNear = t;
-    }
-    float cameraZ = linearDepth(fetchDepth(hitPixel));
-
-    return rayZFar <= cameraZ && rayZNear >= cameraZ - SSR_Z_THICKNESS_THRESHOLD;
+    return SampleGBuffer(gbuffer_depth_texture, uv).r;
 }
 
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
 bool TraceRays(
-    vec3 rayOrigin, vec3 rayDir, float jitter,
-    out vec2 hitPixel, out vec3 hitPoint, out float iterationCount
+    vec3 ray_origin,
+    vec3 ray_direction,
+    float jitter,
+    out vec2 hit_pixel,
+    out vec3 hit_point,
+    out float num_iterations
 )
 {
     bool intersect = false;
-    iterationCount = 0.0;
+    num_iterations = 0.0;
 
-    vec3 step = ssr_params.ray_step * normalize(rayDir);
-    vec3 marchingPosition = rayOrigin;
-    float depthFromScreen;
-    vec2 screenPosition;
+    vec3 step = ssr_params.ray_step * normalize(ray_direction);
+    vec3 marching_position = ray_origin;
+    float depth_from_screen;
     float step_delta;
+
+    const mat4 inverse_proj = inverse(scene.projection);
 
     int i = 0;
 
 	for (; i < ssr_params.num_iterations; i++) {
-        marchingPosition += step;
+        marching_position += step;
 
-        hitPixel = generateProjectedPosition(marchingPosition);
+        hit_pixel = GetProjectedPosition(marching_position);
 
-        float depth = SampleGBuffer(gbuffer_depth_texture, hitPixel).x;
+        float depth = FetchDepth(hit_pixel);
 
-        depthFromScreen = generatePositionFromDepth(hitPixel, depth).z;
-
-        step_delta = marchingPosition.z - depthFromScreen;
+        depth_from_screen = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, depth).z;
+        step_delta = marching_position.z - depth_from_screen;
 
         intersect = step_delta > 0.0;
-        iterationCount += 1.0;
+        num_iterations += 1.0;
 
         if (intersect) {
             break;
@@ -86,11 +68,11 @@ bool TraceRays(
 		// binary search
 		for (i = 0; i < max_binary_search_steps; i++) {
             step *= 0.5;
-            marchingPosition = marchingPosition - step * sign(step_delta);
+            marching_position = marching_position - step * sign(step_delta);
 
-            hitPixel = generateProjectedPosition(marchingPosition);
-            depthFromScreen = abs(generatePositionFromDepth(hitPixel, SampleGBuffer(gbuffer_depth_texture, hitPixel).x).z);
-            step_delta = abs(marchingPosition.z) - depthFromScreen;
+            hit_pixel = GetProjectedPosition(marching_position);
+            depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, FetchDepth(hit_pixel)).z);
+            step_delta = abs(marching_position.z) - depth_from_screen;
 
             if (abs(step_delta) < ssr_params.distance_bias) {
                 return true;
@@ -102,20 +84,20 @@ bool TraceRays(
 }
 
 float CalculateAlpha(
-    float iterationCount, float reflectivity,
-    vec2 hitPixel, vec3 hitPoint, float dist, vec3 rayDir
+    float num_iterations, float reflectivity,
+    vec2 hit_pixel, vec3 hit_point, float dist, vec3 ray_direction
 )
 {
     float alpha = 1.0;
     // Fade ray hits that approach the maximum iterations
-    alpha *= 1.0 - (iterationCount / float(SSR_MAX_ITERATIONS));
+    alpha *= 1.0 - (num_iterations / float(SSR_MAX_ITERATIONS));
     // Fade ray hits that approach the screen edge
-    vec2 hitPixelNDC = hitPixel * 2.0 - 1.0;
-    float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
+    vec2 hit_pixelNDC = hit_pixel * 2.0 - 1.0;
+    float maxDimension = min(1.0, max(abs(hit_pixelNDC.x), abs(hit_pixelNDC.y)));
     alpha *= 1.0 - max(0.0, maxDimension - SSR_SCREEN_EDGE_FADE_START) / (1.0 - SSR_SCREEN_EDGE_FADE_START);
 
     // Fade ray hits base on how much they face the camera
-    //float eyeDir = clamp(rayDir.z, SSR_EYE_FADE_START, SSR_EYE_FADE_END);
+    //float eyeDir = clamp(ray_direction.z, SSR_EYE_FADE_START, SSR_EYE_FADE_END);
     //alpha *= 1.0 - (eyeDir - SSR_EYE_FADE_START) / (SSR_EYE_FADE_END - SSR_EYE_FADE_START);
 
     // Fade ray hits based on distance from ray origin
@@ -129,35 +111,28 @@ void main(void)
     ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
 	vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
+    const mat4 inverse_proj = inverse(scene.projection);
+
     float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
 	vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
-    vec3 viewSpaceN = normalize((scene.view * vec4(N, 0.0)).xyz);
+    vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 
-    vec3 rayOrigin = generatePositionFromDepth(texcoord, fetchDepth(texcoord));
-    vec3 rayDir = normalize(reflect(normalize(rayOrigin), viewSpaceN));
+    vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, FetchDepth(texcoord)).xyz;
+    vec3 ray_direction = normalize(reflect(normalize(ray_origin), view_space_normal));
 
 
-	vec2 hitPixel;
-    vec3 hitPoint;
-    float iterationCount;
+	vec2 hit_pixel;
+    vec3 hit_point;
+    float num_iterations;
 
     vec2 uv2 = texcoord * scene_resolution;
     float jitter = fract((texcoord.x + texcoord.y) * 0.25 + SSR_JITTER_OFFSET);
 
-    bool intersect = TraceRays(rayOrigin, rayDir, jitter, hitPixel, hitPoint, iterationCount);
+    bool intersect = TraceRays(ray_origin, ray_direction, jitter, hit_pixel, hit_point, num_iterations);
 
-    float dist = distance(rayOrigin, hitPoint);
+    float dist = distance(ray_origin, hit_point);
 
-    float alpha = CalculateAlpha(iterationCount, 1.0 /* reflectivity */, hitPixel, hitPoint, dist, rayDir) * float(intersect);
-
-    vec3 hitNormal = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, hitPixel));
-    hitNormal = normalize((scene.view * vec4(hitNormal, 0.0)).xyz);
-
-    /*if (dot(hitNormal, rayDir) >= 0.0) {
-        imageStore(ssr_uvs, coord, vec4(0.0));
-
-        return;
-    }*/
+    float alpha = CalculateAlpha(num_iterations, 1.0 /* reflectivity */, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
 
     if (!intersect) {
         imageStore(ssr_uvs, coord, vec4(0.0));
@@ -165,5 +140,5 @@ void main(void)
         return;
     }
 
-    imageStore(ssr_uvs, coord, vec4(hitPixel, 0.0, alpha));
+    imageStore(ssr_uvs, coord, vec4(hit_pixel, 0.0, alpha));
 }

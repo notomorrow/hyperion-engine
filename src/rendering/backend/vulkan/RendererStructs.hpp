@@ -663,6 +663,8 @@ protected:
 struct alignas(4) IndirectDrawCommand {
     // native vk object
     VkDrawIndexedIndirectCommand command;
+
+    HYP_PAD_STRUCT_HERE(Float32, 7);
 };
 
 static_assert(std::is_standard_layout_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");

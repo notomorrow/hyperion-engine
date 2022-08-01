@@ -145,7 +145,6 @@ void Octree::CollapseParents(Engine *engine)
     if (m_is_divided || !Empty()) {
         return;
     }
-    DebugLog(LogType::Debug, "collapse parents\n");
 
     Octree *iteration = m_parent,
            *highest_empty = nullptr;

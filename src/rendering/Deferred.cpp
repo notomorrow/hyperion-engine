@@ -195,7 +195,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 }
 
 DeferredRenderer::DeferredRenderer()
-    : m_ssr(Extent2D { 1024, 1024 }),
+    : m_ssr(Extent2D { 512, 512 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -211,10 +211,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_indirect_pass.Create(engine);
     m_direct_pass.Create(engine);
-
-    // const auto &attachment_refs = m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs();
-
-    // auto &opaque_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetRenderPass();
+    
     const auto *depth_attachment_ref = m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs().back();//opaque_render_pass->GetRenderPass().GetAttachmentRefs().back();//.back();
     AssertThrow(depth_attachment_ref != nullptr);
 

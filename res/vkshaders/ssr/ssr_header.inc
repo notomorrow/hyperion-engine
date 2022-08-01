@@ -24,15 +24,7 @@ layout(push_constant) uniform PushConstant
 	float screen_edge_fade_end;
 } ssr_params;
 
-vec3 generatePositionFromDepth(vec2 texturePos, float depth)
-{
-	vec4 ndc = vec4((texturePos - 0.5) * 2, depth, 1.f);
-	vec4 inversed = inverse(scene.projection) * ndc;// going back from projected
-	inversed /= inversed.w;
-	return inversed.xyz;
-}
-
-vec2 generateProjectedPosition(vec3 pos)
+vec2 GetProjectedPosition(vec3 pos)
 {
 	vec4 samplePosition = scene.projection * vec4(pos, 1.f);
 	samplePosition.xy = (samplePosition.xy / samplePosition.w) * 0.5 + 0.5;
