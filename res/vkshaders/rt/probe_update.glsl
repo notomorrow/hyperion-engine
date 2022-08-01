@@ -8,24 +8,24 @@
 #define PROBE_TEXEL_FETCH(coord) (GetProbeRayData(coord / probe_system.image_dimensions))
 
 #if DEPTH
-
-#define GROUP_SIZE 16
-#define PROBE_SIDE_LENGTH 16
-#define OUTPUT_IMAGE output_depth
-
+    #define GROUP_SIZE 16
 #else
-    
-#define GROUP_SIZE 8
-#define PROBE_SIDE_LENGTH 8
-#define OUTPUT_IMAGE output_irradiance
-
+    #define GROUP_SIZE 8
 #endif
-
-#define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + probe_system.probe_border.x)
 
 layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
 
 #include "../include/rt/probe/shared.inc"
+
+#if DEPTH
+    #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_DEPTH
+    #define OUTPUT_IMAGE output_depth
+#else
+    #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_IRRADIANCE
+    #define OUTPUT_IMAGE output_irradiance
+#endif
+
+#define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + probe_system.probe_border.x)
 
 shared ProbeRayData ray_cache[CACHE_SIZE];
 
@@ -37,19 +37,6 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
     vec2 oct_frag_coord = ivec2((int(coord.x) - 2) % PROBE_SIDE_LENGTH_BORDER, (int(coord.y) - 2) % PROBE_SIDE_LENGTH_BORDER);
     
     return (oct_frag_coord + vec2(0.5)) * (2.0 / float(PROBE_SIDE_LENGTH)) - vec2(1.0);
-}
-
-vec3 DecodeOctahedralCoord(vec2 coord)
-{
-#define NON_ZERO_SIGN(n) (n >= 0.0 ? 1.0 : -1.0)
-    vec3 vec = vec3(coord.x, coord.y, 1.0 - abs(coord.x) - abs(coord.y));
-    
-    if (vec.z < 0.0) {
-        vec.xy = (1.0 - abs(vec.yx)) * vec2(NON_ZERO_SIGN(vec.x), NON_ZERO_SIGN(vec.y));
-    }
-#undef NON_ZERO_SIGN
-    
-    return normalize(vec);
 }
 
 void UpdateRayCache(uvec2 coord, uint offset, uint num_rays)
