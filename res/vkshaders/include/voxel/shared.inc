@@ -1,5 +1,5 @@
 
-vec3 ScaleToAabb(vec3 aabb_max, vec3 aabb_min, vec3 world_position)
+vec3 ScaleToAABB(vec3 aabb_max, vec3 aabb_min, vec3 world_position)
 {
     vec3 extent3 = aabb_max - aabb_min;
     float extent = max(extent3.x, max(extent3.y, extent3.z)) * 0.5;
@@ -16,7 +16,7 @@ vec3 OffsetVoxelPosition(vec3 voxel_position)
 
 vec3 ToVoxelPosition(vec3 aabb_max, vec3 aabb_min, vec3 world_position, float grid_size)
 {
-    vec3 voxel_pos = OffsetVoxelPosition(ScaleToAabb(aabb_max, aabb_min, world_position));
+    vec3 voxel_pos = OffsetVoxelPosition(ScaleToAABB(aabb_max, aabb_min, world_position));
     
     return clamp(vec3(voxel_pos * grid_size), vec3(0.0), vec3(grid_size - 1.0));
 }

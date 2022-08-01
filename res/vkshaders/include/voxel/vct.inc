@@ -40,7 +40,7 @@ vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, float lod)
 	
 	uint resolution = uint(uVolumeDimension);
 
-	vec3 scaled_pos = ScaleToAabb(aabb_max, aabb_min, position);
+	vec3 scaled_pos = ScaleToAABB(aabb_max, aabb_min, position);
 
     uvec3 fragPos = clamp(uvec3(OffsetVoxelPosition(scaled_pos) * resolution), 
 						  uvec3(0u), 
