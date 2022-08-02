@@ -71,6 +71,7 @@ layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform 
 #define HYP_RENDER_COMPONENT_VCT     0
 #define HYP_RENDER_COMPONENT_SHADOWS 1
 #define HYP_RENDER_COMPONENT_CUBEMAP 2
+#define HYP_RENDER_COMPONENT_DDGI    3
 
 bool IsRenderComponentEnabled(uint name)
 {

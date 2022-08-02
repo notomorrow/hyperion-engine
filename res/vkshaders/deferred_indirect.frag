@@ -132,7 +132,9 @@ void main()
 #endif
 
 #if HYP_DDGI_ENABLED
-        irradiance = DDGISampleIrradiance(position.xyz, N, V).rgb;
+        if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_DDGI)) {
+            irradiance = DDGISampleIrradiance(position.xyz, N, V).rgb;
+        }
 #endif
 
 #if HYP_SSR_ENABLED
@@ -164,6 +166,8 @@ void main()
     // output_color = vec4(albedo.rgb, 1.0);
 
     output_color = vec4(result, 1.0);
+
+    output_color.rgb = irradiance.rgb;
     // output_color.rgb = vec3(float(depth < 0.95)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
 
     // output_color.rgb = irradiance.rgb;
