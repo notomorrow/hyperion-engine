@@ -64,11 +64,9 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_VCT 1
+#define HYPERION_VK_TEST_VCT 0
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
-
-v2::VoxelConeTracing *vct = nullptr; // Have to do this for now... we need some way of statically generating descriptor sets
 
 namespace hyperion::v2 {
     
@@ -194,7 +192,7 @@ public:
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        scene->GetRootNode()->AddChild(std::move(zombie));
+        //scene->GetRootNode()->AddChild(std::move(zombie));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -258,7 +256,7 @@ public:
         quad_spatial->SetScale(Vector3(150.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
         quad_spatial->SetTranslation(Vector3(0, -28.0f, 0));
-        scene->AddEntity(std::move(quad_spatial));
+        // scene->AddEntity(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
@@ -808,15 +806,6 @@ int main()
 
     my_game->Init(engine, window);
 
-#if HYPERION_VK_TEST_VCT
-    /*vct = new v2::VoxelConeTracing({
-        .aabb = BoundingBox(Vector3(-128), Vector3(128))
-    });
-
-    vct->Init(engine);*/
-#endif
-
-
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
@@ -1065,14 +1054,6 @@ int main()
         probe_system.ComputeIrradiance(engine, frame->GetCommandBuffer());
 #endif
 
-#if HYPERION_VK_TEST_VCT
-        //if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.005f) {
-        //    vct->OnRender(engine, frame);
-        //   tmp_render_timer = 0.001f;
-       // }
-        tmp_render_timer += 0.001f;
-#endif
-
         engine->RenderDeferred(frame);
         
 
@@ -1115,8 +1096,6 @@ int main()
     HYP_FLUSH_RENDER_QUEUE(engine);
 
     engine->game_thread.Join();
-
-    //delete vct;
 
     delete my_game;
 

@@ -392,6 +392,7 @@ void Scene::EnqueueRenderUpdates()
             shader_data.projection      = m_camera->GetDrawProxy().projection;
             shader_data.camera_position = m_camera->GetDrawProxy().position.ToVector4();
             shader_data.camera_near     = m_camera->GetDrawProxy().clip_near;
+            shader_data.camera_fov      = m_camera->GetDrawProxy().fov;
             shader_data.camera_far      = m_camera->GetDrawProxy().clip_far;
             shader_data.resolution_x    = m_camera->GetDrawProxy().dimensions.width;
             shader_data.resolution_y    = m_camera->GetDrawProxy().dimensions.height;

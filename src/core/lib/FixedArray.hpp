@@ -27,14 +27,14 @@ public:
         }
     }
 
-    FixedArray &operator=(T const (&items)[Sz])
-    {
-        for (SizeType i = 0; i < Sz; i++) {
-            m_data[i] = items[i];
-        }
+    // FixedArray &operator=(T const (&items)[Sz])
+    // {
+    //     for (SizeType i = 0; i < Sz; i++) {
+    //         m_data[i] = items[i];
+    //     }
 
-        return *this;
-    }
+    //     return *this;
+    // }
 
     FixedArray(const std::initializer_list<T> &items)
     {

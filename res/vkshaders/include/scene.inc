@@ -14,8 +14,9 @@ struct Scene {
     // 148
     float camera_far;
 
+    float camera_fov;
+
     uint enabled_render_components_mask;
-    float _pad1;
     
     // 152
     uint environment_texture_index;

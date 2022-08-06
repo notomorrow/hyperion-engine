@@ -87,6 +87,16 @@ float LinearDepth(mat4 projection, float depth)
     return projection[3][2] / (depth * projection[2][3] - projection[2][2]);
 }
 
+float ViewDepth(float depth, float near, float far)
+{
+   /* float x = 1.0 - (far / near);
+    float y = (far / near);
+
+    return 1.0 / ((x / far) * depth + (y / far));*/
+    
+    return (far * near) / (far - depth * (far - near));
+}
+
 vec4 ReconstructWorldSpacePositionFromDepth(mat4 inverse_view_projection, vec2 coord, float depth)
 {
     vec4 ndc = vec4(coord * 2.0 - 1.0, depth, 1.0);
@@ -109,5 +119,24 @@ vec4 ReconstructViewSpacePositionFromDepth(mat4 inverse_projection, vec2 coord, 
     return inversed;
 }
 
+float Saturate(float val)
+{
+    return min(max(val, 0.0), 1.0);
+}
+
+vec2 Saturate(vec2 val)
+{
+    return min(max(val, vec2(0.0)), vec2(1.0));
+}
+
+vec3 Saturate(vec3 val)
+{
+    return min(max(val, vec3(0.0)), vec3(1.0));
+}
+
+vec4 Saturate(vec4 val)
+{
+    return min(max(val, vec4(0.0)), vec4(1.0));
+}
 
 #endif
