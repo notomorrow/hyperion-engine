@@ -39,7 +39,7 @@ static auto &printf = std::wprintf;
 static auto &sprintf = wsprintf;
 static auto &fputs = std::fputws;
 #define PRIutf8s "ls"
-#define UTF8_CSTR(str) L##str
+#define HYP_UTF8_CSTR(str) L##str
 
 inline std::vector<wchar_t> ToWide(const char *str)
 {
@@ -64,8 +64,8 @@ static auto &printf = std::printf;
 static auto &sprintf = std::sprintf;
 static auto &fputs = std::fputs;
 #define PRIutf8s "s"
-#define UTF8_CSTR(str) str
-#define UTF8_TOWIDE(str) str
+#define HYP_UTF8_CSTR(str) str
+#define HYP_UTF8_TOWIDE(str) str
 #endif
 
 typedef uint32_t u32char;

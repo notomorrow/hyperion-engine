@@ -13,6 +13,8 @@ layout(location=0) out vec4 color_output;
 
 #include "include/gbuffer.inc"
 #include "include/scene.inc"
+#include "include/noise.inc"
+#include "include/shared.inc"
 
 const float diffarea = 0.3; //self-shadowing reduction
 const float gdisplace = 0.4; //gauss bell center //0.4
@@ -27,10 +29,10 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define SSAO_MIST_END 0.01
 #define CAP_MIN_DISTANCE 0.0001
 #define CAP_MAX_DISTANCE 0.1
-#define SSAO_SAMPLES 25 // NOTE: Even numbers breaking on linux nvidia drivers ??
+#define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
 #define SSAO_STRENGTH 0.65
 #define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 5.0
+#define SSAO_RADIUS 3.0
 #define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
@@ -115,10 +117,158 @@ float CalculateAO(float depth, float dw, float dh)
     return temp;
 }
 
+#define HYP_GTAO_NUM_CIRCLES 2
+#define HYP_GTAO_NUM_SLICES  2
+#define HYP_GTAO_RADIUS      80.0
+#define HYP_GTAO_THICKNESS   0.75
+#define HYP_GTAO_POWER       4.0
+
+const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
+const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
+
+float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
+
+float tan_half_fov = tan(fov_rad * 0.5);
+float inv_tan_half_fov = 1.0 / tan_half_fov; //-scene.view[1][1];
+vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scene.resolution_x)), inv_tan_half_fov);
+vec2 inv_focal_len = vec2(1.0) / focal_len;
+
+vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
+
+float GTAOOffsets(vec2 uv)
+{
+    ivec2 position = ivec2(uv * vec2(scene.resolution_x, scene.resolution_y));
+    return 0.25 * float((position.y - position.x) & 3);
+}
+
+mat4 inv_view_proj = inverse(scene.projection * scene.view);
+
+vec3 GTAOGetPosition(vec2 uv)
+{
+    const float depth = SampleGBuffer(gbuffer_depth_texture, uv).r;
+
+    const float linear_depth = LinearDepth(scene.projection, depth);
+    return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
+}
+
+vec3 GTAOGetNormal(vec2 uv)
+{
+    vec3 normal = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, uv));
+    vec3 view_normal = normalize((scene.view * vec4(normal, 0.0)).xyz);
+    return view_normal;
+}
+
+float GTAOIntegrateUniformWeight(vec2 h)
+{
+    vec2 arc = vec2(1.0) - cos(h);
+
+    return arc.x + arc.y;
+}
+
+float GTAOIntegrateArcCosWeight(vec2 h, float n)
+{
+    vec2 arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
+    return 0.25 * (arc.x + arc.y);
+}
+
+vec4 GTAOGetDetails(vec2 uv)
+{
+    
+    const float projected_scale = float(scene.resolution_y) / (tan_half_fov * 2.0) * 0.5;
+
+    /*! TODO! global counter variable for temporal stuff */
+    const float temporal_offset = spatial_offsets[0];
+    // const float temporal_noise = InterleavedGradientNoise(uv * vec2(scene.resolution_x, scene.resolution_y)); // TODO!
+    const float temporal_rotation = temporal_rotations[0]; // TODO!
+
+    const float noise_offset = GTAOOffsets(vec2(uv.x, 1.0 - uv.y));
+    const float noise_direction = InterleavedGradientNoise(vec2(uv.x, 1.0 - uv.y) * vec2(scene.resolution_x, scene.resolution_y));
+    float ray_step = fract(noise_offset + temporal_offset);
+
+    const vec3 position = GTAOGetPosition(uv);
+    const float depth = SampleGBuffer(gbuffer_depth_texture, uv).r;
+    const vec3 world_position = ReconstructWorldSpacePositionFromDepth(inv_view_proj, uv, depth).xyz;
+    const vec3 N = GTAOGetNormal(uv);
+    const vec3 V = normalize(vec3(0.0) - position);
+
+    const vec2 texel_size = vec2(1.0) / vec2(scene.resolution_x, scene.resolution_y);
+
+    float step_radius = max(min((HYP_GTAO_RADIUS * projected_scale) / position.z, 512.0), float(HYP_GTAO_NUM_SLICES)) / float(HYP_GTAO_NUM_SLICES + 1);
+
+    vec3 bent_normal = vec3(0.0);
+    float occlusion = 0.0;
+
+    vec2 falloff;
+
+    for (int i = 0; i < HYP_GTAO_NUM_CIRCLES; i++) {
+        const float angle = (float(i) + noise_direction + (temporal_rotation / 360.0)) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES));
+        const vec3 slice_dir = vec3(cos(angle), sin(angle), 0.0);
+
+        vec2 h = vec2(-1.0);
+
+        vec2 uv_offset;
+        vec4 uv_slice;
+        vec3 ds, dt;
+        vec2 dsdt;
+        vec2 dsdt_length;
+        vec2 H;
+
+        for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
+            uv_offset = (slice_dir.xy * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1)) * vec2(1.0, -1.0);
+            uv_slice = uv.xyxy + vec4(uv_offset, -uv_offset);
+
+            ds = GTAOGetPosition(uv_slice.xy) - position;
+            dt = GTAOGetPosition(uv_slice.zw) - position;
+
+            dsdt = vec2(dot(ds, ds), dot(dt, dt));
+            dsdt_length = inversesqrt(dsdt);
+
+            falloff = Saturate(dsdt * (2.0 / max(HYP_FMATH_SQR(HYP_GTAO_RADIUS), 0.0001)));
+
+            H = vec2(dot(ds, V), dot(dt, V)) * dsdt_length;
+            h = mix(
+                mix(H, h, falloff),
+                mix(H, h, HYP_GTAO_THICKNESS),
+                greaterThan(H, h)
+            );
+
+            // h.x = max(h.x, H.x - falloff.x);
+            // h.y = max(h.y, H.y - falloff.y);
+        }
+
+        vec3 plane_normal = normalize(cross(slice_dir, V));
+        vec3 tangent = cross(V, plane_normal);
+        vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
+        float projected_length = length(projected_normal);
+
+        float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
+        float n = -sign(dot(projected_normal, tangent)) * acos(cos_n);
+
+        h = acos(clamp(h, vec2(-1.0), vec2(1.0)));
+        h.x = n + max(-h.x - n, -HYP_FMATH_PI_HALF);
+        h.y = n + min(h.y - n, HYP_FMATH_PI_HALF);
+
+        const float bent_angle = (h.x + h.y) * 0.5;
+
+        bent_normal += V * cos(bent_angle) - tangent * sin(bent_angle);
+        occlusion += projected_length * GTAOIntegrateArcCosWeight(h, n);
+    }
+
+    bent_normal = normalize(normalize(bent_normal) - (V * 0.5));
+    occlusion = Saturate(pow(occlusion / float(HYP_GTAO_NUM_CIRCLES), HYP_GTAO_POWER));
+
+    return vec4(bent_normal, occlusion);
+}
+
 void main()
 {
 #if SSAO_ENABLED
     
+    // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0)) * 0.5 + 0.5).xyz, 1.0);
+    color_output = vec4(GTAOGetDetails(texcoord).aaa, 1.0);
+    return;
+
+
     float width = float(scene.resolution_x);
     float height = float(scene.resolution_y);
 

@@ -173,8 +173,8 @@ protected:
         }
     };
 
-    static_assert(sizeof(Storage) == sizeof(typename Storage::data_buffer), "Storage struct should not be padded");
-    //static_assert(alignof(Storage) == alignof(typename Storage::data_buffer), "Storage struct should not be padded");
+    static_assert(sizeof(Storage) == sizeof(Storage::data_buffer), "Storage struct should not be padded");
+    // static_assert(alignof(Storage) == alignof(Storage::data_buffer), "Storage struct should not be padded");
 
     HYP_FORCE_INLINE
     static ValueType &ToValueType(Storage &storage)
@@ -753,8 +753,6 @@ auto DynArray<T>::Insert(ConstIterator where, const ValueType &value) -> Iterato
     }
 
     AssertThrow(m_capacity >= m_size + 1);
-
-    const Int64 dist = where - Begin();
 
     Int64 index;
 

@@ -841,7 +841,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
     }
     default: {
         Int64 last_pos = static_cast<Int64>(bs->Position()) - sizeof(UByte);
-        utf::printf(UTF8_CSTR("unknown instruction '%d' referenced at location: 0x%" PRIx64 "\n"), code, last_pos);
+        utf::printf(HYP_UTF8_CSTR("unknown instruction '%d' referenced at location: 0x%" PRIx64 "\n"), code, last_pos);
         // seek to end of bytecode stream
         bs->Seek(bs->Size());
 

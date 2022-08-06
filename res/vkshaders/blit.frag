@@ -46,4 +46,6 @@ void main()
     }
 
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
+
+    // out_color.rgb = vec3(SampleEffectPre(0, v_texcoord0, vec4(1.0)).rgb);
 }
