@@ -1,7 +1,7 @@
 #ifndef HYPERION_RENDERER_RAYTRACING_INSTANCE_H
 #define HYPERION_RENDERER_RAYTRACING_INSTANCE_H
 
-#include "RendererRaytracingPipeline.hpp"
+#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <memory>
 #include <vector>

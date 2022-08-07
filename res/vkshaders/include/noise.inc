@@ -22,7 +22,6 @@ vec2 VogelDisk(int sample_index, int num_samples, float phi)
     return vec2(r * cos(theta), r * sin(theta));
 }
 
-
 float InterleavedGradientNoise(vec2 position_screen)
 {
     const vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);

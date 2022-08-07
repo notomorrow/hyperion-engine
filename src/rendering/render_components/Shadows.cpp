@@ -205,7 +205,7 @@ ShadowRenderer::ShadowRenderer(Ref<Light> &&light)
 
 ShadowRenderer::ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance)
     : EngineComponentBase(),
-      RenderComponent(5)
+      RenderComponent()
 {
     m_shadow_pass.SetLight(std::move(light));
     m_shadow_pass.SetOrigin(origin);

@@ -1,8 +1,8 @@
 #ifndef HYPERION_RENDERER_IMAGE_VIEW_H
 #define HYPERION_RENDERER_IMAGE_VIEW_H
 
-#include "RendererResult.hpp"
-#include "RendererImage.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererImage.hpp>
 
 #include <vulkan/vulkan.h>
 

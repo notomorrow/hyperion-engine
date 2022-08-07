@@ -1,8 +1,9 @@
 #ifndef RENDERER_IMAGE_H
 #define RENDERER_IMAGE_H
 
-#include "RendererResult.hpp"
-#include "RendererBuffer.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererStructs.hpp>
 
 #include <math/MathUtil.hpp>
 

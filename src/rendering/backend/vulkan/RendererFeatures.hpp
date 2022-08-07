@@ -1,9 +1,9 @@
 #ifndef HYPERION_RENDERER_FEATURES_H
 #define HYPERION_RENDERER_FEATURES_H
 
-#include "RendererResult.hpp"
-#include "RendererImage.hpp"
-#include "RendererStructs.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererStructs.hpp>
 
 #include <util/Defines.hpp>
 

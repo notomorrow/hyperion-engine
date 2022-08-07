@@ -1,11 +1,11 @@
 #ifndef HYPERION_RENDERER_FRAME_HANDLER_H
 #define HYPERION_RENDERER_FRAME_HANDLER_H
 
-#include "RendererFrame.hpp"
-#include "RendererSwapchain.hpp"
-#include "RendererCommandBuffer.hpp"
-#include "RendererStructs.hpp"
-#include "RendererQueue.hpp"
+#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererSwapchain.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererQueue.hpp>
 
 #include <Types.hpp>
 

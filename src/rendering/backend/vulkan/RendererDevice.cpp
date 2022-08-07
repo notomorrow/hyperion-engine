@@ -2,9 +2,9 @@
 // Created by emd22 on 2022-02-20.
 //
 
-#include "RendererDevice.hpp"
-#include "RendererInstance.hpp"
-#include "RendererFeatures.hpp"
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererInstance.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 #include <cstring>
 #include <algorithm>

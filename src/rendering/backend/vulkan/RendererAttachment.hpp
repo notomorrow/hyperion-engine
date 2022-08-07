@@ -1,10 +1,10 @@
 #ifndef HYPERION_RENDERER_ATTACHMENT_H
 #define HYPERION_RENDERER_ATTACHMENT_H
 
-#include "RendererDevice.hpp"
-#include "RendererImage.hpp"
-#include "RendererImageView.hpp"
-#include "RendererSampler.hpp"
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererSampler.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>

@@ -1,4 +1,4 @@
-#include "RendererPipeline.hpp"
+#include <rendering/backend/RendererPipeline.hpp>
 #include <core/lib/FlatSet.hpp>
 
 #include <system/Debug.hpp>

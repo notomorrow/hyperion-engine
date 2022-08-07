@@ -2,10 +2,10 @@
 // Created by emd22 on 2022-02-20.
 //
 
-#include "RendererGraphicsPipeline.hpp"
-#include "RendererFeatures.hpp"
-#include "RendererRenderPass.hpp"
-#include "RendererFramebuffer.hpp"
+#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererRenderPass.hpp>
+#include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <system/Debug.hpp>
 #include <math/MathUtil.hpp>

@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <string>
 
-#include "RendererResult.hpp"
-#include "RendererStructs.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererStructs.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

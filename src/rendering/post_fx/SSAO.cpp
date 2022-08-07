@@ -21,10 +21,10 @@ Ref<Shader> SSAOEffect::CreateShader(Engine *engine)
     return engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_vert.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/gtao_vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/gtao_frag.spv")).ReadBytes()
             }}
         }
     ));

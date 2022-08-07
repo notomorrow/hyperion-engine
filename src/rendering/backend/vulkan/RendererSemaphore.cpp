@@ -1,5 +1,5 @@
-#include "RendererSemaphore.hpp"
-#include "RendererDevice.hpp"
+#include <rendering/backend/RendererSemaphore.hpp>
+#include <rendering/backend/RendererDevice.hpp>
 
 #include <Util.hpp>
 

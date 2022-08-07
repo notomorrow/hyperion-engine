@@ -1,11 +1,11 @@
-#include "RendererDescriptorSet.hpp"
-#include "RendererCommandBuffer.hpp"
-#include "RendererGraphicsPipeline.hpp"
-#include "RendererComputePipeline.hpp"
-#include "RendererBuffer.hpp"
-#include "RendererFeatures.hpp"
-#include "RendererImageView.hpp"
-#include "RendererSampler.hpp"
+#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererSampler.hpp>
 #include "rt/RendererRaytracingPipeline.hpp"
 #include "rt/RendererAccelerationStructure.hpp"
 
@@ -214,7 +214,7 @@ DescriptorSet::DescriptorSet()
       m_descriptor_pool(nullptr),
       m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
       m_index(static_cast<Index>(-1)),
-      m_real_index(static_cast<Index>(-1)),
+      m_real_index(~0u),
       m_bindless(false),
       m_is_created(false),
       m_is_standalone(true)
@@ -232,6 +232,28 @@ DescriptorSet::DescriptorSet(Index index, UInt real_index, bool bindless)
       m_is_created(false),
       m_is_standalone(false)
 {
+}
+
+DescriptorSet::DescriptorSet(DescriptorSet &&other) noexcept
+    : m_set(other.m_set),
+      m_layout(other.m_layout),
+      m_descriptor_pool(other.m_descriptor_pool),
+      m_state(other.m_state),
+      m_index(other.m_index),
+      m_real_index(other.m_real_index),
+      m_bindless(other.m_bindless),
+      m_is_created(other.m_is_created),
+      m_is_standalone(other.m_is_standalone)
+{
+    other.m_set = VK_NULL_HANDLE;
+    other.m_layout = VK_NULL_HANDLE;
+    other.m_descriptor_pool = nullptr;
+    other.m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+    other.m_index = static_cast<DescriptorSet::Index>(-1);
+    other.m_real_index = ~0u;
+    other.m_bindless = false;
+    other.m_is_created = false;
+    other.m_is_standalone = false;
 }
 
 DescriptorSet::~DescriptorSet()

@@ -277,6 +277,8 @@ public:
     DescriptorSet(Index index, UInt real_index, bool bindless);
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;
+    DescriptorSet(DescriptorSet &&other) noexcept;
+    DescriptorSet &operator=(DescriptorSet &&other) noexcept = delete;
     ~DescriptorSet();
 
     DescriptorSetState GetState() const { return m_state; }

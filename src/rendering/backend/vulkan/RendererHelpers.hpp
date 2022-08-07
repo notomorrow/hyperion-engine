@@ -1,11 +1,11 @@
 #ifndef HYPERION_RENDERER_HELPERS_H
 #define HYPERION_RENDERER_HELPERS_H
 
-#include "RendererResult.hpp"
-#include "RendererDevice.hpp"
-#include "RendererFence.hpp"
-#include "RendererStructs.hpp"
-#include "RendererCommandBuffer.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererFence.hpp>
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
 
 #include <vulkan/vulkan.h>
 

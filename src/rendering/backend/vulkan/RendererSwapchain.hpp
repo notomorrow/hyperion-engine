@@ -1,11 +1,11 @@
 #ifndef HYPERION_RENDERER_SWAPCHAIN_H
 #define HYPERION_RENDERER_SWAPCHAIN_H
 
-#include "RendererStructs.hpp"
-#include "RendererDevice.hpp"
-#include "RendererImageView.hpp"
-#include "RendererSemaphore.hpp"
-#include "RendererFramebuffer.hpp"
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererSemaphore.hpp>
+#include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <vector>
 

@@ -1,12 +1,12 @@
 #ifndef HYPERION_RENDERER_COMPUTE_PIPELINE_H
 #define HYPERION_RENDERER_COMPUTE_PIPELINE_H
 
-#include "RendererPipeline.hpp"
-#include "RendererDevice.hpp"
-#include "RendererSwapchain.hpp"
-#include "RendererBuffer.hpp"
-#include "RendererShader.hpp"
-#include "RendererDescriptorSet.hpp"
+#include <rendering/backend/RendererPipeline.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererSwapchain.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererShader.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 namespace hyperion {
 namespace renderer {
