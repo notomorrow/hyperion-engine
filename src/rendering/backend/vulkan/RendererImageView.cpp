@@ -1,6 +1,6 @@
-#include "RendererImageView.hpp"
-#include "RendererImage.hpp"
-#include "RendererDevice.hpp"
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererDevice.hpp>
 
 #include <system/Debug.hpp>
 

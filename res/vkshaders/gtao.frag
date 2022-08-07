@@ -119,9 +119,9 @@ float CalculateAO(float depth, float dw, float dh)
 
 #define HYP_GTAO_NUM_CIRCLES 2
 #define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      80.0
-#define HYP_GTAO_THICKNESS   0.75
-#define HYP_GTAO_POWER       4.0
+#define HYP_GTAO_RADIUS      4.0
+#define HYP_GTAO_THICKNESS   0.85
+#define HYP_GTAO_POWER       10.0
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
@@ -132,7 +132,6 @@ float tan_half_fov = tan(fov_rad * 0.5);
 float inv_tan_half_fov = 1.0 / tan_half_fov; //-scene.view[1][1];
 vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scene.resolution_x)), inv_tan_half_fov);
 vec2 inv_focal_len = vec2(1.0) / focal_len;
-
 vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
 
 float GTAOOffsets(vec2 uv)
@@ -147,7 +146,7 @@ vec3 GTAOGetPosition(vec2 uv)
 {
     const float depth = SampleGBuffer(gbuffer_depth_texture, uv).r;
 
-    const float linear_depth = LinearDepth(scene.projection, depth);
+    const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far); // LinearDepth(scene.projection, depth);
     return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
 }
 
@@ -183,75 +182,63 @@ vec4 GTAOGetDetails(vec2 uv)
 
     const float noise_offset = GTAOOffsets(vec2(uv.x, 1.0 - uv.y));
     const float noise_direction = InterleavedGradientNoise(vec2(uv.x, 1.0 - uv.y) * vec2(scene.resolution_x, scene.resolution_y));
-    float ray_step = fract(noise_offset + temporal_offset);
+    const float ray_step = fract(noise_offset + temporal_offset);
 
-    const vec3 position = GTAOGetPosition(uv);
+    const vec3 P = GTAOGetPosition(uv);
     const float depth = SampleGBuffer(gbuffer_depth_texture, uv).r;
-    const vec3 world_position = ReconstructWorldSpacePositionFromDepth(inv_view_proj, uv, depth).xyz;
     const vec3 N = GTAOGetNormal(uv);
-    const vec3 V = normalize(vec3(0.0) - position);
+    const vec3 V = normalize(vec3(0.0) - P);
 
     const vec2 texel_size = vec2(1.0) / vec2(scene.resolution_x, scene.resolution_y);
 
-    float step_radius = max(min((HYP_GTAO_RADIUS * projected_scale) / position.z, 512.0), float(HYP_GTAO_NUM_SLICES)) / float(HYP_GTAO_NUM_SLICES + 1);
+    const float step_radius = max(min((HYP_GTAO_RADIUS * projected_scale) / P.z, 512.0), float(HYP_GTAO_NUM_SLICES)) / float(HYP_GTAO_NUM_SLICES + 1);
 
     vec3 bent_normal = vec3(0.0);
     float occlusion = 0.0;
-
-    vec2 falloff;
 
     for (int i = 0; i < HYP_GTAO_NUM_CIRCLES; i++) {
         const float angle = (float(i) + noise_direction + (temporal_rotation / 360.0)) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES));
         const vec3 slice_dir = vec3(cos(angle), sin(angle), 0.0);
 
-        vec2 h = vec2(-1.0);
-
-        vec2 uv_offset;
-        vec4 uv_slice;
-        vec3 ds, dt;
-        vec2 dsdt;
-        vec2 dsdt_length;
-        vec2 H;
+        vec2 horizons = vec2(-1.0);
 
         for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
-            uv_offset = (slice_dir.xy * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1)) * vec2(1.0, -1.0);
-            uv_slice = uv.xyxy + vec4(uv_offset, -uv_offset);
+            const vec2 uv_offset = (slice_dir.xy * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1)) * vec2(1.0, -1.0);
+            const vec4 uv_slice = uv.xyxy + vec4(uv_offset, -uv_offset);
 
-            ds = GTAOGetPosition(uv_slice.xy) - position;
-            dt = GTAOGetPosition(uv_slice.zw) - position;
+            const vec3 ds = GTAOGetPosition(uv_slice.xy) - P;
+            const vec3 dt = GTAOGetPosition(uv_slice.zw) - P;
 
-            dsdt = vec2(dot(ds, ds), dot(dt, dt));
-            dsdt_length = inversesqrt(dsdt);
+            const vec2 dsdt = vec2(dot(ds, ds), dot(dt, dt));
+            const vec2 dsdt_length = inversesqrt(dsdt);
 
-            falloff = Saturate(dsdt * (2.0 / max(HYP_FMATH_SQR(HYP_GTAO_RADIUS), 0.0001)));
+            const vec2 falloff = Saturate(dsdt * (2.0 / max(HYP_FMATH_SQR(HYP_GTAO_RADIUS), 0.0001)));
 
-            H = vec2(dot(ds, V), dot(dt, V)) * dsdt_length;
-            h = mix(
-                mix(H, h, falloff),
-                mix(H, h, HYP_GTAO_THICKNESS),
-                greaterThan(H, h)
+            const vec2 H = vec2(dot(ds, V), dot(dt, V)) * dsdt_length;
+
+            horizons = mix(
+                mix(H, horizons, falloff),
+                mix(H, horizons, HYP_GTAO_THICKNESS),
+                greaterThan(H, horizons)
             );
-
-            // h.x = max(h.x, H.x - falloff.x);
-            // h.y = max(h.y, H.y - falloff.y);
         }
 
-        vec3 plane_normal = normalize(cross(slice_dir, V));
-        vec3 tangent = cross(V, plane_normal);
-        vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
-        float projected_length = length(projected_normal);
+        const vec3 plane_normal = normalize(cross(slice_dir, V));
+        const vec3 plane_tangent = cross(V, plane_normal);
+        const vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
+        const float projected_length = length(projected_normal);
 
-        float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
-        float n = -sign(dot(projected_normal, tangent)) * acos(cos_n);
+        const float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
+        const float n = -sign(dot(projected_normal, plane_tangent)) * acos(cos_n);
 
-        h = acos(clamp(h, vec2(-1.0), vec2(1.0)));
-        h.x = n + max(-h.x - n, -HYP_FMATH_PI_HALF);
-        h.y = n + min(h.y - n, HYP_FMATH_PI_HALF);
+        horizons = acos(clamp(horizons, vec2(-1.0), vec2(1.0)));
+        horizons.x = n + max(-horizons.x - n, -HYP_FMATH_PI_HALF);
+        horizons.y = n + min(horizons.y - n, HYP_FMATH_PI_HALF);
 
-        const float bent_angle = (h.x + h.y) * 0.5;
+        const float bent_angle = (horizons.x + horizons.y) * 0.5;
 
-        bent_normal += V * cos(bent_angle) - tangent * sin(bent_angle);
-        occlusion += projected_length * GTAOIntegrateArcCosWeight(h, n);
+        bent_normal += V * cos(bent_angle) - plane_tangent * sin(bent_angle);
+        occlusion += projected_length * GTAOIntegrateArcCosWeight(horizons, n);
     }
 
     bent_normal = normalize(normalize(bent_normal) - (V * 0.5));
@@ -264,8 +251,8 @@ void main()
 {
 #if SSAO_ENABLED
     
-    // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0)) * 0.5 + 0.5).xyz, 1.0);
-    color_output = vec4(GTAOGetDetails(texcoord).aaa, 1.0);
+    // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
+    color_output = GTAOGetDetails(texcoord).aaaa;
     return;
 
 

@@ -1,8 +1,8 @@
 #ifndef HYPERION_RENDERER_PIPELINE_H
 #define HYPERION_RENDERER_PIPELINE_H
 
-#include "RendererStructs.hpp"
-#include "RendererDescriptorSet.hpp"
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/Optional.hpp>
 

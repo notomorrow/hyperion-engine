@@ -3,7 +3,7 @@
 
 #include <csignal>
 
-#include "RendererResult.hpp"
+#include <rendering/backend/RendererResult.hpp>
 #include <util/NonOwningPtr.hpp>
 
 #include <vector>

@@ -27,13 +27,15 @@ using renderer::CommandBuffer;
 using renderer::PerFrameData;
 using renderer::VertexAttributeSet;
 using renderer::UniformBuffer;
+using renderer::DescriptorSet;
+using renderer::ShaderVec2;
 
 class Engine;
 
 struct alignas(16) PostProcessingUniforms {
-    UInt32 effect_counts[2]; // pre, post
-    UInt32 last_enabled_indices[2]; // pre, post
-    UInt32 masks[2]; // pre, post
+    ShaderVec2<UInt32> effect_counts; // pre, post
+    ShaderVec2<UInt32> last_enabled_indices; // pre, post
+    ShaderVec2<UInt32> masks; // pre, post
 };
 
 class PostProcessingEffect : public EngineComponentBase<STUB_CLASS(PostProcessingEffect)> {

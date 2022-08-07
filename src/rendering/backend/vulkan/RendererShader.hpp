@@ -1,7 +1,7 @@
 #ifndef HYPERION_RENDERER_SHADER_H
 #define HYPERION_RENDERER_SHADER_H
 
-#include "RendererDevice.hpp"
+#include <rendering/backend/RendererDevice.hpp>
 
 #include <asset/ByteReader.hpp>
 

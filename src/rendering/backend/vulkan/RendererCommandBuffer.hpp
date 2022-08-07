@@ -1,12 +1,12 @@
 #ifndef HYPERION_RENDERER_COMMAND_BUFFER_H
 #define HYPERION_RENDERER_COMMAND_BUFFER_H
 
-#include "RendererDevice.hpp"
-#include "RendererRenderPass.hpp"
-#include "RendererSemaphore.hpp"
-#include "RendererFence.hpp"
-#include "RendererDescriptorSet.hpp"
-#include "RendererBuffer.hpp"
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererRenderPass.hpp>
+#include <rendering/backend/RendererSemaphore.hpp>
+#include <rendering/backend/RendererFence.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 
 #include <core/lib/FixedArray.hpp>
 

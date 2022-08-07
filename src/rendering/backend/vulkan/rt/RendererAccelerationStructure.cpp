@@ -1,4 +1,4 @@
-#include "RendererAccelerationStructure.hpp"
+#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 #include "../RendererDevice.hpp"
 #include "../RendererInstance.hpp"
 #include "../RendererFeatures.hpp"

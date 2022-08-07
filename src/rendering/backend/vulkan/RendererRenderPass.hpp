@@ -1,10 +1,10 @@
 #ifndef HYPERION_RENDERER_RENDER_PASS_H
 #define HYPERION_RENDERER_RENDER_PASS_H
 
-#include "RendererImage.hpp"
-#include "RendererImageView.hpp"
-#include "RendererSampler.hpp"
-#include "RendererAttachment.hpp"
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RendererAttachment.hpp>
 
 #include <vulkan/vulkan.h>
 

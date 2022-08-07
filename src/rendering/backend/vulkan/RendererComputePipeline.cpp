@@ -1,5 +1,5 @@
-#include "RendererComputePipeline.hpp"
-#include "RendererCommandBuffer.hpp"
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
 
 #include <system/Debug.hpp>
 #include <math/MathUtil.hpp>
@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-#include "RendererFeatures.hpp"
+#include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion {
 namespace renderer {

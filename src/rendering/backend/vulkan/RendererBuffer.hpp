@@ -1,9 +1,9 @@
 #ifndef HYPERION_RENDERER_BUFFER_H
 #define HYPERION_RENDERER_BUFFER_H
 
-#include "RendererResult.hpp"
-#include "RendererStructs.hpp"
-#include "RendererShader.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererShader.hpp>
 
 #include <Types.hpp>
 

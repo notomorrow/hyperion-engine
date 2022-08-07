@@ -1,6 +1,6 @@
-#include "RendererRenderPass.hpp"
-#include "RendererFramebuffer.hpp"
-#include "RendererCommandBuffer.hpp"
+#include <rendering/backend/RendererRenderPass.hpp>
+#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
 
 namespace hyperion {
 namespace renderer {

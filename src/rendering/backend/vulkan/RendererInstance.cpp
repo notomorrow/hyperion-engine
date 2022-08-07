@@ -2,10 +2,10 @@
 // Created by ethan on 2/5/22.
 //
 
-#include "RendererInstance.hpp"
-#include "RendererDevice.hpp"
-#include "RendererSemaphore.hpp"
-#include "RendererFeatures.hpp"
+#include <rendering/backend/RendererInstance.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererSemaphore.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 #include <system/Debug.hpp>
 #include <system/vma/VmaUsage.hpp>

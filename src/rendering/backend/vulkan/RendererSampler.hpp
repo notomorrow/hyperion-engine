@@ -1,8 +1,8 @@
 #ifndef RENDERER_SAMPLER_H
 #define RENDERER_SAMPLER_H
 
-#include "RendererResult.hpp"
-#include "RendererImage.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererImage.hpp>
 
 #include <vulkan/vulkan.h>
 

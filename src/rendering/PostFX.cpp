@@ -116,8 +116,8 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
         auto &effects = effect_passes[i];
 
         post_processing_uniforms.effect_counts[i]        = static_cast<UInt32>(effects->Size());
-        post_processing_uniforms.masks[i]                = 0;
-        post_processing_uniforms.last_enabled_indices[i] = 0;
+        post_processing_uniforms.masks[i]                = 0u;
+        post_processing_uniforms.last_enabled_indices[i] = 0u;
 
         for (auto &it : *effects) {
             if (it.second != nullptr && it.second->IsEnabled()) {

@@ -5,15 +5,8 @@
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba8) uniform writeonly image2D ssr_uvs;
 
 
-#define SSR_MAX_ITERATIONS 80
-#define SSR_MAX_BINARY_SEARCH_ITERATIONS 8
-#define SSR_PIXEL_STRIDE 1
-#define SSR_PIXEL_STRIDE_CUTOFF 1
-#define SSR_MAX_RAY_DISTANCE 128
-#define SSR_SCREEN_EDGE_FADE_START 0.9
 #define SSR_EYE_FADE_START 0.8
 #define SSR_EYE_FADE_END 0.995
-#define SSR_Z_THICKNESS_THRESHOLD 0.1
 #define SSR_JITTER_OFFSET 0.0
 
 float FetchDepth(vec2 uv)
@@ -90,11 +83,11 @@ float CalculateAlpha(
 {
     float alpha = 1.0;
     // Fade ray hits that approach the maximum iterations
-    alpha *= 1.0 - (num_iterations / float(SSR_MAX_ITERATIONS));
+    alpha *= 1.0 - (num_iterations / ssr_params.num_iterations);
     // Fade ray hits that approach the screen edge
     vec2 hit_pixelNDC = hit_pixel * 2.0 - 1.0;
     float maxDimension = min(1.0, max(abs(hit_pixelNDC.x), abs(hit_pixelNDC.y)));
-    alpha *= 1.0 - max(0.0, maxDimension - SSR_SCREEN_EDGE_FADE_START) / (1.0 - SSR_SCREEN_EDGE_FADE_START);
+    alpha *= 1.0 - max(0.0, maxDimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
     // Fade ray hits base on how much they face the camera
     //float eyeDir = clamp(ray_direction.z, SSR_EYE_FADE_START, SSR_EYE_FADE_END);

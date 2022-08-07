@@ -1,4 +1,4 @@
-#include "RendererRaytracingInstance.hpp"
+#include <rendering/backend/rt/RendererRaytracingInstance.hpp>
 
 namespace hyperion {
 namespace renderer {

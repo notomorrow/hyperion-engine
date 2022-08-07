@@ -1,12 +1,12 @@
 #ifndef HYPERION_RENDERER_FRAME_H
 #define HYPERION_RENDERER_FRAME_H
 
-#include "RendererResult.hpp"
-#include "RendererDevice.hpp"
-#include "RendererCommandBuffer.hpp"
-#include "RendererFence.hpp"
-#include "RendererSemaphore.hpp"
-#include "RendererQueue.hpp"
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererFence.hpp>
+#include <rendering/backend/RendererSemaphore.hpp>
+#include <rendering/backend/RendererQueue.hpp>
 
 #include <util/NonOwningPtr.hpp>
 
