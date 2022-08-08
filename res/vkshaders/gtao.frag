@@ -170,7 +170,7 @@ void main()
 
 #define HYP_GTAO_NUM_CIRCLES 2
 #define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      5.0
+#define HYP_GTAO_RADIUS      3.0
 #define HYP_GTAO_THICKNESS   1.0
 #define HYP_GTAO_POWER       1.0
 
@@ -253,16 +253,9 @@ vec4 GTAOGetDetails(vec2 uv)
     vec3 bent_normal = vec3(0.0);
     float occlusion = 0.0;
 
-    // const float alpha = 2.0 * HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES);
-    // const vec2 noise_2d = vec2(SimpleNoise(uv * vec2(scene.resolution_x, scene.resolution_y)), SimpleNoise((vec2(1.0) - uv) * vec2(scene.resolution_x, scene.resolution_y)));
-
     for (int i = 0; i < HYP_GTAO_NUM_CIRCLES; i++) {
         const float angle = (float(i) + noise_direction + (temporal_rotation / 360.0)) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES));
         const vec3 slice_dir = vec3(cos(angle), sin(angle), 0.0);
-
-        // const float angle = alpha * (float(i));
-
-        // const vec3 slice_dir = vec3(GTAORotateDirection(vec2(cos(angle), sin(angle)), noise_2d), 0.0);
 
         vec2 horizons = vec2(-1.0);
 
@@ -273,13 +266,6 @@ vec4 GTAOGetDetails(vec2 uv)
 
         const float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
         const float n = -sign(dot(projected_normal, plane_tangent)) * acos(cos_n);
-
-        // const float low_horizon_cos0 = cos(n + HYP_FMATH_PI_HALF);
-        // const float low_horizon_cos1 = cos(n - HYP_FMATH_PI_HALF);
-
-        // float horizon_cos0 = low_horizon_cos0;
-        // float horizon_cos1 = low_horizon_cos1;
-
 
         for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
             // R1 sequence (http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/)
@@ -298,42 +284,12 @@ vec4 GTAOGetDetails(vec2 uv)
             const vec2 falloff = Saturate(dsdt * (2.0 / max(HYP_FMATH_SQR(HYP_GTAO_RADIUS), 0.0001)));
 
             const vec2 H = vec2(dot(ds, V), dot(dt, V)) * dsdt_length;
-
-            // const float falloff_range_unscaled = 0.5;
-            // const float falloff_range = falloff_range_unscaled * HYP_GTAO_RADIUS;
-            // const float falloff_from = HYP_GTAO_RADIUS * (1.0 - falloff_range_unscaled);
-            // const float falloff_mul = -1.0 / falloff_range;
-            // const float falloff_add = falloff_from / falloff_range + 1.0;
-
-            // const float sample_dist0 = length(ds);
-            // const float sample_dist1 = length(dt);
-
-            // const vec3 sample_horizon_vec0 = ds / length(ds);
-            // const vec3 sample_horizon_vec1 = dt / length(dt);
-
-            // float weight0 = Saturate(sample_dist0 * falloff_mul + falloff_add);
-            // float weight1 = Saturate(sample_dist1 * falloff_mul + falloff_add);
-
-            // float sch0 = dot(sample_horizon_vec0, V);
-            // float sch1 = dot(sample_horizon_vec1, V);
-            // sch0 = mix(low_horizon_cos0, sch0, weight0);
-            // sch1 = mix(low_horizon_cos1, sch1, weight1);
-
-            // const float new_horizons_cos0 = max(horizon_cos0, sch0);
-            // const float new_horizons_cos1 = max(horizon_cos1, sch1);
-
-            // horizons = vec2(max(horizon_cos0, sch0), max(horizon_cos1, sch1));
-
-// #if 1
-            horizons = max(horizons, mix(H, horizons, falloff));
-            // horizons = mix(
-            //     mix(H, horizons, falloff),
-            //     mix(H, horizons, HYP_GTAO_THICKNESS),
-            //     greaterThan(H, horizons)
-            // );
-// #else
-            // horizons = new_horizons_cos0;
-// #endif
+            // horizons = max(horizons, mix(H, horizons, falloff));
+            horizons = mix(
+                mix(H, horizons, HYP_GTAO_THICKNESS),
+                mix(H, horizons, falloff),
+                greaterThan(H, horizons)
+            );
         }
 
 
@@ -356,7 +312,9 @@ vec4 GTAOGetDetails(vec2 uv)
 void main()
 {
     // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
-    color_output = GTAOGetDetails(texcoord).aaaa;
+    vec4 data = GTAOGetDetails(texcoord);
+    data.xyz = EncodeNormal(data.xyz).xyz;
+    color_output = data;
 }
 
 #endif

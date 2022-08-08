@@ -2,7 +2,13 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 1.5
+#define HYP_SSR_MAX_BLUR_INCREMENT 2.0
+// #define HYP_SSR_USE_GAUSSIAN_BLUR 
+
+#ifndef HYP_SSR_USE_GAUSSIAN_BLUR
+    #define HYP_SSR_BLUR_MIN        0.25
+    #define HYP_SSR_BLUR_MULTIPLIER 10.0
+#endif
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba8) uniform readonly image2D ssr_sample_image;
@@ -11,12 +17,14 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radi
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform writeonly image2D ssr_blur;
-    #define HYP_SSR_PREV_IMAGE ssr_sample_image
+    #define HYP_SSR_PREV_IMAGE   ssr_sample_image
+    #define HYP_SSR_PREV_TEXTURE ssr_sample
 #elif defined(HYP_SSR_BLUR_VERTICAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform readonly image2D ssr_blur_hor_image;
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform writeonly image2D ssr_blur;
-    #define HYP_SSR_PREV_IMAGE ssr_blur_hor_image
+    #define HYP_SSR_PREV_IMAGE   ssr_blur_hor_image
+    #define HYP_SSR_PREV_TEXTURE ssr_blur_hor
 #else
     #error No blur direction defined
 #endif
@@ -110,6 +118,7 @@ void main(void)
     vec4 reflection_sample = vec4(0.0);
     float accum_radius     = 0.0;
 
+#ifdef HYP_SSR_USE_GAUSSIAN_BLUR
     // if (roughness < HYP_SSR_ROUGHNESS_MAX) {
         float divisor = gauss_table[0];
 
@@ -125,8 +134,31 @@ void main(void)
         }
     // }
 
+#else
+
+    // reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord);
+    accum_radius  = imageLoad(ssr_radius_image, coord).r;
+    const float blur_amount = mix(HYP_SSR_BLUR_MIN, HYP_SSR_MAX_BLUR_INCREMENT, Saturate(accum_radius * HYP_SSR_BLUR_MULTIPLIER));
+
+    for (int x = -1; x <= 1; ++x) {
+#ifdef HYP_SSR_BLUR_HORIZONTAL
+        vec2 offset_coord = ivec2(x, 0);
+#else
+        vec2 offset_coord = ivec2(0, x);
+#endif
+
+        vec2 offset_texcoord = offset_coord * blur_amount / vec2(ssr_params.dimension);
+        vec4 offset_reflection_sample = Texture2D(HYP_SAMPLER_LINEAR, HYP_SSR_PREV_TEXTURE, texcoord + offset_texcoord);
+
+        reflection_sample += offset_reflection_sample;
+    }
+
+    reflection_sample /= 3.0;
+
+#endif
+
 #ifdef HYP_SSR_BLUR_VERTICAL
-    reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
+    // reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
 #endif
 
     imageStore(ssr_blur, coord, reflection_sample);

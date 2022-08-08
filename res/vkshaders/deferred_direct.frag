@@ -38,8 +38,6 @@ void main()
 
     bool perform_lighting = albedo.a > 0.0;
 
-    const vec4 diffuse_color = albedo * (1.0 - metalness);
-
     const float material_reflectance = 0.5;
     const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
     const vec4 F0 = albedo * metalness + (reflectance * (1.0 - metalness));
@@ -53,7 +51,6 @@ void main()
     float NdotV = max(0.0001, dot(N, V));
     
     const vec2 AB = BRDFMap(roughness, NdotV);
-    const vec4 dfg = albedo * AB.x + AB.y;
     
     const vec4 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
     const float perceptual_roughness = sqrt(roughness);
@@ -92,16 +89,18 @@ void main()
         float D = DistributionGGX(N, H, roughness);
         float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
         vec4 F = SchlickFresnel(F0, F90, LdotH);
+
+        const vec4 diffuse_color = (albedo) * (1.0 - metalness);
         vec4 specular = D * G * F;
 
         float dist = max(length(light.position.xyz - position.xyz), light.radius);
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-            (light.intensity/(dist*dist)) : 1.0;
+            (light.intensity / max(dist * dist, 0.0001)) : 1.0;
 
         vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
         vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
         vec4 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
-        result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color) * attenuation;
+        result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * (attenuation * NdotL) * ao * shadow * light_color);
     } else {
         result = albedo;
     }

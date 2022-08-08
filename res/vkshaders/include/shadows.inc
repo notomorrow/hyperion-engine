@@ -56,7 +56,7 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
     const float shadow_map_depth = coord.z;
 
-    const float shadow_filter_size = 0.0035;
+    const float shadow_filter_size = 0.0025;
     const float penumbra_filter_size = 0.075;
     const float light_size = 3.0; // affects how quickly shadows become soft
 
@@ -66,7 +66,7 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
     float num_blockers = 0.0;
 
 #define HYP_DEF_VOGEL_DISK(iter_index) \
-    vec2 vogel_##iter_index = VogelDisk(iter_index, HYP_SHADOW_NUM_SAMPLES, gradient_noise)
+    vec2 vogel_##iter_index = VogelDisk(iter_index, 16, gradient_noise)
 
     HYP_DEF_VOGEL_DISK(0);
     HYP_DEF_VOGEL_DISK(1);
@@ -76,6 +76,14 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
     HYP_DEF_VOGEL_DISK(5);
     HYP_DEF_VOGEL_DISK(6);
     HYP_DEF_VOGEL_DISK(7);
+    HYP_DEF_VOGEL_DISK(8);
+    HYP_DEF_VOGEL_DISK(9);
+    HYP_DEF_VOGEL_DISK(10);
+    HYP_DEF_VOGEL_DISK(11);
+    HYP_DEF_VOGEL_DISK(12);
+    HYP_DEF_VOGEL_DISK(13);
+    HYP_DEF_VOGEL_DISK(14);
+    HYP_DEF_VOGEL_DISK(15);
 
 #undef HYP_DEF_VOGEL_DISK
 
@@ -89,26 +97,35 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
         num_blockers        += is_blocking;
     }*/
 
-#define HYP_DO_SHADOW_PENUMBRA(iter_index) \
+#if HYP_SHADOW_PENUMBRA
+#define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3) \
     { \
-        float blocker_sample = texture(shadow_maps[index], coord.xy + (vogel_##iter_index * penumbra_filter_size)).r; \
-        float is_blocking    = float(blocker_sample < shadow_map_depth); \
-        total_blocker_depth += blocker_sample * is_blocking; \
-        num_blockers        += is_blocking; \
+        vec4 blocker_samples = vec4( \
+            texture(shadow_maps[index], coord.xy + (vogel_##iter_index0 * penumbra_filter_size)).r, \
+            texture(shadow_maps[index], coord.xy + (vogel_##iter_index1 * penumbra_filter_size)).r, \
+            texture(shadow_maps[index], coord.xy + (vogel_##iter_index2 * penumbra_filter_size)).r, \
+            texture(shadow_maps[index], coord.xy + (vogel_##iter_index3 * penumbra_filter_size)).r \
+        ); \
+        vec4 are_samples_blocking = vec4(lessThan(blocker_samples, vec4(shadow_map_depth))); \
+        total_blocker_depth += dot(blocker_samples * are_samples_blocking, vec4(1.0)); \
+        num_blockers += dot(are_samples_blocking, vec4(1.0)); \
     }
 
-    HYP_DO_SHADOW_PENUMBRA(0)
-    HYP_DO_SHADOW_PENUMBRA(1)
-    HYP_DO_SHADOW_PENUMBRA(2)
-    HYP_DO_SHADOW_PENUMBRA(3)
-    HYP_DO_SHADOW_PENUMBRA(4)
-    HYP_DO_SHADOW_PENUMBRA(5)
-    HYP_DO_SHADOW_PENUMBRA(6)
-    HYP_DO_SHADOW_PENUMBRA(7)
+
+    /*HYP_DO_SHADOW_PENUMBRA(0, 1, 2, 3)
+    HYP_DO_SHADOW_PENUMBRA(4, 5, 6, 7)
+    HYP_DO_SHADOW_PENUMBRA(8, 9, 10, 11)
+    HYP_DO_SHADOW_PENUMBRA(12, 13, 14, 15)*/
+    HYP_DO_SHADOW_PENUMBRA(0, 2, 4, 6)
+    HYP_DO_SHADOW_PENUMBRA(8, 10, 12, 14)
 
 #undef HYP_DO_SHADOW_PENUMBRA
 
-    float penumbra_mask = num_blockers > 0.0 ? AvgBlockerDepthToPenumbra(light_size, total_blocker_depth / num_blockers, shadow_map_depth) : 0.0;
+    float penumbra_mask = num_blockers > 0.0 ? AvgBlockerDepthToPenumbra(light_size, total_blocker_depth / max(num_blockers, 0.0001), shadow_map_depth) : 0.0;
+#else
+    float penumbra_mask = 1.0;
+#endif
+    
     float shadowness = 0.0;
 
     /*for (int i = 0; i < HYP_SHADOW_NUM_SAMPLES; i++) {
@@ -118,23 +135,24 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
     shadowness /= float(HYP_SHADOW_NUM_SAMPLES);*/
 
+
 #define HYP_DO_SHADOW(iter_index) \
     { \
         shadowness += GetShadow(index, pos, vogel_##iter_index * penumbra_mask * shadow_filter_size, NdotL); \
     }
 
     HYP_DO_SHADOW(0)
-    HYP_DO_SHADOW(1)
     HYP_DO_SHADOW(2)
-    HYP_DO_SHADOW(3)
     HYP_DO_SHADOW(4)
-    HYP_DO_SHADOW(5)
     HYP_DO_SHADOW(6)
-    HYP_DO_SHADOW(7)
+    HYP_DO_SHADOW(8)
+    HYP_DO_SHADOW(10)
+    HYP_DO_SHADOW(12)
+    HYP_DO_SHADOW(14)
 
 #undef HYP_DO_SHADOW
 
-    shadowness /= float(HYP_SHADOW_NUM_SAMPLES);
+    shadowness /= 8.0;
 
     return shadowness;
 }

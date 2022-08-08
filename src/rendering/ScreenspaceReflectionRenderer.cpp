@@ -215,7 +215,7 @@ void ScreenspaceReflectionRenderer::Render(
             .offset                 = 0.01f,
             .eye_fade_start         = 0.45f,
             .eye_fade_end           = 0.75f,
-            .screen_edge_fade_start = 0.45f,
+            .screen_edge_fade_start = 0.55f,
             .screen_edge_fade_end   = 0.75f
         }
     };

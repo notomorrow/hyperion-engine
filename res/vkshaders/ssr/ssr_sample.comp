@@ -69,9 +69,9 @@ void main(void)
             if (hit_mask >= 0.001) {
                 const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
 
-                float mip_level = 0;//clamp(log2(current_radius), 0.0, max_mip_level);
+                float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
 
-                vec4 current_reflection_sample = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, hit_uv, mip_level);
+                vec4 current_reflection_sample = Texture2DLod(HYP_SAMPLER_LINEAR, gbuffer_mip_chain, hit_uv, mip_level);
                 current_reflection_sample.a = hit_mask;
 
                 reflection_sample += current_reflection_sample;

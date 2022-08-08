@@ -603,7 +603,7 @@ void RendererInstance::Render(Engine *engine, Frame *frame)
                     if (auto *octant = entity->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
                         
-                        if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant, engine->render_state.visibility_cursor)) {
+                        if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
                             ++num_culled_objects;
                             continue;
                         }

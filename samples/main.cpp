@@ -112,7 +112,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //testbed/testbed.obj", //sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
+            "models/sponza/sponza.obj",//testbed/testbed.obj", ////sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -266,7 +266,7 @@ public:
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            Vector3 {0, 15, 0},
+            BoundingBox { Vector(-256, -20, -256), Vector(256, 60, 256) },
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
         scene->ForceUpdate();

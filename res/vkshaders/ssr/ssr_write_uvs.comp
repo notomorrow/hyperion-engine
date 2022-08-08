@@ -94,7 +94,7 @@ float CalculateAlpha(
     //alpha *= 1.0 - (eyeDir - SSR_EYE_FADE_START) / (SSR_EYE_FADE_END - SSR_EYE_FADE_START);
 
     // Fade ray hits based on distance from ray origin
-    //alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
+    alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
 
     return alpha;
 }
