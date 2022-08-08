@@ -28,7 +28,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 1
-#define HYP_VCT_REFLECTIONS_ENABLED 1
+#define HYP_VCT_REFLECTIONS_ENABLED 0
 #define HYP_VCT_INDIRECT_ENABLED 1
 #define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
@@ -150,7 +150,7 @@ void main()
         
         const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
         const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
-        const float lod = 7.0 * perceptual_roughness * (2.0 - perceptual_roughness);
+        const float lod = 12.0 * perceptual_roughness * (2.0 - perceptual_roughness);
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
