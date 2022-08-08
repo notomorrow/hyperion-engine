@@ -12,6 +12,7 @@ using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
+using renderer::ImageDescriptor;
 using renderer::ImageSamplerDescriptor;
 using renderer::FillMode;
 
@@ -138,15 +139,14 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
     
         if (!framebuffer.GetAttachmentRefs().empty()) {
             auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(m_descriptor_key);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(m_descriptor_key);
 
             AssertThrowMsg(framebuffer.GetAttachmentRefs().size() == 1, "> 1 attachments not supported currently for full screen passes");
 
             for (const auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
                 m_sub_descriptor_index = descriptor->SetSubDescriptor({
                     .element_index = m_sub_descriptor_index,
-                    .image_view    = attachment_ref->GetImageView(),
-                    .sampler       = attachment_ref->GetSampler()
+                    .image_view    = attachment_ref->GetImageView()
                 });
             }
         }

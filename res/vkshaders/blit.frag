@@ -39,12 +39,13 @@ void main()
 
     //out_color = texture(shadow_map, texcoord);
 
-    if (post_processing.masks[HYP_STAGE_POST] != 0) {
-        out_color = Texture2D(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], v_texcoord0);
-    } else {
-        out_color = Texture2D(gbuffer_deferred_result, v_texcoord0);
-    }
+    // if (post_processing.masks[HYP_STAGE_POST] != 0) {
+    //     out_color = Texture2D(HYP_SAMPLER_NEAREST, effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], v_texcoord0);
+    // } else {
+        // out_color = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
+    // }
 
+    out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0));
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     // out_color.rgb = vec3(SampleEffectPre(0, v_texcoord0, vec4(1.0)).rgb);

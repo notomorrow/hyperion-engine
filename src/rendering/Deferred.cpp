@@ -12,7 +12,7 @@ using renderer::DescriptorKey;
 using renderer::Rect;
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
-    : FullScreenPass(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F),
+    : FullScreenPass(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F),
       m_is_indirect_pass(is_indirect_pass)
 {
 }
@@ -68,15 +68,20 @@ void DeferredPass::CreateDescriptors(Engine *engine)
 
         if (!framebuffer.GetAttachmentRefs().empty()) {
             auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(DescriptorKey::DEFERRED_RESULT);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::DEFERRED_RESULT);
 
-            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
-                descriptor->SetSubDescriptor({
-                    .element_index = ~0u,
-                    .image_view    = attachment_ref->GetImageView(),
-                    .sampler       = attachment_ref->GetSampler(),
-                });
-            }
+            // only add color attachment
+            AssertThrowMsg(!framebuffer.GetAttachmentRefs().empty(),
+                "Size should be at least 1! Need to have color attachment to create DEFERRED_RESULT descriptor");
+
+            auto *color_attachment_ref = framebuffer.GetAttachmentRefs().front();
+            AssertThrow(color_attachment_ref != nullptr);
+            AssertThrow(!color_attachment_ref->IsDepthAttachment());
+
+            descriptor->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view    = color_attachment_ref->GetImageView()
+            });
         }
     }
 }
