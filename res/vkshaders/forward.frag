@@ -214,7 +214,6 @@ void main()
     // gbuffer_albedo.a = 0.0;
     // gbuffer_albedo = vec4(uv_min, 0, 0);
     
-
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);
     gbuffer_material   = vec4(roughness, metalness, 0.0, ao);

@@ -64,7 +64,7 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_VCT 0
+#define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -200,14 +200,14 @@ public:
         auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
-            150000.0f
+            50000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
 
         m_point_light = engine->resources.lights.Add(std::make_unique<PointLight>(
-            Vector3(2.0f, 4.0f, 0.0f),
+            Vector3(2.0f, 12.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
-            10000.0f,
+            8000.0f,
             25.0f
         ));
 
@@ -228,7 +228,6 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        // test_model->Scale(0.15f);
         if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
             /*for (auto &child : test->GetChildren()) {
                 if (auto &ent = child->GetEntity()) {
@@ -238,8 +237,8 @@ public:
             }*/
         }
 
-        auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
-        quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
+        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCube(32));//MeshBuilder::Quad());
+        // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
         auto quad_spatial = engine->resources.entities.Add(std::make_unique<Entity>(
             std::move(quad),
             engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
@@ -252,11 +251,11 @@ public:
         ));
         quad_spatial.Init();
         quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));//0.00f, 0.4f, 0.9f, 1.0f));
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
-        quad_spatial->SetScale(Vector3(150.0f));
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.5f);
+        quad_spatial->SetScale(Vector3(5.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
-        quad_spatial->SetTranslation(Vector3(0, -28.0f, 0));
-        // scene->AddEntity(std::move(quad_spatial));
+        quad_spatial->SetTranslation(Vector3(6, 6.0f, 0));
+        scene->AddEntity(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
@@ -266,7 +265,7 @@ public:
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            BoundingBox { Vector(-256, -20, -256), Vector(256, 60, 256) },
+            BoundingBox { Vector(-280, -20, -280), Vector(200, 60, 200) },
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
         scene->ForceUpdate();
