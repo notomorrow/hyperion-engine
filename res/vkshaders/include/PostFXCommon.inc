@@ -4,8 +4,10 @@
 #include "shared.inc"
 #include "gbuffer.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 8) uniform sampler2D effects_pre_stack[];
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 9) uniform sampler2D effects_post_stack[];
+#define HYP_MAX_EFFECTS_PER_SLOT 8
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 8) uniform texture2D effects_pre_stack[HYP_MAX_EFFECTS_PER_SLOT];
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 9) uniform texture2D effects_post_stack[HYP_MAX_EFFECTS_PER_SLOT];
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 10) uniform PostProcessingData {
     uvec2 effect_counts;

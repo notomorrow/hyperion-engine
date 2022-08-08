@@ -15,6 +15,9 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 2) uniform texture2D gbuffer_m
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 3) uniform sampler   gbuffer_depth_sampler; // nearest
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler   gbuffer_sampler;       // mipmap linear
 
+#define HYP_SAMPLER_NEAREST gbuffer_depth_sampler
+#define HYP_SAMPLER_LINEAR  gbuffer_sampler
+
 #define gbuffer_albedo_texture     (gbuffer_textures[0])
 #define gbuffer_normals_texture    (gbuffer_textures[1])
 #define gbuffer_positions_texture  (gbuffer_textures[2])
@@ -22,7 +25,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler   gbuffer_s
 #define gbuffer_tangents_texture   (gbuffer_textures[4])
 #define gbuffer_bitangents_texture (gbuffer_textures[5])
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 5) uniform sampler2D gbuffer_deferred_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 5) uniform texture2D gbuffer_deferred_result;
 
 vec4 SampleGBuffer(texture2D tex, vec2 texcoord)
 {

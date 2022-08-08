@@ -83,7 +83,6 @@ void ShadowPass::CreateDescriptors(Engine *engine)
 {
     AssertThrow(m_shadow_map_index != ~0u);
 
-
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
     

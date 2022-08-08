@@ -213,7 +213,7 @@ public:
 
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
-        //test_model->Scale(10.0f);
+        // test_model->Scale(10.0f);
         test_model->Scale(0.15f);//14.075f);
 
         /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();

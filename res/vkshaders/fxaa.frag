@@ -54,11 +54,11 @@ void main()
           dir * rcpDirMin)) / resolution;
 
     vec3 rgbA = (1.0/2.0) * (
-        Texture2D(gbuffer_deferred_result, v_texcoord0.xy + dir * (1.0/3.0 - 0.5)).xyz +
-        Texture2D(gbuffer_deferred_result, v_texcoord0.xy + dir * (2.0/3.0 - 0.5)).xyz);
+        Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0.xy + dir * (1.0/3.0 - 0.5)).xyz +
+        Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0.xy + dir * (2.0/3.0 - 0.5)).xyz);
     vec3 rgbB = rgbA * (1.0/2.0) + (1.0/4.0) * (
-        Texture2D(gbuffer_deferred_result, v_texcoord0.xy + dir * (0.0/3.0 - 0.5)).xyz +
-        Texture2D(gbuffer_deferred_result, v_texcoord0.xy + dir * (3.0/3.0 - 0.5)).xyz);
+        Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0.xy + dir * (0.0/3.0 - 0.5)).xyz +
+        Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0.xy + dir * (3.0/3.0 - 0.5)).xyz);
     float lumaB = dot(rgbB, luma);
 
     if ((lumaB < lumaMin) || (lumaB > lumaMax)){

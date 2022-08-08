@@ -16,25 +16,10 @@ layout(location=0) out vec4 color_output;
 #include "include/noise.inc"
 #include "include/shared.inc"
 
-const float diffarea = 0.3; //self-shadowing reduction
-const float gdisplace = 0.4; //gauss bell center //0.4
 
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
-#define PI 3.14159265359
-#define SSAO_NOISE 1
 #define SSAO_NOISE_AMOUNT 0.0002
-#define SSAO_MIST 0
-#define SSAO_MIST_START 0.0
-#define SSAO_MIST_END 0.01
-#define CAP_MIN_DISTANCE 0.0001
-#define CAP_MAX_DISTANCE 0.1
-#define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
-#define SSAO_STRENGTH 0.65
-#define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 3.0
-#define SSAO_ENABLED 1
-
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
 {
     float width = float(scene.resolution_x);
@@ -50,6 +35,25 @@ vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
 
     return vec2(noise_x, noise_y) * SSAO_NOISE_AMOUNT;
 }
+
+#define HYP_USE_GTAO
+
+#ifndef HYP_USE_GTAO
+
+const float diffarea = 0.3; //self-shadowing reduction
+const float gdisplace = 0.4; //gauss bell center //0.4
+
+
+#define SSAO_NOISE 1
+#define SSAO_MIST 0
+#define SSAO_MIST_START 0.0
+#define SSAO_MIST_END 0.01
+#define CAP_MIN_DISTANCE 0.0001
+#define CAP_MAX_DISTANCE 0.1
+#define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
+#define SSAO_STRENGTH 0.65
+#define SSAO_CLAMP_AMOUNT 0.125
+#define SSAO_RADIUS 3.0
 
 #if SSAO_MIST
 float CalculateMist()
@@ -117,11 +121,58 @@ float CalculateAO(float depth, float dw, float dh)
     return temp;
 }
 
+
+
+void main()
+{
+    float width = float(scene.resolution_x);
+    float height = float(scene.resolution_y);
+
+    vec2 noise = GetNoise(texcoord);
+    float depth = ReadDepth(texcoord);
+
+    float w = (1.0 / width) / clamp(depth, SSAO_CLAMP_AMOUNT, 1.0) + (noise.x * (1.0 - noise.x));
+    float h = (1.0 / height) / clamp(depth, SSAO_CLAMP_AMOUNT, 1.0) + (noise.y * (1.0 - noise.y));
+
+    float pw = 0.0;
+    float ph = 0.0;
+
+    float ao = 0.0;
+
+    float dl = HYP_FMATH_PI * (3.0 - sqrt(5.0));
+    float dz = 1.0 / float(SSAO_SAMPLES);
+    float l = 0.0;
+    float z = 1.0 - dz/2.0;
+
+    for (int i = 0; i < SSAO_SAMPLES; i++) {
+        float r = sqrt(1.0 - z);
+
+        pw = cos(l) * r;
+        ph = sin(l) * r;
+        ao += CalculateAO(depth, pw * w, ph * h);
+        z = z - dz;
+        l = l + dl;
+    }
+
+    ao /= float(SSAO_SAMPLES);
+    ao *= SSAO_STRENGTH;
+    ao = 1.0-ao;
+
+#if SSAO_MIST
+    ao = mix(ao, 1.0, CalculateMist());
+#endif
+    
+    color_output = vec4(ao);
+}
+
+
+#else
+
 #define HYP_GTAO_NUM_CIRCLES 2
 #define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      4.0
-#define HYP_GTAO_THICKNESS   0.85
-#define HYP_GTAO_POWER       10.0
+#define HYP_GTAO_RADIUS      5.0
+#define HYP_GTAO_THICKNESS   1.0
+#define HYP_GTAO_POWER       1.0
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
@@ -146,7 +197,7 @@ vec3 GTAOGetPosition(vec2 uv)
 {
     const float depth = SampleGBuffer(gbuffer_depth_texture, uv).r;
 
-    const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far); // LinearDepth(scene.projection, depth);
+    const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far); //LinearDepth(scene.projection, depth);//
     return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
 }
 
@@ -168,6 +219,12 @@ float GTAOIntegrateArcCosWeight(vec2 h, float n)
 {
     vec2 arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
     return 0.25 * (arc.x + arc.y);
+}
+
+vec2 GTAORotateDirection(vec2 uv, vec2 cos_sin)
+{
+   return vec2(uv.x * cos_sin.x - uv.y * cos_sin.y,
+               uv.x * cos_sin.y + uv.y * cos_sin.x);
 }
 
 vec4 GTAOGetDetails(vec2 uv)
@@ -196,13 +253,39 @@ vec4 GTAOGetDetails(vec2 uv)
     vec3 bent_normal = vec3(0.0);
     float occlusion = 0.0;
 
+    // const float alpha = 2.0 * HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES);
+    // const vec2 noise_2d = vec2(SimpleNoise(uv * vec2(scene.resolution_x, scene.resolution_y)), SimpleNoise((vec2(1.0) - uv) * vec2(scene.resolution_x, scene.resolution_y)));
+
     for (int i = 0; i < HYP_GTAO_NUM_CIRCLES; i++) {
         const float angle = (float(i) + noise_direction + (temporal_rotation / 360.0)) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES));
         const vec3 slice_dir = vec3(cos(angle), sin(angle), 0.0);
 
+        // const float angle = alpha * (float(i));
+
+        // const vec3 slice_dir = vec3(GTAORotateDirection(vec2(cos(angle), sin(angle)), noise_2d), 0.0);
+
         vec2 horizons = vec2(-1.0);
 
+        const vec3 plane_normal = normalize(cross(slice_dir, V));
+        const vec3 plane_tangent = cross(V, plane_normal);
+        const vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
+        const float projected_length = length(projected_normal);
+
+        const float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
+        const float n = -sign(dot(projected_normal, plane_tangent)) * acos(cos_n);
+
+        // const float low_horizon_cos0 = cos(n + HYP_FMATH_PI_HALF);
+        // const float low_horizon_cos1 = cos(n - HYP_FMATH_PI_HALF);
+
+        // float horizon_cos0 = low_horizon_cos0;
+        // float horizon_cos1 = low_horizon_cos1;
+
+
         for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
+            // R1 sequence (http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/)
+            const float step_base_noise = float(i + j * HYP_GTAO_NUM_SLICES) * 0.6180339887498948482;
+            const float step_noise = fract(noise_direction + step_base_noise);
+        
             const vec2 uv_offset = (slice_dir.xy * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1)) * vec2(1.0, -1.0);
             const vec4 uv_slice = uv.xyxy + vec4(uv_offset, -uv_offset);
 
@@ -216,20 +299,43 @@ vec4 GTAOGetDetails(vec2 uv)
 
             const vec2 H = vec2(dot(ds, V), dot(dt, V)) * dsdt_length;
 
-            horizons = mix(
-                mix(H, horizons, falloff),
-                mix(H, horizons, HYP_GTAO_THICKNESS),
-                greaterThan(H, horizons)
-            );
+            // const float falloff_range_unscaled = 0.5;
+            // const float falloff_range = falloff_range_unscaled * HYP_GTAO_RADIUS;
+            // const float falloff_from = HYP_GTAO_RADIUS * (1.0 - falloff_range_unscaled);
+            // const float falloff_mul = -1.0 / falloff_range;
+            // const float falloff_add = falloff_from / falloff_range + 1.0;
+
+            // const float sample_dist0 = length(ds);
+            // const float sample_dist1 = length(dt);
+
+            // const vec3 sample_horizon_vec0 = ds / length(ds);
+            // const vec3 sample_horizon_vec1 = dt / length(dt);
+
+            // float weight0 = Saturate(sample_dist0 * falloff_mul + falloff_add);
+            // float weight1 = Saturate(sample_dist1 * falloff_mul + falloff_add);
+
+            // float sch0 = dot(sample_horizon_vec0, V);
+            // float sch1 = dot(sample_horizon_vec1, V);
+            // sch0 = mix(low_horizon_cos0, sch0, weight0);
+            // sch1 = mix(low_horizon_cos1, sch1, weight1);
+
+            // const float new_horizons_cos0 = max(horizon_cos0, sch0);
+            // const float new_horizons_cos1 = max(horizon_cos1, sch1);
+
+            // horizons = vec2(max(horizon_cos0, sch0), max(horizon_cos1, sch1));
+
+// #if 1
+            horizons = max(horizons, mix(H, horizons, falloff));
+            // horizons = mix(
+            //     mix(H, horizons, falloff),
+            //     mix(H, horizons, HYP_GTAO_THICKNESS),
+            //     greaterThan(H, horizons)
+            // );
+// #else
+            // horizons = new_horizons_cos0;
+// #endif
         }
 
-        const vec3 plane_normal = normalize(cross(slice_dir, V));
-        const vec3 plane_tangent = cross(V, plane_normal);
-        const vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
-        const float projected_length = length(projected_normal);
-
-        const float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
-        const float n = -sign(dot(projected_normal, plane_tangent)) * acos(cos_n);
 
         horizons = acos(clamp(horizons, vec2(-1.0), vec2(1.0)));
         horizons.x = n + max(-horizons.x - n, -HYP_FMATH_PI_HALF);
@@ -249,53 +355,8 @@ vec4 GTAOGetDetails(vec2 uv)
 
 void main()
 {
-#if SSAO_ENABLED
-    
     // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
     color_output = GTAOGetDetails(texcoord).aaaa;
-    return;
-
-
-    float width = float(scene.resolution_x);
-    float height = float(scene.resolution_y);
-
-    vec2 noise = GetNoise(texcoord);
-    float depth = ReadDepth(texcoord);
-
-    float w = (1.0 / width) / clamp(depth, SSAO_CLAMP_AMOUNT, 1.0) + (noise.x * (1.0 - noise.x));
-    float h = (1.0 / height) / clamp(depth, SSAO_CLAMP_AMOUNT, 1.0) + (noise.y * (1.0 - noise.y));
-
-    float pw = 0.0;
-    float ph = 0.0;
-
-    float ao = 0.0;
-
-    float dl = PI * (3.0 - sqrt(5.0));
-    float dz = 1.0 / float(SSAO_SAMPLES);
-    float l = 0.0;
-    float z = 1.0 - dz/2.0;
-
-    for (int i = 0; i < SSAO_SAMPLES; i++) {
-        float r = sqrt(1.0 - z);
-
-        pw = cos(l) * r;
-        ph = sin(l) * r;
-        ao += CalculateAO(depth, pw * w, ph * h);
-        z = z - dz;
-        l = l + dl;
-    }
-
-    ao /= float(SSAO_SAMPLES);
-    ao *= SSAO_STRENGTH;
-    ao = 1.0-ao;
-
-#if SSAO_MIST
-    ao = mix(ao, 1.0, CalculateMist());
-#endif
-    
-#else
-    float ao = 1.0;
-#endif
-    
-    color_output = vec4(ao);
 }
+
+#endif

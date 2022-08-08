@@ -12,6 +12,7 @@ using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::DescriptorKey;
+using renderer::ImageDescriptor;
 using renderer::ImageSamplerDescriptor;
 
 PostProcessingEffect::PostProcessingEffect(
@@ -70,6 +71,24 @@ PostProcessing::~PostProcessing() = default;
 
 void PostProcessing::Create(Engine *engine)
 {
+    // Fill out placeholder images -- 8 pre, 8 post.
+    {
+        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+
+            for (auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
+                auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(descriptor_key);
+
+                for (UInt effect_index = 0; effect_index < 8; effect_index++) {
+                    descriptor->SetSubDescriptor({
+                        .element_index = effect_index,
+                        .image_view    = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                    });
+                }
+            }
+        }
+    }
+
     for (auto &effect : m_pre_effects) {
         AssertThrow(effect.second != nullptr);
 
@@ -87,16 +106,22 @@ void PostProcessing::Create(Engine *engine)
 
 void PostProcessing::Destroy(Engine *engine)
 {
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        descriptor_set_globals->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
+    m_pre_effects.Clear();
+    m_post_effects.Clear();
+
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+
+        descriptor_set->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
             ->RemoveSubDescriptor(0);
+
+        // remove all images
+        for (auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
+            descriptor_set->RemoveDescriptor(descriptor_key);
+        }
     }
 
     HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(engine->GetDevice()));
-
-    m_pre_effects.Clear();
-    m_post_effects.Clear();
 }
 
 void PostProcessing::CreateUniformBuffer(Engine *engine)
