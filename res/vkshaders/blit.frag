@@ -48,5 +48,6 @@ void main()
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0));
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
-    // out_color.rgb = vec3(SampleEffectPre(0, v_texcoord0, vec4(1.0)).rgb);
+    // out_color.rgb = vec3(SampleEffectPre(0, v_texcoord0, vec4(1.0)).aaa);
+    // out_color = Texture2D(HYP_SAMPLER_NEAREST, ssr_blur_vert, v_texcoord0);
 }

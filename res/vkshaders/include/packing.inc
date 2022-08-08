@@ -12,7 +12,7 @@ vec4 EncodeNormal(vec3 n)
     enc = enc*0.5+0.5;
     return vec4(enc,0,0);
 #else
-    return vec4(n, 1.0);
+    return vec4(n * 0.5 + 0.5, 1.0);
 #endif
 }
 
@@ -29,7 +29,7 @@ vec3 DecodeNormal(vec4 enc)
     n.z = g-1.0;
     return n;
 #else
-    return enc.xyz;
+    return enc.xyz * 2.0 - 1.0;
 #endif
 }
 

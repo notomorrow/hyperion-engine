@@ -129,7 +129,8 @@ void main()
     vec3 ibl = vec3(0.0);
     
     if (perform_lighting) {
-        ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).r * material.a;
+        const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
+        ao = ssao_data.a * material.a;
 
         const float roughness = material.r;
         const float metalness = material.g;
@@ -141,6 +142,8 @@ void main()
         const float material_reflectance = 0.5;
         const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
         const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
+        const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+        const vec3 F = SchlickFresnel(F0, F90, NdotV);
         
         const vec2 AB = BRDFMap(roughness, NdotV);
         const vec3 dfg = albedo_linear.rgb * AB.x + AB.y;
@@ -183,11 +186,27 @@ void main()
         
         // ibl
         //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
+
+        vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
+
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
-        vec3 radiance = dfg * ibl * specular_ao;
-        result = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao) + radiance;
-        result *= exposure * IBL_INTENSITY;
-        result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
+        // const vec3 bent_normal = (inverse(scene.view) * vec4(DecodeNormal(vec4(ssao_data.xyz, 1.0)).xyz, 0.0)).xyz;//ssao_data.xyz;
+        // vec3 specular_ao = vec3(SpecularAO_Cones(bent_normal, ao, perceptual_roughness, R));
+        specular_ao *= energy_compensation;
+
+        vec3 Fr = dfg * ibl * specular_ao;
+        Fr *= exposure * IBL_INTENSITY;
+
+        reflections.rgb *= specular_ao;
+        Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
+
+        vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
+        Fd *= multibounce;
+        Fr *= multibounce;
+
+        result = Fr + Fd;
+
+        // result = specular_ao;
         //end ibl
     } else {
         result = albedo.rgb;
