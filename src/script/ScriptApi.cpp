@@ -13,6 +13,8 @@ namespace hyperion {
 using namespace vm;
 using namespace compiler;
 
+APIInstance::ClassBindings APIInstance::class_bindings = {};
+
 static Module *GetModule(CompilationUnit *compilation_unit, const std::string &module_name)
 {
     if (Module *mod = compilation_unit->LookupModule(module_name)) {
@@ -514,7 +516,7 @@ void API::ModuleDefine::BindType(
         // create heap value for object
         prototype_ptr = vm->GetState().HeapAlloc(main_thread);
 
-        api_instance.class_bindings.class_prototypes[def.name] = prototype_ptr;
+        APIInstance::class_bindings.class_prototypes[def.name] = prototype_ptr;
 
         AssertThrow(prototype_ptr != nullptr);
         prototype_ptr->Assign(prototype_object);

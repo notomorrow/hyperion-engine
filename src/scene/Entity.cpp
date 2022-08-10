@@ -4,6 +4,9 @@
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
+#include <script/ScriptApi.hpp>
+#include <script/ScriptBindingDef.hpp>
+
 namespace hyperion::v2 {
 
 Entity::Entity(
@@ -583,5 +586,16 @@ bool Entity::IsReady() const
 
     return Base::IsReady();
 }
+
+// static const ClassInitializer<STUB_CLASS(Entity)> entity_initializer([]() -> ClassFields {
+//     return ClassFields {
+//         {
+//             "$construct",
+//             BuiltinTypes::ANY,
+//             { { "self", BuiltinTypes::ANY } },
+//             CxxCtor< Ref<Entity> > 
+//         }
+//     };
+// });
 
 } // namespace hyperion::v2

@@ -4,6 +4,7 @@
 #include <Types.hpp>
 
 #include <type_traits>
+#include <utility>
 
 namespace hyperion {
 
@@ -13,6 +14,12 @@ constexpr UInt num_gbuffer_textures = 7;
 
 template <class ...T>
 constexpr bool resolution_failure = false;
+
+template <char ... Chars>
+using character_sequence = std::integer_sequence<char, Chars...>;
+
+template <class T, T... Chars>
+constexpr character_sequence<Chars...> MakeCharSequence(T &&) { return { }; }
 
 template <class T, std::size_t = sizeof(T)>
 std::true_type implementation_exists_impl(T *);

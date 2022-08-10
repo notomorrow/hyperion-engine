@@ -94,8 +94,6 @@ private:
 
     Matrix4                      m_last_view_projection_matrix;
                                  
-    ScheduledFunctionId          m_render_update_id;
-                                 
     Scene::ID                    m_parent_id;
                                  
     mutable ShaderDataState      m_shader_data_state;

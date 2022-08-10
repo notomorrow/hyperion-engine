@@ -46,23 +46,23 @@ public:
     inline bool TypeCompatible() const 
         { return GetTypeId() == GetTypeId<std::decay_t<T>>(); }
 
-    inline void AssignCopy(HeapValue &other)
-    {
-        if (m_holder != nullptr) {
-            delete m_holder;
-            m_holder = nullptr;
-        }
+    // inline void AssignCopy(HeapValue &other)
+    // {
+    //     if (m_holder != nullptr) {
+    //         delete m_holder;
+    //         m_holder = nullptr;
+    //     }
 
-        if (other.m_holder != nullptr) {
-            // receive a new pointer via Clone() which will now be managed by this instance
-            m_holder = other.m_holder->Clone();
-            // call virtual GetVoidPointer() method because we can't access the m_value,
-            // as m_holder is a virtual base class.
-            m_ptr = m_holder->GetVoidPointer();
-        } else {
-            m_ptr = nullptr;
-        }
-    }
+    //     if (other.m_holder != nullptr) {
+    //         // receive a new pointer via Clone() which will now be managed by this instance
+    //         m_holder = other.m_holder->Clone();
+    //         // call virtual GetVoidPointer() method because we can't access the m_value,
+    //         // as m_holder is a virtual base class.
+    //         m_ptr = m_holder->GetVoidPointer();
+    //     } else {
+    //         m_ptr = nullptr;
+    //     }
+    // }
 
     template <typename T>
     inline void Assign(const T &value)
@@ -129,7 +129,7 @@ private:
         virtual ~BaseHolder() = default;
 
         virtual bool operator==(const BaseHolder &other) const = 0;
-        virtual BaseHolder *Clone() const = 0;
+        // virtual BaseHolder *Clone() const = 0;
         virtual void *GetVoidPointer() const = 0;
 
         size_t m_type_id;
@@ -137,6 +137,7 @@ private:
 
     // derived class that can hold any type
     template <typename T> struct DerivedHolder : public BaseHolder {
+        explicit DerivedHolder(T &&value) noexcept : BaseHolder(GetTypeId<T>()), m_value(std::move(value)) {}
         explicit DerivedHolder(const T &value) : BaseHolder(GetTypeId<T>()), m_value(value) {}
 
         virtual ~DerivedHolder()
@@ -151,7 +152,7 @@ private:
 
         // note: returns raw pointer which must be explicitly deleted
         // by receiver
-        virtual BaseHolder *Clone() const override { return new DerivedHolder<T>(m_value); }
+        // virtual BaseHolder *Clone() const override { return new DerivedHolder<T>(m_value); }
         virtual void *GetVoidPointer() const override { return (void*)&m_value; }
 
         T m_value;

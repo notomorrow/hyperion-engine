@@ -48,8 +48,9 @@ struct ComponentInitInfo<STUB_CLASS(Entity)> {
     ComponentFlagBits flags = ENTITY_FLAGS_RAY_TESTS_ENABLED;
 };
 
-class Entity : public EngineComponentBase<STUB_CLASS(Entity)>,
-                public HasDrawProxy<STUB_CLASS(Entity)>
+class Entity :
+    public EngineComponentBase<STUB_CLASS(Entity)>,
+    public HasDrawProxy<STUB_CLASS(Entity)>
 {
     friend class Octree;
     friend class RendererInstance;
@@ -221,12 +222,11 @@ private:
     ControllerSet          m_controllers;
 
     std::atomic<Octree *>  m_octree{nullptr};
-    // std::atomic_bool       m_is_visible{false};
     bool                   m_needs_octree_update{false};
 
     struct {
         RendererInstance *renderer_instance = nullptr;
-        bool changed                        = false;
+        bool changed = false;
     } m_primary_renderer_instance;
 
     /* Retains a list of pointers to RendererInstances that this Entity is used by,
@@ -236,8 +236,6 @@ private:
     std::mutex                  m_render_instances_mutex;
 
     mutable ShaderDataState     m_shader_data_state;
-    ScheduledFunctionId         m_render_update_id,
-                                m_change_pipeline_id;
 };
 
 } // namespace hyperion::v2

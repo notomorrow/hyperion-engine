@@ -125,10 +125,10 @@ inline int utf32_strlen(const u32char *str)
     return counter;
 }
 
-template <class T>
+template <class T, bool IsUtf8>
 int utf_strlen(const T *str, int *out_count = nullptr)
 {
-    if constexpr (std::is_same_v<std::make_unsigned_t<T>, u8char>) {
+    if constexpr (IsUtf8) {
         return utf8_strlen(str, out_count);
     }
 
@@ -218,10 +218,10 @@ inline int utf32_strcmp(const u32char *lhs, const u32char *rhs)
     return 0;
 }
 
-template <class T>
+template <class T, bool IsUtf8>
 int utf_strcmp(const T *lhs, const T *rhs)
 {
-    if constexpr (sizeof(T) == 1) {
+    if constexpr (IsUtf8) {
         return utf8_strcmp(lhs, rhs);
     }
 

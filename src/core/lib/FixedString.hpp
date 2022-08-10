@@ -78,16 +78,16 @@ public:
         }
     }
 
-    operator const char *() const       { return m_str; }
+    operator const char *() const { return m_str; }
 
-    char &operator[](size_t index)      { return m_str[index]; }
+    char &operator[](size_t index) { return m_str[index]; }
     char operator[](size_t index) const { return m_str[index]; }
 
     bool operator<(const FixedString &other) const
         { return m_str == nullptr ? true : bool(std::strcmp(m_str, other.m_str) < 0); }
 
-    size_t Length() const       { return m_length; }
-    const char *Data() const    { return m_str; }
+    size_t Length() const { return m_length; }
+    const char *Data() const { return m_str; }
     const char *CString() const { return m_str; }
 
     char *begin() { return m_str; }

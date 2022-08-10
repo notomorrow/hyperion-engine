@@ -69,8 +69,7 @@ export function OnTick(node: any, delta: float) {
     if (global_time >= 1.0) {
         let avg_time: float = global_time / num_ticks;
 
-        Print("avg time between ticks: %\n", avg_time);
-        Print("FPS: %\n", 1.0 / avg_time);
+        Print("CPU Ticks per second (in script): %\n", 1.0 / avg_time);
         global_time = 0.0;
         num_ticks = 0;
     }

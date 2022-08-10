@@ -4,7 +4,7 @@
 namespace hyperion::v2 {
 
 Blas::Blas(Ref<Mesh> &&mesh, const Transform &transform)
-    : EngineComponent(),
+    : EngineComponentWrapper(),
       m_mesh(std::move(mesh)),
       m_transform(transform)
 {
@@ -65,13 +65,13 @@ void Blas::Init(Engine *engine)
             ));
         }
 
-        EngineComponent::Create(
+        EngineComponentWrapper::Create(
             engine,
             engine->GetInstance()
         );
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](...) {
-            EngineComponent::Destroy(GetEngine());
+            EngineComponentWrapper::Destroy(GetEngine());
 
             m_mesh.Reset();
         }));
