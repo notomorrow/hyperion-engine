@@ -86,13 +86,13 @@ const SymbolTypePtr_t BuiltinTypes::ENUM_TYPE = SymbolType::Primitive(
 );
 
 const SymbolTypePtr_t BuiltinTypes::INT = SymbolType::Extend(
-    "int",
+    "Int",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__int", nullptr
+                "__Int", nullptr
             ),
             sp<AstInteger>(new AstInteger(0, SourceLocation::eof))
         },
@@ -109,13 +109,13 @@ const SymbolTypePtr_t BuiltinTypes::INT = SymbolType::Extend(
 );
 
 const SymbolTypePtr_t BuiltinTypes::UNSIGNED_INT = SymbolType::Extend(
-    "uint",
+    "UInt",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__uint", nullptr
+                "__UInt", nullptr
             ),
             sp<AstUnsignedInteger>(new AstUnsignedInteger(0, SourceLocation::eof))
         },
@@ -132,13 +132,13 @@ const SymbolTypePtr_t BuiltinTypes::UNSIGNED_INT = SymbolType::Extend(
 );
 
 const SymbolTypePtr_t BuiltinTypes::FLOAT = SymbolType::Extend(
-    "float",
+    "Float",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__float", nullptr
+                "__Float", nullptr
             ),
             sp<AstFloat>(new AstFloat(0.0, SourceLocation::eof))
         },
@@ -155,13 +155,13 @@ const SymbolTypePtr_t BuiltinTypes::FLOAT = SymbolType::Extend(
 );
 
 const SymbolTypePtr_t BuiltinTypes::NUMBER = SymbolType::Extend(
-    "number",
+    "Number",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__number", nullptr
+                "__Number", nullptr
             ),
             sp<AstFloat>(new AstFloat(0.0, SourceLocation::eof))
         },
@@ -184,13 +184,13 @@ const SymbolTypePtr_t BuiltinTypes::NUMBER = SymbolType::Extend(
 // );
 
 const SymbolTypePtr_t BuiltinTypes::BOOLEAN = SymbolType::Extend(
-    "bool",
+    "Bool",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__bool", nullptr
+                "__Bool", nullptr
             ),
             sp<AstFalse>(new AstFalse(SourceLocation::eof))
         },
@@ -213,13 +213,13 @@ const SymbolTypePtr_t BuiltinTypes::BOOLEAN = SymbolType::Extend(
 
 
 const SymbolTypePtr_t BuiltinTypes::STRING = SymbolType::Extend(
-    "string",
+    "String",
     BuiltinTypes::CLASS_TYPE,
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__string", nullptr
+                "__String", nullptr
             ),
             sp<AstString>(new AstString("", SourceLocation::eof))
         },
@@ -268,12 +268,12 @@ const SymbolTypePtr_t BuiltinTypes::FUNCTION = SymbolType::Generic(
 );
 
 const SymbolTypePtr_t BuiltinTypes::ARRAY = SymbolType::Generic(
-    "array",
+    "Array",
     std::vector<SymbolMember_t> {
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__array", nullptr
+                "__Array", nullptr
             ),
             sp<AstArrayExpression>(new AstArrayExpression(
                 {}, SourceLocation::eof

@@ -272,11 +272,6 @@ protected:
     std::vector<Node *> m_descendents;
 
     Scene *m_scene;
-
-private:
-
-    void RequestPipelineChanges();
-
 };
 
 } // namespace hyperion::v2

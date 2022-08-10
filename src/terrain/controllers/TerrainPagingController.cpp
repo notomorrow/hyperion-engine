@@ -8,8 +8,9 @@ namespace hyperion::v2 {
 TerrainPagingController::TerrainPagingController(
     Seed seed,
     Extent3D patch_size,
-    const Vector3 &scale
-) : PagingController("TerrainPagingController", patch_size, scale),
+    const Vector3 &scale,
+    Float max_distance
+) : PagingController("TerrainPagingController", patch_size, scale, max_distance),
     m_noise_combinator(seed),
     m_seed(seed)
 {

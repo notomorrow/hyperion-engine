@@ -16,10 +16,7 @@ ComputePipeline::ComputePipeline(Ref<Shader> &&shader, const DynArray<const Desc
 {
 }
 
-ComputePipeline::~ComputePipeline()
-{
-    Teardown();
-}
+ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Init(Engine *engine)
 {

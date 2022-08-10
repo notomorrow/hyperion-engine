@@ -146,11 +146,17 @@ struct ComponentID : IDBase {};
 
 class RenderResource {};
 
+class EngineComponentBaseBase {
+
+};
+
 template <class Type>
-class EngineComponentBase : public CallbackTrackable<EngineCallbacks>
+class EngineComponentBase
+    : public EngineComponentBaseBase,
+      public CallbackTrackable<EngineCallbacks>
 {
 public:
-    using ID                = ComponentID<Type>;
+    using ID = ComponentID<Type>;
     using ComponentInitInfo = ComponentInitInfo<Type>;
 
     static constexpr ID empty_id = ID{0};
@@ -172,9 +178,11 @@ public:
 
     EngineComponentBase(const EngineComponentBase &other) = delete;
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
-    ~EngineComponentBase()
+    ~EngineComponentBase() {}
+
+    void OnDisposed()
     {
-        //DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
+        Teardown();
     }
 
     HYP_FORCE_INLINE ID GetId() const { return m_id; }

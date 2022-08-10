@@ -35,8 +35,6 @@ class FullScreenPass {
     using PushConstantData = Pipeline::PushConstantData;
 
 public:
-    static std::unique_ptr<Mesh> full_screen_quad;
-    
     FullScreenPass(
         Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
     );
@@ -82,15 +80,19 @@ public:
     void Record(Engine *engine, UInt frame_index);
 
 protected:
+    void CreateQuad(Engine *engine);
+
     FixedArray<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
     FixedArray<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
     Ref<Shader>                                                      m_shader;
     Ref<RenderPass>                                                  m_render_pass;
     Ref<RendererInstance>                                            m_renderer_instance;
-                                                                     
+    Ref<Mesh>                                                        m_full_screen_quad;
+
     DynArray<std::unique_ptr<Attachment>>                            m_attachments;
 
     PushConstantData                                                 m_push_constant_data;
+
 
 private:                         
     Image::InternalFormat                                            m_image_format;                                    

@@ -45,10 +45,7 @@ CubemapRenderer::CubemapRenderer(
 }
 
 
-CubemapRenderer::~CubemapRenderer()
-{
-    Teardown();
-}
+CubemapRenderer::~CubemapRenderer() = default;
 
 void CubemapRenderer::Init(Engine *engine)
 {

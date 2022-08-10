@@ -14,7 +14,12 @@ namespace hyperion::v2 {
 
 class TerrainPagingController : public PagingController {
 public:
-    TerrainPagingController(Seed seed, Extent3D patch_size, const Vector3 &scale);
+    TerrainPagingController(
+        Seed seed,
+        Extent3D patch_size,
+        const Vector3 &scale,
+        Float max_distance
+    );
     virtual ~TerrainPagingController() override = default;
 
     virtual void OnAdded() override;

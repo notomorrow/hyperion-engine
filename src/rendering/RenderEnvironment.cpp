@@ -14,10 +14,7 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
 {
 }
 
-RenderEnvironment::~RenderEnvironment()
-{
-    Teardown();
-}
+RenderEnvironment::~RenderEnvironment() = default;
 
 void RenderEnvironment::Init(Engine *engine)
 {

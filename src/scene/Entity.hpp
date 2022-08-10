@@ -198,9 +198,6 @@ private:
     void OnAddedToPipeline(RendererInstance *pipeline);
     void OnRemovedFromPipeline(RendererInstance *pipeline);
     
-    // void RemoveFromPipelines();
-    // void RemoveFromPipeline(Engine *engine, RendererInstance *pipeline);
-    
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
     void OnMovedToOctant(Octree *octree);

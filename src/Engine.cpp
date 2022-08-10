@@ -10,6 +10,8 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <builders/MeshBuilder.hpp>
+
 #include <audio/AudioManager.hpp>
 
 namespace hyperion::v2 {
@@ -160,8 +162,11 @@ void Engine::FindTextureFormatDefaults()
     );
 }
 
-void Engine::PrepareSwapchain()
+void Engine::PrepareFinalPass()
 {
+    m_full_screen_quad = resources.meshes.Add(MeshBuilder::Quad().release());
+    m_full_screen_quad.Init();
+
     auto shader = resources.shaders.Add(new Shader(
         std::vector<SubShader> {
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
@@ -239,7 +244,7 @@ void Engine::PrepareSwapchain()
             render_pass->GetRenderPass().AddAttachmentRef(color_attachment_ref);
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment_ref);
 
-            render_pass.Init();
+            render_pass->Init(this);
 
             m_root_pipeline = std::make_unique<RendererInstance>(
                 shader.IncRef(),
@@ -484,7 +489,7 @@ void Engine::Initialize()
 
     m_running = true;
 
-    PrepareSwapchain();
+    PrepareFinalPass();
 }
 
 void Engine::Compile()
@@ -650,7 +655,7 @@ void Engine::RenderFinalPass(Frame *frame) const
 #endif
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
-    FullScreenPass::full_screen_quad->Render(const_cast<Engine *>(this), frame->GetCommandBuffer());
+    m_full_screen_quad->Render(const_cast<Engine *>(this), frame->GetCommandBuffer());
     
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(frame->GetCommandBuffer());
 }

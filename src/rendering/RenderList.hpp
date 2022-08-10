@@ -36,13 +36,13 @@ public:
 
         Bucket GetBucket() const                                            { return bucket; }
         void SetBucket(Bucket bucket)                                       { this->bucket = bucket; }
-                                                                            
+        
         Ref<RenderPass> &GetRenderPass()                                    { return render_pass; }
         const Ref<RenderPass> &GetRenderPass() const                        { return render_pass; }
-                                                                               
+        
         DynArray<Ref<Framebuffer>> &GetFramebuffers()                       { return framebuffers; }
         const DynArray<Ref<Framebuffer>> &GetFramebuffers() const           { return framebuffers; }
-                                                                               
+
         DynArray<Ref<RendererInstance>> &GetRendererInstances()             { return renderer_instances; }
         const DynArray<Ref<RendererInstance>> &GetRendererInstances() const { return renderer_instances; }
 

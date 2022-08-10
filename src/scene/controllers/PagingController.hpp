@@ -57,10 +57,14 @@ class PagingController : public Controller {
     static constexpr GameCounter::TickUnit update_max{2.5f};
     static constexpr GameCounter::TickUnit queue_max{2.5f};
     static constexpr GameCounter::TickUnit patch_unload_time{5.0f};
-    static constexpr float                 max_distance{4.5f};
 
 public:
-    PagingController(const char *name, Extent3D patch_size, const Vector3 &scale);
+    PagingController(
+        const char *name,
+        Extent3D patch_size,
+        const Vector3 &scale,
+        Float max_distance
+    );
     virtual ~PagingController() override = default;
 
     virtual void OnAdded() override;
@@ -110,6 +114,7 @@ protected:
     FlatSet<PatchCoord>                         m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
     Extent3D                                    m_patch_size;
     Vector3                                     m_scale;
+    Float                                       m_max_distance;
     GameCounter::TickUnit                       m_update_timer;
     GameCounter::TickUnit                       m_queue_timer;
 };

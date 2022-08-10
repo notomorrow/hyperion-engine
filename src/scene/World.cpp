@@ -10,10 +10,7 @@ World::World()
 {
 }
 
-World::~World()
-{
-    Teardown();
-}
+World::~World() = default;
     
 void World::Init(Engine *engine)
 {

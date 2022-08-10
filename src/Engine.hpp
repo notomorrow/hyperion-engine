@@ -239,6 +239,78 @@ public:
     void Initialize();
     void Compile();
 
+#if 0
+    template <class Object>
+    Ref<Object> MakeHandle(Object *object)
+    {
+        if constexpr (std::is_same_v<Object, Shader>) {
+            Ref<Object> handle = resources.shaders.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Texture>) {
+            Ref<Object> handle = resources.textures.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Material>) {
+            Ref<Object> handle = resources.materials.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Light>) {
+            Ref<Object> handle = resources.lights.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Entity>) {
+            Ref<Object> handle = resources.entities.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Mesh>) {
+            Ref<Object> handle = resources.meshes.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Skeleton>) {
+            Ref<Object> handle = resources.skeletons.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Scene>) {
+            Ref<Object> handle = resources.scenes.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, RenderPass>) {
+            Ref<Object> handle = resources.render_passes.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Framebuffer>) {
+            Ref<Object> handle = resources.framebuffers.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, RendererInstance>) {
+            Ref<Object> handle = resources.renderer_instances.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, ComputePipeline>) {
+            Ref<Object> handle = resources.compute_pipelines.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Blas>) {
+            Ref<Object> handle = resources.blas.Add(object);
+            handle->Init(this);
+            return handle;
+        } else if constexpr(std::is_same_v<Object, Camera>) {
+            Ref<Object> handle = resources.cameras.Add(object);
+            handle->Init(this);
+            return handle;
+        } else {
+            static_assert(resolution_failure<Object>, "No handler defined for the given type");
+        }
+    }
+#endif
+
+    template <class Object>
+    void Activate(Ref<Object> &object)
+    {
+        object->Init(this);
+    }
+
     void PreFrameUpdate(Frame *frame);
     
     void RenderDeferred(Frame *frame);
@@ -264,7 +336,7 @@ private:
     void ResetRenderState();
     void UpdateBuffersAndDescriptors(UInt frame_index);
 
-    void PrepareSwapchain();
+    void PrepareFinalPass();
 
     void FindTextureFormatDefaults();
     
@@ -273,7 +345,7 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 16> m_texture_format_defaults;
 
-    DeferredRenderer    m_deferred_renderer;
+    DeferredRenderer m_deferred_renderer;
     RenderListContainer m_render_list_container;
 
     /* TMP */
@@ -285,9 +357,11 @@ private:
 
     PlaceholderData m_placeholder_data;
 
-    SafeDeleter                                    m_safe_deleter;
+    SafeDeleter m_safe_deleter;
 
-    World                                          m_world;
+    World m_world;
+
+    Ref<Mesh> m_full_screen_quad;
 };
 
 } // namespace hyperion::v2

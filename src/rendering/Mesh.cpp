@@ -83,10 +83,7 @@ Mesh::Mesh(
 {
 }
 
-Mesh::~Mesh()
-{
-    Teardown();
-}
+Mesh::~Mesh() = default;
 
 void Mesh::Init(Engine *engine)
 {

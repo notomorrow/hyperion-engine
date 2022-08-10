@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 
-std::atomic<ControllerId> ControllerSet::controller_id_counter{0};
+std::atomic<ControllerID> ControllerSet::controller_id_counter{0};
 
 Controller::Controller(const char *name, bool receives_update)
     : m_name(nullptr),

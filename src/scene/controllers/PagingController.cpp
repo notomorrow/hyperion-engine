@@ -19,18 +19,23 @@ auto PagingController::GetNeighbors(const PatchCoord &coord) -> PatchNeighbors
     };
 }
 
-PagingController::PagingController(const char *name, Extent3D patch_size, const Vector3 &scale)
-    : Controller(name),
-      m_patch_size(patch_size),
-      m_scale(scale),
-      m_update_timer(0.0f),
-      m_queue_timer(0.0f)
+PagingController::PagingController(
+    const char *name,
+    Extent3D patch_size,
+    const Vector3 &scale,
+    Float max_distance
+) : Controller(name),
+    m_patch_size(patch_size),
+    m_scale(scale),
+    m_max_distance(max_distance),
+    m_update_timer(0.0f),
+    m_queue_timer(0.0f)
 {
 }
 
 void PagingController::OnAdded()
 {
-    AddPatch(PatchCoord{0, 0});
+    AddPatch(PatchCoord { 0, 0 });
 }
 
 void PagingController::OnRemoved()
@@ -196,7 +201,7 @@ bool PagingController::InRange(const Patch *patch, const PatchCoord &camera_coor
 
 bool PagingController::InRange(const PatchCoord &patch_center, const PatchCoord &camera_coord) const
 {
-    return camera_coord.Distance(patch_center) <= max_distance;
+    return camera_coord.Distance(patch_center) <= m_max_distance;
 }
 
 auto PagingController::CreatePatch(const PatchInfo &info) -> std::unique_ptr<Patch>

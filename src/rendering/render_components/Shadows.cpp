@@ -211,10 +211,7 @@ ShadowRenderer::ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float 
     m_shadow_pass.SetMaxDistance(max_distance);
 }
 
-ShadowRenderer::~ShadowRenderer()
-{
-    Teardown();
-}
+ShadowRenderer::~ShadowRenderer() = default;
 
 // called from render thread
 void ShadowRenderer::Init(Engine *engine)

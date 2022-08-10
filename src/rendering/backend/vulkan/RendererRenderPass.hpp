@@ -32,9 +32,9 @@ public:
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
-    RenderPassStage GetStage() const        { return m_stage; }
-    bool IsMultiview() const                { return m_num_multiview_layers != 0; }
-    uint32_t NumMultiviewLayers() const     { return m_num_multiview_layers; }
+    RenderPassStage GetStage() const    { return m_stage; }
+    bool IsMultiview() const { return m_num_multiview_layers != 0; }
+    uint32_t NumMultiviewLayers() const { return m_num_multiview_layers; }
 
     void AddAttachmentRef(AttachmentRef *attachment_ref)
     {
@@ -64,7 +64,7 @@ public:
         return true;
     }
 
-    auto &GetAttachmentRefs()             { return m_render_pass_attachment_refs; }
+    auto &GetAttachmentRefs() { return m_render_pass_attachment_refs; }
     const auto &GetAttachmentRefs() const { return m_render_pass_attachment_refs; }
 
     VkRenderPass GetHandle() const { return m_handle; }

@@ -22,7 +22,7 @@ class RenderEnvironment;
 class World;
 
 class Scene : public EngineComponentBase<STUB_CLASS(Scene)> {
-    friend class Entity; // TODO: refactor to not need as many friend classes
+    friend class Entity;
     friend class World;
 public:
     static constexpr UInt32 max_environment_textures = SceneShaderData::max_environment_textures;
@@ -75,9 +75,9 @@ private:
     void AddPendingEntities();
     void RemovePendingEntities();
 
-    void RequestPipelineChanges(Ref<Entity> &entity);
-    void RemoveFromPipeline(Ref<Entity> &entity, RendererInstance *pipeline);
-    void RemoveFromPipelines(Ref<Entity> &entity);
+    void RequestRendererInstanceUpdate(Ref<Entity> &entity);
+    void RemoveFromRendererInstance(Ref<Entity> &entity, RendererInstance *renderer_instance);
+    void RemoveFromRendererInstances(Ref<Entity> &entity);
 
     Ref<Camera>                  m_camera;
     std::unique_ptr<Node>        m_root_node;

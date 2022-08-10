@@ -16,10 +16,7 @@ RenderPass::RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode, U
 {
 }
 
-RenderPass::~RenderPass()
-{
-    Teardown();
-}
+RenderPass::~RenderPass() = default;
 
 void RenderPass::Init(Engine *engine)
 {

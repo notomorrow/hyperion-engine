@@ -16,8 +16,6 @@ using renderer::ImageDescriptor;
 using renderer::ImageSamplerDescriptor;
 using renderer::FillMode;
 
-std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad();
-
 FullScreenPass::FullScreenPass(Image::InternalFormat image_format)
     : FullScreenPass(nullptr, image_format)
 {
@@ -46,9 +44,7 @@ void FullScreenPass::Create(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    /* will only init once */
-    full_screen_quad->Init(engine);
-
+    CreateQuad(engine);
     CreateRenderPass(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
@@ -90,6 +86,12 @@ void FullScreenPass::SetShader(Ref<Shader> &&shader)
     m_shader = std::move(shader);
 
     m_shader.Init();
+}
+
+void FullScreenPass::CreateQuad(Engine *engine)
+{
+    m_full_screen_quad = engine->resources.meshes.Add(MeshBuilder::Quad().release());
+    m_full_screen_quad.Init();
 }
 
 void FullScreenPass::CreateRenderPass(Engine *engine)
@@ -182,6 +184,8 @@ void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet
 
 void FullScreenPass::Destroy(Engine *engine)
 {
+    m_full_screen_quad.Reset();
+
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         if (m_framebuffers[i] != nullptr) {
             for (auto &attachment : m_attachments) {
@@ -287,7 +291,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
                 DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
             );
 
-            full_screen_quad->Render(engine, cmd);
+            m_full_screen_quad->Render(engine, cmd);
 
             HYPERION_RETURN_OK;
         });

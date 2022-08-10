@@ -49,10 +49,7 @@ Entity::Entity(
     }
 }
 
-Entity::~Entity()
-{
-    Teardown();
-}
+Entity::~Entity() = default;
 
 void Entity::Init(Engine *engine)
 {

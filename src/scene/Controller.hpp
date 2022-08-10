@@ -15,7 +15,7 @@
 
 namespace hyperion::v2 {
 
-using ControllerId = UInt32;
+using ControllerID = UInt;
 
 class Node;
 class Entity;
@@ -31,7 +31,7 @@ public:
     virtual ~Controller();
 
     const char *GetName() const { return m_name; }
-    Entity *GetOwner() const   { return m_owner; }
+    Entity *GetOwner() const { return m_owner; }
     bool ReceivesUpdate() const { return m_receives_update; }
 
 protected:
@@ -46,22 +46,22 @@ protected:
     Engine *GetEngine() const;
 
 private:
-    char    *m_name;
+    char *m_name;
     Entity *m_owner;
-    bool     m_receives_update;
+    bool m_receives_update;
 };
 
 class ControllerSet {
-    using Map = FlatMap<ControllerId, std::unique_ptr<Controller>>;
+    using Map = FlatMap<ControllerID, std::unique_ptr<Controller>>;
 
-    static std::atomic<ControllerId> controller_id_counter;
+    static std::atomic<ControllerID> controller_id_counter;
 
     template <class T>
-    inline static ControllerId GetControllerId()
+    inline static ControllerID GetControllerID()
     {
         static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
 
-        static const ControllerId id = ++controller_id_counter;
+        static const ControllerID id = ++controller_id_counter;
 
         return id;
     }
@@ -93,7 +93,7 @@ public:
     {
         AssertThrow(controller != nullptr);
 
-        const auto id = GetControllerId<T>();
+        const auto id = GetControllerID<T>();
 
         m_map[id] = std::move(controller);
     }
@@ -101,7 +101,7 @@ public:
     template <class T>
     T *Get() const
     {
-        const auto id = GetControllerId<T>();
+        const auto id = GetControllerID<T>();
 
         const auto it = m_map.Find(id);
 
@@ -115,7 +115,7 @@ public:
     template <class T>
     bool Has() const
     {
-        const auto id = GetControllerId<T>();
+        const auto id = GetControllerID<T>();
 
         return m_map.Find(id) != m_map.End();
     }
@@ -123,7 +123,7 @@ public:
     template <class T>
     bool Remove()
     {
-        const auto id = GetControllerId<T>();
+        const auto id = GetControllerID<T>();
 
         const auto it = m_map.Find(id);
 
