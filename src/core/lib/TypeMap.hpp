@@ -13,23 +13,23 @@
 
 namespace hyperion {
 
-struct TypeId {
+struct TypeID {
     using Value = UInt;
 
     Value value;
 
-    TypeId() : value{} {}
-    TypeId(const Value &id) : value(id) {}
-    TypeId(const TypeId &other) = default;
-    TypeId &operator=(const TypeId &other) = default;
+    TypeID() : value{} {}
+    TypeID(const Value &id) : value(id) {}
+    TypeID(const TypeID &other) = default;
+    TypeID &operator=(const TypeID &other) = default;
 
-    TypeId(TypeId &&other) noexcept
+    TypeID(TypeID &&other) noexcept
         : value(other.value)
     {
         other.value = 0;
     }
     
-    TypeId &operator=(TypeId &&other) noexcept
+    TypeID &operator=(TypeID &&other) noexcept
     {
         value = other.value;
         other.value = 0;
@@ -37,17 +37,17 @@ struct TypeId {
         return *this;
     }
 
-    TypeId &operator=(Value id)
+    TypeID &operator=(Value id)
     {
         value = id;
 
         return *this;
     }
 
-    bool operator==(const TypeId &other) const { return value == other.value; }
-    bool operator!=(const TypeId &other) const { return value != other.value; }
-    bool operator<(const TypeId &other) const  { return value < other.value; }
-    bool operator>(const TypeId &other) const  { return value > other.value; }
+    bool operator==(const TypeID &other) const { return value == other.value; }
+    bool operator!=(const TypeID &other) const { return value != other.value; }
+    bool operator<(const TypeID &other) const  { return value < other.value; }
+    bool operator>(const TypeID &other) const  { return value > other.value; }
 
     HashCode GetHashCode() const
     {
@@ -59,22 +59,22 @@ struct TypeId {
 };
 
 template <class Value>
-class TypeMap : public ContainerBase<TypeMap<Value>, TypeId> {
+class TypeMap : public ContainerBase<TypeMap<Value>, TypeID> {
 protected:
-    using Map = FlatMap<TypeId, Value>;
+    using Map = FlatMap<TypeID, Value>;
 
-    static inline std::atomic<TypeId::Value> type_id_counter;
+    static inline std::atomic<TypeID::Value> type_id_counter;
 
     template <class T>
-    static TypeId GetTypeId()
+    static TypeID GetTypeID()
     {
-        static const TypeId id = TypeId{++type_id_counter};
+        static const TypeID id = TypeID{++type_id_counter};
 
         return id;
     }
 
 public:
-    using Iterator      = typename Map::Iterator;
+    using Iterator = typename Map::Iterator;
     using ConstIterator = typename Map::ConstIterator;
 
     TypeMap() = default;
@@ -100,7 +100,7 @@ public:
     template <class T>
     void Set(const Value &value)
     {
-        const auto id = GetTypeId<T>();
+        const auto id = GetTypeID<T>();
 
         m_map[id] = value;
     }
@@ -108,7 +108,7 @@ public:
     template <class T>
     void Set(Value &&value)
     {
-        const auto id = GetTypeId<T>();
+        const auto id = GetTypeID<T>();
 
         m_map[id] = std::move(value);
     }
@@ -116,7 +116,7 @@ public:
     template <class T>
     Iterator Find()
     {
-        const auto id = GetTypeId<T>();
+        const auto id = GetTypeID<T>();
 
         return m_map.Find(id);
     }
@@ -124,7 +124,7 @@ public:
     template <class T>
     ConstIterator Find() const
     {
-        const auto id = GetTypeId<T>();
+        const auto id = GetTypeID<T>();
 
         return m_map.Find(id);
     }
@@ -152,7 +152,7 @@ public:
     template <class T>
     bool Contains() const
     {
-        const auto id = GetTypeId<T>();
+        const auto id = GetTypeID<T>();
 
         return m_map.Find(id) != m_map.End();
     }

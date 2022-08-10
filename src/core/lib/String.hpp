@@ -46,6 +46,8 @@ public:
     bool operator==(const T *str) const;
     bool operator!=(const DynString &other) const;
     bool operator!=(const T *str) const;
+
+    bool operator<(const DynString &other) const;
     
     [[nodiscard]] const T operator[](SizeType index) const;
 
@@ -123,7 +125,7 @@ DynString<T, IsUtf8>::DynString(const T *str)
     : DynArray<T>()
 {
     int count;
-    int len = utf::utf_strlen(str, &count);
+    int len = utf::utf_strlen<T, IsUtf8>(str, &count);
 
     if (len == -1) {
         // invalid utf8 string
@@ -240,13 +242,13 @@ bool DynString<T, IsUtf8>::operator==(const DynString &other) const
         return true;
     }
 
-    return utf::utf_strcmp(&Base::m_values[0], &other.m_values[0]);
+    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], &other.m_values[0]) == 0;
 }
 
 template <class T, bool IsUtf8>
 bool DynString<T, IsUtf8>::operator==(const T *str) const
 {
-    const auto len = utf::utf_strlen(str);
+    const auto len = utf::utf_strlen<T, IsUtf8>(str);
 
     if (len == -1) {
         return false; // invalid utf string
@@ -260,7 +262,7 @@ bool DynString<T, IsUtf8>::operator==(const T *str) const
         return true;
     }
 
-    return utf::utf_strcmp(&Base::m_values[0], str);
+    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], str) == 0;
 }
 
 template <class T, bool IsUtf8>
@@ -273,6 +275,12 @@ template <class T, bool IsUtf8>
 bool DynString<T, IsUtf8>::operator!=(const T *str) const
 {
     return !operator==(str);
+}
+
+template <class T, bool IsUtf8>
+bool DynString<T, IsUtf8>::operator<(const DynString &other) const
+{
+    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], &other.m_values[0]) < 0;
 }
 
 template <class T, bool IsUtf8>

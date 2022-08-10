@@ -7,6 +7,8 @@ using renderer::Device;
 
 class Engine;
 
+TypeMap<ClassFields> ClassInitializerBase::class_fields = {};
+
 Device *GetEngineDevice(Engine *engine)
 {
     return engine->GetInstance()->GetDevice();

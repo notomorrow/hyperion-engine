@@ -2,10 +2,15 @@
 #define HYPERION_V2_COMPONENTS_BASE_H
 
 #include <core/Containers.hpp>
+#include <core/lib/StaticString.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
+#include <Constants.hpp>
 #include <Types.hpp>
+
+#include <script/ScriptApi.hpp>
+#include <script/vm/Value.hpp>
 
 #include <memory>
 #include <atomic>
@@ -16,23 +21,86 @@ namespace hyperion::v2 {
 using renderer::Instance;
 using renderer::Device;
 
+using ClassField = API::NativeMemberDefine;
+
 class Engine;
 
 Device *GetEngineDevice(Engine *engine);
 
-template <class T>
-struct Stub {
-    Stub() = default;
-    ~Stub() = default;
+// struct FieldInfo {
+//     NativeMemberDefine info;
+// };
 
-    renderer::Result Create(Engine *)  { return renderer::Result::OK; }
+using ClassFields = DynArray<ClassField>; //FlatMap<ANSIString, FieldInfo>;
+// global variable of all class fields
+// this must strictly be used on one thread
+
+struct ClassInitializerBase {
+    static TypeMap<ClassFields> class_fields;
+};
+
+
+template <class Class>
+struct ClassInitializer : ClassInitializerBase {
+    ClassInitializer(std::add_pointer_t<ClassFields(void)> &&fn)
+    {
+        ClassInitializerBase::class_fields.Set<Class>(fn());
+    }
+};
+
+template <class ClassName>
+struct Class {
+    using ClassNameSequence = typename ClassName::Sequence;
+
+public:
+    static constexpr const char *GetName() { return ClassNameSequence::data; }
+
+    Class()
+    {
+        // class_fields.Set<decltype(*this)>({ });
+    }
+
+    Class(const Class &other) = delete;
+    Class &operator=(const Class &other) = delete;
+
+    Class(Class &&other) = delete;
+    Class &operator=(Class &&other) noexcept = delete;
+
+    ~Class()
+    {
+        // class_fields.Remove<decltype(*this)>();
+    }
+
+    static Class &GetInstance()
+    {
+        static Class instance;
+        return instance;
+    }
+
+    // ClassFields &GetFields()
+    // {
+    //     return class_fields.At<decltype(*this)>();
+    // }
+};
+
+template <class T, class ClassName>
+struct StubbedClass : public Class<ClassName> {
+    StubbedClass() = default;
+    ~StubbedClass() = default;
+
+    renderer::Result Create(Engine *) { return renderer::Result::OK; }
     renderer::Result Destroy(Engine *) { return renderer::Result::OK; }
 };
 
-#define STUB_CLASS(name) ::hyperion::v2::Stub<name>
+template <auto X>
+struct ClassName {
+    using Sequence = IntegerSequenceFromString<X>;
+};
+
+#define STUB_CLASS(name) ::hyperion::v2::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>
 
 #define ENGINE_COMPONENT_DELEGATE_METHODS \
-    decltype(m_wrapped) *operator->()             { return &m_wrapped; } \
+    decltype(m_wrapped) *operator->() { return &m_wrapped; } \
     const decltype(m_wrapped) *operator->() const { return &m_wrapped; }
 
 using ComponentFlagBits = UInt;
@@ -46,7 +114,7 @@ struct ComponentInitInfo {
 
 // a non-descript ID (no type attached)
 struct IDBase {
-    using ValueType = UInt32;
+    using ValueType = UInt;
     
     HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }
     HYP_FORCE_INLINE constexpr ValueType Value() const             { return value; }
@@ -107,17 +175,20 @@ public:
     ~EngineComponentBase()
     {
         //DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
-    };
+    }
 
-    HYP_FORCE_INLINE ID GetId() const                             { return m_id; }
+    HYP_FORCE_INLINE ID GetId() const { return m_id; }
 
-    HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo()             { return m_init_info; }
+    HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo() { return m_init_info; }
     HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
 
     /* To be called from ObjectHolder<Type> */
-    void SetId(const ID &id)  { m_id = id; }
+    void SetId(const ID &id) { m_id = id; }
     bool IsInitCalled() const { return m_init_called; }
-    bool IsReady() const      { return m_is_ready; }
+    bool IsReady() const { return m_is_ready; }
+
+    auto &GetClass() { return Type::GetInstance(); }
+    const auto &GetClass() const { return Type::GetInstance(); }
 
     /*! \brief Just a function to store that Init() has been called from a derived class
      * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.
@@ -130,10 +201,11 @@ public:
         );
 
         m_init_called = true;
-        m_engine      = engine;
+        m_engine = engine;
     }
 
 protected:
+    using Class = Type;
     using Base = EngineComponentBase<Type>;
 
     void Destroy()
@@ -172,10 +244,10 @@ protected:
 };
 
 template <class WrappedType>
-class EngineComponent : public EngineComponentBase<WrappedType> {
+class EngineComponentWrapper : public EngineComponentBase<WrappedType> {
 public:
     template <class ...Args>
-    EngineComponent(Args &&... args)
+    EngineComponentWrapper(Args &&... args)
         : EngineComponentBase<WrappedType>(),
           m_wrapped(std::move(args)...),
           m_wrapped_created(false)
@@ -185,10 +257,10 @@ public:
 #endif
     }
 
-    EngineComponent(const EngineComponent &other) = delete;
-    EngineComponent &operator=(const EngineComponent &other) = delete;
+    EngineComponentWrapper(const EngineComponentWrapper &other) = delete;
+    EngineComponentWrapper &operator=(const EngineComponentWrapper &other) = delete;
 
-    ~EngineComponent()
+    ~EngineComponentWrapper()
     {
         const char *type_name = typeid(WrappedType).name();
 
@@ -207,7 +279,7 @@ public:
         );
     }
 
-    WrappedType &Get()             { return m_wrapped; }
+    WrappedType &Get() { return m_wrapped; }
     const WrappedType &Get() const { return m_wrapped; }
 
     /* Standard non-specialized initialization function */

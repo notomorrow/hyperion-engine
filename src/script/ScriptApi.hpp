@@ -5,6 +5,7 @@
 #include <script/vm/Array.hpp>
 #include <script/vm/ImmutableString.hpp>
 #include <script/vm/Value.hpp>
+#include <script/vm/InstructionHandler.hpp>
 
 #include <script/compiler/Configuration.hpp>
 #include <script/compiler/CompilationUnit.hpp>
@@ -131,23 +132,23 @@
 #define HYP_SCRIPT_GET_ARG_INT(index, name) \
     Int64 name; \
     do { \
-        Number num; \
+        vm::Number num; \
         if (!params.args[index]->GetSignedOrUnsigned(&num)) { \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type int or uint")); \
             return (decltype(name))0; \
         } \
-        name = (num.flags & Number::FLAG_UNSIGNED) ? static_cast<Int64>(num.u) : num.i; \
+        name = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<Int64>(num.u) : num.i; \
     } while (false)
 
 #define HYP_SCRIPT_GET_ARG_UINT(index, name) \
     UInt64 name; \
     do { \
-        Number num; \
+        vm::Number num; \
         if (!params.args[index]->GetSignedOrUnsigned(&num)) { \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type int or uint")); \
             return (decltype(name))0; \
         } \
-        name = (num.flags & Number::FLAG_SIGNED) ? static_cast<UInt64>(num.i) : num.u; \
+        name = (num.flags & vm::Number::FLAG_SIGNED) ? static_cast<UInt64>(num.i) : num.u; \
     } while (false)
 
 #define HYP_SCRIPT_GET_ARG_FLOAT(index, name) \
@@ -179,13 +180,13 @@
 #define HYP_SCRIPT_GET_MEMBER_INT(object, name, type, decl_name) \
     type decl_name; \
     do { \
-        Number num; \
+        vm::Number num; \
         vm::Member *_member = nullptr; \
         if (!(_member = object->LookupMemberFromHash(hash_fnv_1(name))) || !_member->value.GetSignedOrUnsigned(&num)) { \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type int or uint")); \
             return; \
         } \
-        decl_name = (num.flags & Number::FLAG_UNSIGNED) ? static_cast<Int64>(num.u) : num.i; \
+        decl_name = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<Int64>(num.u) : num.i; \
     } while (false)
 
 #define HYP_SCRIPT_GET_MEMBER_FLOAT(object, name, type, decl_name) \
@@ -538,8 +539,8 @@ public:
 
 class APIInstance {
 public:
-    struct ClassBindings {
-        TypeMap<std::string>                             class_names;
+    static struct ClassBindings {
+        TypeMap<std::string> class_names;
         std::unordered_map<std::string, vm::HeapValue *> class_prototypes;
     } class_bindings;
 
@@ -565,7 +566,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
     const std::vector<NativeMemberDefine> &members
 )
 {
-    m_api_instance.class_bindings.class_names.Set<T>(class_name);
+    APIInstance::class_bindings.class_names.Set<T>(class_name);
 
     m_type_defs.push_back(TypeDefine(
         class_name,
@@ -582,7 +583,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
     const std::vector<NativeMemberDefine> &members
 )
 {
-    m_api_instance.class_bindings.class_names.Set<T>(class_name);
+    APIInstance::class_bindings.class_names.Set<T>(class_name);
 
     m_type_defs.push_back(TypeDefine(
         class_name,
@@ -591,6 +592,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
 
     return *this;
 }
+
 }
 
 namespace hyperion {

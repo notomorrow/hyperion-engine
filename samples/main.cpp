@@ -105,6 +105,10 @@ public:
             ))
         ));
         engine->GetWorld().AddScene(scene.IncRef());
+        // std::cout << (int)scene->GetClass().fields["foo"].type << "\n";
+
+        DebugLog(LogType::Debug, "%s\n", scene->GetClass().GetName());
+        // HYP_BREAKPOINT;
 
         base_material = engine->resources.materials.Add(new Material());
         base_material.Init();

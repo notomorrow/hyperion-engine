@@ -90,7 +90,7 @@ struct VMState {
     HeapValue *HeapAlloc(ExecutionThread *thread);
     void GC();
 
-    void CloneValue(const Value &other, ExecutionThread *thread, Value &out);
+    // void CloneValue(const Value &other, ExecutionThread *thread, Value &out);
 
     /** Add a thread */
     ExecutionThread *CreateThread();

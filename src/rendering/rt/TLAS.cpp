@@ -4,7 +4,7 @@
 namespace hyperion::v2 {
 
 Tlas::Tlas()
-    : EngineComponent()
+    : EngineComponentWrapper()
 {
 }
 
@@ -44,7 +44,7 @@ void Tlas::Init(Engine *engine)
             blas[i] = &m_blas[i]->Get();
         }
 
-        EngineComponent::Create(
+        EngineComponentWrapper::Create(
             engine,
             engine->GetInstance(),
             std::move(blas)
@@ -53,7 +53,7 @@ void Tlas::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](...) {
             m_blas.clear();
 
-            EngineComponent::Destroy(GetEngine());
+            EngineComponentWrapper::Destroy(GetEngine());
         }));
     }));
 }

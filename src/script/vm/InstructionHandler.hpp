@@ -1420,6 +1420,8 @@ struct InstructionHandler {
                     result.m_value.d = result.m_value.d / b.f;
                 }
                 break;
+            default:
+                AssertThrowMsg(false, "Result type was not a number. Investigate");
             }
         } else {
             state->ThrowException(
