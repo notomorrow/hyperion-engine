@@ -28,27 +28,27 @@ Builtins::Builtins()
         BuiltinTypes::VOID_TYPE, nullptr, SourceLocation::eof
     ));
 
-    m_vars["int"].reset(new AstTypeObject(
+    m_vars["Int"].reset(new AstTypeObject(
         BuiltinTypes::INT, nullptr, SourceLocation::eof
     ));
 
-    m_vars["uint"].reset(new AstTypeObject(
+    m_vars["UInt"].reset(new AstTypeObject(
         BuiltinTypes::UNSIGNED_INT, nullptr, SourceLocation::eof
     ));
 
-    m_vars["float"].reset(new AstTypeObject(
+    m_vars["Float"].reset(new AstTypeObject(
         BuiltinTypes::FLOAT, nullptr, SourceLocation::eof
     ));
 
-    m_vars["number"].reset(new AstTypeObject(
+    m_vars["Number"].reset(new AstTypeObject(
         BuiltinTypes::NUMBER, nullptr, SourceLocation::eof
     ));
 
-    m_vars["bool"].reset(new AstTypeObject(
+    m_vars["Bool"].reset(new AstTypeObject(
         BuiltinTypes::BOOLEAN, nullptr, SourceLocation::eof
     ));
 
-    m_vars["string"].reset(new AstTypeObject(
+    m_vars["String"].reset(new AstTypeObject(
         BuiltinTypes::STRING, nullptr, SourceLocation::eof
     ));
 
@@ -56,7 +56,7 @@ Builtins::Builtins()
         BuiltinTypes::FUNCTION, nullptr, SourceLocation::eof
     ));
 
-    m_vars["array"].reset(new AstTemplateExpression(
+    m_vars["Array"].reset(new AstTemplateExpression(
         sp<AstTypeObject>(new AstTypeObject(
             BuiltinTypes::ARRAY, nullptr, SourceLocation::eof
         )),

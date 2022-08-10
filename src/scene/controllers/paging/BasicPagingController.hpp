@@ -7,7 +7,11 @@ namespace hyperion::v2 {
 
 class BasicPagingController : public PagingController {
 public:
-    BasicPagingController(Extent3D patch_size, const Vector3 &scale);
+    BasicPagingController(
+        Extent3D patch_size,
+        const Vector3 &scale,
+        Float max_distance
+    );
     virtual ~BasicPagingController() override = default;
 
     virtual void OnAdded() override;

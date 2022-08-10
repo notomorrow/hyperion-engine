@@ -598,7 +598,8 @@ struct ComponentEvents {
  * a teardown method which is defined in CallbackTrackable.
  */
 template <class T>
-struct ObjectVector {
+class ObjectVector {
+public:
     std::vector<T *> objects;
     std::queue<SizeType> free_slots;
 
@@ -669,10 +670,8 @@ struct ObjectVector {
     void Remove(typename T::ID id)
     {
         AssertThrowMsg(id.value != 0, "Value was not initialized!\n");
-        AssertThrow(id.value - 1 < objects.size());
-
-        delete objects[id.value - 1];
-        objects[id.value - 1] = nullptr;
+        
+        DisposeObjectAtIndex(id.value - 1);
 
         if (id.value == objects.size()) {
             objects.pop_back();
@@ -686,20 +685,33 @@ struct ObjectVector {
     void Destroy(typename T::ID id)
     {
         AssertThrowMsg(id.value != 0, "Value was not initialized!\n");
-        AssertThrow(id.value - 1 < objects.size());
-
-        delete objects[id.value - 1];
-        objects[id.value - 1] = nullptr;
+        DisposeObjectAtIndex(id.value - 1);
     }
     
     void RemoveAll()
     {
         for (SizeType i = objects.size(); i > 0; --i) {
-            delete objects[i - 1];
+            DisposeObjectAtIndex(i - 1);
         }
 
         objects.clear();
         free_slots = {};
+    }
+
+private:
+
+    void DisposeObjectAtIndex(SizeType index)
+    {
+        AssertThrow(index < objects.size());
+
+        if (!objects[index]) {
+            return;
+        }
+
+        // objects[index]->OnDisposed();
+
+        delete objects[index];
+        objects[index] = nullptr;
     }
 
 };
@@ -709,8 +721,8 @@ class RefCounter {
     using ArgsTuple = std::tuple<Args...>;
 
     struct RefCount {
-        RefCounter *ref_manager{nullptr};
-        std::atomic_uint32_t count{0};
+        RefCounter *ref_manager = nullptr;
+        std::atomic_uint32_t count { 0 };
     };
 
     FlatMap<typename T::ID, RefCount *> m_ref_count_holder;
@@ -809,6 +821,7 @@ public:
         }
     };
 
+    // A simple ref-counted handle to a resource, deriving EngineComponent
     class Ref : public RefWrapper {
     public:
         Ref()
@@ -907,14 +920,14 @@ public:
                 RefWrapper::m_ref_count->ref_manager->Release(RefWrapper::ptr);
             }
 
-            RefWrapper::ptr         = nullptr;
+            RefWrapper::ptr = nullptr;
             RefWrapper::m_ref_count = nullptr;
         }
     };
 
     class WeakRef : public RefWrapper {
     public:
-        WeakRef()               : WeakRef(nullptr) {}
+        WeakRef() : WeakRef(nullptr) {}
         WeakRef(std::nullptr_t) : WeakRef(nullptr, nullptr) {}
 
         WeakRef(const Ref &strong_ref)
@@ -938,10 +951,10 @@ public:
                 return *this;
             }
 
-            RefWrapper::ptr         = other.ptr;
+            RefWrapper::ptr = other.ptr;
             RefWrapper::m_ref_count = other.m_ref_count;
 
-            RefWrapper::other.ptr         = nullptr;
+            RefWrapper::other.ptr = nullptr;
             RefWrapper::other.m_ref_count = nullptr;
 
             return *this;
@@ -1007,7 +1020,7 @@ public:
             ptr->GetId(),
             new RefCount {
                 .ref_manager = this,
-                .count       = 0
+                .count = 0
             }
         );
 
@@ -1045,10 +1058,12 @@ public:
 private:
     friend class Ref;
 
-    void Release(const T *ptr)
+    void Release(T *ptr)
     {
         AssertThrow(ptr != nullptr);
         const auto id = ptr->GetId();
+
+        ptr->OnDisposed();
 
         m_holder.Remove(id);
 

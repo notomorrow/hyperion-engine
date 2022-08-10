@@ -33,10 +33,7 @@ PostProcessingEffect::PostProcessingEffect(
 {
 }
 
-PostProcessingEffect::~PostProcessingEffect()
-{
-    Teardown();
-}
+PostProcessingEffect::~PostProcessingEffect() = default;
 
 void PostProcessingEffect::Init(Engine *engine)
 {

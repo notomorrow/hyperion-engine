@@ -155,8 +155,7 @@ public:
 
         auto terrain_node = scene->GetRootNode()->AddChild();
         terrain_node->SetEntity(engine->resources.entities.Add(new Entity()));
-        terrain_node->GetEntity()->AddController<TerrainPagingController>(123999, Extent3D{256}, Vector3(3.0f));
-        
+        terrain_node->GetEntity()->AddController<TerrainPagingController>(0xFF8F8F, Extent3D { 128 } , Vector3(3.0f, 5.0f, 3.0f), 6.0f);
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
         //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
@@ -195,7 +194,7 @@ public:
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        //scene->GetRootNode()->AddChild(std::move(zombie));
+        scene->GetRootNode()->AddChild(std::move(zombie));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -206,6 +205,12 @@ public:
             50000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
+
+        auto my_light2 = engine->Attach(new DirectionalLight(
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+            Vector4::One(),
+            50000.0f
+        ));
 
         m_point_light = engine->resources.lights.Add(new PointLight(
             Vector3(2.0f, 12.0f, 0.0f),
@@ -1092,9 +1097,6 @@ int main()
     }
 
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
-
-    FullScreenPass::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
-    
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->GetGraphicsCommandPool());

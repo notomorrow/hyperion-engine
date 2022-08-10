@@ -21,10 +21,7 @@ RendererInstance::RendererInstance(
 {
 }
 
-RendererInstance::~RendererInstance()
-{
-    Teardown();
-}
+RendererInstance::~RendererInstance() = default;
 
 void RendererInstance::RemoveFramebuffer(Framebuffer::ID id)
 {

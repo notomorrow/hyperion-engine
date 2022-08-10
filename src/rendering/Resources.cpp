@@ -4,7 +4,8 @@
 namespace hyperion::v2 {
 
 Resources::Resources(Engine *engine)
-    : shaders(engine),
+    : m_engine(engine),
+      shaders(engine),
       textures(engine),
       materials(engine),
       lights(engine),

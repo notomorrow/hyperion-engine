@@ -159,10 +159,9 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
     });
 
     m_draw_proxies.PushBack(draw_proxy);
-
     m_draw_proxies.Back().draw_command_index = draw_command_index;
 
-    m_is_dirty = { true, true };
+    m_is_dirty = { true };
 }
 
 bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame, SizeType count)

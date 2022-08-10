@@ -14,10 +14,7 @@ Voxelizer::Voxelizer()
 {
 }
 
-Voxelizer::~Voxelizer()
-{
-    Teardown();
-}
+Voxelizer::~Voxelizer() = default;
 
 void Voxelizer::Init(Engine *engine)
 {

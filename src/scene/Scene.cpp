@@ -18,8 +18,6 @@ Scene::Scene(Ref<Camera> &&camera)
 
 Scene::~Scene()
 {
-    Teardown();
-
     delete m_environment;
 }
     
@@ -52,7 +50,7 @@ void Scene::Init(Engine *engine)
 
                 it.second->SetScene(nullptr);
 
-                RemoveFromPipelines(it.second);
+                RemoveFromRendererInstances(it.second);
 
                 if (it.second->m_octree != nullptr) {
                     it.second->RemoveFromOctree(GetEngine());
@@ -200,18 +198,18 @@ void Scene::AddPendingEntities()
         const auto id = entity->GetId();
 
         if (entity->IsRenderable() && !entity->GetPrimaryRendererInstance()) {
-            if (auto pipeline = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
-                pipeline->AddEntity(entity.IncRef());
+            if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
+                renderer_instance->AddEntity(entity.IncRef());
                 entity->EnqueueRenderUpdates();
 
                 entity->m_primary_renderer_instance = {
-                    .renderer_instance = pipeline.ptr,
+                    .renderer_instance = renderer_instance.ptr,
                     .changed  = false
                 };
             } else {
                 DebugLog(
                     LogType::Error,
-                    "Could not find or create optimal graphics pipeline for Entity #%lu!\n",
+                    "Could not find or create optimal RendererInstance for Entity #%lu!\n",
                     entity->GetId().value
                 );
 
@@ -251,7 +249,7 @@ void Scene::RemovePendingEntities()
         auto &found_entity = it->second;
         AssertThrow(found_entity != nullptr);
 
-        RemoveFromPipelines(found_entity);
+        RemoveFromRendererInstances(found_entity);
 
         if (found_entity->m_octree != nullptr) {
             DebugLog(
@@ -311,7 +309,7 @@ void Scene::Update(
         AssertThrow(entity != nullptr);
 
         if (entity->m_primary_renderer_instance.changed) {
-            RequestPipelineChanges(entity);
+            RequestRendererInstanceUpdate(entity);
         }
     }
 
@@ -320,38 +318,37 @@ void Scene::Update(
     }
 }
 
-void Scene::RequestPipelineChanges(Ref<Entity> &entity)
+void Scene::RequestRendererInstanceUpdate(Ref<Entity> &entity)
 {
     AssertThrow(entity != nullptr);
     AssertThrow(entity->GetScene() == this);
 
     if (entity->GetPrimaryRendererInstance() != nullptr) {
-        RemoveFromPipeline(entity, entity->m_primary_renderer_instance.renderer_instance);
+        RemoveFromRendererInstance(entity, entity->m_primary_renderer_instance.renderer_instance);
     }
     
-    if (auto pipeline = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
-        pipeline->AddEntity(entity.IncRef());
-        
-        // TODO: wrapper function
+    if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
+        renderer_instance->AddEntity(entity.IncRef());
+
         entity->m_primary_renderer_instance = {
-            .renderer_instance = pipeline.ptr,
+            .renderer_instance = renderer_instance.ptr,
             .changed  = false
         };
     } else {
         DebugLog(
             LogType::Error,
-            "Could not find or create optimal graphics pipeline for Entity #%lu!\n",
+            "Could not find or create optimal RendererInstance for Entity #%lu!\n",
             entity->GetId().value
         );
     }
 }
 
-void Scene::RemoveFromPipeline(Ref<Entity> &entity, RendererInstance *pipeline)
+void Scene::RemoveFromRendererInstance(Ref<Entity> &entity, RendererInstance *renderer_instance)
 {
-    pipeline->RemoveEntity(entity.IncRef());
+    renderer_instance->RemoveEntity(entity.IncRef());
 }
 
-void Scene::RemoveFromPipelines(Ref<Entity> &entity)
+void Scene::RemoveFromRendererInstances(Ref<Entity> &entity)
 {
     auto renderer_instances = entity->m_renderer_instances;
 

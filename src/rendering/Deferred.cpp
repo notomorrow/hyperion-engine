@@ -88,6 +88,7 @@ void DeferredPass::CreateDescriptors(Engine *engine)
 
 void DeferredPass::Create(Engine *engine)
 {
+    CreateQuad(engine);
     CreateShader(engine);
     CreateRenderPass(engine);
 
@@ -186,7 +187,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
                     }
                 );
 
-                full_screen_quad->Render(engine, cmd);
+                m_full_screen_quad->Render(engine, cmd);
             }
 
             HYPERION_RETURN_OK;
@@ -235,7 +236,6 @@ void DeferredRenderer::Create(Engine *engine)
         m_mipmapped_results[i].Init();
     }
     
-
     m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
     HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
 

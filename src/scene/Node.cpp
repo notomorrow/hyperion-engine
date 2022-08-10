@@ -383,9 +383,4 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
     return has_entity_hit;
 }
 
-void Node::RequestPipelineChanges()
-{
-    
-}
-
 } // namespace hyperion::v2

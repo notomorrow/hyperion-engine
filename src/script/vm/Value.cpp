@@ -63,28 +63,28 @@ const char *Value::GetTypeString() const
     switch (m_type) {
         case NONE:    return "<Uninitialized Data>";
         case I32:     // fallthrough
-        case I64:     return "int";
+        case I64:     return "Int";
         case F32:     // fallthrough
-        case F64:     return "float";
-        case BOOLEAN: return "bool";
+        case F64:     return "Float";
+        case BOOLEAN: return "Bool";
         case VALUE_REF:
             AssertThrow(m_value.value_ref != nullptr);
             return m_value.value_ref->GetTypeString();
 
         case HEAP_POINTER: 
             if (m_value.ptr == nullptr) {
-                return "null";
+                return "Null";
             } else if (m_value.ptr->GetPointer<ImmutableString>()) {
-                return "string";
+                return "String";
             } else if (m_value.ptr->GetPointer<Array>() || m_value.ptr->GetPointer<Slice>()) {
-                return "array";
+                return "Array";
             } else if (m_value.ptr->GetPointer<MemoryBuffer>()) {
                 return "MemoryBuffer";
             } else if (Object *object = m_value.ptr->GetPointer<Object>()) {
-                return "object"; // TODO prototype name
+                return "Object"; // TODO prototype name
             }
 
-            return "object";
+            return "Pointer";
 
         case FUNCTION:        return "Function";
         case NATIVE_FUNCTION: return "NativeFunction";
