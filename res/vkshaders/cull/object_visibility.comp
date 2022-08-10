@@ -35,7 +35,7 @@ struct ObjectInstance {
     uint draw_command_index;
     uint batch_index;
     uint num_indices;
-    //uvec2 user_data;
+    // uvec2 packed_data;
     vec4 aabb_max;
     vec4 aabb_min;
 };
@@ -57,6 +57,11 @@ layout(push_constant) uniform ObjectVisibilityData {
     uint  scene_id;
     uvec2 depth_pyramid_dimensions;
 } push_constants;
+
+// uint GetObjectBucket(ObjectInstance object_instance)
+// {
+//     return object_instance.packed_data.x & 0xFF;
+// }
 
 bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
 {
@@ -97,6 +102,7 @@ void main()
     aabb.min = object_instance.aabb_min.xyz;
 
     uint cull_bits = 0x7F;
+    // bool skip_check = bool(GetObjectBucket(object_instance) & (1 << HYP_OBJECT_BUCKET_SKYBOX));
 
     // entity id should not ever be zero/unset
     if (all(bvec2(entity_id, push_constants.scene_id))) {

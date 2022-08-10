@@ -62,7 +62,7 @@ void main()
     
     vec2 texcoord = v_texcoord0 * material.uv_scale;
     
-#if PARALLAX_ENABLED
+#if 0//PARALLAX_ENABLED
     if (HAS_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP)) {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
             material.parallax_height,
@@ -75,37 +75,39 @@ void main()
 #endif
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
+        vec4 albedo_texture = SAMPLE_TEXTURE_TRIPLANAR(MATERIAL_TEXTURE_ALBEDO_map, v_position, normal);
         
-        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
-            discard;
-        }
+        // if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
+        //     discard;
+        // }
 
-        gbuffer_albedo *= albedo_texture;
+        gbuffer_albedo = albedo_texture;
     }
 
     vec4 normals_texture = vec4(0.0);
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP)) {
-        normals_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
+        normals_texture = SAMPLE_TEXTURE_TRIPLANAR(MATERIAL_TEXTURE_NORMAL_MAP, v_position, normal) * 2.0 - 1.0;
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
 
-    if (HAS_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = SAMPLE_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
+    // if (HAS_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP)) {
+    //     float metalness_sample = SAMPLE_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
         
-        metalness = metalness_sample;//mix(metalness, metalness_sample, metalness_sample);
-    }
+    //     metalness = metalness_sample;//mix(metalness, metalness_sample, metalness_sample);
+    // }
     
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
-        float roughness_sample = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ROUGHNESS_MAP, texcoord).r;
+        float roughness_sample = SAMPLE_TEXTURE_TRIPLANAR(MATERIAL_TEXTURE_ROUGHNESS_MAP, v_position, normal).r;
         
         roughness = roughness_sample;//mix(roughness, roughness_sample, roughness_sample);
     }
     
-    if (HAS_TEXTURE(MATERIAL_TEXTURE_AO_MAP)) {
-        ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
-    }
+    // if (HAS_TEXTURE(MATERIAL_TEXTURE_AO_MAP)) {
+    //     ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
+    // }
+
+    // gbuffer_albedo.rgb = GetTriplanarBlend(normal);
 
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);

@@ -82,99 +82,63 @@ void RendererInstance::AddEntity(Ref<Entity> &&entity)
 
 void RendererInstance::RemoveEntity(Ref<Entity> &&entity, bool call_on_removed)
 {
-    // TODO:: Make all RendererInstance operations operate in the RENDER
-    // thread. Deferred rendering will be some derived version of a RenderComponent, so
-    // it will acquire entities that way and hand them off from the render thread here.
-
     // we cannot touch m_entities from any thread other than the render thread
     // we'll have to assume it's here, and check later :/ 
 
-    // auto entities_it = std::find_if(
-    //     m_entities.begin(),
-    //     m_entities.end(),
-    //     [&id](const auto &item) {
-    //         AssertThrow(item != nullptr);
-    //         return item->GetId() == id;
-    //     }
-    // );
+    // add it to pending removal list
+    std::lock_guard guard(m_enqueued_entities_mutex);
 
-    // if (entities_it != m_entities.end()) {
-    //     auto &&found_entity = *entities_it;
+    const auto pending_removal_it = std::find(
+        m_entities_pending_removal.begin(),
+        m_entities_pending_removal.end(),
+        entity
+    );
 
+    if (pending_removal_it == m_entities_pending_removal.end()) {
+        if (call_on_removed) {
+            entity->OnRemovedFromPipeline(this);
+        }
 
-        // add it to pending removal list
-        std::lock_guard guard(m_enqueued_entities_mutex);
-
-        const auto pending_removal_it = std::find(
-            m_entities_pending_removal.begin(),
-            m_entities_pending_removal.end(),
+        auto pending_addition_it = std::find(
+            m_entities_pending_addition.begin(),
+            m_entities_pending_addition.end(),
             entity
         );
 
-        if (pending_removal_it == m_entities_pending_removal.end()) {
-            if (call_on_removed) {
-                entity->OnRemovedFromPipeline(this);
-            }
-
-            auto pending_addition_it = std::find(
-                m_entities_pending_addition.begin(),
-                m_entities_pending_addition.end(),
-                entity
-            );
-
-            if (pending_addition_it != m_entities_pending_addition.end()) {
-                
-                // directly remove from list of ones pending addition
-                m_entities_pending_addition.erase(pending_addition_it);
-            } else {
-                /*m_cached_render_data.push_back(CachedRenderData{
-                    .cycles_remaining = max_frames_in_flight + 1,
-                    .entity_id       = entity->GetId(),
-                    .material = entity->GetMaterial() != nullptr
-                        ? entity->GetMaterial().IncRef()
-                        : nullptr,
-                    .mesh     = entity->GetMesh() != nullptr
-                        ? entity->GetMesh().IncRef()
-                        : nullptr,
-                    .skeleton = entity->GetSkeleton() != nullptr
-                        ? entity->GetSkeleton().IncRef()
-                        : nullptr,
-                    .shader   = entity->GetShader() != nullptr
-                        ? entity->GetShader().IncRef()
-                        : nullptr
-                });*/
-
-                m_entities_pending_removal.push_back(std::move(entity));
-            }
-
-            UpdateEnqueuedEntitiesFlag();
+        if (pending_addition_it != m_entities_pending_addition.end()) {
+            
+            // directly remove from list of ones pending addition
+            m_entities_pending_addition.erase(pending_addition_it);
         } else {
-            DebugLog(
-                LogType::Info,
-                "Entity #%u is already pending removal from pipeline #%u\n",
-                entity->GetId().value,
-                GetId().value
-            );
+            /*m_cached_render_data.push_back(CachedRenderData{
+                .cycles_remaining = max_frames_in_flight + 1,
+                .entity_id       = entity->GetId(),
+                .material = entity->GetMaterial() != nullptr
+                    ? entity->GetMaterial().IncRef()
+                    : nullptr,
+                .mesh     = entity->GetMesh() != nullptr
+                    ? entity->GetMesh().IncRef()
+                    : nullptr,
+                .skeleton = entity->GetSkeleton() != nullptr
+                    ? entity->GetSkeleton().IncRef()
+                    : nullptr,
+                .shader   = entity->GetShader() != nullptr
+                    ? entity->GetShader().IncRef()
+                    : nullptr
+            });*/
+
+            m_entities_pending_removal.push_back(std::move(entity));
         }
 
-        // return;
-    // }
-
-    // not found in main entities list, check pending addition/removal
-
-    // std::lock_guard guard(m_enqueued_entities_mutex);
-
-
-    
-}
-
-// void RendererInstance::OnEntityRemoved(Entity *entity)
-// {
-//     RemoveEntity(entity->GetId(), false);
-// }
-
-void RendererInstance::BuildDrawCommandsBuffer(Engine *engine, UInt frame_index)
-{
+        UpdateEnqueuedEntitiesFlag();
+    } else {
+        DebugLog(
+            LogType::Info,
+            "Entity #%u is already pending removal from pipeline #%u\n",
+            entity->GetId().value,
+            GetId().value
+        );
+    }
 }
 
 void RendererInstance::PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index)

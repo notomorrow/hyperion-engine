@@ -19,24 +19,13 @@ struct Quad {
 
 class MeshBuilder {
 public:
-    // struct Cube {
-    //     Cube();
-
-    //     std::unique_ptr<Mesh> Build();
-    // };
-
-    // struct NormalizedCube {
-    //     NormalizedCube(UInt num_divisions);
-
-    //     std::unique_ptr<Mesh> Build();
-
-    //     UInt num_divisions;
-    //     DynArray<struct Quad> quads;
-    // };
-
     static std::unique_ptr<Mesh> Quad(Topology topology = Topology::TRIANGLES);
     static std::unique_ptr<Mesh> Cube();
-    static std::unique_ptr<Mesh> NormalizedCube(UInt num_divisions);
+    static std::unique_ptr<Mesh> NormalizedCubeSphere(UInt num_divisions);
+
+    static std::unique_ptr<Mesh> ApplyTransform(const Mesh *mesh, const Transform &transform);
+    static std::unique_ptr<Mesh> Merge(const Mesh *a, const Mesh *b, const Transform &a_transform, const Transform &b_transform);
+    static std::unique_ptr<Mesh> Merge(const Mesh *a, const Mesh *b);
 };
 
 } // namespace hyperion::v2

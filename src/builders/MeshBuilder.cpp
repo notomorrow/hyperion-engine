@@ -1,5 +1,8 @@
 #include "MeshBuilder.hpp"
 
+// temp
+#include <util/NoiseFactory.hpp>
+
 namespace hyperion::v2 {
 
 std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
@@ -124,8 +127,12 @@ std::unique_ptr<Mesh> MeshBuilder::Cube()
 }
 
 // https://github.com/caosdoar/spheres/blob/master/src/spheres.cpp
-std::unique_ptr<Mesh> MeshBuilder::NormalizedCube(UInt num_divisions)
+std::unique_ptr<Mesh> MeshBuilder::NormalizedCubeSphere(UInt num_divisions)
 {
+    // // temp
+    // auto *noise_generator = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, 12345);
+    // auto *simplex = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, 12345);
+
     const Float step = 1.0f / static_cast<Float>(num_divisions);
 
     static const Vector3 origins[6] = {
@@ -165,14 +172,23 @@ std::unique_ptr<Mesh> MeshBuilder::NormalizedCube(UInt num_divisions)
 
         for (UInt j = 0; j < num_divisions + 1; j++) {
             for (UInt i = 0; i < num_divisions + 1; i++) {
-                const Vector3 p = (origin + Vector3(step) * (Vector3(i) * right + Vector3(j) * up)).Normalized();
+                const Vector3 point = (origin + Vector3(step) * (Vector3(i) * right + Vector3(j) * up)).Normalized();
+                Vector3 position = point;
+                const Vector3 normal = point;
 
                 const Vector2 uv(
-                    static_cast<Float>(i) / static_cast<Float>(num_divisions),
-                    static_cast<Float>(j) / static_cast<Float>(num_divisions)
+                    static_cast<Float>(j + (face * num_divisions)) / static_cast<Float>(num_divisions * 6),
+                    static_cast<Float>(i + (face * num_divisions)) / static_cast<Float>(num_divisions * 6)
                 );
 
-                vertices.push_back(Vertex(p, uv, p));
+                // const Float noise_value = noise_generator->GetNoise(point.x * 3.0f, point.y * 3.0f, point.z * 3.0f);
+                // const Float simplex_value = simplex->GetNoise(point.x * 10.25f, point.y * 10.25f, point.z * 10.25f);
+                    
+                //     //(j + face * (num_divisions + 1)) * 1000.0, (i + face * (num_divisions + 1)) * 1000.0);
+                // position += (normal * ((simplex_value) * 2.0f + ((noise_value))));
+
+
+                vertices.push_back(Vertex(position, uv, normal));
             }
         }
     }
@@ -210,12 +226,78 @@ std::unique_ptr<Mesh> MeshBuilder::NormalizedCube(UInt num_divisions)
         }
     }
 
+    // NoiseFactory::GetInstance()->Release(noise_generator);
+    // NoiseFactory::GetInstance()->Release(simplex);
+
     return std::make_unique<Mesh>(
         vertices,
         indices,
         Topology::TRIANGLES,
         renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
     );
+}
+
+std::unique_ptr<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transform &transform)
+{
+    AssertThrow(mesh != nullptr);
+
+    std::vector<Vertex> new_vertices(mesh->GetVertices());
+
+    const auto normal_matrix = transform.GetMatrix().Inverted().Transposed();
+
+    for (Vertex &vertex : new_vertices) {
+        vertex.SetPosition(transform.GetMatrix() * vertex.GetPosition());
+        vertex.SetNormal(normal_matrix * vertex.GetNormal());
+        vertex.SetTangent(normal_matrix * vertex.GetTangent());
+        vertex.SetBitangent(normal_matrix * vertex.GetBitangent());
+    }
+
+    return std::make_unique<Mesh>(
+        new_vertices,
+        mesh->GetIndices(),
+        mesh->GetTopology(),
+        mesh->GetVertexAttributes(),
+        mesh->GetFlags()
+    );
+}
+
+std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Transform &a_transform, const Transform &b_transform)
+{
+    AssertThrow(a != nullptr);
+    AssertThrow(b != nullptr);
+
+    std::unique_ptr<Mesh> transformed_meshes[2] = { ApplyTransform(a, a_transform), ApplyTransform(b, b_transform) };
+    
+    const auto merged_vertex_attributes = a->GetVertexAttributes() | b->GetVertexAttributes();
+
+    std::vector<Vertex> all_vertices(transformed_meshes[0]->GetVertices().size() + transformed_meshes[1]->GetVertices().size());
+    std::vector<Mesh::Index> all_indices(transformed_meshes[0]->GetIndices().size() + transformed_meshes[1]->GetIndices().size());
+
+    SizeType vertex_offset = 0,
+             index_offset = 0;
+
+    for (SizeType mesh_index = 0; mesh_index < 2; mesh_index++) {
+        for (SizeType i = 0; i < transformed_meshes[mesh_index]->GetVertices().size(); i++) {
+            all_vertices[vertex_offset++] = transformed_meshes[mesh_index]->GetVertices()[i];
+        }
+
+        for (SizeType i = 0; i < transformed_meshes[mesh_index]->GetIndices().size(); i++) {
+            all_indices[index_offset++] = transformed_meshes[mesh_index]->GetIndices()[i];
+        }
+    }
+
+    return std::make_unique<Mesh>(
+        all_vertices,
+        all_indices,
+        a->GetTopology(),
+        merged_vertex_attributes,
+        a->GetFlags()
+    );
+}
+
+std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b)
+{
+    return Merge(a, b, Transform(), Transform());
 }
 
 } // namespace hyperion::v2

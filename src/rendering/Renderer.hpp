@@ -125,8 +125,6 @@ private:
         Ref<Shader>   shader;
     };
 
-    void BuildDrawCommandsBuffer(Engine *engine, UInt frame_index);
-
     void PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedEntitiesFlag()

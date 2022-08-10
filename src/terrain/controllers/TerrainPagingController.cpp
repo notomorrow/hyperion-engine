@@ -10,12 +10,18 @@ TerrainPagingController::TerrainPagingController(
     Extent3D patch_size,
     const Vector3 &scale
 ) : PagingController("TerrainPagingController", patch_size, scale),
+    m_noise_combinator(seed),
     m_seed(seed)
 {
 }
 
 void TerrainPagingController::OnAdded()
 {
+    m_noise_combinator
+        .Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, 100.0f, 0.0f, Vector(0.005f, 0.005f, 0.0f, 0.0f))
+        .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector(0.05, 0.05f, 0.0f, 0.0f))
+        .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, 100.0f, 0.0f, Vector(0.5f, 0.5, 0.0f, 0.0f));
+
     m_material = GetEngine()->resources.materials.Add(std::make_unique<Material>(
         "terrain_material"
     ));
@@ -57,7 +63,7 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
     
     GetEngine()->terrain_thread.ScheduleTask([this, patch_info = patch->info]() {
         TerrainMeshBuilder builder(patch_info);
-        builder.GenerateHeights(m_seed);
+        builder.GenerateHeights(m_noise_combinator);
 
         auto mesh = builder.BuildMesh();
 
@@ -65,7 +71,7 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
 
         m_shared_terrain_mesh_queue.Push(TerrainGenerationResult {
             .patch_info = patch_info,
-            .mesh       = std::move(mesh)
+            .mesh = std::move(mesh)
         });
 
         m_terrain_generation_flag.store(true);
@@ -83,7 +89,7 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
             scene->RemoveEntity(patch->entity);
         }
 
-        patch->entity = nullptr;
+        patch->entity.Reset();
     }
 }
 
@@ -97,12 +103,14 @@ void TerrainPagingController::AddEnqueuedChunks()
 
     while (m_owned_terrain_mesh_queue.Any()) {
         auto terrain_generation_result = m_owned_terrain_mesh_queue.Pop();
-        const auto &patch_info         = terrain_generation_result.patch_info;
+        const auto &patch_info = terrain_generation_result.patch_info;
 
         auto mesh = GetEngine()->resources.meshes.Add(std::move(terrain_generation_result.mesh));
+        AssertThrow(mesh != nullptr);
+
         auto vertex_attributes = mesh->GetVertexAttributes();
 
-        auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+        auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::TERRAIN);
         
         auto entity = std::make_unique<Entity>(
             std::move(mesh),

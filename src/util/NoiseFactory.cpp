@@ -40,7 +40,18 @@ double SimplexNoiseGenerator::GetNoise(double x, double z) const
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
         result += open_simplex_noise2(m_simplex_noise.octaves[i], x / m_simplex_noise.frequencies[i], z / m_simplex_noise.frequencies[i]) * m_simplex_noise.amplitudes[i];
     }
+    
+    return result;
+}
 
+double SimplexNoiseGenerator::GetNoise(double x, double y, double z) const
+{
+    double result = 0.0;
+
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        result += open_simplex_noise3(m_simplex_noise.octaves[i], x / m_simplex_noise.frequencies[i], y / m_simplex_noise.frequencies[i], z / m_simplex_noise.frequencies[i]) * m_simplex_noise.amplitudes[i];
+    }
+    
     return result;
 }
 
@@ -60,6 +71,11 @@ WorleyNoiseGenerator::~WorleyNoiseGenerator()
 double WorleyNoiseGenerator::GetNoise(double x, double z) const
 {
     return m_worley_noise->Noise(x, z, 0);
+}
+
+double WorleyNoiseGenerator::GetNoise(double x, double y, double z) const
+{
+    return m_worley_noise->Noise(x, y, z);
 }
 
 // factory

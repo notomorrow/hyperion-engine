@@ -31,7 +31,7 @@ namespace hyperion::v2 {
 struct ScheduledFunctionId {
     uint32_t value{0};
     
-    ScheduledFunctionId &operator=(uint32_t id)
+    ScheduledFunctionId &operator=(UInt id)
     {
         value = id;
 
@@ -60,27 +60,33 @@ struct ScheduledFunction {
 
     template <class Lambda>
     ScheduledFunction(Lambda &&lambda)
+        : id {}
     {
         fn = std::forward<Lambda>(lambda);
     }
 
-    ScheduledFunction() = default;
+    // ScheduledFunction()
+    //     : id {},
+    //       fn(nullptr)
+    // {
+    // }
+
     ScheduledFunction(const ScheduledFunction &other) = default;
     ScheduledFunction &operator=(const ScheduledFunction &other) = default;
     ScheduledFunction(ScheduledFunction &&other) noexcept
         : id(other.id),
           fn(std::move(other.fn))
     {
-        other.id = 0;
+        other.id = {};
         other.fn = nullptr;
     }
 
-    ScheduledFunction &operator=(ScheduledFunction &&other)
+    ScheduledFunction &operator=(ScheduledFunction &&other) noexcept
     {
         id = other.id;
         fn = std::move(other.fn);
 
-        other.id = 0;
+        other.id = {};
         other.fn = nullptr;
 
         return *this;
@@ -245,7 +251,6 @@ public:
 
         if (m_scheduled_functions.Any()) {
             out_container.Push(std::move(m_scheduled_functions.Front()));
-
             m_scheduled_functions.PopFront();
 
             --m_num_enqueued;

@@ -13,13 +13,13 @@ TerrainMeshBuilder::TerrainMeshBuilder(const PatchInfo &patch_info)
 {
 }
 
-void TerrainMeshBuilder::GenerateHeights(Seed seed)
+void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator)
 {
     Threads::AssertOnThread(THREAD_TERRAIN);
 
-    auto *simplex       = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed);
-    auto *simplex_biome = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed + 1);
-    auto *worley        = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, seed);
+    // auto *simplex       = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed);
+    // auto *simplex_biome = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed + 1);
+    // auto *worley        = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, seed);
     
     m_heights.resize(m_patch_info.extent.width * m_patch_info.extent.depth);
 
@@ -28,20 +28,20 @@ void TerrainMeshBuilder::GenerateHeights(Seed seed)
             const double x_offset = x + (m_patch_info.coord.x * (m_patch_info.extent.width - 1));
             const double z_offset = z + (m_patch_info.coord.y * (m_patch_info.extent.depth - 1));
 
-            const double biome_height = simplex_biome->GetNoise(x_offset * 0.6, z_offset * 0.6);
-            const double height = (simplex->GetNoise(x_offset, z_offset)) * 30 - 30;
-            const double mountain = ((worley->GetNoise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH))) * MOUNTAIN_SCALE_HEIGHT;
+            // const double biome_height = simplex_biome->GetNoise(x_offset * 0.6, z_offset * 0.6);
+            // const double height = (simplex->GetNoise(x_offset, z_offset)) * 30 - 30;
+            // const double mountain = ((worley->GetNoise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH))) * MOUNTAIN_SCALE_HEIGHT;
 
-            const size_t index = ((x + m_patch_info.extent.width) % m_patch_info.extent.width)
+            const UInt index = ((x + m_patch_info.extent.width) % m_patch_info.extent.width)
                 + ((z + m_patch_info.extent.depth) % m_patch_info.extent.depth) * m_patch_info.extent.width;
 
-            m_heights[index] = MathUtil::Lerp(height, mountain, biome_height);
+            m_heights[index] = noise_combinator.GetNoise(Vector(x_offset, z_offset));
         }
     }
 
-    NoiseFactory::GetInstance()->Release(simplex);
-    NoiseFactory::GetInstance()->Release(simplex_biome);
-    NoiseFactory::GetInstance()->Release(worley);
+    // NoiseFactory::GetInstance()->Release(simplex);
+    // NoiseFactory::GetInstance()->Release(simplex_biome);
+    // NoiseFactory::GetInstance()->Release(worley);
 }
 
 std::unique_ptr<Mesh> TerrainMeshBuilder::BuildMesh() const
