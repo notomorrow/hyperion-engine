@@ -24,7 +24,7 @@ ShadowPass::~ShadowPass() = default;
 
 void ShadowPass::CreateShader(Engine *engine)
 {
-    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_shader = engine->resources.shaders.Add(new Shader(
         std::vector<SubShader> {
             SubShader { ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
             SubShader { ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
@@ -75,7 +75,7 @@ void ShadowPass::CreateRenderPass(Engine *engine)
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 
-    m_render_pass = engine->resources.render_passes.Add(std::move(render_pass));
+    m_render_pass = engine->resources.render_passes.Add(render_pass.release());
     m_render_pass.Init();
 }
 
@@ -134,8 +134,8 @@ void ShadowPass::Create(Engine *engine)
     CreateShader(engine);
     CreateRenderPass(engine);
 
-    m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-        engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
+    m_scene = engine->resources.scenes.Add(new Scene(
+        engine->resources.cameras.Add(new OrthoCamera(
             m_dimensions.width, m_dimensions.height,
             -100.0f, 100.0f,
             -100.0f, 100.0f,
@@ -148,7 +148,7 @@ void ShadowPass::Create(Engine *engine)
     m_scene->SetParentId(m_parent_scene_id);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        m_framebuffers[i] = engine->resources.framebuffers.Add(new Framebuffer(
             m_dimensions,
             m_render_pass.IncRef()
         ));

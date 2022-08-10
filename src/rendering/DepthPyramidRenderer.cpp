@@ -117,8 +117,8 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
         }
     }
     // create compute pipeline for rendering depth image
-    m_generate_depth_pyramid = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_generate_depth_pyramid = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/cull/generate_depth_pyramid.comp.spv")).Read()}}
             }

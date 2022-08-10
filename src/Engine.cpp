@@ -162,7 +162,7 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    auto shader = resources.shaders.Add(std::make_unique<Shader>(
+    auto shader = resources.shaders.Add(new Shader(
         std::vector<SubShader> {
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
@@ -173,7 +173,7 @@ void Engine::PrepareSwapchain()
 
     UInt iteration = 0;
     
-    auto render_pass = resources.render_passes.Add(std::make_unique<RenderPass>(
+    auto render_pass = resources.render_passes.Add(new RenderPass(
         renderer::RenderPassStage::PRESENT,
         renderer::RenderPass::Mode::RENDER_PASS_INLINE
     ));
@@ -252,7 +252,7 @@ void Engine::PrepareSwapchain()
             );
         }
 
-        m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(std::move(fbo)));
+        m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(fbo.release()));
 
         ++iteration;
     }
@@ -558,7 +558,7 @@ Ref<RendererInstance> Engine::FindOrCreateRendererInstance(const RenderableAttri
     
 Ref<RendererInstance> Engine::AddRendererInstance(std::unique_ptr<RendererInstance> &&pipeline)
 {
-    auto renderer_instance = resources.renderer_instances.Add(std::move(pipeline));
+    auto renderer_instance = resources.renderer_instances.Add(pipeline.release());
     
     m_renderer_instance_mapping.Insert(
         renderer_instance->GetRenderableAttributes(),

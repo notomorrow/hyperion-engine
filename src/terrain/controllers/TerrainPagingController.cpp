@@ -22,7 +22,7 @@ void TerrainPagingController::OnAdded()
         .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector(0.05, 0.05f, 0.0f, 0.0f))
         .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, 100.0f, 0.0f, Vector(0.5f, 0.5, 0.0f, 0.0f));
 
-    m_material = GetEngine()->resources.materials.Add(std::make_unique<Material>(
+    m_material = GetEngine()->resources.materials.Add(new Material(
         "terrain_material"
     ));
 
@@ -30,9 +30,9 @@ void TerrainPagingController::OnAdded()
     m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.9f);
     m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.01f);
     // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png").release()));
     m_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png").release()));
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
@@ -105,7 +105,7 @@ void TerrainPagingController::AddEnqueuedChunks()
         auto terrain_generation_result = m_owned_terrain_mesh_queue.Pop();
         const auto &patch_info = terrain_generation_result.patch_info;
 
-        auto mesh = GetEngine()->resources.meshes.Add(std::move(terrain_generation_result.mesh));
+        auto mesh = GetEngine()->resources.meshes.Add(terrain_generation_result.mesh.release());
         AssertThrow(mesh != nullptr);
 
         auto vertex_attributes = mesh->GetVertexAttributes();
@@ -131,7 +131,7 @@ void TerrainPagingController::AddEnqueuedChunks()
 
         if (auto *patch = GetPatch(patch_info.coord)) {
             if (patch->entity == nullptr) {
-                patch->entity = GetEngine()->resources.entities.Add(std::move(entity));
+                patch->entity = GetEngine()->resources.entities.Add(entity.release());
 
                 ++num_chunks_added;
 

@@ -52,7 +52,7 @@ void FullScreenPass::Create(Engine *engine)
     CreateRenderPass(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        m_framebuffers[i] = engine->resources.framebuffers.Add(new Framebuffer(
             engine->GetInstance()->swapchain->extent,
             m_render_pass.IncRef()
         ));
@@ -126,7 +126,7 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 
-    m_render_pass = engine->resources.render_passes.Add(std::move(render_pass));
+    m_render_pass = engine->resources.render_passes.Add(render_pass.release());
     m_render_pass.Init();
 }
 

@@ -96,8 +96,8 @@ public:
 
     virtual void OnPostInit(Engine *engine) override
     {
-        scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-            engine->resources.cameras.Add(std::make_unique<FirstPersonCamera>(//FollowCamera>(
+        scene = engine->resources.scenes.Add(new Scene(
+            engine->resources.cameras.Add(new FirstPersonCamera(//FollowCamera(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 1024,//2048, 1080,
                 70.0f,
@@ -106,7 +106,7 @@ public:
         ));
         engine->GetWorld().AddScene(scene.IncRef());
 
-        base_material = engine->resources.materials.Add(std::make_unique<Material>());
+        base_material = engine->resources.materials.Add(new Material());
         base_material.Init();
 
         auto loaded_assets = engine->assets.Load<Node>(
@@ -127,7 +127,7 @@ public:
             auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
             sphere->Scale(1.0f);
             sphere->SetName("sphere");
-            // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
+            // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(new Material()));
             sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
             sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
             sphere->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
@@ -140,7 +140,7 @@ public:
 
 
 
-        // auto character_entity = engine->resources.entities.Add(std::make_unique<Spatial>());
+        // auto character_entity = engine->resources.entities.Add(new Spatial());
         // character_entity->AddController<BasicCharacterController>();
         // scene->AddSpatial(std::move(character_entity));
 
@@ -150,7 +150,7 @@ public:
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
         auto terrain_node = scene->GetRootNode()->AddChild();
-        terrain_node->SetEntity(engine->resources.entities.Add(std::make_unique<Entity>()));
+        terrain_node->SetEntity(engine->resources.entities.Add(new Entity()));
         terrain_node->GetEntity()->AddController<TerrainPagingController>(123999, Extent3D{256}, Vector3(3.0f));
         
         
@@ -173,7 +173,7 @@ public:
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
         
-        auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
+        auto cubemap = engine->resources.textures.Add(new TextureCube(
            engine->assets.Load<Texture>(
                "textures/Lycksele3/posx.jpg",
                "textures/Lycksele3/negx.jpg",
@@ -196,14 +196,14 @@ public:
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
+        auto my_light = engine->resources.lights.Add(new DirectionalLight(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             50000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
 
-        m_point_light = engine->resources.lights.Add(std::make_unique<PointLight>(
+        m_point_light = engine->resources.lights.Add(new PointLight(
             Vector3(2.0f, 12.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
             8000.0f,
@@ -236,12 +236,12 @@ public:
             }*/
         // }
 
-        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(64));//MeshBuilder::Quad());
+        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(64).release());//MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-        auto quad_spatial = engine->resources.entities.Add(std::make_unique<Entity>(
+        auto quad_spatial = engine->resources.entities.Add(new Entity(
             std::move(quad),
             engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
-            engine->resources.materials.Add(std::make_unique<Material>()),
+            engine->resources.materials.Add(new Material()),
             RenderableAttributeSet {
                 .bucket            = Bucket::BUCKET_OPAQUE,
                 .shader_id         = engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)->GetId(),
@@ -279,23 +279,23 @@ public:
 
 
         tex1 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>("textures/dirt.jpg")
+            engine->assets.Load<Texture>("textures/dirt.jpg").release()
         );
         //tex1.Init();
 
         tex2 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>("textures/dummy.jpg")
+            engine->assets.Load<Texture>("textures/dummy.jpg").release()
         );
         //tex2.Init();
 
         cube_obj->Scale(50.0f);
 
-        auto metal_material = engine->resources.materials.Add(std::make_unique<Material>());
+        auto metal_material = engine->resources.materials.Add(new Material());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         metal_material.Init();
 
-        auto skybox_material = engine->resources.materials.Add(std::make_unique<Material>());
+        auto skybox_material = engine->resources.materials.Add(new Material());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
@@ -682,7 +682,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_VEGETATION,
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -702,7 +702,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::DEBUG_AABB,
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -722,7 +722,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_FORWARD,
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -742,7 +742,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::TERRAIN,
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -774,7 +774,7 @@ int main()
     
     // engine->shader_manager.SetShader(
     //     ShaderManager::Key::STENCIL_OUTLINE,
-    //     engine->resources.shaders.Add(std::make_unique<Shader>(
+    //     engine->resources.shaders.Add(new Shader(
     //         std::vector<SubShader>{
     //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
     //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
@@ -786,7 +786,7 @@ int main()
     {
         engine->shader_manager.SetShader(
             ShaderManager::Key::BASIC_SKYBOX,
-            engine->resources.shaders.Add(std::make_unique<Shader>(
+            engine->resources.shaders.Add(new Shader(
                 std::vector<SubShader>{
                     {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
                     {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
@@ -848,12 +848,12 @@ int main()
 
     auto my_tlas = std::make_unique<Tlas>();
 
-    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<Blas>(
+    my_tlas->AddBlas(engine->resources.blas.Add(new Blas(
         engine->resources.meshes.IncRef(my_game->material_test_obj->GetChild(0)->GetEntity()->GetMesh()),
         my_game->material_test_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
     
-    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<Blas>(
+    my_tlas->AddBlas(engine->resources.blas.Add(new Blas(
         engine->resources.meshes.IncRef(my_game->cube_obj->GetChild(0)->GetEntity()->GetMesh()),
         my_game->cube_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
