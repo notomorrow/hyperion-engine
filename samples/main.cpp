@@ -102,7 +102,7 @@ public:
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 1024,//2048, 1080,
                 70.0f,
-                0.35f, 1500.0f
+                0.35f, 15000.0f
             )
         ));
         engine->GetWorld().AddScene(scene.IncRef());
@@ -150,9 +150,9 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
-        // auto terrain_node = scene->GetRootNode()->AddChild();
-        // terrain_node->SetEntity(engine->resources.entities.Add(std::make_unique<Spatial>()));
-        // terrain_node->GetEntity()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
+        auto terrain_node = scene->GetRootNode()->AddChild();
+        terrain_node->SetEntity(engine->resources.entities.Add(std::make_unique<Entity>()));
+        terrain_node->GetEntity()->AddController<TerrainPagingController>(123999, Extent3D{256}, Vector3(3.0f));
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -228,16 +228,16 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
+        // if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
             /*for (auto &child : test->GetChildren()) {
                 if (auto &ent = child->GetEntity()) {
                     std::cout << "Adding debug controller to  " << child->GetName() << "\n";
                     ent->AddController<AABBDebugController>(engine);
                 }
             }*/
-        }
+        // }
 
-        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCube(32));//MeshBuilder::Quad());
+        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(64));//MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
         auto quad_spatial = engine->resources.entities.Add(std::make_unique<Entity>(
             std::move(quad),
@@ -405,7 +405,7 @@ public:
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
 
 
-        if (1) { // bad performance on large meshes. need bvh
+        #if 0 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
             const auto &mouse_position = input_manager->GetMousePosition();
@@ -455,7 +455,7 @@ public:
                     }
                 }
             }
-        }
+        #endif
 
         //ray_cast_timer += delta;
         
@@ -735,6 +735,26 @@ int main()
                     ShaderModule::Type::FRAGMENT, {
                         FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
+                    }
+                }
+            }
+        ))
+    );
+
+    engine->shader_manager.SetShader(
+        v2::ShaderKey::TERRAIN,
+        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
+            std::vector<v2::SubShader>{
+                {
+                    ShaderModule::Type::VERTEX, {
+                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
+                        {.name = "main vert"}
+                    }
+                },
+                {
+                    ShaderModule::Type::FRAGMENT, {
+                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/Terrain.frag.spv")).Read(),
+                        {.name = "Terrain frag"}
                     }
                 }
             }

@@ -139,4 +139,34 @@ vec4 Saturate(vec4 val)
     return min(max(val, vec4(0.0)), vec4(1.0));
 }
 
+vec3 GetTriplanarBlend(vec3 normal)
+{
+    vec3 blending = normalize(max(abs(normal), 0.0001));
+    blending /= (blending.x + blending.y + blending.z);
+
+    return blending;
+}
+
+vec4 Texture2DTriplanar(sampler samp, texture2D tex, vec3 position, vec3 normal)
+{
+    vec3 blending = GetTriplanarBlend(normal);
+
+    vec4 sample_x = Texture2D(samp, tex, position.zy * 0.01);
+    vec4 sample_y = Texture2D(samp, tex, position.xz * 0.01);
+    vec4 sample_z = Texture2D(samp, tex, position.xy * 0.01);
+    
+    return sample_x * blending.x + sample_y * blending.y + sample_z * blending.z;
+}
+
+vec4 Texture2DTriplanar(sampler2D tex, vec3 position, vec3 normal)
+{
+    vec3 blending = GetTriplanarBlend(normal);
+
+    vec4 sample_x = Texture2D(tex, position.zy * 0.01);
+    vec4 sample_y = Texture2D(tex, position.xz * 0.01);
+    vec4 sample_z = Texture2D(tex, position.xy * 0.01);
+
+    return sample_x * blending.x + sample_y * blending.y + sample_z * blending.z;
+}
+
 #endif

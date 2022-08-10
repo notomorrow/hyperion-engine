@@ -3,6 +3,7 @@
 
 #include "FlatSet.hpp"
 #include "DynArray.hpp"
+#include "Pair.hpp"
 #include "ContainerBase.hpp"
 
 #include <algorithm>
@@ -12,34 +13,12 @@
 namespace hyperion {
 
 template <class Key, class Value>
-struct KeyValuePair {
-    Key   first;
-    Value second;
-
-    bool operator<(const Key &key) const
-    {
-        return first < key;
-    }
-
-    bool operator<(const KeyValuePair &other) const
-    {
-        return first < other.first;
-    }
-
-    bool operator==(const KeyValuePair &other) const
-    {
-        return first == other.first
-            && second == other.second;
-    }
-};
-
-template <class Key, class Value>
 class FlatMap : public ContainerBase<FlatMap<Key, Value>, Key> {
 public:
-    using Pair = KeyValuePair<Key, Value>;
+    using KeyValuePair = KeyValuePair<Key, Value>;
 
 private:
-    DynArray<Pair> m_vector;
+    DynArray<KeyValuePair> m_vector;
 
 public:
     using KeyType       = Key;
@@ -50,7 +29,7 @@ public:
     using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
 
     FlatMap();
-    FlatMap(std::initializer_list<Pair> initializer_list)
+    FlatMap(std::initializer_list<KeyValuePair> initializer_list)
         : m_vector(initializer_list)
     {
         std::sort(
@@ -75,7 +54,7 @@ public:
 
     InsertResult Insert(const Key &key, const Value &value);
     InsertResult Insert(const Key &key, Value &&value);
-    InsertResult Insert(KeyValuePair<Key, Value> &&pair);
+    InsertResult Insert(Pair<Key, Value> &&pair);
 
     InsertResult Set(const Key &key, const Value &value);
     InsertResult Set(const Key &key, Value &&value);
@@ -90,16 +69,16 @@ public:
     bool Erase(const Key &key);
 
     [[nodiscard]] size_t Size() const                   { return m_vector.Size(); }
-    [[nodiscard]] Pair *Data()                          { return m_vector.Data(); }
-    [[nodiscard]] Pair * const Data() const             { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePair *Data()                  { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePair * const Data() const     { return m_vector.Data(); }
     [[nodiscard]] bool Empty() const                    { return m_vector.Empty(); }
 
     void Clear()                                        { m_vector.Clear(); }
     
-    [[nodiscard]] Pair &Front()                         { return m_vector.Front(); }
-    [[nodiscard]] const Pair &Front() const             { return m_vector.Front(); }
-    [[nodiscard]] Pair &Back()                          { return m_vector.Back(); }
-    [[nodiscard]] const Pair &Back() const              { return m_vector.Back(); }
+    [[nodiscard]] KeyValuePair &Front()                 { return m_vector.Front(); }
+    [[nodiscard]] const KeyValuePair &Front() const     { return m_vector.Front(); }
+    [[nodiscard]] KeyValuePair &Back()                  { return m_vector.Back(); }
+    [[nodiscard]] const KeyValuePair &Back() const      { return m_vector.Back(); }
 
     [[nodiscard]] FlatSet<Key> Keys() const;
     [[nodiscard]] FlatSet<Value> Values() const;
@@ -194,7 +173,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, Pair { key, value });
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, value });
 
         return {it, true};
     }
@@ -208,7 +187,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, Pair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::forward<Value>(value) });
 
         return {it, true};
     }
@@ -217,7 +196,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 }
 
 template <class Key, class Value>
-auto FlatMap<Key, Value>::Insert(KeyValuePair<Key, Value> &&pair) -> InsertResult
+auto FlatMap<Key, Value>::Insert(Pair<Key, Value> &&pair) -> InsertResult
 {
     const auto lower_bound = m_vector.LowerBound(pair.first);// FlatMap<Key, Value>::Base::LowerBound(pair.first);
 
@@ -236,7 +215,7 @@ auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, Pair { key, value });
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, value });
 
         return {it, true};
     }
@@ -252,7 +231,7 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, Pair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::forward<Value>(value) });
 
         return {it, true};
     }

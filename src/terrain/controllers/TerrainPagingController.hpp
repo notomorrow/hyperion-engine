@@ -5,6 +5,7 @@
 #include <core/lib/Queue.hpp>
 #include <scene/controllers/PagingController.hpp>
 #include <rendering/Material.hpp>
+#include <util/NoiseFactory.hpp>
 
 #include <mutex>
 #include <atomic>
@@ -25,6 +26,8 @@ protected:
     virtual void OnPatchRemoved(Patch *patch) override;
 
     void AddEnqueuedChunks();
+
+    NoiseCombinator m_noise_combinator;
 
 private:
     struct TerrainGenerationResult {

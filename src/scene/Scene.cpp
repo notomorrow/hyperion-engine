@@ -197,11 +197,8 @@ void Scene::AddPendingEntities()
 
         if (entity->IsRenderable() && !entity->GetPrimaryRendererInstance()) {
             if (auto pipeline = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
-                if (!entity->GetRendererInstances().Contains(pipeline.ptr)) {
-                    pipeline->AddEntity(entity.IncRef());
-
-                    entity->EnqueueRenderUpdates();
-                }
+                pipeline->AddEntity(entity.IncRef());
+                entity->EnqueueRenderUpdates();
 
                 entity->m_primary_renderer_instance = {
                     .renderer_instance = pipeline.ptr,
@@ -329,9 +326,7 @@ void Scene::RequestPipelineChanges(Ref<Entity> &entity)
     }
     
     if (auto pipeline = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
-        if (!entity->GetRendererInstances().Contains(pipeline.ptr)) {
-            pipeline->AddEntity(entity.IncRef());
-        }
+        pipeline->AddEntity(entity.IncRef());
         
         // TODO: wrapper function
         entity->m_primary_renderer_instance = {

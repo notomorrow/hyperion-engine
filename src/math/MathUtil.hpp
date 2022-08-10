@@ -138,23 +138,23 @@ public:
         { return Abs(a - b) <= eps; }
 
     template <class T>
-    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Random(const T &a, const T &b)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) RandRange(const T &a, const T &b)
     {
         T result;
 
-        for (int i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Random(a.values[i], b.values[i]);
+        for (UInt i = 0; i < static_cast<UInt>(std::size(result.values)); i++) {
+            result.values[i] = RandRange(a.values[i], b.values[i]);
         }
 
         return result;
     }
 
     template <class T>
-    static HYP_ENABLE_IF(!is_math_vector_v<T>, T) Random(const T &a, const T &b)
+    static HYP_ENABLE_IF(!is_math_vector_v<T>, T) RandRange(const T &a, const T &b)
     {
-        T random = T(rand()) / T(RAND_MAX);
-        T diff = b - a;
-        T r = random * diff;
+        const auto random = T(rand()) / T(RAND_MAX);
+        const auto diff = b - a;
+        const auto r = random * diff;
 
         return a + r;
     }

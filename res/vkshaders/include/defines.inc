@@ -49,6 +49,11 @@
 #define HYP_LIGHT_TYPE_POINT       1
 #define HYP_LIGHT_TYPE_SPOT        2
 
+#define HYP_OBJECT_BUCKET_OPAQUE      4
+#define HYP_OBJECT_BUCKET_TRANSLUCENT 5
+#define HYP_OBJECT_BUCKET_PARTICLE    6
+#define HYP_OBJECT_BUCKET_SKYBOX      7
+
 #define HYP_FMATH_SQR(num)     (num)*(num)
 #define HYP_FMATH_CUBE(num)    (num)*(num)*(num)
 #define HYP_FMATH_PI           3.14159265359

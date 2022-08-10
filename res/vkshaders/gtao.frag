@@ -36,7 +36,7 @@ vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
     return vec2(noise_x, noise_y) * SSAO_NOISE_AMOUNT;
 }
 
-#define HYP_USE_GTAO
+// #define HYP_USE_GTAO
 
 #ifndef HYP_USE_GTAO
 
@@ -51,7 +51,7 @@ const float gdisplace = 0.4; //gauss bell center //0.4
 #define CAP_MIN_DISTANCE 0.0001
 #define CAP_MAX_DISTANCE 0.1
 #define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
-#define SSAO_STRENGTH 0.65
+#define SSAO_STRENGTH 1.0
 #define SSAO_CLAMP_AMOUNT 0.125
 #define SSAO_RADIUS 3.0
 
@@ -170,7 +170,7 @@ void main()
 
 #define HYP_GTAO_NUM_CIRCLES 2
 #define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      3.0
+#define HYP_GTAO_RADIUS      1.0
 #define HYP_GTAO_THICKNESS   1.0
 #define HYP_GTAO_POWER       1.0
 
@@ -314,6 +314,13 @@ void main()
     // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
     vec4 data = GTAOGetDetails(texcoord);
     data.xyz = EncodeNormal(data.xyz).xyz;
+
+    // Fade ray hits that approach the screen edge
+    // vec2 texcoord_ndc = texcoord * 2.0 - 1.0;
+    // float max_dimension = min(1.0, max(abs(texcoord_ndc.x), abs(texcoord_ndc.y)));
+    // data.a = mix(1.0, data.a, 1.0 - max(0.0, max_dimension - 0.75) / (1.0 - 0.9));
+
+
     color_output = data;
 }
 

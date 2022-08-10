@@ -22,6 +22,7 @@
 
 #include <util/Defines.hpp>
 
+#include <mutex>
 #include <vector>
 
 namespace hyperion::v2 {
@@ -125,9 +126,6 @@ public:
 
     RendererInstance *GetPrimaryRendererInstance() const
         { return m_primary_renderer_instance.renderer_instance; }
-
-    const auto &GetRendererInstances() const
-        { return m_renderer_instances; }
 
     Bucket GetBucket() const                     { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
@@ -235,6 +233,7 @@ private:
      * for easy removal when RemoveEntity() is called.
      */
     FlatSet<RendererInstance *> m_renderer_instances;
+    std::mutex                  m_render_instances_mutex;
 
     mutable ShaderDataState     m_shader_data_state;
     ScheduledFunctionId         m_render_update_id,

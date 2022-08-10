@@ -19,7 +19,7 @@ public:
     TerrainMeshBuilder &operator=(const TerrainMeshBuilder &other) = delete;
     ~TerrainMeshBuilder() = default;
 
-    void GenerateHeights(Seed seed);
+    void GenerateHeights(const NoiseCombinator &noise_combinator);
     std::unique_ptr<Mesh> BuildMesh() const;
 
 private:

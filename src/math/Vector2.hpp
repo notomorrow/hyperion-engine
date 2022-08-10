@@ -14,6 +14,8 @@
 
 namespace hyperion {
 
+class Vector4;
+
 class Vector2 {
     friend std::ostream &operator<<(std::ostream &out, const Vector2 &vec);
 public:
@@ -26,6 +28,12 @@ public:
     Vector2(float x, float y);
     Vector2(float xy);
     Vector2(const Vector2 &other);
+
+    //! \brief Consturct a Vector2 from a Vector3, discarding y.
+    Vector2(const Vector3 &other);
+
+    //! \brief Consturct a Vector2 from a Vector4, discarding y and w.
+    Vector2(const Vector4 &other);
 
     float GetX() const     { return x; }
     float &GetX()          { return x; }

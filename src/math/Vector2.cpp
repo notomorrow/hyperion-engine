@@ -1,4 +1,5 @@
 #include "Vector2.hpp"
+#include "Vector4.hpp"
 #include "MathUtil.hpp"
 namespace hyperion {
 
@@ -22,6 +23,18 @@ Vector2::Vector2(float xy)
 
 Vector2::Vector2(const Vector2 &other)
     : x(other.x), 
+      y(other.y)
+{
+}
+
+Vector2::Vector2(const Vector3 &other)
+    : x(other.x),
+      y(other.y)
+{
+}
+
+Vector2::Vector2(const Vector4 &other)
+    : x(other.x),
       y(other.y)
 {
 }

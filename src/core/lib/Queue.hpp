@@ -44,7 +44,7 @@ public:
     void Refit()                                                              { DynArray<T>::Refit(); }
     void Push(const typename DynArray<T>::ValueType &value);
     void Push(typename DynArray<T>::ValueType &&value);
-    typename DynArray<T>::ValueType &&Pop();
+    typename DynArray<T>::ValueType Pop();
     void Clear();
 
     HYP_DEF_STL_BEGIN_END(
@@ -105,7 +105,7 @@ void Queue<T>::Push(typename DynArray<T>::ValueType &&value)
 }
 
 template <class T>
-auto Queue<T>::Pop() -> typename DynArray<T>::ValueType&&
+auto Queue<T>::Pop() -> typename DynArray<T>::ValueType
 {
     return DynArray<T>::PopFront();
 }

@@ -71,9 +71,9 @@ LoaderResult TextureLoader::LoadFn(LoaderState *state, Object &object)
 std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &object)
 {
     return std::make_unique<Texture2D>(
-        Extent2D{
-            uint32_t(object.width),
-            uint32_t(object.height)
+        Extent2D {
+            static_cast<UInt>(object.width),
+            static_cast<UInt>(object.height)
         },
         object.format,
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,

@@ -156,7 +156,8 @@ void Entity::EnqueueRenderUpdates()
         .mesh_id      = mesh_id,
         .material_id  = material_id,
         .skeleton_id  = skeleton_id,
-        .bounding_box = m_world_aabb
+        .bounding_box = m_world_aabb,
+        .bucket       = m_renderable_attributes.bucket
     };
 
     GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, draw_proxy](...) {
@@ -463,13 +464,18 @@ void Entity::SetTransform(const Transform &transform)
     }
 }
 
+// TODO! Investigate if we even need those 2 functions
 void Entity::OnAddedToPipeline(RendererInstance *pipeline)
 {
+    std::lock_guard guard(m_render_instances_mutex);
+
     m_renderer_instances.Insert(pipeline);
 }
 
 void Entity::OnRemovedFromPipeline(RendererInstance *pipeline)
 {
+    std::lock_guard guard(m_render_instances_mutex);
+
     if (pipeline == m_primary_renderer_instance.renderer_instance) {
         m_primary_renderer_instance = {
             .renderer_instance = nullptr,

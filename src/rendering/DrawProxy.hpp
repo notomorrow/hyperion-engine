@@ -2,6 +2,7 @@
 #define HYPERION_V2_DRAW_PROXY_H
 
 #include "Base.hpp"
+#include "RenderBucket.hpp"
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
@@ -43,8 +44,9 @@ struct alignas(16) ObjectInstance {
     UInt32             draw_command_index;
     UInt32             batch_index;
     UInt32             num_indices;
-    Vector4            aabb_max;
-    Vector4            aabb_min;
+    // ShaderVec2<UInt32> packed_data;
+    ShaderVec4<Float>  aabb_max;
+    ShaderVec4<Float>  aabb_min;
 };
 
 template <class T>
@@ -57,21 +59,21 @@ struct DrawProxy<STUB_CLASS(Entity)> {
     // engine will hold onto RenderResources like Mesh and Material
     // for at least {max_frames_in_flight} frames, so we will have
     // rendered the DrawProxy before the ptr is invalidated.
-    Mesh          *mesh     = nullptr;
-    Material      *material = nullptr;
+    Mesh *mesh = nullptr;
+    Material *material = nullptr;
 
-    IDBase         entity_id,
-                   scene_id,
-                   mesh_id,
-                   material_id,
-                   skeleton_id;
+    IDBase entity_id,
+           scene_id,
+           mesh_id,
+           material_id,
+           skeleton_id;
 
-    BoundingBox    bounding_box;
+    BoundingBox bounding_box;
 
     // object instance in GPU
-    UInt32         draw_command_index = 0;
+    UInt32 draw_command_index = 0;
 
-    void          *user_data = nullptr;
+    Bucket bucket = Bucket::BUCKET_OPAQUE;
 };
 
 using EntityDrawProxy = DrawProxy<STUB_CLASS(Entity)>;

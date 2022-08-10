@@ -58,7 +58,8 @@ protected:
                 m_scheduler->AcceptNext(m_task_queue);
 
                 // do not execute within lock
-                m_task_queue.Pop().Execute();
+                m_task_queue.Front().Execute();
+                m_task_queue.Pop();
             }
         }
     }

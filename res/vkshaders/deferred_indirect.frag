@@ -40,7 +40,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 /* Begin main shader program */
 
 #define IBL_INTENSITY 10000.0
-#define IRRADIANCE_MULTIPLIER 12.0
+#define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -186,6 +186,9 @@ void main()
         
         // ibl
         //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
+
+        // TEMP
+        irradiance = vec3(0.65);
 
         vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
 

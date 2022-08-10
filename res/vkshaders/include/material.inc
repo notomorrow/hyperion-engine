@@ -73,17 +73,23 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer Mat
 
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
     #define SAMPLE_TEXTURE(index, texcoord) \
-        Texture2D(texture_sampler, GET_TEXTURE(index), texcoord)
+        Texture2D(texture_sampler, GET_TEXTURE(index), (texcoord))
+
+    #define SAMPLE_TEXTURE_TRIPLANAR(index, position, normal) \
+        Texture2DTriplanar(texture_sampler, GET_TEXTURE(index), (position), (normal))
 
     #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
-        TextureCube(texture_sampler, GET_TEXTURE_CUBE(index), texcoord)
+        TextureCube(texture_sampler, GET_TEXTURE_CUBE(index), (texcoord))
 #else
     #define SAMPLE_TEXTURE(index, texcoord) \
-        Texture2D(GET_TEXTURE(index), texcoord)
+        Texture2D(GET_TEXTURE(index), (texcoord))
+
+    #define SAMPLE_TEXTURE_TRIPLANAR(index, position, normal) \
+        Texture2DTriplanar(GET_TEXTURE(index), (position), (normal))
 
     #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
         #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
-            TextureCube(GET_TEXTURE_CUBE(index), texcoord)
+            TextureCube(GET_TEXTURE_CUBE(index), (texcoord))
     #endif
 #endif
 

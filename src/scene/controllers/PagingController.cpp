@@ -96,7 +96,9 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
 
     if (m_queue_timer >= queue_max) {
         while (m_queue.Any()) {
-            const auto top = m_queue.Pop();
+            const auto top = m_queue.Front();
+            m_queue.Pop();
+
             Patch *patch = nullptr;
 
             switch (top.new_state) {
