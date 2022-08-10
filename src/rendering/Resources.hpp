@@ -25,10 +25,8 @@ namespace hyperion::v2 {
 class Engine;
 
 struct Resources {
-    using Callbacks = EngineCallbacks;
-
 #define HYP_DEF_REF_COUNTED(class_name, member_name) \
-    RefCounter<class_name, Callbacks> member_name
+    RefCounter<class_name, Engine *> member_name
 
     HYP_DEF_REF_COUNTED(Shader,            shaders);
     HYP_DEF_REF_COUNTED(Texture,           textures);

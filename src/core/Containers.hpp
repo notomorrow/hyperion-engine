@@ -597,7 +597,7 @@ struct ComponentEvents {
  * as new component types will not have Destroy() rather using
  * a teardown method which is defined in CallbackTrackable.
  */
-template <class T, class CallbacksClass>
+template <class T>
 struct ObjectVector {
     std::vector<T *> objects;
     std::queue<SizeType> free_slots;
@@ -624,7 +624,7 @@ struct ObjectVector {
     }
 
     constexpr const T *Get(typename T::ID id) const
-        { return const_cast<ObjectVector<T, CallbacksClass> *>(this)->Get(id); }
+        { return const_cast<ObjectVector<T> *>(this)->Get(id); }
 
     constexpr T *operator[](typename T::ID id)             { return Get(id); }
     constexpr const T *operator[](typename T::ID id) const { return Get(id); }
@@ -704,9 +704,9 @@ struct ObjectVector {
 
 };
 
-template <class T, class CallbacksClass>
+template <class T, class ...Args>
 class RefCounter {
-    using ArgsTuple = typename CallbacksClass::ArgsTuple;
+    using ArgsTuple = std::tuple<Args...>;
 
     struct RefCount {
         RefCounter *ref_manager{nullptr};
@@ -715,8 +715,8 @@ class RefCounter {
 
     FlatMap<typename T::ID, RefCount *> m_ref_count_holder;
 
-    ObjectVector<T, CallbacksClass>     m_holder;
-    ArgsTuple                           m_init_args{};
+    ObjectVector<T> m_holder;
+    ArgsTuple m_init_args{};
 
 public:
     class RefWrapper {
@@ -784,14 +784,14 @@ public:
          * Throws an assertion error if state is invalid.
          * @param args The arguments to be forwarded to Init()
          */
-        template <class ...Args>
-        void Init(Args &&... args)
+        template <class ...InitArgs>
+        void Init(InitArgs &&... args)
         {
             AssertState();
             
             if (!ptr->IsInitCalled()) {
                 /* Call ptr->Init() with the provided args */
-                ptr->Init(std::forward<Args>(args)...);
+                ptr->Init(std::forward<InitArgs>(args)...);
             }
         }
 
@@ -973,11 +973,11 @@ public:
         }
     };
 
-    RefCounter(CallbacksClass &callbacks)
+    RefCounter()
     {
     }
 
-    RefCounter(CallbacksClass &callbacks, ArgsTuple &&bind_init_args)
+    RefCounter(ArgsTuple &&bind_init_args)
         : m_init_args(std::move(bind_init_args))
     {
     }
@@ -988,12 +988,6 @@ public:
             AssertThrow(it.second != nullptr);
             AssertThrowMsg(it.second->count.load() <= 1, "Ref<%s> with id #%u still in use", typeid(T).name(), it.first.value);
         }
-    }
-
-    /*! \brief Sets the args tuple that is passed to Init() for any newly acquired object. */
-    void BindInitArguments(ArgsTuple &&args)
-    {
-        m_init_args = std::move(args);
     }
     
     [[nodiscard]] Ref Add(T *object)
@@ -1069,10 +1063,10 @@ private:
 };
 
 template <class T>
-using Ref    = typename RefCounter<T, EngineCallbacks>::Ref;
+using Ref = typename RefCounter<T, Engine *>::Ref;
 
 template <class T>
-using WeakRef = typename RefCounter<T, EngineCallbacks>::WeakRef;
+using WeakRef = typename RefCounter<T, Engine *>::WeakRef;
 
 template <class T>
 WeakRef<T> MakeWeakRef(const Ref<T> &strong_ref)

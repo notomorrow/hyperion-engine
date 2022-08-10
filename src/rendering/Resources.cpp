@@ -4,20 +4,20 @@
 namespace hyperion::v2 {
 
 Resources::Resources(Engine *engine)
-    : shaders(engine->callbacks,            {engine}),
-      textures(engine->callbacks,           {engine}),
-      materials(engine->callbacks,          {engine}),
-      lights(engine->callbacks,             {engine}),
-      entities(engine->callbacks,           {engine}),
-      meshes(engine->callbacks,             {engine}),
-      skeletons(engine->callbacks,          {engine}),
-      scenes(engine->callbacks,             {engine}),
-      render_passes(engine->callbacks,      {engine}),
-      framebuffers(engine->callbacks,       {engine}),
-      renderer_instances(engine->callbacks, {engine}),
-      compute_pipelines(engine->callbacks,  {engine}),
-      blas(engine->callbacks,               {engine}),
-      cameras(engine->callbacks,            {engine})
+    : shaders(engine),
+      textures(engine),
+      materials(engine),
+      lights(engine),
+      entities(engine),
+      meshes(engine),
+      skeletons(engine),
+      scenes(engine),
+      render_passes(engine),
+      framebuffers(engine),
+      renderer_instances(engine),
+      compute_pipelines(engine),
+      blas(engine),
+      cameras(engine)
 {
 }
 
