@@ -1,9 +1,9 @@
-#ifndef ORTHO_CAMERA_H
-#define ORTHO_CAMERA_H
+#ifndef HYPERION_V2_ORTHO_CAMERA_H
+#define HYPERION_V2_ORTHO_CAMERA_H
 
 #include "Camera.hpp"
 
-namespace hyperion {
+namespace hyperion::v2 {
 class OrthoCamera : public Camera {
 public:
     OrthoCamera(
@@ -46,6 +46,6 @@ public:
 private:
     float m_left, m_right, m_bottom, m_top;
 };
-}
+} // namespace hyperion::v2
 
 #endif

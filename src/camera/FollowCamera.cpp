@@ -1,6 +1,6 @@
 #include "FollowCamera.hpp"
 
-namespace hyperion {
+namespace hyperion::v2 {
 FollowCamera::FollowCamera(
     const Vector3 &target, const Vector3 &offset,
     int width, int height,
@@ -94,4 +94,4 @@ void FollowCamera::RespondToCommand(const CameraCommand &command, GameCounter::T
     }
 }
 
-} // namespace hyperion
+} // namespace hyperion::v2

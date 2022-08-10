@@ -1,5 +1,5 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef HYPERION_V2_CAMERA_H
+#define HYPERION_V2_CAMERA_H
 
 #include <GameCounter.hpp>
 
@@ -17,13 +17,8 @@
 
 namespace hyperion {
 namespace v2 {
-class Engine;
-} // namespace v2
 
-using v2::GameCounter;
-using v2::CameraDrawProxy;
-using v2::HasDrawProxy;
-using v2::Engine;
+class Engine;
 
 enum class CameraType {
     PERSPECTIVE,
@@ -67,7 +62,9 @@ struct CameraCommand {
     };
 };
 
-class Camera : public HasDrawProxy<STUB_CLASS(Camera)> {
+class Camera :
+    public EngineComponentBase<STUB_CLASS(Camera)>,
+    public HasDrawProxy<STUB_CLASS(Camera)> {
 public:
     Camera(CameraType camera_type, int width, int height, float _near, float _far);
     virtual ~Camera();
@@ -138,6 +135,8 @@ public:
     /*! \brief Push a command to the camera in a thread-safe way. */
     void PushCommand(const CameraCommand &command);
 
+    void Init(Engine *engine);
+
 protected:
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) {}
 
@@ -162,6 +161,8 @@ private:
     std::atomic_uint32_t m_command_queue_count;
     Queue<CameraCommand> m_command_queue;
 };
-}
+
+} // namespace v2
+} // namespace hyperion
 
 #endif

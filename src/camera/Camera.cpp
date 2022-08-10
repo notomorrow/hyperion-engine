@@ -2,10 +2,11 @@
 
 #include <Engine.hpp>
 
-namespace hyperion {
+namespace hyperion::v2 {
 
 Camera::Camera(CameraType camera_type, int width, int height, float _near, float _far)
-    : HasDrawProxy(),
+    : EngineComponentBase(),
+      HasDrawProxy(),
       m_camera_type(camera_type),
       m_width(width),
       m_height(height),
@@ -20,7 +21,24 @@ Camera::Camera(CameraType camera_type, int width, int height, float _near, float
 
 Camera::~Camera()
 {
-    // TODO: make it be an engine component, flush render queue before closing.
+    Teardown();
+}
+
+void Camera::Init(Engine *engine)
+{
+    if (IsInitCalled()) {
+        return;
+    }
+
+    EngineComponentBase::Init(engine);
+
+    SetReady(true);
+
+    OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
+        SetReady(false);
+
+        HYP_FLUSH_RENDER_QUEUE(GetEngine());
+    }));
 }
 
 void Camera::SetTranslation(const Vector3 &translation)
@@ -183,4 +201,4 @@ void Camera::UpdateCommandQueue(GameCounter::TickUnit dt)
     m_command_queue_count = 0;
 }
 
-} // namespace hyperion
+} // namespace hyperion::v2

@@ -16,7 +16,8 @@ Resources::Resources(Engine *engine)
       framebuffers(engine->callbacks,       {engine}),
       renderer_instances(engine->callbacks, {engine}),
       compute_pipelines(engine->callbacks,  {engine}),
-      blas(engine->callbacks,               {engine})
+      blas(engine->callbacks,               {engine}),
+      cameras(engine->callbacks,            {engine})
 {
 }
 

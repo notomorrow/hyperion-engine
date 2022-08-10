@@ -15,15 +15,10 @@
 
 #define HYP_OCTREE_DEBUG 0
 
-namespace hyperion {
-
-class Camera;
-
-} // namespace hyperion
-
 namespace hyperion::v2 {
 
 class Entity;
+class Camera;
 
 class Octree {
     friend class Entity;

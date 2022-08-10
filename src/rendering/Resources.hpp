@@ -13,6 +13,7 @@
 #include <ui/UIScene.hpp>
 #include "../animation/Skeleton.hpp"
 #include "../scene/Scene.hpp"
+#include <camera/Camera.hpp>
 #include <rendering/rt/BLAS.hpp>
 #include <rendering/rt/TLAS.hpp>
 
@@ -37,11 +38,12 @@ struct Resources {
     HYP_DEF_REF_COUNTED(Light,             lights);
     HYP_DEF_REF_COUNTED(RendererInstance,  renderer_instances);
     HYP_DEF_REF_COUNTED(ComputePipeline,   compute_pipelines);
-    HYP_DEF_REF_COUNTED(Entity,           entities);
+    HYP_DEF_REF_COUNTED(Entity,            entities);
     HYP_DEF_REF_COUNTED(Mesh,              meshes);
     HYP_DEF_REF_COUNTED(Skeleton,          skeletons);
     HYP_DEF_REF_COUNTED(Scene,             scenes);
     HYP_DEF_REF_COUNTED(Blas,              blas);
+    HYP_DEF_REF_COUNTED(Camera,            cameras);
     //HYP_DEF_REF_COUNTED(UIObject,          ui_objects);
 
 #undef HYP_DEF_REF_COUNTED

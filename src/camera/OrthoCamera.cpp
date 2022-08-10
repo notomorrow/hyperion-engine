@@ -1,6 +1,6 @@
 #include "OrthoCamera.hpp"
 
-namespace hyperion {
+namespace hyperion::v2 {
 OrthoCamera::OrthoCamera(
     int width, int height,
     float left, float right,
@@ -35,4 +35,4 @@ void OrthoCamera::UpdateProjectionMatrix()
         m_near,   m_far
     );
 }
-}
+} // namespace hyperion::v2

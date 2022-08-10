@@ -1,9 +1,9 @@
-#ifndef FOLLOW_CAMERA_H
-#define FOLLOW_CAMERA_H
+#ifndef HYPERION_V2_FOLLOW_CAMERA_H
+#define HYPERION_V2_FOLLOW_CAMERA_H
 
 #include "PerspectiveCamera.hpp"
 
-namespace hyperion {
+namespace hyperion::v2 {
 class FollowCamera : public PerspectiveCamera {
 public:
     FollowCamera(
@@ -34,6 +34,6 @@ private:
     Vector2 m_mag,
             m_prev_mag;
 };
-}
+} // namespace hyperion::v2
 
 #endif
