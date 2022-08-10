@@ -344,16 +344,14 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
         engine->resources.Lock([&](Resources &resources) {
             if (material == nullptr) {
-                material = resources.materials.Add(std::make_unique<Material>());
+                material = resources.materials.Add(new Material());
             }
 
-            auto mesh = resources.meshes.Add(
-                std::make_unique<Mesh>(
-                    vertices, 
-                    indices,
-                    Topology::TRIANGLES
-                )
-            );
+            auto mesh = resources.meshes.Add(new Mesh(
+                vertices, 
+                indices,
+                Topology::TRIANGLES
+            ));
 
             if (!has_normals) {
                 mesh->CalculateNormals();
@@ -365,18 +363,16 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
-            auto entity = resources.entities.Add(
-                std::make_unique<Entity>(
-                    std::move(mesh),
-                    std::move(shader),
-                    std::move(material),
-                    RenderableAttributeSet {
-                        .bucket            = Bucket::BUCKET_OPAQUE,
-                        .shader_id         = shader_id,
-                        .vertex_attributes = vertex_attributes
-                    }
-                )
-            );
+            auto entity = resources.entities.Add(new Entity(
+                std::move(mesh),
+                std::move(shader),
+                std::move(material),
+                RenderableAttributeSet {
+                    .bucket            = Bucket::BUCKET_OPAQUE,
+                    .shader_id         = shader_id,
+                    .vertex_attributes = vertex_attributes
+                }
+            ));
             
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
             node->SetEntity(std::move(entity));

@@ -208,40 +208,40 @@ void SparseVoxelOctree::CreateDescriptors(Engine *engine)
 
 void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
 {
-    m_alloc_nodes = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_alloc_nodes = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/voxel/octree_alloc_nodes.comp.spv")).Read()}}
             }
         ))
     ));
 
-    m_init_nodes = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_init_nodes = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/voxel/octree_init_nodes.comp.spv")).Read()}}
             }
         ))
     ));
 
-    m_tag_nodes = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_tag_nodes = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/voxel/octree_tag_nodes.comp.spv")).Read()}}
             }
         ))
     ));
 
-    m_modify_args = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_modify_args = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/voxel/octree_modify_args.comp.spv")).Read()}}
             }
         ))
     ));
 
-    m_write_mipmaps = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_write_mipmaps = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/voxel/octree_write_mipmaps.comp.spv")).Read()}}
             }

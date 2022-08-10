@@ -61,7 +61,7 @@ void CubemapRenderer::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
         auto *engine = GetEngine();
 
-        m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(nullptr));
+        m_scene = engine->resources.scenes.Add(new Scene(nullptr));
 
         CreateShader(engine);
         CreateRenderPass(engine);
@@ -289,7 +289,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
     m_env_probe_uniform_buffer.Copy(engine->GetDevice(), sizeof(EnvProbeShaderData), &env_probe);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_cubemaps[i] = engine->resources.textures.Add(std::make_unique<TextureCube>(
+        m_cubemaps[i] = engine->resources.textures.Add(new TextureCube(
             m_cubemap_dimensions,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             m_filter_mode,
@@ -365,13 +365,13 @@ void CubemapRenderer::CreateShader(Engine *engine)
         {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
     };
 
-    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(sub_shaders));
+    m_shader = engine->resources.shaders.Add(new Shader(sub_shaders));
     m_shader->Init(engine);
 }
 
 void CubemapRenderer::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->resources.render_passes.Add(std::make_unique<RenderPass>(
+    m_render_pass = engine->resources.render_passes.Add(new RenderPass(
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
         6
@@ -425,7 +425,7 @@ void CubemapRenderer::CreateRenderPass(Engine *engine)
 void CubemapRenderer::CreateFramebuffers(Engine *engine)
 {
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        m_framebuffers[i] = engine->resources.framebuffers.Add(new Framebuffer(
             m_cubemap_dimensions,
             m_render_pass.IncRef()
         ));

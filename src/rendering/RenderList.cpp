@@ -112,7 +112,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    render_pass = engine->resources.render_passes.Add(std::make_unique<RenderPass>(
+    render_pass = engine->resources.render_passes.Add(new RenderPass(
         RenderPassStage::SHADER,
         mode
     ));
@@ -213,16 +213,13 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
     AssertThrow(framebuffers.Empty());
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
+        auto *framebuffer = new Framebuffer(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
 
         for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {
             framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 
-        framebuffers.PushBack(engine->resources.framebuffers.Add(
-            std::move(framebuffer)
-        ));
-
+        framebuffers.PushBack(engine->resources.framebuffers.Add(framebuffer));
         framebuffers.Back().Init();
     }
 }

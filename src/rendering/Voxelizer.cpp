@@ -32,8 +32,8 @@ void Voxelizer::Init(Engine *engine)
 
         const auto voxel_map_size_signed = static_cast<Int64>(voxel_map_size);
 
-        m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-            engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
+        m_scene = engine->resources.scenes.Add(new Scene(
+            engine->resources.cameras.Add(new OrthoCamera(
                 voxel_map_size, voxel_map_size,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed,
@@ -131,7 +131,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
 
 void Voxelizer::CreateShader(Engine *engine)
 {
-    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_shader = engine->resources.shaders.Add(new Shader(
         std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
             {ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}},
@@ -144,7 +144,7 @@ void Voxelizer::CreateShader(Engine *engine)
 
 void Voxelizer::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->resources.render_passes.Add(std::make_unique<RenderPass>(
+    m_render_pass = engine->resources.render_passes.Add(new RenderPass(
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     ));
@@ -154,7 +154,7 @@ void Voxelizer::CreateRenderPass(Engine *engine)
 
 void Voxelizer::CreateFramebuffer(Engine *engine)
 {
-    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+    m_framebuffer = engine->resources.framebuffers.Add(new Framebuffer(
         Extent2D{voxel_map_size, voxel_map_size},
         m_render_pass.IncRef()
     ));

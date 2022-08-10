@@ -35,8 +35,8 @@ void VoxelConeTracing::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
         auto *engine = GetEngine();
 
-        m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-            engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
+        m_scene = engine->resources.scenes.Add(new Scene(
+            engine->resources.cameras.Add(new OrthoCamera(
                 voxel_map_size.width, voxel_map_size.height,
                 -static_cast<float>(voxel_map_size[0]) * 0.5f, static_cast<float>(voxel_map_size[0]) * 0.5f,
                 -static_cast<float>(voxel_map_size[1]) * 0.5f, static_cast<float>(voxel_map_size[1]) * 0.5f,
@@ -215,7 +215,7 @@ void VoxelConeTracing::OnComponentIndexChanged(RenderComponentBase::Index new_in
 
 void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 {
-    m_voxel_image = engine->resources.textures.Add(std::make_unique<Texture>(
+    m_voxel_image = engine->resources.textures.Add(new Texture(
         StorageImage(
             voxel_map_size,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
@@ -273,8 +273,8 @@ void VoxelConeTracing::CreateRendererInstance(Engine *engine)
 
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)
 {
-    m_clear_voxels = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
-        engine->resources.shaders.Add(std::make_unique<Shader>(
+    m_clear_voxels = engine->resources.compute_pipelines.Add(new ComputePipeline(
+        engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
             }
@@ -300,13 +300,13 @@ void VoxelConeTracing::CreateShader(Engine *engine)
         );
     }
     
-    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(sub_shaders));
+    m_shader = engine->resources.shaders.Add(new Shader(sub_shaders));
     m_shader->Init(engine);
 }
 
 void VoxelConeTracing::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->resources.render_passes.Add(std::make_unique<RenderPass>(
+    m_render_pass = engine->resources.render_passes.Add(new RenderPass(
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     ));
@@ -317,7 +317,7 @@ void VoxelConeTracing::CreateRenderPass(Engine *engine)
 void VoxelConeTracing::CreateFramebuffers(Engine *engine)
 {
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        m_framebuffers[i] = engine->resources.framebuffers.Add(new Framebuffer(
             Extent2D(voxel_map_size),
             m_render_pass.IncRef()
         ));

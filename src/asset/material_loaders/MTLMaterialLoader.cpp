@@ -248,7 +248,7 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
                 continue;
             }
 
-            texture_refs[all_filepaths[i]] = engine->resources.textures.Add(std::move(loaded_textures[i]));
+            texture_refs[all_filepaths[i]] = engine->resources.textures.Add(loaded_textures[i].release());
         }
 
         for (auto &item : object.materials) {
@@ -276,7 +276,7 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
                 material->SetTexture(it.mapping.key, texture.IncRef());
             }
 
-            material_library->Add(item.tag, resources.materials.Add(std::move(material)));
+            material_library->Add(item.tag, resources.materials.Add(material.release()));
         }
     });
 

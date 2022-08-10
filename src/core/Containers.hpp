@@ -599,13 +599,16 @@ struct ComponentEvents {
  */
 template <class T, class CallbacksClass>
 struct ObjectVector {
-    std::vector<std::unique_ptr<T>> objects;
-    std::queue<size_t> free_slots;
+    std::vector<T *> objects;
+    std::queue<SizeType> free_slots;
 
     ObjectVector() = default;
     ObjectVector(const ObjectVector &other) = delete;
     ObjectVector &operator=(const ObjectVector &other) = delete;
-    ~ObjectVector() {}
+    ~ObjectVector()
+    {
+        RemoveAll();
+    }
 
     constexpr size_t Size() const
         { return objects.size(); }
@@ -615,8 +618,8 @@ struct ObjectVector {
 
     constexpr T *Get(typename T::ID id)
     {
-        return MathUtil::InRange(id.value, {1, objects.size() + 1})
-            ? objects[id.value - 1].get()
+        return MathUtil::InRange(id.value, { 1, objects.size() + 1 })
+            ? objects[id.value - 1]
             : nullptr;
     }
 
@@ -638,7 +641,7 @@ struct ObjectVector {
         return nullptr;
     }
     
-    T *Add(std::unique_ptr<T> &&object)
+    T *Add(T *object)
     {
         AssertThrow(object != nullptr);
         AssertThrowMsg(object->GetId() == T::empty_id, "Adding object that already has id set");
@@ -648,25 +651,28 @@ struct ObjectVector {
         if (!free_slots.empty()) {
             auto front = free_slots.front();
 
-            next_id = typename T::ID{typename T::ID::ValueType(front + 1)};
+            next_id = typename T::ID { typename T::ID::ValueType(front + 1) } ;
             object->SetId(next_id);
 
-            objects[front] = std::move(object);
+            objects[front] = object;
             free_slots.pop();
         } else {
-            next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
+            next_id = typename T::ID { typename T::ID::ValueType(objects.size() + 1) } ;
             object->SetId(next_id);
 
-            objects.push_back(std::move(object));
+            objects.push_back(object);
         }
 
-        return objects[next_id.value - 1].get();
+        return objects[next_id.value - 1];
     }
     
     void Remove(typename T::ID id)
     {
         AssertThrowMsg(id.value != 0, "Value was not initialized!\n");
-        objects[id.value - 1].reset();
+        AssertThrow(id.value - 1 < objects.size());
+
+        delete objects[id.value - 1];
+        objects[id.value - 1] = nullptr;
 
         if (id.value == objects.size()) {
             objects.pop_back();
@@ -679,10 +685,22 @@ struct ObjectVector {
 
     void Destroy(typename T::ID id)
     {
-        objects[id.value - 1].reset();
+        AssertThrowMsg(id.value != 0, "Value was not initialized!\n");
+        AssertThrow(id.value - 1 < objects.size());
+
+        delete objects[id.value - 1];
+        objects[id.value - 1] = nullptr;
     }
     
-    void RemoveAll() { objects.clear(); }
+    void RemoveAll()
+    {
+        for (SizeType i = objects.size(); i > 0; --i) {
+            delete objects[i - 1];
+        }
+
+        objects.clear();
+        free_slots = {};
+    }
 
 };
 
@@ -691,7 +709,7 @@ class RefCounter {
     using ArgsTuple = typename CallbacksClass::ArgsTuple;
 
     struct RefCount {
-        RefCounter          *ref_manager{nullptr};
+        RefCounter *ref_manager{nullptr};
         std::atomic_uint32_t count{0};
     };
 
@@ -978,7 +996,7 @@ public:
         m_init_args = std::move(args);
     }
     
-    [[nodiscard]] Ref Add(std::unique_ptr<T> &&object)
+    [[nodiscard]] Ref Add(T *object)
     {
         if (object == nullptr) {
             return nullptr;
@@ -986,7 +1004,7 @@ public:
 
         std::lock_guard guard(m_mutex);
 
-        T *ptr = m_holder.Add(std::move(object));
+        T *ptr = m_holder.Add(object);
 
         auto it = m_ref_count_holder.Find(ptr->GetId());
         AssertThrowMsg(it == m_ref_count_holder.End(), "ptr with id %u already exists!", ptr->GetId().value);

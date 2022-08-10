@@ -22,7 +22,7 @@ DeferredPass::~DeferredPass() = default;
 void DeferredPass::CreateShader(Engine *engine)
 {
     if (m_is_indirect_pass) {
-        m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+        m_shader = engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
                     FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
@@ -35,7 +35,7 @@ void DeferredPass::CreateShader(Engine *engine)
             }
         ));
     } else {
-        m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+        m_shader = engine->resources.shaders.Add(new Shader(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
                     FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
@@ -224,7 +224,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_ssr.Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
+        m_mipmapped_results[i] = engine->resources.textures.Add(new Texture2D(
             Extent2D { 1024, 1024 },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,

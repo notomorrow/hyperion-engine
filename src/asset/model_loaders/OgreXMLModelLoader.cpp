@@ -194,7 +194,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 
     engine->resources.Lock([&](Resources &resources) {
         auto skeleton_ref = skeleton != nullptr
-            ? resources.skeletons.Add(std::move(skeleton))
+            ? resources.skeletons.Add(skeleton.release())
             : nullptr;
 
         for (auto &sub_mesh : object.submeshes) {
@@ -204,15 +204,13 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                 continue;
             }
 
-            auto material = resources.materials.Add(std::make_unique<Material>("ogrexml_material"));
+            auto material = resources.materials.Add(new Material("ogrexml_material"));
 
-            auto mesh = resources.meshes.Add(
-                std::make_unique<Mesh>(
-                    object.vertices,
-                    sub_mesh.indices,
-                    Topology::TRIANGLES
-                )
-            );
+            auto mesh = resources.meshes.Add(new Mesh(
+                object.vertices,
+                sub_mesh.indices,
+                Topology::TRIANGLES
+            ));
 
             if (object.normals.empty()) {
                 mesh->CalculateNormals();
@@ -225,18 +223,16 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
 
-            auto entity = resources.entities.Add(
-                std::make_unique<Entity>(
-                    std::move(mesh),
-                    std::move(shader),
-                    std::move(material),
-                    RenderableAttributeSet{
-                        .bucket            = Bucket::BUCKET_OPAQUE,
-                        .shader_id         = shader_id,
-                        .vertex_attributes = vertex_attributes
-                    }
-                )
-            );
+            auto entity = resources.entities.Add(new Entity(
+                std::move(mesh),
+                std::move(shader),
+                std::move(material),
+                RenderableAttributeSet {
+                    .bucket            = Bucket::BUCKET_OPAQUE,
+                    .shader_id         = shader_id,
+                    .vertex_attributes = vertex_attributes
+                }
+            ));
 
             if (skeleton_ref != nullptr) {
                 entity->AddController<AnimationController>();
