@@ -135,12 +135,12 @@ void ShadowPass::Create(Engine *engine)
     CreateRenderPass(engine);
 
     m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-        std::make_unique<OrthoCamera>(
+        engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
             m_dimensions.width, m_dimensions.height,
             -100.0f, 100.0f,
             -100.0f, 100.0f,
             -100.0f, 100.0f
-        )
+        ))
     ));
 
     engine->GetWorld().AddScene(m_scene.IncRef());
@@ -318,30 +318,47 @@ void ShadowRenderer::OnRender(Engine *engine, Frame *frame)
 
     AssertReady();
 
-    const auto *camera = m_shadow_pass.GetScene()->GetCamera();
-    
-    engine->shader_globals->shadow_maps.Set(
-        m_shadow_pass.GetShadowMapIndex(),
-        {
-            .projection  = camera->GetProjectionMatrix(),
-            .view        = camera->GetViewMatrix(),
-            .scene_index = m_shadow_pass.GetScene()->GetId().value - 1
-        }
-    );
+    const auto scene_index = m_shadow_pass.GetScene()->GetId().value - 1;
+
+    if (const auto &camera = m_shadow_pass.GetScene()->GetCamera()) {
+        engine->shader_globals->shadow_maps.Set(
+            m_shadow_pass.GetShadowMapIndex(),
+            {
+                .projection  = camera->GetDrawProxy().projection,
+                .view        = camera->GetDrawProxy().view,
+                .scene_index = scene_index
+            }
+        );
+    } else {
+        engine->shader_globals->shadow_maps.Set(
+            m_shadow_pass.GetShadowMapIndex(),
+            {
+                .projection  = Matrix4::Identity(),
+                .view        = Matrix4::Identity(),
+                .scene_index = scene_index
+            }
+        );
+    }
 
     m_shadow_pass.Render(engine, frame);
 }
 
 void ShadowRenderer::UpdateSceneCamera(Engine *engine)
 {
-    const auto aabb   = m_shadow_pass.GetAabb();
+    // runs in game thread
+
+    const auto aabb = m_shadow_pass.GetAabb();
     const auto center = aabb.GetCenter();
 
     const auto light_direction = m_shadow_pass.GetLight() != nullptr
         ? m_shadow_pass.GetLight()->GetPosition()
         : Vector3::Zero();
 
-    auto *camera = m_shadow_pass.GetScene()->GetCamera();
+    auto &camera = m_shadow_pass.GetScene()->GetCamera();
+
+    if (!camera) {
+        return;
+    }
 
     camera->SetTranslation(center + light_direction);
     camera->SetTarget(center);
@@ -360,7 +377,7 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
             mins  = MathUtil::Min(mins, corner);
         }
 
-        static_cast<OrthoCamera *>(camera)->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        static_cast<OrthoCamera *>(camera.ptr)->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             mins.x, maxes.x,
             mins.y, maxes.y,
             -m_shadow_pass.GetMaxDistance(),

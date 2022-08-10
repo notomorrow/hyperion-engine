@@ -993,7 +993,7 @@ public:
 
         auto insert_result = m_ref_count_holder.Insert(
             ptr->GetId(),
-            new RefCount{
+            new RefCount {
                 .ref_manager = this,
                 .count       = 0
             }

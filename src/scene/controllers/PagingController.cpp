@@ -72,9 +72,9 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
         return;
     }
 
-    auto *camera = scene->GetCamera();
+    auto &camera = scene->GetCamera();
 
-    if (camera == nullptr) {
+    if (!camera) {
         DebugLog(
             LogType::Warn,
             "PagingController on Scene with no Camera\n"

@@ -36,12 +36,12 @@ void VoxelConeTracing::Init(Engine *engine)
         auto *engine = GetEngine();
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-            std::make_unique<OrthoCamera>(
+            engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
                 voxel_map_size.width, voxel_map_size.height,
                 -static_cast<float>(voxel_map_size[0]) * 0.5f, static_cast<float>(voxel_map_size[0]) * 0.5f,
                 -static_cast<float>(voxel_map_size[1]) * 0.5f, static_cast<float>(voxel_map_size[1]) * 0.5f,
                 -static_cast<float>(voxel_map_size[2]) * 0.5f, static_cast<float>(voxel_map_size[2]) * 0.5f
-            )
+            ))
         ));
 
         CreateImagesAndBuffers(engine);

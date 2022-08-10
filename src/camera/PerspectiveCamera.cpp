@@ -1,6 +1,6 @@
 #include "PerspectiveCamera.hpp"
 
-namespace hyperion {
+namespace hyperion::v2 {
 PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float _near, float _far)
     : Camera(CameraType::PERSPECTIVE, width, height, _near, _far)
 {
@@ -28,4 +28,4 @@ void PerspectiveCamera::UpdateProjectionMatrix()
         m_near,  m_far
     );
 }
-} // namespace hyperion
+} // namespace hyperion::v2

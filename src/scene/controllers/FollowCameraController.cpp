@@ -23,9 +23,9 @@ void BasicCharacterController::OnUpdate(GameCounter::TickUnit)
     static const float camera_height = 10.0f;
 
     if (auto *scene = GetOwner()->GetScene()) {
-        if (auto *camera = scene->GetCamera()) {
-            Ray ray {
-                .position  = camera->GetTranslation() + Vector3(0, 1000, 0),
+        if (auto &camera = scene->GetCamera()) {
+            const Ray ray {
+                .position = camera->GetTranslation() + Vector(0, 1000, 0),
                 .direction = Vector3::UnitY() * -1.0f
             };
 

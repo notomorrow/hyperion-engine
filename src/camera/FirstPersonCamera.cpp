@@ -1,7 +1,7 @@
 #include "FirstPersonCamera.hpp"
 
-namespace hyperion {
-FpsCamera::FpsCamera(int width, int height, float fov, float _near, float _far)
+namespace hyperion::v2 {
+FirstPersonCamera::FirstPersonCamera(int width, int height, float fov, float _near, float _far)
     : PerspectiveCamera(fov, width, height, _near, _far),
       m_mouse_x(0),
       m_mouse_y(0),
@@ -11,21 +11,21 @@ FpsCamera::FpsCamera(int width, int height, float fov, float _near, float _far)
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 }
 
-void FpsCamera::SetTranslation(const Vector3 &translation)
+void FirstPersonCamera::SetTranslation(const Vector3 &translation)
 {
     Camera::SetTranslation(translation);
 
     // m_move_translation = translation;
 }
 
-void FpsCamera::SetNextTranslation(const Vector3 &translation)
+void FirstPersonCamera::SetNextTranslation(const Vector3 &translation)
 {
     Camera::SetNextTranslation(translation);
 
     // m_move_translation = translation;
 }
 
-void FpsCamera::UpdateLogic(double dt)
+void FirstPersonCamera::UpdateLogic(double dt)
 {
     m_desired_mag = Vector2(
         m_mouse_x - m_prev_mouse_x,
@@ -89,7 +89,7 @@ void FpsCamera::UpdateLogic(double dt)
     m_next_translation += m_move_deltas * dt;
 }
 
-void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
+void FirstPersonCamera::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
 {
     switch (command.command) {
     case CameraCommand::CAMERA_COMMAND_MAG:
@@ -131,4 +131,4 @@ void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::Tick
     }
 }
 
-} // namespace hyperion
+} // namespace hyperion::v2

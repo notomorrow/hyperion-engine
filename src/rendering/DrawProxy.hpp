@@ -16,14 +16,8 @@
 
 #include <memory>
 
-namespace hyperion {
-
-class Camera;
-
-} // namespace hyperion
-
 namespace hyperion::v2 {
-
+    
 using renderer::IndirectDrawCommand;
 using renderer::IndirectBuffer;
 using renderer::StorageBuffer;
@@ -38,6 +32,7 @@ class Mesh;
 class Material;
 class Engine;
 class Entity;
+class Camera;
 
 struct alignas(16) ObjectInstance {
     UInt32             entity_id;

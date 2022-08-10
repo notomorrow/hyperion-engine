@@ -33,12 +33,12 @@ void Voxelizer::Init(Engine *engine)
         const auto voxel_map_size_signed = static_cast<Int64>(voxel_map_size);
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-            std::make_unique<OrthoCamera>(
+            engine->resources.cameras.Add(std::make_unique<OrthoCamera>(
                 voxel_map_size, voxel_map_size,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed
-            )
+            ))
         ));
 
         if (m_counter == nullptr) {
@@ -56,11 +56,6 @@ void Voxelizer::Init(Engine *engine)
         CreateRenderPass(engine);
         CreateFramebuffer(engine);
         CreateDescriptors(engine);
-
-        /* TODO: once descriptors are the new component type, this should be removed. */
-        //engine->callbacks.Once(EngineCallback::CREATE_DESCRIPTOR_SETS, [this](Engine *engine) {
-        //});
-        
         CreatePipeline(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](...) {

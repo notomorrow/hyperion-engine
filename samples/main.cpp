@@ -62,6 +62,7 @@
 #include <util/UTF8.hpp>
 
 using namespace hyperion;
+using namespace hyperion::v2;
 
 
 #define HYPERION_VK_TEST_VCT 1
@@ -70,7 +71,7 @@ using namespace hyperion;
 
 namespace hyperion::v2 {
     
-class MyGame : public v2::Game {
+class MyGame : public Game {
 
 public:
     Ref<Material> base_material;//hack
@@ -84,8 +85,6 @@ public:
 
     virtual void Init(Engine *engine, SystemWindow *window) override
     {
-        using namespace v2;
-
         Game::Init(engine, window);
 
         input_manager = new InputManager(window);
@@ -97,13 +96,13 @@ public:
 
     virtual void OnPostInit(Engine *engine) override
     {
-        scene = engine->resources.scenes.Add(std::make_unique<v2::Scene>(
-            std::make_unique<FpsCamera>(//FollowCamera>(
+        scene = engine->resources.scenes.Add(std::make_unique<Scene>(
+            engine->resources.cameras.Add(std::make_unique<FirstPersonCamera>(//FollowCamera>(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 1024,//2048, 1080,
                 70.0f,
                 0.35f, 15000.0f
-            )
+            ))
         ));
         engine->GetWorld().AddScene(scene.IncRef());
 
@@ -671,29 +670,29 @@ int main()
 
     SystemEvent event;
 
-    auto *engine = new v2::Engine(system, "My app");
+    auto *engine = new Engine(system, "My app");
 
-    engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "..", "res"));
+    engine->assets.SetBasePath(FileSystem::Join(HYP_ROOT_DIR, "..", "res"));
 
-    auto *my_game = new v2::MyGame;
+    auto *my_game = new MyGame;
 ;
     engine->Initialize();
 
     Device *device = engine->GetInstance()->GetDevice();
 
     engine->shader_manager.SetShader(
-        v2::ShaderKey::BASIC_VEGETATION,
-        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
+        ShaderKey::BASIC_VEGETATION,
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vegetation.vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vegetation.vert.spv")).Read(),
                         {.name = "vegetation vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
                     }
                 }
@@ -702,18 +701,18 @@ int main()
     );
 
     engine->shader_manager.SetShader(
-        v2::ShaderKey::DEBUG_AABB,
-        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
+        ShaderKey::DEBUG_AABB,
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.vert.spv")).Read(),
                         {.name = "aabb vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.frag.spv")).Read(),
                         {.name = "aabb frag"}
                     }
                 }
@@ -722,18 +721,18 @@ int main()
     );
 
     engine->shader_manager.SetShader(
-        v2::ShaderKey::BASIC_FORWARD,
-        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
+        ShaderKey::BASIC_FORWARD,
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
                         {.name = "main vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
                     }
                 }
@@ -742,18 +741,18 @@ int main()
     );
 
     engine->shader_manager.SetShader(
-        v2::ShaderKey::TERRAIN,
-        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
+        ShaderKey::TERRAIN,
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
                         {.name = "main vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/Terrain.frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/Terrain.frag.spv")).Read(),
                         {.name = "Terrain frag"}
                     }
                 }
@@ -774,11 +773,11 @@ int main()
 
     
     // engine->shader_manager.SetShader(
-    //     v2::ShaderManager::Key::STENCIL_OUTLINE,
-    //     engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-    //         std::vector<v2::SubShader>{
-    //             {ShaderModule::Type::VERTEX, {FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
-    //             {ShaderModule::Type::FRAGMENT, {FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
+    //     ShaderManager::Key::STENCIL_OUTLINE,
+    //     engine->resources.shaders.Add(std::make_unique<Shader>(
+    //         std::vector<SubShader>{
+    //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
+    //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
     //         }
     //     ))
     // );
@@ -786,20 +785,20 @@ int main()
 
     {
         engine->shader_manager.SetShader(
-            v2::ShaderManager::Key::BASIC_SKYBOX,
-            engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-                std::vector<v2::SubShader>{
-                    {ShaderModule::Type::VERTEX, {FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
-                    {ShaderModule::Type::FRAGMENT, {FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
+            ShaderManager::Key::BASIC_SKYBOX,
+            engine->resources.shaders.Add(std::make_unique<Shader>(
+                std::vector<SubShader>{
+                    {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
+                    {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
                 }
             ))
         );
 
-        /*auto pipeline = std::make_unique<v2::RendererInstance>(
-            engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef(),
-            engine->GetRenderListContainer().Get(v2::BUCKET_SKYBOX).GetRenderPass().IncRef(),
+        /*auto pipeline = std::make_unique<RendererInstance>(
+            engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef(),
+            engine->GetRenderListContainer().Get(BUCKET_SKYBOX).GetRenderPass().IncRef(),
             renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-            v2::Bucket::BUCKET_SKYBOX
+            Bucket::BUCKET_SKYBOX
         );
         pipeline->SetFaceCullMode(FaceCullMode::FRONT);
         pipeline->SetDepthTest(false);
@@ -809,11 +808,11 @@ int main()
     }
     
     {
-        auto pipeline = std::make_unique<v2::RendererInstance>(
-            engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
-            engine->GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
-            v2::RenderableAttributeSet{
-                .bucket            = v2::Bucket::BUCKET_TRANSLUCENT,
+        auto pipeline = std::make_unique<RendererInstance>(
+            engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
+            engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
+            RenderableAttributeSet{
+                .bucket            = Bucket::BUCKET_TRANSLUCENT,
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
             }
         );
@@ -828,13 +827,13 @@ int main()
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rgen.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rgen.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rmiss.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rmiss.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rchit.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rchit.spv")).Read()
     });
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
@@ -842,19 +841,19 @@ int main()
     my_game->material_test_obj->GetChild(0)->GetEntity()->SetTransform({{ 0, 7, 0 }});
 
 
-    v2::ProbeGrid probe_system({
+    ProbeGrid probe_system({
         .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}
     });
     probe_system.Init(engine);
 
-    auto my_tlas = std::make_unique<v2::Tlas>();
+    auto my_tlas = std::make_unique<Tlas>();
 
-    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
+    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<Blas>(
         engine->resources.meshes.IncRef(my_game->material_test_obj->GetChild(0)->GetEntity()->GetMesh()),
         my_game->material_test_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
     
-    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
+    my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<Blas>(
         engine->resources.meshes.IncRef(my_game->cube_obj->GetChild(0)->GetEntity()->GetMesh()),
         my_game->cube_obj->GetChild(0)->GetEntity()->GetTransform()
     )));
@@ -1090,7 +1089,7 @@ int main()
 
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
 
-    v2::FullScreenPass::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
+    FullScreenPass::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
     
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
