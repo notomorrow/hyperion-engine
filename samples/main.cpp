@@ -202,15 +202,15 @@ public:
         auto my_light = engine->resources.lights.Add(new DirectionalLight(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
-            50000.0f
+            150000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
 
-        auto my_light2 = engine->Attach(new DirectionalLight(
-            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
-            Vector4::One(),
-            50000.0f
-        ));
+        // auto my_light2 = engine->Attach(new DirectionalLight(
+        //     Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+        //     Vector4::One(),
+        //     50000.0f
+        // ));
 
         m_point_light = engine->resources.lights.Add(new PointLight(
             Vector3(2.0f, 12.0f, 0.0f),
@@ -222,7 +222,7 @@ public:
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
         // test_model->Scale(10.0f);
-        test_model->Scale(0.15f);//14.075f);
+        test_model->Scale(0.08f);//14.075f);
 
         /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
         terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
@@ -236,16 +236,16 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        // if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
-            /*for (auto &child : test->GetChildren()) {
-                if (auto &ent = child->GetEntity()) {
-                    std::cout << "Adding debug controller to  " << child->GetName() << "\n";
-                    ent->AddController<AABBDebugController>(engine);
-                }
-            }*/
-        // }
+        if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
+            // for (auto &child : test->GetChildren()) {
+            //     if (auto &ent = child->GetEntity()) {
+            //         std::cout << "Adding debug controller to  " << child->GetName() << "\n";
+            //         ent->AddController<AABBDebugController>(engine);
+            //     }
+            // }
+        }
 
-        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(64).release());//MeshBuilder::Quad());
+        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
         auto quad_spatial = engine->resources.entities.Add(new Entity(
             std::move(quad),
@@ -259,16 +259,16 @@ public:
         ));
         quad_spatial.Init();
         quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));//0.00f, 0.4f, 0.9f, 1.0f));
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.5f);
-        quad_spatial->SetScale(Vector3(5.0f));
-        quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
-        quad_spatial->SetTranslation(Vector3(6, 6.0f, 0));
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
+        quad_spatial->SetScale(Vector3(3.0f));
+        quad_spatial->SetRotation(Quaternion(Vector3(1, 1, 1), MathUtil::DegToRad(-40.0f)));
+        quad_spatial->SetTranslation(Vector3(0, 12.0f, 0));
         scene->AddEntity(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            140.0f
+            80.0f
         );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
@@ -530,32 +530,6 @@ public:
 
 };
 } // namespace hyperion::v2
-
-struct TestStruct {
-    int id = 0;
-
-    TestStruct(int id = -1)
-        : id(id)
-    {
-        // std::cout << "Create TestStruct " << id << "\n";
-    }
-    TestStruct(const TestStruct &other)
-        : id(other.id)
-    {
-        // std::cout << "Copy TestStruct " << id << "\n";
-    }
-    TestStruct &operator=(const TestStruct &other)
-    {
-        id = other.id;
-        // std::cout << "Copy-assign TestStruct " << id << "\n";
-
-        return *this;
-    }
-    ~TestStruct()
-    {
-        // std::cout << "Destroy TestStruct " << id << "\n";
-    }
-};
 
 int main()
 {

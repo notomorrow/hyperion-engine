@@ -141,12 +141,11 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
 
     const auto draw_command_index = draw_proxy.entity_id.value - 1;//static_cast<UInt>(m_draw_proxies.Size());
     
-    ShaderVec2<UInt32> packed_data;
+    UInt32 packed_data;
     // first byte = bucket. we currently use only 7, with
     // some having the potential to be combined, so it shouldn't be
     // an issue.
-    packed_data.x = (1u << static_cast<UInt32>(draw_proxy.bucket)) & 0xFF;
-    packed_data.y = 0u;
+    packed_data = (1u << static_cast<UInt32>(draw_proxy.bucket)) & 0xFF;
 
     m_object_instances.PushBack(ObjectInstance {
         .entity_id          = static_cast<UInt32>(draw_proxy.entity_id.value),
@@ -155,13 +154,15 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
         .num_indices        = static_cast<UInt32>(draw_proxy.mesh->NumIndices()),
         // .packed_data        = packed_data,
         .aabb_max           = draw_proxy.bounding_box.max.ToVector4(),
-        .aabb_min           = draw_proxy.bounding_box.min.ToVector4()
+        .aabb_min           = draw_proxy.bounding_box.min.ToVector4(),
+
+        .packed_data        = packed_data
     });
 
     m_draw_proxies.PushBack(draw_proxy);
     m_draw_proxies.Back().draw_command_index = draw_command_index;
 
-    m_is_dirty = { true };
+    m_is_dirty = { true, true };
 }
 
 bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *frame, SizeType count)

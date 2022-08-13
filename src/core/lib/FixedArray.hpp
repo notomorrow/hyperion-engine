@@ -2,6 +2,7 @@
 #define HYPERION_V2_LIB_FIXED_ARRAY_H
 
 #include "ContainerBase.hpp"
+#include <math/MathUtil.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -12,45 +13,18 @@ namespace hyperion {
 
 template <class T, SizeType Sz>
 class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt> {
-    T m_data[Sz];
+    T m_data[MathUtil::Max(Sz, 1)];
 
 public:
-    using Iterator      = T *;
+    using Iterator = T *;
     using ConstIterator = const T *;
 
     FixedArray();
 
-    FixedArray(T const (&items)[Sz])
+    template <class ... Args>
+    constexpr FixedArray(Args &&... args)
+        : m_data { std::forward<decltype(args)>(args)... }
     {
-        for (SizeType i = 0; i < Sz; i++) {
-            m_data[i] = items[i];
-        }
-    }
-
-    // FixedArray &operator=(T const (&items)[Sz])
-    // {
-    //     for (SizeType i = 0; i < Sz; i++) {
-    //         m_data[i] = items[i];
-    //     }
-
-    //     return *this;
-    // }
-
-    FixedArray(const std::initializer_list<T> &items)
-    {
-        if (items.size() <= Sz) {
-            std::copy(
-                items.begin(),
-                items.end(),
-                std::begin(m_data)
-            );
-        } else {
-            std::copy(
-                items.begin(),
-                items.begin() + Sz,
-                std::begin(m_data)
-            );
-        }
     }
 
     FixedArray(const FixedArray &other);
@@ -58,6 +32,19 @@ public:
     FixedArray(FixedArray &&other) noexcept;
     FixedArray &operator=(FixedArray &&other) noexcept;
     ~FixedArray();
+
+    template <class Function>
+    FixedArray Map(Function &&fn) const
+    {
+        FixedArray result;
+        SizeType index = 0;
+
+        for (auto it = Begin(); it != End(); ++it) {
+            result[index++] = fn(*it);
+        }
+
+        return result;
+    }
 
     HYP_FORCE_INLINE
     T &operator[](typename FixedArray::Base::KeyType index)               { return m_data[index]; }

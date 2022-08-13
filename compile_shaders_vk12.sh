@@ -19,8 +19,8 @@ glslc --target-env=$VULKAN_TARGET imagestore.comp -o imagestore.comp.spv
 glslc --target-env=$VULKAN_TARGET cull/generate_depth_pyramid.comp -o cull/generate_depth_pyramid.comp.spv
 glslc --target-env=$VULKAN_TARGET cull/object_visibility.comp -o cull/object_visibility.comp.spv
 
-glslc --target-env=$VULKAN_TARGET gtao.frag -o gtao_frag.spv
-glslc --target-env=$VULKAN_TARGET gtao.vert -o gtao_vert.spv
+glslc --target-env=$VULKAN_TARGET SSAO.frag -o SSAO.frag.spv
+glslc --target-env=$VULKAN_TARGET PostEffect.vert -o PostEffect.vert.spv
 glslc --target-env=$VULKAN_TARGET fxaa.frag -o fxaa.frag.spv
 glslc --target-env=$VULKAN_TARGET tonemap.frag -o tonemap.frag.spv
 

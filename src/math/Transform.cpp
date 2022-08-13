@@ -12,6 +12,14 @@ Transform::Transform()
     UpdateMatrix();
 }
 
+Transform::Transform(const Vector3 &translation, const Vector3 &scale)
+    : m_translation(translation),
+      m_scale(scale),
+      m_rotation(Quaternion::Identity())
+{
+    UpdateMatrix();
+}
+
 Transform::Transform(const Vector3 &translation, const Vector3 &scale, const Quaternion &rotation)
     : m_translation(translation),
       m_scale(scale),

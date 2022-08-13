@@ -18,8 +18,13 @@ struct Quad {
 };
 
 class MeshBuilder {
+    static const std::vector<Vertex> quad_vertices;
+    static const std::vector<Mesh::Index> quad_indices;
+    static const std::vector<Vertex> cube_vertices;
+
 public:
     static std::unique_ptr<Mesh> Quad(Topology topology = Topology::TRIANGLES);
+    static std::unique_ptr<Mesh> DividedQuad(UInt num_divisions);
     static std::unique_ptr<Mesh> Cube();
     static std::unique_ptr<Mesh> NormalizedCubeSphere(UInt num_divisions);
 

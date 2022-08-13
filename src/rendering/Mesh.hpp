@@ -84,7 +84,7 @@ public:
     std::vector<PackedVertex> BuildPackedVertices() const;
     std::vector<PackedIndex> BuildPackedIndices() const;
     
-    void CalculateNormals();
+    void CalculateNormals(bool weighted = false);
     void CalculateTangents();
     void InvertNormals();
 

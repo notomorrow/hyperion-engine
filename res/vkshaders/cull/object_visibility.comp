@@ -35,9 +35,14 @@ struct ObjectInstance {
     uint draw_command_index;
     uint batch_index;
     uint num_indices;
-    // uvec2 packed_data;
     vec4 aabb_max;
     vec4 aabb_min;
+
+    uint packed_data;
+
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
 };
 
 layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer {
@@ -132,7 +137,7 @@ void main()
             clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
             clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
 
-            vec2 dimensions = vec2(textureSize(sampler2D(depth_pyramid, depth_pyramid_sampler), 0));//vec2(push_constants.depth_pyramid_dimensions);
+            vec2 dimensions = vec2(push_constants.depth_pyramid_dimensions);
 
             // Calculate hi-Z buffer mip
             vec2 size = (clip_max.xy - clip_min.xy) * max(dimensions.x, dimensions.y);

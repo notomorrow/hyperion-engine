@@ -178,7 +178,11 @@ Vector3 &Vector3::operator/=(const Vector3 &other)
 
 bool Vector3::operator==(const Vector3 &other) const
 {
-    return x == other.x && y == other.y && z == other.z;
+    return MathUtil::ApproxEqual(x, other.x)
+        && MathUtil::ApproxEqual(y, other.y)
+        && MathUtil::ApproxEqual(z, other.z);
+
+    // return x == other.x && y == other.y && z == other.z;
 }
 
 bool Vector3::operator!=(const Vector3 &other) const
@@ -245,6 +249,14 @@ Vector3 &Vector3::Lerp(const Vector3 &to, const float amt)
 float Vector3::Dot(const Vector3 &other) const
 {
     return x * other.x + y * other.y + z * other.z;
+}
+
+float Vector3::AngleBetween(const Vector3 &other) const
+{
+    const float dot_product = x * other.x + y * other.y + z * other.z;
+    const float arc_cos = MathUtil::Arccos(dot_product);
+
+    return arc_cos / (Length() * other.Length());
 }
 
 Vector3 Vector3::Abs(const Vector3 &vec)

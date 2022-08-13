@@ -115,7 +115,7 @@ float CalculateAO(float depth, float dw, float dh)
     //DEPTH EXTRAPOLATION:
     if (far > 0) {
         temp2 = CompareDepths(ReadDepth(coord2), depth);
-        temp += (1.0-temp)*temp2;
+        temp += (1.0 - temp) * temp2;
     }
 
     return temp;
@@ -170,7 +170,7 @@ void main()
 
 #define HYP_GTAO_NUM_CIRCLES 2
 #define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      1.0
+#define HYP_GTAO_RADIUS      8.0
 #define HYP_GTAO_THICKNESS   1.0
 #define HYP_GTAO_POWER       1.0
 

@@ -96,7 +96,10 @@ Vector2 &Vector2::operator/=(const Vector2 &other)
 
 bool Vector2::operator==(const Vector2 &other) const
 {
-    return x == other.x && y == other.y;
+    return MathUtil::ApproxEqual(x, other.x)
+        && MathUtil::ApproxEqual(y, other.y);
+
+    // return x == other.x && y == other.y;
 }
 
 bool Vector2::operator!=(const Vector2 &other) const

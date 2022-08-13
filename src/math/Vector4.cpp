@@ -136,7 +136,12 @@ Vector4 &Vector4::operator/=(const Vector4 &other)
 
 bool Vector4::operator==(const Vector4 &other) const
 {
-    return x == other.x && y == other.y && z == other.z && w == other.w;
+    return MathUtil::ApproxEqual(x, other.x)
+        && MathUtil::ApproxEqual(y, other.y)
+        && MathUtil::ApproxEqual(z, other.z)
+        && MathUtil::ApproxEqual(w, other.w);
+
+    // return x == other.x && y == other.y && z == other.z && w == other.w;
 }
 
 bool Vector4::operator!=(const Vector4 &other) const

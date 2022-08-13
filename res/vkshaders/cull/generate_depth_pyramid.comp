@@ -37,13 +37,13 @@ void main()
 
     float depth = 0.0;
 
-    //if (mip_level == 0) {
-    //    depth = GetDepthAtTexel(texcoord, ivec2(0));
-    //} else {
+    if (mip_level == 0) {
+       depth = GetDepthAtTexel(texcoord, ivec2(0));
+    } else {
         for (int i = 0; i < HYP_NUM_DEPTH_PYRAMID_OFFSETS; i++) {
             depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texcoord, depth_pyramid_offsets[i]));
         }
-    //}
+    }
 
     imageStore(mip_out, ivec2(coord), vec4(depth));
 }
