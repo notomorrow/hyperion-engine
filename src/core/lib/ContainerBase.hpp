@@ -97,6 +97,51 @@ public:
         return static_cast<const Container *>(this)->Find(value)
             != static_cast<const Container *>(this)->End();
     }
+
+    [[nodiscard]] auto Sum() const
+    {
+        using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container *>(this)->Begin())>>;
+
+        HeldType result { };
+        const auto _begin = static_cast<const Container *>(this)->Begin();
+        const auto _end   = static_cast<const Container *>(this)->End();
+
+        const auto dist = static_cast<HeldType>(_end - _begin);
+
+        if (!dist) {
+            return result;
+        }
+
+        for (auto it = _begin; it != _end; ++it) {
+            result += static_cast<HeldType>(*it);
+        }
+
+        return result;
+    }
+
+    [[nodiscard]] auto Avg() const
+    {
+        using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container *>(this)->Begin())>>;
+
+        HeldType result { };
+
+        const auto _begin = static_cast<const Container *>(this)->Begin();
+        const auto _end   = static_cast<const Container *>(this)->End();
+
+        const auto dist = static_cast<HeldType>(_end - _begin);
+
+        if (!dist) {
+            return result;
+        }
+
+        for (auto it = _begin; it != _end; ++it) {
+            result += static_cast<HeldType>(*it);
+        }
+
+        result /= dist;
+
+        return result;
+    }
 };
 
 

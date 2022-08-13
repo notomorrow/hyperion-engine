@@ -209,7 +209,7 @@ void main()
 
         result = Fr + Fd;
 
-        // result = specular_ao;
+        // result = albedo.rgb * 2.0 - 1.0;
         //end ibl
     } else {
         result = albedo.rgb;

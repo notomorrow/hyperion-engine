@@ -48,6 +48,9 @@ public:
     constexpr float &operator[](UInt index)
         { return values[index]; }
 
+    explicit operator bool() const
+        { return Sum() != 0.0f; }
+
     Vector2 &operator=(const Vector2 &other);
     Vector2 operator+(const Vector2 &other) const;
     Vector2 &operator+=(const Vector2 &other);
@@ -65,7 +68,10 @@ public:
         { return std::tie(x, y) < std::tie(other.x, other.y); }
 
     constexpr float LengthSquared() const { return x * x + y * y; }
-    float Length() const { return sqrt(LengthSquared()); }
+    float Length() const { return std::sqrt(LengthSquared()); }
+
+    constexpr float Avg() const { return (x + y) / 2.0f; }
+    constexpr float Sum() const { return x + y; }
 
     float Distance(const Vector2 &other) const;
     float DistanceSquared(const Vector2 &other) const;

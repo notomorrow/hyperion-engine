@@ -68,7 +68,10 @@ public:
         { return std::tie(x, y, z, w) < std::tie(other.x, other.y, other.z, other.w); }
 
     constexpr float LengthSquared() const { return x * x + y * y + z * z + w * w; }
-    float Length() const                  { return sqrt(LengthSquared()); }
+    float Length() const { return std::sqrt(LengthSquared()); }
+
+    constexpr float Avg() const { return (x + y + z + w) / 4.0f; }
+    constexpr float Sum() const { return x + y + z + w; }
 
     float DistanceSquared(const Vector4 &other) const;
     float Distance(const Vector4 &other) const;

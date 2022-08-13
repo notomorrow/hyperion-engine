@@ -39,9 +39,10 @@ struct alignas(16) ObjectInstance {
     UInt32             draw_command_index;
     UInt32             batch_index;
     UInt32             num_indices;
-    // ShaderVec2<UInt32> packed_data;
     ShaderVec4<Float>  aabb_max;
     ShaderVec4<Float>  aabb_min;
+
+    UInt32             packed_data;
 };
 
 template <class T>

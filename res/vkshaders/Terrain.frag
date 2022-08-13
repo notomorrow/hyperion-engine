@@ -81,7 +81,7 @@ void main()
         //     discard;
         // }
 
-        gbuffer_albedo = albedo_texture;
+        gbuffer_albedo = vec4(albedo_texture.rgb, 1.0);
     }
 
     vec4 normals_texture = vec4(0.0);

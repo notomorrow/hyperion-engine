@@ -331,7 +331,7 @@ std::vector<PackedIndex> Mesh::BuildPackedIndices() const
     return std::vector<PackedIndex>(m_indices.begin(), m_indices.end());
 }
 
-void Mesh::CalculateNormals()
+void Mesh::CalculateNormals(bool weighted)
 {
     if (m_indices.empty()) {
         DebugLog(LogType::Warn, "Cannot calculate normals before indices are generated!\n");
@@ -339,13 +339,13 @@ void Mesh::CalculateNormals()
         return;
     }
 
-    std::unordered_map<Index, std::vector<Vector3>> normals;
-    //std::vector<Vector3> normals(m_indices.size());
+    std::unordered_map<Index, DynArray<Vector3>> normals;
 
+    // compute per-face normals (facet normals)
     for (size_t i = 0; i < m_indices.size(); i += 3) {
-        Index i0 = m_indices[i];
-        Index i1 = m_indices[i + 1];
-        Index i2 = m_indices[i + 2];
+        const Index i0 = m_indices[i];
+        const Index i1 = m_indices[i + 1];
+        const Index i2 = m_indices[i + 2];
 
         const Vector3 &p0 = m_vertices[i0].GetPosition();
         const Vector3 &p1 = m_vertices[i1].GetPosition();
@@ -355,23 +355,101 @@ void Mesh::CalculateNormals()
         const Vector3 v = p1 - p0;
         const Vector3 n = v.Cross(u).Normalize();
 
-        normals[i0].push_back(n);
-        normals[i1].push_back(n);
-        normals[i2].push_back(n);
+        normals[i0].PushBack(n);
+        normals[i1].PushBack(n);
+        normals[i2].PushBack(n);
     }
 
     for (size_t i = 0; i < m_vertices.size(); i++) {
-        // find average
-        Vector3 average;
+        if (weighted) {
+            m_vertices[i].SetNormal(normals[i].Sum());
+        } else {
+            m_vertices[i].SetNormal(normals[i].Sum().Normalize());
+        }
+    }
 
-        for (const auto &normal : normals[i]) {
-            average += normal * (1.0f / float(normals[i].size()));
+    if (!weighted) {
+        return;
+    }
+
+    normals.clear();
+
+    // weighted (smooth) normals
+
+    for (size_t i = 0; i < m_indices.size(); i += 3) {
+        const Index i0 = m_indices[i];
+        const Index i1 = m_indices[i + 1];
+        const Index i2 = m_indices[i + 2];
+
+        const auto &p0 = m_vertices[i0].GetPosition();
+        const auto &p1 = m_vertices[i1].GetPosition();
+        const auto &p2 = m_vertices[i2].GetPosition();
+
+        const auto &n0 = m_vertices[i0].GetNormal();
+        const auto &n1 = m_vertices[i1].GetNormal();
+        const auto &n2 = m_vertices[i2].GetNormal();
+
+        // Vector3 n = FixedArray { n0, n1, n2 }.Avg();
+
+        FixedArray weighted_normals { n0, n1, n2 };
+
+        // nested loop through faces to get weighted neighbours
+        // any code that uses this really should bake the normals in
+        // especially for any production code. this is an expensive process
+        for (size_t j = 0; j < m_indices.size(); j += 3) {
+            if (j == i) {
+                continue;
+            }
+
+            const Index j0 = m_indices[j];
+            const Index j1 = m_indices[j + 1];
+            const Index j2 = m_indices[j + 2];
+
+            const FixedArray face_positions {
+                m_vertices[j0].GetPosition(),
+                m_vertices[j1].GetPosition(),
+                m_vertices[j2].GetPosition()
+            };
+
+            const FixedArray face_normals {
+                m_vertices[j0].GetNormal(),
+                m_vertices[j1].GetNormal(),
+                m_vertices[j2].GetNormal()
+            };
+
+            const auto a = p1 - p0;
+            const auto b = p2 - p0;
+            const auto c = a.Cross(b);
+
+            const auto area = 0.5f * MathUtil::Sqrt(c.Dot(c));
+
+            if (face_positions.Contains(p0)) {
+                const auto angle = (p0 - p1).AngleBetween(p0 - p2);
+                weighted_normals[0] += face_normals.Avg() * area * angle;
+            }
+
+            if (face_positions.Contains(p1)) {
+                const auto angle = (p1 - p0).AngleBetween(p1 - p2);
+                weighted_normals[1] += face_normals.Avg() * area * angle;
+            }
+
+            if (face_positions.Contains(p2)) {
+                const auto angle = (p2 - p0).AngleBetween(p2 - p1);
+                weighted_normals[2] += face_normals.Avg() * area * angle;
+            }
         }
 
-        average.Normalize();
-
-        m_vertices[i].SetNormal(average);
+        normals[i0].PushBack(weighted_normals[0].Normalized());
+        normals[i1].PushBack(weighted_normals[1].Normalized());
+        normals[i2].PushBack(weighted_normals[2].Normalized());
     }
+
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        m_vertices[i].SetNormal(normals[i].Sum().Normalized());
+    }
+
+    normals.clear();
+
 }
 
 void Mesh::CalculateTangents()

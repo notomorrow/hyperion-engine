@@ -51,6 +51,9 @@ public:
     constexpr float &operator[](UInt index)
         { return values[index]; }
 
+    explicit operator bool() const
+        { return Sum() != 0.0f; }
+
     Vector3 &operator=(const Vector3 &other);
     Vector3 operator+(const Vector3 &other) const;
     Vector3 &operator+=(const Vector3 &other);
@@ -74,10 +77,10 @@ public:
         { return std::tie(x, y, z) < std::tie(other.x, other.y, other.z); }
 
     constexpr float LengthSquared() const { return x * x + y * y + z * z; }
-    float Length() const                  { return std::sqrt(LengthSquared()); }
+    float Length() const { return std::sqrt(LengthSquared()); }
 
-    constexpr float Avg() const           { return (x + y + z) / 3.0f; }
-    constexpr float Sum() const           { return x + y + z; }
+    constexpr float Avg() const { return (x + y + z) / 3.0f; }
+    constexpr float Sum() const { return x + y + z; }
     float Max() const;
     float Min() const;
 
@@ -92,6 +95,7 @@ public:
     Vector3 &Rotate(const Vector3 &axis, float radians);
     Vector3 &Lerp(const Vector3 &to, const float amt);
     float Dot(const Vector3 &other) const;
+    float AngleBetween(const Vector3 &other) const;
 
     Vector4 ToVector4(float w = 1.0f) const
         { return Vector4(*this, w); }
