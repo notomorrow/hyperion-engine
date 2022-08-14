@@ -29,8 +29,7 @@ void main()
     vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
     vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
     float depth    = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    // reconstructing pos from depth has an issue with transparent objects
-    vec4 position  = SampleGBuffer(gbuffer_positions_texture, texcoord);  ///ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    vec4 position  = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
     vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     const float roughness = material.r;

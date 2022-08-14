@@ -38,8 +38,8 @@ void main()
     vec2 texcoord = v_texcoord0;
 
     
-    gbuffer_albedo    = vec4(1.0);
-    gbuffer_normals   = EncodeNormal(normal);
-    gbuffer_positions = vec4(v_position, 1.0);
-    gbuffer_material  = vec4(roughness, metalness, 0.0, 1.0);
+    gbuffer_albedo = vec4(1.0);
+    gbuffer_normals = EncodeNormal(normal);
+    gbuffer_positions = vec4(0.0); // not used
+    gbuffer_material = vec4(roughness, metalness, 0.0, 1.0);
 }

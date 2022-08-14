@@ -113,14 +113,16 @@ static bool ResizeBuffer(
     }
 
     if (needs_create) {
-        //const SizeType new_buffer_size_pow2 = MathUtil::NextPowerOf2(new_buffer_size);
+        if constexpr (IndirectDrawState::use_next_pow2_size) {
+            new_buffer_size = MathUtil::NextPowerOf2(new_buffer_size);
+        }
 
         DebugLog(
             LogType::Debug,
             "Resize indirect draw commands at frame index %u from %llu -> %llu\n",
             frame_index,
             current_buffer_size,
-            new_buffer_size//new_buffer_size_pow2
+            new_buffer_size
         );
 
         HYPERION_ASSERT_RESULT(buffers[frame_index]->Create(engine->GetDevice(), new_buffer_size));
@@ -294,7 +296,7 @@ void IndirectDrawState::UpdateBufferData(Engine *engine, Frame *frame, bool *out
 
 
 IndirectRenderer::IndirectRenderer()
-    : m_cached_cull_data_updated({ false })
+    : m_cached_cull_data_updated_bits(0x0)
 {
 }
 
@@ -306,7 +308,7 @@ void IndirectRenderer::Create(Engine *engine)
 {
     HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
 
-    const IndirectParams initial_params{};
+    const IndirectParams initial_params { };
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         HYPERION_ASSERT_RESULT(m_indirect_params_buffers[frame_index].Create(
@@ -407,11 +409,11 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     const CullData &cull_data
 )
 {
-    auto *command_buffer        = frame->GetCommandBuffer();
-    const auto frame_index      = frame->GetFrameIndex();
+    auto *command_buffer = frame->GetCommandBuffer();
+    const auto frame_index = frame->GetFrameIndex();
 
     const UInt num_draw_proxies = static_cast<UInt>(m_indirect_draw_state.GetDrawProxies().Size());
-    const UInt num_batches      = (num_draw_proxies / IndirectDrawState::batch_size) + 1;
+    const UInt num_batches = (num_draw_proxies / IndirectDrawState::batch_size) + 1;
 
     if (num_draw_proxies == 0) {
         return;
@@ -426,21 +428,21 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
     if (m_cached_cull_data != cull_data) {
         m_cached_cull_data = cull_data;
-        m_cached_cull_data_updated = { true, true };
+        m_cached_cull_data_updated_bits = 0xFF;
     }
 
-    if (m_cached_cull_data_updated[frame_index]) {
+    if (m_cached_cull_data_updated_bits & (1u << frame_index)) {
         m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
             .element_index = 0,
-            .image_view    = m_cached_cull_data.depth_pyramid_image_views[frame_index]
+            .image_view = m_cached_cull_data.depth_pyramid_image_views[frame_index]
         });
 
         m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
 
-        m_cached_cull_data_updated[frame_index] = false;
+        m_cached_cull_data_updated_bits &= ~(1u << frame_index);
     }
 
-    const auto scene_id    = engine->render_state.GetScene().id;
+    const auto scene_id = engine->render_state.GetScene().id;
     const UInt scene_index = scene_id ? scene_id.value - 1 : 0;
 
     // bind our descriptor set to binding point 0
@@ -459,9 +461,9 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
         m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
             .object_visibility_data = {
-                .batch_offset             = batch_index * IndirectDrawState::batch_size,
-                .num_draw_proxies         = num_draw_proxies_in_batch,
-                .scene_id                 = static_cast<UInt32>(scene_id.value),
+                .batch_offset = batch_index * IndirectDrawState::batch_size,
+                .num_draw_proxies = num_draw_proxies_in_batch,
+                .scene_id = static_cast<UInt32>(scene_id.value),
                 .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
             }
         });
@@ -483,13 +485,13 @@ void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
     descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
     descriptor_set->GetDescriptor(3)->SetSubDescriptor({
         .element_index = 0,
-        .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+        .buffer = m_indirect_draw_state.GetInstanceBuffer(frame_index)
     });
 
     descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
     descriptor_set->GetDescriptor(4)->SetSubDescriptor({
         .element_index = 0,
-        .buffer        = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+        .buffer = m_indirect_draw_state.GetIndirectBuffer(frame_index)
     });
 
     descriptor_set->ApplyUpdates(engine->GetDevice());

@@ -24,18 +24,19 @@ const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE](
 
 void main(void)
 {
-    const ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
 	const vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
     const float gradient_noise = InterleavedGradientNoise(vec2(coord));
 
     const vec4 uv_sample = imageLoad(ssr_uv_image, coord);
-    const vec2 uv        = uv_sample.xy;
-    const float alpha    = uv_sample.w;
+    const vec2 uv = uv_sample.xy;
+    const float alpha = uv_sample.w;
 
     vec4 reflection_sample = vec4(0.0);
 
-    vec3 P = SampleGBuffer(gbuffer_positions_texture, texcoord).xyz;
+    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth).xyz;
     vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
     vec3 V = normalize(scene.camera_position.xyz - P);
     float roughness = 0.0;

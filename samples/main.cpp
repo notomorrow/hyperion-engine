@@ -162,7 +162,6 @@ public:
         grass->GetChild(0)->GetEntity()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
-        // grass->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
 
 
         material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);

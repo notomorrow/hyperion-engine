@@ -437,6 +437,18 @@ void Mesh::CalculateNormals(bool weighted)
                 const auto angle = (p2 - p0).AngleBetween(p2 - p1);
                 weighted_normals[2] += face_normals.Avg() * area * angle;
             }
+
+            // if (face_positions.Contains(p0)) {
+            //     weighted_normals[0] += face_normals.Avg();
+            // }
+
+            // if (face_positions.Contains(p1)) {
+            //     weighted_normals[1] += face_normals.Avg();
+            // }
+
+            // if (face_positions.Contains(p2)) {
+            //     weighted_normals[2] += face_normals.Avg();
+            // }
         }
 
         normals[i0].PushBack(weighted_normals[0].Normalized());
