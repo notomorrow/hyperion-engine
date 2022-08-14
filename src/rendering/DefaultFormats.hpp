@@ -11,7 +11,8 @@ enum TextureFormatDefault {
     TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT = 1 << 3,
     TEXTURE_FORMAT_DEFAULT_NORMALS      = 1 << 4,
     TEXTURE_FORMAT_DEFAULT_UV           = 1 << 5,
-    TEXTURE_FORMAT_DEFAULT_STORAGE      = 1 << 6
+    TEXTURE_FORMAT_DEFAULT_STORAGE      = 1 << 6,
+    TEXTURE_FORMAT_DEFAULT_UNUSED       = 1 << 7
 };
 
 } // namespace hyperion::v2

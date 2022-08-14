@@ -135,7 +135,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F},
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
@@ -147,6 +148,15 @@ void Engine::FindTextureFormatDefaults()
         device->GetFeatures().FindSupportedFormat(
             std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F},
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+        )
+    );
+
+    m_texture_format_defaults.Set(
+        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_UNUSED,
+        device->GetFeatures().FindSupportedFormat(
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8 },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )

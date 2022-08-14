@@ -19,7 +19,7 @@ layout(location=2) out vec4 gbuffer_positions;
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo    = vec4(0.0, 1.0, 0.0, 1.0);
-    gbuffer_normals   = EncodeNormal(normal);
-    gbuffer_positions = vec4(v_position, 1.0);
+    gbuffer_albedo = vec4(0.0, 1.0, 0.0, 1.0);
+    gbuffer_normals = EncodeNormal(normal);
+    gbuffer_positions = vec4(0.0); // not used
 }

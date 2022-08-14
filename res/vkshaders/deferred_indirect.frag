@@ -209,7 +209,7 @@ void main()
 
         result = Fr + Fd;
 
-        // result = albedo.rgb * 2.0 - 1.0;
+        // result = normal.rgb * 0.5 + 0.5;
         //end ibl
     } else {
         result = albedo.rgb;
