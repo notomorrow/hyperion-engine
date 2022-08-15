@@ -2,6 +2,7 @@
 #define HYPERION_V2_SCENE_H
 
 #include "Node.hpp"
+#include "NodeProxy.hpp"
 #include "Entity.hpp"
 #include "Octree.hpp"
 #include <rendering/Base.hpp>
@@ -32,9 +33,9 @@ public:
     Scene &operator=(const Scene &other) = delete;
     ~Scene();
 
-    Ref<Camera> &GetCamera()                  { return m_camera; }
-    const Ref<Camera> &GetCamera() const      { return m_camera; }
-    void SetCamera(Ref<Camera> &&camera)      { m_camera = std::move(camera); }
+    Ref<Camera> &GetCamera() { return m_camera; }
+    const Ref<Camera> &GetCamera() const { return m_camera; }
+    void SetCamera(Ref<Camera> &&camera) { m_camera = std::move(camera); }
 
     /*! Add an Entity to the queue. On Update(), it will be added to the scene. */
     bool AddEntity(Ref<Entity> &&entity);
@@ -43,18 +44,19 @@ public:
     bool RemoveEntity(const Ref<Entity> &entity);
 
     /*! ONLY CALL FROM GAME THREAD!!! */
-    auto &GetEntities()                       { return m_entities; }
-    const auto &GetEntities() const           { return m_entities; }
+    auto &GetEntities() { return m_entities; }
+    const auto &GetEntities() const { return m_entities; }
 
-    Node *GetRootNode() const                 { return m_root_node.get(); }
+    NodeProxy &GetRoot() { return m_root_node_proxy; }
+    const NodeProxy &GetRoot() const { return m_root_node_proxy; }
 
     RenderEnvironment *GetEnvironment() const { return m_environment; }
 
-    World *GetWorld() const                   { return m_world; }
+    World *GetWorld() const { return m_world; }
     void SetWorld(World *world);
 
-    Scene::ID GetParentId() const             { return m_parent_id; }
-    void SetParentId(Scene::ID id)            { m_parent_id = id; }
+    Scene::ID GetParentId() const { return m_parent_id; }
+    void SetParentId(Scene::ID id) { m_parent_id = id; }
     
     void Init(Engine *engine);
 
@@ -80,7 +82,7 @@ private:
     void RemoveFromRendererInstances(Ref<Entity> &entity);
 
     Ref<Camera>                  m_camera;
-    std::unique_ptr<Node>        m_root_node;
+    NodeProxy                    m_root_node_proxy;
     RenderEnvironment           *m_environment;
     World                       *m_world;
     std::array<Ref<Texture>,     max_environment_textures> m_environment_textures;

@@ -269,10 +269,10 @@ DynArray<T>::DynArray(DynArray &&other) noexcept
         }
     }
 
-    other.m_size        = 0;
-    other.m_capacity    = inline_storage_size;
-    other.m_buffer      = &other.m_inline_buffer[0];
-    other.m_is_dynamic  = false;
+    other.m_size = 0;
+    other.m_capacity = inline_storage_size;
+    other.m_buffer = &other.m_inline_buffer[0];
+    other.m_is_dynamic = false;
     other.m_start_offset = 0;
 }
 
@@ -288,6 +288,13 @@ DynArray<T>::~DynArray()
     if (m_is_dynamic) {
         std::free(m_buffer);
     }
+
+#if HYP_DEBUG_MODE
+    m_size = 0;
+    m_start_offset = 0;
+    m_capacity = inline_storage_size;
+    m_buffer = &m_inline_buffer[0];
+#endif
 }
 
 template <class T>

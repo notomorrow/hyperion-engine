@@ -36,11 +36,15 @@ void Bone::ClearPose()
     UpdateBoneTransform();
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->ClearPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        if (child.Get()->GetType() != Type::BONE) {
+            continue;
+        }
+
+        static_cast<Bone *>(child.Get())->ClearPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 
@@ -50,11 +54,15 @@ void Bone::StoreBindingPose()
     m_inv_binding_rotation = Quaternion(m_world_bone_rotation).Invert();
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->StoreBindingPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        if (child.Get()->GetType() != Type::BONE) {
+            continue;
+        }
+
+        static_cast<Bone *>(child.Get())->StoreBindingPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 
@@ -66,11 +74,15 @@ void Bone::SetToBindingPose()
     UpdateBoneTransform();
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->SetToBindingPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        if (child.Get()->GetType() != Type::BONE) {
+            continue;
+        }
+
+        static_cast<Bone *>(child.Get())->SetToBindingPose();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 
@@ -86,11 +98,15 @@ void Bone::CalculateBoneTranslation()
     }
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->CalculateBoneTranslation();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        if (child.Get()->GetType() != Type::BONE) {
+            continue;
+        }
+
+        static_cast<Bone *>(child.Get())->CalculateBoneTranslation();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 
@@ -105,11 +121,15 @@ void Bone::CalculateBoneRotation()
     }
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->CalculateBoneRotation();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        if (child.Get()->GetType() != Type::BONE) {
+            continue;
+        }
+
+        static_cast<Bone *>(child.Get())->CalculateBoneRotation();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 
@@ -135,11 +155,15 @@ void Bone::SetSkeleton(Skeleton *skeleton)
     m_skeleton = skeleton;
     
     for (auto &child : m_child_nodes) {
-        if (child == nullptr || child->GetType() != Type::BONE) {
+        if (!child) {
+            continue;
+        }
+        
+        if (child.Get()->GetType() != Type::BONE) {
             continue;
         }
 
-        static_cast<Bone *>(child.get())->SetSkeleton(skeleton);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        static_cast<Bone *>(child.Get())->SetSkeleton(skeleton);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
 

@@ -377,7 +377,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
             node->SetEntity(std::move(entity));
 
-            top->AddChild(std::move(node));
+            top->AddChild(NodeProxy(node.release()));
         });
     }
 

@@ -4,9 +4,12 @@
 #include <core/Containers.hpp>
 #include <GameCounter.hpp>
 #include "Entity.hpp"
+#include "NodeProxy.hpp"
 
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
+
+#include <Types.hpp>
 
 #include <vector>
 #include <memory>
@@ -19,9 +22,17 @@ class Scene;
 class Node {
     friend class Scene;
     friend class Entity;
+    friend class NodeProxy;
+
+    struct NodeRefCount {
+        UInt count = 0;
+    } m_ref_count;
+
+    void IncRef() { ++m_ref_count.count; }
+    void DecRef() { AssertThrow(m_ref_count.count != 0); --m_ref_count.count; }
 
 public:
-    using NodeList = std::vector<std::unique_ptr<Node>>;
+    using NodeList = std::vector<NodeProxy>;
 
     enum class Type {
         NODE,
@@ -50,33 +61,35 @@ public:
 
     Node(const Node &other) = delete;
     Node &operator=(const Node &other) = delete;
+    Node(Node &&other) noexcept;
+    Node &operator=(Node &&other) noexcept;
     ~Node();
 
     /*! @returns The string tag that was given to the Node on creation. */
-    const char *GetName() const            { return m_name; }
+    const char *GetName() const { return m_name; }
     /*! \brief Set the string tag of this Node. Used for nested lookups. */
     void SetName(const char *name);
     /*! @returns The type of the node. By default, it will just be NODE. */
-    Type GetType() const                   { return m_type; }
+    Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
-    Node *GetParent() const                { return m_parent_node; }
+    Node *GetParent() const { return m_parent_node; }
     /*! @returns A pointer to the Scene this Node and its children are attached to. May be null. */
-    Scene *GetScene() const                { return m_scene; }
+    Scene *GetScene() const { return m_scene; }
 
-    Ref<Entity> &GetEntity()               { return m_entity; }
-    const Ref<Entity> &GetEntity() const   { return m_entity; }
+    Ref<Entity> &GetEntity() { return m_entity; }
+    const Ref<Entity> &GetEntity() const { return m_entity; }
     void SetEntity(Ref<Entity> &&entity);
 
     /*! \brief Add a new child Node to this object
      * @returns The added Node
      */
-    Node *AddChild();
+    NodeProxy AddChild();
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      * @param node The Node to be added as achild of this Node
      * @returns The added Node
      */
-    Node *AddChild(std::unique_ptr<Node> &&node);
+    NodeProxy AddChild(const NodeProxy &node);
 
     /*! \brief Remove a child using the given iterator (i.e from FindChild())
      * @param iter The iterator from this Node's child list
@@ -92,13 +105,15 @@ public:
 
     /*! \brief Remove this node from the parent Node's list of child Nodes. */
     bool Remove();
+
+    void RemoveAllChildren();
     
     /*! \brief Get a child Node from this Node's child list at the given index.
      * @param index The index of the child element to return
      * @returns The child node at the given index. If the index is out of bounds, nullptr
      * will be returned.
      */
-    Node *GetChild(size_t index) const;
+    NodeProxy GetChild(size_t index) const;
 
     /*! \brief Search for a (potentially nested) node using the syntax `some/child/node`.
      * Each `/` indicates searching a level deeper, so first a child node with the tag "some"
@@ -109,7 +124,7 @@ public:
      * The string is case-sensitive.
      * The '/' can be escaped by using a '\' char.
      */
-    Node *Select(const char *selector);
+    NodeProxy Select(const char *selector);
 
     /*! \brief Get an iterator for the given child Node from this Node's child list
      * @param node The node to find in this Node's child list
@@ -123,14 +138,20 @@ public:
      */
     NodeList::iterator FindChild(const char *name);
 
-    NodeList &GetChildren()             { return m_child_nodes; }
+    NodeList &GetChildren() { return m_child_nodes; }
     const NodeList &GetChildren() const { return m_child_nodes; }
 
     /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
      * so no calculation happens when calling this method.
      * @returns A vector of raw pointers to descendent Nodes
      */
-    const std::vector<Node *> &GetDescendents() const { return m_descendents; }
+    std::vector<NodeProxy> &GetDescendents() { return m_descendents; }
+
+    /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
+     * so no calculation happens when calling this method.
+     * @returns A vector of raw pointers to descendent Nodes
+     */
+    const std::vector<NodeProxy> &GetDescendents() const { return m_descendents; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     void SetLocalTransform(const Transform &);
@@ -255,8 +276,8 @@ protected:
 
     void SetScene(Scene *scene);
 
-    void OnNestedNodeAdded(Node *node);
-    void OnNestedNodeRemoved(Node *node);
+    void OnNestedNodeAdded(const NodeProxy &node);
+    void OnNestedNodeRemoved(const NodeProxy &node);
 
     Type m_type = Type::NODE;
     char *m_name;
@@ -269,7 +290,7 @@ protected:
 
     Ref<Entity> m_entity;
 
-    std::vector<Node *> m_descendents;
+    std::vector<NodeProxy> m_descendents;
 
     Scene *m_scene;
 };

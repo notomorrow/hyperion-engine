@@ -202,7 +202,7 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
 
         if (!item.parent_name.empty()) {
             if (auto *parent_bone = skeleton->FindBone(item.parent_name.c_str())) {
-                parent_bone->AddChild(std::move(bone));
+                parent_bone->AddChild(NodeProxy(bone.release()));
 
                 continue;
             }

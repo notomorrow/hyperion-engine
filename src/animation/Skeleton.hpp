@@ -28,7 +28,14 @@ public:
      * or the bone could not be found, nullptr is returned. Otherwise, the resulting bone
      * pointer is returned.
      */
-    Bone *FindBone(const char *name) const;
+    Bone *FindBone(const char *name);
+
+    /*! \brief Look up a bone with the given name/tag. If no root bone was set,
+     * or the bone could not be found, nullptr is returned. Otherwise, the resulting bone
+     * pointer is returned.
+     */
+    const Bone *FindBone(const char *name) const
+        { return const_cast<Skeleton *>(this)->FindBone(name); }
 
     /*! \brief Get the root Bone of this skeleton, which all nested Bones fall under.
      * If no root bone was set on this Skeleton, nullptr is returned

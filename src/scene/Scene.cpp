@@ -8,16 +8,17 @@ namespace hyperion::v2 {
 Scene::Scene(Ref<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
-      m_root_node(std::make_unique<Node>("root")),
+      m_root_node_proxy(new Node("root")),
       m_environment(new RenderEnvironment(this)),
       m_world(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
-    m_root_node->SetScene(this);
+    m_root_node_proxy.Get()->SetScene(this);
 }
 
 Scene::~Scene()
 {
+    m_environment->OnDisposed();
     delete m_environment;
 }
     
@@ -43,7 +44,7 @@ void Scene::Init(Engine *engine)
 
             m_camera.Reset();
 
-            m_root_node->SetScene(nullptr);
+            m_root_node_proxy.Get()->SetScene(nullptr);
 
             for (auto &it : m_entities) {
                 AssertThrow(it.second != nullptr);
@@ -366,12 +367,11 @@ void Scene::EnqueueRenderUpdates()
 {
     struct {
         BoundingBox aabb;
-        Float       global_timer;
+        Float global_timer;
     } params = {
-        .aabb            = m_aabb,
-        .global_timer    = m_environment->GetGlobalTimer()
+        .aabb = m_aabb,
+        .global_timer = m_environment->GetGlobalTimer()
     };
-
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
         SceneShaderData shader_data {
