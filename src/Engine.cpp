@@ -28,7 +28,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(this),
       assets(this),
-      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 10.0f)
+      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 60.0f)
 {
 }
 
@@ -135,9 +135,10 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F},
+            std::array{ //Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )

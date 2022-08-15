@@ -23,6 +23,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
+#include "include/PhysicalCamera.inc"
 
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
@@ -40,7 +41,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 /* Begin main shader program */
 
 #define IBL_INTENSITY 10000.0
-#define IRRADIANCE_MULTIPLIER 1.0
+#define IRRADIANCE_MULTIPLIER 8.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -110,13 +111,6 @@ void main()
     vec3 albedo_linear = albedo.rgb;
 	vec3 result = vec3(0.0);
 
-    /* Physical camera */
-    float aperture = 16.0;
-    float shutter = 1.0/125.0;
-    float sensitivity = 100.0;
-    float ev100 = log2((aperture * aperture) / shutter * 100.0f / sensitivity);
-    float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
-    
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);
     vec3 B = normalize(bitangent.xyz);
@@ -155,7 +149,7 @@ void main()
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
             uint probe_index = scene.environment_texture_index;
-            ibl = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], position.xyz, R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+            ibl = EnvProbeSampleParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], position.xyz, R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
         }
 #endif
 
@@ -187,8 +181,18 @@ void main()
         // ibl
         //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
 
-        // TEMP
-        irradiance = vec3(0.65);
+        // TEMP; will be under a compiler conditional.
+        // quick and dirty hack to get not-so accurate indirect light for the scene --
+        // sample lowest mipmap of cubemap, if we have it.
+        // later, replace this will spherical harmonics.
+#if HYP_ENV_PROBE_ENABLED
+        if (scene.environment_texture_usage != 0) {
+            uint probe_index = scene.environment_texture_index;
+            const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_index]);
+
+            irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_index], -N, float(num_levels - 1)).rgb;
+        }
+#endif
 
         vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
 
@@ -198,16 +202,21 @@ void main()
         specular_ao *= energy_compensation;
 
         vec3 Fr = dfg * ibl * specular_ao;
-        Fr *= exposure * IBL_INTENSITY;
-
-        reflections.rgb *= specular_ao;
-        Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
 
         vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
         Fd *= multibounce;
         Fr *= multibounce;
 
+        Fr *= exposure * IBL_INTENSITY;
+        Fd *= exposure * IBL_INTENSITY;
+
+        reflections.rgb *= specular_ao;
+        Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
+
         result = Fr + Fd;
+
+
+        result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
 
         // result = normal.rgb * 0.5 + 0.5;
         //end ibl
@@ -219,14 +228,9 @@ void main()
     result = vec3(ao);
 #endif
 
-    // output_color = vec4(albedo.rgb, 1.0);
-
     output_color = vec4(result, 1.0);
 
-
     // output_color.rgb = vec3(float(depth < 0.95)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
-
-    // output_color.rgb = irradiance.rgb;
     //output_color = ScreenSpaceReflection(material.r);
 
     // output_color.rgb = ibl.rgb;

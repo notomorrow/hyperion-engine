@@ -124,7 +124,7 @@ size_t Skeleton::NumBones() const
         return 0;
     }
 
-    return 1 + m_root_bone->GetDescendents().size();
+    return 1 + m_root_bone->GetDescendents().Size();
 }
 
 void Skeleton::AddAnimation(std::unique_ptr<Animation> &&animation)

@@ -7,7 +7,7 @@
 
 #ifndef HYP_SSR_USE_GAUSSIAN_BLUR
     #define HYP_SSR_BLUR_MIN        0.25
-    #define HYP_SSR_BLUR_MULTIPLIER 10.0
+    #define HYP_SSR_BLUR_MULTIPLIER 30.0
 #endif
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
@@ -28,6 +28,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radi
 #else
     #error No blur direction defined
 #endif
+
+#ifdef HYP_SSR_USE_GAUSSIAN_BLUR
 
 #define GAUSS_TABLE_SIZE 15
 
@@ -106,6 +108,8 @@ void GaussianBlurAccum(
     }
 }
 
+#endif
+
 void main(void)
 {
     const ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
@@ -130,7 +134,7 @@ void main(void)
         
         if (divisor > 0.0) {
             reflection_sample /= divisor;
-            accum_radius      /= divisor;
+            accum_radius /= divisor;
         }
     // }
 

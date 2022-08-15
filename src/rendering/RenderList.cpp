@@ -5,7 +5,7 @@
 namespace hyperion::v2 {
 
 const std::array<TextureFormatDefault, num_gbuffer_textures> RenderListContainer::gbuffer_textures = {
-    TEXTURE_FORMAT_DEFAULT_COLOR,   // color
+    TEXTURE_FORMAT_DEFAULT_GBUFFER,//COLOR,   // color
     TEXTURE_FORMAT_DEFAULT_NORMALS, // normal
     TEXTURE_FORMAT_DEFAULT_UNUSED, // position -- No longer used. Reconstruct from depth instead.
     TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT, // material
@@ -122,7 +122,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(gbuffer_textures[0]),
+            engine->GetDefaultFormat(TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_GBUFFER),//engine->GetDefaultFormat(gbuffer_textures[0]),
             nullptr
         );
         

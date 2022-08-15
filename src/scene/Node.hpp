@@ -32,7 +32,7 @@ class Node {
     void DecRef() { AssertThrow(m_ref_count.count != 0); --m_ref_count.count; }
 
 public:
-    using NodeList = std::vector<NodeProxy>;
+    using NodeList = DynArray<NodeProxy>;
 
     enum class Type {
         NODE,
@@ -95,7 +95,7 @@ public:
      * @param iter The iterator from this Node's child list
      * @returns Whether then removal was successful
      */
-    bool RemoveChild(NodeList::iterator iter);
+    bool RemoveChild(NodeList::Iterator iter);
 
     /*! \brief Remove a child at the given index
      * @param index The index of the child element to remove
@@ -130,13 +130,13 @@ public:
      * @param node The node to find in this Node's child list
      * @returns The resulting iterator
      */
-    NodeList::iterator FindChild(Node *node);
+    NodeList::Iterator FindChild(Node *node);
 
     /*! \brief Get an iterator for a node by finding it by its string tag
      * @param name The string tag to compare with the child Node's string tag
      * @returns The resulting iterator
      */
-    NodeList::iterator FindChild(const char *name);
+    NodeList::Iterator FindChild(const char *name);
 
     NodeList &GetChildren() { return m_child_nodes; }
     const NodeList &GetChildren() const { return m_child_nodes; }
@@ -145,13 +145,13 @@ public:
      * so no calculation happens when calling this method.
      * @returns A vector of raw pointers to descendent Nodes
      */
-    std::vector<NodeProxy> &GetDescendents() { return m_descendents; }
+    DynArray<NodeProxy> &GetDescendents() { return m_descendents; }
 
     /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
      * so no calculation happens when calling this method.
      * @returns A vector of raw pointers to descendent Nodes
      */
-    const std::vector<NodeProxy> &GetDescendents() const { return m_descendents; }
+    const DynArray<NodeProxy> &GetDescendents() const { return m_descendents; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     void SetLocalTransform(const Transform &);
@@ -290,7 +290,7 @@ protected:
 
     Ref<Entity> m_entity;
 
-    std::vector<NodeProxy> m_descendents;
+    DynArray<NodeProxy> m_descendents;
 
     Scene *m_scene;
 };

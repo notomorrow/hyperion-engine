@@ -208,9 +208,9 @@ void ScreenspaceReflectionRenderer::Render(
         .ssr_data = {
             .width                  = m_extent.width,
             .height                 = m_extent.height,
-            .ray_step               = 0.85f,
-            .num_iterations         = 80.0f,
-            .max_ray_distance       = 128.0f,
+            .ray_step               = 1.5f,
+            .num_iterations         = 128.0f,
+            .max_ray_distance       = 512.0f,
             .distance_bias          = 0.1f,
             .offset                 = 0.01f,
             .eye_fade_start         = 0.45f,

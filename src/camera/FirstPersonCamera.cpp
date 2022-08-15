@@ -86,7 +86,7 @@ void FirstPersonCamera::UpdateLogic(double dt)
         // );
     }
 
-    m_next_translation += m_move_deltas * dt;
+    m_next_translation += m_move_deltas * movement_speed * dt;
 }
 
 void FirstPersonCamera::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
@@ -101,7 +101,7 @@ void FirstPersonCamera::RespondToCommand(const CameraCommand &command, GameCount
     }
     case CameraCommand::CAMERA_COMMAND_MOVEMENT:
     {
-        const float speed = movement_speed * static_cast<float>(dt);
+        const float speed = movement_speed;// * static_cast<float>(dt);
 
         switch (command.movement_data.movement_type) {
         case CameraCommand::CAMERA_MOVEMENT_FORWARD:

@@ -26,7 +26,9 @@ using renderer::Image;
 using renderer::ImageView;
 using renderer::Extent2D;
 
-class CubemapRenderer : public EngineComponentBase<STUB_CLASS(CubemapRenderer)>, public RenderComponent<CubemapRenderer> {
+class CubemapRenderer
+    : public EngineComponentBase<STUB_CLASS(CubemapRenderer)>,
+      public RenderComponent<CubemapRenderer> {
 public:
     static constexpr RenderComponentName component_name = RENDER_COMPONENT_CUBEMAP;
 

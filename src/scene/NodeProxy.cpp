@@ -5,17 +5,17 @@ namespace hyperion::v2 {
 
 SizeType NodeProxyChildren::Size() const
 {
-    return node ? node->GetChildren().size() : 0;
+    return node ? node->GetChildren().Size() : 0;
 }
 
 NodeProxyChildren::Iterator NodeProxyChildren::End()
 {
-    return Iterator { node, node->GetChildren().size() };
+    return Iterator { node, node->GetChildren().Size() };
 }
 
 NodeProxy &NodeProxyChildren::Iterator::operator*()
 {
-    AssertThrow(node != nullptr && index < node->GetChildren().size());
+    AssertThrow(node != nullptr && index < node->GetChildren().Size());
 
     return node->GetChildren()[index];
 }
@@ -107,7 +107,7 @@ void NodeProxy::ReleaseNode()
 
 NodeProxy NodeProxy::GetChild(SizeType index)
 {
-    if (m_node && index < m_node->GetChildren().size()) {
+    if (m_node && index < m_node->GetChildren().Size()) {
         return NodeProxy(m_node->GetChild(index));
     }
 

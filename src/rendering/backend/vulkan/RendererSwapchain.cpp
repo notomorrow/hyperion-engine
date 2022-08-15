@@ -15,7 +15,7 @@ Swapchain::Swapchain()
 
 VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat(Device *device)
 {
-    DebugLog(LogType::Debug, "Looking for SRGB surface format\n");
+    DebugLog(LogType::Info, "Looking for SRGB surface format\n");
 
     /* look for srgb format */
     this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
@@ -38,7 +38,7 @@ VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat(Device *device)
         return this->surface_format;
     }
 
-    DebugLog(LogType::Debug, "Could not find SRGB surface format, looking for non-srgb format\n");
+    DebugLog(LogType::Warn, "Could not find SRGB surface format, looking for non-srgb format\n");
 
     /* look for non-srgb format */
     this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(

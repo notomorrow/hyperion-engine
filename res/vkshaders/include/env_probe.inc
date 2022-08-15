@@ -18,9 +18,11 @@ layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26) uniform EnvProbeUn
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
 
-vec4 SampleProbeParallaxCorrected(sampler samp, textureCube tex,
-                                  EnvProbe env_probe,
-                                  vec3 world, vec3 R, float lod)
+vec4 EnvProbeSampleParallaxCorrected(
+    sampler samp, textureCube tex,
+    EnvProbe env_probe,
+    vec3 world, vec3 R, float lod
+)
 {
     vec3 rbmax    = (env_probe.aabb_max.xyz - world) / R;
     vec3 rbmin    = (env_probe.aabb_min.xyz - world) / R;
@@ -35,9 +37,11 @@ vec4 SampleProbeParallaxCorrected(sampler samp, textureCube tex,
     return textureLod(samplerCube(tex, samp), coord, lod);
 }
 
-vec4 SampleProbeParallaxCorrected(samplerCube tex,
-                                  EnvProbe env_probe,
-                                  vec3 world, vec3 R, float lod)
+vec4 EnvProbeSampleParallaxCorrected(
+    samplerCube tex,
+    EnvProbe env_probe,
+    vec3 world, vec3 R, float lod
+)
 {
     vec3 rbmax    = (env_probe.aabb_max.xyz - world) / R;
     vec3 rbmin    = (env_probe.aabb_min.xyz - world) / R;
@@ -52,9 +56,19 @@ vec4 SampleProbeParallaxCorrected(samplerCube tex,
     return textureLod(tex, coord, lod);
 }
 
-vec4 SampleProbe(sampler samp, textureCube tex, vec3 R, float lod)
+vec4 EnvProbeSample(sampler samp, textureCube tex, vec3 R, float lod)
 {
     return textureLod(samplerCube(tex, samp), R, lod);
+}
+
+/*vec4 EnvProbeSample(sampleCube tex, vec3 R, float lod)
+{
+    return textureLod(tex, R, lod);
+}*/
+
+int EnvProbeGetNumLevels(sampler samp, textureCube tex)
+{
+    return textureQueryLevels(samplerCube(tex, samp));
 }
 
 #endif

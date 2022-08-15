@@ -101,8 +101,8 @@ public:
         scene = engine->resources.scenes.Add(new Scene(
             engine->resources.cameras.Add(new FirstPersonCamera(//FollowCamera(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
-                1024, 1024,//2048, 1080,
-                70.0f,
+                2048, 2048,//2048, 1080,
+                75.0f,
                 0.35f, 15000.0f
             ))
         ));
@@ -154,7 +154,7 @@ public:
 
         if (auto terrain_node = scene->GetRoot().AddChild()) {
             terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
-            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xFF8F8F, Extent3D { 128 } , Vector3(3.0f, 5.0f, 3.0f), 6.0f);
+            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 400 } , Vector3(17.5f, 32.0f, 17.5f), 8.0f);
         }
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
@@ -178,12 +178,12 @@ public:
         
         auto cubemap = engine->resources.textures.Add(new TextureCube(
            engine->assets.Load<Texture>(
-               "textures/Lycksele3/posx.jpg",
-               "textures/Lycksele3/negx.jpg",
-               "textures/Lycksele3/posy.jpg",
-               "textures/Lycksele3/negy.jpg",
-               "textures/Lycksele3/posz.jpg",
-               "textures/Lycksele3/negz.jpg"
+               "textures/IceRiver/posx.jpg",
+               "textures/IceRiver/negx.jpg",
+               "textures/IceRiver/posy.jpg",
+               "textures/IceRiver/negy.jpg",
+               "textures/IceRiver/posz.jpg",
+               "textures/IceRiver/negz.jpg"
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
@@ -236,15 +236,14 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
+        // if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
             // for (auto &child : test->GetChildren()) {
             //     if (auto &ent = child->GetEntity()) {
             //         std::cout << "Adding debug controller to  " << child->GetName() << "\n";
             //         ent->AddController<AABBDebugController>(engine);
             //     }
             // }
-
-        }
+        // }
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
@@ -266,15 +265,15 @@ public:
         quad_spatial->SetTranslation(Vector3(0, 12.0f, 0));
         scene->AddEntity(std::move(quad_spatial));
         
-        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-            my_light.IncRef(),
-            Vector3::Zero(),
-            80.0f
-        );
+        // scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        //     my_light.IncRef(),
+        //     Vector3::Zero(),
+        //     80.0f
+        // );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            BoundingBox { Vector(-280, -20, -280), Vector(200, 60, 200) },
+            BoundingBox { Vector(-500, 140, -500), Vector(500, 200, 500) },
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
         scene->ForceUpdate();

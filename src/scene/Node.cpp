@@ -74,10 +74,10 @@ Node::Node(Node &&other) noexcept
     other.m_name = nullptr;
 
     m_child_nodes = std::move(other.m_child_nodes);
-    other.m_child_nodes.clear();
+    other.m_child_nodes = {};
 
     m_descendents = std::move(other.m_descendents);
-    other.m_descendents.clear();
+    other.m_descendents = {};
 
     for (auto &node : m_child_nodes) {
         AssertThrow(node.Get() != nullptr);
@@ -122,10 +122,10 @@ Node &Node::operator=(Node &&other) noexcept
     other.m_name = nullptr;
 
     m_child_nodes = std::move(other.m_child_nodes);
-    other.m_child_nodes.clear();
+    other.m_child_nodes = {};
 
     m_descendents = std::move(other.m_descendents);
-    other.m_descendents.clear();
+    other.m_descendents = {};
 
     for (auto &node : m_child_nodes) {
         AssertThrow(node.Get() != nullptr);
@@ -140,6 +140,7 @@ Node::~Node()
 {
     AssertThrow(m_ref_count.count == 0);
 
+    RemoveAllChildren();
     SetEntity(nullptr);
 
     delete[] m_name;
@@ -181,7 +182,7 @@ void Node::SetScene(Scene *scene)
 
 void Node::OnNestedNodeAdded(const NodeProxy &node)
 {
-    m_descendents.push_back(node);
+    m_descendents.PushBack(node);
     
     if (m_parent_node != nullptr) {
         m_parent_node->OnNestedNodeAdded(node);
@@ -190,10 +191,10 @@ void Node::OnNestedNodeAdded(const NodeProxy &node)
 
 void Node::OnNestedNodeRemoved(const NodeProxy &node)
 {
-    const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
+    const auto it = m_descendents.Find(node);
 
-    if (it != m_descendents.end()) {
-        m_descendents.erase(it);
+    if (it != m_descendents.End()) {
+        m_descendents.Erase(it);
     }
 
     if (m_parent_node != nullptr) {
@@ -211,23 +212,23 @@ NodeProxy Node::AddChild(const NodeProxy &node)
     AssertThrow(node.Get() != nullptr);
     AssertThrow(node.Get()->m_parent_node == nullptr);
 
-    m_child_nodes.push_back(node);
+    m_child_nodes.PushBack(node);
 
-    m_child_nodes.back().Get()->m_parent_node = this;
-    m_child_nodes.back().Get()->SetScene(m_scene);
+    m_child_nodes.Back().Get()->m_parent_node = this;
+    m_child_nodes.Back().Get()->SetScene(m_scene);
 
-    OnNestedNodeAdded(m_child_nodes.back());
+    OnNestedNodeAdded(m_child_nodes.Back());
 
-    for (auto &nested : m_child_nodes.back().Get()->GetDescendents()) {
+    for (auto &nested : m_child_nodes.Back().Get()->GetDescendents()) {
         OnNestedNodeAdded(nested);
     }
 
-    m_child_nodes.back().Get()->UpdateWorldTransform();
+    m_child_nodes.Back().Get()->UpdateWorldTransform();
 
-    return m_child_nodes.back();
+    return m_child_nodes.Back();
 }
 
-bool Node::RemoveChild(NodeList::iterator iter)
+bool Node::RemoveChild(NodeList::Iterator iter)
 {
     if (iter == m_child_nodes.end()) {
         return false;
@@ -247,7 +248,7 @@ bool Node::RemoveChild(NodeList::iterator iter)
         node.Get()->SetScene(nullptr);
     }
 
-    m_child_nodes.erase(iter);
+    m_child_nodes.Erase(iter);
 
     UpdateWorldTransform();
 
@@ -256,7 +257,7 @@ bool Node::RemoveChild(NodeList::iterator iter)
 
 bool Node::RemoveChild(size_t index)
 {
-    if (index >= m_child_nodes.size()) {
+    if (index >= m_child_nodes.Size()) {
         return false;
     }
 
@@ -289,7 +290,7 @@ void Node::RemoveAllChildren()
             node.Get()->SetScene(nullptr);
         }
 
-        it = m_child_nodes.erase(it);
+        it = m_child_nodes.Erase(it);
     }
 
     UpdateWorldTransform();
@@ -297,7 +298,7 @@ void Node::RemoveAllChildren()
 
 NodeProxy Node::GetChild(size_t index) const
 {
-    if (index >= m_child_nodes.size()) {
+    if (index >= m_child_nodes.Size()) {
         return NodeProxy();
     }
 
@@ -372,26 +373,18 @@ NodeProxy Node::Select(const char *selector)
     return NodeProxy(search_node);
 }
 
-Node::NodeList::iterator Node::FindChild(Node *node)
+Node::NodeList::Iterator Node::FindChild(Node *node)
 {
-    return std::find_if(
-        m_child_nodes.begin(),
-        m_child_nodes.end(),
-        [node](const auto &it) {
-            return it.Get() == node;
-        }
-    );
+    return m_child_nodes.FindIf([node](const auto &it) {
+        return it.Get() == node;
+    });
 }
 
-Node::NodeList::iterator Node::FindChild(const char *name)
+Node::NodeList::Iterator Node::FindChild(const char *name)
 {
-    return std::find_if(
-        m_child_nodes.begin(),
-        m_child_nodes.end(),
-        [name](const auto &it) {
-            return !std::strcmp(name, it.Get()->GetName());
-        }
-    );
+    return m_child_nodes.FindIf([name](const auto &it) {
+        return !std::strcmp(name, it.Get()->GetName());
+    });
 }
 
 void Node::SetLocalTransform(const Transform &transform)

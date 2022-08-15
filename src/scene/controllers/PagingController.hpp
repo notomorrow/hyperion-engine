@@ -39,10 +39,10 @@ enum class PageState {
 
 struct PatchInfo {
     Extent3D       extent;
-    PatchCoord     coord{0.0f};
-    Vector3        scale{1.0f};
-    PageState      state{PageState::UNLOADED};
-    float          unload_timer{0.0f};
+    PatchCoord     coord { 0.0f };
+    Vector3        scale { 1.0f };
+    PageState      state { PageState::UNLOADED };
+    float          unload_timer { 0.0f };
     PatchNeighbors neighbors{};
 };
 
@@ -54,9 +54,9 @@ struct Patch {
 };
 
 class PagingController : public Controller {
-    static constexpr GameCounter::TickUnit update_max{2.5f};
-    static constexpr GameCounter::TickUnit queue_max{2.5f};
-    static constexpr GameCounter::TickUnit patch_unload_time{5.0f};
+    static constexpr GameCounter::TickUnit update_max { 0.01f };
+    static constexpr GameCounter::TickUnit queue_max { 0.01f };
+    static constexpr GameCounter::TickUnit patch_unload_time { 1.0f };
 
 public:
     PagingController(
@@ -72,7 +72,7 @@ public:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
 
 protected:
-    virtual void OnPatchAdded(Patch *patch)   = 0;
+    virtual void OnPatchAdded(Patch *patch) = 0;
     virtual void OnPatchRemoved(Patch *patch) = 0;
 
     struct PatchUpdate {

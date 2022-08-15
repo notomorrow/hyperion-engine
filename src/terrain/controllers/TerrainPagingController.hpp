@@ -42,6 +42,8 @@ private:
 
     Seed                                m_seed;
 
+    UInt m_update_log_timer = 0;
+
     Ref<Material>                       m_material;
 
     std::mutex                          m_terrain_generation_mutex;

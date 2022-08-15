@@ -215,7 +215,7 @@ void RendererInstance::Init(Engine *engine)
             entity->Init(engine);
         }
 
-        m_indirect_renderer.Create(engine);
+        m_indirect_renderer.Create(engine);    
 
         engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info {
@@ -267,7 +267,9 @@ void RendererInstance::Init(Engine *engine)
 
             SetReady(false);
 
-            m_indirect_renderer.Destroy(engine);
+            m_indirect_renderer.Destroy(engine); // make sure we have the render queue flush at the end of
+                                                 // this, as the indirect renderer has a call back that needs to be exec'd
+                                                 // before the destructor is called
 
             for (auto &&entity : m_entities) {
                 AssertThrow(entity != nullptr);

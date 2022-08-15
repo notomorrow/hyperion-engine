@@ -99,7 +99,11 @@ void main()
         vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
         vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
         vec4 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
-        result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * (attenuation * NdotL) * ao * shadow * light_color);
+        vec4 direct_component = (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * (attenuation * NdotL) * ao * shadow * light_color);
+
+        direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
+
+        result += direct_component;
     } else {
         result = albedo;
     }

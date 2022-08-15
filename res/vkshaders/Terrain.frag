@@ -56,7 +56,7 @@ void main()
     
     gbuffer_albedo = material.albedo;
     
-    float ao        = 1.0;
+    float ao  = 1.0;
     float metalness = material.metalness;
     float roughness = material.roughness;
     
@@ -84,6 +84,15 @@ void main()
         gbuffer_albedo = vec4(albedo_texture.rgb, 1.0);
     }
 
+
+    // temp grass color
+    // gbuffer_albedo.rgb = vec3(0.5, 0.8, 0.35) * 0.15;
+
+    // lerp to rock based on slope
+    gbuffer_albedo.rgb = mix(gbuffer_albedo.rgb, vec3(0.11), 1.0 - smoothstep(0.45, 0.65, abs(dot(normal, vec3(0.0, 1.0, 0.0)))));
+
+    // gbuffer_albedo.a = 0.0;// no lighting for now
+
     vec4 normals_texture = vec4(0.0);
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP)) {
@@ -108,6 +117,7 @@ void main()
     // }
 
     // gbuffer_albedo.rgb = GetTriplanarBlend(normal);
+    
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_positions = vec4(0.0); // not used
