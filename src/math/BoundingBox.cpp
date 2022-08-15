@@ -5,6 +5,8 @@
 
 namespace hyperion {
 
+const BoundingBox BoundingBox::empty = BoundingBox();
+
 BoundingBox::BoundingBox()
     : min(MathUtil::MaxSafeValue<Float>()), 
       max(MathUtil::MinSafeValue<Float>())

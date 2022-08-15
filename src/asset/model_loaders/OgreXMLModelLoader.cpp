@@ -242,7 +242,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             auto node = std::make_unique<Node>();
             node->SetEntity(std::move(entity));
 
-            top->AddChild(std::move(node));
+            top->AddChild(NodeProxy(node.release()));
         }
     });
 

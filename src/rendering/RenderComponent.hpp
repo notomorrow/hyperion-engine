@@ -69,6 +69,8 @@ public:
     virtual void ComponentUpdate(Engine *engine, GameCounter::TickUnit delta) {}
     /*! \brief Perform rendering. Runs in RENDER thread. */
     virtual void ComponentRender(Engine *engine, Frame *frame) = 0;
+    /*! \brief Called when the component is removed. Calls EngineComponentBase::OnDisposed(). */
+    virtual void ComponentRemoved() = 0;
 
     /*! \brief Called when an entity is added to the parent scene. Runs in RENDER thread. */
     virtual void OnEntityAdded(Ref<Entity> &entity) = 0;
@@ -76,6 +78,7 @@ public:
     virtual void OnEntityRemoved(Ref<Entity> &entity) = 0;
     /*! \brief Called when an entity has meaningful attributes changed. Runs in RENDER thread. */
     virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) = 0;
+
 
 protected:
     RenderComponentName m_name;
@@ -156,6 +159,11 @@ public:
     virtual void OnEntityAdded(Ref<Entity> &entity) override {}
     virtual void OnEntityRemoved(Ref<Entity> &entity) override {}
     virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override {}
+
+    virtual void ComponentRemoved() override
+    {
+        static_cast<Derived *>(this)->OnDisposed();
+    }
 
 protected:
     virtual void OnComponentIndexChanged(Index new_index, Index prev_index) = 0;

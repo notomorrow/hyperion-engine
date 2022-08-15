@@ -106,11 +106,11 @@ public:
 
         std::lock_guard guard(m_render_component_mutex);
 
-        m_render_components_pending_removal.Insert(Pair { decltype(m_render_components)::GetComponentId<T>(), T::ComponentName });
+        m_render_components_pending_removal.Insert(Pair { decltype(m_render_components)::GetComponentID<T>(), T::ComponentName });
         m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
 
-    // only touch from render thread
+    // only touch from render thread!
     UInt32 GetEnabledRenderComponentsMask() const { return m_current_enabled_render_components_mask; }
 
     void OnEntityAdded(Ref<Entity> &entity);
@@ -126,7 +126,7 @@ public:
     void RenderComponents(Engine *engine, Frame *frame);
 
 private:
-    using RenderComponentPendingRemovalEntry = Pair<ComponentSetUnique<RenderComponentBase>::ComponentId, RenderComponentName>;
+    using RenderComponentPendingRemovalEntry = Pair<ComponentSetUnique<RenderComponentBase>::ComponentID, RenderComponentName>;
 
     Scene *m_scene;
 

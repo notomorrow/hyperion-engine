@@ -49,8 +49,97 @@ Node::Node(
     Memory::CopyString(m_name, name);
 }
 
+Node::Node(Node &&other) noexcept
+    : m_type(other.m_type),
+      m_parent_node(other.m_parent_node),
+      m_local_transform(other.m_local_transform),
+      m_world_transform(other.m_world_transform),
+      m_local_aabb(other.m_local_aabb),
+      m_world_aabb(other.m_world_aabb),
+      m_scene(other.m_scene)
+{
+    other.m_type = Type::NODE;
+    other.m_parent_node = nullptr;
+    other.m_local_transform = Transform::identity;
+    other.m_world_transform = Transform::identity;
+    other.m_local_aabb = BoundingBox::empty;
+    other.m_world_aabb = BoundingBox::empty;
+    other.m_scene = nullptr;
+
+    m_entity = std::move(other.m_entity);
+    m_entity->SetParent(this);
+    other.m_entity = nullptr;
+
+    m_name = other.m_name;
+    other.m_name = nullptr;
+
+    m_child_nodes = std::move(other.m_child_nodes);
+    other.m_child_nodes.clear();
+
+    m_descendents = std::move(other.m_descendents);
+    other.m_descendents.clear();
+
+    for (auto &node : m_child_nodes) {
+        AssertThrow(node.Get() != nullptr);
+
+        node.Get()->m_parent_node = this;
+    }
+}
+
+Node &Node::operator=(Node &&other) noexcept
+{
+    RemoveAllChildren();
+
+    SetEntity(nullptr);
+    SetScene(nullptr);
+
+    m_type = other.m_type;
+    other.m_type = Type::NODE;
+
+    m_parent_node = other.m_parent_node;
+    other.m_parent_node = nullptr;
+
+    m_local_transform = other.m_local_transform;
+    other.m_local_transform = Transform::identity;
+
+    m_world_transform = other.m_world_transform;
+    other.m_world_transform = Transform::identity;
+
+    m_local_aabb = other.m_local_aabb;
+    other.m_local_aabb = BoundingBox::empty;
+
+    m_world_aabb = other.m_world_aabb;
+    other.m_world_aabb = BoundingBox::empty;
+
+    m_scene = other.m_scene;
+    other.m_scene = nullptr;
+
+    m_entity = std::move(other.m_entity);
+    m_entity->SetParent(this);
+    other.m_entity = nullptr;
+
+    m_name = other.m_name;
+    other.m_name = nullptr;
+
+    m_child_nodes = std::move(other.m_child_nodes);
+    other.m_child_nodes.clear();
+
+    m_descendents = std::move(other.m_descendents);
+    other.m_descendents.clear();
+
+    for (auto &node : m_child_nodes) {
+        AssertThrow(node.Get() != nullptr);
+
+        node.Get()->m_parent_node = this;
+    }
+
+    return *this;
+}
+
 Node::~Node()
 {
+    AssertThrow(m_ref_count.count == 0);
+
     SetEntity(nullptr);
 
     delete[] m_name;
@@ -82,15 +171,15 @@ void Node::SetScene(Scene *scene)
     }
 
     for (auto &child : m_child_nodes) {
-        if (child == nullptr) {
+        if (!child) {
             continue;
         }
 
-        child->SetScene(scene);
+        child.Get()->SetScene(scene);
     }
 }
 
-void Node::OnNestedNodeAdded(Node *node)
+void Node::OnNestedNodeAdded(const NodeProxy &node)
 {
     m_descendents.push_back(node);
     
@@ -99,7 +188,7 @@ void Node::OnNestedNodeAdded(Node *node)
     }
 }
 
-void Node::OnNestedNodeRemoved(Node *node)
+void Node::OnNestedNodeRemoved(const NodeProxy &node)
 {
     const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
 
@@ -112,32 +201,30 @@ void Node::OnNestedNodeRemoved(Node *node)
     }
 }
 
-Node *Node::AddChild()
+NodeProxy Node::AddChild()
 {
-    return AddChild(std::make_unique<Node>());
+    return AddChild(NodeProxy(new Node()));
 }
 
-Node *Node::AddChild(std::unique_ptr<Node> &&node)
+NodeProxy Node::AddChild(const NodeProxy &node)
 {
-    AssertThrow(node != nullptr);
-    AssertThrow(node->m_parent_node == nullptr);
+    AssertThrow(node.Get() != nullptr);
+    AssertThrow(node.Get()->m_parent_node == nullptr);
 
-    node->m_parent_node = this;
-    node->SetScene(m_scene);
+    m_child_nodes.push_back(node);
 
-    OnNestedNodeAdded(node.get());
+    m_child_nodes.back().Get()->m_parent_node = this;
+    m_child_nodes.back().Get()->SetScene(m_scene);
 
-    for (Node *nested : node->GetDescendents()) {
+    OnNestedNodeAdded(m_child_nodes.back());
+
+    for (auto &nested : m_child_nodes.back().Get()->GetDescendents()) {
         OnNestedNodeAdded(nested);
     }
 
-    m_child_nodes.push_back(std::move(node));
+    m_child_nodes.back().Get()->UpdateWorldTransform();
 
-    auto *child = m_child_nodes.back().get();
-
-    child->UpdateWorldTransform();
-
-    return child;
+    return m_child_nodes.back();
 }
 
 bool Node::RemoveChild(NodeList::iterator iter)
@@ -146,17 +233,18 @@ bool Node::RemoveChild(NodeList::iterator iter)
         return false;
     }
 
-    if (Node *node = iter->get()) {
-        AssertThrow(node->m_parent_node == this);
+    if (auto &node = *iter) {
+        AssertThrow(node.Get() != nullptr);
+        AssertThrow(node.Get()->m_parent_node == this);
 
-        for (Node *nested : node->GetDescendents()) {
+        for (auto &nested : node.Get()->GetDescendents()) {
             OnNestedNodeRemoved(nested);
         }
 
         OnNestedNodeRemoved(node);
 
-        node->m_parent_node = nullptr;
-        node->SetScene(nullptr);
+        node.Get()->m_parent_node = nullptr;
+        node.Get()->SetScene(nullptr);
     }
 
     m_child_nodes.erase(iter);
@@ -184,19 +272,42 @@ bool Node::Remove()
     return m_parent_node->RemoveChild(m_parent_node->FindChild(this));
 }
 
-Node *Node::GetChild(size_t index) const
+void Node::RemoveAllChildren()
 {
-    if (index >= m_child_nodes.size()) {
-        return nullptr;
+    for (auto it = m_child_nodes.begin(); it != m_child_nodes.end();) {
+        if (auto &node = *it) {
+            AssertThrow(node.Get() != nullptr);
+            AssertThrow(node.Get()->m_parent_node == this);
+
+            for (auto &nested : node.Get()->GetDescendents()) {
+                OnNestedNodeRemoved(nested);
+            }
+
+            OnNestedNodeRemoved(node);
+
+            node.Get()->m_parent_node = nullptr;
+            node.Get()->SetScene(nullptr);
+        }
+
+        it = m_child_nodes.erase(it);
     }
 
-    return m_child_nodes[index].get();
+    UpdateWorldTransform();
 }
 
-Node *Node::Select(const char *selector)
+NodeProxy Node::GetChild(size_t index) const
+{
+    if (index >= m_child_nodes.size()) {
+        return NodeProxy();
+    }
+
+    return NodeProxy(m_child_nodes[index]);
+}
+
+NodeProxy Node::Select(const char *selector)
 {
     if (selector == nullptr) {
-        return nullptr;
+        return NodeProxy();
     }
 
     char ch;
@@ -218,13 +329,13 @@ Node *Node::Select(const char *selector)
             const auto it = search_node->FindChild(buffer);
 
             if (it == search_node->GetChildren().end()) {
-                return nullptr;
+                return NodeProxy();
             }
 
-            search_node = it->get();
+            search_node = it->Get();
 
-            if (search_node == nullptr) {
-                return nullptr;
+            if (!search_node) {
+                return NodeProxy();
             }
 
             buffer_index = 0;
@@ -240,7 +351,7 @@ Node *Node::Select(const char *selector)
                     std::size(buffer)
                 );
 
-                return nullptr;
+                return NodeProxy();
             }
         }
 
@@ -252,13 +363,13 @@ Node *Node::Select(const char *selector)
         const auto it = search_node->FindChild(buffer);
 
         if (it == search_node->GetChildren().end()) {
-            return nullptr;
+            return NodeProxy();
         }
 
-        search_node = it->get();
+        search_node = it->Get();
     }
 
-    return search_node;
+    return NodeProxy(search_node);
 }
 
 Node::NodeList::iterator Node::FindChild(Node *node)
@@ -267,7 +378,7 @@ Node::NodeList::iterator Node::FindChild(Node *node)
         m_child_nodes.begin(),
         m_child_nodes.end(),
         [node](const auto &it) {
-            return it.get() == node;
+            return it.Get() == node;
         }
     );
 }
@@ -278,7 +389,7 @@ Node::NodeList::iterator Node::FindChild(const char *name)
         m_child_nodes.begin(),
         m_child_nodes.end(),
         [name](const auto &it) {
-            return !std::strcmp(name, it->GetName());
+            return !std::strcmp(name, it.Get()->GetName());
         }
     );
 }
@@ -339,9 +450,10 @@ void Node::UpdateWorldTransform()
     m_world_aabb = m_local_aabb * m_world_transform;
 
     for (auto &node : m_child_nodes) {
-        node->UpdateWorldTransform();
+        AssertThrow(node.Get() != nullptr);
+        node.Get()->UpdateWorldTransform();
 
-        m_world_aabb.Extend(node->m_world_aabb);
+        m_world_aabb.Extend(node.Get()->GetWorldAabb());
     }
 
     if (m_parent_node != nullptr) {
@@ -370,11 +482,11 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
         }
 
         for (auto &child_node : m_child_nodes) {
-            if (child_node == nullptr) {
+            if (!child_node) {
                 continue;
             }
 
-            if (child_node->TestRay(ray, out_results)) {
+            if (child_node.Get()->TestRay(ray, out_results)) {
                 has_entity_hit = true;
             }
         }

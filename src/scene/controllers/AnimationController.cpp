@@ -53,6 +53,10 @@ void AnimationController::OnRemovedFromNode(Node *node)
 
 bool AnimationController::FindSkeleton(Node *node)
 {
+    if (node == nullptr) {
+        return false;
+    }
+
     if (auto &entity = node->GetEntity()) {
         if (FindSkeletonDirect(entity.ptr)) {
             return true;
@@ -62,8 +66,8 @@ bool AnimationController::FindSkeleton(Node *node)
     return std::any_of(
         node->GetChildren().begin(),
         node->GetChildren().end(),
-        [this](const auto &child) {
-            return child != nullptr && FindSkeleton(child.get());
+        [this](auto &child) {
+            return FindSkeleton(child.Get());
         }
     );
 }

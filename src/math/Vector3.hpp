@@ -22,6 +22,8 @@ class Matrix4;
 class Vector3 {
     friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
 public:
+    static const Vector3 zero;
+
     union {
         struct { float x, y, z; };
         float values[3];
