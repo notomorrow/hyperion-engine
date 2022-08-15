@@ -9,9 +9,6 @@
 #include <math/Ray.hpp>
 #include <Types.hpp>
 
-#include <vector>
-#include <memory>
-
 namespace hyperion::v2 {
 
 class Engine;

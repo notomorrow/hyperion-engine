@@ -18,22 +18,37 @@ TerrainPagingController::TerrainPagingController(
 
 void TerrainPagingController::OnAdded()
 {
+    constexpr Float base_height = 20.0f;
+    constexpr Float mountain_height = 150.0f;
+    constexpr Float global_terrain_noise_scale = 1.0f;
+
     m_noise_combinator
-        .Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, 100.0f, 0.0f, Vector(0.005f, 0.005f, 0.0f, 0.0f))
-        .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector(0.05, 0.05f, 0.0f, 0.0f))
-        .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, 100.0f, 0.0f, Vector(0.5f, 0.5, 0.0f, 0.0f));
+        .Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, mountain_height, 0.0f, Vector(1.0f, 1.0f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, base_height, 0.0f, Vector(100.0f, 100.0f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(3, NoiseCombinator::Mode::ADDITIVE, base_height * 0.5f, 0.0f, Vector(50.0f, 50.0f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(4, NoiseCombinator::Mode::ADDITIVE, base_height * 0.25f, 0.0f, Vector(25.0f, 25.0f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(5, NoiseCombinator::Mode::ADDITIVE, base_height * 0.125f, 0.0f, Vector(12.5f, 12.5f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(6, NoiseCombinator::Mode::ADDITIVE, base_height * 0.06f, 0.0f, Vector(6.25f, 6.25f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(7, NoiseCombinator::Mode::ADDITIVE, base_height * 0.03f, 0.0f, Vector(3.125f, 3.125f, 0.0f, 0.0f) * global_terrain_noise_scale)
+        .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, base_height * 0.015f, 0.0f, Vector(1.56f, 1.56f, 0.0f, 0.0f) * global_terrain_noise_scale);
 
     m_material = GetEngine()->resources.materials.Add(new Material(
         "terrain_material"
     ));
 
     // m_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.2f, 0.99f, 0.5f, 1.0f));
-    m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.9f);
-    m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.01f);
+    m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);
+    m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
     // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png").release()));
-    m_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png").release()));
+    // auto albedo_texture = GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png").release());
+    auto albedo_texture = GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/snow/snowdrift1_albedo.png").release());
+    albedo_texture->GetImage().SetIsSRGB(true);
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/snow/snowdrift1_Normal-ogl.png").release()));
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/snow/snowdrift1_Roughness.png").release()));
+    // m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_normal-dx.png").release()));
+
+
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
     // m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
@@ -56,6 +71,18 @@ void TerrainPagingController::OnUpdate(GameCounter::TickUnit delta)
     }
 
     PagingController::OnUpdate(delta);
+
+    ++m_update_log_timer;
+
+    if (m_update_log_timer >= 1000) {
+        DebugLog(
+            LogType::Debug,
+            "Currently have %u terrain chunks\n",
+            static_cast<UInt>(m_patches.Size())
+        );
+        
+        m_update_log_timer = 0;
+    }
 }
 
 void TerrainPagingController::OnPatchAdded(Patch *patch)

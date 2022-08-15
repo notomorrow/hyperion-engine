@@ -63,10 +63,10 @@ layout(push_constant) uniform ObjectVisibilityData {
     uvec2 depth_pyramid_dimensions;
 } push_constants;
 
-// uint GetObjectBucket(ObjectInstance object_instance)
-// {
-//     return object_instance.packed_data.x & 0xFF;
-// }
+uint GetObjectBucket(ObjectInstance object_instance)
+{
+    return object_instance.packed_data & 0xFF;
+}
 
 bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
 {
@@ -107,10 +107,12 @@ void main()
     aabb.min = object_instance.aabb_min.xyz;
 
     uint cull_bits = 0x7F;
-    // bool skip_check = bool(GetObjectBucket(object_instance) & (1 << HYP_OBJECT_BUCKET_SKYBOX));
+    bool skip_check = bool(GetObjectBucket(object_instance) & (1 << HYP_OBJECT_BUCKET_SKYBOX));
+
+    num_instances += int(skip_check);
 
     // entity id should not ever be zero/unset
-    if (all(bvec2(entity_id, push_constants.scene_id))) {
+    if (all(bvec3(!skip_check, entity_id, push_constants.scene_id))) {
         // get view/proj matrices from scene.
         mat4 view = scene.view;
         mat4 proj = scene.projection;
@@ -158,9 +160,9 @@ void main()
         }
     }
 
-    indirect_draw_commands[draw_command_index].index_count    = object_instance.num_indices;
+    indirect_draw_commands[draw_command_index].index_count = object_instance.num_indices;
     indirect_draw_commands[draw_command_index].instance_count = num_instances;
-    indirect_draw_commands[draw_command_index].first_index    = 0;
-    indirect_draw_commands[draw_command_index].vertex_offset  = 0;
+    indirect_draw_commands[draw_command_index].first_index = 0;
+    indirect_draw_commands[draw_command_index].vertex_offset = 0;
     indirect_draw_commands[draw_command_index].first_instance = 0;
 }

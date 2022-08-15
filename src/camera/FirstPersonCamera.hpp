@@ -9,7 +9,7 @@ class FirstPersonCamera : public PerspectiveCamera {
 public:
     static constexpr float mouse_sensitivity = 1.0f;
     static constexpr float mouse_blending = 0.25f;
-    static constexpr float movement_speed = 10.0f;
+    static constexpr float movement_speed = 5.0f;
     static constexpr float movement_speed_2 = movement_speed * 2.0f;
     static constexpr float movement_blending = 0.3f;
 

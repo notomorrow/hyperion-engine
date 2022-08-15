@@ -2,10 +2,6 @@
 #include <Threads.hpp>
 #include <math/MathUtil.hpp>
 
-#define MOUNTAIN_SCALE_WIDTH 0.017
-#define MOUNTAIN_SCALE_LENGTH 0.017
-#define MOUNTAIN_SCALE_HEIGHT 40.0
-
 namespace hyperion::v2 {
 
 TerrainMeshBuilder::TerrainMeshBuilder(const PatchInfo &patch_info)
@@ -17,38 +13,104 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
 {
     Threads::AssertOnThread(THREAD_TERRAIN);
 
-    // auto *simplex       = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed);
-    // auto *simplex_biome = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed + 1);
-    // auto *worley        = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, seed);
-    
-    m_heights.resize(m_patch_info.extent.width * m_patch_info.extent.depth);
+    m_height_infos.Resize(m_patch_info.extent.width * m_patch_info.extent.depth);
 
     for (int z = 0; z < m_patch_info.extent.depth; z++) {
         for (int x = 0; x < m_patch_info.extent.width; x++) {
-            const double x_offset = x + (m_patch_info.coord.x * (m_patch_info.extent.width - 1));
-            const double z_offset = z + (m_patch_info.coord.y * (m_patch_info.extent.depth - 1));
+            const Float x_offset = static_cast<Float>(x + (m_patch_info.coord.x * (m_patch_info.extent.width - 1))) / static_cast<Float>(m_patch_info.extent.width);
+            const Float z_offset = static_cast<Float>(z + (m_patch_info.coord.y * (m_patch_info.extent.depth - 1))) / static_cast<Float>(m_patch_info.extent.depth);
 
-            // const double biome_height = simplex_biome->GetNoise(x_offset * 0.6, z_offset * 0.6);
-            // const double height = (simplex->GetNoise(x_offset, z_offset)) * 30 - 30;
-            // const double mountain = ((worley->GetNoise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH))) * MOUNTAIN_SCALE_HEIGHT;
+            const UInt index = GetHeightIndex(x, z);
 
-            const UInt index = ((x + m_patch_info.extent.width) % m_patch_info.extent.width)
-                + ((z + m_patch_info.extent.depth) % m_patch_info.extent.depth) * m_patch_info.extent.width;
-
-            m_heights[index] = noise_combinator.GetNoise(Vector(x_offset, z_offset));
+            m_height_infos[index] = {
+                .height = noise_combinator.GetNoise(Vector(x_offset, z_offset)),
+                .erosion = 0.0f,
+                .sediment = 0.0f,
+                .water = 1.0f,
+                .new_water = 0.0f,
+                .down = 0.0f
+            };
         }
     }
 
-    // NoiseFactory::GetInstance()->Release(simplex);
-    // NoiseFactory::GetInstance()->Release(simplex_biome);
-    // NoiseFactory::GetInstance()->Release(worley);
+    // erosion
+    // this erosion code based on: https://github.com/RolandR/glterrain
+
+    constexpr bool erosion_enabled = true;
+
+    if constexpr (erosion_enabled) {
+        const Float erosion_scale = 1.0f / MathUtil::Max(MathUtil::epsilon<Float>, Vector2(m_patch_info.scale.x, m_patch_info.scale.z).Max());
+        constexpr UInt num_erosion_iterations = 250;
+        constexpr Float evaporation = 0.9f;
+        const Float erosion = 0.004f * erosion_scale;
+        const Float deposition = 0.0000002f * erosion_scale;
+
+        static const FixedArray offsets {
+            Pair { 1, 0 },
+            Pair { 1, 1 },
+            Pair { 1, -1 },
+            Pair { 0, 1 },
+            Pair { 0, -1 },
+            Pair { -1, 0 },
+            Pair { -1, 1 },
+            Pair { -1, -1 },
+        };
+
+        for (UInt iteration = 0; iteration < num_erosion_iterations; iteration++) {
+            for (int z = 1; z < m_patch_info.extent.depth - 2; z++) {
+                for (int x = 1; x < m_patch_info.extent.width - 2; x++) {
+                    auto &height_info = m_height_infos[GetHeightIndex(x, z)];
+
+                    Float down = 0.0f;
+
+                    for (const auto &offset : offsets) {
+                        down += MathUtil::Max(height_info.height - m_height_infos[GetHeightIndex(x + offset.first, z + offset.second)].height, 0.0f);
+                    }
+
+                    height_info.down = down;
+
+                    if (down != 0.0f) {
+                        Float water = height_info.water * evaporation;
+                        Float staying_water = (water * 0.0002f) / (down * erosion_scale + 1);
+                        water = water - staying_water;
+
+                        for (const auto &offset : offsets) {
+                            auto &neighbor_height_info = m_height_infos[GetHeightIndex(x + offset.first, z + offset.second)];
+
+                            neighbor_height_info.new_water += MathUtil::Max(height_info.height - neighbor_height_info.height, 0.0f) / down * water;
+                        }
+
+                        height_info.water = staying_water + 1.0f;
+                    }
+
+                }
+            }
+
+            for (int z = 1; z < m_patch_info.extent.depth - 2; z++) {
+                for (int x = 1; x < m_patch_info.extent.width - 2; x++) {
+                    auto &height_info = m_height_infos[GetHeightIndex(x, z)];
+
+                    height_info.water += height_info.new_water;
+                    height_info.new_water = 0.0f;
+
+                    const auto old_height = height_info.height;
+                    height_info.height += (-(height_info.down - (0.005f / erosion_scale)) * height_info.water) * erosion + height_info.water * deposition;
+                    height_info.erosion = old_height - height_info.height;
+
+                    if (old_height < height_info.height) {
+                        height_info.water = MathUtil::Max(height_info.water - (height_info.height - old_height) * 1000.0f, 0.0f);
+                    }
+                }
+            }
+        }
+    }
 }
 
 std::unique_ptr<Mesh> TerrainMeshBuilder::BuildMesh() const
 {
     Threads::AssertOnThread(THREAD_TERRAIN);
 
-    std::vector<Vertex> vertices     = BuildVertices();
+    std::vector<Vertex> vertices = BuildVertices();
     std::vector<Mesh::Index> indices = BuildIndices();
 
     auto mesh = std::make_unique<Mesh>(
@@ -69,11 +131,11 @@ std::vector<Vertex> TerrainMeshBuilder::BuildVertices() const
     std::vector<Vertex> vertices;
     vertices.resize(m_patch_info.extent.width * m_patch_info.extent.depth);
 
-    int i = 0;
+    UInt i = 0;
 
-    for (int z = 0; z < m_patch_info.extent.depth; z++) {
-        for (int x = 0; x < m_patch_info.extent.width; x++) {
-            Vector3 position(x, m_heights[i], z);
+    for (UInt z = 0; z < m_patch_info.extent.depth; z++) {
+        for (UInt x = 0; x < m_patch_info.extent.width; x++) {
+            Vector3 position(x, m_height_infos[i].height, z);
             position *= m_patch_info.scale;
 
             Vector2 texcoord(

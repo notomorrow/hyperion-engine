@@ -23,12 +23,18 @@ float CookTorranceG(float NdotL, float NdotV, float LdotH, float NdotH)
 
 vec3 SchlickFresnel(vec3 f0, vec3 f90, float u)
 {
-    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+    const float Fc = pow(1 - u, 5.0);
+    return f0 * (1.0 - Fc) + f90 * Fc;
+
+    //return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 vec4 SchlickFresnel(vec4 f0, vec4 f90, float u)
 {
-    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+    const float Fc = pow(1 - u, 5.0);
+    return f0 * (1.0 - Fc) + f90 * Fc;
+
+    //return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 vec3 mon2lin(vec3 x)

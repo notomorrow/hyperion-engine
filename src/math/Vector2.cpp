@@ -107,6 +107,16 @@ bool Vector2::operator!=(const Vector2 &other) const
     return !((*this) == other);
 }
 
+float Vector2::Min() const
+{
+    return MathUtil::Min(x, y);
+}
+
+float Vector2::Max() const
+{
+    return MathUtil::Max(x, y);
+}
+
 float Vector2::Distance(const Vector2 &other) const
 {
     return sqrt(DistanceSquared(other));

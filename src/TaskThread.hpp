@@ -55,11 +55,14 @@ protected:
             counter.NextTick();
 
             if (m_scheduler->NumEnqueued()) {
-                m_scheduler->AcceptNext(m_task_queue);
+                m_scheduler->AcceptAll(m_task_queue);
 
                 // do not execute within lock
-                m_task_queue.Front().Execute();
-                m_task_queue.Pop();
+                while (m_task_queue.Any()) {
+                    m_task_queue.Front().Execute();
+
+                    m_task_queue.Pop();
+                }
             }
         }
     }

@@ -37,13 +37,13 @@ public:
     const Ref<Camera> &GetCamera() const { return m_camera; }
     void SetCamera(Ref<Camera> &&camera) { m_camera = std::move(camera); }
 
-    /*! Add an Entity to the queue. On Update(), it will be added to the scene. */
+    /*! \brief Add an Entity to the queue. On Update(), it will be added to the scene. */
     bool AddEntity(Ref<Entity> &&entity);
     bool HasEntity(Entity::ID id) const;
-    /*! Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
+    /*! \brief Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
     bool RemoveEntity(const Ref<Entity> &entity);
 
-    /*! ONLY CALL FROM GAME THREAD!!! */
+    /* ONLY CALL FROM GAME THREAD!!! */
     auto &GetEntities() { return m_entities; }
     const auto &GetEntities() const { return m_entities; }
 
@@ -85,10 +85,10 @@ private:
     NodeProxy                    m_root_node_proxy;
     RenderEnvironment           *m_environment;
     World                       *m_world;
-    std::array<Ref<Texture>,     max_environment_textures> m_environment_textures;
 
     // entities live in GAME thread
     FlatMap<IDBase, Ref<Entity>> m_entities;
+
     // NOTE: not for thread safety, it's to defer updates so we don't
     // remove in the update loop.
     FlatSet<Entity::ID>          m_entities_pending_removal;

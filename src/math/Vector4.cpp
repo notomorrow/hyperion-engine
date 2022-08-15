@@ -149,6 +149,16 @@ bool Vector4::operator!=(const Vector4 &other) const
     return !((*this) == other);
 }
 
+float Vector4::Max() const
+{
+    return MathUtil::Max(x, MathUtil::Max(y, MathUtil::Max(z, w)));
+}
+
+float Vector4::Min() const
+{
+    return MathUtil::Min(x, MathUtil::Min(y, MathUtil::Min(z, w)));
+}
+
 float Vector4::DistanceSquared(const Vector4 &other) const
 {
     float dx = x - other.x;

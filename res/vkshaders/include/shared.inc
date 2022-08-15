@@ -169,4 +169,24 @@ vec4 Texture2DTriplanar(sampler2D tex, vec3 position, vec3 normal)
     return sample_x * blending.x + sample_y * blending.y + sample_z * blending.z;
 }
 
+vec4 CalculateFogExp(in vec4 start_color, in vec4 end_color, vec3 world_position, vec3 camera_position, float fog_start, float fog_end)
+{
+    const float dist = distance(world_position, camera_position);
+    const float density = 0.00003;
+
+    const float fog_factor = 1.0 / exp(dist * density);
+
+    return mix(start_color, end_color, 1.0 - fog_factor);
+}
+
+vec4 CalculateFogLinear(in vec4 start_color, in vec4 end_color, vec3 world_position, vec3 camera_position, float fog_start, float fog_end)
+{
+    const float dist = distance(world_position, camera_position);
+
+    const float fog_factor = Saturate((fog_end - dist) / (fog_end - fog_start));
+
+    return mix(start_color, end_color, 1.0 - fog_factor);
+}
+
+
 #endif

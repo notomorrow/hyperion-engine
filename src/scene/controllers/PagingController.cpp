@@ -54,24 +54,12 @@ void PagingController::OnRemoved()
 
 void PagingController::OnUpdate(GameCounter::TickUnit delta)
 {
-    auto *node = GetOwner()->GetParent();
-
-    if (node == nullptr) {
-        DebugLog(
-            LogType::Warn,
-            "Entity #%u not attached to any node, cannot get scene camera.\n",
-            GetOwner()->GetId().value
-        );
-
-        return;
-    }
-
-    Scene *scene = node->GetScene();
+    Scene *scene = GetOwner()->GetScene();
 
     if (scene == nullptr) {
         DebugLog(
             LogType::Warn,
-            "PagingController on Node not attached to scene\n"
+            "PagingController on Entity not attached to scene\n"
         );
 
         return;
@@ -97,7 +85,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
     }
 
     m_update_timer += delta;
-    m_queue_timer  += delta;
+    m_queue_timer += delta;
 
     if (m_queue_timer >= queue_max) {
         while (m_queue.Any()) {

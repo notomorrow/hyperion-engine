@@ -1,9 +1,11 @@
 #define HDR 1
-//#define HDR_TONEMAP_UNCHARTED 1
-#define HDR_TONEMAP_FILMIC 1
+#define HDR_TONEMAP_UNCHARTED 1
+//#define HDR_TONEMAP_FILMIC 1
+//#define HDR_TONEMAP_UNREAL 1
+//#define HDR_TONEMAP_REINHARD 1
 
 #ifndef HDR_EXPOSURE
-#define HDR_EXPOSURE 12.0
+#define HDR_EXPOSURE 9.0
 #endif
 
 const float A = 0.15;
@@ -43,16 +45,39 @@ vec3 TonemapUnreal(vec3 x)
     return x / (x + 0.155) * 1.019;
 }
 
+float GetLuminance(vec3 x)
+{
+    return dot(x, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec3 ChangeLuminance(vec3 x, float new_luminance)
+{
+    float luminance = GetLuminance(x);
+
+    return x * (new_luminance / luminance);
+}
+
+vec3 TonemapReinhard(vec3 x)
+{
+    const float max_white_l = 100.0;
+    float l_old = GetLuminance(x);
+    float numerator = l_old * (1.0f + (l_old / (max_white_l * max_white_l)));
+    float l_new = numerator / (1.0f + l_old);
+    return ChangeLuminance(x, l_new);
+}
+
 vec3 Tonemap(vec3 x) {
-#if HDR
+#if defined(HDR) && HDR
     #if HDR_TONEMAP_FILMIC
         return TonemapFilmic(x);
     #elif HDR_TONEMAP_UNREAL
         return TonemapUnreal(x);
     #elif HDR_TONEMAP_UNCHARTED
         return TonemapUncharted(x);
+    #elif HDR_TONEMAP_REINHARD
+        return TonemapReinhard(x);
     #else
-        return TonemapFilmic(x);
+        return TonemapReinhard(x);
     #endif
 #else
 	return x;

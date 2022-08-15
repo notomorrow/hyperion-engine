@@ -241,7 +241,7 @@ public:
         m_is_flushed.notify_all();
     }
 
-    /* Move all tasks in the queue to an external container. */
+    /* Move all the next pending task in the queue to an external container. */
     template <class Container>
     void AcceptNext(Container &out_container)
     {
@@ -261,6 +261,26 @@ public:
         m_is_flushed.notify_all();
     }
     
+    /* Move all tasks in the queue to an external container. */
+    template <class Container>
+    void AcceptAll(Container &out_container)
+    {
+        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+
+        std::unique_lock lock(m_mutex);
+
+        for (auto it = m_scheduled_functions.Begin(); it != m_scheduled_functions.End(); ++it) {
+            out_container.Push(std::move(*it));
+        }
+
+        m_scheduled_functions.Clear();
+        m_num_enqueued.store(0);
+
+        lock.unlock();
+
+        m_is_flushed.notify_all();
+    }
+
     /*! Execute all scheduled tasks. May only be called from the creation thread.
      */
     template <class Executor>

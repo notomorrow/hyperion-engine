@@ -138,9 +138,6 @@ bool Scene::AddEntity(Ref<Entity> &&entity)
     entity.Init();
     m_environment->OnEntityAdded(entity);
 
-    // // m_entities.Insert(entity->GetId(), std::move(entity));
-    // m_entities.Insert(static_cast<IDBase>(entity->GetId()), std::move(entity));
-
     m_entities_pending_addition.Insert(std::move(entity));
 
     return true;

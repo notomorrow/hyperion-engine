@@ -353,7 +353,7 @@ void Mesh::CalculateNormals(bool weighted)
 
         const Vector3 u = p2 - p0;
         const Vector3 v = p1 - p0;
-        const Vector3 n = v.Cross(u).Normalize();
+        const Vector3 n = v.Cross(u);//.Normalize();
 
         normals[i0].PushBack(n);
         normals[i1].PushBack(n);

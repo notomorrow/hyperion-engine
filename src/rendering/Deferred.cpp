@@ -80,7 +80,7 @@ void DeferredPass::CreateDescriptors(Engine *engine)
 
             descriptor->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view    = color_attachment_ref->GetImageView()
+                .image_view = color_attachment_ref->GetImageView()
             });
         }
     }
@@ -150,7 +150,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
             m_renderer_instance->GetPipeline()->Bind(cmd);
 
             const auto scene_binding = engine->render_state.GetScene();
-            const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
+            const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
             cmd->BindDescriptorSet(
                 engine->GetInstance()->GetDescriptorPool(),
