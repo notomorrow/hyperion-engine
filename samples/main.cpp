@@ -133,7 +133,7 @@ public:
             sphere->SetName("sphere");
             // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(new Material()));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 10.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
@@ -152,10 +152,10 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
-        if (auto terrain_node = scene->GetRoot().AddChild()) {
-            terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
-            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
-        }
+        // if (auto terrain_node = scene->GetRoot().AddChild()) {
+        //     terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
+        //     terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
+        // }
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
             //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
@@ -202,7 +202,7 @@ public:
         auto my_light = engine->resources.lights.Add(new DirectionalLight(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
-            8.0f
+            110000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
 

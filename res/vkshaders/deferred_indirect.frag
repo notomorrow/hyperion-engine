@@ -40,7 +40,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
+#define IBL_INTENSITY 100000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
@@ -213,16 +213,16 @@ void main()
         // vec3 specular_ao = vec3(SpecularAO_Cones(bent_normal, ao, perceptual_roughness, R));
         specular_ao *= energy_compensation;
 
-        vec3 Fr = dfg * ibl * specular_ao;
+        vec3 Fr = dfg * ibl;// * specular_ao;
 
-        vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
-        Fd *= multibounce;
-        Fr *= multibounce;
+        // vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
+        // Fd *= multibounce;
+        // Fr *= multibounce;
 
-        // Fr *= exposure * IBL_INTENSITY;
-        // Fd *= exposure * IBL_INTENSITY;
+        Fr *= exposure * IBL_INTENSITY;
+        Fd *= exposure * IBL_INTENSITY;
 
-        reflections.rgb *= specular_ao;
+        // reflections.rgb *= specular_ao;
         Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
 
         result = Fr + Fd;
@@ -239,8 +239,10 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
+    // result = irradiance.rgb;
 
     output_color = vec4(result, 1.0);
+
 
     // output_color.rgb = vec3(float(depth < 0.95)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
     //output_color = ScreenSpaceReflection(material.r);
