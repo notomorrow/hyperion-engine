@@ -35,7 +35,10 @@ Texture::Texture(
 {
 }
 
-Texture::~Texture() = default;
+Texture::~Texture()
+{
+    Teardown();
+}
 
 void Texture::Init(Engine *engine)
 {

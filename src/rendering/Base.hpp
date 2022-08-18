@@ -180,11 +180,6 @@ public:
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase() {}
 
-    void OnDisposed()
-    {
-        Teardown();
-    }
-
     HYP_FORCE_INLINE ID GetId() const { return m_id; }
 
     HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo() { return m_init_info; }
@@ -219,7 +214,7 @@ protected:
     void Destroy()
     {
         m_init_called = false;
-        m_engine      = nullptr;
+        m_engine = nullptr;
     }
     
     void SetReady(bool is_ready) { m_is_ready = is_ready; }

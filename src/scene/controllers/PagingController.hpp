@@ -47,16 +47,16 @@ struct PatchInfo {
 };
 
 struct Patch {
-    PatchInfo    info;
+    PatchInfo info;
     Ref<Entity> entity;
 
     Vector2 GetCenter() const { return info.coord - 0.5f; }
 };
 
 class PagingController : public Controller {
-    static constexpr GameCounter::TickUnit update_max { 0.01f };
-    static constexpr GameCounter::TickUnit queue_max { 0.01f };
-    static constexpr GameCounter::TickUnit patch_unload_time { 1.0f };
+    static constexpr GameCounter::TickUnit update_max { 0.0f };
+    static constexpr GameCounter::TickUnit queue_max { 0.0f };
+    static constexpr GameCounter::TickUnit patch_unload_time { 0.0f };
 
 public:
     PagingController(
@@ -77,7 +77,7 @@ protected:
 
     struct PatchUpdate {
         PatchCoord coord;
-        PageState  new_state;
+        PageState new_state;
     };
 
     static PatchNeighbors GetNeighbors(const PatchCoord &coord);

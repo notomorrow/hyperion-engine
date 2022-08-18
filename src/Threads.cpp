@@ -6,7 +6,15 @@ const FlatMap<ThreadName, ThreadId> Threads::thread_ids {
     decltype(thread_ids)::KeyValuePair { THREAD_MAIN,    ThreadId { static_cast<UInt>(THREAD_MAIN),    "MainThread" } },
     // decltype(thread_ids)::Pair { THREAD_RENDER   ThreadId { static_cast<UInt>(THREAD_RENDER),  "RenderThread" } },
     decltype(thread_ids)::KeyValuePair { THREAD_GAME,    ThreadId { static_cast<UInt>(THREAD_GAME),    "GameThread" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadId { static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread" } }
+    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadId { static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0,  ThreadId { static_cast<UInt>(THREAD_TASK_0), "TaskThread0" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1,  ThreadId { static_cast<UInt>(THREAD_TASK_1), "TaskThread1" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2,  ThreadId { static_cast<UInt>(THREAD_TASK_2), "TaskThread2" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3,  ThreadId { static_cast<UInt>(THREAD_TASK_3), "TaskThread3" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4,  ThreadId { static_cast<UInt>(THREAD_TASK_4), "TaskThread4" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5,  ThreadId { static_cast<UInt>(THREAD_TASK_5), "TaskThread5" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6,  ThreadId { static_cast<UInt>(THREAD_TASK_6), "TaskThread6" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7,  ThreadId { static_cast<UInt>(THREAD_TASK_7), "TaskThread7" } },
 };
 
 #if HYP_ENABLE_THREAD_ASSERTION

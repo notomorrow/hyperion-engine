@@ -185,6 +185,7 @@ enum class DescriptorKey {
     SSR_RADIUS_TEXTURE,
     SSR_BLUR_HOR_TEXTURE,
     SSR_BLUR_VERT_TEXTURE,
+    SSR_FINAL_TEXTURE,
     CUBEMAP_UNIFORMS,
     CUBEMAP_TEST, // removeme
     ENV_PROBES,

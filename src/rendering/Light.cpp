@@ -22,7 +22,10 @@ Light::Light(
 {
 }
 
-Light::~Light() = default;
+Light::~Light()
+{
+    Teardown();
+}
 
 void Light::Init(Engine *engine)
 {

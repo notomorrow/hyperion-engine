@@ -1,14 +1,11 @@
 #ifndef HYPERION_V2_CORE_SCHEDULER_H
 #define HYPERION_V2_CORE_SCHEDULER_H
 
-#define HYP_SCHEDULER_USE_ATOMIC_LOCK 0
-
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-#include "lib/AtomicLock.hpp"
-#endif
+#define HYP_SCHEDULER_USE_ATOMIC_LOCK 1
 
 #include "lib/AtomicSemaphore.hpp"
 #include "lib/DynArray.hpp"
+#include "lib/FixedArray.hpp"
 
 #include <Util.hpp>
 #include <util/Defines.hpp>
@@ -116,6 +113,7 @@ class Scheduler {
 
 public:
     using Task = ScheduledFunction;
+    using TaskID = ScheduledFunctionId;
 
     Scheduler()
         : m_creation_thread(std::this_thread::get_id())
@@ -134,33 +132,99 @@ public:
      * called from a non-owner thread. */
     ScheduledFunctionId Enqueue(ScheduledFunction &&fn)
     {
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
-        return EnqueueInternal(std::forward<ScheduledFunction>(fn));
+        auto result = EnqueueInternal(std::forward<ScheduledFunction>(fn));
+
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#endif
+
+        return result;
     }
     
     /*! \brief Remove a function from the owner thread's queue, if it exists
      * @returns a boolean value indicating whether or not the function was successfully dequeued */
-    // bool Dequeue(ScheduledFunctionId id)
-    // {
-    //     if (id == ScheduledFunction::empty_id) {
-    //         return false;
-    //     }
+    bool Dequeue(ScheduledFunctionId id)
+    {
+        if (id == ScheduledFunction::empty_id) {
+            return false;
+        }
         
-    //     std::unique_lock lock(m_mutex);
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
+        std::unique_lock lock(m_mutex);
+#endif
 
-    //     if (DequeueInternal(id)) {
-    //         lock.unlock();
+        if (DequeueInternal(id)) {
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+            m_sp.Signal();
+#else
+            if (m_scheduled_functions.Empty()) {
+                lock.unlock();
 
-    //         if (m_scheduled_functions.Empty()) {
-    //             m_is_flushed.notify_all();
-    //         }
+                m_is_flushed.notify_all();
+            }
+#endif
 
-    //         return true;
-    //     }
+            return true;
+        }
 
-    //     return false;
-    // }
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#endif
+
+        return false;
+    }
+
+    /*! \brief For each item, remove a function from the owner thread's queue, if it exists
+     * @returns a FixedArray of booleans, each holding whether or not the corresponding function was successfully dequeued */
+    template <SizeType Sz>
+    FixedArray<bool, Sz> DequeueMany(const FixedArray<ScheduledFunctionId, Sz> &ids)
+    {
+        FixedArray<bool, Sz> results {};
+
+        if (ids.Empty()) {
+            return results;
+        }
+        
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
+        std::unique_lock lock(m_mutex);
+#endif
+
+        for (SizeType i = 0; i < ids.Size(); i++) {
+            const auto &id = ids[i];
+
+            if (id == ScheduledFunction::empty_id) {
+                results[i] = false;
+
+                continue;
+            }
+
+            if (DequeueInternal(id)) {
+                results[i] = true;
+            }
+        }
+
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#else
+        if (m_scheduled_functions.Empty()) {
+            lock.unlock();
+
+            m_is_flushed.notify_all();
+        }
+#endif
+
+        return results;
+    }
 
     /*! If the enqueued with the given ID does _not_ exist, schedule the given function.
      *  else, remove the item with the given ID
@@ -186,17 +250,6 @@ public:
     //     return (dequeue_id = EnqueueInternal(std::forward<ScheduledFunction>(enqueue_fn)));
     // }
 
-    /*! Wait for all tasks to be completed in another thread.
-     * Must only be called from a different thread than the creation thread.
-     */
-    void AwaitExecution()
-    {
-        AssertThrow(std::this_thread::get_id() != m_creation_thread);
-        
-        std::unique_lock lock(m_mutex);
-        m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
-    }
-
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
      * Otherwise, the thread will block until all tasks have been executed.
      */
@@ -217,29 +270,33 @@ public:
             return;
         }
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        while (m_num_enqueued.load() != 0u);
+#else
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
+#endif
     }
 
-    template <class Executor>
-    void ExecuteFront(Executor &&executor)
-    {
-        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+    // template <class Executor>
+    // void ExecuteFront(Executor &&executor)
+    // {
+    //     AssertThrow(std::this_thread::get_id() == m_creation_thread);
 
-        std::unique_lock lock(m_mutex);
+    //     std::unique_lock lock(m_mutex);
 
-        if (m_scheduled_functions.Any()) {
-            executor(m_scheduled_functions.Front());
+    //     if (m_scheduled_functions.Any()) {
+    //         executor(m_scheduled_functions.Front());
 
-            m_scheduled_functions.PopFront();
+    //         m_scheduled_functions.PopFront();
 
-            --m_num_enqueued;
-        }
+    //         --m_num_enqueued;
+    //     }
 
-        lock.unlock();
+    //     lock.unlock();
 
-        m_is_flushed.notify_all();
-    }
+    //     m_is_flushed.notify_all();
+    // }
 
     /* Move all the next pending task in the queue to an external container. */
     template <class Container>
@@ -247,7 +304,11 @@ public:
     {
         AssertThrow(std::this_thread::get_id() == m_creation_thread);
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
         if (m_scheduled_functions.Any()) {
             out_container.Push(std::move(m_scheduled_functions.Front()));
@@ -256,9 +317,13 @@ public:
             --m_num_enqueued;
         }
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#else
         lock.unlock();
 
         m_is_flushed.notify_all();
+#endif
     }
     
     /* Move all tasks in the queue to an external container. */
@@ -267,18 +332,26 @@ public:
     {
         AssertThrow(std::this_thread::get_id() == m_creation_thread);
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
         for (auto it = m_scheduled_functions.Begin(); it != m_scheduled_functions.End(); ++it) {
             out_container.Push(std::move(*it));
         }
 
         m_scheduled_functions.Clear();
-        m_num_enqueued.store(0);
+        m_num_enqueued.store(0u);
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#else
         lock.unlock();
 
         m_is_flushed.notify_all();
+#endif
     }
 
     /*! Execute all scheduled tasks. May only be called from the creation thread.
@@ -288,7 +361,11 @@ public:
     {
         AssertThrow(std::this_thread::get_id() == m_creation_thread);
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
         while (m_scheduled_functions.Any()) {
             executor(m_scheduled_functions.Front());
@@ -296,12 +373,15 @@ public:
             m_scheduled_functions.PopFront();
         }
 
-        m_num_enqueued = 0;
+        m_num_enqueued.store(0u);
 
-
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#else
         lock.unlock();
 
         m_is_flushed.notify_all();
+#endif
     }
     
 private:
@@ -323,29 +403,31 @@ private:
         });
     }
 
-    // bool DequeueInternal(ScheduledFunctionId id)
-    // {
-    //     const auto it = Find(id);
+    bool DequeueInternal(ScheduledFunctionId id)
+    {
+        const auto it = Find(id);
 
-    //     if (it == m_scheduled_functions.End()) {
-    //         return false;
-    //     }
+        if (it == m_scheduled_functions.End()) {
+            return false;
+        }
 
-    //     m_scheduled_functions.Erase(it);
+        m_scheduled_functions.Erase(it);
 
-    //     if (m_scheduled_functions.Empty()) {
-    //         m_num_enqueued = 0;
-    //     }
+        --m_num_enqueued;
 
-    //     return true;
-    // }
+        return true;
+    }
 
     uint32_t                       m_id_counter = 0;
     std::atomic_uint32_t           m_num_enqueued{0};
     ScheduledFunctionQueue         m_scheduled_functions;
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+    BinarySemaphore m_sp;
+#else
     std::mutex                     m_mutex;
     std::condition_variable        m_is_flushed;
+#endif
 
     std::thread::id                m_creation_thread;
 };

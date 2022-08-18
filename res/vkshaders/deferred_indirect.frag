@@ -41,7 +41,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 /* Begin main shader program */
 
 #define IBL_INTENSITY 10000.0
-#define IRRADIANCE_MULTIPLIER 8.0
+#define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -137,19 +137,31 @@ void main()
         const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
         const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
         const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
-        const vec3 F = SchlickFresnel(F0, F90, NdotV);
         
         const vec2 AB = BRDFMap(roughness, NdotV);
-        const vec3 dfg = albedo_linear.rgb * AB.x + AB.y;
+        const vec3 dfg = F0 * AB.x + AB.y;
         
         const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
         const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
-        const float lod = 12.0 * perceptual_roughness * (2.0 - perceptual_roughness);
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
             uint probe_index = scene.environment_texture_index;
-            ibl = EnvProbeSampleParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], position.xyz, R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+            const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_index]);
+            const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
+
+            EnvProbe probe = env_probes[probe_index];
+
+            ibl = EnvProbeSample(
+                gbuffer_sampler,
+                env_probe_textures[probe_index],
+                bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
+                    ? EnvProbeCoordParallaxCorrected(probe, position.xyz, R)
+                    : R,
+                lod
+            ).rgb;
+            
+               //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
         }
 #endif
 
@@ -190,7 +202,7 @@ void main()
             uint probe_index = scene.environment_texture_index;
             const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_index]);
 
-            irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_index], -N, float(num_levels - 1)).rgb;
+            irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_index], N, float(num_levels - 1)).rgb;
         }
 #endif
 
@@ -207,8 +219,8 @@ void main()
         Fd *= multibounce;
         Fr *= multibounce;
 
-        Fr *= exposure * IBL_INTENSITY;
-        Fd *= exposure * IBL_INTENSITY;
+        // Fr *= exposure * IBL_INTENSITY;
+        // Fd *= exposure * IBL_INTENSITY;
 
         reflections.rgb *= specular_ao;
         Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
@@ -232,6 +244,4 @@ void main()
 
     // output_color.rgb = vec3(float(depth < 0.95)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
     //output_color = ScreenSpaceReflection(material.r);
-
-    // output_color.rgb = ibl.rgb;
 }

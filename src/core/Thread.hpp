@@ -27,10 +27,10 @@ void SetThreadId(const ThreadId &id);
 
 template <class SchedulerType, class ...Args>
 class Thread {
-protected:
-    using Scheduler = SchedulerType;
-
 public:
+    using Scheduler = SchedulerType;
+    using Task = typename Scheduler::Task;
+
     Thread(const ThreadId &id);
     Thread(const Thread &other) = delete;
     Thread &operator=(const Thread &other) = delete;
@@ -38,16 +38,16 @@ public:
     Thread &operator=(Thread &&other) noexcept;
     virtual ~Thread();
 
-    const ThreadId &GetId() const         { return m_id; }
+    const ThreadId &GetId() const { return m_id; }
 
-    Scheduler *GetScheduler()             { return m_scheduler; }
+    Scheduler *GetScheduler() { return m_scheduler; }
     const Scheduler *GetScheduler() const { return m_scheduler; }
 
     template <class Task>
-    void ScheduleTask(Task &&task)
+    auto ScheduleTask(Task &&task) -> typename Scheduler::TaskID
     {
         AssertThrow(m_scheduler != nullptr);
-        m_scheduler->Enqueue(std::forward<Task>(task));
+        return m_scheduler->Enqueue(std::forward<Task>(task));
     }
 
     bool Start(Args ...args);
@@ -59,10 +59,10 @@ protected:
     virtual void operator()(Args ...args) = 0;
 
     const ThreadId m_id;
-    Scheduler     *m_scheduler;
+    Scheduler *m_scheduler;
 
 private:
-    std::thread   *m_thread;
+    std::thread *m_thread;
 };
 
 template <class SchedulerType, class ...Args>

@@ -13,6 +13,7 @@
 #include "CullData.hpp"
 #include "Compute.hpp"
 #include <Constants.hpp>
+#include <core/lib/AtomicSemaphore.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFrame.hpp>
@@ -82,9 +83,6 @@ public:
     const StencilState &GetStencilMode() const              { return m_renderable_attributes.stencil_state; }
     void SetStencilState(const StencilState &stencil_state) { m_renderable_attributes.stencil_state = stencil_state; }
 
-    UInt GetMultiviewIndex() const                          { return m_multiview_index; }
-    void SetMultiviewIndex(UInt multiview_index)            { m_multiview_index = multiview_index; }
-
     void AddEntity(Ref<Entity> &&entity);
     void RemoveEntity(Ref<Entity> &&entity, bool call_on_removed = true);
     auto &GetEntities()                                     { return m_entities; }
@@ -116,15 +114,6 @@ public:
     );
 
 private:
-    struct CachedRenderData {
-        UInt          cycles_remaining{max_frames_in_flight + 1};
-        Entity::ID    entity_id;
-        Ref<Material> material;
-        Ref<Mesh>     mesh;
-        Ref<Skeleton> skeleton;
-        Ref<Shader>   shader;
-    };
-
     void PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedEntitiesFlag()
@@ -136,25 +125,23 @@ private:
 
     std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 
-    Ref<Shader>                       m_shader;
-    Ref<RenderPass>                   m_render_pass;
-    RenderableAttributeSet            m_renderable_attributes;
-    UInt                              m_multiview_index;
+    Ref<Shader> m_shader;
+    Ref<RenderPass> m_render_pass;
+    RenderableAttributeSet m_renderable_attributes;
 
-    IndirectRenderer                  m_indirect_renderer;
+    IndirectRenderer m_indirect_renderer;
     
-    std::vector<Ref<Framebuffer>>     m_fbos;
+    std::vector<Ref<Framebuffer>> m_fbos;
 
-    std::vector<Ref<Entity>>         m_entities; // lives in RENDER thread
-    std::vector<Ref<Entity>>         m_entities_pending_addition; // shared
-    std::vector<Ref<Entity>>         m_entities_pending_removal; // shared
+    std::vector<Ref<Entity>> m_entities; // lives in RENDER thread
+    std::vector<Ref<Entity>> m_entities_pending_addition; // shared
+    std::vector<Ref<Entity>> m_entities_pending_removal; // shared
 
-    std::vector<CachedRenderData>     m_cached_render_data;
+    PerFrameData<CommandBuffer> *m_per_frame_data;
 
-    PerFrameData<CommandBuffer>      *m_per_frame_data;
-
-    std::mutex                        m_enqueued_entities_mutex;
-    std::atomic_bool                  m_enqueued_entities_flag{false};
+    // std::mutex m_enqueued_entities_mutex;
+    BinarySemaphore m_enqueued_entities_sp;
+    std::atomic_bool m_enqueued_entities_flag { false };
 
 };
 

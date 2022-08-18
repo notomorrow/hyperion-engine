@@ -45,7 +45,10 @@ CubemapRenderer::CubemapRenderer(
 }
 
 
-CubemapRenderer::~CubemapRenderer() = default;
+CubemapRenderer::~CubemapRenderer()
+{
+    Teardown();
+}
 
 void CubemapRenderer::Init(Engine *engine)
 {
@@ -279,7 +282,8 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
         .aabb_max       = m_aabb.max.ToVector4(),
         .aabb_min       = m_aabb.min.ToVector4(),
         .world_position = origin.ToVector4(),
-        .texture_index  = GetComponentIndex()
+        .texture_index  = GetComponentIndex(),
+        .flags          = static_cast<UInt32>(ENV_PROBE_PARALLAX_CORRECTED)
     };
 
     HYPERION_ASSERT_RESULT(m_env_probe_uniform_buffer.Create(engine->GetDevice(), sizeof(EnvProbeShaderData)));
@@ -345,7 +349,6 @@ void CubemapRenderer::CreateRendererInstance(Engine *engine)
     renderer_instance->SetDepthWrite(true);
     renderer_instance->SetDepthTest(true);
     renderer_instance->SetFaceCullMode(FaceCullMode::BACK);
-    renderer_instance->SetMultiviewIndex(0);
 
     for (auto &framebuffer: m_framebuffers) {
         renderer_instance->AddFramebuffer(framebuffer.IncRef());

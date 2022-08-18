@@ -16,12 +16,14 @@ RendererInstance::RendererInstance(
     m_shader(std::move(shader)),
     m_render_pass(std::move(render_pass)),
     m_renderable_attributes(renderable_attributes),
-    m_per_frame_data(nullptr),
-    m_multiview_index(~0u)
+    m_per_frame_data(nullptr)
 {
 }
 
-RendererInstance::~RendererInstance() = default;
+RendererInstance::~RendererInstance()
+{
+    Teardown();
+}
 
 void RendererInstance::RemoveFramebuffer(Framebuffer::ID id)
 {
@@ -59,7 +61,8 @@ void RendererInstance::AddEntity(Ref<Entity> &&entity)
 
     entity->OnAddedToPipeline(this);
     
-    std::lock_guard guard(m_enqueued_entities_mutex);
+    m_enqueued_entities_sp.Wait();
+    //std::lock_guard guard(m_enqueued_entities_mutex);
 
     // remove from 'pending removal' list
     auto it = std::find(
@@ -73,6 +76,8 @@ void RendererInstance::AddEntity(Ref<Entity> &&entity)
     }
     
     m_entities_pending_addition.push_back(std::move(entity));
+
+    m_enqueued_entities_sp.Signal();
     
     UpdateEnqueuedEntitiesFlag();
 }
@@ -83,7 +88,9 @@ void RendererInstance::RemoveEntity(Ref<Entity> &&entity, bool call_on_removed)
     // we'll have to assume it's here, and check later :/ 
 
     // add it to pending removal list
-    std::lock_guard guard(m_enqueued_entities_mutex);
+    // std::lock_guard guard(m_enqueued_entities_mutex);
+
+    m_enqueued_entities_sp.Wait();
 
     const auto pending_removal_it = std::find(
         m_entities_pending_removal.begin(),
@@ -107,23 +114,6 @@ void RendererInstance::RemoveEntity(Ref<Entity> &&entity, bool call_on_removed)
             // directly remove from list of ones pending addition
             m_entities_pending_addition.erase(pending_addition_it);
         } else {
-            /*m_cached_render_data.push_back(CachedRenderData{
-                .cycles_remaining = max_frames_in_flight + 1,
-                .entity_id       = entity->GetId(),
-                .material = entity->GetMaterial() != nullptr
-                    ? entity->GetMaterial().IncRef()
-                    : nullptr,
-                .mesh     = entity->GetMesh() != nullptr
-                    ? entity->GetMesh().IncRef()
-                    : nullptr,
-                .skeleton = entity->GetSkeleton() != nullptr
-                    ? entity->GetSkeleton().IncRef()
-                    : nullptr,
-                .shader   = entity->GetShader() != nullptr
-                    ? entity->GetShader().IncRef()
-                    : nullptr
-            });*/
-
             m_entities_pending_removal.push_back(std::move(entity));
         }
 
@@ -136,13 +126,17 @@ void RendererInstance::RemoveEntity(Ref<Entity> &&entity, bool call_on_removed)
             GetId().value
         );
     }
+
+    m_enqueued_entities_sp.Signal();
 }
 
 void RendererInstance::PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    std::lock_guard guard(m_enqueued_entities_mutex);
+    // std::lock_guard guard(m_enqueued_entities_mutex);
+
+    m_enqueued_entities_sp.Wait();
 
     if (!m_entities_pending_removal.empty()) {
         for (auto it = m_entities_pending_removal.begin(); it != m_entities_pending_removal.end();) {
@@ -184,6 +178,8 @@ void RendererInstance::PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_i
             ++it;
         }
     }
+
+    m_enqueued_entities_sp.Signal();
 
     UpdateEnqueuedEntitiesFlag();
 }
@@ -228,8 +224,7 @@ void RendererInstance::Init(Engine *engine)
                 .blend_enabled     = m_renderable_attributes.alpha_blending,
                 .shader            = m_shader->GetShaderProgram(),
                 .render_pass       = &m_render_pass->GetRenderPass(),
-                .stencil_state     = m_renderable_attributes.stencil_state,
-                .multiview_index   = m_multiview_index
+                .stencil_state     = m_renderable_attributes.stencil_state
             };
 
             for (auto &fbo : m_fbos) {
@@ -279,7 +274,9 @@ void RendererInstance::Init(Engine *engine)
 
             m_entities.clear();
             
-            std::lock_guard guard(m_enqueued_entities_mutex);
+            // std::lock_guard guard(m_enqueued_entities_mutex);
+
+            m_enqueued_entities_sp.Wait();
 
             for (auto &&entity : m_entities_pending_addition) {
                 if (entity == nullptr) {
@@ -291,6 +288,8 @@ void RendererInstance::Init(Engine *engine)
 
             m_entities_pending_addition.clear();
             m_entities_pending_removal.clear();
+
+            m_enqueued_entities_sp.Signal();
 
             m_shader.Reset();
 
@@ -332,8 +331,8 @@ void RendererInstance::CollectDrawCalls(
     }
 
     const auto scene_binding = engine->render_state.GetScene();
-    const auto scene_id      = scene_binding.id;
-    const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
+    const auto scene_id = scene_binding.id;
+    const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
     // check visibility state
     const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
@@ -379,7 +378,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
     AssertThrow(m_per_frame_data != nullptr);
 
     const auto scene_binding = engine->render_state.GetScene();
-    const auto scene_id      = scene_binding.id;
+    const auto scene_id = scene_binding.id;
 
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
@@ -398,7 +397,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
                 FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,        DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
                 FixedArray {
                     UInt32((scene_id.value - 1) * sizeof(SceneShaderData)),
-                    UInt32(0           * sizeof(LightShaderData))
+                    UInt32(0 * sizeof(LightShaderData))
                 }
             );
 
@@ -485,23 +484,6 @@ void RendererInstance::Render(Engine *engine, Frame *frame)
     AssertReady();
 
     AssertThrow(m_per_frame_data != nullptr);
-
-    /* Remove cache data. This data exists so that there is some buffer time
-       in between removing an entity from the pipeline and the data (potentially)
-       being destroyed. We use (max frames in flight) + 1 and count down each Render() call.
-    */
-    
-    /*if (!m_cached_render_data.empty()) {
-        auto it = m_cached_render_data.begin();
-
-        while (it != m_cached_render_data.end()) {
-            if (!--it->cycles_remaining) {
-                it = m_cached_render_data.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }*/
 
     if (m_enqueued_entities_flag.load()) {
         PerformEnqueuedEntityUpdates(engine, frame->GetFrameIndex());

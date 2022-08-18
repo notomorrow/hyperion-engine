@@ -11,7 +11,6 @@
 #include <core/lib/Pair.hpp>
 #include <Types.hpp>
 
-#include <mutex>
 #include <vector>
 
 namespace hyperion::renderer {
@@ -59,10 +58,14 @@ public:
 
         AssertThrow(component != nullptr);
 
-        std::lock_guard guard(m_render_component_mutex);
+        // std::lock_guard guard(m_render_component_mutex);
+
+        m_render_component_sp.Wait();
 
         component->SetParent(this);
         m_render_components_pending_addition.Set<T>(std::move(component));
+
+        m_render_component_sp.Signal();
         
         m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
@@ -104,9 +107,14 @@ public:
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
 
-        std::lock_guard guard(m_render_component_mutex);
+        // std::lock_guard guard(m_render_component_mutex);
+
+        m_render_component_sp.Wait();
 
         m_render_components_pending_removal.Insert(Pair { decltype(m_render_components)::GetComponentID<T>(), T::ComponentName });
+
+        m_render_component_sp.Signal();
+
         m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
 
@@ -135,7 +143,7 @@ private:
     Queue<Ref<Entity>>                                            m_entities_pending_addition;
     Queue<Ref<Entity>>                                            m_entities_pending_removal;
     Queue<Ref<Entity>>                                            m_entity_renderable_attribute_updates;
-    std::mutex                                                    m_entity_update_mutex;
+    BinarySemaphore                                               m_entity_update_sp;
 
     ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
     ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
@@ -146,11 +154,11 @@ private:
     FlatMap<Light::ID, Ref<Light>>                                m_lights;
     Queue<Ref<Light>>                                             m_lights_pending_addition;
     Queue<Ref<Light>>                                             m_lights_pending_removal;
-    std::mutex                                                    m_light_update_mutex;
+    BinarySemaphore                                               m_light_update_sp;
 
     float                                                         m_global_timer;
 
-    std::mutex                                                    m_render_component_mutex;
+    BinarySemaphore                                               m_render_component_sp;
     AtomicLock                                                    m_updating_render_components;
 };
 

@@ -23,7 +23,7 @@ public:
 
     template <class ... Args>
     constexpr FixedArray(Args &&... args)
-        : m_data { std::forward<decltype(args)>(args)... }
+        : m_data { std::forward<Args>(args)... }
     {
     }
 

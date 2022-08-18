@@ -19,7 +19,10 @@ Camera::Camera(CameraType camera_type, int width, int height, float _near, float
 {
 }
 
-Camera::~Camera() = default;
+Camera::~Camera()
+{
+    Teardown();
+}
 
 void Camera::Init(Engine *engine)
 {

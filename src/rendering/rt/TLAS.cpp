@@ -8,7 +8,10 @@ Tlas::Tlas()
 {
 }
 
-Tlas::~Tlas() = default;
+Tlas::~Tlas()
+{
+    Teardown();
+}
 
 void Tlas::AddBlas(Ref<Blas> &&blas)
 {

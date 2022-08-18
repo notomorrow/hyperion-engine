@@ -41,6 +41,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::SSR_RADIUS_TEXTURE,    19},
             {DescriptorKey::SSR_BLUR_HOR_TEXTURE,  20},
             {DescriptorKey::SSR_BLUR_VERT_TEXTURE, 21},
+            {DescriptorKey::SSR_FINAL_TEXTURE,     22},
 
             {DescriptorKey::CUBEMAP_UNIFORMS,      24},
             {DescriptorKey::CUBEMAP_TEST,          25},

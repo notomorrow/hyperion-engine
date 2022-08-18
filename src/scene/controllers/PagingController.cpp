@@ -7,15 +7,15 @@ namespace hyperion::v2 {
 
 auto PagingController::GetNeighbors(const PatchCoord &coord) -> PatchNeighbors
 {
-    return{
-        PatchNeighbor{coord + PatchCoord{1, 0}},
-        PatchNeighbor{coord + PatchCoord{-1, 0}},
-        PatchNeighbor{coord + PatchCoord{0, 1}},
-        PatchNeighbor{coord + PatchCoord{0, -1}},
-        PatchNeighbor{coord + PatchCoord{1, -1}},
-        PatchNeighbor{coord + PatchCoord{-1, -1}},
-        PatchNeighbor{coord + PatchCoord{1, 1}},
-        PatchNeighbor{coord + PatchCoord{-1, 1}}
+    return {
+        PatchNeighbor { coord + PatchCoord { 1, 0 } },
+        PatchNeighbor { coord + PatchCoord { -1, 0 } },
+        PatchNeighbor { coord + PatchCoord { 0, 1 } },
+        PatchNeighbor { coord + PatchCoord { 0, -1 } },
+        PatchNeighbor { coord + PatchCoord { 1, -1 } },
+        PatchNeighbor { coord + PatchCoord { -1, -1 } },
+        PatchNeighbor { coord + PatchCoord { 1, 1 } },
+        PatchNeighbor { coord + PatchCoord { -1, 1 } }
     };
 }
 
@@ -35,7 +35,13 @@ PagingController::PagingController(
 
 void PagingController::OnAdded()
 {
-    AddPatch(PatchCoord { 0, 0 });
+    const PatchCoord origin { 0, 0 };
+
+    AddPatch(origin);
+
+    for (const auto neighbor : GetNeighbors(origin)) {
+        AddPatch(neighbor.coord);
+    }
 }
 
 void PagingController::OnRemoved()
@@ -87,6 +93,16 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
     m_update_timer += delta;
     m_queue_timer += delta;
 
+    FlatSet<PatchCoord> patch_coords_in_range;
+
+    for (Int x = MathUtil::Floor(-m_max_distance); x <= MathUtil::Ceil(m_max_distance) + 1; x++) {
+        for (Int z = MathUtil::Floor(-m_max_distance); z <= MathUtil::Ceil(m_max_distance) + 1; z++) {
+            patch_coords_in_range.Insert(camera_coord + Vector(static_cast<Float>(x), static_cast<Float>(z)));
+        }
+    }
+
+    FlatSet<PatchCoord> patch_coords_to_add = patch_coords_in_range;
+
     if (m_queue_timer >= queue_max) {
         while (m_queue.Any()) {
             const auto top = m_queue.Front();
@@ -129,19 +145,19 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
             auto &patch = it.second;
             AssertThrow(patch != nullptr);
 
+            const bool in_range = patch_coords_in_range.Contains(patch->info.coord);
+
+            if (in_range) {
+                patch_coords_to_add.Erase(patch->info.coord);
+            }
+
             switch (patch->info.state) {
             case PageState::LOADED:
                 patch->info.unload_timer = 0.0f;
 
-                if (InRange(patch.get(), camera_coord)) {
-                    for (auto &neighbor : patch->info.neighbors) {
-                        if (GetPatch(neighbor.coord) == nullptr && InRange(neighbor.GetCenter(), camera_coord)) {
-                            EnqueuePatch(neighbor.coord);
-                        }
-                    }
-                } else {
+                if (!in_range) {
                     PushUpdate({
-                        .coord     = patch->info.coord,
+                        .coord = patch->info.coord,
                         .new_state = PageState::UNLOADING
                     });
                 }
@@ -149,9 +165,9 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
                 break;
 
             case PageState::UNLOADING:
-                if (InRange(patch.get(), camera_coord)) {
+                if (in_range) {
                     PushUpdate({
-                        .coord     = patch->info.coord,
+                        .coord = patch->info.coord,
                         .new_state = PageState::LOADED
                     });
                 } else {
@@ -159,7 +175,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
 
                     if (patch->info.unload_timer >= patch_unload_time) {
                         PushUpdate({
-                            .coord     = patch->info.coord,
+                            .coord = patch->info.coord,
                             .new_state = PageState::UNLOADED
                         });
                     }
@@ -170,6 +186,10 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
         }
 
         m_update_timer = 0.0f;
+    }
+
+    for (const auto &coord : patch_coords_to_add) {
+        EnqueuePatch(coord);
     }
 }
 
@@ -194,7 +214,7 @@ bool PagingController::InRange(const PatchCoord &patch_center, const PatchCoord 
 
 auto PagingController::CreatePatch(const PatchInfo &info) -> std::unique_ptr<Patch>
 {
-    return std::make_unique<Patch>(Patch{
+    return std::make_unique<Patch>(Patch {
         .info = info
     });
 }
@@ -203,7 +223,7 @@ void PagingController::AddPatch(const PatchCoord &coord)
 {
     AssertThrow(GetPatch(coord) == nullptr);
 
-    const PatchInfo info{
+    const PatchInfo info {
         .extent    = m_patch_size,
         .coord     = coord,
         .scale     = m_scale,
@@ -218,7 +238,7 @@ void PagingController::AddPatch(const PatchCoord &coord)
 
     const auto neighbor_it = m_queued_neighbors.Find(coord);
 
-    if (neighbor_it != m_queued_neighbors.end()) {
+    if (neighbor_it != m_queued_neighbors.End()) {
         m_queued_neighbors.Erase(neighbor_it);
     }
 }

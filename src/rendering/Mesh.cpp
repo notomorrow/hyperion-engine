@@ -74,16 +74,19 @@ Mesh::Mesh(
     Topology topology,
     Flags flags
 ) : Mesh(
-      vertices,
-      indices,
-      topology,
-      renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-      flags
+        vertices,
+        indices,
+        topology,
+        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
+        flags
     )
 {
 }
 
-Mesh::~Mesh() = default;
+Mesh::~Mesh()
+{
+    Teardown();
+}
 
 void Mesh::Init(Engine *engine)
 {
@@ -108,8 +111,8 @@ void Mesh::Init(Engine *engine)
             );
 
             /* set to 1 vertex / index to prevent explosions */
-            m_vertices = {Vertex()};
-            m_indices  = {0};
+            m_vertices = { Vertex() };
+            m_indices = { 0 };
         }
 
         engine->render_scheduler.Enqueue([this, packed_buffer = BuildVertexBuffer(), indices = m_indices](...) {
@@ -118,7 +121,7 @@ void Mesh::Init(Engine *engine)
             auto *engine = GetEngine();
 
             auto *instance = engine->GetInstance();
-            auto *device   = engine->GetDevice();
+            auto *device  = engine->GetDevice();
 
             const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
             const size_t packed_indices_size = indices.size() * sizeof(Index);

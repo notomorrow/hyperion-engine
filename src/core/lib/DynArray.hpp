@@ -734,6 +734,10 @@ void DynArray<T>::Shift(SizeType count)
 template <class T>
 auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
 {
+    if (iter == End()) {
+        return End();
+    }
+
     const Int64 dist = iter - Begin();
 
     for (Int64 index = dist; index < Size() - 1; ++index) {

@@ -407,16 +407,16 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         .pData         = &specialization_info_data
     };
 
-    if (m_construction_info.render_pass->IsMultiview()) {
-        AssertThrowMsg(m_construction_info.multiview_index != ~0u, "Multiview index not set but renderpass is multiview");
+    // if (m_construction_info.render_pass->IsMultiview()) {
+    //     AssertThrowMsg(m_construction_info.multiview_index != ~0u, "Multiview index not set but renderpass is multiview");
 
-        specialization_info_data = static_cast<float>(m_construction_info.multiview_index);
+    //     specialization_info_data = static_cast<float>(m_construction_info.multiview_index);
 
-        // create specialization info for each shader stage
-        for (auto &stage : stages) {
-            stage.pSpecializationInfo = &specialization_info;
-        }
-    }
+    //     // create specialization info for each shader stage
+    //     for (auto &stage : stages) {
+    //         stage.pSpecializationInfo = &specialization_info;
+    //     }
+    // }
 
     HYPERION_VK_CHECK_MSG(
         vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),

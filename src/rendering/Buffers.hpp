@@ -105,6 +105,8 @@ struct alignas(256) ObjectShaderData {
     UInt32 mesh_id;
     UInt32 material_id;
     UInt32 skeleton_id;
+
+    UInt32 bucket;
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
@@ -188,11 +190,17 @@ struct alignas(16) ShadowShaderData {
 
 //static_assert(sizeof(ShadowShaderData) == 128);
 
+enum EnvProbeFlags : UInt32 {
+    ENV_PROBE_NONE = 0x0,
+    ENV_PROBE_PARALLAX_CORRECTED = 0x1
+};
+
 struct alignas(16) EnvProbeShaderData {
     Vector4 aabb_max;
     Vector4 aabb_min;
     Vector4 world_position;
     UInt32  texture_index;
+    UInt32  flags;
 };
 
 /* max number of skeletons, based on size in mb */

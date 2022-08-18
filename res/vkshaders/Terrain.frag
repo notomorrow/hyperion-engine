@@ -120,7 +120,7 @@ void main()
     
 
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_positions = vec4(0.0); // not used
+    gbuffer_positions = vec4(v_position, 1.0); // not used
     gbuffer_material = vec4(roughness, metalness, 0.0, ao);
     gbuffer_tangents = EncodeNormal(v_tangent);
     gbuffer_bitangents = EncodeNormal(v_bitangent);

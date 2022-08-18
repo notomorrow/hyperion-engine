@@ -17,7 +17,7 @@
 
 #include "GameThread.hpp"
 #include "Threads.hpp"
-#include "TaskThread.hpp"
+#include "TaskSystem.hpp"
 
 #include <core/ecs/ComponentRegistry.hpp>
 #include <core/Scheduler.hpp>
@@ -29,6 +29,8 @@
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
+
+#include <TaskSystem.hpp>
 
 #include <util/EnumOptions.hpp>
 #include <builders/shader_compiler/ShaderCompiler.hpp>
@@ -330,7 +332,8 @@ public:
     Scheduler<RenderFunctor> render_scheduler;
 
     GameThread game_thread;
-    TaskThread terrain_thread;
+    //TaskThread terrain_thread;
+    TaskSystem task_system;
 
 private:
     void ResetRenderState();

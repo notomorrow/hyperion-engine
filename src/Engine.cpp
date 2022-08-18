@@ -27,8 +27,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(this),
-      assets(this),
-      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 60.0f)
+      assets(this)
 {
 }
 
@@ -468,11 +467,20 @@ void Engine::Initialize()
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto *descriptor_set_globals = GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view    = &GetPlaceholderData().GetImageView3D1x1x1R8Storage(),
                 .sampler       = &GetPlaceholderData().GetSamplerLinear()
+            });
+
+        // add placeholder SSR image
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_FINAL_TEXTURE)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view    = &GetPlaceholderData().GetImageView2D1x1R8()
             });
     }
 
@@ -548,7 +556,7 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 
-    AssertThrow(terrain_thread.Start());
+    task_system.Start();
 }
 
 Ref<RendererInstance> Engine::FindOrCreateRendererInstance(const RenderableAttributeSet &renderable_attributes)

@@ -41,7 +41,10 @@ Shader::Shader(const std::vector<SubShader> &sub_shaders)
 {
 }
 
-Shader::~Shader() = default;
+Shader::~Shader()
+{
+    Teardown();
+}
 
 void Shader::Init(Engine *engine)
 {
