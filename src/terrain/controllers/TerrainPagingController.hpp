@@ -2,12 +2,13 @@
 #define HYPERION_V2_TERRAIN_PAGING_CONTROLLER_H
 
 #include "../TerrainMeshBuilder.hpp"
+#include <TaskSystem.hpp>
 #include <core/lib/Queue.hpp>
+#include <core/lib/AtomicSemaphore.hpp>
 #include <scene/controllers/PagingController.hpp>
 #include <rendering/Material.hpp>
 #include <util/NoiseFactory.hpp>
 
-#include <mutex>
 #include <atomic>
 
 namespace hyperion::v2 {
@@ -36,22 +37,24 @@ protected:
 
 private:
     struct TerrainGenerationResult {
-        PatchInfo             patch_info;
+        PatchInfo patch_info;
         std::unique_ptr<Mesh> mesh;
     };
 
-    Seed                                m_seed;
+    Seed m_seed;
 
     UInt m_update_log_timer = 0;
 
-    Ref<Material>                       m_material;
+    Ref<Material>  m_material;
 
-    std::mutex                          m_terrain_generation_mutex;
-    std::atomic_bool                    m_terrain_generation_flag;
+    BinarySemaphore m_terrain_generation_sp;
+    std::atomic_bool m_terrain_generation_flag;
 
-    // don't touch without mutex
-    Queue<TerrainGenerationResult>      m_shared_terrain_mesh_queue;
-    Queue<TerrainGenerationResult>      m_owned_terrain_mesh_queue;
+    // don't touch without using the semaphore
+    Queue<TerrainGenerationResult> m_shared_terrain_mesh_queue;
+    Queue<TerrainGenerationResult> m_owned_terrain_mesh_queue;
+
+    FlatMap<PatchCoord, TaskSystem::TaskRef> m_enqueued_patches;
 };
 
 } // namespace hyperion::v2

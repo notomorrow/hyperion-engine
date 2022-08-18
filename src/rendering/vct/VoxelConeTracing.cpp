@@ -19,7 +19,10 @@ VoxelConeTracing::VoxelConeTracing(Params &&params)
 {
 }
 
-VoxelConeTracing::~VoxelConeTracing() = default;
+VoxelConeTracing::~VoxelConeTracing()
+{
+    Teardown();
+}
 
 void VoxelConeTracing::Init(Engine *engine)
 {

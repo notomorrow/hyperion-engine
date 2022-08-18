@@ -3,16 +3,56 @@
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    float a = roughness*roughness;
-    float a2 = a*a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
+    // float a = roughness*roughness;
+    // float a2 = a*a;
+    // float NdotH = max(dot(N, H), 0.0);
+    // float NdotH2 = NdotH*NdotH;
 
-    float nom   = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
+    // float nom   = a2;
+    // float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    // denom = PI * denom * denom;
 
-    return nom / denom;
+    // return nom / denom;
+
+
+    // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
+
+    // In mediump, there are two problems computing 1.0 - NoH^2
+    // 1) 1.0 - NoH^2 suffers floating point cancellation when NoH^2 is close to 1 (highlights)
+    // 2) NoH doesn't have enough precision around 1.0
+    // Both problem can be fixed by computing 1-NoH^2 in highp and providing NoH in highp as well
+
+    // However, we can do better using Lagrange's identity:
+    //      ||a x b||^2 = ||a||^2 ||b||^2 - (a . b)^2
+    // since N and H are unit vectors: ||N x H||^2 = 1.0 - NoH^2
+    // This computes 1.0 - NoH^2 directly (which is close to zero in the highlights and has
+    // enough precision).
+    // Overall this yields better performance, keeping all computations in mediump
+    const float NoH = dot(N, H);
+#if defined(TARGET_MOBILE)
+    vec3 NxH = cross(N, H);
+    float oneMinusNoHSquared = dot(NxH, NxH);
+#else
+    float oneMinusNoHSquared = 1.0 - NoH * NoH;
+#endif
+
+    float a = NoH * roughness;
+    float k = roughness / (oneMinusNoHSquared + a * a);
+    float d = k * k * (1.0 / PI);
+    return d;
+}
+
+float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
+    // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+    float a2 = roughness * roughness;
+    // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+    float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
+    float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
+    float v = 0.5 / (lambdaV + lambdaL);
+    // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
+    // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
+    // clamp to the maximum value representable in mediump
+    return v;
 }
 
 

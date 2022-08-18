@@ -17,7 +17,10 @@ SparseVoxelOctree::SparseVoxelOctree()
 {
 }
 
-SparseVoxelOctree::~SparseVoxelOctree() = default;
+SparseVoxelOctree::~SparseVoxelOctree()
+{
+    Teardown();
+}
 
 void SparseVoxelOctree::Init(Engine *engine)
 {

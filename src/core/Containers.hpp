@@ -83,8 +83,7 @@ struct CallbackRef {
 
     ~CallbackRef() = default;
 
-    auto *GetCallbackInstance() const { return id != 0 && group != nullptr ? group->GetCallbackInstance(id) : nullptr; }
-    bool Valid() const                { return id != 0 && group != nullptr && group->CheckValid(id); }
+    bool Valid() const { return id != 0 && group != nullptr; }
 
     bool Remove()
     {
@@ -140,6 +139,11 @@ struct CallbackRef {
     }
 };
 
+// relly don't like this interface anymore.
+// will refactor. the only reason it is still needed
+// is so that stuff that uses certain descriptor sets gets
+// created only after the descriptor sets are created.
+
 template <class Enum, class ...Args>
 class Callbacks {
     struct CallbackInstance {
@@ -182,6 +186,8 @@ public:
 
         ~CallbackGroup()
         {
+            std::lock_guard guard(m_mtx);
+
             for (auto &once_callback : once_callbacks) {
                 once_callback.Reset();
             }
@@ -191,19 +197,10 @@ public:
             }
         }
 
-        auto Find(typename CallbackInstance::Id id, std::vector<CallbackInstance> &callbacks) -> typename std::vector<CallbackInstance>::iterator
-        {
-            return std::find_if(
-                callbacks.begin(),
-                callbacks.end(),
-                [id](const auto &other) {
-                    return other.id == id;
-                }
-            );
-        }
-
         CallbackInstance *GetCallbackInstance(typename CallbackInstance::Id id)
         {
+            std::lock_guard guard(m_mtx);
+
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
@@ -230,6 +227,8 @@ public:
 
         bool Remove(typename CallbackInstance::Id id)
         {
+            std::lock_guard guard(m_mtx);
+
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
@@ -252,6 +251,8 @@ public:
         /*! \brief Trigger a specific callback, removing it if it is a `once` callback. */
         bool Trigger(UInt id, Args &&... args)
         {
+            std::lock_guard guard(m_mtx);
+
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
@@ -284,6 +285,8 @@ public:
 
         void ClearInvalidatedCallbacks()
         {
+            std::lock_guard guard(m_mtx);
+
             once_callbacks.erase(
                 std::remove_if(once_callbacks.begin(), once_callbacks.end(), [](const auto &item) {
                     return !item.Valid();
@@ -298,6 +301,34 @@ public:
                 on_callbacks.end()
             );
         }
+
+        void AddOnceCallback(CallbackInstance &&instance)
+        {
+            std::lock_guard guard(m_mtx);
+
+            once_callbacks.push_back(std::move(instance));
+        }
+
+        void AddOnCallback(CallbackInstance &&instance)
+        {
+            std::lock_guard guard(m_mtx);
+
+            on_callbacks.push_back(std::move(instance));
+        }
+
+    private:
+        auto Find(typename CallbackInstance::Id id, std::vector<CallbackInstance> &callbacks) -> typename std::vector<CallbackInstance>::iterator
+        {
+            return std::find_if(
+                callbacks.begin(),
+                callbacks.end(),
+                [id](const auto &other) {
+                    return other.id == id;
+                }
+            );
+        }
+
+        std::mutex m_mtx;
     };
 
     using ArgsTuple = std::tuple<Args...>;
@@ -316,7 +347,7 @@ public:
 
         const auto id = ++m_id_counter;
         
-        CallbackInstance callback_instance{
+        CallbackInstance callback_instance {
             .id = id,
             .fn = std::move(function)
         };
@@ -327,7 +358,7 @@ public:
             return CallbackRef<CallbackGroup>();
         }
 
-        holder.once_callbacks.push_back(std::move(callback_instance));
+        holder.AddOnceCallback(std::move(callback_instance));
 
         return CallbackRef<CallbackGroup>(id, &holder);
     }
@@ -350,7 +381,7 @@ public:
             callback_instance.Call(std::get<Args>(holder.trigger_state.args)...);
         }
 
-        holder.on_callbacks.push_back(std::move(callback_instance));
+        holder.AddOnceCallback(std::move(callback_instance));
 
         return CallbackRef<CallbackGroup>(id, &holder);
     }
@@ -384,7 +415,7 @@ private:
         auto &holder = m_holders[key];
         
         auto &once_callbacks = holder.once_callbacks;
-        auto &on_callbacks   = holder.on_callbacks;
+        auto &on_callbacks = holder.on_callbacks;
 
         const bool previous_triggered_state = holder.trigger_state.triggered;
 
@@ -419,7 +450,10 @@ public:
     CallbackTrackable() = default;
     CallbackTrackable(const CallbackTrackable &other) = delete;
     CallbackTrackable &operator=(const CallbackTrackable &other) = delete;
-    ~CallbackTrackable() = default;
+    ~CallbackTrackable()
+    {
+        AssertThrowMsg(m_destroy_callback.id == 0, "Teardown not called? ID was %u\n", m_destroy_callback.id);
+    }
 
 protected:
 
@@ -439,7 +473,7 @@ protected:
         }
 
         if (m_destroy_callback.Valid()) {
-            m_destroy_callback.TriggerRemove();
+            AssertThrowMsg(m_destroy_callback.TriggerRemove(), "Failed to trigger!");
         }
     }
 
@@ -599,6 +633,8 @@ struct ComponentEvents {
  */
 template <class T>
 class ObjectVector {
+    static constexpr bool use_free_slots = true;
+
 public:
     std::vector<T *> objects;
     std::queue<SizeType> free_slots;
@@ -649,22 +685,26 @@ public:
 
         typename T::ID next_id;
 
-        if (!free_slots.empty()) {
-            auto front = free_slots.front();
+        if constexpr (use_free_slots) {
+            if (!free_slots.empty()) {
+                auto front = free_slots.front();
 
-            next_id = typename T::ID { typename T::ID::ValueType(front + 1) } ;
-            object->SetId(next_id);
+                next_id = typename T::ID { typename T::ID::ValueType(front + 1) } ;
+                object->SetId(next_id);
 
-            objects[front] = object;
-            free_slots.pop();
-        } else {
-            next_id = typename T::ID { typename T::ID::ValueType(objects.size() + 1) } ;
-            object->SetId(next_id);
+                objects[front] = object;
+                free_slots.pop();
 
-            objects.push_back(object);
+                return object;
+            }
         }
 
-        return objects[next_id.value - 1];
+        next_id = typename T::ID { typename T::ID::ValueType(objects.size() + 1) } ;
+        object->SetId(next_id);
+
+        objects.push_back(object);
+
+        return object;
     }
     
     void Remove(typename T::ID id)
@@ -677,8 +717,9 @@ public:
             objects.pop_back();
         } else {
             /* Cannot simply erase from vector, as that would invalidate existing IDs */
-            
-            free_slots.push(id.value - 1);
+            if constexpr (use_free_slots) {
+                free_slots.push(id.value - 1);
+            }
         }
     }
 
@@ -807,13 +848,13 @@ public:
             }
         }
 
+        bool Valid() const
+            { return ptr != nullptr && m_ref_count != nullptr; }
+
         T *ptr;
         RefCount *m_ref_count = nullptr;
 
     protected:
-        bool Valid() const
-            { return ptr != nullptr && m_ref_count != nullptr; }
-
         void AssertState()
         {
             AssertThrowMsg(ptr != nullptr,           "underlying pointer was null");
@@ -849,18 +890,16 @@ public:
 
         Ref &operator=(Ref &&other) noexcept
         {
-            if (std::addressof(other) == this) {
-                return *this;
+            if (RefWrapper::operator!=(other)) {
+                if (RefWrapper::Valid()) {
+                    Release();
+                }
+
+                RefWrapper::ptr = other.ptr;
+                RefWrapper::m_ref_count = other.m_ref_count;
             }
 
-            if (RefWrapper::Valid()) {
-                Release();
-            }
-
-            RefWrapper::ptr         = other.ptr;
-            RefWrapper::m_ref_count = other.m_ref_count;
-
-            other.ptr         = nullptr;
+            other.ptr = nullptr;
             other.m_ref_count = nullptr;
 
             return *this;
@@ -888,12 +927,10 @@ public:
         {
             RefWrapper::AssertState();
 
-            //return m_ref_counter->IncRef(ptr);
-
             return Ref(RefWrapper::ptr, RefWrapper::m_ref_count);
         }
 
-        size_t GetRefCount() const
+        SizeType GetRefCount() const
         {
             if (!RefWrapper::Valid()) {
                 return 0;
@@ -1063,7 +1100,13 @@ private:
         AssertThrow(ptr != nullptr);
         const auto id = ptr->GetId();
 
-        ptr->OnDisposed();
+        DebugLog(
+            LogType::Debug,
+            "Removing %u from ref count holder map\n",
+            id.value
+        );
+
+        std::lock_guard guard(m_mutex);
 
         m_holder.Remove(id);
 
@@ -1071,6 +1114,7 @@ private:
         AssertThrowMsg(it != m_ref_count_holder.End(), "%u not found in ref count holder map!", id.value);
 
         delete it->second;
+
         m_ref_count_holder.Erase(id);
     }
 

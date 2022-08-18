@@ -333,9 +333,11 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
-    // collect draw calls - not actually rendering yet.
-    RenderOpaqueObjects(engine, frame, true);
-    RenderTranslucentObjects(engine, frame, true);
+    if constexpr (use_draw_indirect) {
+        // collect draw calls - not actually rendering yet.
+        RenderOpaqueObjects(engine, frame, true);
+        RenderTranslucentObjects(engine, frame, true);
+    }
 
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
@@ -400,7 +402,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     // update culling info now that depth pyramid has been rendered
     m_cull_data.depth_pyramid_image_views[frame_index] = m_dpr.GetResults()[frame_index].get();
-    m_cull_data.depth_pyramid_dimensions               = m_dpr.GetExtent();
+    m_cull_data.depth_pyramid_dimensions = m_dpr.GetExtent();
 
     /* ========== BEGIN MIP CHAIN GENERATION ========== */
     {
@@ -432,34 +434,50 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect)
 {
-    if (collect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
-        }
-        
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+    if constexpr (use_draw_indirect) {
+        if (collect) {
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+                pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+            }
+            
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+                pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+            }
+        } else {
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+                pipeline->PerformRendering(engine, frame);
+            }
+            
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+                pipeline->PerformRendering(engine, frame);
+            }
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+            pipeline->Render(engine, frame);
         }
         
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+            pipeline->Render(engine, frame);
         }
     }
 }
 
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect)
 {
-    if (collect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+    if constexpr (use_draw_indirect) {
+        if (collect) {
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+                pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+            }
+        } else {
+            for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+                pipeline->PerformRendering(engine, frame);
+            }
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+            pipeline->Render(engine, frame);
         }
     }
 }

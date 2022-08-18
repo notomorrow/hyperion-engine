@@ -10,7 +10,10 @@ World::World()
 {
 }
 
-World::~World() = default;
+World::~World()
+{
+    Teardown();
+}
     
 void World::Init(Engine *engine)
 {
@@ -39,8 +42,6 @@ void World::Init(Engine *engine)
             }
             
             m_scenes.Clear();
-
-            HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
         }));

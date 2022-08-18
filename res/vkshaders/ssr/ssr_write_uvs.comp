@@ -90,8 +90,8 @@ float CalculateAlpha(
     alpha *= 1.0 - max(0.0, maxDimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
     // Fade ray hits base on how much they face the camera
-    //float eyeDir = clamp(ray_direction.z, SSR_EYE_FADE_START, SSR_EYE_FADE_END);
-    //alpha *= 1.0 - (eyeDir - SSR_EYE_FADE_START) / (SSR_EYE_FADE_END - SSR_EYE_FADE_START);
+    float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
+    alpha *= 1.0 - (eye_direction - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start);
 
     // Fade ray hits based on distance from ray origin
     alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);

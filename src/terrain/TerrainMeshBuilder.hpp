@@ -6,6 +6,8 @@
 #include <scene/controllers/PagingController.hpp>
 #include <util/NoiseFactory.hpp>
 
+#include <terrain/TerrainHeightInfo.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -24,26 +26,10 @@ public:
     std::unique_ptr<Mesh> BuildMesh() const;
 
 private:
-    struct TerrainHeightInfo {
-        Float height;
-        Float erosion;
-        Float sediment;
-        Float water;
-        Float new_water;
-        Float down;
-    };
-
-    UInt GetHeightIndex(UInt x, UInt z) const
-    {
-        return ((x + m_patch_info.extent.width) % m_patch_info.extent.width)
-                + ((z + m_patch_info.extent.depth) % m_patch_info.extent.depth) * m_patch_info.extent.width;
-    }
-
     std::vector<Vertex> BuildVertices() const;
     std::vector<Mesh::Index> BuildIndices() const;
 
-    PatchInfo m_patch_info;
-    DynArray<TerrainHeightInfo> m_height_infos;
+    TerrainHeightData m_height_data;
 };
 
 } // namespace hyperion::v2

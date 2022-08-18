@@ -18,7 +18,7 @@ Scene::Scene(Ref<Camera> &&camera)
 
 Scene::~Scene()
 {
-    m_environment->OnDisposed();
+    Teardown();
     delete m_environment;
 }
     
@@ -69,7 +69,8 @@ void Scene::Init(Engine *engine)
 
 void Scene::SetWorld(World *world)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    // be cautious
+    // Threads::AssertOnThread(THREAD_GAME);
 
     for (auto &it : m_entities) {
         auto &entity = it.second;
@@ -258,6 +259,14 @@ void Scene::RemovePendingEntities()
 
             found_entity->RemoveFromOctree(GetEngine());
         }
+
+        DebugLog(
+            LogType::Debug,
+            "Remove entity with ID #%u (with material: %s) from scene with ID #%u\n",
+            found_entity->GetId().value,
+            found_entity->GetMaterial() ? found_entity->GetMaterial()->GetName() : " no material ",
+            m_id.value
+        );
 
         m_entities.Erase(it);
     }

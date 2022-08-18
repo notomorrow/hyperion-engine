@@ -2,12 +2,13 @@
 #define HYPERION_V2_LIB_ATOMIC_SEMAPHORE_H
 
 #include <core/Memory.hpp>
+#include <Types.hpp>
 
 #include <atomic>
 
 namespace hyperion::v2 {
 
-/* waits for zero to be accessing */
+// counting semaphore
 template <class T = int>
 class AtomicSemaphore {
 public:
@@ -27,6 +28,35 @@ public:
 
 private:
     std::atomic<T> m_count{0};
+};
+
+// binary semaphore
+class BinarySemaphore {
+public:
+    BinarySemaphore() = default;
+    BinarySemaphore(const BinarySemaphore &other) = delete;
+    BinarySemaphore &operator=(const BinarySemaphore &other) = delete;
+    BinarySemaphore(BinarySemaphore &&other) = delete;
+    BinarySemaphore &operator=(BinarySemaphore &&other) = delete;
+    ~BinarySemaphore() = default;
+
+    void Signal()
+    {
+        m_value.fetch_add(1u);
+    }
+
+    void Wait()
+    {
+        auto value = m_value.load();
+
+        // wait for value be non-zero.
+        while (value == 0u || !m_value.compare_exchange_strong(value, value - 1u)) {
+            value = m_value.load();
+        }
+    }
+
+private:
+    std::atomic<UInt8> m_value { 1u };
 };
 
 } // namespace hyperion::v2

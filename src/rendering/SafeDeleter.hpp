@@ -2,6 +2,7 @@
 #define HYPERION_V2_SAFE_DELETER_H
 
 #include <core/Containers.hpp>
+#include <core/lib/Pair.hpp>
 
 #include <rendering/Texture.hpp>
 #include <rendering/Mesh.hpp>
@@ -31,72 +32,63 @@ enum RenderableDeletionMask : RenderableDeletionMaskBits {
 };
 
 class SafeDeleter {
+    static constexpr UInt8 initial_cycles_remaining = static_cast<UInt8>(max_frames_in_flight + 1);
+
 public:
     void SafeReleaseRenderResource(Ref<Texture> &&resource)
     {
-        std::lock_guard guard(m_render_resource_deletion_mutex);
-        
-        std::get<DynArray<RenderableDeletionEntry<Texture>>>(m_render_resource_deletion_queue_items).PushBack({
-            .ref     = std::move(resource),
-            .deleter = [](Ref<Texture> &&ref) {
-                ref.Reset();
-            }
-        });
-
-        m_render_resource_deletion_flag |= RENDERABLE_DELETION_TEXTURES;
+        SafeReleaseRenderResourceImpl<Texture>(std::move(resource), RENDERABLE_DELETION_TEXTURES);
     }
     
     void SafeReleaseRenderResource(Ref<Mesh> &&resource)
     {
-        std::lock_guard guard(m_render_resource_deletion_mutex);
-        
-        std::get<DynArray<RenderableDeletionEntry<Mesh>>>(m_render_resource_deletion_queue_items).PushBack({
-            .ref     = std::move(resource),
-            .deleter = [](Ref<Mesh> &&ref) {
-                ref.Reset();
-            }
-        });
-
-        m_render_resource_deletion_flag |= RENDERABLE_DELETION_MESHES;
+        SafeReleaseRenderResourceImpl<Mesh>(std::move(resource), RENDERABLE_DELETION_MESHES);
     }
     
     void SafeReleaseRenderResource(Ref<Skeleton> &&resource)
     {
-        std::lock_guard guard(m_render_resource_deletion_mutex);
-        
-        std::get<DynArray<RenderableDeletionEntry<Skeleton>>>(m_render_resource_deletion_queue_items).PushBack({
-            .ref     = std::move(resource),
-            .deleter = [](Ref<Skeleton> &&ref) {
-                ref.Reset();
-            }
-        });
-
-        m_render_resource_deletion_flag |= RENDERABLE_DELETION_SKELETONS;
+        SafeReleaseRenderResourceImpl<Skeleton>(std::move(resource), RENDERABLE_DELETION_SKELETONS);
     }
     
     void SafeReleaseRenderResource(Ref<Shader> &&resource)
     {
-        std::lock_guard guard(m_render_resource_deletion_mutex);
-        
-        std::get<DynArray<RenderableDeletionEntry<Shader>>>(m_render_resource_deletion_queue_items).PushBack({
-            .ref     = std::move(resource),
-            .deleter = [](Ref<Shader> &&ref) {
-                ref.Reset();
-            }
-        });
-
-        m_render_resource_deletion_flag |= RENDERABLE_DELETION_SHADERS;
+        SafeReleaseRenderResourceImpl<Shader>(std::move(resource), RENDERABLE_DELETION_SHADERS);
     }
 
     template <class T>
-    struct RenderableDeletionEntry {
+    struct RenderableDeletionEntry : public KeyValuePair<Ref<T>, UInt8> {
+        using Base = KeyValuePair<Ref<T>, UInt8>;
+
         static_assert(std::is_base_of_v<RenderResource, T>, "T must be a derived class of RenderResource");
 
-        using Deleter = std::add_pointer_t<void(Ref<T> &&)>;
+        RenderableDeletionEntry(Ref<T> &&renderable)
+            : Base(std::move(renderable), initial_cycles_remaining)
+        {
+        }
 
-        UInt    cycles_remaining = max_frames_in_flight;
-        Ref<T>  ref;
-        Deleter deleter;
+        RenderableDeletionEntry(const RenderableDeletionEntry &other) = delete;
+        RenderableDeletionEntry &operator=(const RenderableDeletionEntry &other) = delete;
+
+        RenderableDeletionEntry(RenderableDeletionEntry &&other) noexcept
+            : Base(std::move(other))
+        {
+        }
+
+        RenderableDeletionEntry &operator=(RenderableDeletionEntry &&other) noexcept
+        {
+            Base::operator=(std::move(other));
+
+            return *this;
+        }
+
+        ~RenderableDeletionEntry() = default;
+
+        void PerformDeletion()
+        {
+            AssertThrow(Base::second == 0u);
+
+            Base::first.Reset();
+        }
     };
 
     void PerformEnqueuedDeletions();
@@ -105,15 +97,19 @@ public:
     template <class T>
     bool DeleteEnqueuedItemsOfType()
     {
-        auto &queue = std::get<DynArray<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
+        auto &queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
 
         for (auto it = queue.Begin(); it != queue.End();) {
-            auto &front = queue.Front();
+            RenderableDeletionEntry<T> &front = *it;
+            AssertThrow(front.first.Valid());
 
-            if (!--front.cycles_remaining) {
-                front.deleter(std::move(front.ref));
+            if (!front.second) {
+                front.PerformDeletion();
+
                 it = queue.Erase(it);
             } else {
+                --front.second;
+
                 ++it;
             }
         }
@@ -121,15 +117,30 @@ public:
         return queue.Empty();
     }
 
+private:
+    template <class T>
+    void SafeReleaseRenderResourceImpl(Ref<T> &&resource, UInt mask)
+    {
+        if (resource.Valid()) {// && resource.GetRefCount() == 1) {
+            std::lock_guard guard(m_render_resource_deletion_mutex);
+            
+            auto &deletion_queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
+    
+            deletion_queue.Insert(RenderableDeletionEntry<T>(std::move(resource)));
+
+            m_render_resource_deletion_flag |= mask;
+        }
+    }
+
     std::tuple<
-        DynArray<RenderableDeletionEntry<Texture>>,
-        DynArray<RenderableDeletionEntry<Mesh>>,
-        DynArray<RenderableDeletionEntry<Skeleton>>,
-        DynArray<RenderableDeletionEntry<Shader>>
+        FlatSet<RenderableDeletionEntry<Texture>>,
+        FlatSet<RenderableDeletionEntry<Mesh>>,
+        FlatSet<RenderableDeletionEntry<Skeleton>>,
+        FlatSet<RenderableDeletionEntry<Shader>>
     > m_render_resource_deletion_queue_items;
     
-    std::mutex                              m_render_resource_deletion_mutex;
-    std::atomic<RenderableDeletionMaskBits> m_render_resource_deletion_flag{RENDERABLE_DELETION_NONE};
+    std::mutex m_render_resource_deletion_mutex;
+    std::atomic<RenderableDeletionMaskBits> m_render_resource_deletion_flag { RENDERABLE_DELETION_NONE };
 };
 
 } // namespace hyperion::v2

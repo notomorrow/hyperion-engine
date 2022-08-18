@@ -10,7 +10,10 @@ Blas::Blas(Ref<Mesh> &&mesh, const Transform &transform)
 {
 }
 
-Blas::~Blas() = default;
+Blas::~Blas()
+{
+    Teardown();
+}
 
 void Blas::SetMesh(Ref<Mesh> &&mesh)
 {

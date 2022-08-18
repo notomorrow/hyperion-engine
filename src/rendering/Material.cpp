@@ -27,6 +27,7 @@ Material::Material(const char *name)
 
 Material::~Material()
 {
+    Teardown();
     delete[] m_name;
 }
 

@@ -2,26 +2,29 @@
 #define HYPERION_V2_LIB_FLAT_SET_H
 
 #include "ContainerBase.hpp"
+#include "SortedArray.hpp"
+#include "Pair.hpp"
 #include <util/Defines.hpp>
 
 #include <algorithm>
-#include <vector>
 #include <utility>
 
 namespace hyperion {
 
 template <class T>
-class FlatSet : public ContainerBase<FlatSet<T>, T> {
-    std::vector<T> m_vector;
+class FlatSet : public SortedArray<T> {
+protected:
+    using Base = SortedArray<T>;
 
 public:
-    using Iterator      = typename std::vector<T>::iterator;
-    using ConstIterator = typename std::vector<T>::const_iterator;
-    using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
+    using Iterator = typename Base::Iterator;
+    using ConstIterator = typename Base::ConstIterator;
+
+    using InsertResult = Pair<Iterator, bool>; // iterator, was inserted
 
     FlatSet();
     FlatSet(std::initializer_list<T> initializer_list)
-        : m_vector(initializer_list)
+        : SortedArray<T>(initializer_list)
     {
     }
 
@@ -41,76 +44,58 @@ public:
     InsertResult Emplace(Args &&... args)
         { return Insert(T(std::forward<Args>(args)...)); }
 
-    bool Erase(Iterator it);
-    bool Erase(const T &value);
+    Iterator Erase(ConstIterator it);
+    Iterator Erase(const T &value);
 
-    [[nodiscard]] size_t Size() const                     { return m_vector.size(); }
-    [[nodiscard]] T *Data()                               { return m_vector.data(); }
-    [[nodiscard]] T * const Data() const                  { return m_vector.data(); }
-    [[nodiscard]] bool Empty() const                      { return m_vector.empty(); }
+    [[nodiscard]] typename Base::SizeType Size() const    { return Base::Size(); }
+    [[nodiscard]] T *Data()                               { return Base::Data(); }
+    [[nodiscard]] T * const Data() const                  { return Base::Data(); }
+    [[nodiscard]] bool Any() const                        { return Base::Any(); }
+    [[nodiscard]] bool Empty() const                      { return Base::Empty(); }
     [[nodiscard]] bool Contains(const T &value) const     { return Find(value) != End(); }
-    void Clear()                                          { m_vector.clear(); }
+    void Clear()                                          { Base::Clear(); }
     
-    [[nodiscard]] T &Front()                              { return m_vector.front(); }
-    [[nodiscard]] const T &Front() const                  { return m_vector.front(); }
-    [[nodiscard]] T &Back()                               { return m_vector.back(); }
-    [[nodiscard]] const T &Back() const                   { return m_vector.back(); }
+    [[nodiscard]] T &Front()                              { return Base::Front(); }
+    [[nodiscard]] const T &Front() const                  { return Base::Front(); }
+    [[nodiscard]] T &Back()                               { return Base::Back(); }
+    [[nodiscard]] const T &Back() const                   { return Base::Back(); }
 
-    [[nodiscard]] T &At(Iterator iter)                    { return m_vector.at(std::distance(m_vector.begin(), iter)); }
-    [[nodiscard]] const T &At(Iterator iter) const        { return m_vector.at(std::distance(m_vector.begin(), iter)); }
-
-    //[[nodiscard]] T &operator[](size_t index)             { return m_vector[index]; }
-    //[[nodiscard]] const T &operator[](size_t index) const { return m_vector[index]; }
-
-    HYP_DEF_STL_ITERATOR(m_vector)
-
-private:
-    /*Iterator LowerBound(const T &value)
-    {
-        return std::lower_bound(
-            m_vector.begin(),
-            m_vector.end(),
-            value
-        );
-    }
-
-    ConstIterator LowerBound(const T &value) const
-    {
-        return std::lower_bound(
-            m_vector.cbegin(),
-            m_vector.cend(),
-            value
-        );
-    }*/
+    HYP_DEF_STL_BEGIN_END(
+        Base::Begin(),
+        Base::End()
+    )
 };
 
 template <class T>
-FlatSet<T>::FlatSet() {}
+FlatSet<T>::FlatSet()
+    : Base()
+{
+}
 
 template <class T>
 FlatSet<T>::FlatSet(const FlatSet &other)
-    : m_vector(other.m_vector)
+    : Base(other)
 {
 }
 
 template <class T>
 auto FlatSet<T>::operator=(const FlatSet &other) -> FlatSet&
 {
-    m_vector = other.m_vector;
+    Base::operator=(other);
 
     return *this;
 }
 
 template <class T>
 FlatSet<T>::FlatSet(FlatSet &&other) noexcept
-    : m_vector(std::move(other.m_vector))
+    : Base(std::move(other))
 {
 }
 
 template <class T>
 auto FlatSet<T>::operator=(FlatSet &&other) noexcept -> FlatSet&
 {
-    m_vector = std::move(other.m_vector);
+    Base::operator=(std::move(other));
 
     return *this;
 }
@@ -121,7 +106,7 @@ FlatSet<T>::~FlatSet() = default;
 template <class T>
 auto FlatSet<T>::Find(const T &value) -> Iterator
 {
-    const auto it = FlatSet<T>::Base::LowerBound(value);
+    const auto it = DynArray<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -133,7 +118,7 @@ auto FlatSet<T>::Find(const T &value) -> Iterator
 template <class T>
 auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 {
-    const auto it = FlatSet<T>::Base::LowerBound(value);
+    const auto it = DynArray<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -145,10 +130,10 @@ auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 template <class T>
 auto FlatSet<T>::Insert(const T &value) -> InsertResult
 {
-    Iterator it = FlatSet<T>::Base::LowerBound(value);
+    Iterator it = DynArray<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
-        it = m_vector.insert(it, value);
+        it = DynArray<T>::Insert(it, value);
 
         return {it, true};
     }
@@ -159,10 +144,10 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Insert(T &&value) -> InsertResult
 {
-    Iterator it = FlatSet<T>::Base::LowerBound(value);
+    Iterator it = DynArray<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
-        it = m_vector.insert(it, std::forward<T>(value));
+        it = DynArray<T>::Insert(it, std::forward<T>(value));
 
         return {it, true};
     }
@@ -171,19 +156,13 @@ auto FlatSet<T>::Insert(T &&value) -> InsertResult
 }
 
 template <class T>
-bool FlatSet<T>::Erase(Iterator it)
+auto FlatSet<T>::Erase(ConstIterator it) -> Iterator
 {
-    if (it == End()) {
-        return false;
-    }
-
-    m_vector.erase(it);
-
-    return true;
+    return DynArray<T>::Erase(it);
 }
 
 template <class T>
-bool FlatSet<T>::Erase(const T &value)
+auto FlatSet<T>::Erase(const T &value) -> Iterator
 {
     return Erase(Find(value));
 }

@@ -10,7 +10,10 @@ Framebuffer::Framebuffer(Extent2D extent, Ref<RenderPass> &&render_pass)
 {
 }
 
-Framebuffer::~Framebuffer() = default;
+Framebuffer::~Framebuffer()
+{
+    Teardown();
+}
 
 void Framebuffer::Init(Engine *engine)
 {

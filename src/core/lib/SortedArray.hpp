@@ -14,8 +14,12 @@ namespace hyperion {
 
 template <class T>
 class SortedArray : public DynArray<T> {
+protected:
+    using Base = DynArray<T>;
+    using ValueType = typename DynArray<T>::ValueType;
+
 public:
-    using Iterator      = typename DynArray<T>::Iterator;
+    using Iterator = typename DynArray<T>::Iterator;
     using ConstIterator = typename DynArray<T>::ConstIterator;
 
     SortedArray();

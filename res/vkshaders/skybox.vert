@@ -40,7 +40,7 @@ layout( push_constant ) uniform constants
 } PushConstants;
 
 void main() {
-    vec4 position = vec4(a_position + scene.camera_position.xyz, 1.0);
+    vec4 position = vec4((a_position * 10.0) + scene.camera_position.xyz, 1.0);
     // vec4 position = object.model_matrix * vec4(a_position, 1.0);
     mat4 normal_matrix = transpose(inverse(object.model_matrix));
 

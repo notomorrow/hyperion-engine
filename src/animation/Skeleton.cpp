@@ -20,7 +20,10 @@ Skeleton::Skeleton(std::unique_ptr<Bone> &&root_bone)
     }
 }
 
-Skeleton::~Skeleton() = default;
+Skeleton::~Skeleton()
+{
+    Teardown();
+}
 
 void Skeleton::Init(Engine *engine)
 {

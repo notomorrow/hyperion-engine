@@ -20,16 +20,7 @@ struct Object {
     uint material_id;
     uint skeleton_id;
 
-    /*vec4 _pad0;
-    vec4 _pad1;
-    vec4 _pad2;
-    vec4 _pad3;
-    // 228
-    vec4 _pad4;
-    vec4 _pad5;
-    float _pad6;
-    float _pad7;
-    float _pad8;*/
+    uint bucket;
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS

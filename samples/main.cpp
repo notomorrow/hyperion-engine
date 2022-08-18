@@ -103,7 +103,7 @@ public:
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 2048, 2048,//2048, 1080,
                 75.0f,
-                0.35f, 15000.0f
+                0.5f, 30000.0f
             ))
         ));
         engine->GetWorld().AddScene(scene.IncRef());
@@ -127,17 +127,17 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 10; i++) {
             auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
             sphere->Scale(1.0f);
             sphere->SetName("sphere");
             // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(new Material()));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 10.0f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            //sphere->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
+            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
-            sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 30.0f, 50.0f));
+            sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 7.0f, 0.0f));
             scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
@@ -154,7 +154,7 @@ public:
 
         if (auto terrain_node = scene->GetRoot().AddChild()) {
             terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
-            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 400 } , Vector3(17.5f, 32.0f, 17.5f), 8.0f);
+            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
         }
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
@@ -168,7 +168,7 @@ public:
         material_test_obj->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         material_test_obj->Scale(3.45f);
         material_test_obj->Translate(Vector3(0, 22, 0));
-        scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
+        //scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -178,12 +178,12 @@ public:
         
         auto cubemap = engine->resources.textures.Add(new TextureCube(
            engine->assets.Load<Texture>(
-               "textures/IceRiver/posx.jpg",
-               "textures/IceRiver/negx.jpg",
-               "textures/IceRiver/posy.jpg",
-               "textures/IceRiver/negy.jpg",
-               "textures/IceRiver/posz.jpg",
-               "textures/IceRiver/negz.jpg"
+               "textures/chapel/posx.jpg",
+               "textures/chapel/negx.jpg",
+               "textures/chapel/posy.jpg",
+               "textures/chapel/negy.jpg",
+               "textures/chapel/posz.jpg",
+               "textures/chapel/negz.jpg"
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
@@ -194,7 +194,7 @@ public:
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        // scene->GetRoot().AddChild(NodeProxy(zombie.release()));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -202,24 +202,18 @@ public:
         auto my_light = engine->resources.lights.Add(new DirectionalLight(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
-            150000.0f
+            8.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
 
-        // auto my_light2 = engine->Attach(new DirectionalLight(
-        //     Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
-        //     Vector4::One(),
-        //     50000.0f
-        // ));
-
         m_point_light = engine->resources.lights.Add(new PointLight(
-            Vector3(2.0f, 12.0f, 0.0f),
+            Vector3(0.0f, 6.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
-            8000.0f,
+            5.0f,
             25.0f
         ));
 
-        scene->GetEnvironment()->AddLight(m_point_light.IncRef());
+       // scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
         // test_model->Scale(10.0f);
         test_model->Scale(0.08f);//14.075f);
@@ -236,14 +230,14 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        // if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
+        if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
             // for (auto &child : test->GetChildren()) {
             //     if (auto &ent = child->GetEntity()) {
             //         std::cout << "Adding debug controller to  " << child->GetName() << "\n";
             //         ent->AddController<AABBDebugController>(engine);
             //     }
             // }
-        // }
+        }
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
@@ -263,17 +257,17 @@ public:
         quad_spatial->SetScale(Vector3(3.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 1, 1), MathUtil::DegToRad(-40.0f)));
         quad_spatial->SetTranslation(Vector3(0, 12.0f, 0));
-        scene->AddEntity(std::move(quad_spatial));
+        // scene->AddEntity(std::move(quad_spatial));
         
-        // scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-        //     my_light.IncRef(),
-        //     Vector3::Zero(),
-        //     80.0f
-        // );
+        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+            my_light.IncRef(),
+            Vector3::Zero(),
+            80.0f
+        );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            BoundingBox { Vector(-500, 140, -500), Vector(500, 200, 500) },
+            BoundingBox { Vector(-128, -10, -128), Vector(128, 100, 128) },
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
         scene->ForceUpdate();
@@ -324,6 +318,9 @@ public:
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
         monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
+        monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+        monkey->Translate(Vector3(0, 10, 0));
+        monkey->Scale(2.0f);
         scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 
         for (auto &x : scene->GetRoot().GetChildren()) {
@@ -984,8 +981,7 @@ int main()
 #endif
 
 
-    engine->terrain_thread.Stop();
-    engine->terrain_thread.Join();
+    engine->task_system.Stop();
 
     engine->m_running = false;
 
