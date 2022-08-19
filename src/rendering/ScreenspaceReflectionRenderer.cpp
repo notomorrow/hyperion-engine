@@ -213,9 +213,9 @@ void ScreenspaceReflectionRenderer::Render(
             .max_ray_distance       = 512.0f,
             .distance_bias          = 0.1f,
             .offset                 = 0.01f,
-            .eye_fade_start         = 0.45f,
-            .eye_fade_end           = 0.75f,
-            .screen_edge_fade_start = 0.55f,
+            .eye_fade_start         = 0.95f,
+            .eye_fade_end           = 0.98f,
+            .screen_edge_fade_start = 0.65f,
             .screen_edge_fade_end   = 0.75f
         }
     };

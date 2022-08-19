@@ -132,7 +132,7 @@ public:
             sphere->Scale(1.0f);
             sphere->SetName("sphere");
             // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(new Material()));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.1f, 0.8f, 0.35f, 1.0f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
@@ -152,10 +152,13 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
+
+#if 0
         if (auto terrain_node = scene->GetRoot().AddChild()) {
             terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
             terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
         }
+#endif
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
             //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
@@ -168,7 +171,7 @@ public:
         material_test_obj->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         material_test_obj->Scale(3.45f);
         material_test_obj->Translate(Vector3(0, 22, 0));
-        //scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
+        scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -209,11 +212,11 @@ public:
         m_point_light = engine->resources.lights.Add(new PointLight(
             Vector3(0.0f, 6.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
-            5.0f,
-            25.0f
+            500.0f,
+            35.0f
         ));
 
-       // scene->GetEnvironment()->AddLight(m_point_light.IncRef());
+       scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
         // test_model->Scale(10.0f);
         test_model->Scale(0.08f);//14.075f);
@@ -318,8 +321,8 @@ public:
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
         monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
-        monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
-        monkey->Translate(Vector3(0, 10, 0));
+        monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.35f);
+        monkey->Translate(Vector3(0, 12.5f, 0));
         monkey->Scale(2.0f);
         scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 

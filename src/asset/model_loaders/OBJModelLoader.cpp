@@ -207,7 +207,17 @@ LoaderResult ObjModelLoader::LoadFn(LoaderState *state, Object &object)
 
         if (tokens[0] == "mtllib") {
             if (tokens.size() != 1) {
-                object.material_library = tokens[1];
+                std::stringstream material_library_name;
+
+                for (SizeType i = 1; i < tokens.size(); i++) {
+                    if (i != 1) {
+                        material_library_name << ' ';
+                    }
+
+                    material_library_name << tokens[i];
+                }
+
+                object.material_library = material_library_name.str();
             }
 
             return;

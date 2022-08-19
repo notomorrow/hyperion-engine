@@ -37,9 +37,19 @@ void main()
 
     bool perform_lighting = albedo.a > 0.0;
 
-    const float material_reflectance = 0.5;
-    const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
-    const vec4 F0 = albedo * metalness + (reflectance * (1.0 - metalness));
+    // const float material_reflectance = 0.5;
+    // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
+    
+    
+    // Index of refraction for common dielectrics. Corresponds to f0 4%
+    const float IOR = 1.5;
+
+    // Reflectance of the surface when looking straight at it along the negative normal
+    const vec4 reflectance = vec4(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+    vec4 F0 = albedo * metalness + (reflectance * (1.0 - metalness));
+
+
+    // const vec4 F0 = albedo * (1.0 - metalness);//albedo * metalness + (reflectance * (1.0 - metalness));
 
 
     vec3 N = normalize(normal.xyz);
@@ -49,9 +59,6 @@ void main()
 
     float NdotV = max(0.0001, dot(N, V));
     
-    const vec2 AB = BRDFMap(roughness, NdotV);
-    
-    const vec4 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
     const float perceptual_roughness = sqrt(roughness);
  
     vec4 result = vec4(0.0);
@@ -68,11 +75,12 @@ void main()
         L -= position.xyz * float(min(light.type, 1));
         L = normalize(L);
 
-        vec3 H = normalize(L + V);
+        const vec3 H = normalize(L + V);
 
-        float NdotL = max(0.0001, dot(N, L));
-        float NdotH = max(0.0001, dot(N, H));
-        float LdotH = max(0.0001, dot(L, H));
+        const float NdotL = max(0.0001, dot(N, L));
+        const float NdotH = max(0.0001, dot(N, H));
+        const float LdotH = max(0.0001, dot(L, H));
+        const float VdotH = max(0.0001, dot(V, H));
 
         if (light.shadow_map_index != ~0u) {
 #if HYP_SHADOW_PENUMBRA
@@ -85,12 +93,17 @@ void main()
         vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
-        float D = DistributionGGX(N, H, roughness);
-        float G = V_SmithGGXCorrelated(roughness, NdotV, NdotL);//CookTorranceG(NdotL, NdotV, LdotH, NdotH);
-        vec4 F = SchlickFresnel(F0, F90, LdotH);
+        const float D = DistributionGGX(N, H, roughness);
+        const float G = V_SmithGGXCorrelated(roughness, NdotV, NdotL);//CookTorranceG(NdotL, NdotV, LdotH, NdotH);
+        const vec4 F = SchlickFresnelRoughness(F0, roughness, LdotH);//SchlickFresnelRoughness(F0.rgb, roughness, LdotH), albedo.a);
 
-        const vec4 diffuse_color = (albedo) * (1.0 - metalness);
-        vec4 specular = D * G * F;
+        const vec2 AB = BRDFMap(roughness, NdotV);
+        const vec4 dfg = F * AB.x + AB.y;
+        
+        const vec4 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
+
+        // const vec4 diffuse_color = (albedo) * (1.0 - metalness);
+        const vec4 specular_lobe = D * G * F;
 
         float dist = max(length(light.position.xyz - position.xyz), light.radius);
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
@@ -98,12 +111,20 @@ void main()
 
         vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
         vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
-        vec4 diffuse = diffuse_color * (1.0 / HYP_FMATH_PI);///(light_scatter * view_scatter * (1.0 / PI));
-        vec4 direct_component = (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * (attenuation * NdotL) * ao * shadow * light_color);
+        
+        const vec4 kD = (1.0 - F) * (1.0 - metalness);
 
+        vec4 specular = specular_lobe;
+
+        vec4 diffuse_lobe = albedo * (light_scatter * view_scatter) / HYP_FMATH_PI;
+        vec4 diffuse = diffuse_lobe;
+
+        vec4 direct_component = kD * diffuse + specular * energy_compensation;
+
+        
         direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
+        result += direct_component * ((exposure * light.intensity) * light_color * ao * NdotL * shadow * attenuation);
 
-        result += direct_component;
     } else {
         result = albedo;
     }
