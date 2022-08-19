@@ -134,9 +134,33 @@ public:
         return *reinterpret_cast<const T *>(&m_storage.data_buffer);
     }
 
-    bool HasValue() const { return m_has_value; }
+    // template <class U>
+    // T GetOr(U &&default_value) const&
+    // {
+    //     return Any()
+    //         ? *reinterpret_cast<T *>(&m_storage.data_buffer)
+    //         : static_cast<T>(std::forward<U>(default_value));
+    // }
 
-    
+    // template <class U>
+    // T GetOr(U &&default_value) const&
+    // {
+    //     return Any()
+    //         ? *reinterpret_cast<const T *>(&m_storage.data_buffer)
+    //         : static_cast<const T>(std::forward<U>(default_value));
+    // }
+
+    //! \brief Remove the held value, setting the Optional<> to a default state.
+    void Unset()
+    {
+        if (m_has_value) {
+            Get().~T();
+            m_has_value = false;
+        }
+    }
+
+    bool Any() const { return m_has_value; }
+    bool Empty() const { return !m_has_value; }
 
 private:
     struct Storage {

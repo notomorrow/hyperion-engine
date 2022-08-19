@@ -152,10 +152,10 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
-        // if (auto terrain_node = scene->GetRoot().AddChild()) {
-        //     terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
-        //     terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
-        // }
+        if (auto terrain_node = scene->GetRoot().AddChild()) {
+            terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
+            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
+        }
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
             //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);

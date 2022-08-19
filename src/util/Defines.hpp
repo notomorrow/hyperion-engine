@@ -3,6 +3,9 @@
 
 #define HYP_VULKAN 1
 
+//#define HYP_LOG_MEMORY_OPERATIONS
+//#define HYP_LOG_DESCRIPTOR_SET_UPDATES
+
 // stl helpers and such
 
 #define HYP_STR(x) #x

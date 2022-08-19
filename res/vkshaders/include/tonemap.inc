@@ -1,5 +1,5 @@
-#define HDR 1
-#define HDR_TONEMAP_UNCHARTED 1
+//#define HDR 1
+//#define HDR_TONEMAP_UNCHARTED 1
 //#define HDR_TONEMAP_FILMIC 1
 //#define HDR_TONEMAP_UNREAL 1
 //#define HDR_TONEMAP_REINHARD 1

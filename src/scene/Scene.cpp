@@ -400,12 +400,19 @@ void Scene::EnqueueRenderUpdates()
             shader_data.resolution_y    = m_camera->GetDrawProxy().dimensions.height;
         }
 
-        shader_data.environment_texture_usage = 0;
+        shader_data.environment_texture_usage = 0u;
 
-        //! TODO: allow any cubemap to be set on env
-        if (const auto *cubemap_renderer = m_environment->GetRenderComponent<CubemapRenderer>()) {
-            shader_data.environment_texture_index = cubemap_renderer->GetComponentIndex();
-            shader_data.environment_texture_usage |= 1u << cubemap_renderer->GetComponentIndex();
+        if (GetEngine()->render_state.env_probes.Any()) {//const auto *cubemap_renderer = m_environment->GetRenderComponent<CubemapRenderer>()) {
+            // TODO: Make to be packed uvec2 containing indices (each are 1 byte)
+            shader_data.environment_texture_index = 0u;//cubemap_renderer->GetComponentIndex();
+
+            for (const auto &it : GetEngine()->render_state.env_probes) {
+                if (it.second.Empty()) {
+                    continue;
+                }
+
+                shader_data.environment_texture_usage |= 1u << it.second.Get();//cubemap_renderer->GetComponentIndex();
+            }
         }
 
         // DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);

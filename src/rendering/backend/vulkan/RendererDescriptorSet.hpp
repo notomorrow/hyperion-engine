@@ -187,7 +187,7 @@ enum class DescriptorKey {
     SSR_BLUR_VERT_TEXTURE,
     SSR_FINAL_TEXTURE,
     CUBEMAP_UNIFORMS,
-    CUBEMAP_TEST, // removeme
+    ENV_PROBE_TEXTURES, // removeme
     ENV_PROBES,
     VOXEL_IMAGE,
     DEPTH_PYRAMID_RESULT,

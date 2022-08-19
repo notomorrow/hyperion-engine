@@ -10,6 +10,7 @@
 #include "Texture.hpp"
 #include "Mesh.hpp"
 #include "Light.hpp"
+#include "EnvProbe.hpp"
 #include <ui/UIScene.hpp>
 #include "../animation/Skeleton.hpp"
 #include "../scene/Scene.hpp"
@@ -171,6 +172,7 @@ struct Resources {
     HYP_DEF_REF_COUNTED(Scene,             scenes);
     HYP_DEF_REF_COUNTED(Blas,              blas);
     HYP_DEF_REF_COUNTED(Camera,            cameras);
+    HYP_DEF_REF_COUNTED(EnvProbe,          env_probes);
     //HYP_DEF_REF_COUNTED(UIObject,          ui_objects);
 
 #undef HYP_DEF_REF_COUNTED

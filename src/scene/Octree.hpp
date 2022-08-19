@@ -96,20 +96,10 @@ public:
     Octree(const BoundingBox &aabb = default_bounds);
     ~Octree();
 
-    auto &GetCallbacks()
-    {
-        AssertThrow(m_root != nullptr);
-
-        return m_root->events;
-    }
-
-    const auto &GetCallbacks() const                  { return const_cast<Octree *>(this)->GetCallbacks(); }
-
-    //VisibilityState &GetVisibilityState()             { return m_visibility_state; }
     const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
 
-    BoundingBox &GetAabb()                            { return m_aabb; }
-    const BoundingBox &GetAabb() const                { return m_aabb; }
+    BoundingBox &GetAABB() { return m_aabb; }
+    const BoundingBox &GetAABB() const { return m_aabb; }
 
     void Clear(Engine *engine);
     Result Insert(Engine *engine, Entity *entity);

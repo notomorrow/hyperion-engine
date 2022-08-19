@@ -358,27 +358,29 @@ void Engine::Initialize()
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::SHADOW_MATRICES)
-        ->SetSubDescriptor({ .buffer = shader_globals->shadow_maps.GetBuffers()[1].get() });
+        ->SetSubDescriptor({
+            .buffer = shader_globals->shadow_maps.GetBuffers()[1].get()
+        });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->SetSubDescriptor({
             .buffer = shader_globals->materials.GetBuffers()[1].get(),
-            .range  = static_cast<UInt>(sizeof(MaterialShaderData))
+            .range = static_cast<UInt>(sizeof(MaterialShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
             .buffer = shader_globals->objects.GetBuffers()[1].get(),
-            .range  = static_cast<UInt>(sizeof(ObjectShaderData))
+            .range = static_cast<UInt>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->SetSubDescriptor({
             .buffer = shader_globals->skeletons.GetBuffers()[1].get(),
-            .range  = static_cast<UInt>(sizeof(SkeletonShaderData))
+            .range = static_cast<UInt>(sizeof(SkeletonShaderData))
         });
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
@@ -405,12 +407,14 @@ void Engine::Initialize()
     for (UInt i = 0; i < DescriptorSet::max_material_texture_samplers; i++) {
         material_textures_descriptor->SetSubDescriptor({
             .element_index = i,
-            .image_view    = &GetPlaceholderData().GetImageView2D1x1R8()
+            .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
         });
     }
 #endif
 
-    for (DescriptorSet::Index descriptor_set_index : DescriptorSet::global_buffer_mapping) {
+    for (UInt frame_index = 0; frame_index < static_cast<UInt>(std::size(DescriptorSet::global_buffer_mapping)); frame_index++) {
+        const auto descriptor_set_index = DescriptorSet::global_buffer_mapping[frame_index];
+
         auto *descriptor_set = GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(descriptor_set_index);
 
@@ -418,21 +422,24 @@ void Engine::Initialize()
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS)
             ->SetSubDescriptor({
                 .element_index = 0,
-                .buffer        = &shader_globals->cubemap_uniforms
+                .buffer = &shader_globals->cubemap_uniforms
             });
 
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
-            ->SetSubDescriptor({
-                .element_index = 0,
-                .image_view    = &GetPlaceholderData().GetImageViewCube1x1R8()
+        auto *env_probe_textures_descriptor = descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENV_PROBE_TEXTURES);
+
+        for (UInt env_probe_index = 0; env_probe_index < max_bound_env_probes; env_probe_index++) {
+            env_probe_textures_descriptor->SetSubDescriptor({
+                .element_index = env_probe_index,
+                .image_view = &GetPlaceholderData().GetImageViewCube1x1R8()
             });
+        }
 
         descriptor_set
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::ENV_PROBES)
             ->SetSubDescriptor({
                 .element_index = 0,
-                .buffer        = &shader_globals->env_probes
+                .buffer = shader_globals->shadow_maps.GetBuffers()[frame_index].get()
             });
     }
 
@@ -444,11 +451,11 @@ void Engine::Initialize()
         auto *shadow_map_descriptor = descriptor_set
             ->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
         
-        for (UInt i = 0; i < RenderEnvironment::max_shadow_maps; i++) {
+        for (UInt i = 0; i < /*max_shadow_maps*/ 1; i++) {
             shadow_map_descriptor->SetSubDescriptor({
                 .element_index = i,
-                .image_view    = &GetPlaceholderData().GetImageView2D1x1R8(),
-                .sampler       = &GetPlaceholderData().GetSamplerNearest()
+                .image_view = &GetPlaceholderData().GetImageView2D1x1R8(),
+                .sampler = &GetPlaceholderData().GetSamplerNearest()
             });
         }
     }
@@ -463,7 +470,10 @@ void Engine::Initialize()
 
     vct_descriptor_set
         ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
-        ->SetSubDescriptor({ .element_index = 0u, .buffer = GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(GetDevice(), sizeof(VoxelUniforms))});
+        ->SetSubDescriptor({
+            .element_index = 0u,
+            .buffer = GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(GetDevice(), sizeof(VoxelUniforms))
+        });
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto *descriptor_set_globals = GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
@@ -520,6 +530,9 @@ void Engine::Compile()
     m_deferred_renderer.Create(this);
 
     for (UInt i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
+        /* Finalize env probes */
+        shader_globals->env_probes.UpdateBuffer(m_instance->GetDevice(), i);
+
         /* Finalize shadow maps */
         shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), i);
 
@@ -614,7 +627,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 
 void Engine::ResetRenderState()
 {
-    render_state.scene_ids = {};
+    render_state.Reset();
 }
 
 void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
@@ -627,6 +640,7 @@ void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->lights.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->env_probes.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     m_instance->GetDescriptorPool().DestroyPendingDescriptorSets(m_instance->GetDevice(), frame_index);
     m_instance->GetDescriptorPool().UpdateDescriptorSets(m_instance->GetDevice(), frame_index);

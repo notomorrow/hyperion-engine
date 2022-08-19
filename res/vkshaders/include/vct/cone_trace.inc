@@ -48,7 +48,7 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
 
 vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
 {
-    const vec3 storage_coord    = VctStoragePosition(VctWorldToAabb(P + VCT_OFFSET_ORIGIN(N)));
+    const vec3 storage_coord    = VctStoragePosition(VctWorldToAABB(P + VCT_OFFSET_ORIGIN(N)));
     const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
     const float greatest_extent = float(vct_greatest_extent);
 
@@ -69,7 +69,7 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
         return vec4(0.0);
     }
 
-    const vec3 storage_coord    = VctStoragePosition(VctWorldToAabb(P + VCT_OFFSET_ORIGIN(N)));
+    const vec3 storage_coord    = VctStoragePosition(VctWorldToAABB(P + VCT_OFFSET_ORIGIN(N)));
     const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
     const float greatest_extent = float(vct_greatest_extent);
 

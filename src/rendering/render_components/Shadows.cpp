@@ -346,7 +346,7 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
 {
     // runs in game thread
 
-    const auto aabb = m_shadow_pass.GetAabb();
+    const auto aabb = m_shadow_pass.GetAABB();
     const auto center = aabb.GetCenter();
 
     const auto light_direction = m_shadow_pass.GetLight() != nullptr

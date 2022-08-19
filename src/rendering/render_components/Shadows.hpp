@@ -42,13 +42,13 @@ public:
 
     void SetParentScene(Scene::ID id);
 
-    const Vector3 &GetOrigin() const        { return m_origin; }
+    const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin)   { m_origin = origin; }
 
-    float GetMaxDistance() const            { return m_max_distance; }
+    float GetMaxDistance() const { return m_max_distance; }
     void SetMaxDistance(float max_distance) { m_max_distance = max_distance; }
 
-    BoundingBox GetAabb() const
+    BoundingBox GetAABB() const
     {
         return {
             MathUtil::Round(m_origin - m_max_distance * 0.5f),
@@ -56,7 +56,7 @@ public:
         };
     }
 
-    UInt GetShadowMapIndex() const          { return m_shadow_map_index; }
+    UInt GetShadowMapIndex() const { return m_shadow_map_index; }
 
     void SetShadowMapIndex(UInt index)
     {

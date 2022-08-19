@@ -43,7 +43,9 @@
     #define HYP_MAX_BOUND_TEXTURES 16
 #endif
 
-#define HYP_MAX_ENV_PROBES 1 // TMP, for now. can up this if we fill it in with dummy data
+#define HYP_MAX_ENV_PROBES 256
+#define HYP_MAX_BOUND_ENV_PROBES 1
+#define HYP_MAX_SHADOW_MAPS 1  // 113
 
 #define HYP_LIGHT_TYPE_DIRECTIONAL 0
 #define HYP_LIGHT_TYPE_POINT       1

@@ -3,6 +3,7 @@
 
 #include "Base.hpp"
 #include "RenderBucket.hpp"
+#include "Buffers.hpp"
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
@@ -33,6 +34,7 @@ class Material;
 class Engine;
 class Entity;
 class Camera;
+class EnvProbe;
 
 struct alignas(16) ObjectInstance {
     UInt32             entity_id;
@@ -87,6 +89,17 @@ struct DrawProxy<STUB_CLASS(Camera)> {
 };
 
 using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
+
+template <>
+struct DrawProxy<STUB_CLASS(EnvProbe)> {
+    IDBase id;
+    BoundingBox aabb;
+    Vector3 world_position;
+    UInt texture_index;
+    EnvProbeFlags flags;
+};
+
+using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
 
 template <class T>
 class HasDrawProxy {

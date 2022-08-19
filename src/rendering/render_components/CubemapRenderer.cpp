@@ -61,13 +61,17 @@ void CubemapRenderer::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
         auto *engine = GetEngine();
 
-        m_scene = engine->resources.scenes.Add(new Scene(nullptr));
-
         CreateShader(engine);
         CreateRenderPass(engine);
         CreateFramebuffers(engine);
         CreateImagesAndBuffers(engine);
         CreateRendererInstance(engine);
+
+        m_scene = engine->resources.scenes.Add(new Scene(nullptr));
+        m_env_probe = engine->resources.env_probes.Add(new EnvProbe(
+            m_cubemaps[0].IncRef(), // TODO
+            m_aabb
+        ));
 
         HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -104,7 +108,6 @@ void CubemapRenderer::Init(Engine *engine)
                         .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
 
                     descriptor_set->RemoveDescriptor(DescriptorKey::CUBEMAP_UNIFORMS);
-                    descriptor_set->RemoveDescriptor(DescriptorKey::CUBEMAP_TEST);
                 }
 
                 for (auto &attachment : m_attachments) {
@@ -114,7 +117,7 @@ void CubemapRenderer::Init(Engine *engine)
                 m_attachments.clear();
 
                 HYPERION_PASS_ERRORS(m_cubemap_render_uniform_buffer.Destroy(engine->GetDevice()), result);
-                HYPERION_PASS_ERRORS(m_env_probe_uniform_buffer.Destroy(engine->GetDevice()), result);
+                // HYPERION_PASS_ERRORS(m_env_probe_uniform_buffer.Destroy(engine->GetDevice()), result);
 
                 HYPERION_RETURN_OK;
             });
@@ -122,6 +125,7 @@ void CubemapRenderer::Init(Engine *engine)
 
             m_framebuffers = {};
             m_cubemaps = {};
+            m_env_probe.Reset();
             m_shader.Reset();
             m_render_pass.Reset();
             m_renderer_instance.Reset();
@@ -143,6 +147,9 @@ void CubemapRenderer::InitGame(Engine *engine)
 
     // add all entities from environment scene
     AssertThrow(GetParent()->GetScene() != nullptr);
+    AssertThrow(m_env_probe != nullptr);
+
+    GetParent()->AddEnvProbe(m_env_probe.IncRef());
 
     for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
@@ -157,6 +164,16 @@ void CubemapRenderer::InitGame(Engine *engine)
             m_renderer_instance->AddEntity(it.second.IncRef());
         }
     }
+}
+
+void CubemapRenderer::OnRemoved()
+{
+    AssertReady();
+
+    AssertThrow(GetParent()->GetScene() != nullptr);
+    AssertThrow(m_env_probe != nullptr);
+
+    GetParent()->RemoveEnvProbe(m_env_probe.IncRef());
 }
 
 void CubemapRenderer::OnEntityAdded(Ref<Entity> &entity)
@@ -196,8 +213,10 @@ void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 
 void CubemapRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
 {
+    m_env_probe->Update(engine);
+
     // Threads::AssertOnThread(THREAD_GAME);
-    AssertReady();
+    //AssertReady();
 
     // Scene is owned by World, don't Update() it.
     // we need to make Camera be a component so we can use Camera ID
@@ -278,16 +297,15 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
     HYPERION_ASSERT_RESULT(m_cubemap_render_uniform_buffer.Create(engine->GetDevice(), sizeof(CubemapUniforms)));
     m_cubemap_render_uniform_buffer.Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
 
-    EnvProbeShaderData env_probe {
-        .aabb_max       = m_aabb.max.ToVector4(),
-        .aabb_min       = m_aabb.min.ToVector4(),
-        .world_position = origin.ToVector4(),
-        .texture_index  = GetComponentIndex(),
-        .flags          = static_cast<UInt32>(ENV_PROBE_PARALLAX_CORRECTED)
-    };
+    // EnvProbeShaderData env_probe {
+    //     .aabb_max       = m_aabb.max.ToVector4(),
+    //     .aabb_min       = m_aabb.min.ToVector4(),
+    //     .world_position = origin.ToVector4(),
+    //     .flags          = static_cast<UInt32>(ENV_PROBE_PARALLAX_CORRECTED)
+    // };
 
-    HYPERION_ASSERT_RESULT(m_env_probe_uniform_buffer.Create(engine->GetDevice(), sizeof(EnvProbeShaderData)));
-    m_env_probe_uniform_buffer.Copy(engine->GetDevice(), sizeof(EnvProbeShaderData), &env_probe);
+    // HYPERION_ASSERT_RESULT(m_env_probe_uniform_buffer.Create(engine->GetDevice(), sizeof(EnvProbeShaderData)));
+    // m_env_probe_uniform_buffer.Copy(engine->GetDevice(), sizeof(EnvProbeShaderData), &env_probe);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_cubemaps[i] = engine->resources.textures.Add(new TextureCube(
@@ -313,19 +331,12 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
                 .buffer        = &m_cubemap_render_uniform_buffer
             });
 
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
-            ->SetSubDescriptor({
-                .element_index = GetComponentIndex(),
-                .image_view    = &m_cubemaps[i]->GetImageView()
-            });
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::ENV_PROBES)
-            ->SetSubDescriptor({
-               .element_index = GetComponentIndex(),
-               .buffer        = &m_env_probe_uniform_buffer
-           });
+        // descriptor_set
+        //     ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::ENV_PROBES)
+        //     ->SetSubDescriptor({
+        //        .element_index = GetComponentIndex(),
+        //        .buffer        = &m_env_probe_uniform_buffer
+        //    });
     }
 
     DebugLog(

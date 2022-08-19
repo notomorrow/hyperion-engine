@@ -18,7 +18,8 @@ Resources::Resources(Engine *engine)
       renderer_instances(engine),
       compute_pipelines(engine),
       blas(engine),
-      cameras(engine)
+      cameras(engine),
+      env_probes(engine)
 {
 }
 

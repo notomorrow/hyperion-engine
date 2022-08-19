@@ -37,7 +37,7 @@ void main()
     float NdotL = max(0.0001, dot(N, L));
     v_lighting = NdotL;
 
-    v_voxel = VctWorldToAabb(v_position);
+    v_voxel = VctWorldToAABB(v_position);
     
     gl_Position = vec4(v_voxel, 1.0);
 }

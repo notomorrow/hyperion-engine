@@ -224,7 +224,7 @@ void NodeProxy::SetWorldRotation(const Quaternion &rotation)
 const BoundingBox &NodeProxy::GetLocalAABB() const
 {
     if (m_node) {
-        return m_node->GetLocalAabb();
+        return m_node->GetLocalAABB();
     }
 
     return BoundingBox::empty;
@@ -233,7 +233,7 @@ const BoundingBox &NodeProxy::GetLocalAABB() const
 const BoundingBox &NodeProxy::GetWorldAABB() const
 {
     if (m_node) {
-        return m_node->GetWorldAabb();
+        return m_node->GetWorldAABB();
     }
 
     return BoundingBox::empty;

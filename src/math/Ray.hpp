@@ -26,10 +26,10 @@ struct Ray {
     Vector3 position;
     Vector3 direction;
 
-    bool TestAabb(const BoundingBox &aabb) const;
-    bool TestAabb(const BoundingBox &aabb, RayTestResults &out_results) const;
-    bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const;
-    bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
+    bool TestAABB(const BoundingBox &aabb) const;
+    bool TestAABB(const BoundingBox &aabb, RayTestResults &out_results) const;
+    bool TestAABB(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const;
+    bool TestAABB(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
 
     bool TestTriangle(const Triangle &triangle) const;
     bool TestTriangle(const Triangle &triangle, RayTestResults &out_results) const;

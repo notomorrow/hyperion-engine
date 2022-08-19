@@ -94,7 +94,7 @@ void Material::EnqueueDescriptorSetCreate()
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const auto parent_index = DescriptorSet::Index(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES);
-            const auto index        = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, m_id.value - 1, frame_index);
+            const auto index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, m_id.value - 1, frame_index);
 
             auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
 
@@ -120,12 +120,12 @@ void Material::EnqueueDescriptorSetCreate()
                 if (auto &texture = m_textures.ValueAt(texture_index)) {
                     image_descriptor->SetSubDescriptor({
                         .element_index = texture_index,
-                        .image_view    = &texture->GetImageView()
+                        .image_view = &texture->GetImageView()
                     });
                 } else {
                     image_descriptor->SetSubDescriptor({
                         .element_index = texture_index,
-                        .image_view    = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                        .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
                     });
                 }
             }
@@ -165,7 +165,7 @@ void Material::EnqueueRenderUpdates()
 {
     AssertReady();
     
-    FixedArray<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids{};
+    FixedArray<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids { };
 
     const size_t num_bound_textures = max_textures_to_set;
     
@@ -218,22 +218,22 @@ void Material::EnqueueTextureUpdate(TextureKey key)
     // CopyConstructable. So we have to just fetch it from m_textures (in the render thread).
     // we should try to refactor this to not use std::function at all.
     GetEngine()->GetRenderScheduler().Enqueue([this, key](CommandBuffer *command_buffer, UInt frame_index) {
-        auto &texture            = m_textures.Get(key);
+        auto &texture = m_textures.Get(key);
         const auto texture_index = decltype(m_textures)::EnumToOrdinal(key);
 
         // update descriptor set for the given frame_index
         // these scheduled tasks are executed before descriptors sets are updated,
         // so it won't be updating a descriptor set that is in use
-        const auto *engine              = GetEngine();
+        const auto *engine = GetEngine();
         const auto descriptor_set_index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, m_id.value - 1, frame_index);
 
-        const auto &descriptor_pool     = engine->GetInstance()->GetDescriptorPool();
-        const auto *descriptor_set      = descriptor_pool.GetDescriptorSet(descriptor_set_index);
-        auto       *descriptor          = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
+        const auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
+        const auto *descriptor_set = descriptor_pool.GetDescriptorSet(descriptor_set_index);
+        auto *descriptor = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
 
         descriptor->SetSubDescriptor({
             .element_index = static_cast<UInt>(texture_index),
-            .image_view    = &texture->GetImageView()
+            .image_view = &texture->GetImageView()
         });
 
         HYPERION_RETURN_OK;
