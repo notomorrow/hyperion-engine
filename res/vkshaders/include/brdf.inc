@@ -28,18 +28,25 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     // This computes 1.0 - NoH^2 directly (which is close to zero in the highlights and has
     // enough precision).
     // Overall this yields better performance, keeping all computations in mediump
-    const float NoH = dot(N, H);
-#if defined(TARGET_MOBILE)
-    vec3 NxH = cross(N, H);
-    float oneMinusNoHSquared = dot(NxH, NxH);
-#else
-    float oneMinusNoHSquared = 1.0 - NoH * NoH;
-#endif
+//     const float NoH = dot(N, H);
+// #if defined(TARGET_MOBILE)
+//     vec3 NxH = cross(N, H);
+//     float oneMinusNoHSquared = dot(NxH, NxH);
+// #else
+//     float oneMinusNoHSquared = 1.0 - NoH * NoH;
+// #endif
 
-    float a = NoH * roughness;
-    float k = roughness / (oneMinusNoHSquared + a * a);
-    float d = k * k * (1.0 / PI);
-    return d;
+//     float a = NoH * roughness;
+//     float k = roughness / (oneMinusNoHSquared + a * a);
+//     float d = k * k * (1.0 / PI);
+//     return d;
+
+
+    float NdotH = max(dot(N, H), 0.0);
+
+    const float r2 = HYP_FMATH_SQR(roughness);
+    const float d = (NdotH * r2 - NdotH) * NdotH + 1.0;
+    return r2 / (d * d * HYP_FMATH_PI);
 }
 
 float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
@@ -48,7 +55,7 @@ float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
     // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
     float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
     float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
-    float v = 0.5 / (lambdaV + lambdaL);
+    float v = 0.5 / max(lambdaV + lambdaL, 0.00001);
     // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
     // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
     // clamp to the maximum value representable in mediump
@@ -66,7 +73,7 @@ vec3 SchlickFresnel(vec3 f0, vec3 f90, float u)
     const float Fc = pow(1 - u, 5.0);
     return f0 * (1.0 - Fc) + f90 * Fc;
 
-    //return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+    // return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 vec4 SchlickFresnel(vec4 f0, vec4 f90, float u)
@@ -74,12 +81,50 @@ vec4 SchlickFresnel(vec4 f0, vec4 f90, float u)
     const float Fc = pow(1 - u, 5.0);
     return f0 * (1.0 - Fc) + f90 * Fc;
 
-    //return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+    // return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+}
+
+vec4 SchlickFresnelRoughness(vec4 f0, float roughness, float u)
+{
+    // const float Fc = pow(1 - u, 5.0);
+    // return f0 * (1.0 - Fc) + f90 * Fc;
+
+    return f0 + (max(vec4(1.0 - roughness), f0) - f0) * pow(1.0 - u, 5.0);
+}
+
+vec3 SchlickFresnelRoughness(vec3 f0, float roughness, float u)
+{
+    // const float Fc = pow(1 - u, 5.0);
+    // return f0 * (1.0 - Fc) + f90 * Fc;
+
+    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(1.0 - u, 5.0);
 }
 
 vec3 mon2lin(vec3 x)
 {
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
+}
+
+// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
+vec3 EnvBRDFApprox(vec3 specular_color, float roughness, float ndotv)
+{
+	const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
+	const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
+	vec4 r = roughness * c0 + c1;
+	float a004 = min(r.x * r.x, exp2(-9.28 * ndotv)) * r.x + r.y;
+	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+	return specular_color * AB.x + AB.y;
+}
+
+// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
+vec4 EnvBRDFApprox(vec4 specular_color, float roughness, float ndotv)
+{
+	const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
+	const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
+	vec4 r = roughness * c0 + c1;
+	float a004 = min(r.x * r.x, exp2(-9.28 * ndotv)) * r.x + r.y;
+	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+	return specular_color * AB.x + AB.y;
 }
 
 vec2 BRDFMap(float roughness, float NdotV)

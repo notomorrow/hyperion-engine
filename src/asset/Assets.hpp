@@ -78,7 +78,7 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 14> extensions{
+            constexpr StaticMap<const char *, LoaderFormat, 15> extensions {
                 std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
                 std::make_pair(".mtl",          LoaderFormat::MTL_MATERIAL_LIBRARY),
                 std::make_pair(".mesh.xml",     LoaderFormat::OGRE_XML_MODEL),
@@ -91,6 +91,7 @@ class Assets {
                 std::make_pair(".psd",          LoaderFormat::TEXTURE_2D),
                 std::make_pair(".gif",          LoaderFormat::TEXTURE_2D),
                 std::make_pair(".hdr",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".tif",          LoaderFormat::TEXTURE_2D),
                 std::make_pair(".wav",          LoaderFormat::WAV_AUDIO),
                 std::make_pair(".hypscript",    LoaderFormat::SCRIPT_HYPSCRIPT)
             };

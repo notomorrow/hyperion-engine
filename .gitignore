@@ -281,6 +281,8 @@ paket-files/
 /res/models/san-miguel
 /res/models/bistro
 
+data/**/*
+
 project/**/*
 xcode_project/**/*
 CMakeFiles/**/*

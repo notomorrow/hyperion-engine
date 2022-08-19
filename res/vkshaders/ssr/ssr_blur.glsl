@@ -162,7 +162,7 @@ void main(void)
 #endif
 
 #ifdef HYP_SSR_BLUR_VERTICAL
-    // reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
+    reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
 #endif
 
     imageStore(ssr_blur, coord, reflection_sample);

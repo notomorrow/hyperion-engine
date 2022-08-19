@@ -133,15 +133,27 @@ void main()
 
         const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
-        const float material_reflectance = 0.5;
-        const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
-        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
+        // const float material_reflectance = 0.5;
+        // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
+        
+        
+        // Index of refraction for common dielectrics. Corresponds to f0 4%
+        const float IOR = 1.5;
+
+        // Reflectance of the surface when looking straight at it along the negative normal
+        const vec3 reflectance = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        vec3 F0 = albedo_linear * metalness + (reflectance * (1.0 - metalness));
+    
+        // F0 = mix(F0, albedo_linear, metalness);
+
+        //const vec3 F0 = albedo_linear * (1.0 - metalness);//albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
         const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+        const vec3 F = SchlickFresnelRoughness(F0, roughness, NdotV);
         
         const vec2 AB = BRDFMap(roughness, NdotV);
-        const vec3 dfg = F0 * AB.x + AB.y;
+        const vec3 dfg = F * AB.x + AB.y;
         
-        const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
+        const vec3 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
         const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
 
 #if HYP_ENV_PROBE_ENABLED
@@ -183,16 +195,13 @@ void main()
 
 #if HYP_SSR_ENABLED
         if (bool(deferred_params.flags & DEFERRED_FLAG_SSR_ENABLED)) {
-            vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
+            vec4 screen_space_reflections = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, texcoord);
             screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
             reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
         }
 #endif
 
         vec3 light_color = vec3(1.0);
-        
-        // ibl
-        //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
 
         // TEMP; will be under a compiler conditional.
         // quick and dirty hack to get not-so accurate indirect light for the scene --
@@ -213,31 +222,36 @@ void main()
         }
 #endif
 
-        vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
+        const vec3 kD = (1.0 - F) * (1.0 - metalness);
+
+        vec3 Fd = diffuse_color * irradiance / HYP_FMATH_PI;  //(diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
+
+        // vec3 Fd = diffuse_color * irradiance * (vec3(1.0) - dfg) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         // const vec3 bent_normal = (inverse(scene.view) * vec4(DecodeNormal(vec4(ssao_data.xyz, 1.0)).xyz, 0.0)).xyz;//ssao_data.xyz;
         // vec3 specular_ao = vec3(SpecularAO_Cones(bent_normal, ao, perceptual_roughness, R));
         specular_ao *= energy_compensation;
 
-        vec3 Fr = dfg * ibl;// * specular_ao;
+        vec3 Fr = dfg * ibl * specular_ao;
 
-        // vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
-        // Fd *= multibounce;
-        // Fr *= multibounce;
+        vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
+        Fd *= multibounce;
+        Fr *= multibounce;
 
         Fr *= exposure * IBL_INTENSITY;
         Fd *= exposure * IBL_INTENSITY;
 
-        // reflections.rgb *= specular_ao;
+        reflections.rgb *= specular_ao;
         Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
 
-        result = Fr + Fd;
-
+        result = kD * Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
-        
-        // result = normal.rgb * 0.5 + 0.5;
+        // result = dfg;
+
+        // result = ibl;
+        // result = reflections.rgb;
         //end ibl
     } else {
         result = albedo.rgb;
