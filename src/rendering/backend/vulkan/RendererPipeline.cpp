@@ -34,7 +34,7 @@ std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *dev
 
     std::vector<VkDescriptorSetLayout> used_layouts;
 
-    if (m_used_descriptor_sets.HasValue()) {
+    if (m_used_descriptor_sets.Any()) {
         for (auto *descriptor_set : m_used_descriptor_sets.Get()) {
             used_layouts.push_back(descriptor_set->m_layout);
         }

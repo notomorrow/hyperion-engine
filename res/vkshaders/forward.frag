@@ -107,7 +107,7 @@ void main()
         ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
 
-    // gbuffer_albedo = vec4(v_normal.xyz * 0.5 + 0.5, 1.0);
+    // gbuffer_albedo = vec4(normal.xyz * 0.5 + 0.5, 1.0);
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0); // not used

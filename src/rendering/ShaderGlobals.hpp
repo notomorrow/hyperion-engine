@@ -31,7 +31,8 @@ struct ShaderGlobals {
           objects(num_buffers),
           materials(num_buffers),
           skeletons(num_buffers),
-          shadow_maps(num_buffers)
+          shadow_maps(num_buffers),
+          env_probes(num_buffers)
     {
     }
 
@@ -41,17 +42,16 @@ struct ShaderGlobals {
     void Create(Engine *engine);
     void Destroy(Engine *engine);
 
-    ShaderData<StorageBuffer, SceneShaderData, max_scenes>        scenes;
-    ShaderData<StorageBuffer, LightShaderData, max_lights>        lights;
-    ShaderData<StorageBuffer, ObjectShaderData, max_objects>      objects;
-    ShaderData<StorageBuffer, MaterialShaderData, max_materials>  materials;
-    ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons>  skeletons;
-    ShaderData<UniformBuffer, ShadowShaderData, max_shadow_maps>  shadow_maps;
-    // ShaderData<IndirectBuffer, IndirectDrawCommand, max_objects>  indirect_objects;
-    BindlessStorage                                               textures;
+    ShaderData<StorageBuffer, SceneShaderData, max_scenes> scenes;
+    ShaderData<StorageBuffer, LightShaderData, max_lights> lights;
+    ShaderData<StorageBuffer, ObjectShaderData, max_objects> objects;
+    ShaderData<StorageBuffer, MaterialShaderData, max_materials> materials;
+    ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons> skeletons;
+    ShaderData<UniformBuffer, ShadowShaderData, max_shadow_maps> shadow_maps;
+    ShaderData<UniformBuffer, EnvProbeShaderData, max_env_probes> env_probes;
+    BindlessStorage textures;
 
-    UniformBuffer                                                 cubemap_uniforms;
-    UniformBuffer                                                 env_probes;
+    UniformBuffer cubemap_uniforms;
 };
 
 } // namespace hyperion::v2

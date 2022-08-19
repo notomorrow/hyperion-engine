@@ -1,9 +1,10 @@
 #ifndef HYPERION_V2_ENVIRONMENT_H
 #define HYPERION_V2_ENVIRONMENT_H
 
-#include "Base.hpp"
 #include <rendering/render_components/Shadows.hpp>
+#include "Base.hpp"
 #include "Light.hpp"
+#include "EnvProbe.hpp"
 
 #include <core/lib/ComponentSet.hpp>
 #include <core/lib/AtomicLock.hpp>
@@ -30,25 +31,28 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates {
     RENDER_ENVIRONMENT_UPDATES_NONE              = 0x0,
     RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS = 0x1,
     RENDER_ENVIRONMENT_UPDATES_LIGHTS            = 0x2,
-    RENDER_ENVIRONMENT_UPDATES_ENTITIES          = 0x4
+    RENDER_ENVIRONMENT_UPDATES_ENTITIES          = 0x4,
+    RENDER_ENVIRONMENT_UPDATES_ENV_PROBES        = 0x8
 };
 
 class RenderEnvironment : public EngineComponentBase<STUB_CLASS(RenderEnvironment)> {
 public:
-    static constexpr UInt max_shadow_maps = 1; /* tmp */
-
     RenderEnvironment(Scene *scene);
     RenderEnvironment(const RenderEnvironment &other) = delete;
     RenderEnvironment &operator=(const RenderEnvironment &other) = delete;
     ~RenderEnvironment();
 
-    Scene *GetScene() const                               { return m_scene; }
+    Scene *GetScene() const { return m_scene; }
 
     void AddLight(Ref<Light> &&light);
     void RemoveLight(Ref<Light> &&light);
+    // Call from render thread only!
+    SizeType NumLights() const { return m_lights.Size(); }
 
-    /*! Call from render thread only */
-    size_t NumLights() const                              { return m_lights.Size(); }
+    void AddEnvProbe(Ref<EnvProbe> &&env_probe);
+    void RemoveEnvProbe(Ref<EnvProbe> &&env_probe);
+    // Call from render thread only!
+    SizeType NumEnvProbes() const { return m_env_probes.Size(); }
 
     template <class T>
     void AddRenderComponent(std::unique_ptr<T> &&component)
@@ -57,8 +61,6 @@ public:
             "Component should be a derived class of RenderComponentBase");
 
         AssertThrow(component != nullptr);
-
-        // std::lock_guard guard(m_render_component_mutex);
 
         m_render_component_sp.Wait();
 
@@ -155,6 +157,11 @@ private:
     Queue<Ref<Light>>                                             m_lights_pending_addition;
     Queue<Ref<Light>>                                             m_lights_pending_removal;
     BinarySemaphore                                               m_light_update_sp;
+
+    FlatMap<EnvProbe::ID, Ref<EnvProbe>>                          m_env_probes;
+    Queue<Ref<EnvProbe>>                                          m_env_probes_pending_addition;
+    Queue<Ref<EnvProbe>>                                          m_env_probes_pending_removal;
+    BinarySemaphore                                               m_env_probes_update_sp;
 
     float                                                         m_global_timer;
 

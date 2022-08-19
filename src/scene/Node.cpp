@@ -418,9 +418,9 @@ void Node::SetEntity(Ref<Entity> &&entity)
         m_entity->SetParent(this);
         m_entity.Init();
 
-        m_local_aabb = m_entity->GetLocalAabb();
+        m_local_aabb = m_entity->GetLocalAABB();
     } else {
-        m_local_aabb = BoundingBox();
+        m_local_aabb = BoundingBox::empty;
 
         m_entity = nullptr;
     }
@@ -446,7 +446,7 @@ void Node::UpdateWorldTransform()
         AssertThrow(node.Get() != nullptr);
         node.Get()->UpdateWorldTransform();
 
-        m_world_aabb.Extend(node.Get()->GetWorldAabb());
+        m_world_aabb.Extend(node.Get()->GetWorldAABB());
     }
 
     if (m_parent_node != nullptr) {
@@ -460,14 +460,14 @@ void Node::UpdateWorldTransform()
 
 bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
 {
-    const bool has_node_hit = ray.TestAabb(m_world_aabb);
+    const bool has_node_hit = ray.TestAABB(m_world_aabb);
 
     bool has_entity_hit = false;
 
     if (has_node_hit) {
         if (m_entity != nullptr) {
-            has_entity_hit = ray.TestAabb(
-                m_entity->GetWorldAabb(),
+            has_entity_hit = ray.TestAABB(
+                m_entity->GetWorldAABB(),
                 m_entity->GetId().value,
                 m_entity.ptr,
                 out_results

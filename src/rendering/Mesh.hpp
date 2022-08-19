@@ -88,7 +88,7 @@ public:
     void CalculateTangents();
     void InvertNormals();
 
-    BoundingBox CalculateAabb() const;
+    BoundingBox CalculateAABB() const;
 
     void Init(Engine *engine);
 

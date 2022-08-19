@@ -31,6 +31,10 @@ using renderer::UniformBuffer;
 using renderer::StorageBuffer;
 using renderer::PerFrameData;
 using renderer::Device;
+using renderer::ShaderVec2;
+using renderer::ShaderVec3;
+using renderer::ShaderVec4;
+using renderer::ShaderMat4;
 
 struct ShaderDataState {
     enum State {
@@ -196,11 +200,11 @@ enum EnvProbeFlags : UInt32 {
 };
 
 struct alignas(16) EnvProbeShaderData {
-    Vector4 aabb_max;
-    Vector4 aabb_min;
-    Vector4 world_position;
-    UInt32  texture_index;
-    UInt32  flags;
+    ShaderVec4<Float> aabb_max;
+    ShaderVec4<Float> aabb_min;
+    ShaderVec4<Float> world_position;
+    UInt32 texture_index;
+    UInt32 flags;
 };
 
 /* max number of skeletons, based on size in mb */
@@ -221,6 +225,9 @@ constexpr SizeType max_lights_bytes      = max_lights * sizeof(LightShaderData);
 /* max number of shadow maps, based on size in kb */
 constexpr SizeType max_shadow_maps       = (16ull * 1024ull) / sizeof(ShadowShaderData);
 constexpr SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
+/* max number of env probes, based on size in kb */
+constexpr SizeType max_env_probes        = (16ull * 1024ull) / sizeof(EnvProbeShaderData);
+constexpr SizeType max_env_probes_bytes  = max_env_probes * sizeof(EnvProbeShaderData);
 
 template <class Buffer, class StructType, SizeType Size>
 class ShaderData {
@@ -347,9 +354,12 @@ private:
             template <class BufferContainer>
             void PerformUpdate(Device *device, BufferContainer &buffer_container, SizeType buffer_index, StructType *ptr)
             {
+                // TODO: Time it, see if we can afford to copy multiple small sub-sections
+                // of the buffer..
+
                 auto &current_dirty = dirty[buffer_index];
 
-                const auto dirty_end   = current_dirty.GetEnd(),
+                const auto dirty_end = current_dirty.GetEnd(),
                            dirty_start = current_dirty.GetStart();
 
                 if (dirty_end <= dirty_start) {
@@ -360,7 +370,7 @@ private:
 
                 buffer_container[buffer_index]->Copy(
                     device,
-                    dirty_start    * sizeof(StructType),
+                    dirty_start * sizeof(StructType),
                     dirty_distance * sizeof(StructType),
                     &ptr[dirty_start]
                 );
@@ -371,7 +381,7 @@ private:
             void MarkDirty(SizeType index)
             {
                 for (auto &d : dirty) {
-                    d |= Range<SizeType>{index, index + 1};
+                    d |= Range<SizeType> { index, index + 1 };
                 }
             }
 

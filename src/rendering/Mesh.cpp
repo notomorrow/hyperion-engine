@@ -592,7 +592,7 @@ void Mesh::InvertNormals()
     }
 }
 
-BoundingBox Mesh::CalculateAabb() const
+BoundingBox Mesh::CalculateAABB() const
 {
     BoundingBox aabb;
 

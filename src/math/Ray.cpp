@@ -4,24 +4,24 @@
 
 namespace hyperion {
 
-bool Ray::TestAabb(const BoundingBox &aabb) const
+bool Ray::TestAABB(const BoundingBox &aabb) const
 {
     RayTestResults out_results;
 
-    return TestAabb(aabb, ~0, out_results);
+    return TestAABB(aabb, ~0, out_results);
 }
 
-bool Ray::TestAabb(const BoundingBox &aabb, RayTestResults &out_results) const
+bool Ray::TestAABB(const BoundingBox &aabb, RayTestResults &out_results) const
 {
-    return TestAabb(aabb, ~0, out_results);
+    return TestAABB(aabb, ~0, out_results);
 }
 
-bool Ray::TestAabb(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const
+bool Ray::TestAABB(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const
 {
-    return TestAabb(aabb, hit_id, nullptr, out_results);
+    return TestAABB(aabb, hit_id, nullptr, out_results);
 }
 
-bool Ray::TestAabb(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const
+bool Ray::TestAABB(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const
 {
     if (aabb.Empty()) { // drop out early
         return RayHit::no_hit;

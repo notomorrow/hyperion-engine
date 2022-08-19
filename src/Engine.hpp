@@ -13,6 +13,7 @@
 #include <rendering/DefaultFormats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
+#include <rendering/RenderState.hpp>
 #include <scene/World.hpp>
 
 #include "GameThread.hpp"
@@ -123,48 +124,7 @@ struct DebugMarker {
 
 class IndirectDrawState;
 
-struct RenderState {
-    struct SceneBinding {
-        Scene::ID id;
-        Scene::ID parent_id;
 
-        explicit operator bool() const { return bool(id); }
-    };
-
-    std::stack<SceneBinding> scene_ids;
-    FlatSet<Light::ID>       light_ids;
-    IndirectDrawState       *indirect_draw_state = nullptr;
-    UInt8                    visibility_cursor   = 0u;
-
-    void BindLight(Light::ID light)
-    {
-        light_ids.Insert(light);
-    }
-
-    void UnbindLight(Light::ID light)
-    {
-        light_ids.Erase(light);
-    }
-
-    void BindScene(const Scene *scene)
-    {
-        scene_ids.push(
-            scene == nullptr
-                ? SceneBinding{}
-                : SceneBinding{scene->GetId(), scene->GetParentId()}
-        );
-    }
-
-    void UnbindScene()
-    {
-        scene_ids.pop();
-    }
-
-    SceneBinding GetScene() const
-    {
-        return scene_ids.empty() ? SceneBinding{} : scene_ids.top();
-    }
-};
 
 // struct RenderFunctor : public ScheduledFunction<renderer::Result, CommandBuffer * /* command_buffer */, UInt /* frame_index */>
 // {

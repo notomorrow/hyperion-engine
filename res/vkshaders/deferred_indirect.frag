@@ -28,9 +28,9 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 1
+#define HYP_VCT_ENABLED 0
 #define HYP_VCT_REFLECTIONS_ENABLED 0
-#define HYP_VCT_INDIRECT_ENABLED 1
+#define HYP_VCT_INDIRECT_ENABLED 0
 #define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
 
@@ -146,22 +146,23 @@ void main()
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
-            uint probe_index = scene.environment_texture_index;
-            const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_index]);
-            const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
-
+            const uint probe_index = scene.environment_texture_index;
             EnvProbe probe = env_probes[probe_index];
 
-            ibl = EnvProbeSample(
-                gbuffer_sampler,
-                env_probe_textures[probe_index],
-                bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
-                    ? EnvProbeCoordParallaxCorrected(probe, position.xyz, R)
-                    : R,
-                lod
-            ).rgb;
-            
-               //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+            if (probe.texture_index != ~0u) {
+                const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
+                const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
+                const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
+
+                ibl = EnvProbeSample(
+                    gbuffer_sampler,
+                    env_probe_textures[probe_texture_index],
+                    bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
+                        ? EnvProbeCoordParallaxCorrected(probe, position.xyz, R)
+                        : R,
+                    lod
+                ).rgb;
+            }
         }
 #endif
 
@@ -199,10 +200,16 @@ void main()
         // later, replace this will spherical harmonics.
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
-            uint probe_index = scene.environment_texture_index;
-            const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_index]);
+            const uint probe_index = scene.environment_texture_index;
+            EnvProbe probe = env_probes[probe_index];
 
-            irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_index], N, float(num_levels - 1)).rgb;
+            if (probe.texture_index != ~0u) {
+                const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
+
+                const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
+
+                irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1)).rgb;
+            }
         }
 #endif
 
@@ -229,7 +236,7 @@ void main()
 
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
-
+        
         // result = normal.rgb * 0.5 + 0.5;
         //end ibl
     } else {

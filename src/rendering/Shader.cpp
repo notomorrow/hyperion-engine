@@ -13,10 +13,10 @@ void ShaderGlobals::Create(Engine *engine)
     skeletons.Create(device);
     lights.Create(device);
     shadow_maps.Create(device);
+    env_probes.Create(device);
     textures.Create(engine);
 
     cubemap_uniforms.Create(device, sizeof(CubemapUniforms));
-    env_probes.Create(device, sizeof(EnvProbeShaderData));
 }
 
 void ShaderGlobals::Destroy(Engine *engine)

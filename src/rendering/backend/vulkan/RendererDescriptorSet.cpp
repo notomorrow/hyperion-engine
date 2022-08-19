@@ -44,7 +44,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::SSR_FINAL_TEXTURE,     22},
 
             {DescriptorKey::CUBEMAP_UNIFORMS,      24},
-            {DescriptorKey::CUBEMAP_TEST,          25},
+            {DescriptorKey::ENV_PROBE_TEXTURES,    25},
             {DescriptorKey::ENV_PROBES,            26},
 
             {DescriptorKey::VOXEL_IMAGE,           30},
@@ -494,11 +494,14 @@ void DescriptorSet::ApplyUpdates(Device *device)
             write.dstSet = m_set;
         }
 
+#ifdef HYP_LOG_DESCRIPTOR_SET_UPDATES
         DebugLog(
             LogType::Debug,
             "Update descriptor set: %llu writes\n",
             m_descriptor_writes.size()
         );
+#endif
+
         vkUpdateDescriptorSets(device->GetDevice(), static_cast<UInt>(m_descriptor_writes.size()), m_descriptor_writes.data(), 0, nullptr);
 
         m_descriptor_writes.clear();
@@ -575,34 +578,6 @@ Result DescriptorPool::Create(Device *device)
     HYP_DEBUG_LOG_LIMIT(maxPerStageDescriptorSamplers);
 
 #undef HYP_DEBUG_LOG_LIMIT
-
-    // UInt descriptor_set_index = 0;
-
-    // for (auto &descriptor_set : m_descriptor_sets) {
-    //     if (descriptor_set == nullptr) {
-    //         DebugLog(LogType::Warn, "Descriptor set %u null, skipping...\n", descriptor_set_index);
-
-    //         descriptor_set_index++;
-
-    //         continue;
-    //     }
-
-    //     auto allocate_result = descriptor_set->Create(device, this);
-
-    //     if (!allocate_result) {
-    //         device->DebugLogAllocatorStats();
-
-    //         DebugLog(
-    //             LogType::Error,
-    //             "Failed to allocate descriptor set %llu!\n",
-    //             descriptor_set_index
-    //         );
-
-    //         return allocate_result;
-    //     }
-
-    //     descriptor_set_index++;
-    // }
 
     m_is_created = true;
 
@@ -790,11 +765,13 @@ Result DescriptorPool::DestroyDescriptorSet(Device *device, UInt index)
         return {Result::RENDERER_ERR, "Out of bounds"};
     }
 
+#ifdef HYP_LOG_DESCRIPTOR_SET_UPDATES
     DebugLog(
         LogType::Debug,
         "Remove descriptor set at index %u\n",
         index
     );
+#endif
 
     auto &descriptor_set = m_descriptor_sets[index];
 
@@ -825,11 +802,13 @@ Result DescriptorPool::CreateDescriptorSet(Device *device, UInt index)
     auto *descriptor_set = m_descriptor_sets[index].get();
     AssertThrow(descriptor_set != nullptr);
 
+#ifdef HYP_LOG_DESCRIPTOR_SET_UPDATES
     DebugLog(
         LogType::Debug,
         "Allocate descriptor set %u\n",
         index
     );
+#endif
 
     return descriptor_set->Create(device, this);
 }
@@ -1092,7 +1071,7 @@ void Descriptor::Create(
     if (descriptor_count == 0) {
         DebugLog(
             LogType::Debug,
-            "Descriptor has 0 subdescriptors, returning from Create() without pushing any writes\n"
+            "Descriptor has 0 elements, returning from Create() without pushing any writes\n"
         );
 
         return;

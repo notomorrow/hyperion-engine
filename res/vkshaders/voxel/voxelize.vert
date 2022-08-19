@@ -30,5 +30,5 @@ void main()
     vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);  //object.local_aabb_max.xyz; //scene.aabb_max.xyz;  //;
     vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0); //object.local_aabb_min.xyz; //scene.aabb_min.xyz;  //;
     
-    gl_Position = vec4(ScaleToAabb(aabb_max, aabb_min, v_position), 1.0);
+    gl_Position = vec4(ScaleToAABB(aabb_max, aabb_min, v_position), 1.0);
 }

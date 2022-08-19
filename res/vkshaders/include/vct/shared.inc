@@ -17,12 +17,12 @@ vec3 VctStoragePosition(vec3 scaled_position)
     return vec3((scaled_position * 0.5 + 0.5) * image_size);
 }
 
-vec3 VctAabbToWorld(vec3 scaled_position)
+vec3 VctAABBToWorld(vec3 scaled_position)
 {
     return ((scaled_position * 2.0 - 1.0) * vct_aabb_extent) + vct_aabb_center;
 }
 
-vec3 VctWorldToAabb(vec3 world_position)
+vec3 VctWorldToAABB(vec3 world_position)
 {
     return ((world_position - vct_aabb_center) / vct_aabb_extent);
 }

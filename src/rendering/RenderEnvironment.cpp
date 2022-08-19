@@ -34,7 +34,6 @@ void RenderEnvironment::Init(Engine *engine)
 
         { // lights
             if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
-                // std::lock_guard guard(m_light_update_mutex);
                 m_light_update_sp.Wait();
 
                 while (m_lights_pending_addition.Any()) {
@@ -75,6 +74,48 @@ void RenderEnvironment::Init(Engine *engine)
             }
         }
 
+        { // env probes
+            if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENV_PROBES) {
+                m_env_probes_update_sp.Wait();
+
+                while (m_env_probes_pending_addition.Any()) {
+                    auto &front = m_env_probes_pending_addition.Front();
+
+                    if (front != nullptr) {
+                        const auto id = front->GetId();
+
+                        m_env_probes.Insert(id, std::move(front));
+                    }
+
+                    m_env_probes_pending_addition.Pop();
+                }
+
+                while (m_env_probes_pending_removal.Any()) {
+                    auto &front = m_env_probes_pending_removal.Front();
+
+                    if (front != nullptr) {
+                        const auto id = front->GetId();
+
+                        m_env_probes.Erase(id);
+                    }
+
+                    m_env_probes_pending_removal.Pop();
+                }
+
+                m_env_probes_update_sp.Signal();
+
+                m_update_marker &= ~RENDER_ENVIRONMENT_UPDATES_ENV_PROBES;
+            }
+
+            for (auto &it: m_env_probes) {
+                auto &env_probe = it.second;
+
+                if (env_probe != nullptr) {
+                    env_probe.Init();
+                }
+            }
+        }
+
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ENVIRONMENTS, [this](...) {
@@ -85,14 +126,21 @@ void RenderEnvironment::Init(Engine *engine)
             const auto update_marker_value = m_update_marker.load();
 
             if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
-                //std::lock_guard guard(m_light_update_mutex);
-
                 m_light_update_sp.Wait();
 
                 m_lights_pending_addition.Clear();
                 m_lights_pending_removal.Clear();
 
                 m_light_update_sp.Signal();
+            }
+
+            if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENV_PROBES) {
+                m_env_probes_update_sp.Wait();
+
+                m_env_probes_pending_addition.Clear();
+                m_env_probes_pending_removal.Clear();
+
+                m_env_probes_update_sp.Signal();
             }
 
             m_render_components.Clear();
@@ -125,8 +173,6 @@ void RenderEnvironment::AddLight(Ref<Light> &&light)
         light.Init();
     }
 
-    // std::lock_guard guard(m_light_update_mutex);
-
     m_light_update_sp.Wait();
 
     m_lights_pending_addition.Push(std::move(light));
@@ -138,13 +184,37 @@ void RenderEnvironment::AddLight(Ref<Light> &&light)
 
 void RenderEnvironment::RemoveLight(Ref<Light> &&light)
 {
-    // std::lock_guard guard(m_light_update_mutex);
     m_light_update_sp.Wait();
 
     m_lights_pending_removal.Push(std::move(light));
     m_light_update_sp.Signal();
     
     m_update_marker |= RENDER_ENVIRONMENT_UPDATES_LIGHTS;
+}
+
+void RenderEnvironment::AddEnvProbe(Ref<EnvProbe> &&env_probe)
+{
+    if (env_probe != nullptr && IsReady()) {
+        env_probe.Init();
+    }
+
+    m_env_probes_update_sp.Wait();
+
+    m_env_probes_pending_addition.Push(std::move(env_probe));
+
+    m_env_probes_update_sp.Signal();
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENV_PROBES;
+}
+
+void RenderEnvironment::RemoveEnvProbe(Ref<EnvProbe> &&env_probe)
+{
+    m_env_probes_update_sp.Wait();
+
+    m_env_probes_pending_removal.Push(std::move(env_probe));
+    m_env_probes_update_sp.Signal();
+    
+    m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENV_PROBES;
 }
 
 void RenderEnvironment::Update(Engine *engine, GameCounter::TickUnit delta)
@@ -205,7 +275,6 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
     const auto update_marker_value = m_update_marker.load();
 
     if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_LIGHTS) {
-        // std::lock_guard guard(m_light_update_mutex);
         m_light_update_sp.Wait();
 
         while (m_lights_pending_addition.Any()) {
@@ -240,9 +309,40 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
         m_light_update_sp.Signal();
     }
 
-    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
-        // std::lock_guard guard(m_entity_update_mutex);
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENV_PROBES) {
+        m_env_probes_update_sp.Wait();
 
+        while (m_env_probes_pending_addition.Any()) {
+            auto &front = m_env_probes_pending_addition.Front();
+
+            if (front != nullptr) {
+                const auto id = front->GetId();
+
+                m_env_probes.Insert(id, std::move(front));
+            }
+
+            m_env_probes_pending_addition.Pop();
+        }
+
+        while (m_env_probes_pending_removal.Any()) {
+            const auto &front = m_env_probes_pending_removal.Front();
+
+            if (front != nullptr) {
+                const auto id = front->GetId();
+
+                // TODO: scene switch wouldnt unbind light
+                // GetEngine()->render_state.UnbindLight(id);
+
+                m_env_probes.Erase(id);
+            }
+
+            m_env_probes_pending_removal.Pop();
+        }
+
+        m_env_probes_update_sp.Signal();
+    }
+
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
         m_entity_update_sp.Wait();
 
         while (m_entities_pending_addition.Any()) {
@@ -272,6 +372,14 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
         m_entity_update_sp.Signal();
     }
 
+    for (const auto &it : m_lights) {
+        GetEngine()->render_state.BindLight(it.first);
+    }
+
+    for (const auto &it : m_env_probes) {
+        GetEngine()->render_state.BindEnvProbe(it.first);
+    }
+
     for (const auto &component : m_render_components) {
         m_next_enabled_render_components_mask |= 1u << static_cast<UInt32>(component.second->GetName());
         component.second->ComponentRender(engine, frame);
@@ -283,7 +391,6 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
     if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
         AtomicLocker locker(m_updating_render_components);
 
-        // std::lock_guard guard(m_render_component_mutex);
         m_render_component_sp.Wait();
 
         for (auto &it : m_render_components_pending_addition) {

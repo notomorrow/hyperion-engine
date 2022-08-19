@@ -1,7 +1,5 @@
 #include "defines.inc"
 
-#define HYP_MAX_SHADOW_MAPS 1 // tmp
-
 struct Scene {
     // 0
     mat4 view;
