@@ -36,6 +36,7 @@ using std::memcpy;
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMData.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
+#include <asset/serialization/fbom/FBOMMarshaler.hpp>
 
 namespace hyperion {
 
@@ -213,46 +214,7 @@ struct FBOMStaticData {
     }
 };
 
-class FBOMMarshalerBase {
-    friend class FBOMLoader;
 
-public:
-    virtual ~FBOMMarshalerBase() = default;
-
-    virtual FBOMType GetObjectType() const = 0;
-
-protected:
-    virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
-};
-
-template <class T>
-class FBOMObjectMarshalerBase : public FBOMMarshalerBase {
-public:
-    virtual ~FBOMObjectMarshalerBase() = default;
-
-    virtual FBOMType GetObjectType() const override = 0;
-
-    virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(const FBOMObject &in, T &out_object) const = 0;
-
-private:
-    virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
-    {
-        return Serialize(in.Get<T>(), out);
-    }
-
-    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override
-    {
-        out.Set<T>();
-
-        return Deserialize(in, out.Get<T>());
-    }
-};
-
-template <class T>
-class FBOMMarshaler : public FBOMObjectMarshalerBase<T> {
-};
 
 class FBOM {
     FlatMap<String, std::unique_ptr<FBOMMarshalerBase>> marshalers;

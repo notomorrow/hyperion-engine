@@ -20,8 +20,9 @@ public:
     {
     }
 
+    /*! \brief Construct a new T into the Any, without needing to use any move or copy constructors. */
     template <class T, class ...Args>
-    static auto MakeAny(Args &&... args)
+    static auto Construct(Args &&... args)
     {
         Any any;
         any.m_type_id = TypeID::ForType<T>();
@@ -132,12 +133,16 @@ public:
 
     template <class T>
     bool Is() const
-        { return TypeID::ForType<T>() == m_type_id; }
+        { return m_type_id == TypeID::ForType<T>(); }
+
+    bool Is(const TypeID &type_id) const
+        { return m_type_id == type_id; }
 
     template <class T>
     T &Get()
     {
-        AssertThrowMsg(Is<T>(), "Held type not equal to requested type!");
+        const auto requested_type_id = TypeID::ForType<T>();
+        AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         return *static_cast<T *>(m_ptr);
     }
@@ -145,18 +150,21 @@ public:
     template <class T>
     const T &Get() const
     {
-        AssertThrowMsg(Is<T>(), "Held type not equal to requested type!");
+        const auto requested_type_id = TypeID::ForType<T>();
+        AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         return *static_cast<const T *>(m_ptr);
     }
 
+    /*! \brief Construct a new pointer into the Any. Any current value will be destroyed. */
     template <class T, class ...Args>
-    void Set(Args &&... args)
+    void Emplace(Args &&... args)
     {
         if (HasValue()) {
             m_delete_function(m_ptr);
         }
 
+        m_type_id = TypeID::ForType<T>();
         m_ptr = new T(std::forward<Args>(args)...);
         m_delete_function = [](void *ptr) { delete static_cast<T *>(ptr); };
     }
@@ -166,15 +174,44 @@ public:
     template <class T>
     T *Release()
     {
-        AssertThrowMsg(Is<T>(), "Held type not equal to requested type!");
+        const auto requested_type_id = TypeID::ForType<T>();
+
+        AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         T *ptr = static_cast<T *>(m_ptr);
 
-        m_type_id = TypeID::ForType<void>();;
+        m_type_id = TypeID::ForType<void>();
         m_ptr = nullptr;
         m_delete_function = nullptr;
 
         return ptr;
+    }
+
+    /*! \brief Takes ownership of {ptr}, resetting the current value held in the Any.
+        Do NOT delete the value passed to this function, as it is deleted by the Any.
+    */
+    template <class T>
+    void Reset(T *ptr)
+    {
+        if (HasValue()) {
+            m_delete_function(m_ptr);
+        }
+
+        m_type_id = TypeID::ForType<T>();
+        m_ptr = ptr;
+        m_delete_function = [](void *ptr) { delete static_cast<T *>(ptr); };
+    }
+
+    /*! \brief Resets the current value held in the Any. */
+    void Reset()
+    {
+        if (HasValue()) {
+            m_delete_function(m_ptr);
+        }
+
+        m_type_id = TypeID::ForType<void>();
+        m_ptr = nullptr;
+        m_delete_function = nullptr;
     }
 
 private:

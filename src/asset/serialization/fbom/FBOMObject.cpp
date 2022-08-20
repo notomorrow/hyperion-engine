@@ -90,6 +90,16 @@ void FBOMObject::SetProperty(const String &key, const FBOMType &type, const void
     SetProperty(key, type, type.size, bytes);
 }
 
+void FBOMObject::AddChild(const FBOMObject &object)
+{
+    nodes->PushBack(object);
+}
+
+void FBOMObject::AddChild(FBOMObject &&object)
+{
+    nodes->PushBack(std::move(object));
+}
+
 HashCode FBOMObject::GetHashCode() const
 {
     HashCode hc;

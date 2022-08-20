@@ -283,6 +283,8 @@ paket-files/
 
 data/**/*
 
+*.fbom
+
 project/**/*
 xcode_project/**/*
 CMakeFiles/**/*

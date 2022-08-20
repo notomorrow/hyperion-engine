@@ -181,8 +181,14 @@ public:
     const BoundingBox &GetLocalAABB() const
         { return m_local_aabb; }
 
+    void SetLocalAABB(const BoundingBox &aabb)
+        { m_local_aabb = aabb; }
+
     const BoundingBox &GetWorldAABB() const
         { return m_world_aabb; }
+
+    void SetWorldAABB(const BoundingBox &aabb)
+        { m_world_aabb = aabb; }
     
     bool IsReady() const;
 
