@@ -165,6 +165,7 @@ struct KeyValuePair : Pair<Key, Value> {
     friend bool operator>(const Pair<Key, Value> &, const KeyValuePair &);
     friend bool operator>=(const Pair<Key, Value> &, const KeyValuePair &);
 
+    HashCode GetHashCode() const { return Pair<Key, Value>::GetHashCode(); }
 };
 
 template <class K, class V>

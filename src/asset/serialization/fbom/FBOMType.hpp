@@ -1,7 +1,9 @@
 #ifndef HYPERION_V2_FBOM_TYPE_HPP
 #define HYPERION_V2_FBOM_TYPE_HPP
 
+#include <core/lib/String.hpp>
 #include <HashCode.hpp>
+#include <Types.hpp>
 
 #include <string>
 #include <cstddef>
@@ -9,8 +11,8 @@
 namespace hyperion::v2::fbom {
 
 struct FBOMType {
-    std::string name;
-    size_t size;
+    String name;
+    SizeType size;
     FBOMType *extends = nullptr;
 
     FBOMType()
@@ -20,7 +22,7 @@ struct FBOMType {
     {
     }
 
-    FBOMType(const std::string &name, size_t size, const FBOMType *extends = nullptr)
+    FBOMType(const String &name, SizeType size, const FBOMType *extends = nullptr)
         : name(name),
           size(size),
           extends(nullptr)
@@ -66,7 +68,7 @@ struct FBOMType {
 
     FBOMType Extend(const FBOMType &object) const;
 
-    bool IsOrExtends(const std::string &name) const
+    bool IsOrExtends(const String &name) const
     {
         if (this->name == name) {
             return true;
@@ -118,7 +120,7 @@ struct FBOMType {
 
     std::string ToString() const
     {
-        std::string str = name + " (" + std::to_string(size) + ") ";
+        std::string str = std::string(name.Data()) + " (" + std::to_string(size) + ") ";
 
         if (extends != nullptr) {
             str += "[" + extends->ToString() + "]";

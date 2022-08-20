@@ -16,7 +16,7 @@ private:
 
 public:
     template <class T>
-    static TypeID GetTypeID()
+    static TypeID ForType()
     {
         static const TypeID id = TypeID { ++type_id_counter };
 

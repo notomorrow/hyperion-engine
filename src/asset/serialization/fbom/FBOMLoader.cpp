@@ -60,13 +60,13 @@ FBOMResult FBOMLoader::Eat(ByteReader *reader, FBOMCommand command, bool read)
     }
 
     if (received != command) {
-        return FBOMResult(FBOMResult::FBOM_ERR, std::string("unexpected command: expected ") + std::to_string(command) + ", received " + std::to_string(received));
+        return FBOMResult(FBOMResult::FBOM_ERR, "Unexpected command");
     }
 
     return FBOMResult::FBOM_OK;
 }
 
-std::string FBOMLoader::ReadString(ByteReader *reader)
+String FBOMLoader::ReadString(ByteReader *reader)
 {
     // read 4 bytes of string length
     UInt32 len;
@@ -77,7 +77,7 @@ std::string FBOMLoader::ReadString(ByteReader *reader)
 
     reader->Read(bytes, len);
 
-    std::string str(bytes);
+    String str(bytes);
 
     delete[] bytes;
 
@@ -96,8 +96,7 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
         reader->Read(&extend_level);
 
         for (int i = 0; i < extend_level; i++) {
-            std::string type_name = ReadString(reader);
-            result.name = type_name;
+            result.name = ReadString(reader);
 
             // read size of object
             UInt64 type_size;
@@ -198,13 +197,13 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                     return err;
                 }
 
-                object.nodes.push_back(child);
+                object.nodes->PushBack(std::move(child));
 
                 break;
             }
             case FBOM_OBJECT_END:
                 if (auto err = Deserialize(object, object.deserialized)) {
-                    return FBOMResult(FBOMResult::FBOM_ERR, std::string("Read object: could not deserialize ") + object.m_object_type.name + " object: " + err.message);
+                    return FBOMResult(FBOMResult::FBOM_ERR, "Could not deserialize object");
                 }
 
                 break;
@@ -214,7 +213,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                     return err;
                 }
 
-                std::string property_name = ReadString(reader);
+                const auto property_name = ReadString(reader);
 
                 FBOMData data;
 
@@ -227,7 +226,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                 break;
             }
             default:
-                return FBOMResult(FBOMResult::FBOM_ERR, std::string("Read object: cannot process command ") + std::to_string(command) + " while reading object");
+                return FBOMResult(FBOMResult::FBOM_ERR, "Could not process command while reading object");
             }
         } while (command != FBOM_OBJECT_END && command != FBOM_NONE);
 
@@ -255,7 +254,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
             return err;
         }
 
-        last->nodes.push_back(child);
+        last->nodes->PushBack(std::move(child));
 
         break;
     }
@@ -289,7 +288,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
             reader->Read(&offset);
 
             if (offset >= initial_static_data_size) {
-                return FBOMResult(FBOMResult::FBOM_ERR, std::string("read offset as ") + std::to_string(offset) + ", which is >= alotted size of static data pool (" + std::to_string(static_data_size) + ")");
+                return FBOMResult(FBOMResult::FBOM_ERR, "Offset out of bounds of static data pool");
             }
 
             UInt8 type;
@@ -330,7 +329,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
                 break;
             }
             default:
-                return FBOMResult(FBOMResult::FBOM_ERR, std::string("Cannot process static data type ") + std::to_string(type));
+                return FBOMResult(FBOMResult::FBOM_ERR, "Cannot process static data type, unknown type");
             }
         }
 

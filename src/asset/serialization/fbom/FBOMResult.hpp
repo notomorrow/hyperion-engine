@@ -11,9 +11,9 @@ struct FBOMResult {
         FBOM_ERR = 1
     } value;
 
-    std::string message;
+    const char *message = "";
 
-    FBOMResult(decltype(FBOM_OK) value = FBOM_OK, std::string message = "")
+    FBOMResult(decltype(FBOM_OK) value = FBOM_OK, const char *message = "")
         : value(value),
           message(message)
     {

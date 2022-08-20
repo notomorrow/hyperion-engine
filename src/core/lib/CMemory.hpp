@@ -23,6 +23,15 @@ public:
         return std::strcpy(dest, src);
     }
 
+    static inline SizeType StringLength(const char *str)
+    {
+        if (!str) {
+            return 0;
+        }
+
+        return std::strlen(str);
+    }
+
     static inline void *Set(void *dest, int ch, SizeType length)
     {
         return std::memset(dest, ch, length);
@@ -51,6 +60,16 @@ public:
 
 #if HYP_DEBUG_MODE
         Memory::Garble(&object, sizeof(T));
+#endif
+    }
+
+    template <class T>
+    static void Destruct(void *ptr)
+    {
+        static_cast<T *>(ptr)->~T();
+
+#if HYP_DEBUG_MODE
+        Memory::Garble(ptr, sizeof(T));
 #endif
     }
 };

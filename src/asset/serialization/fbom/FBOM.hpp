@@ -6,6 +6,7 @@
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/Any.hpp>
+#include <core/lib/Variant.hpp>
 #include <core/Class.hpp>
 #include <HashCode.hpp>
 #include <math/MathUtil.hpp>
@@ -29,12 +30,12 @@
 using std::memset;
 using std::memcpy;
 
-#include "Result.hpp"
-#include "Type.hpp"
-#include "BaseTypes.hpp"
-#include "Data.hpp"
-#include "Object.hpp"
-#include "Loadable.hpp"
+#include <asset/serialization/fbom/FBOMObject.hpp>
+#include <asset/serialization/fbom/FBOMResult.hpp>
+#include <asset/serialization/fbom/FBOMType.hpp>
+#include <asset/serialization/fbom/FBOMBaseTypes.hpp>
+#include <asset/serialization/fbom/FBOMData.hpp>
+#include <asset/serialization/fbom/FBOMLoadable.hpp>
 
 namespace hyperion {
 
@@ -99,8 +100,8 @@ struct FBOMStaticData {
 
     int64_t offset;
 
-    // no longer a union due to destructors needed
-    void *raw_data;
+    // Variant<void *, FBOMObject, FBOMType, FBOMData> data;
+    // void *raw_data;
     FBOMObject object_data;
     FBOMType type_data;
     Optional<FBOMData> data_data;
@@ -108,7 +109,7 @@ struct FBOMStaticData {
 
     FBOMStaticData()
         : type(FBOM_STATIC_DATA_NONE),
-          raw_data(nullptr),
+        //   raw_data(nullptr),
           offset(-1),
           written(false)
     {
@@ -117,19 +118,19 @@ struct FBOMStaticData {
     FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_OBJECT),
           object_data(object_data),
-          raw_data(nullptr),
+        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
-          raw_data(nullptr),
+        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
-          raw_data(nullptr),
+        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     FBOMStaticData(const FBOMStaticData &other)
@@ -137,7 +138,7 @@ struct FBOMStaticData {
           object_data(other.object_data),
           type_data(other.type_data),
           data_data(other.data_data),
-          raw_data(other.raw_data),
+        //   raw_data(other.raw_data),
           offset(other.offset),
           written(other.written) {}
     FBOMStaticData &operator=(const FBOMStaticData &other)
@@ -146,7 +147,7 @@ struct FBOMStaticData {
         object_data = other.object_data;
         type_data = other.type_data;
         data_data = other.data_data;
-        raw_data = other.raw_data;
+        // raw_data = other.raw_data;
         offset = other.offset;
         written = other.written;
 
@@ -154,6 +155,34 @@ struct FBOMStaticData {
     }
 
     ~FBOMStaticData() = default;
+
+    // bool operator==(const FBOMStaticData &other) const
+    // {
+    //     if (
+    //         type != other.type
+    //         || offset != other.offset
+    //         || written != other.written
+    //     )
+    //     {
+    //         return false;
+    //     }
+
+    //     switch (type) {
+    //     case FBOM_STATIC_DATA_OBJECT:
+    //         return object_data == other.object_data;
+    //     case FBOM_STATIC_DATA_TYPE:
+    //         return type_data == other.type_data;
+    //     case FBOM_STATIC_DATA_DATA:
+    //         return data_data.Get() == other.data_data.Get();
+    //     case FBOM_STATIC_DATA_NONE:
+    //         return true;
+    //     }
+    // }
+
+    bool operator<(const FBOMStaticData &other) const
+    {
+        return offset < other.offset;
+    }
 
     inline HashCode GetHashCode() const
     {
@@ -226,7 +255,7 @@ class FBOMMarshaler : public FBOMObjectMarshalerBase<T> {
 };
 
 class FBOM {
-    FlatMap<ANSIString, std::unique_ptr<FBOMMarshalerBase>> marshalers;
+    FlatMap<String, std::unique_ptr<FBOMMarshalerBase>> marshalers;
 
 public:
     FBOM();
@@ -241,12 +270,12 @@ public:
             "Marshaler class must be a derived class of FBOMMarshalBase");
 
         auto loader = std::make_unique<Marshaler>();
-        const auto name = loader->GetObjectType().name.c_str();
+        const auto name = loader->GetObjectType().name;
 
         marshalers.Set(name, std::move(loader));
     }
 
-    FBOMMarshalerBase *GetLoader(const ANSIString &type_name)
+    FBOMMarshalerBase *GetLoader(const String &type_name)
     {
         auto it = marshalers.Find(type_name);
 
@@ -270,7 +299,7 @@ public:
 
     FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out_object)
     {
-        const ANSIString object_type_name(in.m_object_type.name.c_str());
+        const String object_type_name(in.m_object_type.name);
         const auto *loader = FBOM::GetInstance().GetLoader(object_type_name);
 
         if (!loader) {
@@ -279,19 +308,6 @@ public:
 
         return loader->Deserialize(in, out_object);
     }
-
-    // template <class T, class Marshaler = FBOMMarshaler<T>>
-    // FBOMResult Deserialize(const FBOMObject &in, T &out_object)
-    // {
-    //     const ANSIString object_type_name(in.m_object_type.name.c_str());
-    //     const auto *loader = FBOM::GetInstance().GetLoader(object_type_name);
-
-    //     if (!loader) {
-    //         return FBOMResult(FBOMResult::FBOM_ERR, "Loader not registered for type");
-    //     }
-
-    //     return loader->Deserialize(in, static_cast<void *>(&out_object));
-    // }
 
     FBOMResult LoadFromFile(const std::string &path, FBOMDeserializedObject &out)
     {
@@ -323,10 +339,9 @@ public:
         delete reader;
 
         AssertThrow(root != nullptr);
+        AssertThrowMsg(root->nodes->Size() == 1, "No object added to root (should be one)");
 
-        AssertThrowMsg(root->nodes.size() == 1, "No object added to root (should be one)");
-
-        return Deserialize(root->nodes[0], out);
+        return Deserialize(root->nodes->Front(), out);
     }
 
 private:
@@ -334,7 +349,7 @@ private:
     FBOMCommand PeekCommand(ByteReader *);
     FBOMResult Eat(ByteReader *, FBOMCommand, bool read = true);
 
-    std::string ReadString(ByteReader *);
+    String ReadString(ByteReader *);
     FBOMType ReadObjectType(ByteReader *);
     FBOMResult ReadData(ByteReader *, FBOMData &data);
     FBOMResult ReadObject(ByteReader *, FBOMObject &object);

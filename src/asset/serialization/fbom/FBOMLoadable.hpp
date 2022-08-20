@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_FBOM_LOADABLE_HPP
 #define HYPERION_V2_FBOM_LOADABLE_HPP
 
-#include "Type.hpp"
+#include <asset/serialization/fbom/FBOMType.hpp>
 
 #include <memory>
 
