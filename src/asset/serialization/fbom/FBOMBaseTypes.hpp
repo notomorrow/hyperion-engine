@@ -1,11 +1,10 @@
 #ifndef HYPERION_V2_FBOM_BASE_TYPES_HPP
 #define HYPERION_V2_FBOM_BASE_TYPES_HPP
 
-#include "Type.hpp"
+#include <core/lib/String.hpp>
+#include <asset/serialization/fbom/FBOMType.hpp>
 #include <Types.hpp>
 #include <Util.hpp>
-
-#include <string>
 
 namespace hyperion::v2::fbom {
 
@@ -63,12 +62,12 @@ struct FBOMBaseObjectType : FBOMType { FBOMBaseObjectType() : FBOMType("object",
 struct FBOMObjectType : FBOMType {
     explicit FBOMObjectType(void) : FBOMObjectType("UNSET") {}
 
-    FBOMObjectType(const std::string &name)
+    FBOMObjectType(const String &name)
         : FBOMObjectType(name, FBOMBaseObjectType())
     {
     }
 
-    FBOMObjectType(const std::string &name, FBOMType extends)
+    FBOMObjectType(const String &name, FBOMType extends)
         : FBOMType(name, 0, &extends)
     {
     }

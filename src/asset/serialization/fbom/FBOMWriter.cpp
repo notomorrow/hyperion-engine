@@ -1,5 +1,6 @@
 #include "FBOM.hpp"
 #include <asset/ByteWriter.hpp>
+#include <core/lib/SortedArray.hpp>
 
 #include <stack>
 #include <algorithm>
@@ -52,7 +53,7 @@ void FBOMWriter::Prune(FBOMObject &object)
 {
     AddStaticData(object.m_object_type);
 
-    for (auto &node : object.nodes) {
+    for (auto &node : *object.nodes) {
         Prune(node);
     }
 
@@ -81,21 +82,21 @@ void FBOMWriter::Prune(FBOMObject &object)
 
 FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
 {
-    std::vector<FBOMStaticData> static_data_ordered;
-    static_data_ordered.reserve(m_write_stream.m_static_data.size());
+    SortedArray<FBOMStaticData> static_data_ordered;
+    static_data_ordered.Reserve(m_write_stream.m_static_data.size());
 
     for (auto &it : m_write_stream.m_static_data) {
-        static_data_ordered.push_back(it.second);
+        static_data_ordered.Insert(it.second);
     }
 
-    std::sort(static_data_ordered.begin(), static_data_ordered.end(), [](auto &a, auto &b) {
-        return a.offset < b.offset;
-    });
+    // std::sort(static_data_ordered.begin(), static_data_ordered.end(), [](auto &a, auto &b) {
+    //     return a.offset < b.offset;
+    // });
 
     out->Write<UInt8>(FBOM_STATIC_DATA_START);
 
     // write SIZE of static data as uint32_t
-    out->Write<UInt32>(static_data_ordered.size());
+    out->Write<UInt32>(static_data_ordered.Size());
     // 8 bytes of padding
     out->Write<UInt64>(0);
 
@@ -125,7 +126,7 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
             }
             break;
         default:
-            return FBOMResult(FBOMResult::FBOM_ERR, "cannot write static object to bytestream");
+            return FBOMResult(FBOMResult::FBOM_ERR, "Cannot write static object to bytestream, unknown type");
         }
     }
 
@@ -166,7 +167,7 @@ FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
         }
 
         // now write out all child nodes
-        for (auto &node : object.nodes) {
+        for (auto &node : *object.nodes) {
             if (auto err = WriteObject(out, node)) {
                 return err;
             }

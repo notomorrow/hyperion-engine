@@ -1,5 +1,5 @@
-#include "Type.hpp"
-#include "BaseTypes.hpp"
+#include <asset/serialization/fbom/FBOMType.hpp>
+#include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 
 namespace hyperion::v2::fbom {
 

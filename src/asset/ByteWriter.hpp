@@ -2,6 +2,7 @@
 #define BYTE_WRITER_H
 
 #include <core/lib/CMemory.hpp>
+#include <core/lib/String.hpp>
 #include <Types.hpp>
 
 #include <type_traits>
@@ -26,12 +27,21 @@ public:
         WriteBytes(reinterpret_cast<const char *>(&value), sizeof(T));
     }
 
-    void WriteString(const std::string &str)
+    void WriteString(const String &str)
     {
-        uint32_t len = uint32_t(str.size()) + 1;
-        char *tmp = new char[len];
-        Memory::Set(tmp, 0, len);
-        Memory::Copy(tmp, str.c_str(), str.size());
+        const auto len = static_cast<UInt32>(str.Size());
+
+        WriteBytes(reinterpret_cast<const char *>(&len), sizeof(UInt32));
+        WriteBytes(str.Data(), len);
+    }
+
+    void WriteString(const char *str)
+    {
+        const auto len = Memory::StringLength(str);
+
+        char *tmp = new char[len + 1];
+        tmp[len] = '\0';
+        Memory::Copy(tmp, str, len);
         WriteBytes(reinterpret_cast<const char *>(&len), sizeof(uint32_t));
         WriteBytes(tmp, len);
         delete[] tmp;

@@ -7,6 +7,8 @@
 #include <Types.hpp>
 #include <core/lib/CMemory.hpp>
 #include <system/Debug.hpp>
+#include <HashCode.hpp>
+#include <math/MathUtil.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -23,13 +25,16 @@ namespace hyperion {
 
 template <class T>
 class DynArray : public ContainerBase<DynArray<T>, UInt> {
+public:
+    using Base = DynArray<T>;
+
+    using SizeType = UInt64;
+    using ValueType = T;
+
+    static constexpr SizeType num_inline_bytes = 256u;
+    static constexpr SizeType num_inline_elements = MathUtil::Max(num_inline_bytes / sizeof(T), 1u);
+
 protected:
-    using Base                = DynArray<T>;
-
-    using SizeType            = UInt64;
-    using ValueType           = T;
-
-    static constexpr SizeType inline_storage_size = 256u;
     // on PushFront() we can pad the start with this number,
     // so when multiple successive calls to PushFront() happen,
     // we're not realloc'ing everything each time
@@ -154,7 +159,7 @@ protected:
     void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
 
     Iterator RealBegin() const { return ToValueTypePtr(m_buffer[0]); }
-    Iterator RealEnd() const   { return ToValueTypePtr(m_buffer[m_size]); }
+    Iterator RealEnd() const { return ToValueTypePtr(m_buffer[m_size]); }
 
     static SizeType GetCapacity(SizeType size)
     {
@@ -207,12 +212,12 @@ protected:
 
     // dynamic memory
     union {
-        Storage   *m_buffer;
+        Storage *m_buffer;
         ValueType *m_values;
     };
 
-    Storage  m_inline_buffer[inline_storage_size];
-    bool     m_is_dynamic;
+    Storage m_inline_buffer[num_inline_elements];
+    bool m_is_dynamic;
 
     typename DynArray::Base::KeyType m_start_offset;
 };
@@ -220,13 +225,13 @@ protected:
 template <class T>
 DynArray<T>::DynArray()
     : m_size(0),
-      m_capacity(inline_storage_size),
+      m_capacity(num_inline_elements),
       m_buffer(&m_inline_buffer[0]),
       m_is_dynamic(false),
       m_start_offset(0)
 {
 #if HYP_DEBUG_MODE
-    Memory::Garble(&m_inline_buffer[0], std::size(m_inline_buffer));
+    Memory::Garble(&m_inline_buffer[0], num_inline_elements * sizeof(Storage));
 #endif
 }
 
@@ -269,10 +274,10 @@ DynArray<T>::DynArray(DynArray &&other) noexcept
         }
     }
 
-    other.m_size = 0;
-    other.m_capacity = inline_storage_size;
-    other.m_buffer = &other.m_inline_buffer[0];
-    other.m_is_dynamic = false;
+    other.m_size        = 0;
+    other.m_capacity    = num_inline_elements;
+    other.m_buffer      = &other.m_inline_buffer[0];
+    other.m_is_dynamic  = false;
     other.m_start_offset = 0;
 }
 
@@ -288,13 +293,6 @@ DynArray<T>::~DynArray()
     if (m_is_dynamic) {
         std::free(m_buffer);
     }
-
-#if HYP_DEBUG_MODE
-    m_size = 0;
-    m_start_offset = 0;
-    m_capacity = inline_storage_size;
-    m_buffer = &m_inline_buffer[0];
-#endif
 }
 
 template <class T>
@@ -320,7 +318,7 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
         } else {
             m_buffer     = &m_inline_buffer[0];
             m_is_dynamic = false;
-            m_capacity   = inline_storage_size;
+            m_capacity   = num_inline_elements;
         }
 
         m_size         = other.m_size;
@@ -375,7 +373,7 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
         m_is_dynamic   = true;
     } else {
         m_buffer       = &m_inline_buffer[0];
-        m_capacity     = inline_storage_size;
+        m_capacity     = num_inline_elements;
         m_is_dynamic   = false;
 
         // move items individually
@@ -392,10 +390,10 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
         }
     }
 
-    other.m_size        = 0;
-    other.m_capacity    = inline_storage_size;
-    other.m_is_dynamic  = false;
-    other.m_buffer      = &other.m_inline_buffer[0];
+    other.m_size = 0;
+    other.m_capacity = num_inline_elements;
+    other.m_is_dynamic = false;
+    other.m_buffer = &other.m_inline_buffer[0];
     other.m_start_offset = 0;
 
     return *this;
@@ -429,7 +427,7 @@ void DynArray<T>::ResetOffsets()
 template <class T>
 void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
 {
-    if (capacity > inline_storage_size) {
+    if (capacity > num_inline_elements) {
         // delete and copy all over again
         auto *new_buffer = static_cast<Storage *>(std::malloc(sizeof(Storage) * capacity));
 
@@ -454,10 +452,10 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
         }
 
         // set internal buffer to the new one
-        m_capacity     = capacity;
-        m_size        -= static_cast<Int64>(m_start_offset) - static_cast<Int64>(copy_offset);
-        m_buffer       = new_buffer;
-        m_is_dynamic   = true;
+        m_capacity = capacity;
+        m_size -= static_cast<Int64>(m_start_offset) - static_cast<Int64>(copy_offset);
+        m_buffer = new_buffer;
+        m_is_dynamic = true;
         m_start_offset = copy_offset;
 
     } else {
@@ -473,9 +471,9 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
 
             std::free(m_buffer);
 
-            m_is_dynamic   = false;
-            m_buffer       = &m_inline_buffer[0];
-            m_capacity     = inline_storage_size;
+            m_is_dynamic = false;
+            m_buffer = &m_inline_buffer[0];
+            m_capacity = num_inline_elements;
         } else if (m_start_offset != copy_offset) {
             if (m_start_offset > copy_offset) {
                 const SizeType diff = m_start_offset - copy_offset;
@@ -512,7 +510,7 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
             }
         }
 
-        m_size        -= static_cast<Int64>(m_start_offset) - static_cast<Int64>(copy_offset);
+        m_size -= static_cast<Int64>(m_start_offset) - static_cast<Int64>(copy_offset);
         m_start_offset = copy_offset;
 
         // not currently dynamic; no need to reduce capacity of inline buffer
@@ -734,10 +732,6 @@ void DynArray<T>::Shift(SizeType count)
 template <class T>
 auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
 {
-    if (iter == End()) {
-        return End();
-    }
-
     const Int64 dist = iter - Begin();
 
     for (Int64 index = dist; index < Size() - 1; ++index) {
