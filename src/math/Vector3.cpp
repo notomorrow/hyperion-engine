@@ -8,6 +8,7 @@
 namespace hyperion {
 
 const Vector3 Vector3::zero = Vector3(0.0f);
+const Vector3 Vector3::one = Vector3(1.0f);
 
 Vector3::Vector3()
     : x(0.0f), 

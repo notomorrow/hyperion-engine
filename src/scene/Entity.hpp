@@ -78,49 +78,74 @@ public:
     Entity &operator=(const Entity &other) = delete;
     ~Entity();
 
-    Octree *GetOctree() const { return m_octree; }
+    Octree *GetOctree() const
+        { return m_octree; }
 
-    ShaderDataState GetShaderDataState() const     { return m_shader_data_state; }
-    void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
+    ShaderDataState GetShaderDataState() const
+        { return m_shader_data_state; }
+
+    void SetShaderDataState(ShaderDataState state)
+        { m_shader_data_state = state; }
     
-    Ref<Mesh> &GetMesh()                     { return m_mesh; }
-    const Ref<Mesh> &GetMesh() const         { return m_mesh; }
+    Ref<Mesh> &GetMesh()
+        { return m_mesh; }
+
+    const Ref<Mesh> &GetMesh() const
+        { return m_mesh; }
+
     void SetMesh(Ref<Mesh> &&mesh);
 
-    Ref<Skeleton> &GetSkeleton()             { return m_skeleton; }
-    const Ref<Skeleton> &GetSkeleton() const { return m_skeleton; }
+    Ref<Skeleton> &GetSkeleton()
+        { return m_skeleton; }
+
+    const Ref<Skeleton> &GetSkeleton() const
+        { return m_skeleton; }
+
     void SetSkeleton(Ref<Skeleton> &&skeleton);
 
-    Ref<Shader> &GetShader()                 { return m_shader; }
-    const Ref<Shader> &GetShader() const     { return m_shader; }
+    Ref<Shader> &GetShader()
+        { return m_shader; }
+
+    const Ref<Shader> &GetShader() const
+        { return m_shader; }
+
     void SetShader(Ref<Shader> &&shader);
 
-    Ref<Material> &GetMaterial()             { return m_material; }
-    const Ref<Material> &GetMaterial() const { return m_material; }
+    Ref<Material> &GetMaterial()
+        { return m_material; }
+
+    const Ref<Material> &GetMaterial() const
+        { return m_material; }
+
     void SetMaterial(Ref<Material> &&material);
 
-    Node *GetParent() const                  { return m_node; }
+    Node *GetParent() const
+        { return m_node; }
+
     void SetParent(Node *node);
 
-    Scene *GetScene() const                  { return m_scene; }
+    Scene *GetScene() const
+        { return m_scene; }
+
     // only call from Scene. Don't call manually.
     void SetScene(Scene *scene);
 
-    bool IsRenderable() const                { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
+    bool IsRenderable() const
+        { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
 
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
 
     void SetMeshAttributes(
         VertexAttributeSet vertex_attributes,
         FaceCullMode face_cull_mode = FaceCullMode::BACK,
-        bool depth_write            = true,
-        bool depth_test             = true
+        bool depth_write = true,
+        bool depth_test = true
     );
 
     void SetMeshAttributes(
         FaceCullMode face_cull_mode = FaceCullMode::BACK,
-        bool depth_write            = true,
-        bool depth_test             = true
+        bool depth_write = true,
+        bool depth_test = true
     );
 
     void SetStencilAttributes(const StencilState &stencil_state);
@@ -128,23 +153,36 @@ public:
     RendererInstance *GetPrimaryRendererInstance() const
         { return m_primary_renderer_instance.renderer_instance; }
 
-    Bucket GetBucket() const                     { return m_renderable_attributes.bucket; }
+    Bucket GetBucket() const
+        { return m_renderable_attributes.bucket; }
+
     void SetBucket(Bucket bucket);
 
-    const Vector3 &GetTranslation() const        { return m_transform.GetTranslation(); }
+    const Vector3 &GetTranslation() const
+        { return m_transform.GetTranslation(); }
+
     void SetTranslation(const Vector3 &translation);
 
-    const Vector3 &GetScale() const              { return m_transform.GetScale(); }
+    const Vector3 &GetScale() const
+        { return m_transform.GetScale(); }
+
     void SetScale(const Vector3 &scale);
 
-    const Quaternion &GetRotation() const        { return m_transform.GetRotation(); }
+    const Quaternion &GetRotation() const
+        { return m_transform.GetRotation(); }
+
     void SetRotation(const Quaternion &rotation);
 
-    const Transform &GetTransform() const        { return m_transform; }
+    const Transform &GetTransform() const
+        { return m_transform; }
+
     void SetTransform(const Transform &transform);
 
-    const BoundingBox &GetLocalAABB() const      { return m_local_aabb; }
-    const BoundingBox &GetWorldAABB() const      { return m_world_aabb; }
+    const BoundingBox &GetLocalAABB() const
+        { return m_local_aabb; }
+
+    const BoundingBox &GetWorldAABB() const
+        { return m_world_aabb; }
     
     bool IsReady() const;
 
