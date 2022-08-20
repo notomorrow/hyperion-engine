@@ -22,12 +22,6 @@ struct FBOMStruct : FBOMType {
         : FBOMType("struct", sz)
     {
     }
-
-    template <class T>
-    FBOMStruct()
-        : FBOMType("struct", sizeof(T))
-    {
-    }
 };
 
 struct FBOMArray : FBOMType {

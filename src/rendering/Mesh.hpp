@@ -39,7 +39,7 @@ class Mesh
 public:
     using Index = UInt32;
 
-    enum Flags {
+    enum Flags : UInt {
         MESH_FLAGS_NONE = 0,
         MESH_FLAGS_HAS_ACCELERATION_GEOMETRY = 1
     };
@@ -110,15 +110,15 @@ private:
     std::vector<float> BuildVertexBuffer();
 
     std::unique_ptr<VertexBuffer> m_vbo;
-    std::unique_ptr<IndexBuffer>  m_ibo;
+    std::unique_ptr<IndexBuffer> m_ibo;
 
     size_t m_indices_count = 0;
 
-    VertexAttributeSet  m_vertex_attributes;
-    Topology            m_topology;
+    VertexAttributeSet m_vertex_attributes;
+    Topology m_topology;
 
     std::vector<Vertex> m_vertices;
-    std::vector<Index>  m_indices;
+    std::vector<Index> m_indices;
     
     Flags m_flags;
 };

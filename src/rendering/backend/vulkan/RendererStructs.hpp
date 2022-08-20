@@ -34,18 +34,18 @@ enum class DatumType {
     FLOAT
 };
 
-enum class FaceCullMode {
+enum class FaceCullMode : UInt {
     NONE,
     BACK,
     FRONT
 };
 
-enum class FillMode {
+enum class FillMode : UInt {
     FILL,
     LINE
 };
 
-enum class Topology {
+enum class Topology : UInt {
     TRIANGLES,
     TRIANGLE_FAN,
     TRIANGLE_STRIP,
@@ -55,7 +55,7 @@ enum class Topology {
     POINTS
 };
 
-enum class StencilMode {
+enum class StencilMode : UInt {
     NONE,
     FILL,
     OUTLINE
