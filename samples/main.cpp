@@ -30,6 +30,9 @@
 #include <GameThread.hpp>
 #include <Game.hpp>
 
+#include <asset/serialization/fbom/FBOM.hpp>
+#include <asset/serialization/fbom/marshals/EntityMarshal.hpp>
+
 #include <terrain/controllers/TerrainPagingController.hpp>
 
 #include <rendering/vct/VoxelConeTracing.hpp>
@@ -141,7 +144,23 @@ public:
             scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
+#if 1 // serialize/deseriale test
+        FileByteWriter bw("test_dump.fbom");
+        test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
+        test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);
+        fbom::FBOMWriter fw;
+        fw.Append(*test_model->GetChild(0).Get()->GetEntity());
+        fw.Emit(&bw);
 
+        bw.Close();
+
+
+        fbom::FBOMLoader fr;
+        fbom::FBOMDeserializedObject result;
+        AssertThrow(fr.LoadFromFile("test_dump.fbom", result).value == fbom::FBOMResult::FBOM_OK);
+        auto ent = engine->resources.entities.Add(result.Release<Entity>());
+        HYP_BREAKPOINT;
+#endif
 
         // auto character_entity = engine->resources.entities.Add(new Spatial());
         // character_entity->AddController<BasicCharacterController>();

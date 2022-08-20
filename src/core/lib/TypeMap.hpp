@@ -4,6 +4,7 @@
 #include "ContainerBase.hpp"
 #include "FlatMap.hpp"
 #include "FlatSet.hpp"
+#include "TypeID.hpp"
 
 #include <Types.hpp>
 #include <HashCode.hpp>
@@ -13,65 +14,10 @@
 
 namespace hyperion {
 
-struct TypeID {
-    using Value = UInt;
-
-    Value value;
-
-    TypeID() : value{} {}
-    TypeID(const Value &id) : value(id) {}
-    TypeID(const TypeID &other) = default;
-    TypeID &operator=(const TypeID &other) = default;
-
-    TypeID(TypeID &&other) noexcept
-        : value(other.value)
-    {
-        other.value = 0;
-    }
-    
-    TypeID &operator=(TypeID &&other) noexcept
-    {
-        value = other.value;
-        other.value = 0;
-
-        return *this;
-    }
-
-    TypeID &operator=(Value id)
-    {
-        value = id;
-
-        return *this;
-    }
-
-    bool operator==(const TypeID &other) const { return value == other.value; }
-    bool operator!=(const TypeID &other) const { return value != other.value; }
-    bool operator<(const TypeID &other) const  { return value < other.value; }
-    bool operator>(const TypeID &other) const  { return value > other.value; }
-
-    HashCode GetHashCode() const
-    {
-        HashCode hc;
-        hc.Add(value);
-
-        return hc;
-    }
-};
-
 template <class Value>
 class TypeMap : public ContainerBase<TypeMap<Value>, TypeID> {
 protected:
     using Map = FlatMap<TypeID, Value>;
-
-    static inline std::atomic<TypeID::Value> type_id_counter;
-
-    template <class T>
-    static TypeID GetTypeID()
-    {
-        static const TypeID id = TypeID{++type_id_counter};
-
-        return id;
-    }
 
 public:
     using Iterator = typename Map::Iterator;
@@ -95,12 +41,12 @@ public:
 
     ~TypeMap() = default;
 
-    size_t Size() const { return m_map.Size(); }
+    SizeType Size() const { return m_map.Size(); }
     
     template <class T>
     void Set(const Value &value)
     {
-        const auto id = GetTypeID<T>();
+        const auto id = TypeID::GetTypeID<T>();
 
         m_map[id] = value;
     }
@@ -108,7 +54,7 @@ public:
     template <class T>
     void Set(Value &&value)
     {
-        const auto id = GetTypeID<T>();
+        const auto id = TypeID::GetTypeID<T>();
 
         m_map[id] = std::move(value);
     }
@@ -116,7 +62,7 @@ public:
     template <class T>
     Iterator Find()
     {
-        const auto id = GetTypeID<T>();
+        const auto id = TypeID::GetTypeID<T>();
 
         return m_map.Find(id);
     }
@@ -124,7 +70,7 @@ public:
     template <class T>
     ConstIterator Find() const
     {
-        const auto id = GetTypeID<T>();
+        const auto id = TypeID::GetTypeID<T>();
 
         return m_map.Find(id);
     }
@@ -152,7 +98,7 @@ public:
     template <class T>
     bool Contains() const
     {
-        const auto id = GetTypeID<T>();
+        const auto id = TypeID::GetTypeID<T>();
 
         return m_map.Find(id) != m_map.End();
     }
@@ -181,7 +127,6 @@ public:
 protected:
     Map m_map;
 };
-
 
 } // namespace hyperion
 

@@ -1,6 +1,10 @@
 #ifndef BYTE_WRITER_H
 #define BYTE_WRITER_H
 
+#include <core/lib/CMemory.hpp>
+#include <Types.hpp>
+
+#include <type_traits>
 #include <fstream>
 #include <string>
 
@@ -9,18 +13,17 @@ class ByteWriter {
 public:
     virtual ~ByteWriter() {}
 
-    template <typename T>
-    void Write(T *ptr, unsigned size = sizeof(T))
+    void Write(const void *ptr, SizeType size)
     {
-        WriteBytes(reinterpret_cast<char*>(ptr), size);
+        WriteBytes(reinterpret_cast<const char *>(ptr), size);
     }
 
-    template <typename T>
-    void Write(T value, unsigned size = sizeof(T))
+    template <class T>
+    void Write(const T &value)
     {
-        T *ptr = &value;
+        static_assert(!std::is_pointer_v<T>, "Expected to choose other overload");
 
-        WriteBytes(reinterpret_cast<char*>(ptr), size);
+        WriteBytes(reinterpret_cast<const char *>(&value), sizeof(T));
     }
 
     void WriteString(const std::string &str)
@@ -29,7 +32,7 @@ public:
         char *tmp = new char[len];
         Memory::Set(tmp, 0, len);
         Memory::Copy(tmp, str.c_str(), str.size());
-        WriteBytes(reinterpret_cast<char*>(&len), sizeof(uint32_t));
+        WriteBytes(reinterpret_cast<const char *>(&len), sizeof(uint32_t));
         WriteBytes(tmp, len);
         delete[] tmp;
     }
@@ -38,7 +41,7 @@ public:
     virtual void Close() = 0;
 
 protected:
-    virtual void WriteBytes(char *ptr, unsigned size) = 0;
+    virtual void WriteBytes(const char *ptr, SizeType size) = 0;
 };
 
 // TEMP
@@ -69,9 +72,9 @@ private:
     std::vector<char> m_data;
     size_t m_pos;
 
-    void WriteBytes(char *ptr, unsigned size)
+    void WriteBytes(const char *ptr, SizeType size)
     {
-        for (size_t i = 0; i < size; i++) {
+        for (SizeType i = 0; i < size; i++) {
             m_data.push_back(ptr[i]);
             m_pos++;
         }
@@ -103,7 +106,7 @@ public:
 private:
     std::ofstream *file;
 
-    void WriteBytes(char *ptr, unsigned size)
+    void WriteBytes(const char *ptr, SizeType size)
     {
         file->write(ptr, size);
     }

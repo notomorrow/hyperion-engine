@@ -3,6 +3,9 @@
 #include <float.h>
 
 namespace hyperion {
+
+const Quaternion Quaternion::identity = Quaternion::Identity();
+
 Quaternion::Quaternion()
     : x(0.0), y(0.0), z(0.0), w(1.0)
 {
