@@ -2,6 +2,7 @@
 #define HYPERION_V2_FBOM_MARSHALS_ENTITY_MARSHAL_HPP
 
 #include <asset/serialization/fbom/FBOM.hpp>
+#include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
 #include <scene/Entity.hpp>
 
 namespace hyperion::v2::fbom {
@@ -26,11 +27,17 @@ public:
         out.SetProperty("local_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetLocalAABB());
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
+        if (const auto &mesh = in_object.GetMesh()) {
+            out.AddChild(*mesh);
+        }
+
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, Entity &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Entity *&out_object) const override
     {
+        out_object = new Entity();
+
         { // transform
             Transform transform = Transform::identity;
 
@@ -47,7 +54,7 @@ public:
             }
 
             transform.UpdateMatrix();
-            out_object.SetTransform(transform);
+            out_object->SetTransform(transform);
         }
 
         { // bounding box
@@ -58,8 +65,22 @@ public:
                 return err;
             }
 
+            out_object->SetLocalAABB(local_aabb);
+
             if (auto err = in.GetProperty("world_aabb").ReadStruct(sizeof(BoundingBox), &world_aabb)) {
                 return err;
+            }
+
+            out_object->SetWorldAABB(world_aabb);
+        }
+
+        for (auto &node : *in.nodes) {
+            if (node.GetType().IsOrExtends("Mesh")) {
+                auto *mesh = node.deserialized.Release<Mesh>();
+
+                HYP_BREAKPOINT;
+
+                delete mesh;
             }
         }
 

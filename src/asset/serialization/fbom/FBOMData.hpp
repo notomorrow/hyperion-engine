@@ -36,18 +36,28 @@ struct FBOMData {
         return data_size != 0 && raw_data != nullptr;
     }
 
-    inline const FBOMType &GetType() const { return type; }
-    inline SizeType TotalSize() const { return data_size; }
+    const FBOMType &GetType() const { return type; }
+    SizeType TotalSize() const { return data_size; }
 
     void ReadBytes(SizeType n, void *out) const;
     void SetBytes(SizeType n, const void *data);
 
 #define FBOM_TYPE_FUNCTIONS(type_name, c_type) \
-    inline bool Is##type_name() const { return type == FBOM##type_name(); } \
-    inline FBOMResult Read##type_name(c_type *out) const \
+    bool Is##type_name() const { return type == FBOM##type_name(); } \
+    FBOMResult Read##type_name(c_type *out) const \
     { \
         FBOM_ASSERT(Is##type_name(), "Type mismatch (expected " #type_name ")"); \
         ReadBytes(FBOM##type_name().size, out); \
+        FBOM_RETURN_OK; \
+    } \
+    /*! \brief Read with static_cast to result */ \
+    template <class T> \
+    FBOMResult Read##type_name(T *out) const \
+    { \
+        c_type read_value; \
+        FBOM_ASSERT(Is##type_name(), "Type mismatch (expected " #type_name ")"); \
+        ReadBytes(FBOM##type_name().size, &read_value); \
+        *out = static_cast<T>(read_value); \
         FBOM_RETURN_OK; \
     }
 
@@ -62,9 +72,9 @@ struct FBOMData {
 
 #undef FBOM_TYPE_FUNCTIONS
 
-    inline bool IsString() const { return type.IsOrExtends(FBOMString()); }
+    bool IsString() const { return type.IsOrExtends(FBOMString()); }
 
-    inline FBOMResult ReadString(String &str) const
+    FBOMResult ReadString(String &str) const
     {
         FBOM_ASSERT(IsString(), "Type mismatch (expected String)");
 
@@ -81,13 +91,13 @@ struct FBOMData {
         FBOM_RETURN_OK;
     }
 
-    inline bool IsStruct() const
+    bool IsStruct() const
         { return type.IsOrExtends(FBOMStruct(0)); }
 
-    inline bool IsStruct(SizeType size) const
+    bool IsStruct(SizeType size) const
         { return type.IsOrExtends(FBOMStruct(size)); }
 
-    inline FBOMResult ReadStruct(SizeType size, void *out) const
+    FBOMResult ReadStruct(SizeType size, void *out) const
     {
         AssertThrow(out != nullptr);
 
@@ -98,19 +108,46 @@ struct FBOMData {
         FBOM_RETURN_OK;
     }
 
-    inline bool IsArray() const
+    template <class T>
+    FBOMResult ReadStruct(T *out) const
+    {
+        return ReadStruct(sizeof(T), &out);
+    }
+
+    bool IsArray() const
         { return type.IsOrExtends(FBOMArray()); }
 
     // does NOT check that the types are exact, just that the size is a match
-    inline bool IsArrayMatching(const FBOMType &held_type, SizeType num_items) const
+    bool IsArrayMatching(const FBOMType &held_type, SizeType num_items) const
         { return type.IsOrExtends(FBOMArray(held_type, num_items)); }
 
     // does the array size equal byte_size bytes?
-    inline bool IsArrayOfByteSize(SizeType byte_size) const
+    bool IsArrayOfByteSize(SizeType byte_size) const
         { return type.IsOrExtends(FBOMArray(FBOMByte(), byte_size)); }
 
+    /*! \brief If type is an array, return the number of elements,
+        assuming the array contains the given type. Note, array could
+        contain another type, and still a result will be returned.
+        
+        If type is /not/ an array, return zero. */
+    SizeType NumArrayElements(const FBOMType &held_type) const
+    {
+        if (!IsArray()) {
+            return 0;
+        }
+
+        const auto held_type_size = held_type.size;
+
+        // sanity check
+        if (held_type_size == 0) {
+            return 0;
+        }
+
+        return TotalSize() / held_type_size;
+    }
+
     // count is number of ELEMENTS
-    inline FBOMResult ReadArrayElements(const FBOMType &held_type, SizeType num_items, void *out) const
+    FBOMResult ReadArrayElements(const FBOMType &held_type, SizeType num_items, void *out) const
     {
         AssertThrow(out != nullptr);
 
@@ -138,7 +175,7 @@ struct FBOMData {
         FBOM_RETURN_OK;
     }
 
-    inline std::string ToString() const
+    std::string ToString() const
     {
         std::stringstream stream;
         stream << "FBOM[";
@@ -161,7 +198,7 @@ struct FBOMData {
         return stream.str();
     }
 
-    inline HashCode GetHashCode() const
+    HashCode GetHashCode() const
     {
         HashCode hc;
 
