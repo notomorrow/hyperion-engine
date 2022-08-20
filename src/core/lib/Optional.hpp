@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_LIB_OPTIONAL_H
-#define HYPERION_V2_LIB_OPTIONAL_H
+#ifndef HYPERION_V2_LIB_OPTIONAL_HPP
+#define HYPERION_V2_LIB_OPTIONAL_HPP
 
 #include <system/Debug.hpp>
 #include <Types.hpp>
@@ -37,7 +37,7 @@ public:
         new (&m_storage.data_buffer) T(std::forward<T>(value));
     }
 
-    Optional &operator=(T &&value)
+    Optional &operator=(T &&value) noexcept
     {
         if (m_has_value) {
             Get() = std::forward<T>(value);
