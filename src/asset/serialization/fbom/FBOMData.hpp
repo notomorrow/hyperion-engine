@@ -1,10 +1,13 @@
 #ifndef HYPERION_V2_FBOM_DATA_HPP
 #define HYPERION_V2_FBOM_DATA_HPP
 
-#include "Result.hpp"
-#include "BaseTypes.hpp"
+#include <core/lib/String.hpp>
+#include <asset/serialization/fbom/FBOMResult.hpp>
+#include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <math/MathUtil.hpp>
 #include <system/Debug.hpp>
+
+#include <Types.hpp>
 
 #include <cstring>
 
@@ -34,45 +37,44 @@ struct FBOMData {
     }
 
     inline const FBOMType &GetType() const { return type; }
-    inline size_t TotalSize() const { return data_size; }
+    inline SizeType TotalSize() const { return data_size; }
 
-    void ReadBytes(size_t n, void *out) const;
-    void SetBytes(size_t n, const void *data);
+    void ReadBytes(SizeType n, void *out) const;
+    void SetBytes(SizeType n, const void *data);
 
 #define FBOM_TYPE_FUNCTIONS(type_name, c_type) \
     inline bool Is##type_name() const { return type == FBOM##type_name(); } \
     inline FBOMResult Read##type_name(c_type *out) const \
     { \
-        FBOM_ASSERT(Is##type_name(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for " #c_type " value)"); \
+        FBOM_ASSERT(Is##type_name(), "Type mismatch (expected " #type_name ")"); \
         ReadBytes(FBOM##type_name().size, out); \
         FBOM_RETURN_OK; \
     }
 
-    FBOM_TYPE_FUNCTIONS(UnsignedInt, uint32_t)
-    FBOM_TYPE_FUNCTIONS(UnsignedLong, uint64_t)
-    FBOM_TYPE_FUNCTIONS(Int, int32_t)
-    FBOM_TYPE_FUNCTIONS(Long, int64_t)
-    FBOM_TYPE_FUNCTIONS(Float, float)
+    FBOM_TYPE_FUNCTIONS(UnsignedInt, UInt32)
+    FBOM_TYPE_FUNCTIONS(UnsignedLong, UInt64)
+    FBOM_TYPE_FUNCTIONS(Int, Int32)
+    FBOM_TYPE_FUNCTIONS(Long, Int64)
+    FBOM_TYPE_FUNCTIONS(Float, Float32)
     FBOM_TYPE_FUNCTIONS(Bool, bool)
-    FBOM_TYPE_FUNCTIONS(Byte, int8_t)
+    FBOM_TYPE_FUNCTIONS(Byte, UByte)
     //FBOM_TYPE_FUNCTIONS(String, const char*)
 
 #undef FBOM_TYPE_FUNCTIONS
 
     inline bool IsString() const { return type.IsOrExtends(FBOMString()); }
 
-    inline FBOMResult ReadString(std::string &str) const
+    inline FBOMResult ReadString(String &str) const
     {
-        FBOM_ASSERT(IsString(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for string value)");
+        FBOM_ASSERT(IsString(), "Type mismatch (expected String)");
 
-        size_t total_size = TotalSize();
+        const auto total_size = TotalSize();
         char *ch = new char[total_size + 1];
 
         ReadBytes(total_size, (unsigned char*)ch);
-
         ch[total_size] = '\0';
 
-        str.assign(ch);
+        str = ch;
 
         delete[] ch;
 
@@ -82,14 +84,14 @@ struct FBOMData {
     inline bool IsStruct() const
         { return type.IsOrExtends(FBOMStruct(0)); }
 
-    inline bool IsStruct(size_t size) const
+    inline bool IsStruct(SizeType size) const
         { return type.IsOrExtends(FBOMStruct(size)); }
 
-    inline FBOMResult ReadStruct(size_t size, void *out) const
+    inline FBOMResult ReadStruct(SizeType size, void *out) const
     {
         AssertThrow(out != nullptr);
 
-        FBOM_ASSERT(IsStruct(size), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for struct [size: " + std::to_string(size) + "] value)");
+        FBOM_ASSERT(IsStruct(size), "Object is not a struct or not struct of requested size");
 
         ReadBytes(size, out);
 
@@ -100,19 +102,19 @@ struct FBOMData {
         { return type.IsOrExtends(FBOMArray()); }
 
     // does NOT check that the types are exact, just that the size is a match
-    inline bool IsArrayMatching(const FBOMType &held_type, size_t num_items) const
+    inline bool IsArrayMatching(const FBOMType &held_type, SizeType num_items) const
         { return type.IsOrExtends(FBOMArray(held_type, num_items)); }
 
     // does the array size equal byte_size bytes?
-    inline bool IsArrayOfByteSize(size_t byte_size) const
+    inline bool IsArrayOfByteSize(SizeType byte_size) const
         { return type.IsOrExtends(FBOMArray(FBOMByte(), byte_size)); }
 
     // count is number of ELEMENTS
-    inline FBOMResult ReadArrayElements(const FBOMType &held_type, size_t num_items, void *out) const
+    inline FBOMResult ReadArrayElements(const FBOMType &held_type, SizeType num_items, void *out) const
     {
         AssertThrow(out != nullptr);
 
-        FBOM_ASSERT(IsArray(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for array value)");
+        FBOM_ASSERT(IsArray(), "Object is not an array or not array of requested size");
 
         // assert that the number of items fits evenly.
         // FBOM_ASSERT(type.size % held_type.size == 0, "Array does not evenly store held_type -- byte size mismatch");
@@ -144,7 +146,7 @@ struct FBOMData {
         stream << "size: " << std::to_string(data_size) << ", ";
         stream << "data: { ";
 
-        for (size_t i = 0; i < data_size; i++) {
+        for (SizeType i = 0; i < data_size; i++) {
             stream << std::hex << int(raw_data[i]) << " ";
         }
 
@@ -166,7 +168,7 @@ struct FBOMData {
         hc.Add(data_size);
         hc.Add(type.GetHashCode());
 
-        for (size_t i = 0; i < data_size; i++) {
+        for (SizeType i = 0; i < data_size; i++) {
             hc.Add(raw_data[i]);
         }
 
@@ -178,7 +180,7 @@ struct FBOMData {
     }
 
 private:
-    size_t data_size;
+    SizeType data_size;
     FBOMRawData_t raw_data;
     //FBOMData *next;
     FBOMType type;

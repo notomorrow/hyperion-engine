@@ -87,6 +87,9 @@
                     result.m_value.d oper##= b.f; \
                 } \
                 break; \
+            default: \
+                /* invalid; do nothing */ \
+                break; \
         } \
     } while (0)
 

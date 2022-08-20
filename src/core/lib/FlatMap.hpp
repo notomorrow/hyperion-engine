@@ -5,6 +5,7 @@
 #include "DynArray.hpp"
 #include "Pair.hpp"
 #include "ContainerBase.hpp"
+#include <HashCode.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -21,12 +22,12 @@ private:
     DynArray<KeyValuePair> m_vector;
 
 public:
-    using KeyType = Key;
-    using ValueType = Value;
+    using KeyType       = Key;
+    using ValueType     = Value;
 
-    using Iterator = typename decltype(m_vector)::Iterator;
+    using Iterator      = typename decltype(m_vector)::Iterator;
     using ConstIterator = typename decltype(m_vector)::ConstIterator;
-    using InsertResult = std::pair<Iterator, bool>; // iterator, was inserted
+    using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
 
     FlatMap();
     FlatMap(std::initializer_list<KeyValuePair> initializer_list)
@@ -68,44 +69,24 @@ public:
     bool Erase(Iterator it);
     bool Erase(const Key &key);
 
-    [[nodiscard]] SizeType Size() const
-        { return m_vector.Size(); }
+    [[nodiscard]] size_t Size() const                   { return m_vector.Size(); }
+    [[nodiscard]] KeyValuePair *Data()                  { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePair * const Data() const     { return m_vector.Data(); }
+    [[nodiscard]] bool Any() const                      { return m_vector.Any(); }
+    [[nodiscard]] bool Empty() const                    { return m_vector.Empty(); }
 
-    [[nodiscard]] KeyValuePair *Data()
-        { return m_vector.Data(); }
-
-    [[nodiscard]] KeyValuePair * const Data() const
-        { return m_vector.Data(); }
-
-    [[nodiscard]] bool Any() const
-        { return m_vector.Any(); }
-
-    [[nodiscard]] bool Empty() const
-        { return m_vector.Empty(); }
-
-    void Clear()
-        { m_vector.Clear(); }
+    void Clear()                                        { m_vector.Clear(); }
     
-    [[nodiscard]] KeyValuePair &Front()
-        { return m_vector.Front(); }
-
-    [[nodiscard]] const KeyValuePair &Front() const
-        { return m_vector.Front(); }
-
-    [[nodiscard]] KeyValuePair &Back()
-        { return m_vector.Back(); }
-
-    [[nodiscard]] const KeyValuePair &Back() const
-        { return m_vector.Back(); }
+    [[nodiscard]] KeyValuePair &Front()                 { return m_vector.Front(); }
+    [[nodiscard]] const KeyValuePair &Front() const     { return m_vector.Front(); }
+    [[nodiscard]] KeyValuePair &Back()                  { return m_vector.Back(); }
+    [[nodiscard]] const KeyValuePair &Back() const      { return m_vector.Back(); }
 
     [[nodiscard]] FlatSet<Key> Keys() const;
     [[nodiscard]] FlatSet<Value> Values() const;
 
-    [[nodiscard]] Value &At(const Key &key)
-        { return Find(key)->second; }
-
-    [[nodiscard]] const Value &At(const Key &key) const
-        { return Find(key)->second; }
+    [[nodiscard]] Value &At(const Key &key)             { return Find(key)->second; }
+    [[nodiscard]] const Value &At(const Key &key) const { return Find(key)->second; }
 
     [[nodiscard]] Value &operator[](const Key &key)
     {

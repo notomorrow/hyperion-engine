@@ -3,6 +3,7 @@
 
 #include "Pair.hpp"
 #include <util/Defines.hpp>
+#include <HashCode.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -141,6 +142,17 @@ public:
         result /= dist;
 
         return result;
+    }
+
+    [[nodiscard]] HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (auto it = static_cast<const Container *>(this)->Begin(); it != static_cast<const Container *>(this)->End(); ++it) {
+            hc.Add(*it);
+        }
+
+        return hc;
     }
 };
 

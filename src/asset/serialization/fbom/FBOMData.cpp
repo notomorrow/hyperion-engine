@@ -1,4 +1,4 @@
-#include "Data.hpp"
+#include <asset/serialization/fbom/FBOMData.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -26,7 +26,7 @@ FBOMData::FBOMData(const FBOMData &other)
         raw_data = nullptr;
     } else {
         raw_data = new unsigned char[data_size];
-        memcpy(raw_data, other.raw_data, data_size);
+        std::memcpy(raw_data, other.raw_data, data_size);
     }
 }
 
@@ -45,7 +45,7 @@ FBOMData &FBOMData::operator=(const FBOMData &other)
         raw_data = new unsigned char[data_size];
     }
 
-    memcpy(raw_data, other.raw_data, data_size);
+    std::memcpy(raw_data, other.raw_data, data_size);
 
     return *this;
 }
@@ -84,19 +84,17 @@ FBOMData::~FBOMData()
     }
 }
 
-void FBOMData::ReadBytes(size_t n, void *out) const
+void FBOMData::ReadBytes(SizeType n, void *out) const
 {
     if (!type.IsUnbouned()) {
-        if (n > type.size) {
-            throw std::runtime_error(std::string("attempt to read past max size of object (") + type.name + ": " + std::to_string(type.size) + ") vs " + std::to_string(n));
-        }
+        AssertThrowMsg(n <= type.size, "Attempt to read past max size of object");
     }
 
     size_t to_read = MathUtil::Min(n, data_size);
     std::memcpy(out, raw_data, to_read);
 }
 
-void FBOMData::SetBytes(size_t n, const void *data)
+void FBOMData::SetBytes(SizeType n, const void *data)
 {
     if (!type.IsUnbouned()) {
         AssertThrowMsg(n <= type.size, "Attempt to insert data past size max size of object");

@@ -16,6 +16,9 @@ constexpr UInt num_gbuffer_textures = 7;
 template <class ...T>
 constexpr bool resolution_failure = false;
 
+template <class T>
+using NormalizedType = std::remove_cv_t<std::decay_t<T>>;
+
 template <char ... Chars>
 using character_sequence = std::integer_sequence<char, Chars...>;
 

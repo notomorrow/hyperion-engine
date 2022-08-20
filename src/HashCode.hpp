@@ -9,6 +9,21 @@
 #include <string>
 
 namespace hyperion {
+
+template <class T, class HashCode>
+struct HasGetHashCode {
+    template <class U, HashCode(U::*)() const>
+    struct Resolve {};
+
+    template <class U>
+    static char Test(Resolve<U, &U::GetHashCode> *);
+
+    template <class U>
+    static int Test(...);
+
+    static constexpr bool value = sizeof(Test<T>(0)) == sizeof(char);
+};
+
 struct HashCode {
     using ValueType = UInt64;
 
@@ -29,15 +44,27 @@ struct HashCode {
     typename std::enable_if_t<std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>>
     Add(const T &hash_code) { HashCombine(hash_code.Value()); }
 
-    template<class T>
-    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && (std::is_fundamental_v<T> || std::is_pointer_v<T> || implementation_exists<std::hash<T>>)>
-    Add(const T &value)     { HashCombine(std::hash<T>()(value)); }
+    template<class T, class DecayedType = std::decay_t<T>>
+    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value && implementation_exists<std::hash<DecayedType>>>
+    Add(const T &value) { HashCombine(std::hash<DecayedType>()(value)); }
 
-    template<class T>
-    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && std::is_class_v<std::decay_t<T>> && !std::is_pod_v<T> && !implementation_exists<std::hash<T>>>
-    Add(const T &value)     { HashCombine(std::hash<T>()(value.GetHashCode())); }
+    template<class T, class DecayedType = std::decay_t<T>>
+    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && HasGetHashCode<DecayedType, HashCode>::value>
+    Add(const T &value) { HashCombine(value.GetHashCode().Value()); }
+
+    template<class T, class DecayedType = std::decay_t<T>>
+    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value && !implementation_exists<std::hash<DecayedType>>>
+    Add(const T &value) { static_assert(resolution_failure<T>, "No GetHashCode() method or std::hash<T> implementation"); }
 
     constexpr ValueType Value() const { return hash; }
+
+    template <class T>
+    static inline HashCode GetHashCode(const T &value)
+    {
+        HashCode hc;
+        hc.Add(value);
+        return hc;
+    }
 
 private:
     ValueType hash;

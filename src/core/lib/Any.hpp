@@ -14,7 +14,7 @@ class Any {
 
 public:
     Any()
-        : m_type_id(TypeID::GetTypeID<void>()),
+        : m_type_id(TypeID::ForType<void>()),
           m_ptr(nullptr),
           m_delete_function(nullptr)
     {
@@ -24,7 +24,7 @@ public:
     static auto MakeAny(Args &&... args)
     {
         Any any;
-        any.m_type_id = TypeID::GetTypeID<T>();
+        any.m_type_id = TypeID::ForType<T>();
         any.m_ptr = new T(std::forward<Args>(args)...);
         any.m_delete_function = [](void *ptr) { delete static_cast<T *>(ptr); };
 
@@ -35,7 +35,7 @@ public:
     template <class T>
     Any &operator=(const T &value)
     {
-        const auto new_type_id = TypeID::GetTypeID<T>();
+        const auto new_type_id = TypeID::ForType<T>();
 
         if (m_type_id == new_type_id) {
             // types are same, call copy constructor.
@@ -57,7 +57,7 @@ public:
 
     template <class T>
     Any(T &&value) noexcept
-        : m_type_id(TypeID::GetTypeID<T>()),
+        : m_type_id(TypeID::ForType<T>()),
           m_ptr(new T(std::forward<T>(value))),
           m_delete_function([](void *ptr) { delete static_cast<T *>(ptr); })
     {
@@ -66,7 +66,7 @@ public:
     template <class T>
     Any &operator=(T &&value) noexcept
     {
-        const auto new_type_id = TypeID::GetTypeID<T>();
+        const auto new_type_id = TypeID::ForType<T>();
 
         if (m_type_id == new_type_id) {
             // types are same, call copy constructor.
@@ -95,7 +95,7 @@ public:
           m_ptr(other.m_ptr),
           m_delete_function(other.m_delete_function)
     {
-        other.m_type_id = TypeID::GetTypeID<void>();
+        other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
         other.m_delete_function = nullptr;
     }
@@ -110,7 +110,7 @@ public:
         m_ptr = other.m_ptr;
         m_delete_function = other.m_delete_function;
 
-        other.m_type_id = TypeID::GetTypeID<void>();
+        other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
         other.m_delete_function = nullptr;
         
@@ -132,7 +132,7 @@ public:
 
     template <class T>
     bool Is() const
-        { return TypeID::GetTypeID<T>() == m_type_id; }
+        { return TypeID::ForType<T>() == m_type_id; }
 
     template <class T>
     T &Get()
@@ -170,7 +170,7 @@ public:
 
         T *ptr = static_cast<T *>(m_ptr);
 
-        m_type_id = TypeID::GetTypeID<void>();;
+        m_type_id = TypeID::ForType<void>();;
         m_ptr = nullptr;
         m_delete_function = nullptr;
 
@@ -191,7 +191,7 @@ class Any {
 
 public:
     Any()
-        : m_type_id(TypeID::GetTypeID<void>()),
+        : m_type_id(TypeID::ForType<void>()),
           m_ptr(nullptr),
           m_copy_function(nullptr),
           m_delete_function(nullptr)
@@ -200,7 +200,7 @@ public:
 
     template <class T>
     Any(const T &value)
-        : m_type_id(TypeID::GetTypeID<T>()),
+        : m_type_id(TypeID::ForType<T>()),
           m_ptr(new T(value)),
           m_copy_function(nullptr),
           m_delete_function([](void *ptr) { delete static_cast<T *>(ptr); })
@@ -213,7 +213,7 @@ public:
     template <class T>
     Any &operator=(const T &value)
     {
-        const auto new_type_id = TypeID::GetTypeID<T>();
+        const auto new_type_id = TypeID::ForType<T>();
 
         if (m_type_id == new_type_id) {
             // types are same, call copy constructor.
@@ -240,7 +240,7 @@ public:
 
     template <class T>
     Any(T &&value) noexcept
-        : m_type_id(TypeID::GetTypeID<T>()),
+        : m_type_id(TypeID::ForType<T>()),
           m_ptr(new T(std::forward<T>(value))),
           m_copy_function(nullptr),
           m_delete_function([](void *ptr) { delete static_cast<T *>(ptr); })
@@ -253,7 +253,7 @@ public:
     template <class T>
     Any &operator=(T &&value) noexcept
     {
-        const auto new_type_id = TypeID::GetTypeID<T>();
+        const auto new_type_id = TypeID::ForType<T>();
 
         if (m_type_id == new_type_id) {
             // types are same, call copy constructor.
@@ -306,7 +306,7 @@ public:
           m_copy_function(other.m_copy_function),
           m_delete_function(other.m_delete_function)
     {
-        other.m_type_id = TypeID::GetTypeID<void>();
+        other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
         other.m_copy_function = nullptr;
         other.m_delete_function = nullptr;
@@ -323,7 +323,7 @@ public:
         m_copy_function = other.m_copy_function;
         m_delete_function = other.m_delete_function;
 
-        other.m_type_id = TypeID::GetTypeID<void>();
+        other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
         other.m_copy_function = nullptr;
         other.m_delete_function = nullptr;
@@ -346,7 +346,7 @@ public:
 
     template <class T>
     bool Is() const
-        { return TypeID::GetTypeID<T>() == m_type_id; }
+        { return TypeID::ForType<T>() == m_type_id; }
 
     template <class T>
     T &Get()

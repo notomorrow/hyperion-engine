@@ -6,6 +6,7 @@
 #include "DynArray.hpp"
 #include <util/Defines.hpp>
 #include <Types.hpp>
+#include <HashCode.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -73,7 +74,13 @@ public:
 
     [[nodiscard]] bool HasMultiByteChars() const                       { return Size() > Length(); }
 
-    void Reserve(typename Base::SizeType capacity)                     { Base::Reserve(capacity); }
+    /*! \brief Reserve space for the string. {capacity} + 1 is used, to make space for the null character. */
+    void Reserve(typename Base::SizeType capacity)                     { Base::Reserve(capacity + 1); }
+
+    // NOTE: no Resize(), because utf8 strings can have different length than size
+    // /*! \brief Resizes to {new_size} + 1 to make space for the null character. */
+    // void Resize(typename Base::SizeType new_size)                      { Base::Resize(new_size + 1); }
+
     void Refit()                                                       { Base::Refit(); }
     void Append(const DynString &other);
     void Append(DynString &&other);
@@ -83,6 +90,9 @@ public:
 
     bool StartsWith(const DynString &other) const;
     bool EndsWith(const DynString &other) const;
+
+    [[nodiscard]] HashCode GetHashCode() const
+        { return Base::GetHashCode(); }
 
     HYP_DEF_STL_BEGIN_END(
         reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_start_offset]),
@@ -129,6 +139,9 @@ DynString<T, IsUtf8>::DynString(const T *str)
 
     if (len == -1) {
         // invalid utf8 string
+        // push back null terminated char
+        Base::PushBack(T { 0 });
+
         return;
     }
 
@@ -136,7 +149,8 @@ DynString<T, IsUtf8>::DynString(const T *str)
 
     const auto size = static_cast<typename Base::SizeType>(count);
     
-    Reserve(size + 1);
+    // reserves + 1 for null char
+    Reserve(size);
 
     for (SizeType i = 0; i < size; ++i) {
         Base::PushBack(str[i]);
@@ -178,6 +192,7 @@ template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator=(const DynString &other) -> DynString&
 {
     Base::operator=(other);
+    m_length = other.m_length;
 
     return *this;
 }

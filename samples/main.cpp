@@ -144,7 +144,7 @@ public:
             scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
-#if 1 // serialize/deseriale test
+#if 0 // serialize/deseriale test
         FileByteWriter bw("test_dump.fbom");
         test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
         test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);

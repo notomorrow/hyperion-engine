@@ -440,7 +440,6 @@ inline u32char utf8_charat(const char *str, int index)
 inline void utf8_charat(const char *str, char *dst, int index)
     { char32to8(utf8_charat(str, index), dst); }
 
-
 #define HYP_UTF_MASK16(ch)             ((uint16_t)(0xffff & (ch)))
 #define HYP_UTF_IS_LEAD_SURROGATE(ch)  ((ch) >= 0xd800u && (ch) <= 0xdbffu)
 #define HYP_UTF_IS_TRAIL_SURROGATE(ch) ((ch) >= 0xdc00u && (ch) <= 0xdfffu)

@@ -46,7 +46,7 @@ public:
     template <class T>
     void Set(const Value &value)
     {
-        const auto id = TypeID::GetTypeID<T>();
+        const auto id = TypeID::ForType<T>();
 
         m_map[id] = value;
     }
@@ -54,7 +54,7 @@ public:
     template <class T>
     void Set(Value &&value)
     {
-        const auto id = TypeID::GetTypeID<T>();
+        const auto id = TypeID::ForType<T>();
 
         m_map[id] = std::move(value);
     }
@@ -62,7 +62,7 @@ public:
     template <class T>
     Iterator Find()
     {
-        const auto id = TypeID::GetTypeID<T>();
+        const auto id = TypeID::ForType<T>();
 
         return m_map.Find(id);
     }
@@ -70,7 +70,7 @@ public:
     template <class T>
     ConstIterator Find() const
     {
-        const auto id = TypeID::GetTypeID<T>();
+        const auto id = TypeID::ForType<T>();
 
         return m_map.Find(id);
     }
@@ -98,7 +98,7 @@ public:
     template <class T>
     bool Contains() const
     {
-        const auto id = TypeID::GetTypeID<T>();
+        const auto id = TypeID::ForType<T>();
 
         return m_map.Find(id) != m_map.End();
     }
