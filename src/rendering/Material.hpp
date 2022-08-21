@@ -4,6 +4,7 @@
 #include "Texture.hpp"
 #include "Shader.hpp"
 
+#include <core/lib/FixedArray.hpp>
 #include <Types.hpp>
 
 #include <util/EnumOptions.hpp>
@@ -71,7 +72,7 @@ public:
             void *ptr;
         } values;
 
-        enum Type {
+        enum Type : UInt {
             MATERIAL_PARAMETER_TYPE_NONE,
             MATERIAL_PARAMETER_TYPE_FLOAT,
             MATERIAL_PARAMETER_TYPE_FLOAT2,
@@ -86,55 +87,55 @@ public:
         Parameter() : type(MATERIAL_PARAMETER_TYPE_NONE) {}
 
         template <size_t Size>
-        explicit Parameter(std::array<float, Size> &&v)
-            : Parameter(v.data(), v.size())
+        explicit Parameter(FixedArray<Float, Size> &&v)
+            : Parameter(v.Data(), Size)
         {
         }
         
-        explicit Parameter(const float *v, size_t count)
+        explicit Parameter(const Float *v, SizeType count)
             : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT + (count - 1)))
         {
             AssertThrow(count >= 1 && count <= 4);
 
-            std::memcpy(values.float_values, v, count * sizeof(float));
+            std::memcpy(values.float_values, v, count * sizeof(Float));
         }
         
-        Parameter(float value)
+        Parameter(Float value)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT)
         {
-            std::memcpy(values.float_values, &value, sizeof(float));
+            std::memcpy(values.float_values, &value, sizeof(Float));
         }
 
         Parameter(const Vector2 &xy)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT2)
         {
-            std::memcpy(values.float_values, &xy.values, 2 * sizeof(float));
+            std::memcpy(values.float_values, &xy.values, 2 * sizeof(Float));
         }
 
         Parameter(const Vector3 &xyz)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT3)
         {
-            std::memcpy(values.float_values, &xyz.values, 3 * sizeof(float));
+            std::memcpy(values.float_values, &xyz.values, 3 * sizeof(Float));
         }
 
         Parameter(const Vector4 &xyzw)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT4)
         {
-            std::memcpy(values.float_values, &xyzw.values, 4 * sizeof(float));
+            std::memcpy(values.float_values, &xyzw.values, 4 * sizeof(Float));
         }
 
         template <size_t Size>
-        explicit Parameter(std::array<int, Size> &&v)
-            : Parameter(v.data(), v.size())
+        explicit Parameter(FixedArray<Int32, Size> &&v)
+            : Parameter(v.Data(), Size)
         {
         }
         
-        explicit Parameter(const int *v, size_t count)
+        explicit Parameter(const Int32 *v, SizeType count)
             : type(Type(MATERIAL_PARAMETER_TYPE_INT + (count - 1)))
         {
             AssertThrow(count >= 1 && count <= 4);
 
-            std::memcpy(values.int_values, v, count * sizeof(int));
+            std::memcpy(values.int_values, v, count * sizeof(Int32));
         }
 
         explicit Parameter(const Parameter &other)
@@ -153,37 +154,37 @@ public:
 
         ~Parameter() = default;
 
-        inline bool IsIntType() const
+        bool IsIntType() const
             { return type >= MATERIAL_PARAMETER_TYPE_INT && type <= MATERIAL_PARAMETER_TYPE_INT4; }
 
-        inline bool IsFloatType() const
+        bool IsFloatType() const
             { return type >= MATERIAL_PARAMETER_TYPE_FLOAT && type <= MATERIAL_PARAMETER_TYPE_FLOAT4; }
 
-        inline uint8_t Size() const
+        UInt Size() const
         {
             if (type == MATERIAL_PARAMETER_TYPE_NONE) {
-                return uint8_t(0);
+                return 0u;
             }
 
             if (type >= MATERIAL_PARAMETER_TYPE_INT) {
-                return uint8_t(type - MATERIAL_PARAMETER_TYPE_INT) + 1;
+                return UInt(type - MATERIAL_PARAMETER_TYPE_INT) + 1;
             }
 
-            return uint8_t(type);
+            return UInt(type);
         }
 
-        inline void Copy(unsigned char dst[4]) const
+        void Copy(unsigned char dst[4]) const
         {
             std::memcpy(dst, &values, Size());
         }
 
-        inline bool operator==(const Parameter &other) const
+        bool operator==(const Parameter &other) const
         {
             return values.ptr == other.values.ptr
                 || !std::memcmp(&values, &other.values, sizeof(values));
         }
 
-        inline HashCode GetHashCode() const
+        HashCode GetHashCode() const
         {
             HashCode hc;
 
@@ -241,17 +242,26 @@ public:
     };
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
-    using TextureSet     = EnumOptions<TextureKey, Ref<Texture>, max_textures>;
+    using TextureSet = EnumOptions<TextureKey, Ref<Texture>, max_textures>;
 
     Material(const char *name = "");
     Material(const Material &other) = delete;
     Material &operator=(const Material &other) = delete;
     ~Material();
 
-    ShaderDataState GetShaderDataState() const     { return m_shader_data_state; }
-    void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
+    ShaderDataState GetShaderDataState() const
+        { return m_shader_data_state; }
 
-    inline const Parameter &GetParameter(MaterialKey key) const
+    void SetShaderDataState(ShaderDataState state)
+        { m_shader_data_state = state; }
+
+    ParameterTable &GetParameters()
+        { return m_parameters; }
+
+    const ParameterTable &GetParameters() const
+        { return m_parameters; }
+
+    const Parameter &GetParameter(MaterialKey key) const
         { return m_parameters.Get(key); }
 
     template <class T>
@@ -292,6 +302,12 @@ public:
      */
     void SetTexture(TextureKey key, Ref<Texture> &&texture);
 
+    TextureSet &GetTextures()
+        { return m_textures; }
+
+    const TextureSet &GetTextures() const
+        { return m_textures; }
+
     /*! \brief Return a pointer to a Texture set on this Material by the given
      * texture key. If no Texture was set, nullptr is returned.
      * @param key The key of the texture to find
@@ -312,7 +328,7 @@ public:
     void Init(Engine *engine);
     void Update(Engine *engine);
 
-    inline HashCode GetHashCode() const
+    HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(m_parameters.GetHashCode());
@@ -336,13 +352,13 @@ private:
 
     char *m_name;
 
-    ParameterTable          m_parameters;
-    TextureSet              m_textures;
+    ParameterTable m_parameters;
+    TextureSet m_textures;
 
-    MaterialShaderData      m_shader_data;
+    MaterialShaderData m_shader_data;
     mutable ShaderDataState m_shader_data_state;
 
-    std::array<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
 };
 
 class MaterialGroup {

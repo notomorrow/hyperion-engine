@@ -88,7 +88,7 @@
                 } \
                 break; \
             default: \
-                /* invalid; do nothing */ \
+                AssertThrowMsg(false, "Invalid type, should not reach this state."); \
                 break; \
         } \
     } while (0)
@@ -1425,6 +1425,7 @@ struct InstructionHandler {
                 break;
             default:
                 AssertThrowMsg(false, "Result type was not a number. Investigate");
+                break;
             }
         } else {
             state->ThrowException(
@@ -1564,6 +1565,9 @@ struct InstructionHandler {
                     }
                     result.m_value.d = std::fmod(result.m_value.d, a.f);
                 }
+                break;
+            default:
+                AssertThrowMsg(false, "Invalid type, should not reach this state.");
                 break;
             }
         } else {

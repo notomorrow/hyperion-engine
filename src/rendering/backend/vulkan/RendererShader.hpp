@@ -22,7 +22,7 @@ struct ShaderObject {
     {
         HashCode hc;
 
-        for (size_t i = 0; i < bytes.size(); i++) {
+        for (SizeType i = 0; i < bytes.size(); i++) {
             hc.Add(bytes[i]);
         }
 
@@ -34,7 +34,7 @@ struct ShaderObject {
 };
 
 struct ShaderModule {
-    enum class Type : int {
+    enum class Type : UInt {
         UNSET = 0,
         VERTEX,
         FRAGMENT,

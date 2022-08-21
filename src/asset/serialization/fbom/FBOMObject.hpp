@@ -5,6 +5,7 @@
 #include <core/lib/String.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/Optional.hpp>
 
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
@@ -24,12 +25,19 @@ namespace hyperion::v2::fbom {
 
 class FBOMNodeHolder;
 
+struct FBOMExternalObjectInfo {
+    String key;
+
+    explicit operator bool() const { return key.Any(); }
+};
+
 class FBOMObject {
 public:
     FBOMType m_object_type;
     FBOMNodeHolder *nodes;
     FlatMap<String, FBOMData> properties;
     FBOMDeserializedObject deserialized;
+    Optional<FBOMExternalObjectInfo> m_external_info;
 
     FBOMObject();
     FBOMObject(const FBOMType &loader_type);
@@ -38,6 +46,24 @@ public:
     FBOMObject(FBOMObject &&other) noexcept;
     FBOMObject &operator=(FBOMObject &&other) noexcept;
     ~FBOMObject();
+
+    bool IsExternal() const
+        { return m_external_info.Any(); }
+
+    const String &GetExternalObjectKey() const
+        { return IsExternal() ? m_external_info.Get().key : String::empty; }
+
+   const FBOMExternalObjectInfo *GetExternalObjectInfo() const
+        { return IsExternal() ? &m_external_info.Get() : nullptr; }
+
+    void SetExternalObjectInfo(const FBOMExternalObjectInfo &info)
+    {
+        if (info) {
+            m_external_info = info;
+        } else {
+            m_external_info.Unset();
+        }
+    }
 
     const FBOMType &GetType() const
         { return m_object_type; }
@@ -62,7 +88,8 @@ public:
     }
 
     template <class T, class Marshaler = FBOMMarshaler<NormalizedType<T>>>
-    FBOMResult AddChild(const T &object)
+    typename std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>, FBOMResult>
+    AddChild(const T &object, const String &external_object_key = String::empty)
     {
         static_assert(implementation_exists<Marshaler>,
             "Marshaler class does not exist");
@@ -77,14 +104,14 @@ public:
         auto result = marshal.Serialize(object, out_object);
 
         if (result.value != FBOMResult::FBOM_ERR) {
-            AddChild(std::move(out_object));
+            AddChild(std::move(out_object), external_object_key);
         }
 
         return result;
     }
     
-    void AddChild(const FBOMObject &object);
-    void AddChild(FBOMObject &&object);
+    void AddChild(const FBOMObject &object, const String &external_object_key = String::empty);
+    void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
 
     HashCode GetHashCode() const;
     std::string ToString() const;
@@ -158,10 +185,10 @@ public:
 
     ~FBOMNodeHolder() = default;
 
-    HYP_DEF_STL_BEGIN_END(
-        reinterpret_cast<typename DynArray<FBOMObject>::ValueType *>(&DynArray<FBOMObject>::m_buffer[DynArray<FBOMObject>::m_start_offset]),
-        reinterpret_cast<typename DynArray<FBOMObject>::ValueType *>(&DynArray<FBOMObject>::m_buffer[DynArray<FBOMObject>::m_size])
-    )
+    // HYP_DEF_STL_BEGIN_END(
+    //     reinterpret_cast<typename DynArray<FBOMObject>::ValueType *>(&DynArray<FBOMObject>::m_buffer[DynArray<FBOMObject>::m_start_offset]),
+    //     reinterpret_cast<typename DynArray<FBOMObject>::ValueType *>(&DynArray<FBOMObject>::m_buffer[DynArray<FBOMObject>::m_size])
+    // )
 };
 
 } // namespace hyperion::v2::fbom

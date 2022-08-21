@@ -1,13 +1,12 @@
 #include "FBOM.hpp"
+#include <core/lib/Path.hpp>
 
 namespace hyperion::v2::fbom {
 
-FBOMLoader::FBOMLoader()
-    : root(new FBOMObject(FBOMObjectType("ROOT"))),
+FBOMLoader::FBOMLoader(Resources &resources)
+    : m_resources(resources),
       m_in_static_data(false)
 {
-    last = root;
-
     m_registered_types = {
         FBOMUnsignedInt(),
         FBOMUnsignedLong(),
@@ -22,12 +21,7 @@ FBOMLoader::FBOMLoader()
     };
 }
 
-FBOMLoader::~FBOMLoader()
-{
-    if (root) {
-        delete root;
-    }
-}
+FBOMLoader::~FBOMLoader() = default;
 
 FBOMCommand FBOMLoader::NextCommand(ByteReader *reader)
 {
@@ -91,7 +85,9 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
     reader->Read(&object_type_location);
 
-    if (object_type_location == FBOM_DATA_LOCATION_INPLACE) {
+    switch (object_type_location) {
+    case FBOM_DATA_LOCATION_INPLACE:
+    {
         UInt8 extend_level;
         reader->Read(&extend_level);
 
@@ -109,7 +105,11 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
 
             result = result.Extend(FBOMUnset());
         }
-    } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
+
+        break;
+    }
+    case FBOM_DATA_LOCATION_STATIC:
+    {
         // read offset as u32
         UInt32 offset;
         reader->Read(&offset);
@@ -117,6 +117,12 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
         // grab from static data pool
         AssertThrow(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_TYPE);
         result = m_static_data_pool.at(offset).type_data;
+
+        break;
+    }
+    default:
+        AssertThrowMsg(false, "Invalid data location type");
+        break;
     }
 
     return result;
@@ -155,7 +161,7 @@ FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
 }
 
 
-FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
+FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMObject *parent)
 {
     if (auto err = Eat(reader, FBOM_OBJECT_START)) {
         return err;
@@ -167,7 +173,9 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
     reader->Read(&object_type_location);
 
-    if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
+    switch (object_type_location) {
+    case FBOM_DATA_LOCATION_STATIC:
+    {
         // read offset as u32
         UInt32 offset;
         reader->Read(&offset);
@@ -178,8 +186,8 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
 
         return FBOMResult::FBOM_OK;
     }
-
-    if (object_type_location == FBOM_DATA_LOCATION_INPLACE) {
+    case FBOM_DATA_LOCATION_INPLACE:
+    {
         // read string of "type" - loader to use
         const FBOMType object_type = ReadObjectType(reader);
 
@@ -193,7 +201,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
             {
                 FBOMObject child;
 
-                if (auto err = ReadObject(reader, child)) {
+                if (auto err = ReadObject(reader, child, &object)) {
                     return err;
                 }
 
@@ -202,6 +210,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                 break;
             }
             case FBOM_OBJECT_END:
+                // call deserializer function, writing into object.deserialized
                 if (auto err = Deserialize(object, object.deserialized)) {
                     return FBOMResult(FBOMResult::FBOM_ERR, "Could not deserialize object");
                 }
@@ -234,6 +243,45 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
         if (auto err = Eat(reader, FBOM_OBJECT_END)) {
             return err;
         }
+
+        break;
+    }
+    case FBOM_DATA_LOCATION_EXT_REF:
+    {
+        const auto ref_name = ReadString(reader);
+        
+        // read object_index as u32,
+        // for now this should just be zero but
+        // later we can use to store other things in a sort of
+        // "library" file, and page chunks in and out of memory
+        UInt32 object_index;
+        reader->Read(&object_index);
+
+        // read flags
+        UInt32 flags;
+        reader->Read(&flags);
+
+        // load the file {ref_name}.chunk relative to current file
+        // this could also be stored in a map
+
+        String base_path;
+
+        if (parent != nullptr && parent->GetType().IsOrExtends("ROOT")) {
+            if (auto err = parent->GetProperty("base_path").ReadString(base_path)) {
+                return err;
+            }
+        }
+
+        const String ref_path(FileSystem::Join(std::string(base_path.Data()), std::string(ref_name.Data())).data());
+
+        if (auto err = FBOMLoader(m_resources).LoadFromFile(ref_path, object)) {
+            return err;
+        }
+
+        break;
+    }
+    default:
+        return FBOMResult(FBOMResult::FBOM_ERR, "Unknown object location type");
     }
 
     return FBOMResult::FBOM_OK;
@@ -241,20 +289,18 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
 
 FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObject *parent)
 {
-    std::string object_type;
-
-    // TODO: pre-saving ObjectTypes at start, then using offset
+    AssertThrow(parent != nullptr);
 
     switch (command) {
     case FBOM_OBJECT_START:
     {
         FBOMObject child;
 
-        if (auto err = ReadObject(reader, child)) {
+        if (auto err = ReadObject(reader, child, parent)) {
             return err;
         }
 
-        last->nodes->PushBack(std::move(child));
+        parent->nodes->PushBack(std::move(child));
 
         break;
     }
@@ -304,7 +350,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
             {
                 FBOMObject object;
 
-                if (auto err = ReadObject(reader, object)) {
+                if (auto err = ReadObject(reader, object, parent)) {
                     return err;
                 }
 

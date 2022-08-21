@@ -166,8 +166,8 @@ protected:
         return 1ull << static_cast<SizeType>(std::ceil(std::log(size) / std::log(2.0)));
     }
 
-    SizeType     m_size;
-    SizeType     m_capacity;
+    SizeType m_size;
+    SizeType m_capacity;
     
     struct alignas(T) Storage {
         alignas(T) std::byte data_buffer[sizeof(T)];
