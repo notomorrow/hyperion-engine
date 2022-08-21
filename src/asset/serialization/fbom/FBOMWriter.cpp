@@ -1,5 +1,6 @@
 #include "FBOM.hpp"
 #include <asset/ByteWriter.hpp>
+#include <core/lib/Path.hpp>
 #include <core/lib/SortedArray.hpp>
 
 #include <stack>
@@ -62,7 +63,9 @@ FBOMResult FBOMWriter::WriteExternalObjects()
             }
         }
 
-        FileByteWriter byte_writer(it.first.Data());
+        const Path output_path(it.first);
+
+        FileByteWriter byte_writer(output_path.Data());
         chunk_writer.Emit(&byte_writer);
         byte_writer.Close();
     }
