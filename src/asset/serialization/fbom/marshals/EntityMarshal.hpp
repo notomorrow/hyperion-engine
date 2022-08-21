@@ -39,15 +39,15 @@ public:
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
         if (const auto &mesh = in_object.GetMesh()) {
-            out.AddChild(*mesh, "test.mesh");
+            out.AddChild(*mesh, true);
         }
 
         if (const auto &shader = in_object.GetShader()) {
-            out.AddChild(*shader, "test.shader");
+            out.AddChild(*shader, true);
         }
 
         if (const auto &material = in_object.GetMaterial()) {
-            out.AddChild(*material, "test.material");
+            out.AddChild(*material, true);
         }
 
         return { FBOMResult::FBOM_OK };

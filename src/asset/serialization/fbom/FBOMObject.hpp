@@ -87,9 +87,13 @@ public:
         SetProperty(key, type, &value);
     }
 
+    /*! \brief Add a child object to this object node.
+        @param object The child object to add
+        @param external If true, store the child object in a separate file,
+                        To be pulled in when the final object is loaded */
     template <class T, class Marshaler = FBOMMarshaler<NormalizedType<T>>>
     typename std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>, FBOMResult>
-    AddChild(const T &object, const String &external_object_key = String::empty)
+    AddChild(const T &object, bool external = false)
     {
         static_assert(implementation_exists<Marshaler>,
             "Marshaler class does not exist");
@@ -104,6 +108,12 @@ public:
         auto result = marshal.Serialize(object, out_object);
 
         if (result.value != FBOMResult::FBOM_ERR) {
+            String external_object_key;
+
+            if (external) {
+                external_object_key = String::ToString(out_object.GetHashCode().Value()) + ".fbom";
+            }
+
             AddChild(std::move(out_object), external_object_key);
         }
 
