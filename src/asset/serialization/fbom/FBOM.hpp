@@ -283,7 +283,11 @@ public:
 
         // Include our root dir as part of the path
         std::string root_dir = FileSystem::CurrentPath();
-        ByteReader *reader = new FileByteReader(FileSystem::Join(root_dir, std::string(path.Data())));
+        FileByteReader reader(FileSystem::Join(root_dir, std::string(path.Data())));
+
+        if (reader.Eof()) {
+            return { FBOMResult::FBOM_ERR, "File not open" };
+        }
 
         m_static_data_pool.clear();
         m_in_static_data = false;
@@ -291,15 +295,13 @@ public:
         // expect first FBOMObject defined
         FBOMCommand command = FBOM_NONE;
 
-        while (!reader->Eof()) {
-            command = PeekCommand(reader);
+        while (!reader.Eof()) {
+            command = PeekCommand(&reader);
 
-            if (auto err = Handle(reader, command, &root)) {
+            if (auto err = Handle(&reader, command, &root)) {
                 return err;
             }
         }
-
-        delete reader;
 
         if (root.nodes->Empty()) {
             return { FBOMResult::FBOM_ERR, "No object added to root" };

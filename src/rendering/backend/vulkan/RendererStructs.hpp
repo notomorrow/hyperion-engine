@@ -62,7 +62,7 @@ enum class StencilMode : UInt {
 };
 
 struct StencilState {
-    UInt        id   = 0;
+    UInt id   = 0;
     StencilMode mode = StencilMode::NONE;
 
     HYP_DEF_STRUCT_COMPARE_EQL(StencilState);

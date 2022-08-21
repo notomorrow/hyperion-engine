@@ -161,7 +161,7 @@ public:
             AssertThrowMsg(false, "%s\n", err.message);
         }
         auto ent = engine->resources.entities.Add(result.Release<Entity>());
-        HYP_BREAKPOINT;
+        scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
 #endif
 
         // auto character_entity = engine->resources.entities.Add(new Spatial());
@@ -713,8 +713,8 @@ int main()
         auto pipeline = std::make_unique<RendererInstance>(
             engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
             engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
-            RenderableAttributeSet{
-                .bucket            = Bucket::BUCKET_TRANSLUCENT,
+            RenderableAttributeSet {
+                .bucket = Bucket::BUCKET_TRANSLUCENT,
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
             }
         );
