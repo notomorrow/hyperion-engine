@@ -111,7 +111,7 @@ struct FBOMData {
     template <class T>
     FBOMResult ReadStruct(T *out) const
     {
-        return ReadStruct(sizeof(T), &out);
+        return ReadStruct(sizeof(T), out);
     }
 
     bool IsArray() const

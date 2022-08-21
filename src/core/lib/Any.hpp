@@ -199,7 +199,12 @@ public:
 
         m_type_id = TypeID::ForType<T>();
         m_ptr = ptr;
-        m_delete_function = [](void *ptr) { delete static_cast<T *>(ptr); };
+
+        if (ptr) {
+            m_delete_function = [](void *ptr) { delete static_cast<T *>(ptr); };
+        } else {
+            m_delete_function = nullptr;
+        }
     }
 
     /*! \brief Resets the current value held in the Any. */

@@ -133,12 +133,16 @@ struct RefCountedPtr {
             if (--m_ref->count == 0u) {
                 delete m_ref;
             }
+
+            m_ref = nullptr;
         }
 
-        m_ref = new Ref {
-            .value = ptr,
-            .count = 1u
-        };
+        if (ptr) {
+            m_ref = new Ref {
+                .value = ptr,
+                .count = 1u
+            };
+        }
     }
 
     /*! \brief Drops the reference to the currently held value, if any.  */
@@ -148,29 +152,10 @@ struct RefCountedPtr {
             if (--m_ref->count == 0u) {
                 delete m_ref;
             }
+
+            m_ref = nullptr;
         }
     }
-
-    /*! \brief Drops ownership of the object held inside.
-        Be sure to call delete on it when no longer needed!
-    */
-    // [[nodiscard]] T *Release()
-    // {
-    //     if (!m_ref) {
-    //         return nullptr;
-    //     }
-
-    //     auto *ptr = m_ref->value;
-
-    //     if (--m_ref->count == 0u) {
-    //         m_ref->value = nullptr; // so ~Ref() doesn't delete it.
-    //         delete m_ref;
-    //     }
-
-    //     m_ref = nullptr;
-
-    //     return ptr;
-    // }
 
 protected:
     struct Ref {

@@ -22,7 +22,7 @@ public:
         out.SetProperty("topology", FBOMUnsignedInt(), in_object.GetTopology());
         out.SetProperty("flags", FBOMUnsignedInt(), in_object.GetFlags());
         out.SetProperty("attributes", FBOMStruct(sizeof(VertexAttributeSet)), &in_object.GetVertexAttributes());
-
+    
         // dump vertices and indices
         out.SetProperty(
             "num_vertices",

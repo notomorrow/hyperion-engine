@@ -135,6 +135,8 @@ public:
 
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
 
+    void SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes);
+
     void SetMeshAttributes(
         VertexAttributeSet vertex_attributes,
         FaceCullMode face_cull_mode = FaceCullMode::BACK,
@@ -231,7 +233,6 @@ public:
     void AddToOctree(Engine *engine, Octree &octree);
 
 private:
-    void SetRenderableAttributes(const RenderableAttributeSet &render_options);
     void RebuildRenderableAttributes();
 
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
