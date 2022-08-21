@@ -3,6 +3,8 @@
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
+#include <asset/serialization/fbom/marshals/ShaderMarshal.hpp>
+#include <asset/serialization/fbom/marshals/MaterialMarshal.hpp>
 #include <scene/Entity.hpp>
 
 namespace hyperion::v2::fbom {
@@ -28,13 +30,21 @@ public:
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
         if (const auto &mesh = in_object.GetMesh()) {
-            out.AddChild(*mesh);
+            out.AddChild(*mesh, "test.mesh");
+        }
+
+        if (const auto &shader = in_object.GetShader()) {
+            out.AddChild(*shader, "test.shader");
+        }
+
+        if (const auto &material = in_object.GetMaterial()) {
+            out.AddChild(*material, "test.material");
         }
 
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, Entity *&out_object) const override
+    virtual FBOMResult Deserialize(Resources &resources, const FBOMObject &in, Entity *&out_object) const override
     {
         out_object = new Entity();
 
@@ -76,11 +86,9 @@ public:
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Mesh")) {
-                auto *mesh = node.deserialized.Release<Mesh>();
-
-                HYP_BREAKPOINT;
-
-                delete mesh;
+                out_object->SetMesh(resources.meshes.Add(node.deserialized.Release<Mesh>()));
+            } else if (node.GetType().IsOrExtends("Shader")) {
+                out_object->SetShader(resources.shaders.Add(node.deserialized.Release<Shader>()));
             }
         }
 

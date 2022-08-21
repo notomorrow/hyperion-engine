@@ -14,6 +14,8 @@
 #include <asset/ByteWriter.hpp>
 #include <asset/Assets.hpp>
 #include <util/fs/FsUtil.hpp>
+
+#include <Constants.hpp>
 #include <Types.hpp>
 
 #include <vector>
@@ -88,7 +90,8 @@ struct FBOMMarshal {
 enum FBOMDataLocation {
     FBOM_DATA_LOCATION_NONE = 0x00,
     FBOM_DATA_LOCATION_STATIC = 0x01,
-    FBOM_DATA_LOCATION_INPLACE = 0x02
+    FBOM_DATA_LOCATION_INPLACE = 0x02,
+    FBOM_DATA_LOCATION_EXT_REF = 0x04
 };
 
 struct FBOMStaticData {
@@ -116,19 +119,19 @@ struct FBOMStaticData {
     {
     }
 
-    FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_OBJECT),
           object_data(object_data),
         //   raw_data(nullptr),
           offset(offset),
           written(false) {}
-    FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
         //   raw_data(nullptr),
           offset(offset),
           written(false) {}
-    FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
         //   raw_data(nullptr),
@@ -256,7 +259,7 @@ public:
 
 class FBOMLoader {
 public:
-    FBOMLoader();
+    FBOMLoader(Resources &resources);
     ~FBOMLoader();
 
     FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out_object)
@@ -268,14 +271,19 @@ public:
             return FBOMResult(FBOMResult::FBOM_ERR, "Loader not registered for type");
         }
 
-        return loader->Deserialize(in, out_object);
+        return loader->Deserialize(m_resources, in, out_object);
     }
 
-    FBOMResult LoadFromFile(const std::string &path, FBOMDeserializedObject &out)
+    FBOMResult LoadFromFile(const String &path, FBOMObject &out)
     {
+        const auto base_path = StringUtil::BasePath(path.Data());
+
+        FBOMObject root(FBOMObjectType("ROOT"));
+        root.SetProperty("base_path", FBOMString(), base_path.size(), base_path.data());
+
         // Include our root dir as part of the path
         std::string root_dir = FileSystem::CurrentPath();
-        ByteReader *reader = new FileByteReader(FileSystem::Join(root_dir, path));
+        ByteReader *reader = new FileByteReader(FileSystem::Join(root_dir, std::string(path.Data())));
 
         m_static_data_pool.clear();
         m_in_static_data = false;
@@ -286,24 +294,37 @@ public:
         while (!reader->Eof()) {
             command = PeekCommand(reader);
 
-            if (auto err = Handle(reader, command, root)) {
-                throw std::runtime_error(err.message);
-            }
-
-            if (last == nullptr) {
-                // end of file
-                AssertThrowMsg(reader->Eof(), "last was nullptr before eof reached");
-
-                break;
+            if (auto err = Handle(reader, command, &root)) {
+                return err;
             }
         }
 
         delete reader;
 
-        AssertThrow(root != nullptr);
-        AssertThrowMsg(root->nodes->Size() == 1, "No object added to root (should be one)");
+        if (root.nodes->Empty()) {
+            return { FBOMResult::FBOM_ERR, "No object added to root" };
+        }
 
-        return Deserialize(root->nodes->Front(), out);
+        if (root.nodes->Size() > 1) {
+            return { FBOMResult::FBOM_ERR, "> 1 objects added to root (not supported in current implementation)" };
+        }
+
+        out = root.nodes->Front();
+
+        return { FBOMResult::FBOM_OK };
+    }
+
+    FBOMResult LoadFromFile(const String &path, FBOMDeserializedObject &out)
+    {
+        FBOMObject object;
+        
+        if (auto err = LoadFromFile(path, object)) {
+            return err;
+        }
+
+        out = object.deserialized;
+
+        return { FBOMResult::FBOM_OK };
     }
 
 private:
@@ -314,12 +335,11 @@ private:
     String ReadString(ByteReader *);
     FBOMType ReadObjectType(ByteReader *);
     FBOMResult ReadData(ByteReader *, FBOMData &data);
-    FBOMResult ReadObject(ByteReader *, FBOMObject &object);
+    FBOMResult ReadObject(ByteReader *, FBOMObject &object, FBOMObject *parent);
 
     FBOMResult Handle(ByteReader *, FBOMCommand, FBOMObject *parent);
 
-    FBOMObject *root;
-    FBOMObject *last;
+    Resources &m_resources;
 
     std::vector<FBOMType> m_registered_types;
 
@@ -327,32 +347,9 @@ private:
     std::vector<FBOMStaticData> m_static_data_pool;
 };
 
-template <class T, class Marshaler = FBOMMarshaler<T>>
-static inline FBOMResult SerializeObject(const T &object, FBOMObject &out)
-{
-    static_assert(std::is_base_of_v<FBOMMarshalerBase, Marshaler>,
-        "Marshaler class must be a derived class of FBOMMarshalBase");
-
-    return Marshaler().Serialize(object, out);
-}
-
-template <class T, class Marshaler = FBOMMarshaler<T>>
-static inline FBOMResult DeserializeObject(const FBOMObject &in, T &object)
-{
-    static_assert(std::is_base_of_v<FBOMMarshalerBase, Marshaler>,
-        "Marshaler class must be a derived class of FBOMMarshalBase");
-
-    return Marshaler().Deserialize(in, object);
-}
-
-template <class T, class Marshaler = FBOMMarshaler<T>>
-static inline FBOMType GetObjectType()
-{
-    static_assert(std::is_base_of_v<FBOMMarshalerBase, Marshaler>,
-        "Marshaler class must be a derived class of FBOMMarshalBase");
-
-    return Marshaler().GetObjectType();
-}
+struct FBOMExternalData {
+    FlatMap<HashCode::ValueType, FBOMObject> objects;
+};
 
 class FBOMWriter {
 public:
@@ -360,15 +357,18 @@ public:
     ~FBOMWriter();
 
     template <class T, class Marshaler = FBOMMarshaler<T>>
-    FBOMResult Append(T &object)
+    typename std::enable_if_t<!std::is_same_v<NormalizedType<T>, FBOMObject>, FBOMResult>
+    Append(const T &object)
     {
         if (auto err = m_write_stream.m_last_result) {
             return err;
         }
 
-        FBOMObject base(GetObjectType<T, Marshaler>());
+        Marshaler marshal;
 
-        if (auto err = SerializeObject(object, base)) {
+        FBOMObject base(marshal.GetObjectType());
+
+        if (auto err = marshal.Serialize(object, base)) {
             m_write_stream.m_last_result = err;
 
             return err;
@@ -377,10 +377,11 @@ public:
         return Append(std::move(base));
     }
 
-    FBOMResult Append(FBOMObject &&object);
+    FBOMResult Append(const FBOMObject &object);
     FBOMResult Emit(ByteWriter *out);
 
 private:
+    FBOMResult WriteExternalObjects();
     void BuildStaticData();
     void Prune(FBOMObject &);
     FBOMResult WriteStaticDataToByteStream(ByteWriter *out);
@@ -396,6 +397,7 @@ private:
     void AddStaticData(const FBOMData &);
 
     struct WriteStream {
+        FlatMap<String, FBOMExternalData> m_external_objects; // map filepath -> external object
         std::map<HashCode::ValueType, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
         std::unordered_map<HashCode::ValueType, int> m_hash_use_count_map;
         std::vector<FBOMObject> m_object_data; // TODO: make multiple objects be supported by the loader.

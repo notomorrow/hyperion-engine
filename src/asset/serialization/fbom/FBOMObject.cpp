@@ -18,7 +18,8 @@ FBOMObject::FBOMObject(const FBOMObject &other)
     : m_object_type(other.m_object_type),
       nodes(new FBOMNodeHolder(*other.nodes)),
       properties(other.properties),
-      deserialized(other.deserialized)
+      deserialized(other.deserialized),
+      m_external_info(other.m_external_info)
 {
 }
 
@@ -30,6 +31,7 @@ auto FBOMObject::operator=(const FBOMObject &other) -> FBOMObject&
     nodes = new FBOMNodeHolder(*other.nodes);
     properties = other.properties;
     deserialized = other.deserialized;
+    m_external_info = other.m_external_info;
 
     return *this;
 }
@@ -38,7 +40,8 @@ FBOMObject::FBOMObject(FBOMObject &&other) noexcept
     : m_object_type(std::move(other.m_object_type)),
       nodes(new FBOMNodeHolder(std::move(*other.nodes))),
       properties(std::move(other.properties)),
-      deserialized(std::move(other.deserialized))
+      deserialized(std::move(other.deserialized)),
+      m_external_info(std::move(other.m_external_info))
 {
 }
 
@@ -50,6 +53,7 @@ auto FBOMObject::operator=(FBOMObject &&other) noexcept -> FBOMObject&
     nodes = new FBOMNodeHolder(std::move(*other.nodes));
     properties = std::move(other.properties);
     deserialized = std::move(other.deserialized);
+    m_external_info = std::move(other.m_external_info);
 
     return *this;
 }
@@ -90,14 +94,24 @@ void FBOMObject::SetProperty(const String &key, const FBOMType &type, const void
     SetProperty(key, type, type.size, bytes);
 }
 
-void FBOMObject::AddChild(const FBOMObject &object)
+void FBOMObject::AddChild(const FBOMObject &object, const String &external_object_key)
 {
-    nodes->PushBack(object);
+    FBOMObject _object(object);
+    _object.SetExternalObjectInfo(FBOMExternalObjectInfo {
+        .key = external_object_key
+    });
+
+    nodes->PushBack(std::move(_object));
 }
 
-void FBOMObject::AddChild(FBOMObject &&object)
+void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)
 {
-    nodes->PushBack(std::move(object));
+    FBOMObject _object(std::move(object));
+    _object.SetExternalObjectInfo(FBOMExternalObjectInfo {
+        .key = external_object_key
+    });
+
+    nodes->PushBack(std::move(_object));
 }
 
 HashCode FBOMObject::GetHashCode() const
