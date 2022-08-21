@@ -144,7 +144,7 @@ public:
             scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
-#if 1 // serialize/deseriale test
+#if 0 // serialize/deseriale test
         FileByteWriter bw("test_dump.fbom");
         test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
         test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);
@@ -155,9 +155,11 @@ public:
         bw.Close();
 
 
-        fbom::FBOMLoader fr;
+        fbom::FBOMLoader fr(engine->resources);
         fbom::FBOMDeserializedObject result;
-        AssertThrow(fr.LoadFromFile("test_dump.fbom", result).value == fbom::FBOMResult::FBOM_OK);
+        if (auto err = fr.LoadFromFile("test_dump.fbom", result)) {
+            AssertThrowMsg(false, "%s\n", err.message);
+        }
         auto ent = engine->resources.entities.Add(result.Release<Entity>());
         HYP_BREAKPOINT;
 #endif

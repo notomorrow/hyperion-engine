@@ -15,9 +15,9 @@ FBOMWriter::~FBOMWriter()
 {
 }
 
-FBOMResult FBOMWriter::Append(FBOMObject &&object)
+FBOMResult FBOMWriter::Append(const FBOMObject &object)
 {
-    AddObjectData(std::move(object));
+    AddObjectData(object);
 
     return FBOMResult::FBOM_OK;
 }
@@ -39,6 +39,34 @@ FBOMResult FBOMWriter::Emit(ByteWriter *out)
         }
     }
 
+    if (auto err = WriteExternalObjects()) {
+        return err;
+    }
+
+    return FBOMResult::FBOM_OK;
+}
+
+FBOMResult FBOMWriter::WriteExternalObjects()
+{
+    for (const auto &it : m_write_stream.m_external_objects) {
+        FBOMWriter chunk_writer;
+
+        for (const auto &objects_it : it.second.objects) {
+            FBOMObject object(objects_it.second);
+
+            // set to empty to not keep recursing. we only write the external data once.
+            object.SetExternalObjectInfo(FBOMExternalObjectInfo { });
+
+            if (auto err = chunk_writer.Append(object)) {
+                return err;
+            }
+        }
+
+        FileByteWriter byte_writer(it.first.Data());
+        chunk_writer.Emit(&byte_writer);
+        byte_writer.Close();
+    }
+
     return FBOMResult::FBOM_OK;
 }
 
@@ -51,6 +79,10 @@ void FBOMWriter::BuildStaticData()
 
 void FBOMWriter::Prune(FBOMObject &object)
 {
+    if (object.IsExternal()) {
+        return;
+    }
+
     AddStaticData(object.m_object_type);
 
     for (auto &node : *object.nodes) {
@@ -89,9 +121,8 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
         static_data_ordered.Insert(it.second);
     }
 
-    // std::sort(static_data_ordered.begin(), static_data_ordered.end(), [](auto &a, auto &b) {
-    //     return a.offset < b.offset;
-    // });
+    AssertThrowMsg(static_data_ordered.Size() == m_write_stream.m_static_data_offset,
+        "Values do not match, incorrect bookkeeping");
 
     out->Write<UInt8>(FBOM_STATIC_DATA_START);
 
@@ -106,6 +137,8 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
     //   then, the actual size of the data will vary depending on the held type
 
     for (auto &it : static_data_ordered) {
+        AssertThrow(it.offset < static_data_ordered.Size());
+
         out->Write<UInt32>(it.offset);
         out->Write<UInt8>(it.type);
 
@@ -137,6 +170,16 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
 
 FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
 {
+    if (object.IsExternal()) {
+        // defer writing it. instead we pass the object into our external data,
+        // which we will later be write
+
+        auto &external_object = m_write_stream.m_external_objects[object.GetExternalObjectKey()];
+        external_object.objects[object.GetHashCode().Value()] = object;
+
+        // return FBOMResult::FBOM_OK;
+    }
+
     out->Write<UInt8>(FBOM_OBJECT_START);
 
     FBOMStaticData static_data;
@@ -144,11 +187,13 @@ FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
     const auto data_location = m_write_stream.GetDataLocation(hash_code, static_data);
     out->Write<UInt8>(static_cast<UInt8>(data_location));
 
-    if (data_location == FBOM_DATA_LOCATION_STATIC) {
+    switch (data_location) {
+    // case FBOM_DATA_LOCATION_STATIC: // fallthrough
+    // case FBOM_DATA_LOCATION_INPLACE: // fallthrough
+    case FBOM_DATA_LOCATION_STATIC:
         return WriteStaticDataUsage(out, static_data);
-    }
-
-    if (data_location == FBOM_DATA_LOCATION_INPLACE) {
+    case FBOM_DATA_LOCATION_INPLACE:
+    {
         // write typechain
         if (auto err = WriteObjectType(out, object.m_object_type)) {
             return err;
@@ -176,6 +221,29 @@ FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
         out->Write<UInt8>(FBOM_OBJECT_END);
 
         m_write_stream.MarkStaticDataWritten(hash_code);
+
+        break;
+    }
+    case FBOM_DATA_LOCATION_EXT_REF:
+    {
+        const auto *external_info = object.GetExternalObjectInfo();
+        AssertThrow(external_info != nullptr);
+
+        out->WriteString(external_info->key);
+
+        // write object index as u32
+        // TODO!
+        out->Write<UInt32>(0);
+
+        // write flags -- i.e, lazy loaded, etc.
+        // not yet implemented, just write 0 for now
+        out->Write<UInt32>(0);
+
+        break;
+    }
+    default:
+        AssertThrowMsg(false, "Invalid data location type");
+        break;
     }
 
     return FBOMResult::FBOM_OK;
@@ -339,11 +407,26 @@ FBOMDataLocation FBOMWriter::WriteStream::GetDataLocation(HashCode::ValueType ha
 {
     FBOMDataLocation data_location = FBOM_DATA_LOCATION_INPLACE;
 
-    auto it = m_static_data.find(hash_code);
+    { // check static data
+        auto it = m_static_data.find(hash_code);
 
-    if (it != m_static_data.end() && it->second.written) {
-        out = it->second;
-        data_location = FBOM_DATA_LOCATION_STATIC;
+        if (it != m_static_data.end() && it->second.written) {
+            out = it->second;
+            return FBOM_DATA_LOCATION_STATIC;
+        }
+    }
+
+    // check external files
+    for (auto &it : m_external_objects) {
+        auto &external_data = it.second;
+
+        const auto objects_it = external_data.objects.Find(hash_code);
+
+        if (objects_it == external_data.objects.End()) {
+            continue;
+        }
+
+        return FBOM_DATA_LOCATION_EXT_REF;
     }
 
     return data_location;

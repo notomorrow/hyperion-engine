@@ -248,22 +248,22 @@ private:
 
     void RemoveFromOctree(Engine *engine);
 
-    Ref<Mesh>              m_mesh;
-    Ref<Shader>            m_shader;
-    Transform              m_transform;
-    BoundingBox            m_local_aabb;
-    BoundingBox            m_world_aabb;
-    Ref<Material>          m_material;
-    Ref<Skeleton>          m_skeleton;
-    Node                  *m_node;
-    Scene                 *m_scene;
+    Ref<Mesh> m_mesh;
+    Ref<Shader> m_shader;
+    Transform m_transform;
+    BoundingBox m_local_aabb;
+    BoundingBox m_world_aabb;
+    Ref<Material> m_material;
+    Ref<Skeleton> m_skeleton;
+    Node *m_node;
+    Scene *m_scene;
 
     RenderableAttributeSet m_renderable_attributes;
 
-    ControllerSet          m_controllers;
+    ControllerSet m_controllers;
 
-    std::atomic<Octree *>  m_octree{nullptr};
-    bool                   m_needs_octree_update{false};
+    std::atomic<Octree *> m_octree{nullptr};
+    bool m_needs_octree_update{false};
 
     struct {
         RendererInstance *renderer_instance = nullptr;
@@ -274,9 +274,9 @@ private:
      * for easy removal when RemoveEntity() is called.
      */
     FlatSet<RendererInstance *> m_renderer_instances;
-    std::mutex                  m_render_instances_mutex;
+    std::mutex m_render_instances_mutex;
 
-    mutable ShaderDataState     m_shader_data_state;
+    mutable ShaderDataState m_shader_data_state;
 };
 
 } // namespace hyperion::v2

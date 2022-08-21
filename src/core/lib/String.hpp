@@ -6,10 +6,12 @@
 #include "DynArray.hpp"
 #include <util/Defines.hpp>
 #include <Types.hpp>
+#include <Constants.hpp>
 #include <HashCode.hpp>
 
 #include <algorithm>
 #include <utility>
+#include <type_traits>
 
 namespace hyperion {
 namespace containers {
@@ -23,10 +25,16 @@ protected:
     using Base = typename DynArray<T>::Base;
 
 public:
-    using Iterator      = typename Base::Iterator;
+    using ValueType = typename Base::ValueType;
+    using KeyType = typename Base::KeyType;
+
+    using Iterator = typename Base::Iterator;
     using ConstIterator = typename Base::ConstIterator;
 
+    static const inline DynString empty = DynString();
+
     static constexpr bool is_utf8 = IsUtf8;
+    static constexpr bool is_ansi = !is_utf8 && (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>);
 
     DynString();
     DynString(const T *str);
@@ -84,12 +92,44 @@ public:
     void Refit()                                                       { Base::Refit(); }
     void Append(const DynString &other);
     void Append(DynString &&other);
+    void Append(T &&value);
+    void Append(const T &value);
     typename Base::ValueType &&PopBack();
     typename Base::ValueType &&PopFront();
     void Clear();
 
     bool StartsWith(const DynString &other) const;
     bool EndsWith(const DynString &other) const;
+
+    template <class Integral>
+    static typename std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>, DynString>
+    ToString(Integral &&value)
+    {
+        SizeType result_size;
+        utf::utf_to_str(value, result_size, nullptr);
+
+        AssertThrow(result_size >= 1);
+
+        DynString result;
+
+        if constexpr (is_ansi) { // can write into memory direct without allocating any more
+            result.Resize(result_size - 1); // String class automatically adds 1 for null character
+            utf::utf_to_str(value, result_size, result.Data());
+        } else {
+            result.Reserve(result_size - 1);  // String class automatically adds 1 for null character
+
+            char *data = new char[result_size];
+            utf::utf_to_str(value, result_size, data);
+
+            for (SizeType i = 0; i < result_size; i++) {
+                result.Append(static_cast<T>(data[i]));
+            }
+
+            delete[] data;
+        }
+
+        return result;
+    }
 
     [[nodiscard]] HashCode GetHashCode() const
         { return Base::GetHashCode(); }
@@ -313,7 +353,7 @@ auto DynString<T, IsUtf8>::operator[](SizeType index) const -> const T
 template <class T, bool IsUtf8>
 void DynString<T, IsUtf8>::Append(const DynString &other)
 {
-    if (Base::m_size + other.Size() + 1 >= Base::m_capacity) {
+    if (Size() + other.Size() + 1 >= Base::m_capacity) {
         if (Base::m_capacity >= Size() + other.Size() + 1) {
             Base::ResetOffsets();
         } else {
@@ -336,7 +376,7 @@ void DynString<T, IsUtf8>::Append(const DynString &other)
 template <class T, bool IsUtf8>
 void DynString<T, IsUtf8>::Append(DynString &&other)
 {
-    if (Base::m_size + other.Size() + 1 >= Base::m_capacity) {
+    if (Size() + other.Size() + 1 >= Base::m_capacity) {
         if (Base::m_capacity >= Size() + other.Size() + 1) {
             Base::ResetOffsets();
         } else {
@@ -357,6 +397,44 @@ void DynString<T, IsUtf8>::Append(DynString &&other)
     m_length += other.m_length;
 
     other.Clear();
+}
+
+template <class T, bool IsUtf8>
+void DynString<T, IsUtf8>::Append(const T &value)
+{
+    if (Size() + 2 >= Base::m_capacity) {
+        if (Base::m_capacity >= Size() + 2) {
+            Base::ResetOffsets();
+        } else {
+            Base::SetCapacity(Base::GetCapacity(Size() + 2));
+        }
+    }
+
+    Base::PopBack(); // current NT char
+
+    new (&Base::m_buffer[Base::m_size++].data_buffer) T(value);
+    Base::PushBack(T{0});
+
+    ++m_length;
+}
+
+template <class T, bool IsUtf8>
+void DynString<T, IsUtf8>::Append(T &&value)
+{
+    if (Size() + 2 >= Base::m_capacity) {
+        if (Base::m_capacity >= Size() + 2) {
+            Base::ResetOffsets();
+        } else {
+            Base::SetCapacity(Base::GetCapacity(Size() + 2));
+        }
+    }
+
+    Base::PopBack(); // current NT char
+
+    new (&Base::m_buffer[Base::m_size++].data_buffer) T(std::forward<T>(value));
+    Base::PushBack(T{0});
+
+    ++m_length;
 }
 
 template <class T, bool IsUtf8>

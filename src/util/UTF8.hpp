@@ -489,7 +489,77 @@ inline u8char *utf16to8(u16char *start, u16char *end, u8char *result)
     return result;
 }
 
+/*! \brief How to use:
+    if buffer length is not known, pass nullptr for \ref{result}.
+    buffer_length will be set to the size needed for \ref{result}.
+    Next, call the function again, passing in the previously mentioned
+    value for \ref{buffer_length}. The resulting string will be written into the provided
+    param, \ref{result}, so it'll need to have \ref{buffer_length} bytes allocated to it. */
+template <class T>
+inline void utf_to_str(T value, SizeType &buffer_length, char *result)
+{
+    T divisor = 1;
+    bool is_negative = 0;
+    SizeType buffer_index = 0;
 
+    if (value < 0) {
+        is_negative = true;
+    }
+
+    if (result == nullptr) {
+        // first call
+        buffer_length = 0;
+
+        while (value / divisor >= 10) {
+            divisor *= 10;
+            ++buffer_length;
+        }
+
+        // for negative sign
+        if (is_negative) {
+            ++buffer_length;
+        }
+
+        // for null char
+        ++buffer_length;
+
+        return; // return after writing buffer_length
+    }
+
+    AssertThrow(buffer_length != 0);
+
+    // don't modify passed in value any more
+    SizeType buffer_length_remaining = buffer_length;
+
+    while (value / divisor >= 10) {
+        divisor *= 10;
+    }
+
+    if (is_negative) {
+        result[buffer_index++] = '-';
+        value *= -1;
+    }
+    
+    while (buffer_length_remaining) {
+        // ASCII table has the number characters in sequence from 0-9 so use the
+        // ASCII value of '0' as the base
+        result[buffer_index++] = '0' + value / divisor;
+        
+        // This removes the most significant digit converting 1337 to 337 because
+        // 1337 % 1000 = 337
+        value = value % divisor;
+        
+        // Adjust the divisor to next lowest position
+        divisor = divisor / 10;
+
+        --buffer_length_remaining;
+    }
+    
+    // NULL terminate the string
+    result[buffer_index] = 0;
+}
+
+#if 0
 class Utf8String {
 public:
     Utf8String()
@@ -750,6 +820,8 @@ private:
     size_t m_size; // buffer size (not length)
     size_t m_length;
 };
+
+#endif
 
 } // namespace utf
 

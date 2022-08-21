@@ -31,7 +31,7 @@ class Engine;
 
 struct SubShader {
     ShaderModule::Type type;
-    ShaderObject       spirv;
+    ShaderObject spirv;
 };
 
 class Shader
@@ -46,11 +46,14 @@ public:
 
     ShaderProgram *GetShaderProgram() const { return m_shader_program.get(); }
 
+    auto &GetSubShaders() { return m_sub_shaders; }
+    const auto &GetSubShaders() const { return m_sub_shaders; }
+
     void Init(Engine *engine);
 
 private:
     std::unique_ptr<ShaderProgram> m_shader_program;
-    std::vector<SubShader>         m_sub_shaders;
+    std::vector<SubShader> m_sub_shaders;
 };
 
 enum class ShaderKey {
@@ -64,7 +67,7 @@ enum class ShaderKey {
 };
 
 struct ShaderMapKey {
-    ShaderKey   key;
+    ShaderKey key;
     std::string name;
 
     bool operator==(const ShaderMapKey &other) const

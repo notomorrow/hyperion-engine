@@ -18,7 +18,7 @@ Material::Material(const char *name)
     : EngineComponentBase(),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
-    size_t len = std::strlen(name);
+    SizeType len = std::strlen(name);
     m_name = new char[len + 1];
     Memory::CopyString(m_name, name);
 
@@ -42,7 +42,7 @@ void Material::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this](...) {
         auto *engine = GetEngine();
 
-        for (size_t i = 0; i < m_textures.Size(); i++) {
+        for (SizeType i = 0; i < m_textures.Size(); i++) {
             if (auto &texture = m_textures.ValueAt(i)) {
                 texture.Init();
             }
@@ -57,7 +57,7 @@ void Material::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](...) {
             auto *engine = GetEngine();
 
-            for (size_t i = 0; i < m_textures.Size(); i++) {
+            for (SizeType i = 0; i < m_textures.Size(); i++) {
                 if (auto &texture = m_textures.ValueAt(i)) {
                     engine->SafeReleaseRenderResource<Texture>(std::move(texture));
                 }
@@ -167,9 +167,9 @@ void Material::EnqueueRenderUpdates()
     
     FixedArray<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids { };
 
-    const size_t num_bound_textures = max_textures_to_set;
+    const SizeType num_bound_textures = max_textures_to_set;
     
-    for (size_t i = 0; i < num_bound_textures; i++) {
+    for (SizeType i = 0; i < num_bound_textures; i++) {
         if (const auto &texture = m_textures.ValueAt(i)) {
             bound_texture_ids[i] = texture->GetId();
         }
