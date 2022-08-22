@@ -22,7 +22,7 @@ void Game::Init(Engine *engine, SystemWindow *window)
     m_is_init = true;
 }
 
-void Game::OnPostInit(Engine *engine)
+void Game::InitGame(Engine *engine)
 {
 }
 

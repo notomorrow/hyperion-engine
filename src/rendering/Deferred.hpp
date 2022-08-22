@@ -86,7 +86,7 @@ private:
     ScreenspaceReflectionRenderer                                              m_ssr;
     DepthPyramidRenderer                                                       m_dpr;
 
-    FixedArray<Ref<Texture>, max_frames_in_flight>                             m_mipmapped_results;
+    FixedArray<Handle<Texture>, max_frames_in_flight>                          m_mipmapped_results;
     std::unique_ptr<Sampler>                                                   m_sampler;
     std::unique_ptr<Sampler>                                                   m_depth_sampler;
 

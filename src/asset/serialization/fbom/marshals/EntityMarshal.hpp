@@ -26,28 +26,28 @@ public:
         out.SetProperty("transform.rotation", FBOMQuaternion(), &in_object.GetTransform().GetRotation());
         out.SetProperty("transform.scale", FBOMVec3f(), &in_object.GetTransform().GetScale());
 
-        out.SetProperty("renderable_attributes.bucket", FBOMUnsignedInt(), in_object.GetRenderableAttributes().bucket);
-        out.SetProperty("renderable_attributes.vertex_attributes", FBOMStruct(sizeof(VertexAttributeSet)), &in_object.GetRenderableAttributes().vertex_attributes);
-        out.SetProperty("renderable_attributes.topology", FBOMUnsignedInt(), in_object.GetRenderableAttributes().topology);
-        out.SetProperty("renderable_attributes.fill_mode", FBOMUnsignedInt(), in_object.GetRenderableAttributes().fill_mode);
-        out.SetProperty("renderable_attributes.cull_faces", FBOMUnsignedInt(), in_object.GetRenderableAttributes().cull_faces);
-        out.SetProperty("renderable_attributes.alpha_blending", FBOMBool(), in_object.GetRenderableAttributes().alpha_blending);
-        out.SetProperty("renderable_attributes.depth_write", FBOMBool(), in_object.GetRenderableAttributes().depth_write);
-        out.SetProperty("renderable_attributes.depth_test", FBOMBool(), in_object.GetRenderableAttributes().depth_test);
-
         out.SetProperty("local_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetLocalAABB());
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
+        // out.SetProperty("renderable_attributes.bucket", FBOMUnsignedInt(), in_object.GetRenderableAttributes().bucket);
+        // out.SetProperty("renderable_attributes.vertex_attributes", FBOMStruct(sizeof(VertexAttributeSet)), &in_object.GetRenderableAttributes().vertex_attributes);
+        // out.SetProperty("renderable_attributes.topology", FBOMUnsignedInt(), in_object.GetRenderableAttributes().topology);
+        // out.SetProperty("renderable_attributes.fill_mode", FBOMUnsignedInt(), in_object.GetRenderableAttributes().fill_mode);
+        // out.SetProperty("renderable_attributes.cull_faces", FBOMUnsignedInt(), in_object.GetRenderableAttributes().cull_faces);
+        // out.SetProperty("renderable_attributes.alpha_blending", FBOMBool(), in_object.GetRenderableAttributes().alpha_blending);
+        // out.SetProperty("renderable_attributes.depth_write", FBOMBool(), in_object.GetRenderableAttributes().depth_write);
+        // out.SetProperty("renderable_attributes.depth_test", FBOMBool(), in_object.GetRenderableAttributes().depth_test);
+
         if (const auto &mesh = in_object.GetMesh()) {
-            out.AddChild(*mesh, true);
+            out.AddChild(*mesh, false);
         }
 
         if (const auto &shader = in_object.GetShader()) {
-            out.AddChild(*shader, true);
+            out.AddChild(*shader, false);
         }
 
         if (const auto &material = in_object.GetMaterial()) {
-            out.AddChild(*material, true);
+            out.AddChild(*material, false);
         }
 
         return { FBOMResult::FBOM_OK };
@@ -95,22 +95,24 @@ public:
 
         RenderableAttributeSet renderable_attributes;
 
-        in.GetProperty("renderable_attributes.bucket").ReadUnsignedInt(&renderable_attributes.bucket);
-        in.GetProperty("renderable_attributes.vertex_attributes").ReadStruct(&renderable_attributes.vertex_attributes);
-        in.GetProperty("renderable_attributes.topology").ReadUnsignedInt(&renderable_attributes.topology);
-        in.GetProperty("renderable_attributes.fill_mode").ReadUnsignedInt(&renderable_attributes.fill_mode);
-        in.GetProperty("renderable_attributes.cull_faces").ReadUnsignedInt(&renderable_attributes.cull_faces);
-        in.GetProperty("renderable_attributes.alpha_blending").ReadBool(&renderable_attributes.alpha_blending);
-        in.GetProperty("renderable_attributes.depth_write").ReadBool(&renderable_attributes.depth_write);
-        in.GetProperty("renderable_attributes.depth_test").ReadBool(&renderable_attributes.depth_test);
+        // in.GetProperty("renderable_attributes.bucket").ReadUnsignedInt(&renderable_attributes.bucket);
+        // in.GetProperty("renderable_attributes.vertex_attributes").ReadStruct(&renderable_attributes.vertex_attributes);
+        // in.GetProperty("renderable_attributes.topology").ReadUnsignedInt(&renderable_attributes.topology);
+        // in.GetProperty("renderable_attributes.fill_mode").ReadUnsignedInt(&renderable_attributes.fill_mode);
+        // in.GetProperty("renderable_attributes.cull_faces").ReadUnsignedInt(&renderable_attributes.cull_faces);
+        // in.GetProperty("renderable_attributes.alpha_blending").ReadBool(&renderable_attributes.alpha_blending);
+        // in.GetProperty("renderable_attributes.depth_write").ReadBool(&renderable_attributes.depth_write);
+        // in.GetProperty("renderable_attributes.depth_test").ReadBool(&renderable_attributes.depth_test);
 
         out_object->SetRenderableAttributes(renderable_attributes);
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Mesh")) {
-                out_object->SetMesh(resources.meshes.Add(node.deserialized.Release<Mesh>()));
+                out_object->SetMesh(Handle<Mesh>(node.deserialized.Cast<Mesh>()));
             } else if (node.GetType().IsOrExtends("Shader")) {
-                out_object->SetShader(resources.shaders.Add(node.deserialized.Release<Shader>()));
+                out_object->SetShader(Handle<Shader>(node.deserialized.Cast<Shader>()));
+            } else if (node.GetType().IsOrExtends("Material")) {
+                out_object->SetMaterial(Handle<Material>(node.deserialized.Cast<Material>()));
             }
         }
 

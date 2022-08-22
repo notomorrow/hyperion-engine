@@ -8,7 +8,7 @@
 namespace hyperion::v2 {
 
 RendererInstance::RendererInstance(
-    Ref<Shader> &&shader,
+    Handle<Shader> &&shader,
     Ref<RenderPass> &&render_pass,
     const RenderableAttributeSet &renderable_attributes
 ) : EngineComponentBase(),
@@ -51,8 +51,10 @@ void RendererInstance::AddEntity(Ref<Entity> &&entity)
 
     // FIXME: thread safety. this could be called from any thread
     AssertThrowMsg(
-        (m_renderable_attributes.vertex_attributes & entity->GetRenderableAttributes().vertex_attributes) == entity->GetRenderableAttributes().vertex_attributes,
-        "Pipeline vertex attributes does not satisfy the required vertex attributes of the entity."
+        (m_renderable_attributes.mesh_attributes.vertex_attributes
+            & entity->GetRenderableAttributes().mesh_attributes.vertex_attributes)
+                == entity->GetRenderableAttributes().mesh_attributes.vertex_attributes,
+        "RendererInstance vertex attributes does not satisfy the required vertex attributes of the entity."
     );
 
     // if (IsInitCalled()) {
@@ -203,7 +205,7 @@ void RendererInstance::Init(Engine *engine)
         }
 
         AssertThrow(m_shader != nullptr);
-        m_shader.Init();
+        m_shader->Init(engine);
 
         for (auto &&entity : m_entities) {
             AssertThrow(entity != nullptr);
@@ -215,13 +217,13 @@ void RendererInstance::Init(Engine *engine)
 
         engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info {
-                .vertex_attributes = m_renderable_attributes.vertex_attributes,
-                .topology          = m_renderable_attributes.topology,
-                .cull_mode         = m_renderable_attributes.cull_faces,
-                .fill_mode         = m_renderable_attributes.fill_mode,
-                .depth_test        = m_renderable_attributes.depth_test,
-                .depth_write       = m_renderable_attributes.depth_write,
-                .blend_enabled     = m_renderable_attributes.alpha_blending,
+                .vertex_attributes = m_renderable_attributes.mesh_attributes.vertex_attributes,
+                .topology          = m_renderable_attributes.mesh_attributes.topology,
+                .cull_mode         = m_renderable_attributes.mesh_attributes.cull_faces,
+                .fill_mode         = m_renderable_attributes.mesh_attributes.fill_mode,
+                .depth_test        = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST),
+                .depth_write       = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE),
+                .blend_enabled     = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING),
                 .shader            = m_shader->GetShaderProgram(),
                 .render_pass       = &m_render_pass->GetRenderPass(),
                 .stencil_state     = m_renderable_attributes.stencil_state
@@ -335,7 +337,7 @@ void RendererInstance::CollectDrawCalls(
     const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
     // check visibility state
-    const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
+    const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.material_attributes.bucket);
 
     m_indirect_renderer.GetDrawState().ResetDrawProxies();
     //m_indirect_renderer.GetDrawState().Reserve(engine, frame, m_entities.size());
@@ -541,7 +543,7 @@ void RendererInstance::Render(Engine *engine, Frame *frame)
             );
 
             // check visibility state
-            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
+            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.material_attributes.bucket);
             
             for (auto &&entity : m_entities) {
                 if (perform_culling) {

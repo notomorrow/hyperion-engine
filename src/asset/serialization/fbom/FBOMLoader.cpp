@@ -354,7 +354,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
                     return err;
                 }
 
-                m_static_data_pool[offset] = FBOMStaticData(object, offset);
+                m_static_data_pool[offset] = FBOMStaticData(std::move(object), offset);
 
                 break;
             }

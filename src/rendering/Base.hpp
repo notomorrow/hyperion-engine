@@ -2,8 +2,10 @@
 #define HYPERION_V2_COMPONENTS_BASE_H
 
 #include <core/Containers.hpp>
-#include <core/lib/StaticString.hpp>
 #include <core/Class.hpp>
+#include <core/Handle.hpp>
+#include <core/lib/TypeMap.hpp>
+#include <core/lib/StaticString.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
@@ -12,6 +14,7 @@
 
 #include <memory>
 #include <atomic>
+#include <type_traits>
 
 
 namespace hyperion::v2 {
@@ -23,9 +26,92 @@ class Engine;
 
 Device *GetEngineDevice(Engine *engine);
 
-// struct FieldInfo {
-//     NativeMemberDefine info;
-// };
+struct AttachmentSet {
+    using Initializer = std::add_pointer_t<void(void *, Engine *)>;
+
+    Initializer init_fn;
+    FlatMap<HandleID, HandleBase> objects;
+};
+
+class AttachmentMap {
+public:
+    void InitializeAll(Engine *engine)
+    {
+        for (auto &it : m_attachments) {
+            for (auto &object_it : it.second.objects) {
+                void *object_ptr = object_it.second.Get();
+
+                it.second.init_fn(object_ptr, engine);
+            }
+        }
+    }
+
+    template <class T>
+    T *Get(const HandleID &id)
+    {
+        TypeMap<AttachmentSet>::Iterator it = m_attachments.Find<T>();
+
+        if (it == m_attachments.End()) {
+            return nullptr;
+        }
+
+        const auto objects_it = it->second.objects.Find(id);
+
+        if (objects_it == it->second.objects.End()) {
+            return nullptr;
+        }
+
+        return static_cast<T *>(objects_it->second.Get());
+    }
+
+    template <class T, class ...Args>
+    void Attach(Handle<T> &&handle, bool init_immediately, Args &&... args)
+    {
+        if (!handle) {
+            return;
+        }
+
+        if (init_immediately) {
+            handle->Init(std::forward<Args>(args)...);
+        }
+
+        auto it = m_attachments.Find<T>();
+
+        if (it == m_attachments.End()) {
+            const auto handle_id = handle.GetID();
+
+            m_attachments.Set<T>(AttachmentSet {
+                .init_fn = [](void *ptr, Engine *engine) {
+                    static_cast<T *>(ptr)->Init(engine);
+                },
+                .objects = FlatMap<HandleID, HandleBase> {
+                    { handle_id, std::move(handle) }
+                }
+            });
+
+            return;
+        }
+
+        it->second.objects.PushBack(std::move(handle));
+    }
+
+    template <class T>
+    bool Detach(const typename Handle<T>::ID &id)
+    {
+        TypeMap<AttachmentSet>::Iterator it = m_attachments.Find<T>();
+
+        if (it == m_attachments.End()) {
+            return false;
+        }
+
+        return it->second.objects.Erase(id);
+    }
+
+private:
+    TypeMap<AttachmentSet> m_attachments;
+};
+
+
 
 template <class T, class ClassName>
 struct StubbedClass : public Class<ClassName> {
@@ -56,43 +142,9 @@ struct ComponentInitInfo {
     ComponentFlagBits flags = 0x0;
 };
 
-// a non-descript ID (no type attached)
-struct IDBase {
-    using ValueType = UInt;
-    
-    HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }
-    HYP_FORCE_INLINE constexpr ValueType Value() const             { return value; }
-    
-    HYP_FORCE_INLINE explicit constexpr operator bool() const      { return bool(value); }
-
-    HYP_FORCE_INLINE constexpr bool operator==(const IDBase &other) const
-        { return value == other.value; }
-
-    HYP_FORCE_INLINE constexpr bool operator!=(const IDBase &other) const
-        { return value != other.value; }
-
-    HYP_FORCE_INLINE constexpr bool operator<(const IDBase &other) const
-        { return value < other.value; }
-
-    HashCode GetHashCode() const
-    {
-        HashCode hc;
-        hc.Add(value);
-
-        return hc;
-    }
-
-    ValueType value{0};
-};
-
-template <class Type>
-struct ComponentID : IDBase {};
-
 class RenderResource {};
 
-class EngineComponentBaseBase {
-
-};
+class EngineComponentBaseBase { };
 
 template <class Type>
 class EngineComponentBase
@@ -149,7 +201,29 @@ public:
 
         m_init_called = true;
         m_engine = engine;
+
+        m_attachment_map.InitializeAll(engine);
     }
+
+    template <class T>
+    void Attach(Handle<T> &&handle)
+        { m_attachment_map.Attach(std::move(handle), m_init_called, m_engine); }
+
+    template <class T>
+    void Attach(const Handle<T> &handle)
+        { m_attachment_map.Attach(handle, m_init_called, m_engine); }
+
+    template <class T>
+    void Detach(const typename Handle<T>::ID &id)
+        { m_attachment_map.Detach(id); }
+
+    template <class T>
+    void Detach(const Handle<T> &handle)
+        { m_attachment_map.Detach(handle); }
+
+    template <class T>
+    T *GetAttachment(const HandleID &id)
+        { return m_attachment_map.Get<T>(id); }
 
 protected:
     using Class = Type;
@@ -188,6 +262,8 @@ protected:
     std::atomic_bool        m_is_ready;
     Engine                 *m_engine;
     ComponentInitInfo       m_init_info;
+
+    AttachmentMap m_attachment_map;
 };
 
 template <class WrappedType>
@@ -299,7 +375,7 @@ protected:
 
 } // namespace hyperion::v2
 
-HYP_DEF_STL_HASH(hyperion::v2::IDBase);
+HYP_DEF_STL_HASH(hyperion::IDBase);
 
 #endif // !HYPERION_V2_COMPONENTS_BASE_H
 

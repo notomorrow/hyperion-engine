@@ -32,7 +32,7 @@ void Voxelizer::Init(Engine *engine)
 
         const auto voxel_map_size_signed = static_cast<Int64>(voxel_map_size);
 
-        m_scene = engine->resources.scenes.Add(new Scene(
+        m_scene = Handle<Scene>(new Scene(
             engine->resources.cameras.Add(new OrthoCamera(
                 voxel_map_size, voxel_map_size,
                 -voxel_map_size_signed, voxel_map_size_signed,
@@ -40,6 +40,8 @@ void Voxelizer::Init(Engine *engine)
                 -voxel_map_size_signed, voxel_map_size_signed
             ))
         ));
+
+        m_scene->Init(engine);
 
         if (m_counter == nullptr) {
             m_counter = std::make_unique<AtomicCounter>();
@@ -101,25 +103,27 @@ void Voxelizer::Init(Engine *engine)
 
 void Voxelizer::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<RendererInstance>(
+    auto renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        RenderableAttributeSet{
-            .bucket            = BUCKET_VOXELIZER,
-            .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-        }
+        RenderableAttributeSet(
+            MeshAttributes {
+                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
+                .cull_faces = FaceCullMode::NONE
+            },
+            MaterialAttributes {
+                .bucket = BUCKET_VOXELIZER,
+                .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
+            }
+        )
     );
-
-    pipeline->SetDepthWrite(false);
-    pipeline->SetDepthTest(false);
-    pipeline->SetFaceCullMode(FaceCullMode::NONE);
     
-    pipeline->AddFramebuffer(m_framebuffer.IncRef());
+    renderer_instance->AddFramebuffer(m_framebuffer.IncRef());
     
-    m_renderer_instance = engine->AddRendererInstance(std::move(pipeline));
+    m_renderer_instance = engine->AddRendererInstance(std::move(renderer_instance));
     
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-        for (auto &entity : pipeline->GetEntities()) {
+    for (auto &item : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &entity : item->GetEntities()) {
             if (entity != nullptr) {
                 m_renderer_instance->AddEntity(entity.IncRef());
             }
@@ -131,7 +135,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
 
 void Voxelizer::CreateShader(Engine *engine)
 {
-    m_shader = engine->resources.shaders.Add(new Shader(
+    m_shader = Handle<Shader>(new Shader(
         std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
             {ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}},
@@ -224,7 +228,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
         Frame frame = Frame::TemporaryFrame(command_buffer, 0);
 
-        engine->render_state.BindScene(m_scene);
+        engine->render_state.BindScene(m_scene.Get());
 
         m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,

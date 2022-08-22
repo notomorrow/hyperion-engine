@@ -20,37 +20,37 @@
 
 namespace hyperion::v2::fbom {
 
-struct FBOMDeserializedObject : RefCountedPtr<Any> {
-    FBOMDeserializedObject()
-        : RefCountedPtr<Any>()
-    {
-    }
+class FBOMDeserializedObject : public AtomicRefCountedPtr<void>
+{
+protected:
+    using Base = AtomicRefCountedPtr<void>;
 
-    FBOMDeserializedObject(Any &&value)
-        : RefCountedPtr<Any>(std::forward<Any>(value))
+public:
+    FBOMDeserializedObject()
+        : Base()
     {
     }
 
     FBOMDeserializedObject(const FBOMDeserializedObject &other)
-        : RefCountedPtr<Any>(other)
+        : Base(other)
     {
     }
 
     FBOMDeserializedObject &operator=(const FBOMDeserializedObject &other)
     {
-        RefCountedPtr<Any>::operator=(other);
+        Base::operator=(other);
 
         return *this;
     }
 
     FBOMDeserializedObject(FBOMDeserializedObject &&other) noexcept
-        : RefCountedPtr<Any>(std::forward<FBOMDeserializedObject>(other))
+        : Base(std::forward<FBOMDeserializedObject>(other))
     {
     }
 
     FBOMDeserializedObject &operator=(FBOMDeserializedObject &&other) noexcept
     {
-        RefCountedPtr<Any>::operator=(std::forward<FBOMDeserializedObject>(other));
+        Base::operator=(std::forward<FBOMDeserializedObject>(other));
 
         return *this;
     }
@@ -61,24 +61,23 @@ struct FBOMDeserializedObject : RefCountedPtr<Any> {
     template <class T>
     auto Get() -> NormalizedType<T>&
     {
-        AssertThrow(RefCountedPtr<Any>::m_ref != nullptr);
+        AssertThrow(Base::Get() != nullptr);
+        AssertThrow(Base::GetTypeID() == TypeID::ForType<NormalizedType<T>>());
 
-        return RefCountedPtr<Any>::Get()->Get<NormalizedType<T>>();
+        return *Base::Cast<NormalizedType<T>>();
     }
 
     /*! \brief Extracts the value held inside the Any */
     template <class T>
     auto Get() const -> const NormalizedType<T>&
     {
-        AssertThrow(RefCountedPtr<Any>::m_ref != nullptr);
-
-        return RefCountedPtr<Any>::Get()->Get<NormalizedType<T>>();
+        return const_cast<FBOMDeserializedObject *>(this)->template Get<T>();
     }
 
-    template <class T, class ...Args>
-    void Set(Args &&... args)
+    template <class T>
+    void Set(T &&value)
     {
-        RefCountedPtr<Any>::Set(Any::Construct<NormalizedType<T>, Args...>(std::forward<Args>(args)...));
+        Base::template Set<NormalizedType<T>>(std::move(value));
     }
 
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
@@ -87,10 +86,7 @@ struct FBOMDeserializedObject : RefCountedPtr<Any> {
     template <class T>
     void Reset(T *ptr)
     {
-        auto *any = new Any();
-        any->Reset(ptr);
-
-        RefCountedPtr<Any>::Reset(any); // take ownership
+        Base::template Reset<NormalizedType<T>>(ptr); // take ownership
     }
 
     /*! \brief Drops ownership of the object from the {Any} held inside.
@@ -102,17 +98,19 @@ struct FBOMDeserializedObject : RefCountedPtr<Any> {
     template <class T>
     [[nodiscard]] T *Release()
     {
-        auto *any_ptr = RefCountedPtr<Any>::Get();
+        // AssertThrow(false);
+        return nullptr;
+        // auto *ptr = RefCountedPtr<void>::Get();
         
-        if (!any_ptr) {
-            return nullptr;
-        }
+        // if (!ptr) {
+        //     return nullptr;
+        // }
 
-        auto *held_ptr = any_ptr->Release<NormalizedType<T>>();
+        // auto *ptr = any_ptr->Release<NormalizedType<T>>();
 
-        RefCountedPtr<Any>::Reset();
+        // RefCountedPtr<Any>::Reset();
 
-        return held_ptr;
+        // return held_ptr;
     }
 };
 

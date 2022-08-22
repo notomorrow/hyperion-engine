@@ -44,8 +44,8 @@ public:
 
     Scene *GetScene() const { return m_scene; }
 
-    void AddLight(Ref<Light> &&light);
-    void RemoveLight(Ref<Light> &&light);
+    void AddLight(Handle<Light> &&light);
+    void RemoveLight(Handle<Light> &&light);
     // Call from render thread only!
     SizeType NumLights() const { return m_lights.Size(); }
 
@@ -140,33 +140,33 @@ private:
 
     Scene *m_scene;
 
-    std::atomic<RenderEnvironmentUpdates>                         m_update_marker{RENDER_ENVIRONMENT_UPDATES_NONE};
+    std::atomic<RenderEnvironmentUpdates> m_update_marker{RENDER_ENVIRONMENT_UPDATES_NONE};
 
-    Queue<Ref<Entity>>                                            m_entities_pending_addition;
-    Queue<Ref<Entity>>                                            m_entities_pending_removal;
-    Queue<Ref<Entity>>                                            m_entity_renderable_attribute_updates;
-    BinarySemaphore                                               m_entity_update_sp;
+    Queue<Ref<Entity>> m_entities_pending_addition;
+    Queue<Ref<Entity>> m_entities_pending_removal;
+    Queue<Ref<Entity>> m_entity_renderable_attribute_updates;
+    BinarySemaphore m_entity_update_sp;
 
-    ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
-    ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
-    FlatSet<RenderComponentPendingRemovalEntry>                   m_render_components_pending_removal;
-    UInt32                                                        m_current_enabled_render_components_mask;
-    UInt32                                                        m_next_enabled_render_components_mask;
+    ComponentSetUnique<RenderComponentBase> m_render_components; // only touch from render thread
+    ComponentSetUnique<RenderComponentBase> m_render_components_pending_addition;
+    FlatSet<RenderComponentPendingRemovalEntry> m_render_components_pending_removal;
+    UInt32 m_current_enabled_render_components_mask;
+    UInt32 m_next_enabled_render_components_mask;
 
-    FlatMap<Light::ID, Ref<Light>>                                m_lights;
-    Queue<Ref<Light>>                                             m_lights_pending_addition;
-    Queue<Ref<Light>>                                             m_lights_pending_removal;
-    BinarySemaphore                                               m_light_update_sp;
+    FlatMap<Light::ID, Handle<Light>> m_lights;
+    Queue<Handle<Light>> m_lights_pending_addition;
+    Queue<Handle<Light>> m_lights_pending_removal;
+    BinarySemaphore m_light_update_sp;
 
-    FlatMap<EnvProbe::ID, Ref<EnvProbe>>                          m_env_probes;
-    Queue<Ref<EnvProbe>>                                          m_env_probes_pending_addition;
-    Queue<Ref<EnvProbe>>                                          m_env_probes_pending_removal;
-    BinarySemaphore                                               m_env_probes_update_sp;
+    FlatMap<EnvProbe::ID, Ref<EnvProbe>> m_env_probes;
+    Queue<Ref<EnvProbe>> m_env_probes_pending_addition;
+    Queue<Ref<EnvProbe>> m_env_probes_pending_removal;
+    BinarySemaphore m_env_probes_update_sp;
 
-    float                                                         m_global_timer;
+    float m_global_timer;
 
-    BinarySemaphore                                               m_render_component_sp;
-    AtomicLock                                                    m_updating_render_components;
+    BinarySemaphore m_render_component_sp;
+    AtomicLock m_updating_render_components;
 };
 
 } // namespace hyperion::v2

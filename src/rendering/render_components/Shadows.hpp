@@ -25,13 +25,13 @@ public:
     ShadowPass &operator=(const ShadowPass &other) = delete;
     ~ShadowPass();
 
-    Ref<Scene> &GetScene()                  { return m_scene; }
-    const Ref<Scene> &GetScene() const      { return m_scene; }
+    Handle<Scene> &GetScene() { return m_scene; }
+    const Handle<Scene> &GetScene() const { return m_scene; }
 
-    Ref<Light> &GetLight()                  { return m_light; }
-    const Ref<Light> &GetLight() const      { return m_light; }
+    Handle<Light> &GetLight() { return m_light; }
+    const Handle<Light> &GetLight() const { return m_light; }
 
-    void SetLight(Ref<Light> &&light)
+    void SetLight(Handle<Light> &&light)
     {
         m_light = std::move(light);
 
@@ -77,21 +77,21 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-    Ref<Scene>                                               m_scene;
-    Ref<Light>                                               m_light;
-    Scene::ID                                                m_parent_scene_id;
-    Vector3                                                  m_origin;
-    float                                                    m_max_distance;
-    UInt                                                     m_shadow_map_index;
-    Extent2D                                                 m_dimensions;
+    Handle<Scene> m_scene;
+    Handle<Light> m_light;
+    Scene::ID m_parent_scene_id;
+    Vector3 m_origin;
+    float m_max_distance;
+    UInt m_shadow_map_index;
+    Extent2D m_dimensions;
 };
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)>, public RenderComponent<ShadowRenderer> {
 public:
     static constexpr RenderComponentName component_name = RENDER_COMPONENT_SHADOWS;
 
-    ShadowRenderer(Ref<Light> &&light);
-    ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance);
+    ShadowRenderer(Handle<Light> &&light);
+    ShadowRenderer(Handle<Light> &&light, const Vector3 &origin, float max_distance);
     ShadowRenderer(const ShadowRenderer &other) = delete;
     ShadowRenderer &operator=(const ShadowRenderer &other) = delete;
     virtual ~ShadowRenderer();
@@ -102,7 +102,7 @@ public:
     const Vector3 &GetOrigin() const      { return m_shadow_pass.GetOrigin(); }
     void SetOrigin(const Vector3 &origin) { m_shadow_pass.SetOrigin(origin); }
 
-    void SetParentScene(const Ref<Scene> &parent_scene)
+    void SetParentScene(const Handle<Scene> &parent_scene)
     {
         if (parent_scene != nullptr) {
             m_shadow_pass.SetParentScene(parent_scene->GetId());

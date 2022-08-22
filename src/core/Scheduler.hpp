@@ -51,7 +51,7 @@ struct ScheduledFunction {
     using Function = std::function<ReturnType(Args...)>;
 
     ScheduledFunctionId id;
-    Function            fn;
+    Function fn;
 
     constexpr static ScheduledFunctionId empty_id = ScheduledFunctionId{0};
 
@@ -126,7 +126,7 @@ public:
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
 
-    HYP_FORCE_INLINE uint32_t NumEnqueued() const { return m_num_enqueued.load(); }
+    HYP_FORCE_INLINE UInt NumEnqueued() const { return m_num_enqueued.load(); }
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
      * called from a non-owner thread. */

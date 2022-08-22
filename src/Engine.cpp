@@ -7,8 +7,9 @@
 #include <rendering/Compute.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/vct/VoxelConeTracing.hpp>
-
 #include <rendering/backend/RendererFeatures.hpp>
+
+#include <Game.hpp>
 
 #include <builders/MeshBuilder.hpp>
 
@@ -33,9 +34,6 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
-
-    //game_thread.Join(); // stop looping in game thread
-    
     callbacks.Trigger(EngineCallback::DESTROY_ANY, this);
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
@@ -177,7 +175,7 @@ void Engine::PrepareFinalPass()
     m_full_screen_quad = resources.meshes.Add(MeshBuilder::Quad().release());
     m_full_screen_quad.Init();
 
-    auto shader = resources.shaders.Add(new Shader(
+    auto shader = Handle<Shader>(new Shader(
         std::vector<SubShader> {
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
@@ -257,13 +255,17 @@ void Engine::PrepareFinalPass()
             render_pass->Init(this);
 
             m_root_pipeline = std::make_unique<RendererInstance>(
-                shader.IncRef(),
+                std::move(shader),
                 render_pass.IncRef(),
-                RenderableAttributeSet{
-                    .bucket            = BUCKET_SWAPCHAIN,
-                    .vertex_attributes = renderer::static_mesh_vertex_attributes,
-                    .fill_mode         = FillMode::FILL  
-                }
+                RenderableAttributeSet(
+                    MeshAttributes {
+                        .vertex_attributes = renderer::static_mesh_vertex_attributes,
+                        .fill_mode = FillMode::FILL
+                    },
+                    MaterialAttributes {
+                        .bucket = BUCKET_SWAPCHAIN
+                    }
+                )
             );
         }
 
@@ -516,7 +518,7 @@ void Engine::Initialize()
 
     AssertThrowMsg(AudioManager::GetInstance()->Initialize(), "Failed to initialize audio device");
 
-    m_running = true;
+    m_running.store(true);
 
     PrepareFinalPass();
 }
@@ -570,40 +572,108 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 
     task_system.Start();
+
+    m_is_render_loop_active = true;
 }
 
-Ref<RendererInstance> Engine::FindOrCreateRendererInstance(const RenderableAttributeSet &renderable_attributes)
+void Engine::RequestStop()
 {
-    const auto it = m_renderer_instance_mapping.Find(renderable_attributes);
+    Threads::AssertOnThread(THREAD_RENDER);
 
-    if (it != m_renderer_instance_mapping.End()) {
-        return resources.renderer_instances.Lookup(it->second);
+    task_system.Stop();
+
+    m_running.store(false);
+    m_is_stopping = true;    
+}
+
+void Engine::FinalizeStop()
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertThrow(m_is_stopping = true);
+    AssertThrow(!game_thread.IsRunning());
+
+    m_is_render_loop_active = false;
+
+    // while (game_thread.IsRunning()) {
+    //     HYP_FLUSH_RENDER_QUEUE(this);
+    // }
+
+    game_thread.Join();
+}
+
+void Engine::RenderNextFrame(Game *game)
+{
+    if (m_is_stopping && !game_thread.IsRunning()) {
+        FinalizeStop();
+
+        return;
     }
 
-    auto &render_list_bucket = m_render_list_container.Get(renderable_attributes.bucket);
+    HYPERION_ASSERT_RESULT(GetInstance()->GetFrameHandler()->PrepareFrame(
+        GetInstance()->GetDevice(),
+        GetInstance()->GetSwapchain()
+    ));
 
-    auto shader = resources.shaders.Lookup(renderable_attributes.shader_id);
-    AssertThrow(shader != nullptr);
+    auto *frame = GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<renderer::Frame>();
+    auto *command_buffer = frame->GetCommandBuffer();
+    const auto frame_index = GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
+
+    PreFrameUpdate(frame);
+
+    /* === rendering === */
+    HYPERION_ASSERT_RESULT(frame->BeginCapture(GetInstance()->GetDevice()));
+
+    game->OnFrameBegin(this, frame);
+
+    RenderDeferred(frame);
+    RenderFinalPass(frame);
+
+    HYPERION_ASSERT_RESULT(frame->EndCapture(GetInstance()->GetDevice()));
+    HYPERION_ASSERT_RESULT(frame->Submit(&GetInstance()->GetGraphicsQueue()));
+
+    game->OnFrameEnd(this, frame);
+
+    GetInstance()->GetFrameHandler()->PresentFrame(&GetInstance()->GetGraphicsQueue(), GetInstance()->GetSwapchain());
+    GetInstance()->GetFrameHandler()->NextFrame();
+}
+
+Ref<RendererInstance> Engine::FindOrCreateRendererInstance(const Handle<Shader> &shader, const RenderableAttributeSet &renderable_attributes)
+{
+    if (!shader) {
+        return nullptr;
+    }
+
+    RenderableAttributeSet new_renderable_attributes(renderable_attributes);
+    new_renderable_attributes.shader_id = shader->GetId();
+
+    const auto it = m_renderer_instance_mapping.Find(new_renderable_attributes);
+
+    if (it != m_renderer_instance_mapping.End()) {
+        return it->second.IncRef();
+    }
+
+    auto &render_list_bucket = m_render_list_container.Get(new_renderable_attributes.material_attributes.bucket);
 
     // create a pipeline with the given params
     return AddRendererInstance(std::make_unique<RendererInstance>(
-        std::move(shader),
+        Handle<Shader>(shader),
         render_list_bucket.GetRenderPass().IncRef(),
-        renderable_attributes
+        new_renderable_attributes
     ));
 }
     
-Ref<RendererInstance> Engine::AddRendererInstance(std::unique_ptr<RendererInstance> &&pipeline)
+Ref<RendererInstance> Engine::AddRendererInstance(std::unique_ptr<RendererInstance> &&_renderer_instance)
 {
-    auto renderer_instance = resources.renderer_instances.Add(pipeline.release());
+    auto renderer_instance = resources.renderer_instances.Add(_renderer_instance.release());
     
     m_renderer_instance_mapping.Insert(
         renderer_instance->GetRenderableAttributes(),
-        renderer_instance->GetId()
+        renderer_instance.IncRef()
     );
 
     m_render_list_container
-        .Get(renderer_instance->GetRenderableAttributes().bucket)
+        .Get(renderer_instance->GetRenderableAttributes().material_attributes.bucket)
         .AddRendererInstance(renderer_instance.IncRef());
 
     return renderer_instance;

@@ -49,10 +49,10 @@ FBOMResult FBOMWriter::Emit(ByteWriter *out)
 
 FBOMResult FBOMWriter::WriteExternalObjects()
 {
-    for (const auto &it : m_write_stream.m_external_objects) {
+    for (auto &it : m_write_stream.m_external_objects) {
         FBOMWriter chunk_writer;
 
-        for (const auto &objects_it : it.second.objects) {
+        for (auto &objects_it : it.second.objects) {
             FBOMObject object(objects_it.second);
 
             // set to empty to not keep recursing. we only write the external data once.
@@ -179,8 +179,6 @@ FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
 
         auto &external_object = m_write_stream.m_external_objects[object.GetExternalObjectKey()];
         external_object.objects[object.GetHashCode().Value()] = object;
-
-        // return FBOMResult::FBOM_OK;
     }
 
     out->Write<UInt8>(FBOM_OBJECT_START);
@@ -366,7 +364,7 @@ void FBOMWriter::AddStaticData(const FBOMType &type)
 
     if (it == m_write_stream.m_static_data.end()) {
         sd.offset = m_write_stream.m_static_data_offset++;
-        m_write_stream.m_static_data[hash_code] = sd;
+        m_write_stream.m_static_data[hash_code] = std::move(sd);
     }
 }
 
@@ -384,7 +382,7 @@ void FBOMWriter::AddStaticData(const FBOMObject &object)
 
     if (it == m_write_stream.m_static_data.end()) {
         sd.offset = m_write_stream.m_static_data_offset++;
-        m_write_stream.m_static_data[hash_code] = sd;
+        m_write_stream.m_static_data[hash_code] = std::move(sd);
     }
 }
 
@@ -402,7 +400,7 @@ void FBOMWriter::AddStaticData(const FBOMData &data)
 
     if (it == m_write_stream.m_static_data.end()) {
         sd.offset = m_write_stream.m_static_data_offset++;
-        m_write_stream.m_static_data[hash_code] = sd;
+        m_write_stream.m_static_data[hash_code] = std::move(sd);
     }
 }
 

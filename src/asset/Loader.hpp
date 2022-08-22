@@ -74,7 +74,7 @@ public:
     using Object  = LoaderObject<T, Format>;
     
     struct Handler {
-        std::function<LoaderResult(LoaderState *, Object &)>     load_fn;
+        std::function<LoaderResult(LoaderState *, Object &)> load_fn;
         std::function<std::unique_ptr<FinalType>(Engine *engine, const Object &)> build_fn;
     };
 

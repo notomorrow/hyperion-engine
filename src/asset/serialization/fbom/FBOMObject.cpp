@@ -16,19 +16,27 @@ FBOMObject::FBOMObject(const FBOMType &loader_type)
 
 FBOMObject::FBOMObject(const FBOMObject &other)
     : m_object_type(other.m_object_type),
-      nodes(new FBOMNodeHolder(*other.nodes)),
+      nodes(nullptr),
       properties(other.properties),
       deserialized(other.deserialized),
       m_external_info(other.m_external_info)
 {
+    if (other.nodes) {
+        nodes = new FBOMNodeHolder(*other.nodes);
+    } else {
+        nodes = new FBOMNodeHolder();
+    }
 }
 
 auto FBOMObject::operator=(const FBOMObject &other) -> FBOMObject&
 {
-    delete nodes;
+    if (other.nodes) {
+        *nodes = *other.nodes;
+    } else {
+        nodes->Clear();
+    }
 
     m_object_type = other.m_object_type;
-    nodes = new FBOMNodeHolder(*other.nodes);
     properties = other.properties;
     deserialized = other.deserialized;
     m_external_info = other.m_external_info;
@@ -38,19 +46,21 @@ auto FBOMObject::operator=(const FBOMObject &other) -> FBOMObject&
 
 FBOMObject::FBOMObject(FBOMObject &&other) noexcept
     : m_object_type(std::move(other.m_object_type)),
-      nodes(new FBOMNodeHolder(std::move(*other.nodes))),
+      nodes(other.nodes),
       properties(std::move(other.properties)),
       deserialized(std::move(other.deserialized)),
       m_external_info(std::move(other.m_external_info))
 {
+    other.nodes = nullptr;
 }
 
 auto FBOMObject::operator=(FBOMObject &&other) noexcept -> FBOMObject&
 {
-    delete nodes;
+    nodes->Clear();
+
+    std::swap(nodes, other.nodes);
 
     m_object_type = std::move(other.m_object_type);
-    nodes = new FBOMNodeHolder(std::move(*other.nodes));
     properties = std::move(other.properties);
     deserialized = std::move(other.deserialized);
     m_external_info = std::move(other.m_external_info);
@@ -60,7 +70,9 @@ auto FBOMObject::operator=(FBOMObject &&other) noexcept -> FBOMObject&
 
 FBOMObject::~FBOMObject()
 {
-    delete nodes;
+    if (nodes) {
+        delete nodes;
+    }
 }
 
 const FBOMData &FBOMObject::GetProperty(const String &key) const
@@ -92,16 +104,6 @@ void FBOMObject::SetProperty(const String &key, const FBOMType &type, const void
     AssertThrowMsg(!type.IsUnbouned(), "Cannot determine size of an unbounded type, please manually specify size");
 
     SetProperty(key, type, type.size, bytes);
-}
-
-void FBOMObject::AddChild(const FBOMObject &object, const String &external_object_key)
-{
-    FBOMObject _object(object);
-    _object.SetExternalObjectInfo(FBOMExternalObjectInfo {
-        .key = external_object_key
-    });
-
-    nodes->PushBack(std::move(_object));
 }
 
 void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)

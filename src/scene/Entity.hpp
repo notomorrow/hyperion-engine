@@ -59,17 +59,18 @@ class Entity :
     friend class Scene;
 
 public:
+    Entity();
+
     Entity(
-        Ref<Mesh> &&mesh = nullptr,
-        Ref<Shader> &&shader = nullptr,
-        Ref<Material> &&material = nullptr,
-        const ComponentInitInfo &init_info = {}
+        Handle<Mesh> &&mesh,
+        Handle<Shader> &&shader,
+        Handle<Material> &&material
     );
 
     Entity(
-        Ref<Mesh> &&mesh,
-        Ref<Shader> &&shader,
-        Ref<Material> &&material,
+        Handle<Mesh> &&mesh,
+        Handle<Shader> &&shader,
+        Handle<Material> &&material,
         const RenderableAttributeSet &renderable_attributes,
         const ComponentInitInfo &init_info = {}
     );
@@ -87,37 +88,37 @@ public:
     void SetShaderDataState(ShaderDataState state)
         { m_shader_data_state = state; }
     
-    Ref<Mesh> &GetMesh()
+    Handle<Mesh> &GetMesh()
         { return m_mesh; }
 
-    const Ref<Mesh> &GetMesh() const
+    const Handle<Mesh> &GetMesh() const
         { return m_mesh; }
 
-    void SetMesh(Ref<Mesh> &&mesh);
+    void SetMesh(Handle<Mesh> &&mesh);
 
-    Ref<Skeleton> &GetSkeleton()
+    Handle<Skeleton> &GetSkeleton()
         { return m_skeleton; }
 
-    const Ref<Skeleton> &GetSkeleton() const
+    const Handle<Skeleton> &GetSkeleton() const
         { return m_skeleton; }
 
-    void SetSkeleton(Ref<Skeleton> &&skeleton);
+    void SetSkeleton(Handle<Skeleton> &&skeleton);
 
-    Ref<Shader> &GetShader()
+    Handle<Shader> &GetShader()
         { return m_shader; }
 
-    const Ref<Shader> &GetShader() const
+    const Handle<Shader> &GetShader() const
         { return m_shader; }
 
-    void SetShader(Ref<Shader> &&shader);
+    void SetShader(Handle<Shader> &&shader);
 
-    Ref<Material> &GetMaterial()
+    Handle<Material> &GetMaterial()
         { return m_material; }
 
-    const Ref<Material> &GetMaterial() const
+    const Handle<Material> &GetMaterial() const
         { return m_material; }
 
-    void SetMaterial(Ref<Material> &&material);
+    void SetMaterial(Handle<Material> &&material);
 
     Node *GetParent() const
         { return m_node; }
@@ -137,18 +138,18 @@ public:
 
     void SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes);
 
-    void SetMeshAttributes(
-        VertexAttributeSet vertex_attributes,
-        FaceCullMode face_cull_mode = FaceCullMode::BACK,
-        bool depth_write = true,
-        bool depth_test = true
-    );
+    // void SetMeshAttributes(
+    //     VertexAttributeSet vertex_attributes,
+    //     FaceCullMode face_cull_mode = FaceCullMode::BACK,
+    //     bool depth_write = true,
+    //     bool depth_test = true
+    // );
 
-    void SetMeshAttributes(
-        FaceCullMode face_cull_mode = FaceCullMode::BACK,
-        bool depth_write = true,
-        bool depth_test = true
-    );
+    // void SetMeshAttributes(
+    //     FaceCullMode face_cull_mode = FaceCullMode::BACK,
+    //     bool depth_write = true,
+    //     bool depth_test = true
+    // );
 
     void SetStencilAttributes(const StencilState &stencil_state);
 
@@ -156,7 +157,7 @@ public:
         { return m_primary_renderer_instance.renderer_instance; }
 
     Bucket GetBucket() const
-        { return m_renderable_attributes.bucket; }
+        { return m_renderable_attributes.material_attributes.bucket; }
 
     void SetBucket(Bucket bucket);
 
@@ -249,13 +250,13 @@ private:
 
     void RemoveFromOctree(Engine *engine);
 
-    Ref<Mesh> m_mesh;
-    Ref<Shader> m_shader;
+    Handle<Mesh> m_mesh;
+    Handle<Shader> m_shader;
     Transform m_transform;
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
-    Ref<Material> m_material;
-    Ref<Skeleton> m_skeleton;
+    Handle<Material> m_material;
+    Handle<Skeleton> m_skeleton;
     Node *m_node;
     Scene *m_scene;
 

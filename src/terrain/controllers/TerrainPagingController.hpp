@@ -45,7 +45,7 @@ private:
 
     UInt m_update_log_timer = 0;
 
-    Ref<Material>  m_material;
+    Handle<Material> m_material;
 
     BinarySemaphore m_terrain_generation_sp;
     std::atomic_bool m_terrain_generation_flag;

@@ -338,11 +338,11 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             continue;
         }
 
-        Ref<Material> material;
+        Handle<Material> material;
 
         if (!obj_mesh.material.empty() && material_library != nullptr) {
             if (material_library->Has(obj_mesh.material)) {
-                material = material_library->Get(obj_mesh.material).IncRef();
+                material = material_library->Get(obj_mesh.material);
             } else {
                 DebugLog(
                     LogType::Warn,
@@ -354,10 +354,10 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
         engine->resources.Lock([&](Resources &resources) {
             if (material == nullptr) {
-                material = resources.materials.Add(new Material());
+                material = Handle<Material>(new Material());
             }
 
-            auto mesh = resources.meshes.Add(new Mesh(
+            auto mesh = Handle<Mesh>(new Mesh(
                 vertices, 
                 indices,
                 Topology::TRIANGLES
@@ -371,17 +371,22 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto vertex_attributes = mesh->GetVertexAttributes();
 
-            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
+            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
             auto entity = resources.entities.Add(new Entity(
                 std::move(mesh),
                 std::move(shader),
                 std::move(material),
-                RenderableAttributeSet {
-                    .bucket            = Bucket::BUCKET_OPAQUE,
-                    .shader_id         = shader_id,
-                    .vertex_attributes = vertex_attributes
-                }
+                RenderableAttributeSet(
+                    MeshAttributes {
+                        .vertex_attributes = vertex_attributes
+                    },
+                    MaterialAttributes {
+                        .bucket = Bucket::BUCKET_OPAQUE
+                    },
+                    shader_id
+                ),
+                { }
             ));
             
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());

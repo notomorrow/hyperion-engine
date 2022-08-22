@@ -60,33 +60,6 @@ enum FBOMCommand : UInt8 {
     FBOM_DEFINE_PROPERTY,
 };
 
-using FBOMDeserializeFunction = std::function<FBOMResult(FBOMLoader *, FBOMObject *, FBOMDeserialized &)>;
-using FBOMSerializeFunction = std::function<FBOMResult(const FBOMWriter *, FBOMLoadable *, FBOMObject *)>;
-
-struct FBOMMarshal {
-    FBOMMarshal(FBOMDeserializeFunction deserializer, FBOMSerializeFunction serializer)
-        : m_deserializer(deserializer),
-          m_serializer(serializer)
-    {
-    }
-
-    FBOMDeserializeFunction m_deserializer;
-    FBOMSerializeFunction m_serializer;
-};
-
-#define FBOM_DEF_DESERIALIZER(l, in, out) \
-    static inline fbom::FBOMResult FBOM_Deserialize(fbom::FBOMLoader *l, fbom::FBOMObject *in, fbom::FBOMDeserialized &out)
-#define FBOM_DEF_SERIALIZER(w, in, out) \
-    static inline fbom::FBOMResult FBOM_Serialize(const fbom::FBOMWriter *w, fbom::FBOMLoadable *in, fbom::FBOMObject *out)
-#define FBOM_GET_DESERIALIZER(kls) \
-    &kls::FBOM_Deserialize
-#define FBOM_GET_SERIALIZER(kls) \
-    &kls::FBOM_Serialize
-
-#define FBOM_MARSHAL_CLASS(kls) \
-    FBOMMarshal(FBOM_GET_DESERIALIZER(kls), FBOM_GET_SERIALIZER(kls))
-
-
 enum FBOMDataLocation {
     FBOM_DATA_LOCATION_NONE = 0x00,
     FBOM_DATA_LOCATION_STATIC = 0x01,
@@ -145,6 +118,9 @@ struct FBOMStaticData {
         //   raw_data(other.raw_data),
           offset(other.offset),
           written(other.written) {}
+
+    // FBOMStaticData(const FBOMStaticData &other) = delete;
+
     FBOMStaticData &operator=(const FBOMStaticData &other)
     {
         type = other.type;
@@ -154,6 +130,37 @@ struct FBOMStaticData {
         // raw_data = other.raw_data;
         offset = other.offset;
         written = other.written;
+
+        return *this;
+    }
+
+    // FBOMStaticData &operator=(const FBOMStaticData &other) = delete;
+
+    FBOMStaticData(FBOMStaticData &&other) noexcept
+        : type(other.type),
+          object_data(std::move(other.object_data)),
+          type_data(std::move(other.type_data)),
+          data_data(std::move(other.data_data)),
+          offset(other.offset),
+          written(other.written)
+    {
+        other.type = FBOM_STATIC_DATA_NONE;
+        other.offset = 0;
+        other.written = false;
+    }
+
+    FBOMStaticData &operator=(FBOMStaticData &&other) noexcept
+    {
+        type = other.type;
+        object_data = std::move(other.object_data);
+        type_data = std::move(other.type_data);
+        data_data = std::move(other.data_data);
+        offset = other.offset;
+        written = other.written;
+
+        other.type = FBOM_STATIC_DATA_NONE;
+        other.offset = 0;
+        other.written = false;
 
         return *this;
     }

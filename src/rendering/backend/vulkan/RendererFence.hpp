@@ -17,12 +17,12 @@ public:
     Fence &operator=(const Fence &other) = delete;
     ~Fence();
 
-    inline VkFence &GetHandle()             { return m_handle; }
+    inline VkFence &GetHandle() { return m_handle; }
     inline const VkFence &GetHandle() const { return m_handle; }
 
     Result Create(Device *device);
     Result Destroy(Device *device);
-    Result WaitForGpu(Device *device, bool timeout_loop = false, VkResult *out_result = nullptr);
+    Result WaitForGPU(Device *device, bool timeout_loop = false, VkResult *out_result = nullptr);
     Result Reset(Device *device);
 
 private:

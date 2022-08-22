@@ -31,7 +31,7 @@ public:
     virtual void Init(Engine *engine, SystemWindow *window);
     virtual void Teardown(Engine *engine);
 
-    virtual void OnPostInit(Engine *engine);
+    virtual void InitGame(Engine *engine);
     virtual void OnFrameBegin(Engine *engine, Frame *frame) = 0;
     virtual void OnFrameEnd(Engine *engine, Frame *frame) = 0;
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) = 0;

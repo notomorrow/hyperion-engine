@@ -3,6 +3,7 @@
 
 #include "Base.hpp"
 #include "Shader.hpp"
+#include "RenderableAttributes.hpp"
 
 #include <math/BoundingBox.hpp>
 
@@ -65,21 +66,23 @@ public:
     Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();
 
-    VertexBuffer *GetVertexBuffer() const                          { return m_vbo.get(); }
-    IndexBuffer *GetIndexBuffer() const                            { return m_ibo.get(); }
+    VertexBuffer *GetVertexBuffer() const { return m_vbo.get(); }
+    IndexBuffer *GetIndexBuffer() const { return m_ibo.get(); }
                                                                    
-    const std::vector<Vertex> &GetVertices() const                 { return m_vertices; }
-    const std::vector<Index> &GetIndices() const                   { return m_indices; }
+    const std::vector<Vertex> &GetVertices() const { return m_vertices; }
+    const std::vector<Index> &GetIndices() const { return m_indices; }
 
-    SizeType NumIndices() const                                    { return m_indices_count; }
+    SizeType NumIndices() const { return m_indices_count; }
 
-    const VertexAttributeSet &GetVertexAttributes() const          { return m_vertex_attributes; }
-    void SetVertexAttributes(const VertexAttributeSet &attributes) { m_vertex_attributes = attributes; }
+    const VertexAttributeSet &GetVertexAttributes() const { return m_mesh_attributes.vertex_attributes; }
+    void SetVertexAttributes(const VertexAttributeSet &attributes) { m_mesh_attributes.vertex_attributes = attributes; }
 
-    Flags GetFlags() const                                         { return m_flags; }
-    void SetFlags(Flags flags)                                     { m_flags = flags; }
+    const MeshAttributes &GetRenderAttributes() const { return m_mesh_attributes; }
 
-    Topology GetTopology() const                                   { return m_topology; }
+    Topology GetTopology() const { return m_mesh_attributes.topology; }
+
+    Flags GetFlags() const { return m_flags; }
+    void SetFlags(Flags flags) { m_flags = flags; }
 
     std::vector<PackedVertex> BuildPackedVertices() const;
     std::vector<PackedIndex> BuildPackedIndices() const;
@@ -93,15 +96,15 @@ public:
     void Init(Engine *engine);
 
     void Render(
-        Engine        *engine,
+        Engine *engine,
         CommandBuffer *cmd
     ) const;
 
     void RenderIndirect(
-        Engine               *engine,
-        CommandBuffer        *cmd,
+        Engine *engine,
+        CommandBuffer *cmd,
         const IndirectBuffer *indirect_buffer,
-        UInt                  buffer_offset
+        UInt buffer_offset
     ) const;
 
     void PopulateIndirectDrawCommand(IndirectDrawCommand &out);
@@ -114,8 +117,7 @@ private:
 
     size_t m_indices_count = 0;
 
-    VertexAttributeSet m_vertex_attributes;
-    Topology m_topology;
+    MeshAttributes m_mesh_attributes;
 
     std::vector<Vertex> m_vertices;
     std::vector<Index> m_indices;

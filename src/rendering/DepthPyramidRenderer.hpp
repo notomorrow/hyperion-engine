@@ -27,15 +27,15 @@ public:
     DepthPyramidRenderer();
     ~DepthPyramidRenderer();
 
-    auto &GetResults()                { return m_depth_pyramid_results; }
-    const auto &GetResults() const    { return m_depth_pyramid; }
+    auto &GetResults() { return m_depth_pyramid_results; }
+    const auto &GetResults() const { return m_depth_pyramid; }
 
-    auto &GetMips()                   { return m_depth_pyramid_mips; }
-    const auto &GetMips() const       { return m_depth_pyramid_mips; }
+    auto &GetMips() { return m_depth_pyramid_mips; }
+    const auto &GetMips() const { return m_depth_pyramid_mips; }
 
     const Extent3D &GetExtent() const { return m_depth_pyramid[0]->GetExtent(); }
 
-    bool IsRendered() const           { return m_is_rendered; }
+    bool IsRendered() const { return m_is_rendered; }
 
     void Create(Engine *engine, const AttachmentRef *depth_attachment_ref);
     void Destroy(Engine *engine);
@@ -46,17 +46,17 @@ public:
     );
 
 private:
-    const AttachmentRef                                                       *m_depth_attachment_ref;
+    const AttachmentRef *m_depth_attachment_ref;
 
-    FixedArray<std::unique_ptr<Image>, max_frames_in_flight>                   m_depth_pyramid;
-    FixedArray<std::unique_ptr<ImageView>, max_frames_in_flight>               m_depth_pyramid_results;
-    FixedArray<DynArray<std::unique_ptr<ImageView>>, max_frames_in_flight>     m_depth_pyramid_mips;
+    FixedArray<std::unique_ptr<Image>, max_frames_in_flight> m_depth_pyramid;
+    FixedArray<std::unique_ptr<ImageView>, max_frames_in_flight> m_depth_pyramid_results;
+    FixedArray<DynArray<std::unique_ptr<ImageView>>, max_frames_in_flight> m_depth_pyramid_mips;
     FixedArray<DynArray<std::unique_ptr<DescriptorSet>>, max_frames_in_flight> m_depth_pyramid_descriptor_sets;
-    std::unique_ptr<Sampler>                                                   m_depth_pyramid_sampler;
+    std::unique_ptr<Sampler> m_depth_pyramid_sampler;
 
-    Ref<ComputePipeline>                                                       m_generate_depth_pyramid;
+    Handle<ComputePipeline> m_generate_depth_pyramid;
 
-    bool                                                                       m_is_rendered;
+    bool m_is_rendered;
 };
 
 } // namespace hyperion::v2

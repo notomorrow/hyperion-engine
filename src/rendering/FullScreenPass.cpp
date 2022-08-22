@@ -17,17 +17,23 @@ using renderer::ImageSamplerDescriptor;
 using renderer::FillMode;
 
 FullScreenPass::FullScreenPass(Image::InternalFormat image_format)
-    : FullScreenPass(nullptr, image_format)
-{
-}
-
-FullScreenPass::FullScreenPass(Ref<Shader> &&shader, Image::InternalFormat image_format)
-    : FullScreenPass(std::move(shader), DescriptorKey::POST_FX_PRE_STACK, ~0u, image_format)
+    : FullScreenPass(Handle<Shader>(), image_format)
 {
 }
 
 FullScreenPass::FullScreenPass(
-    Ref<Shader> &&shader,
+    Handle<Shader> &&shader,
+    Image::InternalFormat image_format
+) : FullScreenPass(std::move(shader),
+        DescriptorKey::POST_FX_PRE_STACK,
+        ~0u,
+        image_format
+    )
+{
+}
+
+FullScreenPass::FullScreenPass(
+    Handle<Shader> &&shader,
     DescriptorKey descriptor_key,
     UInt sub_descriptor_index,
     Image::InternalFormat image_format
@@ -70,14 +76,17 @@ void FullScreenPass::Create(Engine *engine)
         m_command_buffers[i] = std::move(command_buffer);
     }
 
-    
+    if (m_shader) {
+        m_shader->Init(engine);
+    }
+
     CreatePipeline(engine);
     CreateDescriptors(engine);
     
     HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
-void FullScreenPass::SetShader(Ref<Shader> &&shader)
+void FullScreenPass::SetShader(Handle<Shader> &&shader)
 {
     if (m_shader == shader) {
         return;
@@ -85,13 +94,13 @@ void FullScreenPass::SetShader(Ref<Shader> &&shader)
 
     m_shader = std::move(shader);
 
-    m_shader.Init();
+    // m_shader.Init();
 }
 
 void FullScreenPass::CreateQuad(Engine *engine)
 {
-    m_full_screen_quad = engine->resources.meshes.Add(MeshBuilder::Quad().release());
-    m_full_screen_quad.Init();
+    m_full_screen_quad = Handle<Mesh>(MeshBuilder::Quad().release());
+    m_full_screen_quad->Init(engine);
 }
 
 void FullScreenPass::CreateRenderPass(Engine *engine)
@@ -157,28 +166,31 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
 
 void FullScreenPass::CreatePipeline(Engine *engine)
 {
-    CreatePipeline(engine, RenderableAttributeSet {
-        .bucket            = BUCKET_INTERNAL,
-        .vertex_attributes = renderer::static_mesh_vertex_attributes,
-        .fill_mode         = FillMode::FILL,
-        .depth_write       = false,
-        .depth_test        = false
-    });
+    CreatePipeline(engine, RenderableAttributeSet(
+        MeshAttributes {
+            .vertex_attributes = renderer::static_mesh_vertex_attributes,
+            .fill_mode = FillMode::FILL,
+        },
+        MaterialAttributes {
+            .bucket = Bucket::BUCKET_INTERNAL,
+            .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
+        }
+    ));
 }
 
 void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet &renderable_attributes)
 {
-    auto pipeline = std::make_unique<RendererInstance>(
+    auto _renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
         renderable_attributes
     );
 
     for (auto &framebuffer : m_framebuffers) {
-        pipeline->AddFramebuffer(framebuffer.IncRef());
+        _renderer_instance->AddFramebuffer(framebuffer.IncRef());
     }
 
-    m_renderer_instance = engine->AddRendererInstance(std::move(pipeline));
+    m_renderer_instance = engine->AddRendererInstance(std::move(_renderer_instance));
     m_renderer_instance.Init();
 }
 

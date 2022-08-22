@@ -39,11 +39,11 @@ public:
         Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
     );
     FullScreenPass(
-        Ref<Shader> &&shader,
+        Handle<Shader> &&shader,
         Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
     );
     FullScreenPass(
-        Ref<Shader> &&shader,
+        Handle<Shader> &&shader,
         DescriptorKey descriptor_key,
         UInt sub_descriptor_index,
         Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
@@ -53,19 +53,21 @@ public:
     ~FullScreenPass();
     
     CommandBuffer *GetCommandBuffer(UInt index) const { return m_command_buffers[index].get(); }
-    Framebuffer *GetFramebuffer(UInt index) const     { return m_framebuffers[index].ptr; }
+    Framebuffer *GetFramebuffer(UInt index) const { return m_framebuffers[index].ptr; }
                                                       
-    Shader *GetShader() const                         { return m_shader.ptr; }
-    void SetShader(Ref<Shader> &&shader);             
-                                                      
-    RenderPass *GetRenderPass() const                 { return m_render_pass.ptr; }
-                                                      
-    RendererInstance *GetRendererInstance() const     { return m_renderer_instance.ptr; }
-                                                      
-    UInt GetSubDescriptorIndex() const                { return m_sub_descriptor_index; }
+    Handle<Shader> &GetShader() { return m_shader; }
+    const Handle<Shader> &GetShader() const { return m_shader; }
 
-    PushConstantData &GetPushConstants()              { return m_push_constant_data; }
-    const PushConstantData &GetPushConstants() const  { return m_push_constant_data; }
+    void SetShader(Handle<Shader> &&shader);             
+                                                      
+    RenderPass *GetRenderPass() const { return m_render_pass.ptr; }
+                                                      
+    RendererInstance *GetRendererInstance() const { return m_renderer_instance.ptr; }
+                                                      
+    UInt GetSubDescriptorIndex() const { return m_sub_descriptor_index; }
+
+    PushConstantData &GetPushConstants() { return m_push_constant_data; }
+    const PushConstantData &GetPushConstants() const { return m_push_constant_data; }
     void SetPushConstants(const PushConstantData &pc) { m_push_constant_data = pc; }
 
     void CreateRenderPass(Engine *engine);
@@ -83,21 +85,20 @@ protected:
     void CreateQuad(Engine *engine);
 
     FixedArray<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
-    FixedArray<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
-    Ref<Shader>                                                      m_shader;
-    Ref<RenderPass>                                                  m_render_pass;
-    Ref<RendererInstance>                                            m_renderer_instance;
-    Ref<Mesh>                                                        m_full_screen_quad;
+    FixedArray<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
+    Handle<Shader> m_shader;
+    Ref<RenderPass> m_render_pass;
+    Ref<RendererInstance> m_renderer_instance;
+    Handle<Mesh> m_full_screen_quad;
 
-    DynArray<std::unique_ptr<Attachment>>                            m_attachments;
+    DynArray<std::unique_ptr<Attachment>> m_attachments;
 
-    PushConstantData                                                 m_push_constant_data;
-
+    PushConstantData m_push_constant_data;
 
 private:                         
-    Image::InternalFormat                                            m_image_format;                                    
-    DescriptorKey                                                    m_descriptor_key;
-    UInt                                                             m_sub_descriptor_index;
+    Image::InternalFormat m_image_format;                                    
+    DescriptorKey m_descriptor_key;
+    UInt m_sub_descriptor_index;
 };
 } // namespace hyperion::v2
 

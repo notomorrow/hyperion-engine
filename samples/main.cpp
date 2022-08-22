@@ -31,7 +31,7 @@
 #include <Game.hpp>
 
 #include <asset/serialization/fbom/FBOM.hpp>
-#include <asset/serialization/fbom/marshals/EntityMarshal.hpp>
+#include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
 
 #include <terrain/controllers/TerrainPagingController.hpp>
 
@@ -79,9 +79,9 @@ namespace hyperion::v2 {
 class MyGame : public Game {
 
 public:
-    Ref<Material> base_material;//hack
+    Handle<Material> base_material;//hack
 
-    Ref<Light>    m_point_light;
+    Handle<Light> m_point_light;
 
     MyGame()
         : Game()
@@ -99,9 +99,9 @@ public:
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
-    virtual void OnPostInit(Engine *engine) override
+    virtual void InitGame(Engine *engine) override
     {
-        scene = engine->resources.scenes.Add(new Scene(
+        scene = Handle<Scene>(new Scene(
             engine->resources.cameras.Add(new FirstPersonCamera(//FollowCamera(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 2048, 2048,//2048, 1080,
@@ -109,13 +109,14 @@ public:
                 0.5f, 30000.0f
             ))
         ));
-        engine->GetWorld().AddScene(scene.IncRef());
+
+        engine->GetWorld().AddScene(Handle<Scene>(scene));
         // std::cout << (int)scene->GetClass().fields["foo"].type << "\n";
 
         DebugLog(LogType::Debug, "%s\n", scene->GetClass().GetName());
 
-        base_material = engine->resources.materials.Add(new Material());
-        base_material.Init();
+        base_material = Handle<Material>(new Material());
+        base_material->Init(engine);
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
@@ -134,34 +135,44 @@ public:
             auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
             sphere->Scale(1.0f);
             sphere->SetName("sphere");
-            // sphere->GetChild(0)->GetEntity()->SetMaterial(engine->resources.materials.Add(new Material()));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.1f, 0.8f, 0.35f, 1.0f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
+            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
             sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 7.0f, 0.0f));
             scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
-#if 1 // serialize/deseriale test
-        FileByteWriter bw("test_dump.fbom");
-        test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
-        test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);
+#if 0// serialize/deseriale test
+
+#if 1
+        FileByteWriter bw("data/dump/sponza.fbom");
+        // test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
+        // test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);
         fbom::FBOMWriter fw;
-        fw.Append(*test_model->GetChild(0).Get()->GetEntity());
-        fw.Emit(&bw);
+        // fw.Append(*test_model->GetChild(0).Get()->GetEntity());
+        fw.Append(*test_model);
+        auto err = fw.Emit(&bw);
+
+        AssertThrowMsg(err.value != fbom::FBOMResult::FBOM_ERR, "%s\n", err.message);
 
         bw.Close();
+
+#endif
 
 
         fbom::FBOMLoader fr(engine->resources);
         fbom::FBOMDeserializedObject result;
-        if (auto err = fr.LoadFromFile("test_dump.fbom", result)) {
+        if (auto err = fr.LoadFromFile("data/dump/sponza.fbom", result)) {
             AssertThrowMsg(false, "%s\n", err.message);
         }
-        auto ent = engine->resources.entities.Add(result.Release<Entity>());
-        scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
+
+        auto *_node = result.Release<Node>();
+        scene->GetRoot().AddChild(NodeProxy(_node));
+        
+        // auto ent = engine->resources.entities.Add(result.Release<Entity>());
+        // scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
 #endif
 
         // auto character_entity = engine->resources.entities.Add(new Spatial());
@@ -183,7 +194,7 @@ public:
         
         if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
             //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            grass.GetChild(0).Get()->GetEntity()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
+            grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
             grass.Scale(1.0f);
             grass.Translate({0, 1, 0});
         }
@@ -200,7 +211,7 @@ public:
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
         
-        auto cubemap = engine->resources.textures.Add(new TextureCube(
+        auto cubemap = Handle<Texture>(new TextureCube(
            engine->assets.Load<Texture>(
                "textures/chapel/posx.jpg",
                "textures/chapel/negx.jpg",
@@ -211,33 +222,33 @@ public:
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
-        cubemap.Init();
+        cubemap->Init(engine);
 
         zombie->GetChild(0).Get()->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(1.25f);
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        // scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        scene->GetRoot().AddChild(NodeProxy(zombie.release()));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        auto my_light = engine->resources.lights.Add(new DirectionalLight(
+        auto my_light = Handle<Light>(new DirectionalLight(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             110000.0f
         ));
-        scene->GetEnvironment()->AddLight(my_light.IncRef());
+        scene->GetEnvironment()->AddLight(Handle<Light>(my_light));
 
-        m_point_light = engine->resources.lights.Add(new PointLight(
+        m_point_light = Handle<Light>(new PointLight(
             Vector3(0.0f, 6.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
             500.0f,
             35.0f
         ));
 
-       scene->GetEnvironment()->AddLight(m_point_light.IncRef());
+       scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
 
         // test_model->Scale(10.0f);
         test_model->Scale(0.08f);//14.075f);
@@ -245,13 +256,13 @@ public:
         /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
         terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
         terrain_material->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
         terrain_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
         if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
@@ -263,18 +274,14 @@ public:
             // }
         }
 
-        auto quad = engine->resources.meshes.Add(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
+        auto quad = Handle<Mesh>(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
         // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
         auto quad_spatial = engine->resources.entities.Add(new Entity(
             std::move(quad),
-            engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
-            engine->resources.materials.Add(new Material()),
-            RenderableAttributeSet {
-                .bucket            = Bucket::BUCKET_OPAQUE,
-                .shader_id         = engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)->GetId(),
-                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-            }
+            Handle<Shader>(engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)),
+            Handle<Material>(new Material())
         ));
+    
         quad_spatial.Init();
         quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));//0.00f, 0.4f, 0.9f, 1.0f));
         quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
@@ -284,7 +291,7 @@ public:
         // scene->AddEntity(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-            my_light.IncRef(),
+            Handle<Light>(my_light),
             Vector3::Zero(),
             80.0f
         );
@@ -304,38 +311,21 @@ public:
         );
 #endif
 
-
-        tex1 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>("textures/dirt.jpg").release()
-        );
-        //tex1.Init();
-
-        tex2 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>("textures/dummy.jpg").release()
-        );
-        //tex2.Init();
-
         cube_obj->Scale(50.0f);
 
-        auto metal_material = engine->resources.materials.Add(new Material());
-        metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
-        metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
-        metal_material.Init();
-
-        auto skybox_material = engine->resources.materials.Add(new Material());
+        auto skybox_material = Handle<Material>(new Material());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
-        skybox_material.Init();
+        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
 
         auto &skybox_spatial = cube_obj->GetChild(0).Get()->GetEntity();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
-        skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
-        skybox_spatial->SetMeshAttributes(
-            FaceCullMode::FRONT,
-            false,
-            false
-        );
+        skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
+        // skybox_spatial->SetMeshAttributes(
+        //     FaceCullMode::FRONT,
+        //     false,
+        //     false
+        // );
 
         scene->AddEntity(cube_obj->GetChild(0).Get()->GetEntity().IncRef());
 
@@ -356,6 +346,9 @@ public:
     {
         delete input_manager;
 
+        engine->GetWorld().RemoveScene(scene->GetId());
+        scene.Reset();
+
         Game::Teardown(engine);
     }
 
@@ -364,7 +357,7 @@ public:
         scene->GetEnvironment()->RenderComponents(engine, frame);
 
         engine->render_state.visibility_cursor = engine->GetWorld().GetOctree().LoadPreviousVisibilityCursor();
-        engine->render_state.BindScene(scene);
+        engine->render_state.BindScene(scene.Get());
     }
 
     virtual void OnFrameEnd(Engine *engine, Frame *) override
@@ -440,8 +433,7 @@ public:
     
     InputManager *input_manager;
 
-    Ref<Scene> scene;
-    Ref<Texture> tex1, tex2;
+    Handle<Scene> scene;
     std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
     GameCounter::TickUnit timer{};
     GameCounter::TickUnit ray_cast_timer{};
@@ -584,7 +576,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_VEGETATION,
-        engine->resources.shaders.Add(new Shader(
+        Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -604,7 +596,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::DEBUG_AABB,
-        engine->resources.shaders.Add(new Shader(
+        Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -624,7 +616,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_FORWARD,
-        engine->resources.shaders.Add(new Shader(
+        Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -644,7 +636,7 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::TERRAIN,
-        engine->resources.shaders.Add(new Shader(
+        Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
@@ -662,8 +654,9 @@ int main()
         ))
     );
     
+
+    // TODO: move elsewhere once RT stuff is established.
     Frame *frame = nullptr;
-    
     PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine->GetInstance()->GetFrameHandler()->NumFrames());
 
     for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
@@ -676,7 +669,7 @@ int main()
     
     // engine->shader_manager.SetShader(
     //     ShaderManager::Key::STENCIL_OUTLINE,
-    //     engine->resources.shaders.Add(new Shader(
+    //     Handle<Shader>(new Shader(
     //         std::vector<SubShader>{
     //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
     //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
@@ -688,39 +681,30 @@ int main()
     {
         engine->shader_manager.SetShader(
             ShaderManager::Key::BASIC_SKYBOX,
-            engine->resources.shaders.Add(new Shader(
+            Handle<Shader>(new Shader(
                 std::vector<SubShader>{
                     {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
                     {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
                 }
             ))
         );
-
-        /*auto pipeline = std::make_unique<RendererInstance>(
-            engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef(),
-            engine->GetRenderListContainer().Get(BUCKET_SKYBOX).GetRenderPass().IncRef(),
-            renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-            Bucket::BUCKET_SKYBOX
-        );
-        pipeline->SetFaceCullMode(FaceCullMode::FRONT);
-        pipeline->SetDepthTest(false);
-        pipeline->SetDepthWrite(false);
-        
-        engine->AddRendererInstance(std::move(pipeline));*/
     }
     
     {
-        auto pipeline = std::make_unique<RendererInstance>(
-            engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
+        auto translucent_renderer_instance = std::make_unique<RendererInstance>(
+            Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)),
             engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
-            RenderableAttributeSet {
-                .bucket = Bucket::BUCKET_TRANSLUCENT,
-                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-            }
+            RenderableAttributeSet(
+                MeshAttributes {
+                    .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
+                },
+                MaterialAttributes {
+                    .bucket = Bucket::BUCKET_TRANSLUCENT
+                }
+            )
         );
-        pipeline->SetBlendEnabled(true);
         
-        engine->AddRendererInstance(std::move(pipeline));
+        engine->AddRendererInstance(std::move(translucent_renderer_instance));
     }
     
 
@@ -800,20 +784,21 @@ int main()
 
     engine->game_thread.Start(engine, my_game, window);
 
-    bool running = true;
-
     float tmp_render_timer = 0.0f;
 
     UInt num_frames = 0;
     float delta_time_accum = 0.0f;
     GameCounter counter;
 
-    while (running) {
+    while (engine->IsRenderLoopActive()) {
+
+        // input manager stuff
         while (SystemSDL::PollEvent(&event)) {
             my_game->input_manager->CheckEvent(&event);
             switch (event.GetType()) {
                 case SystemEventType::EVENT_SHUTDOWN:
-                    running = false;
+                    engine->RequestStop();
+
                     break;
                 case SystemEventType::EVENT_MOUSESCROLL:
                 {
@@ -926,6 +911,7 @@ int main()
             num_frames = 0;
         }
 
+#if HYPERION_VK_TEST_RAYTRACING // for testing RT stuff.
         HYPERION_ASSERT_RESULT(engine->GetInstance()->GetFrameHandler()->PrepareFrame(
             engine->GetInstance()->GetDevice(),
             engine->GetInstance()->GetSwapchain()
@@ -942,7 +928,6 @@ int main()
 
         my_game->OnFrameBegin(engine, frame);
 
-#if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
         engine->GetInstance()->GetDescriptorPool().Bind(
             engine->GetDevice(),
@@ -972,7 +957,6 @@ int main()
         
         probe_system.RenderProbes(engine, frame->GetCommandBuffer());
         probe_system.ComputeIrradiance(engine, frame->GetCommandBuffer());
-#endif
 
         engine->RenderDeferred(frame);
         
@@ -987,6 +971,11 @@ int main()
         engine->GetInstance()->GetFrameHandler()->PresentFrame(&engine->GetInstance()->GetGraphicsQueue(), engine->GetInstance()->GetSwapchain());
         engine->GetInstance()->GetFrameHandler()->NextFrame();
 
+#else
+
+        // simpler loop. this is what it will look like for RT too, soon enough
+        engine->RenderNextFrame(my_game);
+#endif
     }
 
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
@@ -1005,13 +994,7 @@ int main()
 #endif
 
 
-    engine->task_system.Stop();
-
-    engine->m_running = false;
-
-    HYP_FLUSH_RENDER_QUEUE(engine);
-
-    engine->game_thread.Join();
+    // engine->Stop();
 
     delete my_game;
 

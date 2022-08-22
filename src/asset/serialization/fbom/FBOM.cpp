@@ -8,6 +8,7 @@
 #include <asset/serialization/fbom/marshals/ShaderMarshal.hpp>
 #include <asset/serialization/fbom/marshals/SubShaderMarshal.hpp>
 #include <asset/serialization/fbom/marshals/MaterialMarshal.hpp>
+#include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -19,6 +20,7 @@ FBOM::FBOM()
     RegisterLoader<Shader>();
     RegisterLoader<SubShader>();
     RegisterLoader<Material>();
+    RegisterLoader<Node>();
 }
 
 FBOM::~FBOM() = default;

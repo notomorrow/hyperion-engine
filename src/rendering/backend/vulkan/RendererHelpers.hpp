@@ -9,13 +9,15 @@
 
 #include <vulkan/vulkan.h>
 
+#include <Types.hpp>
+
 #include <vector>
 
 namespace hyperion {
 namespace renderer {
 namespace helpers {
 
-uint32_t MipmapSize(uint32_t src_size, int lod);
+UInt MipmapSize(UInt src_size, int lod);
 
 VkIndexType ToVkIndexType(DatumType);
 
@@ -23,12 +25,12 @@ class SingleTimeCommands {
 public:
     SingleTimeCommands() : command_buffer{}, pool{}, family_indices{} {}
 
-    inline void Push(const std::function<Result(CommandBuffer *)> &fn)
+    void Push(const std::function<Result(CommandBuffer *)> &fn)
     {
         m_functions.push_back(fn);
     }
 
-    inline Result Execute(Device *device)
+    Result Execute(Device *device)
     {
         HYPERION_BUBBLE_ERRORS(Begin(device));
 
@@ -57,7 +59,7 @@ private:
     std::vector<std::function<Result(CommandBuffer *)>> m_functions;
     std::unique_ptr<Fence> m_fence;
 
-    inline Result Begin(Device *device)
+    Result Begin(Device *device)
     {
         command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
         m_fence = std::make_unique<Fence>();
@@ -67,7 +69,7 @@ private:
         return command_buffer->Begin(device);
     }
 
-    inline Result End(Device *device)
+    Result End(Device *device)
     {
         auto result = Result::OK;
 
@@ -80,7 +82,7 @@ private:
 
         HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence.get(), nullptr), result);
         
-        HYPERION_PASS_ERRORS(m_fence->WaitForGpu(device), result);
+        HYPERION_PASS_ERRORS(m_fence->WaitForGPU(device), result);
         HYPERION_PASS_ERRORS(m_fence->Destroy(device), result);
 
         HYPERION_PASS_ERRORS(command_buffer->Destroy(device, pool), result);

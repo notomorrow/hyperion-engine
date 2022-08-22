@@ -3,6 +3,7 @@
 
 #include "Texture.hpp"
 #include "Shader.hpp"
+#include "RenderableAttributes.hpp"
 
 #include <core/lib/FixedArray.hpp>
 #include <Types.hpp>
@@ -242,7 +243,7 @@ public:
     };
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
-    using TextureSet = EnumOptions<TextureKey, Ref<Texture>, max_textures>;
+    using TextureSet = EnumOptions<TextureKey, Handle<Texture>, max_textures>;
 
     Material(const char *name = "");
     Material(const Material &other) = delete;
@@ -300,7 +301,7 @@ public:
      * @param key The texture slot to set the texture on
      * @param texture A Texture resource
      */
-    void SetTexture(TextureKey key, Ref<Texture> &&texture);
+    void SetTexture(TextureKey key, Handle<Texture> &&texture);
 
     TextureSet &GetTextures()
         { return m_textures; }
@@ -324,6 +325,51 @@ public:
 
     /*! \brief Get assigned name of the material */
     const char *GetName() const { return m_name; }
+
+    Bucket GetBucket() const
+        { return m_render_attributes.bucket; }
+
+    void SetBucket(Bucket bucket)
+        { m_render_attributes.bucket = bucket; }
+
+    bool IsAlphaBlended() const
+        { return bool(m_render_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING); }
+
+    void SetIsAlphaBlended(bool is_alpha_blended)
+    {
+        if (is_alpha_blended) {
+            m_render_attributes.flags |= MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING;
+        } else {
+            m_render_attributes.flags &= ~MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING;
+        }
+    }
+
+    bool IsDepthWriteEnabled() const
+        { return bool(m_render_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE); }
+
+    void SetIsDepthWriteEnabled(bool is_depth_write_enabled)
+    {
+        if (is_depth_write_enabled) {
+            m_render_attributes.flags |= MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE;
+        } else {
+            m_render_attributes.flags &= ~MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE;
+        }
+    }
+
+    bool IsDepthTestEnabled() const
+        { return bool(m_render_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST); }
+
+    void SetIsDepthTestEnabled(bool is_depth_test_enabled)
+    {
+        if (is_depth_test_enabled) {
+            m_render_attributes.flags |= MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST;
+        } else {
+            m_render_attributes.flags &= ~MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST;
+        }
+    }
+
+    const MaterialAttributes &GetRenderAttributes() const
+        { return m_render_attributes; }
 
     void Init(Engine *engine);
     void Update(Engine *engine);
@@ -358,6 +404,8 @@ private:
     MaterialShaderData m_shader_data;
     mutable ShaderDataState m_shader_data_state;
 
+    MaterialAttributes m_render_attributes;
+
     FixedArray<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
 };
 
@@ -368,7 +416,7 @@ public:
     MaterialGroup &operator=(const MaterialGroup &other) = delete;
     ~MaterialGroup();
 
-    void Add(const std::string &name, Ref<Material> &&material)
+    void Add(const std::string &name, Handle<Material> &&material)
         { m_materials[name] = std::move(material); }
 
     bool Remove(const std::string &name)
@@ -384,17 +432,17 @@ public:
         return false;
     }
 
-    Ref<Material> &Get(const std::string &name)
+    Handle<Material> &Get(const std::string &name)
         { return m_materials[name]; }
 
-    const Ref<Material> &Get(const std::string &name) const
+    const Handle<Material> &Get(const std::string &name) const
         { return m_materials.at(name); }
 
     bool Has(const std::string &name) const
         { return m_materials.find(name) != m_materials.end(); }
 
 private:
-    std::unordered_map<std::string, Ref<Material>> m_materials;
+    std::unordered_map<std::string, Handle<Material>> m_materials;
 };
 
 } // namespace hyperion::v2

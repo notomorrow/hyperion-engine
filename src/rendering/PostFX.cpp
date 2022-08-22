@@ -21,7 +21,7 @@ PostProcessingEffect::PostProcessingEffect(
     Image::InternalFormat image_format
 ) : EngineComponentBase(),
     m_full_screen_pass(
-        nullptr,
+        Handle<Shader>(),
         stage == Stage::PRE_SHADING
             ? DescriptorKey::POST_FX_PRE_STACK
             : DescriptorKey::POST_FX_POST_STACK,
@@ -47,9 +47,11 @@ void PostProcessingEffect::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     m_shader = CreateShader(engine);
-    m_shader.Init();
+    
+    AssertThrow(m_shader != nullptr);
+    m_shader->Init(engine);
 
-    m_full_screen_pass.SetShader(m_shader.IncRef());
+    m_full_screen_pass.SetShader(Handle<Shader>(m_shader));
     m_full_screen_pass.Create(engine);
 
     SetReady(true);

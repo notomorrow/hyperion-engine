@@ -7,6 +7,8 @@
 #include <core/Scheduler.hpp>
 #include <core/Containers.hpp>
 
+#include <atomic>
+
 namespace hyperion {
 
 class SystemWindow;
@@ -24,8 +26,13 @@ class GameThread : public Thread<Scheduler<ScheduledFunction<void, GameCounter::
 public:
     GameThread();
 
+    bool IsRunning() const
+        { return m_is_running.load(); }
+
 private:
     virtual void operator()(Engine *engine, Game *game, SystemWindow *window) override;
+
+    std::atomic_bool m_is_running;
 };
 
 } // namespace hyperion::v2

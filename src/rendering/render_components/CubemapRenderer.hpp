@@ -50,8 +50,8 @@ public:
     CubemapRenderer &operator=(const CubemapRenderer &other) = delete;
     ~CubemapRenderer();
 
-    Ref<Texture> &GetCubemap(UInt frame_index) { return m_cubemaps[frame_index]; }
-    const Ref<Texture> &GetCubemap(UInt frame_index) const { return m_cubemaps[frame_index]; }
+    Handle<Texture> &GetCubemap(UInt frame_index) { return m_cubemaps[frame_index]; }
+    const Handle<Texture> &GetCubemap(UInt frame_index) const { return m_cubemaps[frame_index]; }
 
     Ref<EnvProbe> &GetEnvProbe() { return m_env_probe; }
     const Ref<EnvProbe> &GetEnvProbe() const { return m_env_probe; }
@@ -87,19 +87,18 @@ private:
     virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
-    Extent2D                                           m_cubemap_dimensions;
-    BoundingBox                                        m_aabb;
-    Image::FilterMode                                  m_filter_mode;
-    Ref<Scene>                                         m_scene;
+    Extent2D m_cubemap_dimensions;
+    BoundingBox m_aabb;
+    Image::FilterMode m_filter_mode;
+    Handle<Scene> m_scene;
     FixedArray<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
-    Ref<Shader>                                        m_shader;
-    Ref<RenderPass>                                    m_render_pass;
-    Ref<RendererInstance>                              m_renderer_instance;
-    std::vector<std::unique_ptr<Attachment>>           m_attachments;
-    FixedArray<Ref<Texture>, max_frames_in_flight>     m_cubemaps;
-    Ref<EnvProbe>                                      m_env_probe;
-    UniformBuffer                                      m_cubemap_render_uniform_buffer;
-    // UniformBuffer                                      m_env_probe_uniform_buffer;
+    Handle<Shader> m_shader;
+    Ref<RenderPass> m_render_pass;
+    Ref<RendererInstance> m_renderer_instance;
+    std::vector<std::unique_ptr<Attachment>> m_attachments;
+    FixedArray<Handle<Texture>, max_frames_in_flight> m_cubemaps;
+    Ref<EnvProbe> m_env_probe;
+    UniformBuffer m_cubemap_render_uniform_buffer;
 };
 
 

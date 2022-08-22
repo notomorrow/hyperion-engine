@@ -16,7 +16,7 @@ private:
 
 public:
     template <class T>
-    static TypeID ForType()
+    static const TypeID &ForType()
     {
         static const TypeID id = TypeID { ++type_id_counter };
 
@@ -25,7 +25,7 @@ public:
 
     Value value;
 
-    TypeID() : value{} {}
+    TypeID() : value { } {}
     TypeID(const Value &id) : value(id) {}
     TypeID(const TypeID &other) = default;
     TypeID &operator=(const TypeID &other) = default;

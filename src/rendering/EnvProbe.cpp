@@ -3,14 +3,14 @@
 
 namespace hyperion::v2 {
 
-EnvProbe::EnvProbe(Ref<Texture> &&texture)
+EnvProbe::EnvProbe(Handle<Texture> &&texture)
     : EngineComponentBase(),
       m_texture(std::move(texture)),
       m_needs_update(true)
 {
 }
 
-EnvProbe::EnvProbe(Ref<Texture> &&texture, const BoundingBox &aabb)
+EnvProbe::EnvProbe(Handle<Texture> &&texture, const BoundingBox &aabb)
     : EngineComponentBase(),
       m_texture(std::move(texture)),
       m_aabb(aabb),
@@ -36,7 +36,7 @@ void EnvProbe::Init(Engine *engine)
         auto *engine = GetEngine();
 
         if (m_texture) {
-            m_texture.Init();
+            m_texture->Init(engine);
         }
 
         SetReady(true);

@@ -69,7 +69,7 @@ void RenderEnvironment::Init(Engine *engine)
                 auto &light = it.second;
 
                 if (light != nullptr) {
-                    light.Init();
+                    light->Init(engine);
                 }
             }
         }
@@ -167,10 +167,10 @@ void RenderEnvironment::Init(Engine *engine)
     }));
 }
 
-void RenderEnvironment::AddLight(Ref<Light> &&light)
+void RenderEnvironment::AddLight(Handle<Light> &&light)
 {
     if (light != nullptr && IsReady()) {
-        light.Init();
+        light->Init(GetEngine());
     }
 
     m_light_update_sp.Wait();
@@ -182,7 +182,7 @@ void RenderEnvironment::AddLight(Ref<Light> &&light)
     m_update_marker |= RENDER_ENVIRONMENT_UPDATES_LIGHTS;
 }
 
-void RenderEnvironment::RemoveLight(Ref<Light> &&light)
+void RenderEnvironment::RemoveLight(Handle<Light> &&light)
 {
     m_light_update_sp.Wait();
 
@@ -240,7 +240,9 @@ void RenderEnvironment::OnEntityAdded(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
+    m_entity_update_sp.Wait();
     m_entities_pending_addition.Push(entity.IncRef());
+    m_entity_update_sp.Signal();
     
     m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }
@@ -249,7 +251,9 @@ void RenderEnvironment::OnEntityRemoved(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
+    m_entity_update_sp.Wait();
     m_entities_pending_removal.Push(entity.IncRef());
+    m_entity_update_sp.Signal();
     
     m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }
@@ -259,7 +263,9 @@ void RenderEnvironment::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
+    m_entity_update_sp.Wait();
     m_entity_renderable_attribute_updates.Push(entity.IncRef());
+    m_entity_update_sp.Signal();
     
     m_update_marker |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
 }

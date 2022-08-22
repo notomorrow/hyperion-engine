@@ -48,7 +48,7 @@ class RendererInstance : public EngineComponentBase<STUB_CLASS(RendererInstance)
 
 public:
     RendererInstance(
-        Ref<Shader> &&shader,
+        Handle<Shader> &&shader,
         Ref<RenderPass> &&render_pass,
         const RenderableAttributeSet &renderable_attributes
     );
@@ -57,32 +57,13 @@ public:
     RendererInstance &operator=(const RendererInstance &other) = delete;
     ~RendererInstance();
 
-    renderer::GraphicsPipeline *GetPipeline() const         { return m_pipeline.get(); }
-    Shader *GetShader() const                               { return m_shader.ptr; }
+    renderer::GraphicsPipeline *GetPipeline() const { return m_pipeline.get(); }
+
+    Handle<Shader> &GetShader() { return m_shader; }
+    const Handle<Shader> &GetShader() const { return m_shader; }
     
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
     
-    Topology GetTopology() const                            { return m_renderable_attributes.topology; }
-    void SetTopology(Topology topology)                     { m_renderable_attributes.topology = topology; }
-                                                            
-    auto GetFillMode() const                                { return m_renderable_attributes.fill_mode; }
-    void SetFillMode(FillMode fill_mode)                    { m_renderable_attributes.fill_mode = fill_mode; }
-                                                            
-    auto GetCullMode() const                                { return m_renderable_attributes.cull_faces; }
-    void SetFaceCullMode(FaceCullMode cull_mode)            { m_renderable_attributes.cull_faces = cull_mode; }
-                                                            
-    bool GetDepthTest() const                               { return m_renderable_attributes.depth_test; }
-    void SetDepthTest(bool depth_test)                      { m_renderable_attributes.depth_test = depth_test; }
-                                                            
-    bool GetDepthWrite() const                              { return m_renderable_attributes.depth_write; }
-    void SetDepthWrite(bool depth_write)                    { m_renderable_attributes.depth_write = depth_write; }
-                                                            
-    bool GetBlendEnabled() const                            { return m_renderable_attributes.alpha_blending; }
-    void SetBlendEnabled(bool blend_enabled)                { m_renderable_attributes.alpha_blending = blend_enabled; }
-                                                            
-    const StencilState &GetStencilMode() const              { return m_renderable_attributes.stencil_state; }
-    void SetStencilState(const StencilState &stencil_state) { m_renderable_attributes.stencil_state = stencil_state; }
-
     void AddEntity(Ref<Entity> &&entity);
     void RemoveEntity(Ref<Entity> &&entity, bool call_on_removed = true);
     auto &GetEntities()                                     { return m_entities; }
@@ -93,7 +74,6 @@ public:
     auto &GetFramebuffers()                                 { return m_fbos; } 
     const auto &GetFramebuffers() const                     { return m_fbos; }
     
-    /* Build pipeline */
     void Init(Engine *engine);
     
     void CollectDrawCalls(
@@ -125,7 +105,7 @@ private:
 
     std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 
-    Ref<Shader> m_shader;
+    Handle<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
     RenderableAttributeSet m_renderable_attributes;
 

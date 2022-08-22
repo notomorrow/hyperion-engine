@@ -120,7 +120,6 @@ public:
         return result;
     }
     
-    void AddChild(const FBOMObject &object, const String &external_object_key = String::empty);
     void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
 
     HashCode GetHashCode() const;
