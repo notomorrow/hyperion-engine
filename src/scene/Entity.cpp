@@ -9,26 +9,34 @@
 
 namespace hyperion::v2 {
 
-Entity::Entity(
-    Ref<Mesh> &&mesh,
-    Ref<Shader> &&shader,
-    Ref<Material> &&material,
-    const ComponentInitInfo &init_info
-) : Entity(
-      std::move(mesh),
-      std::move(shader),
-      std::move(material),
-      {},
-      init_info
+Entity::Entity()
+  : Entity(
+        Handle<Mesh>(),
+        Handle<Shader>(),
+        Handle<Material>()
     )
 {
-    // RebuildRenderableAttributes();
 }
 
 Entity::Entity(
-    Ref<Mesh> &&mesh,
-    Ref<Shader> &&shader,
-    Ref<Material> &&material,
+    Handle<Mesh> &&mesh,
+    Handle<Shader> &&shader,
+    Handle<Material> &&material
+) : Entity(
+        std::move(mesh),
+        std::move(shader),
+        std::move(material),
+        {},
+        {}
+    )
+{
+    RebuildRenderableAttributes();
+}
+
+Entity::Entity(
+    Handle<Mesh> &&mesh,
+    Handle<Shader> &&shader,
+    Handle<Material> &&material,
     const RenderableAttributeSet &renderable_attributes,
     const ComponentInitInfo &init_info
 ) : EngineComponentBase(init_info),
@@ -67,16 +75,20 @@ void Entity::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](...) {
         auto *engine = GetEngine();
 
-        if (m_material) {
-            m_material.Init();
+        if (m_skeleton) {
+            m_skeleton->Init(engine);
         }
 
-        if (m_skeleton) {
-            m_skeleton.Init();
+        if (m_material) {
+            m_material->Init(engine);
         }
 
         if (m_mesh) {
-            m_mesh.Init();
+            m_mesh->Init(engine);
+        }
+
+        if (m_shader) {
+            m_shader->Init(engine);
         }
 
         SetReady(true);
@@ -110,12 +122,18 @@ void Entity::Update(Engine *engine, GameCounter::TickUnit delta)
 
     AssertReady();
 
-    if (m_skeleton != nullptr && m_skeleton->IsReady()) {
+    if (m_skeleton && m_skeleton->IsReady()) {
         m_skeleton->EnqueueRenderUpdates();
     }
 
     if (m_material != nullptr && m_material->IsReady()) {
         m_material->Update(engine);
+
+        // make changes if it was updated
+        if (m_material->GetRenderAttributes() != m_renderable_attributes.material_attributes) {
+            m_renderable_attributes.material_attributes = m_material->GetRenderAttributes();
+            SetRenderableAttributes(m_renderable_attributes);
+        }
     }
 
     UpdateControllers(engine, delta);
@@ -161,15 +179,15 @@ void Entity::EnqueueRenderUpdates()
         : Scene::empty_id;
 
     const EntityDrawProxy draw_proxy {
-        .mesh         = m_mesh.ptr,
-        .material     = m_material.ptr,
+        .mesh         = m_mesh.Get(),
+        .material     = m_material.Get(),
         .entity_id    = m_id,
         .scene_id     = scene_id,
         .mesh_id      = mesh_id,
         .material_id  = material_id,
         .skeleton_id  = skeleton_id,
         .bounding_box = m_world_aabb,
-        .bucket       = m_renderable_attributes.bucket
+        .bucket       = m_renderable_attributes.material_attributes.bucket
     };
 
     GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, draw_proxy](...) {
@@ -222,48 +240,48 @@ void Entity::UpdateOctree()
     m_needs_octree_update = false;
 }
 
-void Entity::SetMesh(Ref<Mesh> &&mesh)
+void Entity::SetMesh(Handle<Mesh> &&mesh)
 {
     if (m_mesh == mesh) {
         return;
     }
 
     if (m_mesh != nullptr && IsInitCalled()) {
-        DebugLog(LogType::Debug, "Mehs changed for %p to %p\n", m_mesh.ptr, mesh.ptr);
+        DebugLog(LogType::Debug, "Mehs changed for %p to %p\n", m_mesh.Get(), mesh.Get());
         GetEngine()->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
     }
 
     m_mesh = std::move(mesh);
 
     if (m_mesh != nullptr && IsReady()) {
-        m_mesh.Init();
+        m_mesh->Init(GetEngine());
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
     m_primary_renderer_instance.changed = true;
 }
 
-void Entity::SetSkeleton(Ref<Skeleton> &&skeleton)
+void Entity::SetSkeleton(Handle<Skeleton> &&skeleton)
 {
     if (m_skeleton == skeleton) {
         return;
     }
 
-    if (m_skeleton != nullptr && IsInitCalled()) {
+    if (m_skeleton && IsInitCalled()) {
         GetEngine()->SafeReleaseRenderResource<Skeleton>(std::move(m_skeleton));
     }
 
     m_skeleton = std::move(skeleton);
 
-    if (m_skeleton != nullptr && IsReady()) {
-        m_skeleton.Init();
+    if (m_skeleton && IsReady()) {
+        m_skeleton->Init(GetEngine());
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
     m_primary_renderer_instance.changed = true;
 }
 
-void Entity::SetShader(Ref<Shader> &&shader)
+void Entity::SetShader(Handle<Shader> &&shader)
 {
     if (m_shader == shader) {
         return;
@@ -277,31 +295,36 @@ void Entity::SetShader(Ref<Shader> &&shader)
     
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
     new_renderable_attributes.shader_id = m_shader->GetId();
-
     SetRenderableAttributes(new_renderable_attributes);
 
     if (m_shader != nullptr && IsReady()) {
-        m_shader.Init();
+        m_shader->Init(GetEngine());
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Entity::SetMaterial(Ref<Material> &&material)
+void Entity::SetMaterial(Handle<Material> &&material)
 {
     if (m_material == material) {
         return;
     }
 
-    //if (m_material != nullptr && IsInitCalled()) {
-    //    GetEngine()->SafeReleaseRenderResource(std::move(m_material));
-    //}
-
     m_material = std::move(material);
 
-    if (m_material != nullptr && IsReady()) {
-        m_material.Init();
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+
+    if (m_material) {
+        new_renderable_attributes.material_attributes = m_material->GetRenderAttributes();
+
+        if (IsReady()) {
+            m_material->Init(GetEngine());
+        }
+    } else {
+        new_renderable_attributes.material_attributes = { };
     }
+
+    SetRenderableAttributes(new_renderable_attributes);
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
@@ -334,9 +357,9 @@ void Entity::SetScene(Scene *scene)
 
 void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
 {
-    if (m_renderable_attributes == renderable_attributes) {
-        return;
-    }
+    // if (m_renderable_attributes == renderable_attributes) {
+    //     return;
+    // }
 
     m_renderable_attributes = renderable_attributes;
     m_primary_renderer_instance.changed = true;
@@ -344,18 +367,14 @@ void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_at
 
 void Entity::RebuildRenderableAttributes()
 {
-    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+    RenderableAttributeSet new_renderable_attributes(
+        m_mesh ? m_mesh->GetRenderAttributes() : MeshAttributes { },
+        m_material ? m_material->GetRenderAttributes() : MaterialAttributes { }
+    );
 
-    if (m_mesh != nullptr) {
-        new_renderable_attributes.vertex_attributes = m_mesh->GetVertexAttributes();
-        new_renderable_attributes.topology = m_mesh->GetTopology();
-    } else {
-        new_renderable_attributes.vertex_attributes = {};
-        new_renderable_attributes.topology = Topology::TRIANGLES;
-    }
-
-    if (m_skeleton != nullptr) {
-        new_renderable_attributes.vertex_attributes = new_renderable_attributes.vertex_attributes | renderer::skeleton_vertex_attributes;
+    if (m_skeleton) {
+        new_renderable_attributes.mesh_attributes.vertex_attributes =
+            new_renderable_attributes.mesh_attributes.vertex_attributes | renderer::skeleton_vertex_attributes;
     }
 
     new_renderable_attributes.shader_id = m_shader != nullptr
@@ -372,35 +391,35 @@ void Entity::RebuildRenderableAttributes()
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Entity::SetMeshAttributes(
-    VertexAttributeSet vertex_attributes,
-    FaceCullMode face_cull_mode,
-    bool depth_write,
-    bool depth_test
-)
-{
-    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-    new_renderable_attributes.vertex_attributes = vertex_attributes;
-    new_renderable_attributes.cull_faces = face_cull_mode;
-    new_renderable_attributes.depth_write = depth_write;
-    new_renderable_attributes.depth_test = depth_test;
+// void Entity::SetMeshAttributes(
+//     VertexAttributeSet vertex_attributes,
+//     FaceCullMode face_cull_mode,
+//     bool depth_write,
+//     bool depth_test
+// )
+// {
+//     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+//     new_renderable_attributes.vertex_attributes = vertex_attributes;
+//     new_renderable_attributes.cull_faces = face_cull_mode;
+//     new_renderable_attributes.depth_write = depth_write;
+//     new_renderable_attributes.depth_test = depth_test;
 
-    SetRenderableAttributes(new_renderable_attributes);
-}
+//     SetRenderableAttributes(new_renderable_attributes);
+// }
 
-void Entity::SetMeshAttributes(
-    FaceCullMode face_cull_mode,
-    bool depth_write,
-    bool depth_test
-)
-{
-    SetMeshAttributes(
-        m_renderable_attributes.vertex_attributes,
-        face_cull_mode,
-        depth_write,
-        depth_test
-    );
-}
+// void Entity::SetMeshAttributes(
+//     FaceCullMode face_cull_mode,
+//     bool depth_write,
+//     bool depth_test
+// )
+// {
+//     SetMeshAttributes(
+//         m_renderable_attributes.vertex_attributes,
+//         face_cull_mode,
+//         depth_write,
+//         depth_test
+//     );
+// }
 
 void Entity::SetStencilAttributes(const StencilState &stencil_state)
 {
@@ -413,7 +432,7 @@ void Entity::SetStencilAttributes(const StencilState &stencil_state)
 void Entity::SetBucket(Bucket bucket)
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-    new_renderable_attributes.bucket = bucket;
+    new_renderable_attributes.material_attributes.bucket = bucket;
 
     SetRenderableAttributes(new_renderable_attributes);
 }

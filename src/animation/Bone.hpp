@@ -11,7 +11,7 @@ namespace hyperion::v2 {
 class Bone : public Node {
     friend class Skeleton;
 public:
-    Bone(const char *tag = "");
+    Bone(const char *name = "");
     Bone(const Bone &other) = delete;
     Bone &operator=(const Bone &other) = delete;
     ~Bone();
@@ -36,14 +36,14 @@ public:
 
     void UpdateBoneTransform();
 
-    Transform  m_binding_transform,
-               m_pose_transform;
+    Transform m_binding_transform;
+    Transform m_pose_transform;
 
-    Vector3    m_world_bone_translation,
-               m_inv_binding_translation;
+    Vector3 m_world_bone_translation;
+    Vector3 m_inv_binding_translation;
 
-    Quaternion m_world_bone_rotation,
-               m_inv_binding_rotation;
+    Quaternion m_world_bone_rotation;
+    Quaternion m_inv_binding_rotation;
 
 private:
     void SetSkeleton(Skeleton *skeleton);

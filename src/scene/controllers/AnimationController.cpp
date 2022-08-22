@@ -15,7 +15,7 @@ void AnimationController::OnAdded()
 
 void AnimationController::OnRemoved()
 {
-    m_skeleton = nullptr;
+    m_skeleton.Reset();
 }
 
 void AnimationController::OnUpdate(GameCounter::TickUnit delta)
@@ -46,7 +46,7 @@ void AnimationController::OnAddedToNode(Node *node)
 
 void AnimationController::OnRemovedFromNode(Node *node)
 {
-    m_skeleton = nullptr;
+    m_skeleton.Reset();
 
     FindSkeletonDirect(GetOwner());
 }
@@ -75,7 +75,7 @@ bool AnimationController::FindSkeleton(Node *node)
 bool AnimationController::FindSkeletonDirect(Entity *entity)
 {
     if (auto &skeleton = entity->GetSkeleton()) {
-        m_skeleton = skeleton.IncRef();
+        m_skeleton = skeleton;
 
         return true;
     }

@@ -67,9 +67,11 @@ void CubemapRenderer::Init(Engine *engine)
         CreateImagesAndBuffers(engine);
         CreateRendererInstance(engine);
 
-        m_scene = engine->resources.scenes.Add(new Scene(nullptr));
+        m_scene = Handle<Scene>(new Scene(nullptr));
+        m_scene->Init(engine);
+
         m_env_probe = engine->resources.env_probes.Add(new EnvProbe(
-            m_cubemaps[0].IncRef(), // TODO
+            Handle<Texture>(m_cubemaps[0]), // TODO
             m_aabb
         ));
 
@@ -158,8 +160,8 @@ void CubemapRenderer::InitGame(Engine *engine)
             continue;
         }
 
-        if (entity->GetRenderableAttributes().vertex_attributes &
-            m_renderer_instance->GetRenderableAttributes().vertex_attributes) {
+        if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
+            m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
 
             m_renderer_instance->AddEntity(it.second.IncRef());
         }
@@ -182,8 +184,8 @@ void CubemapRenderer::OnEntityAdded(Ref<Entity> &entity)
 
     AssertReady();
 
-    if (entity->GetRenderableAttributes().vertex_attributes &
-        m_renderer_instance->GetRenderableAttributes().vertex_attributes) {
+    if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
+        m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
         m_renderer_instance->AddEntity(entity.IncRef());
     }
 }
@@ -203,8 +205,8 @@ void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 
     AssertReady();
 
-    if (entity->GetRenderableAttributes().vertex_attributes &
-        m_renderer_instance->GetRenderableAttributes().vertex_attributes) {
+    if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
+        m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
         m_renderer_instance->AddEntity(entity.IncRef());
     } else {
         m_renderer_instance->RemoveEntity(entity.IncRef());
@@ -241,7 +243,7 @@ void CubemapRenderer::OnRender(Engine *engine, Frame *frame)
         }
     };
 
-    engine->render_state.BindScene(m_scene);
+    engine->render_state.BindScene(m_scene.Get());
     m_renderer_instance->Render(engine, frame);
     engine->render_state.UnbindScene();
 
@@ -308,7 +310,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
     // m_env_probe_uniform_buffer.Copy(engine->GetDevice(), sizeof(EnvProbeShaderData), &env_probe);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_cubemaps[i] = engine->resources.textures.Add(new TextureCube(
+        m_cubemaps[i] = Handle<Texture>(new TextureCube(
             m_cubemap_dimensions,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             m_filter_mode,
@@ -316,7 +318,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
             nullptr
         ));
 
-        m_cubemaps[i].Init();
+        m_cubemaps[i]->Init(engine);
     }
 
     // create descriptors
@@ -348,18 +350,20 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 void CubemapRenderer::CreateRendererInstance(Engine *engine)
 {
     auto renderer_instance = std::make_unique<RendererInstance>(
-        m_shader.IncRef(),
+        Handle<Shader>(m_shader),
         m_render_pass.IncRef(),
-        RenderableAttributeSet{
-            .bucket            = BUCKET_INTERNAL,
-            .vertex_attributes = renderer::static_mesh_vertex_attributes |
-                                 renderer::skeleton_vertex_attributes
-        }
+        RenderableAttributeSet(
+            MeshAttributes {
+                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
+                .cull_faces = FaceCullMode::BACK
+            },
+            MaterialAttributes {
+                .bucket = BUCKET_INTERNAL,
+                .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST
+                    | MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE
+            }
+        )
     );
-
-    renderer_instance->SetDepthWrite(true);
-    renderer_instance->SetDepthTest(true);
-    renderer_instance->SetFaceCullMode(FaceCullMode::BACK);
 
     for (auto &framebuffer: m_framebuffers) {
         renderer_instance->AddFramebuffer(framebuffer.IncRef());
@@ -376,7 +380,7 @@ void CubemapRenderer::CreateShader(Engine *engine)
         {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
     };
 
-    m_shader = engine->resources.shaders.Add(new Shader(sub_shaders));
+    m_shader = Handle<Shader>(new Shader(sub_shaders));
     m_shader->Init(engine);
 }
 

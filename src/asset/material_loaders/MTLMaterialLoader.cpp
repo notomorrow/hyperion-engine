@@ -239,16 +239,16 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
     }
 
     engine->resources.Lock([&](Resources &resources) {
-        std::unordered_map<std::string, Ref<Texture>> texture_refs;
+        std::unordered_map<std::string, Handle<Texture>> texture_refs;
 
         for (size_t i = 0; i < loaded_textures.size(); i++) {
             if (loaded_textures[i] == nullptr) {
-                texture_refs[all_filepaths[i]] = nullptr;
+                texture_refs[all_filepaths[i]].Reset();
 
                 continue;
             }
 
-            texture_refs[all_filepaths[i]] = engine->resources.textures.Add(loaded_textures[i].release());
+            texture_refs[all_filepaths[i]] = Handle<Texture>(loaded_textures[i].release());
         }
 
         for (auto &item : object.materials) {
@@ -273,10 +273,10 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
 
                 texture->GetImage().SetIsSRGB(it.mapping.srgb);
 
-                material->SetTexture(it.mapping.key, texture.IncRef());
+                material->SetTexture(it.mapping.key, Handle<Texture>(texture));
             }
 
-            material_library->Add(item.tag, resources.materials.Add(material.release()));
+            material_library->Add(item.tag, Handle<Material>(material.release()));
         }
     });
 

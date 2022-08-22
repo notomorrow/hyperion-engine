@@ -10,7 +10,8 @@ namespace hyperion::v2 {
 static constexpr float game_thread_target_ticks_per_second = 120.0f;
 
 GameThread::GameThread()
-    : Thread(Threads::thread_ids.At(THREAD_GAME))
+    : Thread(Threads::thread_ids.At(THREAD_GAME)),
+      m_is_running { false }
 {
 }
 
@@ -22,9 +23,11 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
     GameCounter counter;
 #endif
 
-    game->OnPostInit(engine);
+    m_is_running.store(true);
 
-    while (engine->m_running) {
+    game->InitGame(engine);
+
+    while (engine->m_running.load()) {
 #if HYP_GAME_THREAD_LOCKED
         while (counter.Waiting()) {
             /* wait */
@@ -33,16 +36,18 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 
         counter.NextTick();
         
-        if (auto num_enqueued = m_scheduler->NumEnqueued()) {
-            m_scheduler->Flush([delta = counter.delta](auto &fn) {
-                fn(delta);
-            });
-        }
+        // if (auto num_enqueued = m_scheduler->NumEnqueued()) {
+        //     m_scheduler->Flush([delta = counter.delta](auto &fn) {
+        //         fn(delta);
+        //     });
+        // }
         
         game->Logic(engine, counter.delta);
     }
 
     game->Teardown(engine);
+
+    m_is_running.store(false);
 }
 
 } // namespace hyperion::v2

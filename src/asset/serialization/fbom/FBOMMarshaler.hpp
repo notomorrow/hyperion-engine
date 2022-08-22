@@ -7,6 +7,8 @@
 
 #include <rendering/Resources.hpp>
 
+#include <Constants.hpp>
+
 namespace hyperion::v2::fbom {
 
 class FBOMObject;
@@ -61,6 +63,7 @@ private:
 
 template <class T>
 class FBOMMarshaler : public FBOMObjectMarshalerBase<T> {
+    static_assert(resolution_failure<T>, "No marshal class defined");
 };
 
 } // namespace hyperion::v2::fbom

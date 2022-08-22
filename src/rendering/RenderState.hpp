@@ -39,12 +39,17 @@ struct RenderState {
         light_ids.Erase(light);
     }
 
+    void BindScenes(Scene::ID scene_id)
+    {
+        scene_ids.push(SceneBinding { scene_id });
+    }
+
     void BindScene(const Scene *scene)
     {
         scene_ids.push(
             scene == nullptr
-                ? SceneBinding{}
-                : SceneBinding{scene->GetId(), scene->GetParentId()}
+                ? SceneBinding { }
+                : SceneBinding { scene->GetId(), scene->GetParentId() }
         );
     }
 

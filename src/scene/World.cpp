@@ -67,7 +67,7 @@ void World::Update(
     }
 }
 
-void World::AddScene(Ref<Scene> &&scene)
+void World::AddScene(Handle<Scene> &&scene)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -76,7 +76,7 @@ void World::AddScene(Ref<Scene> &&scene)
     }
 
     if (IsReady()) {
-        scene.Init();
+        scene->Init(GetEngine());
     }
 
     scene->SetWorld(this);

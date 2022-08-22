@@ -2,8 +2,8 @@
 
 namespace hyperion::v2 {
 
-Bone::Bone(const char *tag)
-    : Node(Type::BONE, tag, nullptr, Transform()),
+Bone::Bone(const char *name)
+    : Node(Type::BONE, name, nullptr, Transform()),
       m_skeleton(nullptr)
 {
 }

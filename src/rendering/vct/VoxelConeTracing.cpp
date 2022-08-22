@@ -35,7 +35,7 @@ void VoxelConeTracing::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
         auto *engine = GetEngine();
 
-        m_scene = engine->resources.scenes.Add(new Scene(
+        m_scene = Handle<Scene>(new Scene(
             engine->resources.cameras.Add(new OrthoCamera(
                 voxel_map_size.width, voxel_map_size.height,
                 -static_cast<float>(voxel_map_size[0]) * 0.5f, static_cast<float>(voxel_map_size[0]) * 0.5f,
@@ -43,6 +43,8 @@ void VoxelConeTracing::Init(Engine *engine)
                 -static_cast<float>(voxel_map_size[2]) * 0.5f, static_cast<float>(voxel_map_size[2]) * 0.5f
             ))
         ));
+
+        m_scene->Init(engine);
 
         CreateImagesAndBuffers(engine);
         CreateShader(engine);
@@ -93,7 +95,8 @@ void VoxelConeTracing::InitGame(Engine *engine)
         }
 
         if (BucketHasGlobalIllumination(entity->GetBucket())
-            && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
+            && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+                & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
 
             m_renderer_instance->AddEntity(it.second.IncRef());
         }
@@ -107,7 +110,8 @@ void VoxelConeTracing::OnEntityAdded(Ref<Entity> &entity)
     AssertReady();
 
     if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
+        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+            & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_renderer_instance->AddEntity(entity.IncRef());
     }
 }
@@ -131,7 +135,8 @@ void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Entity> &entity)
 
     // TODO: better handling
     if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().vertex_attributes & m_renderer_instance->GetRenderableAttributes().vertex_attributes)) {
+        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+            & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_renderer_instance->AddEntity(entity.IncRef());
     } else {
         m_renderer_instance->RemoveEntity(entity.IncRef());
@@ -171,7 +176,7 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
 
     m_clear_voxels->GetPipeline()->Dispatch(command_buffer, m_voxel_image->GetExtent() / Extent3D{8, 8, 8});
 
-    engine->render_state.BindScene(m_scene);
+    engine->render_state.BindScene(m_scene.Get());
 
     HYPERION_PASS_ERRORS(
         engine->GetInstance()->GetDescriptorPool().Bind(
@@ -215,7 +220,7 @@ void VoxelConeTracing::OnComponentIndexChanged(RenderComponentBase::Index new_in
 
 void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 {
-    m_voxel_image = engine->resources.textures.Add(new Texture(
+    m_voxel_image = Handle<Texture>(new Texture(
         StorageImage(
             voxel_map_size,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
@@ -226,7 +231,7 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER
     ));
 
-    m_voxel_image.Init();
+    m_voxel_image->Init(engine);
 
     engine->render_scheduler.Enqueue([this, engine](...) {
         HYPERION_BUBBLE_ERRORS(m_uniform_buffer.Create(engine->GetDevice(), sizeof(VoxelUniforms)));
@@ -253,15 +258,17 @@ void VoxelConeTracing::CreateRendererInstance(Engine *engine)
     auto renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        RenderableAttributeSet{
-            .bucket            = BUCKET_VOXELIZER,
-            .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-        }
+        RenderableAttributeSet(
+            MeshAttributes {
+                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
+                .cull_faces = FaceCullMode::NONE
+            },
+            MaterialAttributes {
+                .bucket = BUCKET_VOXELIZER,
+                .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
+            }
+        )
     );
-
-    renderer_instance->SetDepthWrite(false);
-    renderer_instance->SetDepthTest(false);
-    renderer_instance->SetFaceCullMode(FaceCullMode::NONE);
 
     for (auto &framebuffer : m_framebuffers) {
         renderer_instance->AddFramebuffer(framebuffer.IncRef());
@@ -273,15 +280,15 @@ void VoxelConeTracing::CreateRendererInstance(Engine *engine)
 
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)
 {
-    m_clear_voxels = engine->resources.compute_pipelines.Add(new ComputePipeline(
-        engine->resources.shaders.Add(new Shader(
+    m_clear_voxels = Handle<ComputePipeline>(new ComputePipeline(
+        Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
             }
         ))
     ));
 
-    m_clear_voxels.Init();
+    m_clear_voxels->Init(engine);
 }
 
 void VoxelConeTracing::CreateShader(Engine *engine)
@@ -300,7 +307,7 @@ void VoxelConeTracing::CreateShader(Engine *engine)
         );
     }
     
-    m_shader = engine->resources.shaders.Add(new Shader(sub_shaders));
+    m_shader = Handle<Shader>(new Shader(sub_shaders));
     m_shader->Init(engine);
 }
 

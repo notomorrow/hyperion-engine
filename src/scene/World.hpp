@@ -12,13 +12,13 @@ public:
     World &operator=(const World &other) = delete;
     ~World();
 
-    Octree &GetOctree()                                  { return m_octree; }
-    const Octree &GetOctree() const                      { return m_octree; }
+    Octree &GetOctree() { return m_octree; }
+    const Octree &GetOctree() const { return m_octree; }
 
-    auto &GetScenes()                                    { return m_scenes; }
-    const auto &GetScenes() const                        { return m_scenes; }
+    auto &GetScenes() { return m_scenes; }
+    const auto &GetScenes() const { return m_scenes; }
 
-    void AddScene(Ref<Scene> &&scene);
+    void AddScene(Handle<Scene> &&scene);
     void RemoveScene(Scene::ID scene_id);
 
     void Init(Engine *engine);
@@ -28,8 +28,8 @@ public:
     );
 
 private:
-    Octree                         m_octree;
-    FlatMap<Scene::ID, Ref<Scene>> m_scenes;
+    Octree m_octree;
+    FlatMap<Scene::ID, Handle<Scene>> m_scenes;
 };
 
 } // namespace hyperion::v2

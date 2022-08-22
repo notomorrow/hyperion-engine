@@ -69,17 +69,17 @@ private:
         }
     };
 
-    Extent2D                                                        m_extent;
+    Extent2D m_extent;
 
     FixedArray<std::array<SSRImageOutput, 4>, max_frames_in_flight> m_ssr_image_outputs;
-    FixedArray<SSRImageOutput, max_frames_in_flight>                m_ssr_radius_output;
+    FixedArray<SSRImageOutput, max_frames_in_flight> m_ssr_radius_output;
 
-    Ref<ComputePipeline>                                            m_ssr_write_uvs;
-    Ref<ComputePipeline>                                            m_ssr_sample;
-    Ref<ComputePipeline>                                            m_ssr_blur_hor;
-    Ref<ComputePipeline>                                            m_ssr_blur_vert;
+    Handle<ComputePipeline> m_ssr_write_uvs;
+    Handle<ComputePipeline> m_ssr_sample;
+    Handle<ComputePipeline> m_ssr_blur_hor;
+    Handle<ComputePipeline> m_ssr_blur_vert;
 
-    bool                                                            m_is_rendered;
+    bool m_is_rendered;
 };
 
 } // namespace hyperion::v2

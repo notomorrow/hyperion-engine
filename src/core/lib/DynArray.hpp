@@ -718,6 +718,9 @@ void DynArray<T>::Shift(SizeType count)
 
         if constexpr (std::is_move_assignable_v<T>) {
             m_buffer[index].Get() = std::move(m_buffer[index + count].Get());
+        } else if constexpr (std::is_move_constructible_v<T>) {
+            Memory::Destruct(m_buffer[index].Get());
+            Memory::Construct<T>(&m_buffer[index].data_buffer, std::move(m_buffer[index + count].Get()));
         } else {
             m_buffer[index].Get() = m_buffer[index + count].Get();
         }
@@ -737,6 +740,9 @@ auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
     for (Int64 index = dist; index < Size() - 1; ++index) {
         if constexpr (std::is_move_assignable_v<T>) {
             m_buffer[m_start_offset + index].Get() = std::move(m_buffer[m_start_offset + index + 1].Get());
+        } else if constexpr (std::is_move_constructible_v<T>) {
+            Memory::Destruct(m_buffer[m_start_offset + index].Get());
+            Memory::Construct<T>(&m_buffer[m_start_offset + index].data_buffer, std::move(m_buffer[m_start_offset + index + 1].Get()));
         } else {
             m_buffer[m_start_offset + index].Get() = m_buffer[m_start_offset + index + 1].Get();
         }

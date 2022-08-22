@@ -41,7 +41,7 @@ private:
     
     UInt m_animation_index = ~0u;
 
-    Ref<Skeleton> m_skeleton;
+    Handle<Skeleton> m_skeleton;
 };
 
 } // namespace hyperion::v2

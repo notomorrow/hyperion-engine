@@ -16,8 +16,8 @@ using renderer::DescriptorSet;
 
 class ComputePipeline : public EngineComponentBase<STUB_CLASS(ComputePipeline)> {
 public:
-    ComputePipeline(Ref<Shader> &&shader);
-    ComputePipeline(Ref<Shader> &&shader, const DynArray<const DescriptorSet *> &used_descriptor_sets);
+    ComputePipeline(Handle<Shader> &&shader);
+    ComputePipeline(Handle<Shader> &&shader, const DynArray<const DescriptorSet *> &used_descriptor_sets);
     ComputePipeline(const ComputePipeline &) = delete;
     ComputePipeline &operator=(const ComputePipeline &) = delete;
     ~ComputePipeline();
@@ -28,7 +28,7 @@ public:
 
 private:
     std::unique_ptr<renderer::ComputePipeline> m_pipeline;
-    Ref<Shader> m_shader;
+    Handle<Shader> m_shader;
 };
 
 } // namespace hyperion::v2

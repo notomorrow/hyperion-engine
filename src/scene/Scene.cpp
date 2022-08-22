@@ -33,7 +33,9 @@ void Scene::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SCENES, [this](...) {
         auto *engine = GetEngine();
 
-        m_camera.Init();
+        if (m_camera) {
+            m_camera.Init();
+        }
 
         m_environment->Init(engine);
 
@@ -197,7 +199,7 @@ void Scene::AddPendingEntities()
         const auto id = entity->GetId();
 
         if (entity->IsRenderable() && !entity->GetPrimaryRendererInstance()) {
-            if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
+            if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetShader(), entity->GetRenderableAttributes())) {
                 renderer_instance->AddEntity(entity.IncRef());
                 entity->EnqueueRenderUpdates();
 
@@ -334,7 +336,7 @@ void Scene::RequestRendererInstanceUpdate(Ref<Entity> &entity)
         RemoveFromRendererInstance(entity, entity->m_primary_renderer_instance.renderer_instance);
     }
     
-    if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetRenderableAttributes())) {
+    if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetShader(), entity->GetRenderableAttributes())) {
         renderer_instance->AddEntity(entity.IncRef());
 
         entity->m_primary_renderer_instance = {

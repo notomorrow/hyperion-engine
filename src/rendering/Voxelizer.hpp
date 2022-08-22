@@ -33,10 +33,12 @@ public:
     Voxelizer &operator=(const Voxelizer &other) = delete;
     ~Voxelizer();
 
-    Scene *GetScene() const                       { return m_scene.ptr; }
+    Handle<Scene> &GetScene() { return m_scene; }
+    const Handle<Scene> &GetScene() const { return m_scene; }
+
     RendererInstance *GetRendererInstance() const { return m_renderer_instance.ptr; }
 
-    UInt32 NumFragments() const                   { return m_num_fragments; }
+    UInt32 NumFragments() const { return m_num_fragments; }
 
     void Init(Engine *engine);
     void Render(Engine *engine);
@@ -52,13 +54,13 @@ private:
 
     void RenderFragmentList(Engine *engine, bool count_mode);
 
-    Ref<Scene> m_scene;
+    Handle<Scene> m_scene;
 
     std::unique_ptr<AtomicCounter> m_counter;
     std::unique_ptr<StorageBuffer> m_fragment_list_buffer;
 
     Ref<Framebuffer> m_framebuffer;
-    Ref<Shader> m_shader;
+    Handle<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
     Ref<RendererInstance> m_renderer_instance;
 

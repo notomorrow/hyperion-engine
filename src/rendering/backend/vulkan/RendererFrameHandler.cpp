@@ -42,7 +42,7 @@ Result FrameHandler::PrepareFrame(Device *device, Swapchain *swapchain)
 
     VkResult fence_result;
 
-    frame->fc_queue_submit->WaitForGpu(device, true, &fence_result);
+    frame->fc_queue_submit->WaitForGPU(device, true, &fence_result);
 
     if (fence_result == VK_SUBOPTIMAL_KHR || fence_result == VK_ERROR_OUT_OF_DATE_KHR) {
         DebugLog(LogType::Debug, "Waiting -- image result was %d\n", fence_result);
@@ -74,12 +74,12 @@ Result FrameHandler::PresentFrame(DeviceQueue *queue, Swapchain *swapchain) cons
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 
     present_info.waitSemaphoreCount = static_cast<UInt>(signal_semaphores.size());
-    present_info.pWaitSemaphores    = signal_semaphores.data();
+    present_info.pWaitSemaphores = signal_semaphores.data();
 
     present_info.swapchainCount = 1;
-    present_info.pSwapchains    = &swapchain->swapchain;
-    present_info.pImageIndices  = &m_acquired_image_index;
-    present_info.pResults       = nullptr;
+    present_info.pSwapchains = &swapchain->swapchain;
+    present_info.pImageIndices = &m_acquired_image_index;
+    present_info.pResults = nullptr;
 
     HYPERION_VK_CHECK(vkQueuePresentKHR(queue->queue, &present_info));
 

@@ -29,27 +29,29 @@ void AABBDebugController::OnAdded()
 
     AssertThrow(m_engine != nullptr);
 
-    auto mesh              = MeshBuilder::Cube();
+    auto mesh = MeshBuilder::Cube();
     auto vertex_attributes = mesh->GetVertexAttributes();
-    auto material          = m_engine->resources.materials.Add(new Material("aabb_material"));
+    auto material = Handle<Material>(new Material("aabb_material"));
 
-    auto shader            = m_engine->shader_manager.GetShader(ShaderManager::Key::DEBUG_AABB).IncRef();
-    const auto shader_id   = shader != nullptr ? shader->GetId() : Shader::empty_id;
+    auto shader = m_engine->shader_manager.GetShader(ShaderManager::Key::DEBUG_AABB);
+    const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
 
     m_aabb_entity = m_engine->resources.entities.Add(new Entity(
-        m_engine->resources.meshes.Add(mesh.release()),
+        Handle<Mesh>(mesh.release()),
         std::move(shader),
         std::move(material),
-        RenderableAttributeSet {
-            .bucket            = Bucket::BUCKET_TRANSLUCENT,
-            .shader_id         = shader_id,
-            .vertex_attributes = vertex_attributes,
-            .fill_mode         = FillMode::LINE,
-            .cull_faces        = FaceCullMode::NONE,
-            .alpha_blending    = true,
-            .depth_write       = false,
-            .depth_test        = false
-        },
+        RenderableAttributeSet(
+            MeshAttributes {
+                .vertex_attributes = vertex_attributes,
+                .fill_mode = FillMode::LINE,
+                .cull_faces = FaceCullMode::NONE
+            },
+            MaterialAttributes {
+                .bucket = Bucket::BUCKET_TRANSLUCENT,
+                .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING
+            },
+            shader_id
+        ),
         Entity::ComponentInitInfo {
             .flags = 0x0 // no flags
         }

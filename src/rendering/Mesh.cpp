@@ -60,8 +60,10 @@ Mesh::Mesh(
 ) : EngineComponentBase(),
     m_vbo(std::make_unique<VertexBuffer>()),
     m_ibo(std::make_unique<IndexBuffer>()),
-    m_topology(topology),
-    m_vertex_attributes(vertex_attributes),
+    m_mesh_attributes {
+        .vertex_attributes = vertex_attributes,
+        .topology = topology
+    },
     m_vertices(vertices),
     m_indices(indices),
     m_flags(flags)
@@ -101,7 +103,7 @@ void Mesh::Init(Engine *engine)
 
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
 
-        AssertThrowMsg(m_vertex_attributes != 0, "No vertex attributes set on mesh");
+        AssertThrowMsg(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
 
         if (m_vertices.empty() || m_indices.empty()) {
             DebugLog(
@@ -179,11 +181,6 @@ void Mesh::Init(Engine *engine)
             m_indices_count = 0;
             
             engine->render_scheduler.Enqueue([this, engine](...) {
-                DebugLog(
-                    LogType::Debug,
-                    "REALLY Destroy mesh with id %u\n",
-                    GetId().value
-                );
                 auto result = renderer::Result::OK;
 
                 auto *device = engine->GetDevice();
@@ -211,7 +208,7 @@ void Mesh::Init(Engine *engine)
 
 std::vector<float> Mesh::BuildVertexBuffer()
 {
-    const size_t vertex_size = m_vertex_attributes.CalculateVertexSize();
+    const size_t vertex_size = GetVertexAttributes().CalculateVertexSize();
 
     std::vector<float> packed_buffer(vertex_size * m_vertices.size());
 
@@ -225,17 +222,17 @@ std::vector<float> Mesh::BuildVertexBuffer()
         //current_offset = i * vertex_size;
 
         /* Position and normals */
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3);
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
         /* Texture coordinates */
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
         /* Tangents and Bitangents */
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
 
         /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
             float weights[4] = {
                 vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
                 vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
@@ -243,7 +240,7 @@ std::vector<float> Mesh::BuildVertexBuffer()
             PACKED_SET_ATTR(weights, std::size(weights));
         }
 
-        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
+        if (GetVertexAttributes() & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
             float indices[4] = {
                     (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
                     (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)

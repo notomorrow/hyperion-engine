@@ -11,32 +11,32 @@ class ShaderManager {
 public:
     using Key = ShaderKey;
 
-    void SetShader(const std::string &name, Ref<Shader> &&shader)
+    void SetShader(const std::string &name, Handle<Shader> &&shader)
     {
         SetShader(Key::CUSTOM, name, std::move(shader));
     }
 
-    void SetShader(Key key, Ref<Shader> &&shader)
+    void SetShader(Key key, Handle<Shader> &&shader)
     {
         SetShader(key, "", std::move(shader));
     }
 
-    Ref<Shader> &GetShader(const std::string &name)
+    Handle<Shader> &GetShader(const std::string &name)
         { return GetShader(Key::CUSTOM, name); }
 
-    Ref<Shader> &GetShader(Key key)
+    Handle<Shader> &GetShader(Key key)
         { return GetShader(key, ""); }
 
 private:
-    Ref<Shader> &GetShader(Key key, const std::string &name)
+    Handle<Shader> &GetShader(Key key, const std::string &name)
         { return m_shaders[ShaderMapKey{key, name}]; }
 
-    void SetShader(Key key, const std::string &name, Ref<Shader> &&shader)
+    void SetShader(Key key, const std::string &name, Handle<Shader> &&shader)
     {
         m_shaders[ShaderMapKey{key, name}] = std::move(shader);
     }
 
-    FlatMap<ShaderMapKey, Ref<Shader>> m_shaders;
+    FlatMap<ShaderMapKey, Handle<Shader>> m_shaders;
 };
 
 } // namespace hyperion::v2

@@ -29,8 +29,6 @@ public:
             );
         }
 
-        // TODO: Textures, can't just dump raw texture data
-
         return { FBOMResult::FBOM_OK };
     }
 

@@ -54,29 +54,29 @@ public:
     PostProcessingEffect &operator=(const PostProcessingEffect &other) = delete;
     virtual ~PostProcessingEffect();
 
-    FullScreenPass &GetFullScreenPass()             { return m_full_screen_pass; }
+    FullScreenPass &GetFullScreenPass() { return m_full_screen_pass; }
     const FullScreenPass &GetFullScreenPass() const { return m_full_screen_pass; }
 
-    Ref<Shader> &GetShader()                        { return m_shader; }
-    const Ref<Shader> &GetShader() const            { return m_shader; }
+    Handle<Shader> &GetShader() { return m_shader; }
+    const Handle<Shader> &GetShader() const { return m_shader; }
 
-    Stage GetStage() const                          { return m_stage; }
-    UInt GetIndex() const                           { return m_full_screen_pass.GetSubDescriptorIndex(); }
+    Stage GetStage() const { return m_stage; }
+    UInt GetIndex() const { return m_full_screen_pass.GetSubDescriptorIndex(); }
 
-    bool IsEnabled() const                          { return m_is_enabled; }
-    void SetIsEnabled(bool is_enabled)              { m_is_enabled = is_enabled; }
+    bool IsEnabled() const { return m_is_enabled; }
+    void SetIsEnabled(bool is_enabled) { m_is_enabled = is_enabled; }
 
     void Init(Engine *engine);
 
 protected:
-    virtual Ref<Shader> CreateShader(Engine *engine) = 0;
+    virtual Handle<Shader> CreateShader(Engine *engine) = 0;
 
     FullScreenPass m_full_screen_pass;
 
 private:
-    Ref<Shader>    m_shader;
-    Stage          m_stage;
-    bool           m_is_enabled;
+    Handle<Shader> m_shader;
+    Stage m_stage;
+    bool m_is_enabled;
 };
 
 class PostProcessing {

@@ -51,8 +51,8 @@ public:
     VoxelConeTracing &operator=(const VoxelConeTracing &other) = delete;
     ~VoxelConeTracing();
 
-    Ref<Texture> &GetVoxelImage()             { return m_voxel_image; }
-    const Ref<Texture> &GetVoxelImage() const { return m_voxel_image; }
+    Handle<Texture> &GetVoxelImage() { return m_voxel_image; }
+    const Handle<Texture> &GetVoxelImage() const { return m_voxel_image; }
 
     void Init(Engine *engine);
     void InitGame(Engine *engine); // init on game thread
@@ -76,17 +76,17 @@ private:
     virtual void OnEntityRenderableAttributesChanged(Ref<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
-    Params                                             m_params;
+    Params m_params;
 
-    Ref<Scene>                                         m_scene;
+    Handle<Scene> m_scene;
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
-    Ref<Shader>                                        m_shader;
-    Ref<RenderPass>                                    m_render_pass;
-    Ref<RendererInstance>                              m_renderer_instance;
-    Ref<ComputePipeline>                               m_clear_voxels;
+    Handle<Shader> m_shader;
+    Ref<RenderPass> m_render_pass;
+    Ref<RendererInstance> m_renderer_instance;
+    Handle<ComputePipeline> m_clear_voxels;
                                                        
-    Ref<Texture>                                       m_voxel_image;
-    UniformBuffer                                      m_uniform_buffer;
+    Handle<Texture> m_voxel_image;
+    UniformBuffer m_uniform_buffer;
 };
 
 } // namespace hyperion::v2

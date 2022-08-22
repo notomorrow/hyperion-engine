@@ -41,7 +41,7 @@ Result Fence::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result Fence::WaitForGpu(Device *device, bool timeout_loop, VkResult *out_result)
+Result Fence::WaitForGPU(Device *device, bool timeout_loop, VkResult *out_result)
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 

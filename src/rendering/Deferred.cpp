@@ -22,7 +22,7 @@ DeferredPass::~DeferredPass() = default;
 void DeferredPass::CreateShader(Engine *engine)
 {
     if (m_is_indirect_pass) {
-        m_shader = engine->resources.shaders.Add(new Shader(
+        m_shader = Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
                     FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
@@ -35,7 +35,7 @@ void DeferredPass::CreateShader(Engine *engine)
             }
         ));
     } else {
-        m_shader = engine->resources.shaders.Add(new Shader(
+        m_shader = Handle<Shader>(new Shader(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
                     FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
@@ -105,17 +105,18 @@ void DeferredPass::Create(Engine *engine)
         m_command_buffers[i] = std::move(command_buffer);
     }
 
-    RenderableAttributeSet renderable_attributes {
-        .bucket            = BUCKET_INTERNAL,
-        .vertex_attributes = renderer::static_mesh_vertex_attributes,
-        .fill_mode         = FillMode::FILL,
-        .depth_write       = false,
-        .depth_test        = false
-    };
-
-    if (!m_is_indirect_pass) {
-        renderable_attributes.alpha_blending = true;
-    }
+    RenderableAttributeSet renderable_attributes(
+        MeshAttributes {
+            .vertex_attributes = renderer::static_mesh_vertex_attributes,
+            .fill_mode = FillMode::FILL,
+        },
+        MaterialAttributes {
+            .bucket = Bucket::BUCKET_INTERNAL,
+            .flags = m_is_indirect_pass
+                ? MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
+                : MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING
+        }
+    );
 
     CreatePipeline(engine, renderable_attributes);
 }
@@ -225,7 +226,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_ssr.Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_mipmapped_results[i] = engine->resources.textures.Add(new Texture2D(
+        m_mipmapped_results[i] = Handle<Texture>(new Texture2D(
             Extent2D { 1024, 1024 },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
@@ -233,7 +234,7 @@ void DeferredRenderer::Create(Engine *engine)
             nullptr
         ));
 
-        m_mipmapped_results[i].Init();
+        m_mipmapped_results[i]->Init(engine);
     }
     
     m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);

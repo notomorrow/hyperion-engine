@@ -127,25 +127,24 @@ private:
     void AddDescriptors(Engine *engine);
     void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
 
-    ProbeGridInfo      m_grid_info;
+    ProbeGridInfo m_grid_info;
     std::vector<Probe> m_probes;
 
-    Ref<ComputePipeline> m_update_irradiance,
-                         m_update_depth;
+    Handle<ComputePipeline> m_update_irradiance, m_update_depth;
 
     std::unique_ptr<RaytracingPipeline> m_pipeline;
-    std::unique_ptr<UniformBuffer>      m_uniform_buffer;
+    std::unique_ptr<UniformBuffer> m_uniform_buffer;
 
-    std::unique_ptr<StorageBuffer>      m_radiance_buffer;
+    std::unique_ptr<StorageBuffer> m_radiance_buffer;
 
-    std::unique_ptr<StorageImage>       m_irradiance_image;
-    std::unique_ptr<ImageView>          m_irradiance_image_view;
+    std::unique_ptr<StorageImage> m_irradiance_image;
+    std::unique_ptr<ImageView> m_irradiance_image_view;
 
-    std::unique_ptr<StorageImage>       m_depth_image;
-    std::unique_ptr<ImageView>          m_depth_image_view;
+    std::unique_ptr<StorageImage> m_depth_image;
+    std::unique_ptr<ImageView> m_depth_image_view;
 
     RotationMatrixGenerator m_random_generator;
-    UInt32                  m_time;
+    UInt32 m_time;
 };
 
 } // namespace hyperion::v2

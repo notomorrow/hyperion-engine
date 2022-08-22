@@ -34,7 +34,7 @@ class Node {
 public:
     using NodeList = DynArray<NodeProxy>;
 
-    enum class Type {
+    enum class Type : UInt {
         NODE,
         BONE
     };
@@ -201,8 +201,24 @@ public:
     void Rotate(const Quaternion &rotation)
         { SetLocalRotation(m_local_transform.GetRotation() * rotation); }
 
-    /*! @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
+    /*! \brief @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
     const Transform &GetWorldTransform() const { return m_world_transform; }
+
+    /*! \brief Set the local-space translation, scale, rotation of this Node  */
+    void SetWorldTransform(const Transform &transform)
+    {
+        if (m_parent_node == nullptr) {
+            SetLocalTransform(transform);
+
+            return;
+        }
+
+        SetLocalTransform(Transform(
+            transform.GetTranslation() - m_parent_node->GetWorldTranslation(),
+            transform.GetScale() / m_parent_node->GetWorldScale(),
+            transform.GetRotation() * Quaternion(m_parent_node->GetWorldRotation()).Invert()
+        ));
+    }
     
     /*! @returns The world-space translation of this Node. */
     const Vector3 &GetWorldTranslation() const
@@ -252,15 +268,25 @@ public:
         SetLocalRotation(rotation * Quaternion(m_parent_node->GetWorldRotation()).Invert());
     }
 
-    /*! @returns The local-space (model) of the node's aabb. Only includes
+    /*! \brief @returns The local-space (model) of the node's aabb. Only includes
      * the Entity's aabb.
      */
-    const BoundingBox &GetLocalAABB() const { return m_local_aabb; }
+    const BoundingBox &GetLocalAABB() const
+        { return m_local_aabb; }
 
-    /*! @returns The world-space aabb of the node. Includes the transforms of all
+    /*! \brief Set the local-space AABB of the Node. Used for marshaling data */
+    void SetLocalAABB(const BoundingBox &aabb)
+        { m_local_aabb = aabb; }
+
+    /*! \brief @returns The world-space aabb of the node. Includes the transforms of all
      * parent nodes.
      */
-    const BoundingBox &GetWorldAABB() const { return m_world_aabb; }
+    const BoundingBox &GetWorldAABB() const
+        { return m_world_aabb; }
+
+    /*! \brief Set the world-space AABB of the Node. Used for marshaling data */
+    void SetWorldAABB(const BoundingBox &aabb)
+        { m_world_aabb = aabb; }
 
     void UpdateWorldTransform();
 

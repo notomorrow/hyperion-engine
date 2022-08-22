@@ -6,7 +6,7 @@ namespace hyperion {
 namespace renderer {
 namespace helpers {
 
-uint32_t MipmapSize(uint32_t src_size, int lod)
+UInt MipmapSize(UInt src_size, int lod)
 {
     return MathUtil::Max(src_size >> lod, 1u);
 }

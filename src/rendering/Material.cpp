@@ -44,7 +44,7 @@ void Material::Init(Engine *engine)
 
         for (SizeType i = 0; i < m_textures.Size(); i++) {
             if (auto &texture = m_textures.ValueAt(i)) {
-                texture.Init();
+                texture->Init(engine);
             }
         }
 
@@ -64,7 +64,6 @@ void Material::Init(Engine *engine)
             }
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
-            // TODO: SafeReleaseRenderResource for descriptor set
             EnqueueDescriptorSetDestroy();
 #endif
 
@@ -270,7 +269,7 @@ void Material::ResetParameters()
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
+void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
 {
     if (m_textures[key] == texture) {
         return;
@@ -281,7 +280,7 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
     }
 
     if (texture && IsReady()) {
-        texture.Init();
+        texture->Init(GetEngine());
 
         m_textures.Set(key, std::move(texture));
 
@@ -298,12 +297,12 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 
 Texture *Material::GetTexture(TextureKey key)
 {
-    return m_textures.Get(key).ptr;
+    return m_textures.Get(key).Get();
 }
 
 const Texture *Material::GetTexture(TextureKey key) const
 {
-    return m_textures.Get(key).ptr;
+    return m_textures.Get(key).Get();
 }
 
 MaterialGroup::MaterialGroup() = default;

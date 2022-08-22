@@ -3,6 +3,7 @@
 
 #include <core/Containers.hpp>
 #include <core/lib/Pair.hpp>
+#include <core/Handle.hpp>
 
 #include <rendering/Texture.hpp>
 #include <rendering/Mesh.hpp>
@@ -35,33 +36,33 @@ class SafeDeleter {
     static constexpr UInt8 initial_cycles_remaining = static_cast<UInt8>(max_frames_in_flight + 1);
 
 public:
-    void SafeReleaseRenderResource(Ref<Texture> &&resource)
+    void SafeReleaseRenderResource(Handle<Texture> &&resource)
     {
         SafeReleaseRenderResourceImpl<Texture>(std::move(resource), RENDERABLE_DELETION_TEXTURES);
     }
     
-    void SafeReleaseRenderResource(Ref<Mesh> &&resource)
+    void SafeReleaseRenderResource(Handle<Mesh> &&resource)
     {
         SafeReleaseRenderResourceImpl<Mesh>(std::move(resource), RENDERABLE_DELETION_MESHES);
     }
     
-    void SafeReleaseRenderResource(Ref<Skeleton> &&resource)
+    void SafeReleaseRenderResource(Handle<Skeleton> &&resource)
     {
         SafeReleaseRenderResourceImpl<Skeleton>(std::move(resource), RENDERABLE_DELETION_SKELETONS);
     }
     
-    void SafeReleaseRenderResource(Ref<Shader> &&resource)
+    void SafeReleaseRenderResource(Handle<Shader> &&resource)
     {
         SafeReleaseRenderResourceImpl<Shader>(std::move(resource), RENDERABLE_DELETION_SHADERS);
     }
 
     template <class T>
-    struct RenderableDeletionEntry : public KeyValuePair<Ref<T>, UInt8> {
-        using Base = KeyValuePair<Ref<T>, UInt8>;
+    struct RenderableDeletionEntry : public KeyValuePair<Handle<T>, UInt8> {
+        using Base = KeyValuePair<Handle<T>, UInt8>;
 
         static_assert(std::is_base_of_v<RenderResource, T>, "T must be a derived class of RenderResource");
 
-        RenderableDeletionEntry(Ref<T> &&renderable)
+        RenderableDeletionEntry(Handle<T> &&renderable)
             : Base(std::move(renderable), initial_cycles_remaining)
         {
         }
@@ -85,6 +86,7 @@ public:
 
         void PerformDeletion()
         {
+            // cycle should be at zero
             AssertThrow(Base::second == 0u);
 
             Base::first.Reset();
@@ -101,7 +103,8 @@ public:
 
         for (auto it = queue.Begin(); it != queue.End();) {
             RenderableDeletionEntry<T> &front = *it;
-            AssertThrow(front.first.Valid());
+
+            AssertThrow(front.first != nullptr);
 
             if (!front.second) {
                 front.PerformDeletion();
@@ -119,9 +122,9 @@ public:
 
 private:
     template <class T>
-    void SafeReleaseRenderResourceImpl(Ref<T> &&resource, UInt mask)
+    void SafeReleaseRenderResourceImpl(Handle<T> &&resource, UInt mask)
     {
-        if (resource.Valid()) {// && resource.GetRefCount() == 1) {
+        if (resource) {// && resource.GetRefCount() == 1) {
             std::lock_guard guard(m_render_resource_deletion_mutex);
             
             auto &deletion_queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);

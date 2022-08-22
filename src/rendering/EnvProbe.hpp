@@ -17,8 +17,8 @@ class EnvProbe
       public RenderResource
 {
 public:
-    EnvProbe(Ref<Texture> &&texture);
-    EnvProbe(Ref<Texture> &&texture, const BoundingBox &aabb);
+    EnvProbe(Handle<Texture> &&texture);
+    EnvProbe(Handle<Texture> &&texture, const BoundingBox &aabb);
     EnvProbe(const EnvProbe &other) = delete;
     EnvProbe &operator=(const EnvProbe &other) = delete;
     ~EnvProbe();
@@ -57,7 +57,7 @@ public:
 private:
     void SetNeedsUpdate() { m_needs_update = true; }
 
-    Ref<Texture> m_texture;
+    Handle<Texture> m_texture;
     Optional<BoundingBox> m_aabb;
     Vector3 m_world_position;
     bool m_needs_update;
