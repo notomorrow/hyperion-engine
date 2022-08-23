@@ -6,6 +6,7 @@
 #include "../GameCounter.hpp"
 
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/String.hpp>
 
 #include <Types.hpp>
 
@@ -21,16 +22,17 @@ class Node;
 class Entity;
 class Engine;
 
-class Controller {
+class Controller
+{
     friend class Entity;
 
 public:
-    Controller(const char *name, bool received_update = true);
+    Controller(const String &name, bool receives_update = true);
     Controller(const Controller &other) = delete;
     Controller &operator=(const Controller &other) = delete;
     virtual ~Controller();
 
-    const char *GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
     Entity *GetOwner() const { return m_owner; }
     bool ReceivesUpdate() const { return m_receives_update; }
 
@@ -46,7 +48,7 @@ protected:
     Engine *GetEngine() const;
 
 private:
-    char *m_name;
+    String m_name;
     Entity *m_owner;
     bool m_receives_update;
 };

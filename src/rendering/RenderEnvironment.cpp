@@ -143,7 +143,11 @@ void RenderEnvironment::Init(Engine *engine)
                 m_env_probes_update_sp.Signal();
             }
 
-            m_render_components.Clear();
+            engine->GetRenderScheduler().Enqueue([this](...) {
+                m_render_components.Clear();
+
+                HYPERION_RETURN_OK;
+            });
 
             if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
                 //std::lock_guard guard(m_render_component_mutex);

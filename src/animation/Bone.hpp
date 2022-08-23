@@ -2,16 +2,19 @@
 #define HYPERION_V2_BONE_H
 
 #include "../scene/Node.hpp"
+#include <core/lib/String.hpp>
 #include "Keyframe.hpp"
 
 #include <math/Transform.hpp>
 
 namespace hyperion::v2 {
 
-class Bone : public Node {
+class Bone : public Node
+{
     friend class Skeleton;
+
 public:
-    Bone(const char *name = "");
+    Bone(const String &name = String::empty);
     Bone(const Bone &other) = delete;
     Bone &operator=(const Bone &other) = delete;
     ~Bone();

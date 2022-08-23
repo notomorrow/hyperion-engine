@@ -9,7 +9,7 @@
 namespace hyperion::v2 {
 
 Node::Node(
-    const char *name,
+    const String &name,
     const Transform &local_transform
 ) : Node(
         name,
@@ -20,7 +20,7 @@ Node::Node(
 }
 
 Node::Node(
-    const char *name,
+    const String &name,
     Ref<Entity> &&entity,
     const Transform &local_transform
 ) : Node(
@@ -34,23 +34,21 @@ Node::Node(
 
 Node::Node(
     Type type,
-    const char *name,
+    const String &name,
     Ref<Entity> &&entity,
     const Transform &local_transform
 ) : m_type(type),
+    m_name(name),
     m_parent_node(nullptr),
     m_local_transform(local_transform),
     m_scene(nullptr)
 {
     SetEntity(std::move(entity));
-
-    const size_t len = std::strlen(name);
-    m_name = new char[len + 1];
-    Memory::CopyString(m_name, name);
 }
 
 Node::Node(Node &&other) noexcept
     : m_type(other.m_type),
+      m_name(std::move(other.m_name)),
       m_parent_node(other.m_parent_node),
       m_local_transform(other.m_local_transform),
       m_world_transform(other.m_world_transform),
@@ -69,9 +67,6 @@ Node::Node(Node &&other) noexcept
     m_entity = std::move(other.m_entity);
     m_entity->SetParent(this);
     other.m_entity = nullptr;
-
-    m_name = other.m_name;
-    other.m_name = nullptr;
 
     m_child_nodes = std::move(other.m_child_nodes);
     other.m_child_nodes = {};
@@ -118,8 +113,7 @@ Node &Node::operator=(Node &&other) noexcept
     m_entity->SetParent(this);
     other.m_entity = nullptr;
 
-    m_name = other.m_name;
-    other.m_name = nullptr;
+    m_name = std::move(other.m_name);
 
     m_child_nodes = std::move(other.m_child_nodes);
     other.m_child_nodes = {};
@@ -142,21 +136,6 @@ Node::~Node()
 
     RemoveAllChildren();
     SetEntity(nullptr);
-
-    delete[] m_name;
-}
-
-void Node::SetName(const char *name)
-{
-    if (name == m_name || !std::strcmp(name, m_name)) {
-        return;
-    }
-
-    delete[] m_name;
-
-    const size_t len = std::strlen(name);
-    m_name = new char[len + 1];
-    Memory::CopyString(m_name, name);
 }
 
 void Node::SetScene(Scene *scene)
@@ -383,7 +362,7 @@ Node::NodeList::Iterator Node::FindChild(Node *node)
 Node::NodeList::Iterator Node::FindChild(const char *name)
 {
     return m_child_nodes.FindIf([name](const auto &it) {
-        return !std::strcmp(name, it.Get()->GetName());
+        return it.GetName() == name;
     });
 }
 

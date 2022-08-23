@@ -39,7 +39,7 @@ Keyframe AnimationTrack::GetKeyframe(float time) const
     return {time, transform};
 }
 
-Animation::Animation(const std::string &name)
+Animation::Animation(const String &name)
     : m_name(name)
 {
 }

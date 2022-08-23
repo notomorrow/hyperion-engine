@@ -90,6 +90,13 @@ NodeProxy::~NodeProxy()
     ReleaseNode();
 }
 
+const String &NodeProxy::GetName() const
+{
+    return m_node
+        ? m_node->GetName()
+        : String::empty;
+}
+
 void NodeProxy::ReleaseNode()
 {
     if (m_node == nullptr) {

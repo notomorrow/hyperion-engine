@@ -100,7 +100,7 @@ void Entity::Init(Engine *engine)
                 LogType::Debug,
                 "Destroy entity with id %u, with name %s\n",
                 m_id.value,
-                m_material ? m_material->GetName() : "No material"
+                m_material ? m_material->GetName().Data() : "No material"
             );
 
             SetReady(false);
