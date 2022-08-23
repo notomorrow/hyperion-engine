@@ -8,7 +8,7 @@ void GameCounter::NextTick()
 {
     const auto current = Now();
 
-    delta           = Interval(current);
+    delta = Interval(current);
     last_time_point = current;
 }
 

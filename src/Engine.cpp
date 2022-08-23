@@ -578,19 +578,14 @@ void Engine::Compile()
 
 void Engine::RequestStop()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    task_system.Stop();
-
-    m_running.store(false);
-    m_is_stopping = true;    
+    m_running.store(false); 
 }
 
 void Engine::FinalizeStop()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    AssertThrow(m_is_stopping = true);
+    AssertThrow(m_is_stopping);
     AssertThrow(!game_thread.IsRunning());
 
     m_is_render_loop_active = false;
@@ -604,10 +599,17 @@ void Engine::FinalizeStop()
 
 void Engine::RenderNextFrame(Game *game)
 {
-    if (m_is_stopping && !game_thread.IsRunning()) {
-        FinalizeStop();
+    if (!m_running.load()) {
+        if (m_is_stopping) {
+            if (!game_thread.IsRunning()) {
+                FinalizeStop();
 
-        return;
+                return;
+            }
+        } else {
+            task_system.Stop();
+            m_is_stopping = true;
+        }
     }
 
     HYPERION_ASSERT_RESULT(GetInstance()->GetFrameHandler()->PrepareFrame(
