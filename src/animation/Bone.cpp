@@ -2,7 +2,7 @@
 
 namespace hyperion::v2 {
 
-Bone::Bone(const char *name)
+Bone::Bone(const String &name)
     : Node(Type::BONE, name, nullptr, Transform()),
       m_skeleton(nullptr)
 {

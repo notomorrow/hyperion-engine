@@ -39,7 +39,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::NodeGetName)
     vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
     AssertThrow(ptr != nullptr);
 
-    ptr->Assign(ImmutableString(node_ptr->GetName()));
+    ptr->Assign(ImmutableString(node_ptr->GetName().Data()));
     ptr->Mark();
 
     HYP_SCRIPT_RETURN_PTR(ptr);

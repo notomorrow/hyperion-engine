@@ -14,7 +14,7 @@ public:
     AnimationController();
     virtual ~AnimationController() override = default;
 
-    void Play(const std::string &animation_name, float speed, LoopMode loop_mode = LoopMode::ONCE);
+    void Play(const String &animation_name, float speed, LoopMode loop_mode = LoopMode::ONCE);
     virtual void Play(float speed, LoopMode loop_mode = LoopMode::ONCE) override;
     virtual void Stop() override;
 

@@ -4,14 +4,17 @@
 #include <asset/LoaderObject.hpp>
 #include <asset/Loader.hpp>
 #include <animation/Skeleton.hpp>
+#include <core/lib/String.hpp>
 
 #include <math/Quaternion.hpp>
 
 namespace hyperion::v2 {
 
 template <>
-struct LoaderObject<Skeleton, LoaderFormat::OGRE_XML_SKELETON> {
-    class Loader : public LoaderBase<Skeleton, LoaderFormat::OGRE_XML_SKELETON> {
+struct LoaderObject<Skeleton, LoaderFormat::OGRE_XML_SKELETON>
+{
+    class Loader : public LoaderBase<Skeleton, LoaderFormat::OGRE_XML_SKELETON>
+    {
         static LoaderResult LoadFn(LoaderState *state, Object &);
         static std::unique_ptr<Skeleton> BuildFn(Engine *engine, const Object &);
 
@@ -25,33 +28,37 @@ struct LoaderObject<Skeleton, LoaderFormat::OGRE_XML_SKELETON> {
         }
     };
 
-    struct Bone {
-        std::string name;
-        uint32_t id;
+    struct BoneData
+    {
+        String name;
+        UInt id;
 
-        std::string parent_name;
+        String parent_name;
         Vector3 binding_translation;
         Quaternion binding_rotation;
     };
 
-    struct Keyframe {
+    struct KeyframeData
+    {
         float time;
         Vector3 translation;
         Quaternion rotation;
     };
 
-    struct AnimationTrack {
-        std::string bone_name;
-        std::vector<Keyframe> keyframes;
+    struct AnimationTrackData
+    {
+        String bone_name;
+        std::vector<KeyframeData> keyframes;
     };
 
-    struct Animation {
-        std::string name;
-        std::vector<AnimationTrack> tracks;
+    struct AnimationData
+    {
+        String name;
+        std::vector<AnimationTrackData> tracks;
     };
 
-    std::vector<Bone> bones;
-    std::vector<Animation> animations;
+    std::vector<BoneData> bones;
+    std::vector<AnimationData> animations;
 };
 
 } // namespace hyperion::v2

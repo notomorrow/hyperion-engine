@@ -71,6 +71,10 @@ public:
     Node *Get() { return m_node; }
     const Node *Get() const { return m_node; }
 
+    /*! \brief If the Node exists, returns the String name of the Node.
+        Otherwise, returns the empty String. */
+    const String &GetName() const;
+
     bool Any() const { return m_node != nullptr; }
 
     /*! \brief Conversion operator to bool, to use in if-statements */

@@ -83,13 +83,13 @@ void Skeleton::EnqueueRenderUpdates() const
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-Bone *Skeleton::FindBone(const char *name)
+Bone *Skeleton::FindBone(const String &name)
 {
     if (m_root_bone == nullptr) {
         return nullptr;
     }
 
-    if (!std::strcmp(m_root_bone->GetName(), name)) {
+    if (m_root_bone->GetName() == name) {
         return m_root_bone.get();
     }
 
@@ -104,7 +104,7 @@ Bone *Skeleton::FindBone(const char *name)
 
         auto *bone = static_cast<Bone *>(node.Get());  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
-        if (!std::strcmp(bone->GetName(), name)) {
+        if (bone->GetName() == name) {
             return bone;
         }
     }
@@ -139,40 +139,36 @@ void Skeleton::AddAnimation(std::unique_ptr<Animation> &&animation)
     for (auto &track : animation->GetTracks()) {
         track.bone = nullptr;
 
-        if (track.bone_name.empty()) {
+        if (track.bone_name.Empty()) {
             continue;
         }
 
-        track.bone = FindBone(track.bone_name.c_str());
+        track.bone = FindBone(track.bone_name);
 
         if (track.bone == nullptr) {
             DebugLog(
                 LogType::Warn,
                 "Skeleton could not find bone with name \"%s\"\n",
-                track.bone_name.c_str()
+                track.bone_name.Data()
             );
         }
     }
 
-    m_animations.push_back(std::move(animation));
+    m_animations.PushBack(std::move(animation));
 }
 
-Animation *Skeleton::FindAnimation(const std::string &name, UInt *out_index) const
+Animation *Skeleton::FindAnimation(const String &name, UInt *out_index) const
 {
-    const auto it = std::find_if(
-        m_animations.begin(),
-        m_animations.end(),
-        [&name](const auto &item) {
-            return item->GetName() == name;
-        }
-    );
+    const auto it = m_animations.FindIf([&name](const auto &item) {
+        return item->GetName() == name;
+    });
 
-    if (it == m_animations.end()) {
+    if (it == m_animations.End()) {
         return nullptr;
     }
 
     if (out_index != nullptr) {
-        *out_index = static_cast<UInt>(std::distance(m_animations.begin(), it));
+        *out_index = m_animations.IndexOf(it);
     }
 
     return it->get();

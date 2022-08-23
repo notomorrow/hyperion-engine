@@ -14,17 +14,17 @@ namespace hyperion {
 template <class Container, class Key>
 class ContainerBase {
 protected:
-    using Base     = ContainerBase;
-    using KeyType  = Key;
+    using Base = ContainerBase;
+    using KeyType = Key;
 
 public:
-    ContainerBase() {}
-    ~ContainerBase() {}
+    ContainerBase() { }
+    ~ContainerBase() { }
 
     template <class T>
     [[nodiscard]] auto Find(const T &value)
     {
-        auto _begin     = static_cast<Container *>(this)->Begin();
+        auto _begin = static_cast<Container *>(this)->Begin();
         const auto _end = static_cast<Container *>(this)->End();
 
         for (; _begin != _end; ++_begin) {
@@ -39,7 +39,7 @@ public:
     template <class T>
     [[nodiscard]] auto Find(const T &value) const
     {
-        auto _begin     = static_cast<const Container *>(this)->Begin();
+        auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
 
         for (; _begin != _end; ++_begin) {
@@ -54,8 +54,23 @@ public:
     template <class Function>
     [[nodiscard]] auto FindIf(Function &&pred)
     {
-        typename Container::Iterator _begin     = static_cast<Container *>(this)->Begin();
+        typename Container::Iterator _begin = static_cast<Container *>(this)->Begin();
         const typename Container::Iterator _end = static_cast<Container *>(this)->End();
+
+        for (; _begin != _end; ++_begin) {
+            if (pred(*_begin)) {
+                return _begin;
+            }
+        }
+
+        return _begin;
+    }
+
+    template <class Function>
+    [[nodiscard]] auto FindIf(Function &&pred) const
+    {
+        typename Container::ConstIterator _begin = static_cast<const Container *>(this)->Begin();
+        const typename Container::ConstIterator _end = static_cast<const Container *>(this)->End();
 
         for (; _begin != _end; ++_begin) {
             if (pred(*_begin)) {
@@ -70,7 +85,7 @@ public:
     [[nodiscard]] auto LowerBound(const T &key)
     {
         const auto _begin = static_cast<Container *>(this)->Begin();
-        const auto _end   = static_cast<Container *>(this)->End();
+        const auto _end = static_cast<Container *>(this)->End();
 
         return std::lower_bound(
             _begin,
@@ -83,7 +98,7 @@ public:
     [[nodiscard]] auto LowerBound(const T &key) const
     {
         const auto _begin = static_cast<const Container *>(this)->Begin();
-        const auto _end   = static_cast<const Container *>(this)->End();
+        const auto _end = static_cast<const Container *>(this)->End();
 
         return std::lower_bound(
             _begin,
@@ -105,7 +120,7 @@ public:
 
         HeldType result { };
         const auto _begin = static_cast<const Container *>(this)->Begin();
-        const auto _end   = static_cast<const Container *>(this)->End();
+        const auto _end = static_cast<const Container *>(this)->End();
 
         const auto dist = static_cast<HeldType>(_end - _begin);
 
@@ -127,7 +142,7 @@ public:
         HeldType result { };
 
         const auto _begin = static_cast<const Container *>(this)->Begin();
-        const auto _end   = static_cast<const Container *>(this)->End();
+        const auto _end = static_cast<const Container *>(this)->End();
 
         const auto dist = static_cast<HeldType>(_end - _begin);
 
@@ -142,6 +157,15 @@ public:
         result /= dist;
 
         return result;
+    }
+
+    template <class ConstIterator>
+    [[nodiscard]] KeyType IndexOf(ConstIterator iter) const
+    {
+        static_assert(std::is_convertible_v<decltype(iter),
+            typename Container::ConstIterator>, "Iterator type does not match container");
+
+        return static_cast<KeyType>(std::distance(static_cast<const Container *>(this)->Begin(), iter));
     }
 
     [[nodiscard]] HashCode GetHashCode() const

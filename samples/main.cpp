@@ -338,7 +338,7 @@ public:
         scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 
         for (auto &x : scene->GetRoot().GetChildren()) {
-            DebugLog(LogType::Debug, "%s\n", x.Get()->GetName());
+            DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
         }
     }
 

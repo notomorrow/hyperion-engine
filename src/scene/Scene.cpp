@@ -266,7 +266,9 @@ void Scene::RemovePendingEntities()
             LogType::Debug,
             "Remove entity with ID #%u (with material: %s) from scene with ID #%u\n",
             found_entity->GetId().value,
-            found_entity->GetMaterial() ? found_entity->GetMaterial()->GetName() : " no material ",
+            found_entity->GetMaterial()
+                ? found_entity->GetMaterial()->GetName().Data()
+                : " no material ",
             m_id.value
         );
 

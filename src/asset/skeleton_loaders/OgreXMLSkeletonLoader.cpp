@@ -22,7 +22,7 @@ public:
     {
     }
 
-    OgreXmlSkeletonLoader::Object::Animation &LastAnimation()
+    OgreXmlSkeletonLoader::Object::AnimationData &LastAnimation()
     {
         if (m_object.animations.empty()) {
             m_object.animations.emplace_back();
@@ -31,7 +31,7 @@ public:
         return m_object.animations.back();
     }
 
-    OgreXmlSkeletonLoader::Object::AnimationTrack &LastAnimationTrack()
+    OgreXmlSkeletonLoader::Object::AnimationTrackData &LastAnimationTrack()
     {
         auto &animation = LastAnimation();
 
@@ -42,7 +42,7 @@ public:
         return animation.tracks.back();
     }
 
-    OgreXmlSkeletonLoader::Object::Keyframe &LastKeyframe()
+    OgreXmlSkeletonLoader::Object::KeyframeData &LastKeyframe()
     {
         auto &track = LastAnimationTrack();
 
@@ -54,7 +54,7 @@ public:
     }
 
     template <class Lambda>
-    OgreXmlSkeletonLoader::Object::Bone *GetBone(Lambda lambda)
+    OgreXmlSkeletonLoader::Object::BoneData *GetBone(Lambda lambda)
     {
         auto it = std::find_if(m_object.bones.begin(), m_object.bones.end(), lambda);
 
@@ -72,7 +72,7 @@ public:
             auto id = StringUtil::Parse<UInt>(attributes.at("id"));
 
             m_object.bones.push_back({
-                .name = bone_name,
+                .name = String(bone_name.c_str()),
                 .id = id
             });
         } else if (name == "position") {
@@ -81,7 +81,7 @@ public:
             auto z = StringUtil::Parse<float>(attributes.at("z"));
 
             if (!m_object.bones.empty()) {
-                m_object.bones.back().binding_translation = {x, y, z};
+                m_object.bones.back().binding_translation = Vector(x, y, z);
             } else {
                 DebugLog(LogType::Warn, "Ogre XML skeleton parser: Attempt to add position when no bones exist yet\n");
             }
@@ -91,10 +91,12 @@ public:
             std::string parent_name = attributes.at("parent");
             std::string child_name = attributes.at("bone");
 
-            auto *child_bone = GetBone([&child_name](const auto &bone) { return bone.name == child_name; });
+            auto *child_bone = GetBone([&child_name](const auto &bone) {
+                return bone.name == child_name.c_str();
+            });
 
             if (child_bone != nullptr) {
-                child_bone->parent_name = parent_name;
+                child_bone->parent_name = String(parent_name.c_str());
             } else {
                 DebugLog(
                     LogType::Warn,
@@ -105,11 +107,11 @@ public:
             }
         } else if (name == "animation") {
             m_object.animations.push_back({
-                .name = attributes.at("name")
+                .name = String(attributes.at("name").c_str())
             });
         } else if (name == "track") {
             LastAnimation().tracks.push_back({
-                .bone_name = attributes.at("bone")
+                .bone_name = String(attributes.at("bone").c_str())
             });
         } else if (name == "keyframe") {
             LastAnimationTrack().keyframes.push_back({
@@ -120,7 +122,7 @@ public:
             auto y = StringUtil::Parse<float>(attributes.at("y"));
             auto z = StringUtil::Parse<float>(attributes.at("z"));
 
-            LastKeyframe().translation = {x, y, z};
+            LastKeyframe().translation = Vector(x, y, z);
         } else if (name == "rotate") {
             m_keyframe_angles.push(StringUtil::Parse<float>(attributes.at("angle")));
         } else if (name == "axis") {
@@ -128,8 +130,7 @@ public:
             auto y = StringUtil::Parse<float>(attributes.at("y"));
             auto z = StringUtil::Parse<float>(attributes.at("z"));
 
-            Vector3 axis{x, y, z};
-            axis.Normalize();
+            const auto axis = Vector(x, y, z).Normalized();
 
             if (m_element_tags.empty()) {
                 DebugLog(LogType::Warn, "Ogre XML skeleton loader: Attempt to set rotation axis but no prior elements found\n");
@@ -174,7 +175,6 @@ private:
     std::stack<std::string> m_element_tags;
     std::stack<float> m_binding_angles;
     std::stack<float> m_keyframe_angles;
-    std::stack<std::string> m_track_bone_names;
 };
 
 LoaderResult OgreXmlSkeletonLoader::LoadFn(LoaderState *state, Object &object)
@@ -185,10 +185,10 @@ LoaderResult OgreXmlSkeletonLoader::LoadFn(LoaderState *state, Object &object)
     auto sax_result = parser.Parse(&state->stream);
 
     if (!sax_result) {
-        return {LoaderResult::Status::ERR, sax_result.message};
+        return { LoaderResult::Status::ERR, sax_result.message };
     }
     
-    return {};
+    return { };
 }
 
 std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const Object &object)
@@ -196,12 +196,16 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
     auto skeleton = std::make_unique<Skeleton>();
     
     for (const auto &item : object.bones) {
-        auto bone = std::make_unique<v2::Bone>(item.name.c_str());
+        auto bone = std::make_unique<Bone>(item.name);
 
-        bone->SetBindingTransform(Transform(item.binding_translation, Vector3::One(), item.binding_rotation));
+        bone->SetBindingTransform(Transform(
+            item.binding_translation,
+            Vector3::One(),
+            item.binding_rotation
+        ));
 
-        if (!item.parent_name.empty()) {
-            if (auto *parent_bone = skeleton->FindBone(item.parent_name.c_str())) {
+        if (item.parent_name.Any()) {
+            if (auto *parent_bone = skeleton->FindBone(item.parent_name)) {
                 parent_bone->AddChild(NodeProxy(bone.release()));
 
                 continue;
@@ -210,13 +214,13 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
             DebugLog(
                 LogType::Warn,
                 "Ogre XML parser: Parent bone '%s' not found in skeleton at this stage\n",
-                item.parent_name.c_str()
+                item.parent_name.Data()
             );
         } else if (skeleton->GetRootBone() != nullptr) {
             DebugLog(
                 LogType::Warn,
                 "Ogre XML parser: Attempt to set root bone to node '%s' but it has already been set\n",
-                item.name.c_str()
+                item.name.Data()
             );
         } else {
             skeleton->SetRootBone(std::move(bone));
@@ -224,10 +228,10 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
     }
 
     for (const auto &animation_it : object.animations) {
-        auto animation = std::make_unique<v2::Animation>(animation_it.name);
+        auto animation = std::make_unique<Animation>(animation_it.name);
 
         for (const auto &track_it : animation_it.tracks) {
-            v2::AnimationTrack animation_track;
+            AnimationTrack animation_track;
             animation_track.bone_name = track_it.bone_name;
             animation_track.keyframes.reserve(track_it.keyframes.size());
             
@@ -256,7 +260,7 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
         root_bone->UpdateBoneTransform();
     }
 
-    return std::move(skeleton);
+    return skeleton;
 }
 
 } // namespace hyperion::v2

@@ -6,6 +6,7 @@
 #include "RenderableAttributes.hpp"
 
 #include <core/lib/FixedArray.hpp>
+#include <core/lib/String.hpp>
 #include <Types.hpp>
 
 #include <util/EnumOptions.hpp>
@@ -23,7 +24,8 @@ class DescriptorSet;
 
 namespace hyperion::v2 {
 
-class Material : public EngineComponentBase<STUB_CLASS(Material)> {
+class Material : public EngineComponentBase<STUB_CLASS(Material)>
+{
 public:
     static constexpr UInt max_parameters = 32u;
     static constexpr UInt max_textures   = 32u;
@@ -245,7 +247,7 @@ public:
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
     using TextureSet = EnumOptions<TextureKey, Handle<Texture>, max_textures>;
 
-    Material(const char *name = "");
+    Material(const String &name = String::empty);
     Material(const Material &other) = delete;
     Material &operator=(const Material &other) = delete;
     ~Material();
@@ -324,7 +326,10 @@ public:
     const Texture *GetTexture(TextureKey key) const;
 
     /*! \brief Get assigned name of the material */
-    const char *GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
+
+    /*! \brief Set the assigned name of the material */
+    void SetName(const String &name) { m_name = name; }
 
     Bucket GetBucket() const
         { return m_render_attributes.bucket; }
@@ -396,7 +401,7 @@ private:
     void EnqueueDescriptorSetCreate();
     void EnqueueDescriptorSetDestroy();
 
-    char *m_name;
+    String m_name;
 
     ParameterTable m_parameters;
     TextureSet m_textures;

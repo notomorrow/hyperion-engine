@@ -98,7 +98,7 @@ void AnimationController::Play(float speed, LoopMode loop_mode)
     PlaybackController::Play(speed, loop_mode);
 }
 
-void AnimationController::Play(const std::string &animation_name, float speed, LoopMode loop_mode)
+void AnimationController::Play(const String &animation_name, float speed, LoopMode loop_mode)
 {
     if (m_skeleton == nullptr || m_skeleton->NumAnimations() == 0) {
         return;

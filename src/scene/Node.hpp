@@ -2,6 +2,7 @@
 #define HYPERION_V2_NODE_H
 
 #include <core/Containers.hpp>
+#include <core/lib/String.hpp>
 #include <GameCounter.hpp>
 #include "Entity.hpp"
 #include "NodeProxy.hpp"
@@ -19,7 +20,8 @@ namespace hyperion::v2 {
 class Engine;
 class Scene;
 
-class Node {
+class Node
+{
     friend class Scene;
     friend class Entity;
     friend class NodeProxy;
@@ -49,12 +51,12 @@ public:
      * @param local_transform An optional parameter representing the local-space transform of this Node.
      */
     Node(
-        const char *name = "",
+        const String &name = String::empty,
         const Transform &local_transform = Transform()
     );
 
     Node(
-        const char *name,
+        const String &name,
         Ref<Entity> &&entity,
         const Transform &local_transform = Transform()
     );
@@ -66,9 +68,9 @@ public:
     ~Node();
 
     /*! @returns The string tag that was given to the Node on creation. */
-    const char *GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
     /*! \brief Set the string tag of this Node. Used for nested lookups. */
-    void SetName(const char *name);
+    void SetName(const String &name) { m_name = name; }
     /*! @returns The type of the node. By default, it will just be NODE. */
     Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
@@ -295,7 +297,7 @@ public:
 protected:
     Node(
         Type type,
-        const char *name,
+        const String &name,
         Ref<Entity> &&entity,
         const Transform &local_transform = Transform()
     );
@@ -306,7 +308,7 @@ protected:
     void OnNestedNodeRemoved(const NodeProxy &node);
 
     Type m_type = Type::NODE;
-    char *m_name;
+    String m_name;
     Node *m_parent_node;
     NodeList m_child_nodes;
     Transform m_local_transform;
