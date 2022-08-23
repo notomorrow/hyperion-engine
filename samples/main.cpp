@@ -41,7 +41,6 @@
 
 #include <scene/NodeProxy.hpp>
 
-#include <input/InputManager.hpp>
 #include <camera/FirstPersonCamera.hpp>
 #include <camera/FollowCamera.hpp>
 
@@ -88,20 +87,15 @@ public:
     {
     }
 
-    virtual void Init(Engine *engine, SystemWindow *window) override
+    virtual void InitRender(Engine *engine) override
     {
-        Game::Init(engine, window);
-
-        input_manager = new InputManager(window);
-        input_manager->SetWindow(window);
-        
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
     virtual void InitGame(Engine *engine) override
     {
-        scene = Handle<Scene>(new Scene(
+        m_scene = Handle<Scene>(new Scene(
             engine->resources.cameras.Add(new FirstPersonCamera(//FollowCamera(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 2048, 2048,//2048, 1080,
@@ -110,10 +104,7 @@ public:
             ))
         ));
 
-        engine->GetWorld().AddScene(Handle<Scene>(scene));
-        // std::cout << (int)scene->GetClass().fields["foo"].type << "\n";
-
-        DebugLog(LogType::Debug, "%s\n", scene->GetClass().GetName());
+        engine->GetWorld().AddScene(Handle<Scene>(m_scene));
 
         base_material = Handle<Material>(new Material());
         base_material->Init(engine);
@@ -141,7 +132,7 @@ public:
             // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
             sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 7.0f, 0.0f));
-            scene->GetRoot().AddChild(NodeProxy(sphere.release()));
+            m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
 #if 0// serialize/deseriale test
@@ -169,30 +160,30 @@ public:
         }
 
         auto *_node = result.Release<Node>();
-        scene->GetRoot().AddChild(NodeProxy(_node));
+        m_scene->GetRoot().AddChild(NodeProxy(_node));
         
         // auto ent = engine->resources.entities.Add(result.Release<Entity>());
-        // scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
+        // m_scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
 #endif
 
         // auto character_entity = engine->resources.entities.Add(new Spatial());
         // character_entity->AddController<BasicCharacterController>();
-        // scene->AddSpatial(std::move(character_entity));
+        // m_scene->AddSpatial(std::move(character_entity));
 
         // auto tmp_terrain = engine->assets.Load<Node>("models/tmp_terrain.obj");
         // tmp_terrain->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         // tmp_terrain->Scale(500.0f);
-        // scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
+        // m_scene->AddSpatial(tmp_terrain->GetChild(0)->GetEntity().IncRef());
 
 
 #if 0
-        if (auto terrain_node = scene->GetRoot().AddChild()) {
+        if (auto terrain_node = m_scene->GetRoot().AddChild()) {
             terrain_node.Get()->SetEntity(engine->resources.entities.Add(new Entity()));
             terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
         }
 #endif
         
-        if (auto grass = scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
+        if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
             //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
             grass.Scale(1.0f);
@@ -203,7 +194,7 @@ public:
         material_test_obj->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         material_test_obj->Scale(3.45f);
         material_test_obj->Translate(Vector3(0, 22, 0));
-        scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
+        m_scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -229,7 +220,7 @@ public:
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -239,7 +230,7 @@ public:
             Vector4::One(),
             110000.0f
         ));
-        scene->GetEnvironment()->AddLight(Handle<Light>(my_light));
+        m_scene->GetEnvironment()->AddLight(Handle<Light>(my_light));
 
         m_point_light = Handle<Light>(new PointLight(
             Vector3(0.0f, 6.0f, 0.0f),
@@ -248,7 +239,7 @@ public:
             35.0f
         ));
 
-       scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
+        m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
 
         // test_model->Scale(10.0f);
         test_model->Scale(0.08f);//14.075f);
@@ -265,7 +256,7 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        if (auto test = scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
+        if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
             // for (auto &child : test->GetChildren()) {
             //     if (auto &ent = child->GetEntity()) {
             //         std::cout << "Adding debug controller to  " << child->GetName() << "\n";
@@ -288,23 +279,23 @@ public:
         quad_spatial->SetScale(Vector3(3.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 1, 1), MathUtil::DegToRad(-40.0f)));
         quad_spatial->SetTranslation(Vector3(0, 12.0f, 0));
-        // scene->AddEntity(std::move(quad_spatial));
+        // m_scene->AddEntity(std::move(quad_spatial));
         
-        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             Handle<Light>(my_light),
             Vector3::Zero(),
             80.0f
         );
 
-        scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
+        m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
             BoundingBox { Vector(-128, -10, -128), Vector(128, 100, 128) },
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
-        scene->ForceUpdate();
+        m_scene->ForceUpdate();
 
 #if HYPERION_VK_TEST_VCT
-        scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+        m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
             VoxelConeTracing::Params {
                 BoundingBox(-128, 128)
             }
@@ -327,7 +318,7 @@ public:
         //     false
         // );
 
-        scene->AddEntity(cube_obj->GetChild(0).Get()->GetEntity().IncRef());
+        m_scene->AddEntity(cube_obj->GetChild(0).Get()->GetEntity().IncRef());
 
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
@@ -335,29 +326,27 @@ public:
         monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.35f);
         monkey->Translate(Vector3(0, 12.5f, 0));
         monkey->Scale(2.0f);
-        scene->GetRoot().AddChild(NodeProxy(monkey.release()));
+        m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 
-        for (auto &x : scene->GetRoot().GetChildren()) {
+        for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
         }
     }
 
     virtual void Teardown(Engine *engine) override
     {
-        delete input_manager;
-
-        engine->GetWorld().RemoveScene(scene->GetId());
-        scene.Reset();
+        engine->GetWorld().RemoveScene(m_scene->GetId());
+        m_scene.Reset();
 
         Game::Teardown(engine);
     }
 
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
-        scene->GetEnvironment()->RenderComponents(engine, frame);
+        m_scene->GetEnvironment()->RenderComponents(engine, frame);
 
         engine->render_state.visibility_cursor = engine->GetWorld().GetOctree().LoadPreviousVisibilityCursor();
-        engine->render_state.BindScene(scene.Get());
+        engine->render_state.BindScene(m_scene.Get());
     }
 
     virtual void OnFrameEnd(Engine *engine, Frame *) override
@@ -370,11 +359,13 @@ public:
         timer += delta;
         ++counter;
 
+        HandleCameraMovement();
+
         engine->GetWorld().Update(engine, delta);
 
-        //scene->Update(engine, delta);
+        //m_scene->Update(engine, delta);
 
-        //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
+        //m_scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(m_scene->GetCamera()->GetTranslation());
 
 
         #if 0 // bad performance on large meshes. need bvh
@@ -385,7 +376,7 @@ public:
             const auto mouse_x = mouse_position.x.load();
             const auto mouse_y = mouse_position.y.load();
 
-            const auto mouse_world = scene->GetCamera()->TransformScreenToWorld(
+            const auto mouse_world = m_scene->GetCamera()->TransformScreenToWorld(
                 Vector2(
                     mouse_x / static_cast<float>(input_manager->GetWindow()->width),
                     mouse_y / static_cast<float>(input_manager->GetWindow()->height)
@@ -396,7 +387,7 @@ public:
 
             // std::cout << "ray direction: " << ray_direction << "\n";
 
-            Ray ray{scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
+            Ray ray{m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
             RayTestResults results;
 
             if (engine->GetWorld().GetOctree().TestRay(ray, results)) {
@@ -422,7 +413,7 @@ public:
                 if (!triangle_mesh_results.Empty()) {
                     const auto &mesh_hit = triangle_mesh_results.Front();
 
-                    if (auto sphere = scene->GetRoot().Select("sphere")) {
+                    if (auto sphere = m_scene->GetRoot().Select("sphere")) {
                         sphere.SetLocalTranslation(mesh_hit.hitpoint);
                     }
                 }
@@ -430,10 +421,60 @@ public:
         #endif
     }
 
-    
-    InputManager *input_manager;
+    // virtual void OnInputEvent(Engine *engine, const SystemEvent &event) override;
 
-    Handle<Scene> scene;
+    // not overloading; just creating a method to handle camera movement
+    void HandleCameraMovement()
+    {
+        if (m_input_manager->IsKeyDown(KEY_W)) {
+            if (m_scene && m_scene->GetCamera()) {
+                m_scene->GetCamera()->PushCommand(CameraCommand {
+                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                    .movement_data = {
+                        .movement_type = CameraCommand::CAMERA_MOVEMENT_FORWARD,
+                        .amount = 1.0f
+                    }
+                });
+            }
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_S)) {
+            if (m_scene && m_scene->GetCamera()) {
+                m_scene->GetCamera()->PushCommand(CameraCommand {
+                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                    .movement_data = {
+                        .movement_type = CameraCommand::CAMERA_MOVEMENT_BACKWARD,
+                        .amount = 1.0f
+                    }
+                });
+            }
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_A)) {
+            if (m_scene && m_scene->GetCamera()) {
+                m_scene->GetCamera()->PushCommand(CameraCommand {
+                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                    .movement_data = {
+                        .movement_type = CameraCommand::CAMERA_MOVEMENT_LEFT,
+                        .amount = 1.0f
+                    }
+                });
+            }
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_D)) {
+            if (m_scene && m_scene->GetCamera()) {
+                m_scene->GetCamera()->PushCommand(CameraCommand {
+                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                    .movement_data = {
+                        .movement_type = CameraCommand::CAMERA_MOVEMENT_RIGHT,
+                        .amount = 1.0f
+                    }
+                });
+            }
+        }
+    }
+
     std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
     GameCounter::TickUnit timer{};
     GameCounter::TickUnit ray_cast_timer{};
@@ -656,15 +697,6 @@ int main()
     
 
     // TODO: move elsewhere once RT stuff is established.
-    Frame *frame = nullptr;
-    PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine->GetInstance()->GetFrameHandler()->NumFrames());
-
-    for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
-        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
-        AssertThrow(cmd_buffer->Create(engine->GetInstance()->GetDevice(), engine->GetInstance()->GetGraphicsQueue().command_pool));
-
-        per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
-    }
 
     
     // engine->shader_manager.SetShader(
@@ -778,10 +810,6 @@ int main()
     HYPERION_ASSERT_RESULT(rt->Create(engine->GetDevice(), &engine->GetInstance()->GetDescriptorPool()));
 #endif
 
-#if HYPERION_RUN_TESTS
-    AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
-#endif
-
     engine->game_thread.Start(engine, my_game, window);
 
     float tmp_render_timer = 0.0f;
@@ -794,106 +822,7 @@ int main()
 
         // input manager stuff
         while (SystemSDL::PollEvent(&event)) {
-            my_game->input_manager->CheckEvent(&event);
-            switch (event.GetType()) {
-                case SystemEventType::EVENT_SHUTDOWN:
-                    engine->RequestStop();
-
-                    break;
-                case SystemEventType::EVENT_MOUSESCROLL:
-                {
-                    if (my_game->scene != nullptr) {
-                        int wheel_x, wheel_y;
-                        event.GetMouseWheel(&wheel_x, &wheel_y);
-
-                        my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                            .command = CameraCommand::CAMERA_COMMAND_SCROLL,
-                            .scroll_data = {
-                                .wheel_x = wheel_x,
-                                .wheel_y = wheel_y
-                            }
-                        });
-                    }
-
-                    break;
-                }
-                case SystemEventType::EVENT_MOUSEMOTION:
-                {
-                    const auto &mouse_position = my_game->input_manager->GetMousePosition();
-
-                    int mouse_x = mouse_position.x.load(),
-                        mouse_y = mouse_position.y.load();
-
-                    float mx, my;
-
-                    int window_width, window_height;
-                    my_game->input_manager->GetWindow()->GetSize(&window_width, &window_height);
-
-                    mx = (static_cast<float>(mouse_x) - static_cast<float>(window_width) * 0.5f) / (static_cast<float>(window_width));
-                    my = (static_cast<float>(mouse_y) - static_cast<float>(window_height) * 0.5f) / (static_cast<float>(window_height));
-                    
-                    if (my_game->scene != nullptr) {
-                        my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                            .command = CameraCommand::CAMERA_COMMAND_MAG,
-                            .mag_data = {
-                                .mouse_x = mouse_x,
-                                .mouse_y = mouse_y,
-                                .mx      = mx,
-                                .my      = my
-                            }
-                        });
-                    }
-
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
-
-        if (my_game->input_manager->IsKeyDown(KEY_W)) {
-            if (my_game->scene != nullptr) {
-                my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
-                    .movement_data = {
-                        .movement_type = CameraCommand::CAMERA_MOVEMENT_FORWARD,
-                        .amount        = 1.0f
-                    }
-                });
-            }
-        }
-        if (my_game->input_manager->IsKeyDown(KEY_S)) {
-            if (my_game->scene != nullptr) {
-                my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
-                    .movement_data = {
-                        .movement_type = CameraCommand::CAMERA_MOVEMENT_BACKWARD,
-                        .amount        = 1.0f
-                    }
-                });
-            }
-        }
-        if (my_game->input_manager->IsKeyDown(KEY_A)) {
-            if (my_game->scene != nullptr) {
-                my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
-                    .movement_data = {
-                        .movement_type = CameraCommand::CAMERA_MOVEMENT_LEFT,
-                        .amount        = 1.0f
-                    }
-                });
-            }
-        }
-        if (my_game->input_manager->IsKeyDown(KEY_D)) {
-            if (my_game->scene != nullptr) {
-                my_game->scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
-                    .movement_data = {
-                        .movement_type = CameraCommand::CAMERA_MOVEMENT_RIGHT,
-                        .amount        = 1.0f
-                    }
-                });
-            }
+            my_game->HandleEvent(engine, event);
         }
 
         counter.NextTick();
@@ -979,11 +908,6 @@ int main()
     }
 
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
-
-    for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
-        per_frame_data[i].Get<CommandBuffer>()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->GetGraphicsCommandPool());
-    }
-    per_frame_data.Reset();
     
 #if HYPERION_VK_TEST_RAYTRACING
 

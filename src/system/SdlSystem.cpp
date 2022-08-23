@@ -42,7 +42,8 @@ void SystemWindow::Initialize() {
     AssertThrowMsg(this->window != nullptr, "Failed to initialize window: %s", SDL_GetError());
 }
 
-VkSurfaceKHR SystemWindow::CreateVulkanSurface(VkInstance instance) {
+VkSurfaceKHR SystemWindow::CreateVulkanSurface(VkInstance instance)
+{
     VkSurfaceKHR surface;
     int result = SDL_Vulkan_CreateSurface(this->GetInternalWindow(), instance, &surface);
 
@@ -51,13 +52,20 @@ VkSurfaceKHR SystemWindow::CreateVulkanSurface(VkInstance instance) {
     return surface;
 }
 
-SystemWindow::~SystemWindow() {
+SystemWindow::~SystemWindow()
+{
     SDL_DestroyWindow(this->window);
 }
 
 
-SystemSDL::SystemSDL() {
+SystemSDL::SystemSDL()
+{
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+}
+
+SystemSDL::~SystemSDL()
+{
+    SDL_Quit();
 }
 
 void SystemSDL::SetCurrentWindow(SystemWindow *window) {
@@ -95,20 +103,9 @@ std::vector<const char *> SystemSDL::GetVulkanExtensionNames() {
     return extensions;
 }
 
-SystemSDL::~SystemSDL() {
-    SDL_Quit();
-}
-
-uint64_t SystemSDL::GetTicks() {
-    return SDL_GetTicks64();
-}
-
-void SystemSDL::ThrowError() {
-    std::string message = SDL_GetError();
-
-    DebugLog(LogType::Error, "SDL Error: %s", message.c_str());
-
-    throw std::runtime_error(message);
+void SystemSDL::ThrowError()
+{
+    AssertThrowMsg(false, "SDL Error: %s", SDL_GetError());
 }
 
 } // namespace hyperion

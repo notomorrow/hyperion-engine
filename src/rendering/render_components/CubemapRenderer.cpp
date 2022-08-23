@@ -82,28 +82,26 @@ void CubemapRenderer::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
             auto *engine = GetEngine();
 
-            // destroy descriptors
-
-            for (UInt i = 0; i < max_frames_in_flight; i++) {
-                if (m_framebuffers[i] != nullptr) {
-                    for (auto &attachment : m_attachments) {
-                        m_framebuffers[i]->RemoveAttachmentRef(attachment.get());
-                    }
-
-                    if (m_renderer_instance != nullptr) {
-                        m_renderer_instance->RemoveFramebuffer(m_framebuffers[i]->GetId());
-                    }
-                }
-            }
-
-            if (m_render_pass != nullptr) {
-                for (auto &attachment : m_attachments) {
-                    m_render_pass->GetRenderPass().RemoveAttachmentRef(attachment.get());
-                }
-            }
-
             engine->render_scheduler.Enqueue([this, engine](...) {
                 auto result = renderer::Result::OK;
+
+                for (UInt i = 0; i < max_frames_in_flight; i++) {
+                    if (m_framebuffers[i] != nullptr) {
+                        for (auto &attachment : m_attachments) {
+                            m_framebuffers[i]->RemoveAttachmentRef(attachment.get());
+                        }
+
+                        if (m_renderer_instance != nullptr) {
+                            m_renderer_instance->RemoveFramebuffer(m_framebuffers[i]->GetId());
+                        }
+                    }
+                }
+
+                if (m_render_pass != nullptr) {
+                    for (auto &attachment : m_attachments) {
+                        m_render_pass->GetRenderPass().RemoveAttachmentRef(attachment.get());
+                    }
+                }
 
                 for (UInt i = 0; i < max_frames_in_flight; i++) {
                     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
@@ -119,9 +117,8 @@ void CubemapRenderer::Init(Engine *engine)
                 m_attachments.clear();
 
                 HYPERION_PASS_ERRORS(m_cubemap_render_uniform_buffer.Destroy(engine->GetDevice()), result);
-                // HYPERION_PASS_ERRORS(m_env_probe_uniform_buffer.Destroy(engine->GetDevice()), result);
 
-                HYPERION_RETURN_OK;
+                return result;
             });
 
 

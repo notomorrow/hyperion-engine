@@ -394,7 +394,9 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
         break;
     }
     default:
-        throw std::runtime_error(std::string("Cannot process command ") + std::to_string(int(command)) + " in top level");
+        AssertThrowMsg(false, "Cannot process command %d in top level", static_cast<int>(command));
+
+        break;
     }
 
     return FBOMResult::FBOM_OK;

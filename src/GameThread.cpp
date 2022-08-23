@@ -2,6 +2,7 @@
 #include "Engine.hpp"
 #include "Game.hpp"
 #include "GameCounter.hpp"
+#include <math/MathUtil.hpp>
 
 #define HYP_GAME_THREAD_LOCKED 1
 
@@ -28,22 +29,27 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
     game->InitGame(engine);
 
     while (engine->m_running.load()) {
+        if (auto num_enqueued = m_scheduler->NumEnqueued()) {
+            m_scheduler->Flush([last_delta = counter.delta](auto &fn) {
+                fn(last_delta);
+            });
+        }
+
 #if HYP_GAME_THREAD_LOCKED
-        while (counter.Waiting()) {
-            /* wait */
+        if (counter.Waiting()) {
+            continue;
         }
 #endif
 
         counter.NextTick();
         
-        // if (auto num_enqueued = m_scheduler->NumEnqueued()) {
-        //     m_scheduler->Flush([delta = counter.delta](auto &fn) {
-        //         fn(delta);
-        //     });
-        // }
-        
         game->Logic(engine, counter.delta);
     }
+
+    // flush scheduler
+    m_scheduler->Flush([](auto &fn) {
+        fn(MathUtil::epsilon<GameCounter::TickUnit>);
+    });
 
     game->Teardown(engine);
 

@@ -11,10 +11,9 @@
 #include <string>
 
 #include "Util.hpp"
+#include <Types.hpp>
 
 namespace hyperion {
-
-using ::std::vector;
 
 enum SystemEventType {
     EVENT_WINDOW_EVENT  = SDL_WINDOWEVENT,
@@ -124,21 +123,23 @@ using MouseButtonMask = uint32_t;
 
 class SystemEvent {
 public:
-    inline SystemEventType GetType() {
-        uint32_t event_type = this->GetInternalEvent()->type;
-        return (SystemEventType)event_type;
-    }
-    inline SystemWindowEventType GetWindowEventType() {
-        uint32_t event_type = this->GetInternalEvent()->window.event;
-        return (SystemWindowEventType)event_type;
+    SystemEventType GetType() const
+    {
+        return (SystemEventType)sdl_event.type;
     }
 
-    inline uint16_t GetKeyCode()              { return this->GetInternalEvent()->key.keysym.sym; }
-    inline uint8_t  GetMouseButton()          { return this->GetInternalEvent()->button.button; }
-    inline void GetMouseWheel(int *x, int *y) { *x = this->GetInternalEvent()->wheel.x; *y = this->GetInternalEvent()->wheel.y; }
-    inline uint32_t GetWindowId()             { return this->GetInternalEvent()->window.windowID; }
+    SystemWindowEventType GetWindowEventType() const
+    {
+        return (SystemWindowEventType)sdl_event.window.event;
+    }
 
-    inline void GetWindowResizeDimensions(int *_width, int *_height) {
+    UInt16 GetKeyCode() const { return sdl_event.key.keysym.sym; }
+    UInt8 GetMouseButton() const { return sdl_event.button.button; }
+    void GetMouseWheel(int *x, int *y) const { *x = sdl_event.wheel.x; *y = sdl_event.wheel.y; }
+    UInt32 GetWindowId() const { return sdl_event.window.windowID; }
+
+    void GetWindowResizeDimensions(int *_width, int *_height)
+    {
         SDL_Event *ev = this->GetInternalEvent();
         (*_width) = ev->window.data1;
         (*_height) = ev->window.data2;
@@ -183,16 +184,14 @@ private:
 class SystemSDL {
 public:
     SystemSDL();
+    ~SystemSDL();
 
     static SystemWindow *CreateSystemWindow(const char *title, int width, int height);
 
     static int PollEvent(SystemEvent *result);
-    static uint64_t GetTicks();
     void SetCurrentWindow(SystemWindow *window);
     SystemWindow *GetCurrentWindow();
-    vector<const char *> GetVulkanExtensionNames();
-
-    ~SystemSDL();
+    std::vector<const char *> GetVulkanExtensionNames();
 
     static void ThrowError();
 
