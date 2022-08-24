@@ -9,17 +9,16 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 
 ### Current features include:
 * Physically based rendering
-* Deferred rendering
 * Procedural, paged terrain generation
-* Screen-space reflections
-* Post processing pipeline
 * Skeletal animation
-* Scripting engine (Hypscript)
-* Post processing - SSAO, FXAA, Tonemapping
+* Serialization / deserialization system
+* Highly multi-threaded with async task system
+* Post processing pipeline - SSAO, Screen-space reflections, FXAA, Tonemapping
 * Parallax corrected dynamic cubemap rendering
-* Voxel Cone Tracing global illumination
+* Voxel Cone Tracing (global illumination and reflections)
 * Contact hardened softened shadows
 * Scene graph + octree
+* Scripting engine (Hypscript)
 * Ray tracing - DDGI implementation in development
 
 Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
