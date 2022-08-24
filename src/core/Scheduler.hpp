@@ -6,8 +6,10 @@
 #include "lib/AtomicSemaphore.hpp"
 #include "lib/DynArray.hpp"
 #include "lib/FixedArray.hpp"
+#include "lib/Proc.hpp"
 
 #include <Util.hpp>
+#include <Types.hpp>
 #include <util/Defines.hpp>
 
 #include <functional>
@@ -25,41 +27,41 @@
 
 namespace hyperion::v2 {
 
-struct ScheduledFunctionId {
-    uint32_t value{0};
+struct ScheduledFunctionID {
+    UInt value{0};
     
-    ScheduledFunctionId &operator=(UInt id)
+    ScheduledFunctionID &operator=(UInt id)
     {
         value = id;
 
         return *this;
     }
     
-    ScheduledFunctionId &operator=(const ScheduledFunctionId &other) = default;
+    ScheduledFunctionID &operator=(const ScheduledFunctionID &other) = default;
 
     bool operator==(uint32_t id) const                      { return value == id; }
     bool operator!=(uint32_t id) const                      { return value != id; }
-    bool operator==(const ScheduledFunctionId &other) const { return value == other.value; }
-    bool operator!=(const ScheduledFunctionId &other) const { return value != other.value; }
-    bool operator<(const ScheduledFunctionId &other) const  { return value < other.value; }
+    bool operator==(const ScheduledFunctionID &other) const { return value == other.value; }
+    bool operator!=(const ScheduledFunctionID &other) const { return value != other.value; }
+    bool operator<(const ScheduledFunctionID &other) const  { return value < other.value; }
 
     explicit operator bool() const { return value != 0; }
 };
 
 template <class ReturnType, class ...Args>
 struct ScheduledFunction {
-    using Function = std::function<ReturnType(Args...)>;
+    using Function = Proc<ReturnType, Args...>;//std::function<ReturnType(Args...)>;
 
-    ScheduledFunctionId id;
+    ScheduledFunctionID id;
     Function fn;
 
-    constexpr static ScheduledFunctionId empty_id = ScheduledFunctionId{0};
+    constexpr static ScheduledFunctionID empty_id = ScheduledFunctionID{0};
 
     template <class Lambda>
     ScheduledFunction(Lambda &&lambda)
-        : id {}
+        : id { },
+          fn(std::forward<Lambda>(lambda))
     {
-        fn = std::forward<Lambda>(lambda);
     }
 
     // ScheduledFunction()
@@ -68,14 +70,14 @@ struct ScheduledFunction {
     // {
     // }
 
-    ScheduledFunction(const ScheduledFunction &other) = default;
-    ScheduledFunction &operator=(const ScheduledFunction &other) = default;
+    ScheduledFunction(const ScheduledFunction &other) = delete;
+    ScheduledFunction &operator=(const ScheduledFunction &other) = delete;
     ScheduledFunction(ScheduledFunction &&other) noexcept
         : id(other.id),
           fn(std::move(other.fn))
     {
         other.id = {};
-        other.fn = nullptr;
+        // other.fn = nullptr;
     }
 
     ScheduledFunction &operator=(ScheduledFunction &&other) noexcept
@@ -84,36 +86,37 @@ struct ScheduledFunction {
         fn = std::move(other.fn);
 
         other.id = {};
-        other.fn = nullptr;
+        // other.fn = nullptr;
 
         return *this;
     }
     
     ~ScheduledFunction() = default;
 
-    template <class ...Param>
-    HYP_FORCE_INLINE ReturnType Execute(Param &&... args)
+    // template <class ...Param>
+    HYP_FORCE_INLINE ReturnType Execute(Args... args)
     {
-        return fn(std::forward<Param>(args)...);
+        return fn(std::forward<Args>(args)...);
     }
 
-    template <class ...Param>
-    HYP_FORCE_INLINE ReturnType operator()(Param &&... args)
+    // template <class ...Param>
+    HYP_FORCE_INLINE ReturnType operator()(Args... args)
     {
-        return Execute(std::forward<Param>(args)...);
+        return Execute(std::forward<Args>(args)...);
     }
 };
 
 template <class ScheduledFunction>
-class Scheduler {
+class Scheduler
+{
     //using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
 
     using ScheduledFunctionQueue = DynArray<ScheduledFunction>;
-    using Iterator               = typename ScheduledFunctionQueue::Iterator;
+    using Iterator = typename ScheduledFunctionQueue::Iterator;
 
 public:
     using Task = ScheduledFunction;
-    using TaskID = ScheduledFunctionId;
+    using TaskID = ScheduledFunctionID;
 
     Scheduler()
         : m_creation_thread(std::this_thread::get_id())
@@ -130,7 +133,7 @@ public:
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
      * called from a non-owner thread. */
-    ScheduledFunctionId Enqueue(ScheduledFunction &&fn)
+    ScheduledFunctionID Enqueue(ScheduledFunction &&fn)
     {
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -149,7 +152,7 @@ public:
     
     /*! \brief Remove a function from the owner thread's queue, if it exists
      * @returns a boolean value indicating whether or not the function was successfully dequeued */
-    bool Dequeue(ScheduledFunctionId id)
+    bool Dequeue(ScheduledFunctionID id)
     {
         if (id == ScheduledFunction::empty_id) {
             return false;
@@ -185,7 +188,7 @@ public:
     /*! \brief For each item, remove a function from the owner thread's queue, if it exists
      * @returns a FixedArray of booleans, each holding whether or not the corresponding function was successfully dequeued */
     template <SizeType Sz>
-    FixedArray<bool, Sz> DequeueMany(const FixedArray<ScheduledFunctionId, Sz> &ids)
+    FixedArray<bool, Sz> DequeueMany(const FixedArray<ScheduledFunctionID, Sz> &ids)
     {
         FixedArray<bool, Sz> results {};
 
@@ -230,7 +233,7 @@ public:
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    // ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, ScheduledFunction &&enqueue_fn)
+    // ScheduledFunctionID EnqueueReplace(ScheduledFunctionID &dequeue_id, ScheduledFunction &&enqueue_fn)
     // {
     //     std::unique_lock lock(m_mutex);
 
@@ -385,7 +388,7 @@ public:
     }
     
 private:
-    ScheduledFunctionId EnqueueInternal(ScheduledFunction &&fn)
+    ScheduledFunctionID EnqueueInternal(ScheduledFunction &&fn)
     {
         fn.id = ++m_id_counter;
 
@@ -396,14 +399,14 @@ private:
         return m_scheduled_functions.Back().id;
     }
 
-    Iterator Find(ScheduledFunctionId id)
+    Iterator Find(ScheduledFunctionID id)
     {
         return m_scheduled_functions.FindIf([&id](const auto &item) {
             return item.id == id;
         });
     }
 
-    bool DequeueInternal(ScheduledFunctionId id)
+    bool DequeueInternal(ScheduledFunctionID id)
     {
         const auto it = Find(id);
 
@@ -418,18 +421,18 @@ private:
         return true;
     }
 
-    uint32_t                       m_id_counter = 0;
-    std::atomic_uint32_t           m_num_enqueued{0};
-    ScheduledFunctionQueue         m_scheduled_functions;
+    UInt m_id_counter = 0;
+    std::atomic_uint32_t m_num_enqueued{0};
+    ScheduledFunctionQueue m_scheduled_functions;
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
     BinarySemaphore m_sp;
 #else
-    std::mutex                     m_mutex;
-    std::condition_variable        m_is_flushed;
+    std::mutex m_mutex;
+    std::condition_variable m_is_flushed;
 #endif
 
-    std::thread::id                m_creation_thread;
+    std::thread::id m_creation_thread;
 };
 
 } // namespace hyperion::v2
