@@ -209,11 +209,7 @@ void Material::EnqueueRenderUpdates()
 
 void Material::EnqueueTextureUpdate(TextureKey key)
 {
-    // TODO: (thread safety) - cannot copy `texture` w/ IncRef() because it is not
-    // CopyConstructable. So we have to just fetch it from m_textures (in the render thread).
-    // we should try to refactor this to not use std::function at all.
-    GetEngine()->GetRenderScheduler().Enqueue([this, key](CommandBuffer *command_buffer, UInt frame_index) {
-        auto &texture = m_textures.Get(key);
+    GetEngine()->GetRenderScheduler().Enqueue([this, key, texture = m_textures.Get(key)](CommandBuffer *command_buffer, UInt frame_index) {
         const auto texture_index = decltype(m_textures)::EnumToOrdinal(key);
 
         // update descriptor set for the given frame_index

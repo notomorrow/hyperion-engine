@@ -172,8 +172,8 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareFinalPass()
 {
-    m_full_screen_quad = resources.meshes.Add(MeshBuilder::Quad().release());
-    m_full_screen_quad.Init();
+    m_full_screen_quad = Handle<Mesh>(MeshBuilder::Quad().release());
+    m_full_screen_quad->Init(this);
 
     auto shader = Handle<Shader>(new Shader(
         std::vector<SubShader> {

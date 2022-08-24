@@ -184,7 +184,7 @@
     #endif
 #endif
 
-#define HYP_ENABLE_THREAD_ASSERTION 1 // set to 0 if needing to debug and getting crt errors
+#define HYP_ENABLE_THREAD_ID // undef if needing to debug and getting crt errors
 
 // conditionals
 

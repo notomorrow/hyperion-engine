@@ -260,7 +260,7 @@ private:
 
     World m_world;
 
-    Ref<Mesh> m_full_screen_quad;
+    Handle<Mesh> m_full_screen_quad;
 
     bool m_is_stopping { false };
     bool m_is_render_loop_active { false };

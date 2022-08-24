@@ -2,28 +2,28 @@
 
 namespace hyperion::v2 {
 
-const FlatMap<ThreadName, ThreadId> Threads::thread_ids {
-    decltype(thread_ids)::KeyValuePair { THREAD_MAIN,    ThreadId { static_cast<UInt>(THREAD_MAIN),    "MainThread" } },
-    // decltype(thread_ids)::Pair { THREAD_RENDER   ThreadId { static_cast<UInt>(THREAD_RENDER),  "RenderThread" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_GAME,    ThreadId { static_cast<UInt>(THREAD_GAME),    "GameThread" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadId { static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0,  ThreadId { static_cast<UInt>(THREAD_TASK_0), "TaskThread0" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1,  ThreadId { static_cast<UInt>(THREAD_TASK_1), "TaskThread1" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2,  ThreadId { static_cast<UInt>(THREAD_TASK_2), "TaskThread2" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3,  ThreadId { static_cast<UInt>(THREAD_TASK_3), "TaskThread3" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4,  ThreadId { static_cast<UInt>(THREAD_TASK_4), "TaskThread4" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5,  ThreadId { static_cast<UInt>(THREAD_TASK_5), "TaskThread5" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6,  ThreadId { static_cast<UInt>(THREAD_TASK_6), "TaskThread6" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7,  ThreadId { static_cast<UInt>(THREAD_TASK_7), "TaskThread7" } },
+const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
+    decltype(thread_ids)::KeyValuePair { THREAD_MAIN,    ThreadID { static_cast<UInt>(THREAD_MAIN),    "MainThread" } },
+    // decltype(thread_ids)::Pair { THREAD_RENDER   ThreadID { static_cast<UInt>(THREAD_RENDER),  "RenderThread" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_GAME,    ThreadID { static_cast<UInt>(THREAD_GAME),    "GameThread" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadID { static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0,  ThreadID { static_cast<UInt>(THREAD_TASK_0), "TaskThread0" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1,  ThreadID { static_cast<UInt>(THREAD_TASK_1), "TaskThread1" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2,  ThreadID { static_cast<UInt>(THREAD_TASK_2), "TaskThread2" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3,  ThreadID { static_cast<UInt>(THREAD_TASK_3), "TaskThread3" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4,  ThreadID { static_cast<UInt>(THREAD_TASK_4), "TaskThread4" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5,  ThreadID { static_cast<UInt>(THREAD_TASK_5), "TaskThread5" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6,  ThreadID { static_cast<UInt>(THREAD_TASK_6), "TaskThread6" } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7,  ThreadID { static_cast<UInt>(THREAD_TASK_7), "TaskThread7" } },
 };
 
-#if HYP_ENABLE_THREAD_ASSERTION
-thread_local ThreadId current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
+#ifdef HYP_ENABLE_THREAD_ID
+thread_local ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif
 
 void Threads::AssertOnThread(ThreadMask mask)
 {
-#if HYP_ENABLE_THREAD_ASSERTION
+#ifdef HYP_ENABLE_THREAD_ID
     const auto &current = current_thread_id;
 
     AssertThrowMsg(
@@ -38,7 +38,7 @@ void Threads::AssertOnThread(ThreadMask mask)
 
 bool Threads::IsOnThread(ThreadMask mask)
 {
-#if HYP_ENABLE_THREAD_ASSERTION
+#ifdef HYP_ENABLE_THREAD_ID
     if (mask & current_thread_id.value) {
         return true;
     }
@@ -53,7 +53,7 @@ bool Threads::IsOnThread(ThreadMask mask)
     return false;
 }
 
-ThreadId Threads::GetThreadId(ThreadName thread_name)
+ThreadID Threads::GetThreadID(ThreadName thread_name)
 {
     return thread_ids.At(thread_name);
 }

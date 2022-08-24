@@ -33,12 +33,12 @@ enum ThreadName : ThreadMask {
 
 class Threads {
 public:
-    static const FlatMap<ThreadName, ThreadId> thread_ids;
+    static const FlatMap<ThreadName, ThreadID> thread_ids;
 
     static void AssertOnThread(ThreadMask mask);
     static bool IsOnThread(ThreadMask mask);
 
-    static ThreadId GetThreadId(ThreadName thread_name);
+    static ThreadID GetThreadID(ThreadName thread_name);
 };
 
 } // namespace hyperion::v2

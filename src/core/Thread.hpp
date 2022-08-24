@@ -10,35 +10,37 @@
 
 namespace hyperion::v2 {
 
-struct ThreadId {
+struct ThreadID
+{
     UInt value;
     FixedString name;
 
-    bool operator==(const ThreadId &other) const { return value == other.value; }
-    bool operator!=(const ThreadId &other) const { return value != other.value; }
-    bool operator<(const ThreadId &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
+    bool operator==(const ThreadID &other) const { return value == other.value; }
+    bool operator!=(const ThreadID &other) const { return value != other.value; }
+    bool operator<(const ThreadID &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
 };
 
-#if HYP_ENABLE_THREAD_ASSERTION
-extern thread_local ThreadId current_thread_id;
+#ifdef HYP_ENABLE_THREAD_ID
+extern thread_local ThreadID current_thread_id;
 #endif
 
-void SetThreadId(const ThreadId &id);
+void SetThreadID(const ThreadID &id);
 
 template <class SchedulerType, class ...Args>
-class Thread {
+class Thread
+{
 public:
     using Scheduler = SchedulerType;
     using Task = typename Scheduler::Task;
 
-    Thread(const ThreadId &id);
+    Thread(const ThreadID &id);
     Thread(const Thread &other) = delete;
     Thread &operator=(const Thread &other) = delete;
     Thread(Thread &&other) noexcept;
     Thread &operator=(Thread &&other) noexcept;
     virtual ~Thread();
 
-    const ThreadId &GetId() const { return m_id; }
+    const ThreadID &GetId() const { return m_id; }
 
     Scheduler *GetScheduler() { return m_scheduler; }
     const Scheduler *GetScheduler() const { return m_scheduler; }
@@ -58,7 +60,7 @@ public:
 protected:
     virtual void operator()(Args ...args) = 0;
 
-    const ThreadId m_id;
+    const ThreadID m_id;
     Scheduler *m_scheduler;
 
 private:
@@ -66,7 +68,7 @@ private:
 };
 
 template <class SchedulerType, class ...Args>
-Thread<SchedulerType, Args...>::Thread(const ThreadId &id)
+Thread<SchedulerType, Args...>::Thread(const ThreadID &id)
     : m_id(id),
       m_thread(nullptr),
       m_scheduler(nullptr)
@@ -124,7 +126,7 @@ bool Thread<SchedulerType, Args...>::Start(Args ...args)
     std::tuple<Args...> tuple_args(std::forward<Args>(args)...);
 
     m_thread = new std::thread([&self = *this, tuple_args] {
-        SetThreadId(self.GetId());
+        SetThreadID(self.GetId());
 
         AssertThrow(self.m_scheduler == nullptr);
         self.m_scheduler = new SchedulerType();

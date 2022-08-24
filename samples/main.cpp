@@ -7,6 +7,8 @@
 #include "rendering/backend/RendererRenderPass.hpp"
 #include "rendering/backend/rt/RendererRaytracingPipeline.hpp"
 
+#include <core/lib/Proc.hpp>
+
 #include <Engine.hpp>
 #include <scene/Node.hpp>
 #include <rendering/Atomics.hpp>
@@ -362,11 +364,6 @@ public:
         HandleCameraMovement();
 
         engine->GetWorld().Update(engine, delta);
-
-        //m_scene->Update(engine, delta);
-
-        //m_scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(m_scene->GetCamera()->GetTranslation());
-
 
         #if 0 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {

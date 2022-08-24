@@ -60,15 +60,11 @@ void Game::HandleEvent(Engine *engine, SystemEvent &event)
 
             break;
         default:
-            if (!Threads::IsOnThread(THREAD_GAME)) {
-                engine->game_thread.GetScheduler()->Enqueue([this, engine, event](...) {
-                    OnInputEvent(engine, event);
-
-                    HYPERION_RETURN_OK;
-                });
-            } else {
+            engine->game_thread.GetScheduler()->Enqueue([this, engine, event](...) {
                 OnInputEvent(engine, event);
-            }
+
+                HYPERION_RETURN_OK;
+            });
 
             break;
     }

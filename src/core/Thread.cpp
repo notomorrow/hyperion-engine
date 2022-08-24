@@ -2,9 +2,9 @@
 
 namespace hyperion::v2 {
 
-void SetThreadId(const ThreadId &id)
+void SetThreadID(const ThreadID &id)
 {
-#if HYP_ENABLE_THREAD_ASSERTION
+#ifdef HYP_ENABLE_THREAD_ID
     current_thread_id = id;
 #endif
 }

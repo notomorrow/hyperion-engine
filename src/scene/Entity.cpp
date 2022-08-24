@@ -190,14 +190,14 @@ void Entity::EnqueueRenderUpdates()
         .bucket       = m_renderable_attributes.material_attributes.bucket
     };
 
-    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, draw_proxy](...) {
+    GetEngine()->render_scheduler.Enqueue([this, transform_matrix = m_transform.GetMatrix(), draw_proxy](...) {
         // update m_draw_proxy on render thread.
         m_draw_proxy = draw_proxy;
 
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
             ObjectShaderData {
-                .model_matrix   = transform.GetMatrix(),
+                .model_matrix   = transform_matrix,
 
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),

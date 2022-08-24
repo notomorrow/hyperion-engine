@@ -20,12 +20,12 @@ class SystemWindow;
 
 namespace hyperion::v2 {
 
-struct ThreadId;
+struct ThreadID;
 
 class TaskThread : public Thread<Scheduler<ScheduledFunction<void>>>
 {
 public:
-    TaskThread(const ThreadId &thread_id, UInt target_ticks_per_second = 0)
+    TaskThread(const ThreadID &thread_id, UInt target_ticks_per_second = 0)
         : Thread(thread_id),
           m_is_running(false),
           m_target_ticks_per_second(target_ticks_per_second)
@@ -35,7 +35,7 @@ public:
     virtual ~TaskThread() = default;
 
     bool IsRunning() const { return m_is_running; }
-    void Stop()            { m_is_running = false; }
+    void Stop() { m_is_running = false; }
 
 protected:
     virtual void operator()() override
@@ -67,8 +67,8 @@ protected:
         }
     }
 
-    std::atomic_bool                m_is_running;
-    UInt                            m_target_ticks_per_second;
+    std::atomic_bool m_is_running;
+    UInt m_target_ticks_per_second;
 
     Queue<typename Scheduler::Task> m_task_queue;
 };
