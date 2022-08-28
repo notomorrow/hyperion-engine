@@ -262,6 +262,7 @@ void main()
 #endif
     // result = irradiance.rgb;
 
+    // output_color = vec4(0.0);
     output_color = vec4(result, 1.0);
 
 
