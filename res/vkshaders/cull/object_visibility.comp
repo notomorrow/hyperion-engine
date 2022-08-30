@@ -15,11 +15,13 @@ layout(local_size_x = 256) in;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std140, set = 0, binding = 1, row_major) readonly buffer SceneBuffer {
+layout(std140, set = 0, binding = 1, row_major) readonly buffer SceneBuffer
+{
     Scene scene;
 };
 
-struct IndirectDrawCommand {
+struct IndirectDrawCommand
+{
     // VkDrawIndexedIndirectCommand
     uint index_count;
     uint instance_count;
@@ -30,7 +32,8 @@ struct IndirectDrawCommand {
     HYP_PAD_STRUCT_HERE(float, 7);
 };
 
-struct ObjectInstance {
+struct ObjectInstance
+{
     uint entity_id;
     uint draw_command_index;
     uint batch_index;
@@ -45,18 +48,21 @@ struct ObjectInstance {
     uint _pad2;
 };
 
-layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer {
+layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer
+{
     ObjectInstance instances[];
 };
 
-layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer {
+layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer
+{
     IndirectDrawCommand indirect_draw_commands[];
 };
 
 layout(set = 0, binding = 5) uniform texture2D depth_pyramid;
-layout(set = 0, binding = 6) uniform sampler   depth_pyramid_sampler;
+layout(set = 0, binding = 6) uniform sampler depth_pyramid_sampler;
 
-layout(push_constant) uniform ObjectVisibilityData {
+layout(push_constant) uniform ObjectVisibilityData
+{
     uint batch_offset;
     uint num_drawables;
     uint scene_id;
@@ -89,7 +95,7 @@ float GetDepthAtTexel(vec2 texcoord, int mip)
 
 void main()
 {
-    const uint id    = gl_GlobalInvocationID.x;
+    const uint id = gl_GlobalInvocationID.x;
     const uint index = push_constants.batch_offset + id;
 
     if (id >= push_constants.num_drawables) {
@@ -97,8 +103,8 @@ void main()
     }
 
     ObjectInstance object_instance = instances[index];
-    const uint entity_id           = object_instance.entity_id;
-    const uint draw_command_index  = object_instance.draw_command_index;
+    const uint entity_id = object_instance.entity_id;
+    const uint draw_command_index = object_instance.draw_command_index;
 
     uint num_instances = 0;
 

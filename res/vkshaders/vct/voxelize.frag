@@ -44,5 +44,5 @@ void main()
 
     frag_color.a = 1.0;
 
-	imageStore(voxel_image, ivec3(VctStoragePosition(g_voxel)), frag_color);
+	imageStore(voxel_image, clamp(ivec3(VctStoragePosition(g_voxel)), ivec3(0), ivec3(vct_greatest_extent)), frag_color);
 }

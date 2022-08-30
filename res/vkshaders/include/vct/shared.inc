@@ -14,7 +14,7 @@ vec3 VctStoragePosition(vec3 scaled_position)
 {
     const vec3 image_size = vec3(vct_params.extent.xyz);
 
-    return vec3((scaled_position * 0.5 + 0.5) * image_size);
+    return vec3((scaled_position * 0.5 + 0.5) * (image_size - vec3(1.0)));
 }
 
 vec3 VctAABBToWorld(vec3 scaled_position)

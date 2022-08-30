@@ -24,13 +24,13 @@ vec2 texcoord = v_texcoord0;
 
 void main()
 {
-    vec4 albedo    = SampleGBuffer(gbuffer_albedo_texture, texcoord);
-    vec4 normal    = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
-    vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
+    vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
+    vec4 normal = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 tangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
     vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
-    float depth    = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position  = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
-    vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;

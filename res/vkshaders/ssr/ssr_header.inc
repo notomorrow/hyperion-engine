@@ -55,11 +55,3 @@ float isoscelesTriangleNextAdjacent(float adjacentLength, float incircleRadius)
     return adjacentLength - (incircleRadius * 2.0);
 }
 
-float RoughnessToConeAngle(float roughness)
-{
-	float specularPower = 2.0 / pow(roughness, 4.0) - 2.0;
-
-    const float xi = 0.244;
-    float exponent = 1.0 / (specularPower + 1.0);
-    return acos(pow(xi, exponent));
-}

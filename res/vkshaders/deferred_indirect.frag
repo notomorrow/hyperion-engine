@@ -25,12 +25,11 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 #include "include/brdf.inc"
 #include "include/PhysicalCamera.inc"
 
-vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+vec2 texcoord = v_texcoord0;
 
-
-#define HYP_VCT_ENABLED 0
-#define HYP_VCT_REFLECTIONS_ENABLED 0
-#define HYP_VCT_INDIRECT_ENABLED 0
+#define HYP_VCT_ENABLED 1
+#define HYP_VCT_REFLECTIONS_ENABLED 1
+#define HYP_VCT_INDIRECT_ENABLED 1
 #define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
 
@@ -98,13 +97,13 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 
 void main()
 {
-    vec4 albedo    = SampleGBuffer(gbuffer_albedo_texture, texcoord);
-    vec4 normal    = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
-    vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
+    vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
+    vec4 normal = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 tangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
     vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
-    float depth    = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position  = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
-    vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
     
@@ -181,7 +180,7 @@ void main()
 #if HYP_VCT_ENABLED
         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
             vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-            vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+            vec4 vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
 
 #if HYP_VCT_INDIRECT_ENABLED
             irradiance  = vct_diffuse.rgb;
@@ -217,7 +216,9 @@ void main()
 
                 const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
 
-                irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1)).rgb;
+                vec4 env_probe_irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
+
+                irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
             }
         }
 #endif

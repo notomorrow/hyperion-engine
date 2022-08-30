@@ -5,33 +5,30 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          0.8
-#define VCT_DIFFUSE_RATIO(roughness)  (mix(1.0, 8.0, roughness))
-#define VCT_SPECULAR_MAX_DIST         0.5
+#define VCT_DIFFUSE_MAX_DIST          0.5
+#define VCT_DIFFUSE_RATIO(roughness)  1.0
+#define VCT_SPECULAR_MAX_DIST         0.3
 
-#define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, roughness))
+#define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
-#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.25)
+#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.05)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
-    return textureLod(voxel_image, position, lod);
+    return textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
 }
 
 vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max_dist)
 {
     const float min_diameter_inv = 1.0 / min_diameter;
 
-    vec4 accum      = vec4(0.0);
-    vec4 fade       = vec4(0.0);
+    vec4 accum = vec4(0.0);
     vec3 sample_pos = origin;
-    float dist      = min_diameter;
-
-    const float max_lod = 6;
+    float dist = min_diameter;
 
     while (dist < max_dist && accum.a < 1.0) {
         float diameter = max(min_diameter, ratio * dist);
-        float lod      = log2(diameter * min_diameter_inv);
+        float lod = log2(diameter * min_diameter_inv);
 
         sample_pos = origin + dir * dist;
 
@@ -48,17 +45,19 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
 
 vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
 {
-    const vec3 storage_coord    = VctStoragePosition(VctWorldToAABB(P + VCT_OFFSET_ORIGIN(N)));
-    const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
+    const vec3 normal_offset = VCT_OFFSET_ORIGIN(N);
+
+    const vec3 storage_coord = VctStoragePosition(VctWorldToAABB(P));
+    const vec3 voxel_coord = vec3(storage_coord) / vec3(vct_params.extent.xyz - vec3(1.0));
     const float greatest_extent = float(vct_greatest_extent);
 
     vec4 result = vec4(0.0);
 
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, N, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    // result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, N, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N - T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
 
     return result / 4.0;
 }
@@ -69,15 +68,15 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
         return vec4(0.0);
     }
 
-    const vec3 storage_coord    = VctStoragePosition(VctWorldToAABB(P + VCT_OFFSET_ORIGIN(N)));
-    const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
+    const vec3 storage_coord = VctStoragePosition(VctWorldToAABB(P));
+    const vec3 voxel_coord = vec3(storage_coord) / vec3(vct_params.extent.xyz - vec3(1.0));
     const float greatest_extent = float(vct_greatest_extent);
 
     vec4 result = vec4(0.0);
 
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(R), VCT_SPECULAR_RATIO(roughness), VCT_SPECULAR_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord + VCT_OFFSET_ORIGIN(N), normalize(R), VCT_SPECULAR_RATIO(roughness), VCT_SPECULAR_MAX_DIST);
 
-    return result * HYP_FMATH_SQR(1.0 - roughness);
+    return result;
 }
 
 #endif
