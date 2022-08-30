@@ -37,26 +37,6 @@ vec4 Texture2DLod(sampler samp, texture2D tex, vec2 texcoord, float lod)
 #endif
 }
 
-vec4 TextureCube(samplerCube tex, vec3 texcoord)
-{
-    return texture(tex, texcoord);
-}
-
-vec4 TextureCubeLod(samplerCube tex, vec3 texcoord, float lod)
-{
-    return texture(tex, texcoord, lod);
-}
-
-vec4 TextureCube(sampler samp, textureCube tex, vec3 texcoord)
-{
-    return texture(samplerCube(tex, samp), texcoord);
-}
-
-vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
-{
-    return texture(samplerCube(tex, samp), texcoord, lod);
-}
-
 vec4 Texture2DTexel(sampler2D tex, ivec2 coord)
 {
     return texelFetch(tex, coord, 0);
@@ -77,10 +57,51 @@ vec4 Texture2DGather(sampler2D tex, vec2 coord)
     return textureGather(tex, coord);
 }
 
-vec4 Texture2DGather(sampler samp, texture2D tex, vec2 coord)
+vec4 Texture3D(sampler samp, texture3D tex, vec3 texcoord)
 {
-    return textureGather(sampler2D(tex, samp), coord);
+    return texture(sampler3D(tex, samp), texcoord);
 }
+
+vec4 Texture3DLod(sampler samp, texture3D tex, vec3 texcoord, float lod)
+{
+    return textureLod(sampler3D(tex, samp), texcoord, lod);
+}
+
+vec4 Texture3DTexel(sampler3D tex, ivec3 coord)
+{
+    return texelFetch(tex, coord, 0);
+}
+
+vec4 Texture3DTexel(sampler samp, texture3D tex, ivec3 coord)
+{
+    return texelFetch(sampler3D(tex, samp), coord, 0);
+}
+
+vec4 Texture3DTexelLod(sampler samp, texture3D tex, ivec3 coord, int lod)
+{
+    return texelFetch(sampler3D(tex, samp), coord, lod);
+}
+
+vec4 TextureCube(samplerCube tex, vec3 texcoord)
+{
+    return texture(tex, texcoord);
+}
+
+vec4 TextureCubeLod(samplerCube tex, vec3 texcoord, float lod)
+{
+    return texture(tex, texcoord, lod);
+}
+
+vec4 TextureCube(sampler samp, textureCube tex, vec3 texcoord)
+{
+    return texture(samplerCube(tex, samp), texcoord);
+}
+
+vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
+{
+    return texture(samplerCube(tex, samp), texcoord, lod);
+}
+
 
 float LinearDepth(mat4 projection, float depth)
 {
@@ -188,5 +209,13 @@ vec4 CalculateFogLinear(in vec4 start_color, in vec4 end_color, vec3 world_posit
     return mix(start_color, end_color, 1.0 - fog_factor);
 }
 
+float RoughnessToConeAngle(float roughness)
+{
+	float specular_power = 2.0 / pow(roughness, 4.0) - 2.0;
+
+    const float xi = 0.244;
+    float exponent = 1.0 / (specular_power + 1.0);
+    return acos(pow(xi, exponent));
+}
 
 #endif

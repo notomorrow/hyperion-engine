@@ -1,6 +1,6 @@
 #version 450
 
-#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
@@ -9,14 +9,15 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #include "../include/shared.inc"
 #include "./shared.inc"
 
-layout(set = 0, binding = 0) uniform texture2D               mip_in;
+layout(set = 0, binding = 0) uniform texture2D mip_in;
 layout(set = 0, binding = 1, r32f) uniform writeonly image2D mip_out;
-layout(set = 0, binding = 2) uniform sampler                 depth_pyramid_sampler;
+layout(set = 0, binding = 2) uniform sampler depth_pyramid_sampler;
 
-layout(push_constant) uniform DepthPyramidData {
+layout(push_constant) uniform DepthPyramidData
+{
     uvec2 mip_dimensions;
     uvec2 prev_mip_dimensions;
-    uint  mip_level;
+    uint mip_level;
 };
 
 float GetDepthAtTexel(vec2 texcoord, ivec2 offset)
