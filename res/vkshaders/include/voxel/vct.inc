@@ -7,8 +7,8 @@ layout(std430, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 2) readonly buffer 
 const float uVolumeDimension = 1024.0;
 #define VCT_ORIGIN_OFFSET 0.4
 
-const int 	DIFFUSE_CONE_COUNT_16 		= 16;
-const float DIFFUSE_CONE_APERTURE_16 	= 0.872665;
+const int DIFFUSE_CONE_COUNT_16 = 16;
+const float DIFFUSE_CONE_APERTURE_16 = 0.872665;
 
 const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
     vec3( 0.57735,   0.57735,   0.57735  ),
