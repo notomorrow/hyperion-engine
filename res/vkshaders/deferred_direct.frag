@@ -48,10 +48,6 @@ void main()
     const vec4 reflectance = vec4(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
     vec4 F0 = albedo * metalness + (reflectance * (1.0 - metalness));
 
-
-    // const vec4 F0 = albedo * (1.0 - metalness);//albedo * metalness + (reflectance * (1.0 - metalness));
-
-
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);
     vec3 B = normalize(bitangent.xyz);
