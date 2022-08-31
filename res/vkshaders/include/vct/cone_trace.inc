@@ -5,13 +5,13 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          0.5
-#define VCT_DIFFUSE_RATIO(roughness)  1.0
+#define VCT_DIFFUSE_MAX_DIST          0.1
+#define VCT_DIFFUSE_RATIO(roughness)  0.25
 #define VCT_SPECULAR_MAX_DIST         0.3
 
 #define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
-#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.05)
+#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.025)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
