@@ -5,17 +5,19 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          0.1
-#define VCT_DIFFUSE_RATIO(roughness)  RoughnessToConeAngle(roughness)
+#define VCT_DIFFUSE_MAX_DIST          0.25
+#define VCT_DIFFUSE_RATIO(roughness)  1.0 //RoughnessToConeAngle(roughness)
 #define VCT_SPECULAR_MAX_DIST         0.15
 
 #define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
-#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.01)
+#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.00035)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
-    return textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
+    vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
+    rgba.rgb = pow(rgba.rgb, vec3(2.2));
+    return rgba;
 }
 
 vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max_dist)
