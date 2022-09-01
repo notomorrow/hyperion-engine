@@ -249,11 +249,6 @@ void main()
         result = kD * Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
-        // result = dfg;
-
-        // result = ibl;
-        // result = reflections.rgb;
-        //end ibl
     } else {
         result = albedo.rgb;
     }
@@ -261,7 +256,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    result = irradiance.rgb;
+    // result = irradiance.rgb;
 
     // output_color = vec4(0.0);
     output_color = vec4(result, 1.0);

@@ -39,12 +39,11 @@ void main()
     vec3 L = light.position.xyz;
     L -= g_position.xyz * float(min(light.type, 1));
     L = normalize(L);
-    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, dot(g_normal, L)));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
+    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, Saturate(dot(g_normal, L))));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
 #endif
 
-    frag_color.rgb = pow(frag_color.rgb, vec3(2.2));
+    frag_color.rgb = pow(frag_color.rgb, vec3(1.0 / 2.2));
     frag_color.a = 1.0;
-
 
 	imageStore(voxel_image, clamp(ivec3(VctStoragePosition(g_voxel)), ivec3(0), ivec3(vct_params.extent.xyz)), frag_color);
 }
