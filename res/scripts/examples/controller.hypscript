@@ -47,6 +47,8 @@ let controller_node: any = null;
 let global_time: Float = 0.0;
 let num_ticks: UInt = 0;
 
+let test_vector = new Vector3();
+
 export function OnAdded(node: any) {
     Print("Added controller to node: %s\n", node);
 
@@ -66,10 +68,13 @@ export function OnTick(node: any, delta: Float) {
     global_time += delta;
     num_ticks += 1;
 
+    //test_vector.SetX(test_vector.GetX() + delta);
+
     if (global_time >= 1.0) {
         let avg_time: Float = global_time / num_ticks;
 
         Print("CPU Ticks per second (in script): %\n", 1.0 / avg_time);
+        //Print("test_vector: %\n", test_vector.ToString());
         global_time = 0.0;
         num_ticks = 0;
     }

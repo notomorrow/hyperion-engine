@@ -5,11 +5,11 @@
 
 vec3 vct_aabb_center = (vct_params.aabb_max.xyz + vct_params.aabb_min.xyz) * 0.5;
 vec3 vct_aabb_extent = vct_params.aabb_max.xyz - vct_params.aabb_min.xyz;
+float vct_aabb_greatest_extent = max(vct_aabb_extent.x, max(vct_aabb_extent.y, vct_aabb_extent.z));
 uint vct_greatest_extent = max(vct_params.extent.x, max(vct_params.extent.y, vct_params.extent.z));
 
 #define VOXEL_GRID_SCALE 1.0
 
-// TODO: have to review these, we might be losing 50% of data
 vec3 VctStoragePosition(vec3 scaled_position)
 {
     const vec3 image_size = vec3(vct_params.extent.xyz);
