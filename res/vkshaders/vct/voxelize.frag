@@ -20,7 +20,7 @@ layout(location=4) in float g_lighting;
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D voxel_image;
 
 #define HYP_VCT_SAMPLE_ALBEDO_MAP 1
-#define HYP_VCT_LIGHTING 0
+#define HYP_VCT_LIGHTING 1
 #define HYP_VCT_LIGHTING_AMBIENT 0.1
 
 void main()
@@ -42,7 +42,9 @@ void main()
     frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, dot(g_normal, L)));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
 #endif
 
+    frag_color.rgb = pow(frag_color.rgb, vec3(2.2));
     frag_color.a = 1.0;
 
-	imageStore(voxel_image, clamp(ivec3(VctStoragePosition(g_voxel)), ivec3(0), ivec3(vct_greatest_extent)), frag_color);
+
+	imageStore(voxel_image, clamp(ivec3(VctStoragePosition(g_voxel)), ivec3(0), ivec3(vct_params.extent.xyz)), frag_color);
 }

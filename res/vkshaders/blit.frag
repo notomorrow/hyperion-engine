@@ -21,10 +21,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
 
-//layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;
-//layout(set = 9, binding = 11, rgba16f) uniform image2D irradiance_image;
-//layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
-
 layout(location=0) out vec4 out_color;
 
 void main()

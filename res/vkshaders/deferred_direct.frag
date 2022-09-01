@@ -79,11 +79,7 @@ void main()
         const float VdotH = max(0.0001, dot(V, H));
 
         if (light.shadow_map_index != ~0u) {
-#if HYP_SHADOW_PENUMBRA
-            shadow = GetShadowContactHardened(light.shadow_map_index, position.xyz, NdotL);
-#else
-            shadow = GetShadow(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
-#endif
+            shadow = GetShadow(light.shadow_map_index, position.xyz, NdotL);
         }
 
         vec4 light_color = unpackUnorm4x8(light.color_encoded);
@@ -125,5 +121,5 @@ void main()
         result = albedo;
     }
 
-    output_color = result;
+    output_color = vec4(0.0);//result;
 }
