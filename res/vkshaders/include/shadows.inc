@@ -5,16 +5,19 @@
 
 #define HYP_SHADOW_BIAS 0.005
 #define HYP_SHADOW_VARIABLE_BIAS 1
-#define HYP_SHADOW_PENUMBRA 1
-#define HYP_SHADOW_NUM_SAMPLES 8
+// #define HYP_SHADOW_PENUMBRA 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
+
+#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.35
 
 #define HYP_SHADOW_SAMPLES_4
 //#define HYP_SHADOW_SAMPLES_8
 
 #define HYP_PENUMBRA_SAMPLES_4
 //#define HYP_PENUMBRA_SAMPLES_8
+
+#define HYP_SHADOW_VARIANCE 1
 
 const vec2 shadow_pcf_kernel[16] = vec2[16](
     vec2(-0.94201624, -0.39906216),
@@ -51,11 +54,11 @@ vec3 GetShadowCoord(uint index, vec3 pos)
     return shadow_position.xyz;
 }
 
-float GetShadow(uint index, vec3 pos, vec2 offset, float NdotL)
+float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 {
-    vec3 coord = GetShadowCoord(index, pos);
-    vec4 shadow_sample = texture(shadow_maps[index], coord.xy + offset);
-    float shadow_depth = shadow_sample.r;
+    const vec3 coord = GetShadowCoord(index, pos);
+    const vec4 shadow_sample = texture(shadow_maps[index], coord.xy + offset);
+    const float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
 
@@ -65,6 +68,27 @@ float GetShadow(uint index, vec3 pos, vec2 offset, float NdotL)
 #endif
 
     return max(step(coord.z - bias, shadow_depth), 0.0);
+}
+
+float GetShadowVariance(uint index, vec3 pos, float NdotL)
+{
+    const vec3 coord = GetShadowCoord(index, pos);
+    const vec4 shadow_sample = textureLod(shadow_maps[index], coord.xy, 1.0);
+    const float moment = shadow_sample.r;
+
+    if (coord.z <= moment) {
+        return 1.0;
+    }
+
+    const float moment2 = shadow_sample.g;
+
+    const float variance = max(moment2 - HYP_FMATH_SQR(moment), HYP_FMATH_EPSILON);
+    const float d = coord.z - moment;
+    
+    float percent_in_shadow = variance / (variance + HYP_FMATH_SQR(d));
+    percent_in_shadow = smoothstep(HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION, 1.0, percent_in_shadow);
+    
+    return percent_in_shadow;
 }
 
 float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float shadow_map_coord_z)
@@ -121,7 +145,7 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
 #undef HYP_DEF_VOGEL_DISK
 
-#if HYP_SHADOW_PENUMBRA
+#if defined(HYP_SHADOW_PENUMBRA) && HYP_SHADOW_PENUMBRA
 
 // vectorization
 #define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3) \
@@ -155,7 +179,7 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
 #define HYP_DO_SHADOW(iter_index) \
     { \
-        shadowness += GetShadow(index, pos, /*vogel_##iter_index **/ shadow_pcf_kernel[iter_index] * 0.0008 + (vogel_##iter_index * penumbra_mask * shadow_filter_size), NdotL); \
+        shadowness += GetShadowStandard(index, pos, /*vogel_##iter_index **/ shadow_pcf_kernel[iter_index] * 0.0008 + (vogel_##iter_index * penumbra_mask * shadow_filter_size), NdotL); \
     }
 
 #ifdef HYP_SHADOW_SAMPLES_8
@@ -182,4 +206,17 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
     return shadowness;
 }
+
+
+float GetShadow(uint index, vec3 position, float NdotL)
+{
+#if HYP_SHADOW_PENUMBRA
+    return GetShadowContactHardened(index, position, NdotL);
+#elif HYP_SHADOW_VARIANCE
+    return GetShadowVariance(index, position, NdotL);
+#else
+    return GetShadowStandard(index, position, vec2(0.0), NdotL);
+#endif
+}
+
 #endif

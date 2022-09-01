@@ -56,11 +56,11 @@ layout(push_constant) uniform DeferredParams {
 
 vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 {
-    const uvec3 base_grid_coord    = BaseGridCoord(P);
+    const uvec3 base_grid_coord = BaseGridCoord(P);
     const vec3 base_probe_position = GridPositionToWorldPosition(base_grid_coord);
     
     vec3 total_irradiance = vec3(0.0);
-    float total_weight    = 0.0;
+    float total_weight = 0.0;
     
     vec3 alpha = clamp((P - base_probe_position) / PROBE_GRID_STEP, vec3(0.0), vec3(1.0));
     
@@ -68,7 +68,7 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
         uvec3 offset = uvec3(i, i >> 1, i >> 2) & uvec3(1);
         uvec3 probe_grid_coord = clamp(base_grid_coord + offset, uvec3(0.0), probe_system.probe_counts.xyz - uvec3(1));
         
-        uint probe_index    = GridPositionToProbeIndex(probe_grid_coord);
+        uint probe_index = GridPositionToProbeIndex(probe_grid_coord);
         vec3 probe_position = GridPositionToWorldPosition(probe_grid_coord);
         vec3 probe_to_point = P - probe_position + (N + 3.0 * V) * PROBE_NORMAL_BIAS;
         vec3 dir            = normalize(-probe_to_point);
@@ -261,7 +261,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    // result = irradiance.rgb;
+    result = irradiance.rgb;
 
     // output_color = vec4(0.0);
     output_color = vec4(result, 1.0);

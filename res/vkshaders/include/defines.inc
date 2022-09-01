@@ -62,6 +62,7 @@
 #define HYP_FMATH_PI_HALF      1.57079632679
 #define HYP_FMATH_DEG2RAD(deg) (deg) * HYP_FMATH_PI / 180.0
 #define HYP_FMATH_RAD2DEG(rad) (rad) * 180.0 / HYP_FMATH_PI
+#define HYP_FMATH_EPSILON      0.000001
 
 #ifdef __COUNTER__
     #define HYP_UNIQUE_NAME(prefix) \
