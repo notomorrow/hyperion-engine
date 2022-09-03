@@ -657,9 +657,33 @@ void DescriptorPool::RemoveDescriptorSet(DescriptorSet *descriptor_set)
 
 void DescriptorPool::RemoveDescriptorSet(UInt index)
 {
+    AssertThrowMsg(
+        index < m_descriptor_sets.Size(),
+        "Attempt to remove descriptor set at index %u but it is out of bounds (%llu)",
+        index,
+        m_descriptor_sets.Size()
+    );
+
     const UInt queue_index = DescriptorSet::GetFrameIndex(index);
 
-    m_descriptor_sets_pending_destruction[queue_index].Push(std::move(m_descriptor_sets[index]));
+    auto &descriptor_set = m_descriptor_sets[index];
+    AssertThrowMsg(
+        descriptor_set != nullptr,
+        "Attempt to remove descriptor set at index %u but it is nullptr",
+        index
+    );
+
+    if (m_descriptor_sets_pending_destruction[queue_index].Contains(descriptor_set->GetRealIndex())) {
+        DebugLog(
+            LogType::Warn,
+            "Descriptor set at index %u is already queued for removal",
+            index
+        );
+
+        return;
+    }
+
+    m_descriptor_sets_pending_destruction[queue_index].Push(descriptor_set->GetRealIndex());
 
     // look through the list of items pending addition, remove from there
     // for (auto it = m_descriptor_sets_pending_addition.begin(); it != m_descriptor_sets_pending_addition.end();) {
@@ -676,9 +700,14 @@ Result DescriptorPool::DestroyPendingDescriptorSets(Device *device, UInt frame_i
     auto &descriptor_set_queue = m_descriptor_sets_pending_destruction[frame_index];
 
     while (descriptor_set_queue.Any()) {
-        auto &front = descriptor_set_queue.Front();
+        const auto index = descriptor_set_queue.Front();
+        AssertThrow(index < m_descriptor_sets.Size());
 
-        HYPERION_BUBBLE_ERRORS(front->Destroy(device));
+        auto &item = m_descriptor_sets[index];
+        AssertThrow(item != nullptr);
+    
+        HYPERION_BUBBLE_ERRORS(item->Destroy(device));
+        m_descriptor_sets[index].reset();
 
         descriptor_set_queue.Pop();
     }

@@ -496,7 +496,7 @@ private:
     VkDescriptorPool m_descriptor_pool;
 
     FixedArray<Queue<std::unique_ptr<DescriptorSet>>, max_frames_in_flight> m_descriptor_sets_pending_addition;
-    FixedArray<Queue<std::unique_ptr<DescriptorSet>>, max_frames_in_flight> m_descriptor_sets_pending_destruction;
+    FixedArray<Queue<DescriptorSet::Index>, max_frames_in_flight> m_descriptor_sets_pending_destruction;
 
     bool m_is_created;
 };

@@ -239,7 +239,7 @@ public:
 #if HYPERION_VK_TEST_VCT
         m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
             VoxelConeTracing::Params {
-                BoundingBox(-128, 128)//test_model->GetWorldAABB()
+                test_model->GetWorldAABB()
             }
         );
 #endif
