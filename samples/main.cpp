@@ -113,7 +113,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/living_room/living_room.obj", //sponza/sponza.obj",
+            "models/sponza/sponza.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -232,14 +232,14 @@ public:
 
         // m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
 
-        test_model->Scale(25.0f);
-        // test_model->Scale(0.15f);//14.075f);
+        // test_model->Scale(25.0f);
+        test_model->Scale(0.15f);//14.075f);
 
 
 #if HYPERION_VK_TEST_VCT
         m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
             VoxelConeTracing::Params {
-                test_model->GetWorldAABB()
+                BoundingBox(-128, 128)//test_model->GetWorldAABB()
             }
         );
 #endif

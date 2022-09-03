@@ -275,7 +275,11 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
             // dispatch to generate this mip level
             m_generate_mipmap->GetPipeline()->Dispatch(
                 command_buffer,
-                mip_extent / Extent3D { 8, 8, 8 }
+                Extent3D {
+                    (mip_extent.width + 7) / 8,
+                    (mip_extent.height + 7) / 8,
+                    (mip_extent.depth + 7) / 8
+                }
             );
 
             // put this mip into readable state

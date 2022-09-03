@@ -71,10 +71,10 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
         uint probe_index = GridPositionToProbeIndex(probe_grid_coord);
         vec3 probe_position = GridPositionToWorldPosition(probe_grid_coord);
         vec3 probe_to_point = P - probe_position + (N + 3.0 * V) * PROBE_NORMAL_BIAS;
-        vec3 dir            = normalize(-probe_to_point);
+        vec3 dir = normalize(-probe_to_point);
         
         vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
-        float weight   = 1.0;
+        float weight = 1.0;
         
         /* Backface test */
         
@@ -256,7 +256,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    // result = irradiance.rgb;
+    // result = reflections.rgb;
 
     // output_color = vec4(0.0);
     output_color = vec4(result, 1.0);
