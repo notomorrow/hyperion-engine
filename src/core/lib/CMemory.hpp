@@ -3,6 +3,7 @@
 
 #include <Types.hpp>
 
+#include <type_traits>
 #include <cstring>
 
 namespace hyperion
@@ -53,6 +54,14 @@ public:
         new (where) T(std::forward<Args>(args)...);
     }
 
+    template <class T, class ...Args>
+    [[nodiscard]] static void *AllocateAndConstruct(Args &&... args)
+    {
+        void *ptr = std::malloc(sizeof(T));
+        new (ptr) T(std::forward<Args>(args)...);
+        return ptr;
+    }
+
     template <class T>
     static void Destruct(T &object)
     {
@@ -71,6 +80,26 @@ public:
 #if HYP_DEBUG_MODE
         Memory::Garble(ptr, sizeof(T));
 #endif
+    }
+
+    template <class T>
+    static typename std::enable_if_t<!std::is_same_v<void *, std::add_pointer_t<T>>, void>
+    DestructAndFree(void *ptr)
+    {
+        static_cast<T *>(ptr)->~T();
+
+#if HYP_DEBUG_MODE
+        Memory::Garble(ptr, sizeof(T));
+#endif
+
+        std::free(ptr);
+    }
+
+    template <class T>
+    static typename std::enable_if_t<std::is_same_v<void *, std::add_pointer_t<T>>, void>
+    DestructAndFree(void *ptr)
+    {
+        std::free(ptr);
     }
 };
 

@@ -15,31 +15,30 @@ namespace detail {
 template <class CountType = UInt>
 struct RefCountData
 {
-    using Destructor = std::add_pointer_t<void(void *)>;
-
     void *value;
     TypeID type_id;
     CountType strong_count;
     CountType weak_count;
-    Destructor dtor;
+    void(*dtor)(void *);
 
     template <class T, class ...Args>
     void Construct(Args &&... args)
     {
         using Normalized = NormalizedType<T>;
 
-        value = std::aligned_alloc(alignof(Normalized), sizeof(Normalized));
+        value = Memory::AllocateAndConstruct<Normalized>(std::forward<Args>(args)...);
+        dtor = &Memory::DestructAndFree<Normalized>;
         type_id = TypeID::ForType<Normalized>();
-        new (static_cast<Normalized *>(value)) Normalized(std::forward<Args>(args)...);
-        dtor = [](void *ptr) { static_cast<Normalized *>(ptr)->~T(); std::free(ptr); };
     }
 
     template <class T>
     void TakeOwnership(T *ptr)
     {
+        using Normalized = NormalizedType<T>;
+
         value = ptr;
+        dtor = &Memory::DestructAndFree<Normalized>;
         type_id = TypeID::ForType<T>();
-        dtor = [](void *ptr) { delete static_cast<T *>(ptr); };
     }
 
     void Destruct()

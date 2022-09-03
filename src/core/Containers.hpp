@@ -12,6 +12,8 @@
 #include <core/lib/String.hpp>
 #include <core/lib/Queue.hpp>
 #include <core/lib/Proc.hpp>
+#include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/UniquePtr.hpp>
 #include <math/MathUtil.hpp>
 #include <Types.hpp>
 
