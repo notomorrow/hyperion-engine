@@ -229,15 +229,6 @@ public:
     GameThread game_thread;
     TaskSystem task_system;
 
-    // template <class T, class First, class ...Rest>
-    // Handle<T> CreateHandle(First &&first, Rest &&... args)
-    // {
-    //     Handle<T> handle(new T(std::forward<First>(first), std::forward<Rest>(args)...));
-    //     registry.template Attach<T>(handle);
-
-    //     return handle;
-    // }
-
     template <class T, class First, class Second, class ...Rest>
     Handle<T> CreateHandle(First &&first, Second &&second, Rest &&... args)
     {
