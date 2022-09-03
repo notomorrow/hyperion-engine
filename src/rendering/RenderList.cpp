@@ -74,10 +74,10 @@ void RenderListContainer::RenderListBucket::AddPendingRendererInstances(Engine *
         return;
     }
 
-    DebugLog(LogType::Debug, "Adding %llu pending graphics pipelines\n", renderer_instances_pending_addition.Size());
+    DebugLog(LogType::Debug, "Adding %llu pending RendererInstances\n", renderer_instances_pending_addition.Size());
 
     std::lock_guard guard(renderer_instances_mutex);
-    DebugLog(LogType::Debug, "Adding pending graphics pipelines, locked mutex.\n");
+    DebugLog(LogType::Debug, "Adding pending RendererInstances, locked mutex.\n");
 
     for (auto it = renderer_instances_pending_addition.Begin(); it != renderer_instances_pending_addition.End(); ++it) {
         AssertThrow(*it != nullptr);

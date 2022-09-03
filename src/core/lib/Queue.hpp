@@ -15,7 +15,7 @@ namespace hyperion {
 template <class T>
 class Queue : DynArray<T> {
 public:
-    using Iterator      = typename DynArray<T>::Iterator;
+    using Iterator = typename DynArray<T>::Iterator;
     using ConstIterator = typename DynArray<T>::ConstIterator;
 
     Queue();
@@ -26,22 +26,42 @@ public:
     Queue &operator=(const Queue &other);
     Queue &operator=(Queue &&other) noexcept;
 
-    [[nodiscard]] typename DynArray<T>::SizeType Size() const                 { return DynArray<T>::Size(); }
+    [[nodiscard]] typename DynArray<T>::SizeType Size() const
+        { return DynArray<T>::Size(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType *Data()                     { return DynArray<T>::Data(); }
-    [[nodiscard]] const typename DynArray<T>::ValueType *Data() const         { return DynArray<T>::Data(); }
+    [[nodiscard]] typename DynArray<T>::ValueType *Data()
+        { return DynArray<T>::Data(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType &Front()                    { return DynArray<T>::Front(); }
-    [[nodiscard]] const typename DynArray<T>::ValueType &Front() const        { return DynArray<T>::Front(); }
+    [[nodiscard]] const typename DynArray<T>::ValueType *Data() const
+        { return DynArray<T>::Data(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType &Back()                     { return DynArray<T>::Back(); }
-    [[nodiscard]] const typename DynArray<T>::ValueType &Back() const         { return DynArray<T>::Back(); }
+    [[nodiscard]] typename DynArray<T>::ValueType &Front()
+        { return DynArray<T>::Front(); }
 
-    [[nodiscard]] bool Empty() const                                          { return DynArray<T>::Empty(); }
-    [[nodiscard]] bool Any() const                                            { return DynArray<T>::Any(); }
+    [[nodiscard]] const typename DynArray<T>::ValueType &Front() const
+        { return DynArray<T>::Front(); }
 
-    void Reserve(typename DynArray<T>::SizeType capacity)                     { DynArray<T>::Reserve(capacity); }
-    void Refit()                                                              { DynArray<T>::Refit(); }
+    [[nodiscard]] typename DynArray<T>::ValueType &Back()
+        { return DynArray<T>::Back(); }
+
+    [[nodiscard]] const typename DynArray<T>::ValueType &Back() const
+        { return DynArray<T>::Back(); }
+
+    [[nodiscard]] bool Empty() const
+        { return DynArray<T>::Empty(); }
+
+    [[nodiscard]] bool Any() const
+        { return DynArray<T>::Any(); }
+
+    [[nodiscard]] bool Contains(const T &value) const
+        { return DynArray<T>::Contains(value); }
+
+    void Reserve(typename DynArray<T>::SizeType capacity)
+        { DynArray<T>::Reserve(capacity); }
+
+    void Refit()
+        { DynArray<T>::Refit(); }
+
     void Push(const typename DynArray<T>::ValueType &value);
     void Push(typename DynArray<T>::ValueType &&value);
     typename DynArray<T>::ValueType Pop();
