@@ -262,7 +262,7 @@ void main()
     result = vec3(ao);
 #endif
 
-    // output_color = vec4(0.0);
+    result = reflections.rgb;
     output_color = vec4(result, 1.0);
 
 

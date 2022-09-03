@@ -36,18 +36,6 @@ class Entity;
 class Camera;
 class EnvProbe;
 
-struct alignas(16) ObjectInstance
-{
-    UInt32             entity_id;
-    UInt32             draw_command_index;
-    UInt32             batch_index;
-    UInt32             num_indices;
-    ShaderVec4<Float>  aabb_max;
-    ShaderVec4<Float>  aabb_min;
-
-    UInt32             packed_data;
-};
-
 template <class T>
 struct DrawProxy {};
 
@@ -63,10 +51,10 @@ struct DrawProxy<STUB_CLASS(Entity)>
     Material *material = nullptr;
 
     IDBase entity_id,
-           scene_id,
-           mesh_id,
-           material_id,
-           skeleton_id;
+        scene_id,
+        mesh_id,
+        material_id,
+        skeleton_id;
 
     BoundingBox bounding_box;
 
@@ -81,14 +69,14 @@ using EntityDrawProxy = DrawProxy<STUB_CLASS(Entity)>;
 template <>
 struct DrawProxy<STUB_CLASS(Camera)>
 {
-    Matrix4  view;
-    Matrix4  projection;
-    Vector3  position;
-    Vector3  direction;
+    Matrix4 view;
+    Matrix4 projection;
+    Vector3 position;
+    Vector3 direction;
     Extent2D dimensions;
-    Float    clip_near;
-    Float    clip_far;
-    Float    fov;
+    Float clip_near;
+    Float clip_far;
+    Float fov;
 };
 
 using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;

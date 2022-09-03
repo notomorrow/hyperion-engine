@@ -39,7 +39,8 @@ struct alignas(256) ProbeSystemUniforms
     UInt32 num_rays_per_probe;
 };
 
-struct alignas(16) ProbeRayData {
+struct alignas(16) ProbeRayData
+{
     Vector4 direction_depth;
     Vector4 rigin;
     Vector4 normal;
@@ -48,7 +49,8 @@ struct alignas(16) ProbeRayData {
 
 static_assert(sizeof(ProbeRayData) == 64);
 
-struct ProbeGridInfo {
+struct ProbeGridInfo
+{
     static constexpr UInt num_rays_per_probe         = 128;
     static constexpr UInt irradiance_octahedron_size = 8;
     static constexpr UInt depth_octahedron_size      = 16;

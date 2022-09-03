@@ -67,9 +67,11 @@ public:
             m_buffers.Set<T>({});
         }
 
-        auto it = m_buffers.At<T>().LowerBound(required_size);
+        auto &buffer_container = m_buffers.At<T>();
 
-        if (it != m_buffers.At<T>().End()) {
+        auto it = buffer_container.LowerBound(required_size);
+
+        if (it != buffer_container.End()) {
             return static_cast<T *>(it->second.get());
         }
 
@@ -78,7 +80,7 @@ public:
         auto uniform_buffer = std::make_unique<UniformBuffer>();
         HYPERION_ASSERT_RESULT(uniform_buffer->Create(device, required_size_pow2));
 
-        const auto insert_result = m_buffers.At<T>().Insert(required_size_pow2, std::move(uniform_buffer));
+        const auto insert_result = buffer_container.Insert(required_size_pow2, std::move(uniform_buffer));
         AssertThrow(insert_result.second); // was inserted
 
         return static_cast<T *>(insert_result.first->second.get());

@@ -137,7 +137,7 @@ void PostProcessing::Create(Engine *engine)
                 for (UInt effect_index = 0; effect_index < 8; effect_index++) {
                     descriptor->SetSubDescriptor({
                         .element_index = effect_index,
-                        .image_view    = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                        .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
                     });
                 }
             }
@@ -171,7 +171,7 @@ void PostProcessing::Destroy(Engine *engine)
             ->RemoveSubDescriptor(0);
 
         // remove all images
-        for (auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
+        for (const auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
             descriptor_set->RemoveDescriptor(descriptor_key);
         }
     }
@@ -195,8 +195,8 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
     for (UInt i = 0; i < static_cast<UInt>(std::size(effect_passes)); i++) {
         auto &effects = effect_passes[i];
 
-        post_processing_uniforms.effect_counts[i]        = static_cast<UInt32>(effects->Size());
-        post_processing_uniforms.masks[i]                = 0u;
+        post_processing_uniforms.effect_counts[i] = static_cast<UInt32>(effects->Size());
+        post_processing_uniforms.masks[i] = 0u;
         post_processing_uniforms.last_enabled_indices[i] = 0u;
 
         for (auto &it : *effects) {
@@ -223,7 +223,7 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
         descriptor_set_globals->AddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
             ->SetSubDescriptor({
                 .element_index = 0,
-                .buffer        = &m_uniform_buffer
+                .buffer = &m_uniform_buffer
             });
     }
 }

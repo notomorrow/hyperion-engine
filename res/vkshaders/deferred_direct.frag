@@ -125,5 +125,5 @@ void main()
         result = albedo;
     }
 
-    //output_color = result;
+    output_color = vec4(0.0);//result;
 }

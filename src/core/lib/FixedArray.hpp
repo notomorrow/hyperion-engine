@@ -47,25 +47,32 @@ public:
     }
 
     HYP_FORCE_INLINE
-    T &operator[](typename FixedArray::Base::KeyType index)               { return m_data[index]; }
+    T &operator[](typename FixedArray::Base::KeyType index)
+        { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    const T &operator[](typename FixedArray::Base::KeyType index) const   { return m_data[index]; }
+    [[nodiscard]] const T &operator[](typename FixedArray::Base::KeyType index) const
+        { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    constexpr SizeType Size() const                                       { return Sz; }
+    constexpr SizeType Size() const
+        { return Sz; }
 
     HYP_FORCE_INLINE
-    bool Empty() const                                                    { return Sz == 0; }
+    [[nodiscard]] bool Empty() const
+        { return Sz == 0; }
 
     HYP_FORCE_INLINE
-    bool Any() const                                                      { return Sz != 0; }
+    [[nodiscard]] bool Any() const
+        { return Sz != 0; }
 
     HYP_FORCE_INLINE
-    T *Data()                                                             { return static_cast<T *>(m_data); }
+    [[nodiscard]] T *Data()
+        { return static_cast<T *>(m_data); }
 
     HYP_FORCE_INLINE
-    const T *Data() const                                                 { return static_cast<const T *>(m_data); }
+    [[nodiscard]] const T *Data() const
+        { return static_cast<const T *>(m_data); }
 
     HYP_DEF_STL_BEGIN_END(&m_data[0], &m_data[Sz])
 };

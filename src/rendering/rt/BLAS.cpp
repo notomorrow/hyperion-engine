@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 
-Blas::Blas(Ref<Mesh> &&mesh, const Transform &transform)
+Blas::Blas(Handle<Mesh> &&mesh, const Transform &transform)
     : EngineComponentWrapper(),
       m_mesh(std::move(mesh)),
       m_transform(transform)
@@ -15,20 +15,20 @@ Blas::~Blas()
     Teardown();
 }
 
-void Blas::SetMesh(Ref<Mesh> &&mesh)
+void Blas::SetMesh(Handle<Mesh> &&mesh)
 {
     m_mesh = std::move(mesh);
 
     if (!m_wrapped.GetGeometries().empty()) {
-        auto size = static_cast<int64_t>(m_wrapped.GetGeometries().size());
+        auto size = static_cast<Int64>(m_wrapped.GetGeometries().size());
 
         while (size) {
             m_wrapped.RemoveGeometry(size--);
         }
     }
 
-    if (m_mesh != nullptr && IsInitCalled()) {
-        m_mesh.Init();
+    if (m_mesh && IsInitCalled()) {
+        GetEngine()->InitObject(m_mesh);
         
         m_wrapped.AddGeometry(std::make_unique<AccelerationGeometry>(
             m_mesh->BuildPackedVertices(),
@@ -52,8 +52,8 @@ void Blas::Init(Engine *engine)
         return;
     }
 
-    if (m_mesh != nullptr) {
-        m_mesh.Init();
+    if (m_mesh) {
+        engine->InitObject(m_mesh);
 
         m_wrapped.SetTransform(m_transform.GetMatrix());
         m_wrapped.AddGeometry(std::make_unique<AccelerationGeometry>(

@@ -7,6 +7,9 @@
 #include "lib/DynArray.hpp"
 #include "lib/FixedArray.hpp"
 #include "lib/Proc.hpp"
+#include <core/Thread.hpp>
+#include <Threads.hpp>
+#include <core/lib/Optional.hpp>
 
 #include <Util.hpp>
 #include <Types.hpp>
@@ -28,7 +31,7 @@
 namespace hyperion::v2 {
 
 struct ScheduledFunctionID {
-    UInt value{0};
+    UInt value { 0 };
     
     ScheduledFunctionID &operator=(UInt id)
     {
@@ -39,23 +42,24 @@ struct ScheduledFunctionID {
     
     ScheduledFunctionID &operator=(const ScheduledFunctionID &other) = default;
 
-    bool operator==(uint32_t id) const                      { return value == id; }
-    bool operator!=(uint32_t id) const                      { return value != id; }
+    bool operator==(UInt id) const { return value == id; }
+    bool operator!=(UInt id) const { return value != id; }
     bool operator==(const ScheduledFunctionID &other) const { return value == other.value; }
     bool operator!=(const ScheduledFunctionID &other) const { return value != other.value; }
-    bool operator<(const ScheduledFunctionID &other) const  { return value < other.value; }
+    bool operator<(const ScheduledFunctionID &other) const { return value < other.value; }
 
     explicit operator bool() const { return value != 0; }
 };
 
 template <class ReturnType, class ...Args>
-struct ScheduledFunction {
+struct ScheduledFunction
+{
     using Function = Proc<ReturnType, Args...>;//std::function<ReturnType(Args...)>;
 
     ScheduledFunctionID id;
     Function fn;
 
-    constexpr static ScheduledFunctionID empty_id = ScheduledFunctionID{0};
+    constexpr static ScheduledFunctionID empty_id = ScheduledFunctionID { 0 };
 
     template <class Lambda>
     ScheduledFunction(Lambda &&lambda)
@@ -63,12 +67,6 @@ struct ScheduledFunction {
           fn(std::forward<Lambda>(lambda))
     {
     }
-
-    // ScheduledFunction()
-    //     : id {},
-    //       fn(nullptr)
-    // {
-    // }
 
     ScheduledFunction(const ScheduledFunction &other) = delete;
     ScheduledFunction &operator=(const ScheduledFunction &other) = delete;
@@ -86,20 +84,17 @@ struct ScheduledFunction {
         fn = std::move(other.fn);
 
         other.id = {};
-        // other.fn = nullptr;
 
         return *this;
     }
     
     ~ScheduledFunction() = default;
-
-    // template <class ...Param>
+    
     HYP_FORCE_INLINE ReturnType Execute(Args... args)
     {
         return fn(std::forward<Args>(args)...);
     }
-
-    // template <class ...Param>
+    
     HYP_FORCE_INLINE ReturnType operator()(Args... args)
     {
         return Execute(std::forward<Args>(args)...);
@@ -109,8 +104,6 @@ struct ScheduledFunction {
 template <class ScheduledFunction>
 class Scheduler
 {
-    //using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
-
     using ScheduledFunctionQueue = DynArray<ScheduledFunction>;
     using Iterator = typename ScheduledFunctionQueue::Iterator;
 
@@ -119,7 +112,7 @@ public:
     using TaskID = ScheduledFunctionID;
 
     Scheduler()
-        : m_creation_thread(std::this_thread::get_id())
+        : m_owner_thread(Threads::CurrentThreadID())
     {
     }
 
@@ -130,6 +123,14 @@ public:
     ~Scheduler() = default;
 
     HYP_FORCE_INLINE UInt NumEnqueued() const { return m_num_enqueued.load(); }
+
+    /*! \brief Set the given thread ID to be the owner thread of this Scheduler.
+     *  Tasks are to be enqueued from any other thread, and executed only from the owner thread.
+     */
+    void SetOwnerThread(ThreadID owner_thread)
+    {
+        m_owner_thread = owner_thread;
+    }
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
      * called from a non-owner thread. */
@@ -229,30 +230,6 @@ public:
         return results;
     }
 
-    /*! If the enqueued with the given ID does _not_ exist, schedule the given function.
-     *  else, remove the item with the given ID
-     *  This is a helper function for create/destroy functions
-     */
-    // ScheduledFunctionID EnqueueReplace(ScheduledFunctionID &dequeue_id, ScheduledFunction &&enqueue_fn)
-    // {
-    //     std::unique_lock lock(m_mutex);
-
-    //     if (dequeue_id != ScheduledFunction::empty_id) {
-    //         auto it = Find(dequeue_id);
-
-    //         if (it != m_scheduled_functions.End()) {
-    //             (*it) = {
-    //                 .id = {dequeue_id},
-    //                 .fn = std::move(enqueue_fn)
-    //             };
-
-    //             return dequeue_id;
-    //         }
-    //     }
-
-    //     return (dequeue_id = EnqueueInternal(std::forward<ScheduledFunction>(enqueue_fn)));
-    // }
-
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
      * Otherwise, the thread will block until all tasks have been executed.
      */
@@ -267,13 +244,14 @@ public:
     template <class Executor>
     void FlushOrWait(Executor &&executor)
     {
-        if (std::this_thread::get_id() == m_creation_thread) {
+        if (Threads::IsOnThread(m_owner_thread)) {
             Flush(std::forward<Executor>(executor));
 
             return;
         }
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        // TODO: do we need this?
         while (m_num_enqueued.load() != 0u);
 #else
         std::unique_lock lock(m_mutex);
@@ -281,31 +259,11 @@ public:
 #endif
     }
 
-    // template <class Executor>
-    // void ExecuteFront(Executor &&executor)
-    // {
-    //     AssertThrow(std::this_thread::get_id() == m_creation_thread);
-
-    //     std::unique_lock lock(m_mutex);
-
-    //     if (m_scheduled_functions.Any()) {
-    //         executor(m_scheduled_functions.Front());
-
-    //         m_scheduled_functions.PopFront();
-
-    //         --m_num_enqueued;
-    //     }
-
-    //     lock.unlock();
-
-    //     m_is_flushed.notify_all();
-    // }
-
     /* Move all the next pending task in the queue to an external container. */
     template <class Container>
     void AcceptNext(Container &out_container)
     {
-        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+        AssertThrow(Threads::IsOnThread(m_owner_thread));
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -333,7 +291,7 @@ public:
     template <class Container>
     void AcceptAll(Container &out_container)
     {
-        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+        AssertThrow(Threads::IsOnThread(m_owner_thread));
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -362,7 +320,7 @@ public:
     template <class Executor>
     void Flush(Executor &&executor)
     {
-        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+        AssertThrow(Threads::IsOnThread(m_owner_thread));
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -432,7 +390,7 @@ private:
     std::condition_variable m_is_flushed;
 #endif
 
-    std::thread::id m_creation_thread;
+    ThreadID m_owner_thread;
 };
 
 } // namespace hyperion::v2

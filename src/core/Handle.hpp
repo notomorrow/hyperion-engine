@@ -261,7 +261,7 @@ public:
     using Base::operator bool;
     using Base::operator!;
 
-    static const inline Handle empty = Handle();
+    static const Handle empty;
 
     Handle()
         : Base()
@@ -329,6 +329,9 @@ public:
 
 private:
 };
+
+template <class T>
+const Handle<T> Handle<T>::empty = Handle();
 
 class WeakHandleBase : WeakAtomicRefCountedPtr<void>
 {

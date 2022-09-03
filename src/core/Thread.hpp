@@ -15,9 +15,9 @@ struct ThreadID
     UInt value;
     FixedString name;
 
-    bool operator==(const ThreadID &other) const { return value == other.value; }
-    bool operator!=(const ThreadID &other) const { return value != other.value; }
-    bool operator<(const ThreadID &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
+    HYP_FORCE_INLINE bool operator==(const ThreadID &other) const { return value == other.value; }
+    HYP_FORCE_INLINE bool operator!=(const ThreadID &other) const { return value != other.value; }
+    HYP_FORCE_INLINE bool operator<(const ThreadID &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
 };
 
 #ifdef HYP_ENABLE_THREAD_ID
@@ -42,14 +42,13 @@ public:
 
     const ThreadID &GetId() const { return m_id; }
 
-    Scheduler *GetScheduler() { return m_scheduler; }
-    const Scheduler *GetScheduler() const { return m_scheduler; }
+    Scheduler &GetScheduler() { return m_scheduler; }
+    const Scheduler &GetScheduler() const { return m_scheduler; }
 
     template <class Task>
     auto ScheduleTask(Task &&task) -> typename Scheduler::TaskID
     {
-        AssertThrow(m_scheduler != nullptr);
-        return m_scheduler->Enqueue(std::forward<Task>(task));
+        return m_scheduler.Enqueue(std::forward<Task>(task));
     }
 
     bool Start(Args ...args);
@@ -61,7 +60,7 @@ protected:
     virtual void operator()(Args ...args) = 0;
 
     const ThreadID m_id;
-    Scheduler *m_scheduler;
+    Scheduler m_scheduler;
 
 private:
     std::thread *m_thread;
@@ -70,8 +69,7 @@ private:
 template <class SchedulerType, class ...Args>
 Thread<SchedulerType, Args...>::Thread(const ThreadID &id)
     : m_id(id),
-      m_thread(nullptr),
-      m_scheduler(nullptr)
+      m_thread(nullptr)
 {
 }
 
@@ -79,10 +77,9 @@ template <class SchedulerType, class ...Args>
 Thread<SchedulerType, Args...>::Thread(Thread &&other) noexcept
     : m_id(std::move(other.m_id)),
       m_thread(other.m_thread),
-      m_scheduler(other.m_scheduler)
+      m_scheduler(std::move(other.m_scheduler))
 {
     other.m_thread = nullptr;
-    other.m_scheduler = nullptr;
 }
 
 template <class SchedulerType, class ...Args>
@@ -90,10 +87,9 @@ Thread<SchedulerType, Args...> &Thread<SchedulerType, Args...>::operator=(Thread
 {
     m_id = std::move(other.m_id);
     m_thread = other.m_thread;
-    m_scheduler = other.m_scheduler;
+    m_scheduler = std::move(other.m_scheduler);
 
     other.m_thread = nullptr;
-    other.m_scheduler = nullptr;
 
     return *this;
 }
@@ -101,11 +97,6 @@ Thread<SchedulerType, Args...> &Thread<SchedulerType, Args...>::operator=(Thread
 template <class SchedulerType, class ...Args>
 Thread<SchedulerType, Args...>::~Thread()
 {
-    if (m_scheduler != nullptr) {
-        delete m_scheduler;
-        m_scheduler = nullptr;
-    }
-
     if (m_thread != nullptr) {
         if (m_thread->joinable()) {
             m_thread->join();
@@ -127,9 +118,7 @@ bool Thread<SchedulerType, Args...>::Start(Args ...args)
 
     m_thread = new std::thread([&self = *this, tuple_args] {
         SetThreadID(self.GetId());
-
-        AssertThrow(self.m_scheduler == nullptr);
-        self.m_scheduler = new SchedulerType();
+        self.m_scheduler.SetOwnerThread(self.GetId());
 
         self(std::get<Args>(tuple_args)...);
     });

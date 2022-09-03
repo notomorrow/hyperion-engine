@@ -43,8 +43,6 @@ private:
 
 public:
     using Type = decltype(value);
-
-    static constexpr auto *data = StaticString.data;
 };
 
 template <auto StaticString>

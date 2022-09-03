@@ -211,6 +211,16 @@ public:
     void Compile();
     void RequestStop();
 
+    // temporarily public: RT stuff is not yet in it's own unit,
+    // needs to use this method
+    void PreFrameUpdate(Frame *frame);
+    // temporarily public: RT stuff is not yet in it's own unit,
+    // needs to use this method
+    void RenderDeferred(Frame *frame);
+    // temporarily public: RT stuff is not yet in it's own unit,
+    // needs to use this method
+    void RenderFinalPass(Frame *frame) const;
+
     void RenderNextFrame(Game *game);
 
     ShaderGlobals *shader_globals;
@@ -321,10 +331,6 @@ public:
 
 private:
     void FinalizeStop();
-
-    void PreFrameUpdate(Frame *frame);
-    void RenderDeferred(Frame *frame);
-    void RenderFinalPass(Frame *frame) const;
 
     void ResetRenderState();
     void UpdateBuffersAndDescriptors(UInt frame_index);

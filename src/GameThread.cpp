@@ -29,8 +29,8 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
     game->InitGame(engine);
 
     while (engine->m_running.load(std::memory_order_relaxed)) {
-        if (auto num_enqueued = m_scheduler->NumEnqueued()) {
-            m_scheduler->Flush([last_delta = counter.delta](auto &fn) {
+        if (auto num_enqueued = m_scheduler.NumEnqueued()) {
+            m_scheduler.Flush([last_delta = counter.delta](auto &fn) {
                 fn(last_delta);
             });
         }
@@ -48,7 +48,7 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
     }
 
     // flush scheduler
-    m_scheduler->Flush([](auto &fn) {
+    m_scheduler.Flush([](auto &fn) {
         fn(MathUtil::epsilon<GameCounter::TickUnit>);
     });
 

@@ -218,7 +218,7 @@ void ProbeGrid::RenderProbes(Engine *engine, Frame *frame)
     m_pipeline->Bind(frame->GetCommandBuffer());
     
     const auto scene_binding = engine->render_state.GetScene().id;
-    const auto scene_index   = scene_binding ? scene_binding.value - 1 : 0u;
+    const auto scene_index = scene_binding ? scene_binding.value - 1 : 0u;
 
    /* frame->GetCommandBuffer()->BindDescriptorSet(
         engine->GetInstance()->GetDescriptorPool(),

@@ -422,7 +422,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
 #if HYP_FEATURES_BINDLESS_TEXTURES
                 secondary->BindDescriptorSets(
                     instance->GetDescriptorPool(),
-                    m_renderer_instance.get(),
+                    m_pipeline.get(),
                     FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
                     FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
                     FixedArray {
@@ -557,7 +557,7 @@ void RendererInstance::Render(Engine *engine, Frame *frame)
 #if HYP_FEATURES_BINDLESS_TEXTURES
                 secondary->BindDescriptorSets(
                     instance->GetDescriptorPool(),
-                    m_renderer_instance.get(),
+                    m_pipeline.get(),
                     FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
                     FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
                     FixedArray {

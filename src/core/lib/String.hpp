@@ -31,7 +31,7 @@ public:
     using Iterator = typename Base::Iterator;
     using ConstIterator = typename Base::ConstIterator;
 
-    static const inline DynString empty = DynString();
+    static const DynString empty;
 
     static constexpr bool is_utf8 = IsUtf8;
     static constexpr bool is_ansi = !is_utf8 && (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>);
@@ -160,6 +160,9 @@ protected:
 
     typename Base::SizeType m_length;
 };
+
+template <class T, bool IsUtf8>
+const DynString<T, IsUtf8> DynString<T, IsUtf8>::empty = DynString();
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString()
