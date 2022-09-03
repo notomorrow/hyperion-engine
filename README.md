@@ -46,3 +46,5 @@ Make sure you install the required packages listed in CMakeLists.txt.
 ### Known issues
 * Currently some resources are not being cleaned up properly on close
 * Sometimes, may run into a race condition, some things need to be more thread-safe
+* Scripting has issues with generic types
+* Binding C++ variables to scripts still not fleshed out
