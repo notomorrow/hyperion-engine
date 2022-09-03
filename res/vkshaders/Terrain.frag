@@ -17,11 +17,8 @@ layout(location=12) in vec3 v_view_space_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_positions;
-layout(location=3) out vec4 gbuffer_material;
-layout(location=4) out vec4 gbuffer_tangents;
-layout(location=5) out vec4 gbuffer_bitangents;
-
+layout(location=2) out vec4 gbuffer_material;
+layout(location=3) out vec4 gbuffer_tangents;
 
 #define PARALLAX_ENABLED 1
 
@@ -120,8 +117,6 @@ void main()
     
 
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_positions = vec4(v_position, 1.0); // not used
     gbuffer_material = vec4(roughness, metalness, 0.0, ao);
-    gbuffer_tangents = EncodeNormal(v_tangent);
-    gbuffer_bitangents = EncodeNormal(v_bitangent);
+    gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
 }

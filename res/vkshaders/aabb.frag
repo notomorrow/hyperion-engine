@@ -11,7 +11,6 @@ layout(location=2) in vec2 v_texcoord0;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_positions;
 
 #include "include/material.inc"
 #include "include/packing.inc"
@@ -21,5 +20,4 @@ void main() {
     
     gbuffer_albedo = vec4(0.0, 1.0, 0.0, 1.0);
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_positions = vec4(0.0); // not used
 }

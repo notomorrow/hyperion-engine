@@ -11,7 +11,7 @@ namespace hyperion {
 constexpr UInt max_frames_in_flight = 2;
 constexpr UInt max_bound_env_probes = 1; // temp
 
-constexpr UInt num_gbuffer_textures = 7;
+constexpr UInt num_gbuffer_textures = 5;
 
 template <class ...T>
 constexpr bool resolution_failure = false;
