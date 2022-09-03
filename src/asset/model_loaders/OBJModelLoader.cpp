@@ -372,7 +372,7 @@ std::unique_ptr<Node> OBJModelLoader::BuildFn(Engine *engine, const Object &obje
             auto vertex_attributes = mesh->GetVertexAttributes();
 
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-            const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
+            const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
             auto entity = engine->CreateHandle<Entity>(
                 std::move(mesh),
                 std::move(shader),

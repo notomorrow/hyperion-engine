@@ -113,7 +113,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",
+            "models/San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"sponza/sponza.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -217,7 +217,7 @@ public:
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
         auto my_light = engine->CreateHandle<Light>(new DirectionalLight(
-            Vector3(0.5f, 1.0f, 0.0f).Normalize(),
+            Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
             Vector4::One(),
             150000.0f
         ));
@@ -231,9 +231,8 @@ public:
         ));
 
         // m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
-
-        // test_model->Scale(25.0f);
-        test_model->Scale(0.15f);//14.075f);
+        test_model->Scale(10.0f);
+        //test_model->Scale(0.15f);//14.075f);
 
 
 #if HYPERION_VK_TEST_VCT
@@ -285,8 +284,8 @@ public:
         
         m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             Handle<Light>(my_light),
-            Vector3::Zero(),
-            250.0f
+            Vector3(0, 50, 0),
+            850.0f
         );
 
         m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
@@ -330,7 +329,7 @@ public:
 
     virtual void Teardown(Engine *engine) override
     {
-        engine->GetWorld().RemoveScene(m_scene->GetId());
+        engine->GetWorld().RemoveScene(m_scene->GetID());
         m_scene.Reset();
 
         Game::Teardown(engine);
@@ -389,7 +388,7 @@ public:
                                 mesh->GetVertices(),
                                 mesh->GetIndices(),
                                 lookup_result->GetTransform(),
-                                lookup_result->GetId().value,
+                                lookup_result->GetID().value,
                                 triangle_mesh_results
                             );
                         }
@@ -542,7 +541,7 @@ int main()
 #endif
     
     SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 1024);//2048, 1080);
+    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1600, 1200);
     system.SetCurrentWindow(window);
 
     SystemEvent event;

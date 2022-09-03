@@ -1,11 +1,11 @@
-#include <script/vm/ImmutableString.hpp>
+#include <script/vm/VMString.hpp>
 #include <iostream>
 namespace hyperion {
 namespace vm {
   
-ImmutableString::ImmutableString(const char *str)
+VMString::VMString(const char *str)
 {
-    size_t len = std::strlen(str);
+    const SizeType len = std::strlen(str);
     m_length = len;
 
     m_data = new char[len + 1];
@@ -13,7 +13,7 @@ ImmutableString::ImmutableString(const char *str)
     m_data[len] = '\0';
 }
   
-ImmutableString::ImmutableString(const char *str, size_t len)
+VMString::VMString(const char *str, SizeType len)
 {
     m_length = len;
     m_data = new char[len + 1];
@@ -21,7 +21,7 @@ ImmutableString::ImmutableString(const char *str, size_t len)
     m_data[len] = '\0';
 }
 
-ImmutableString::ImmutableString(const ImmutableString &other)
+VMString::VMString(const VMString &other)
 {
     m_length = other.m_length;
     m_data = new char[m_length + 1];
@@ -30,8 +30,12 @@ ImmutableString::ImmutableString(const ImmutableString &other)
 }
 
 
-ImmutableString &ImmutableString::operator=(const ImmutableString &other)
+VMString &VMString::operator=(const VMString &other)
 {
+    if (std::addressof(other) == this) {
+        return *this;
+    }
+
     if (m_data) {
         delete[] m_data;
         m_data = nullptr;
@@ -48,7 +52,7 @@ ImmutableString &ImmutableString::operator=(const ImmutableString &other)
     return *this;
 }
 
-ImmutableString::ImmutableString(ImmutableString &&other) noexcept
+VMString::VMString(VMString &&other) noexcept
 {
     m_data = other.m_data;
     m_length = other.m_length;
@@ -57,7 +61,7 @@ ImmutableString::ImmutableString(ImmutableString &&other) noexcept
     other.m_length = 0;
 }
 
-ImmutableString &ImmutableString::operator=(ImmutableString &&other) noexcept
+VMString &VMString::operator=(VMString &&other) noexcept
 {
     if (m_data) {
         delete[] m_data;
@@ -74,25 +78,25 @@ ImmutableString &ImmutableString::operator=(ImmutableString &&other) noexcept
     return *this;
 }
 
-ImmutableString::~ImmutableString()
+VMString::~VMString()
 {
     if (m_data) {
         delete[] m_data;
     }
 }
 
-ImmutableString ImmutableString::Concat(const ImmutableString &a, const ImmutableString &b)
+VMString VMString::Concat(const VMString &a, const VMString &b)
 {
-    const size_t a_len = a.GetLength();
-    const size_t b_len = b.GetLength();
+    const SizeType a_len = a.GetLength();
+    const SizeType b_len = b.GetLength();
 
-    const size_t len = a_len + b_len;
+    const SizeType len = a_len + b_len;
     char *str = new char[len + 1];
 
     std::memcpy(str, a.GetData(), a_len);
     std::memcpy(&str[a_len], b.GetData(), b_len);
 
-    ImmutableString res(str, len);
+    VMString res(str, len);
 
     delete[] str;
 

@@ -22,7 +22,8 @@ class Texture;
 using renderer::DescriptorSet;
 using renderer::Swapchain;
 
-class BindlessStorage {
+class BindlessStorage
+{
     /* The index of the descriptor we work on, /within/ the "bindless descriptor set" */
     static constexpr UInt bindless_descriptor_index = 0;
 
@@ -49,12 +50,12 @@ public:
 private:
     struct TextureResource {
         const Texture *texture;
-        UInt           resource_index;
+        UInt resource_index;
     };
 
     FlatSet<IDBase> m_texture_ids;
     
-    std::array<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
     std::mutex m_enqueued_resources_mutex;
 };
 

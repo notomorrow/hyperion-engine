@@ -113,7 +113,7 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
             MaterialAttributes {
                 .bucket = Bucket::BUCKET_OPAQUE
             },
-            shader->GetId()
+            shader->GetID()
         )
     );
 
@@ -182,13 +182,13 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
     }
 
     if (auto *scene = GetOwner()->GetScene()) {
-        DebugLog(LogType::Debug, "Remove terrain Entity with id #%u\n", patch->entity->GetId().value);
+        DebugLog(LogType::Debug, "Remove terrain Entity with id #%u\n", patch->entity->GetID().value);
 
         if (!scene->RemoveEntity(patch->entity)) {
             DebugLog(
                 LogType::Warn,
                 "Terrain entity with id #%u not in Scene! Could cause mem leak if cannot from entities from scene.\n",
-                patch->entity->GetId().value
+                patch->entity->GetID().value
             );
         }
 
@@ -197,7 +197,7 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
         DebugLog(
             LogType::Warn,
             "PatchController on Entity #%u not attached to a Scene!\n",
-            GetOwner()->GetId().value
+            GetOwner()->GetID().value
         );
     }
 

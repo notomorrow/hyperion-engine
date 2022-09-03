@@ -4,7 +4,7 @@
 
 namespace hyperion::v2 {
 
-const std::array<TextureFormatDefault, num_gbuffer_textures> RenderListContainer::gbuffer_textures = {
+const FixedArray<TextureFormatDefault, num_gbuffer_textures> RenderListContainer::gbuffer_textures = {
     TEXTURE_FORMAT_DEFAULT_COLOR,   // color
     TEXTURE_FORMAT_DEFAULT_NORMALS, // normal
     TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT, // material
@@ -123,27 +123,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
     if (IsRenderableBucket()) { // add gbuffer attachments
         AttachmentRef *attachment_ref;
 
-        auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_GBUFFER),//engine->GetDefaultFormat(gbuffer_textures[0]),
-            nullptr
-        );
-        
-        attachments.PushBack(std::make_unique<renderer::Attachment>(
-            std::move(framebuffer_image),
-            RenderPassStage::SHADER
-        ));
-
-        HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
-            engine->GetInstance()->GetDevice(),
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &attachment_ref
-        ));
-
-        render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
-
-        for (UInt i = 1; i < gbuffer_textures.size() - 1 /* because color and depth already accounted for*/; i++) {
+        for (UInt i = 0; i < gbuffer_textures.Size() - 1 /* because depth already accounted for */; i++) {
             auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent,
                 engine->GetDefaultFormat(gbuffer_textures[i]),
@@ -165,7 +145,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
         }
 
-        constexpr SizeType depth_texture_index = gbuffer_textures.size() - 1;
+        constexpr SizeType depth_texture_index = gbuffer_textures.Size() - 1;
 
         /* Add depth attachment */
         if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.

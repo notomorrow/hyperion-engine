@@ -40,7 +40,7 @@ public:
     Thread &operator=(Thread &&other) noexcept;
     virtual ~Thread();
 
-    const ThreadID &GetId() const { return m_id; }
+    const ThreadID &GetID() const { return m_id; }
 
     Scheduler &GetScheduler() { return m_scheduler; }
     const Scheduler &GetScheduler() const { return m_scheduler; }
@@ -117,8 +117,8 @@ bool Thread<SchedulerType, Args...>::Start(Args ...args)
     std::tuple<Args...> tuple_args(std::forward<Args>(args)...);
 
     m_thread = new std::thread([&self = *this, tuple_args] {
-        SetThreadID(self.GetId());
-        self.m_scheduler.SetOwnerThread(self.GetId());
+        SetThreadID(self.GetID());
+        self.m_scheduler.SetOwnerThread(self.GetID());
 
         self(std::get<Args>(tuple_args)...);
     });

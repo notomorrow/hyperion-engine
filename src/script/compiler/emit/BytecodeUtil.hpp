@@ -13,7 +13,8 @@ struct BytecodeChunk;
 struct BuildParams;
 struct Buildable;
 
-class BytecodeUtil {
+class BytecodeUtil
+{
 public:
     template<typename T, typename... Args>
     static std::unique_ptr<T> Make(Args&&... args)

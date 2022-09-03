@@ -12,23 +12,23 @@
 namespace hyperion {
 namespace vm {
 
-class Array
+class VMArray
 {
 public:
     using SizeType = UInt64;
 
-    Array(SizeType size = 0);
-    Array(const Array &other);
-    ~Array();
+    VMArray(SizeType size = 0);
+    VMArray(const VMArray &other);
+    ~VMArray();
 
-    Array &operator=(const Array &other);
-    bool operator==(const Array &other) const { return this == &other; }
+    VMArray &operator=(const VMArray &other);
+    bool operator==(const VMArray &other) const { return this == &other; }
 
-    SizeType GetSize() const                    { return m_size; }
-    Value *GetBuffer() const                    { return m_buffer; }
-    Value &AtIndex(int index)                   { return m_buffer[index]; }
-    const Value &AtIndex(int index) const       { return m_buffer[index]; }
-    void AtIndex(int index, const Value &value) { m_buffer[index] = value; }
+    SizeType GetSize() const { return m_size; }
+    Value *GetBuffer() const { return m_buffer; }
+    Value &AtIndex(SizeType index) { return m_buffer[index]; }
+    const Value &AtIndex(SizeType index) const { return m_buffer[index]; }
+    void AtIndex(SizeType index, const Value &value) { m_buffer[index] = value; }
 
     void Resize(SizeType capacity);
     void Push(const Value &value);
@@ -43,7 +43,7 @@ public:
     ) const;
 
 private:
-    static inline SizeType GetCapacityForSize(SizeType new_size)
+    static SizeType GetCapacityForSize(SizeType new_size)
     {
         return static_cast<SizeType>(1) <<
             static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(new_size, 1)) / std::log(2.0)));

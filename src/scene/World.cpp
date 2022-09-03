@@ -75,7 +75,7 @@ void World::AddScene(Handle<Scene> &&scene)
 
     scene->SetWorld(this);
 
-    const auto scene_id = scene->GetId();
+    const auto scene_id = scene->GetID();
     m_scenes.Insert(scene_id, std::move(scene));
 }
 

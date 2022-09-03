@@ -39,7 +39,7 @@ public:
         }
     }
 
-    const BoundingBox GetAABB() const
+    const BoundingBox &GetAABB() const
         { return m_aabb.Any() ? m_aabb.Get() : BoundingBox::empty; }
 
     void SetAABB(const BoundingBox &aabb)

@@ -11,7 +11,8 @@
 namespace hyperion {
 
 template <class T, class HashCode>
-struct HasGetHashCode {
+struct HasGetHashCode
+{
     template <class U, HashCode(U::*)() const>
     struct Resolve {};
 
@@ -24,7 +25,8 @@ struct HasGetHashCode {
     static constexpr bool value = sizeof(Test<T>(0)) == sizeof(char);
 };
 
-struct HashCode {
+struct HashCode
+{
     using ValueType = UInt64;
 
     HashCode()

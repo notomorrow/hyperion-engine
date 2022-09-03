@@ -5,13 +5,13 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          0.25
-#define VCT_DIFFUSE_RATIO(roughness)  1.0 //RoughnessToConeAngle(roughness)
-#define VCT_SPECULAR_MAX_DIST         0.2
+#define VCT_DIFFUSE_MAX_DIST          0.1
+#define VCT_DIFFUSE_RATIO(roughness)  RoughnessToConeAngle(roughness)
+#define VCT_SPECULAR_MAX_DIST         0.12
 
-#define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
+#define VCT_SPECULAR_RATIO(roughness) 0.015 //RoughnessToConeAngle(roughness)
 
-#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.005)
+#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.015)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -61,7 +61,7 @@ vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
 
-    return result;// / 4.0;
+    return result;
 }
 
 vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)

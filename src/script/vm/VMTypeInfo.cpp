@@ -1,17 +1,18 @@
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 #include <core/Core.hpp>
 #include <cstring>
 
 namespace hyperion {
 namespace vm {
 
-TypeInfo::TypeInfo(const char *name,
-    size_t size,
-    char **names)
-    : m_size(size),
-      m_names(new char*[size])
+VMTypeInfo::VMTypeInfo(
+    const char *name,
+    SizeType size,
+    char **names
+) : m_size(size),
+    m_names(new char*[size])
 {
-    size_t name_len = std::strlen(name);
+    SizeType name_len = std::strlen(name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
     Memory::Copy(m_name, name, name_len);
@@ -25,29 +26,33 @@ TypeInfo::TypeInfo(const char *name,
     }
 }
 
-TypeInfo::TypeInfo(const TypeInfo &other)
+VMTypeInfo::VMTypeInfo(const VMTypeInfo &other)
     : m_size(other.m_size),
       m_names(new char*[other.m_size])
 {
-    size_t name_len = std::strlen(other.m_name);
+    SizeType name_len = std::strlen(other.m_name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
     Memory::Copy(m_name, other.m_name, name_len);
 
     // copy all names
-    for (size_t i = 0; i < m_size; i++) {
-        size_t len = std::strlen(other.m_names[i]);
+    for (SizeType i = 0; i < m_size; i++) {
+        SizeType len = std::strlen(other.m_names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
         Memory::Copy(m_names[i], other.m_names[i], len);
     }
 }
 
-TypeInfo &TypeInfo::operator=(const TypeInfo &other)
+VMTypeInfo &VMTypeInfo::operator=(const VMTypeInfo &other)
 {
+    if (std::addressof(other) == this) {
+        return *this;
+    }
+
     delete[] m_name;
 
-    for (size_t i = 0; i < m_size; i++) {
+    for (SizeType i = 0; i < m_size; i++) {
         delete[] m_names[i];
     }
 
@@ -58,14 +63,14 @@ TypeInfo &TypeInfo::operator=(const TypeInfo &other)
 
     m_size = other.m_size;
 
-    size_t name_len = std::strlen(other.m_name);
+    SizeType name_len = std::strlen(other.m_name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
     Memory::Copy(m_name, other.m_name, name_len);
 
     // copy all names
-    for (size_t i = 0; i < m_size; i++) {
-        size_t len = std::strlen(other.m_names[i]);
+    for (SizeType i = 0; i < m_size; i++) {
+        SizeType len = std::strlen(other.m_names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
         Memory::Copy(m_names[i], other.m_names[i], len);
@@ -74,18 +79,23 @@ TypeInfo &TypeInfo::operator=(const TypeInfo &other)
     return *this;
 }
 
-TypeInfo::~TypeInfo()
+VMTypeInfo::~VMTypeInfo()
 {
     delete[] m_name;
     
-    for (size_t i = 0; i < m_size; i++) {
+    for (SizeType i = 0; i < m_size; i++) {
         delete[] m_names[i];
     }
+
     delete[] m_names;
 }
 
-bool TypeInfo::operator==(const TypeInfo &other) const
+bool VMTypeInfo::operator==(const VMTypeInfo &other) const
 {
+    if (std::addressof(other) == this) {
+        return true;
+    }
+
     // first, compare sizes
     if (m_size != other.m_size) {
         return false;
@@ -97,7 +107,7 @@ bool TypeInfo::operator==(const TypeInfo &other) const
     }
 
     // compare names
-    for (size_t i = 0; i < m_size; i++) {
+    for (SizeType i = 0; i < m_size; i++) {
         if (std::strcmp(m_names[i], other.m_names[i])) {
             return false;
         }

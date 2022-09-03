@@ -21,7 +21,7 @@ void AABBDebugController::OnAdded()
         DebugLog(
             LogType::Error,
             "Added aabb debug controller but Entity #%u was not in scene\n",
-            GetOwner()->GetId().value
+            GetOwner()->GetID().value
         );
 
         return;
@@ -34,7 +34,7 @@ void AABBDebugController::OnAdded()
     auto material = GetEngine()->CreateHandle<Material>("aabb_material");
 
     auto shader = m_engine->shader_manager.GetShader(ShaderManager::Key::DEBUG_AABB);
-    const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
+    const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
 
     m_aabb_entity = GetEngine()->CreateHandle<Entity>(
         GetEngine()->CreateHandle<Mesh>(mesh.release()),

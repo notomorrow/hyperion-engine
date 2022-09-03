@@ -2,7 +2,7 @@
 #define AEX_GENERATOR_HPP
 
 #include <script/compiler/emit/BuildableVisitor.hpp>
-#include <script/compiler/emit/aex-builder/InternalByteStream.hpp>
+#include <script/compiler/emit/codegen/InternalByteStream.hpp>
 
 #include <system/Debug.hpp>
 
@@ -13,10 +13,10 @@
 
 namespace hyperion::compiler {
 
-class AEXGenerator : public BuildableVisitor {
+class CodeGenerator : public BuildableVisitor {
 public:
-    AEXGenerator(BuildParams &build_params);
-    virtual ~AEXGenerator() = default;
+    CodeGenerator(BuildParams &build_params);
+    virtual ~CodeGenerator() = default;
 
     InternalByteStream &GetInternalByteStream() { return m_ibs; }
     const InternalByteStream &GetInternalByteStream() const { return m_ibs; }

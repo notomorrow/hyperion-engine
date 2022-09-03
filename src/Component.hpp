@@ -34,14 +34,14 @@ public:
             return false;
         }
 
-        if (!handle->GetId()) {
-            handle->SetId(GetIDCreator<Normalized>().NextID());
+        if (!handle->GetID()) {
+            handle->SetID(GetIDCreator<Normalized>().NextID());
         }
 
         auto &registered_components = GetRegisteredComponents<Normalized>();
 
         registered_components.mutex.lock();
-        registered_components.map[handle->GetId()] = WeakHandle<Normalized>(handle);
+        registered_components.map[handle->GetID()] = WeakHandle<Normalized>(handle);
         registered_components.mutex.unlock();
 
         return true;
@@ -81,8 +81,8 @@ private:
         TypeID type_id;
         std::atomic<UInt> id_counter { 0u };
         std::atomic_bool has_free_id { false };
-        Queue<HandleID> free_ids;
         std::mutex free_id_mutex;
+        Queue<HandleID> free_ids;
 
         HandleID NextID()
         {

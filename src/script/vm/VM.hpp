@@ -28,7 +28,8 @@
 namespace hyperion {
 namespace vm {
 
-class VM {
+class VM
+{
 public:
     VM();
     VM(const VM &other) = delete;
@@ -36,8 +37,11 @@ public:
 
     void PushNativeFunctionPtr(NativeFunctionPtr_t ptr);
 
-    VMState &GetState()             { return m_state; }
-    const VMState &GetState() const { return m_state; }
+    VMState &GetState()
+        { return m_state; }
+
+    const VMState &GetState() const
+        { return m_state; }
     
     static void Invoke(
         InstructionHandler *handler,
@@ -58,8 +62,6 @@ private:
     void CreateStackTrace(ExecutionThread *thread, StackTrace *out);
 
     VMState m_state;
-
-    uint32_t m_invoke_now_level;
 };
 
 } // namespace vm

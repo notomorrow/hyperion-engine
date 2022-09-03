@@ -8,9 +8,9 @@
 namespace hyperion {
 namespace vm {
 
-const size_t Stack::STACK_SIZE = 20000;
+const size_t StackMemory::STACK_SIZE = 20000;
 
-std::ostream &operator<<(std::ostream &os, const Stack &stack)
+std::ostream &operator<<(std::ostream &os, const StackMemory &stack)
 {
     // print table header
     os << std::left;
@@ -43,18 +43,18 @@ std::ostream &operator<<(std::ostream &os, const Stack &stack)
     return os;
 }
 
-Stack::Stack()
+StackMemory::StackMemory()
     : m_data(new Value[STACK_SIZE]),
       m_sp(0)
 {
 }
 
-Stack::~Stack()
+StackMemory::~StackMemory()
 {
     delete[] m_data;
 }
 
-void Stack::Purge()
+void StackMemory::Purge()
 {
     // just set stack pointer to zero
     // heap allocated objects are not owned,
@@ -64,7 +64,7 @@ void Stack::Purge()
     m_sp = 0;
 }
 
-void Stack::MarkAll()
+void StackMemory::MarkAll()
 {
     for (Int64 i = static_cast<Int64>(m_sp) - 1; i >= 0; i--) {
         m_data[i].Mark();

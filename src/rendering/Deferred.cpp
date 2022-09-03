@@ -256,7 +256,7 @@ void DeferredRenderer::Create(Engine *engine)
         UInt attachment_index = 0;
 
         /* Gbuffer textures */
-        for (; attachment_index < RenderListContainer::gbuffer_textures.size() - 1; attachment_index++) {
+        for (; attachment_index < RenderListContainer::gbuffer_textures.Size() - 1; attachment_index++) {
             descriptor_set_globals
                 ->GetDescriptor(DescriptorKey::GBUFFER_TEXTURES)
                 ->SetSubDescriptor({

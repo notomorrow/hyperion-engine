@@ -1,18 +1,18 @@
 #ifndef HASHER_HPP
 #define HASHER_HPP
 
-#include <cstdint>
+#include <Types.hpp>
 
 namespace hyperion {
 
-using HashFnv1 = uint32_t;
+using HashFNV1 = UInt32;
 
-constexpr HashFnv1 hash_fnv_1(const char *str)
+constexpr HashFNV1 hash_fnv_1(const char *str)
 {
-    constexpr uint32_t PRIME = 16777619u;
-    constexpr uint32_t OFFSET_BASIS = 2166136261u;
+    constexpr UInt32 PRIME = 16777619u;
+    constexpr UInt32 OFFSET_BASIS = 2166136261u;
 
-    uint32_t hash = OFFSET_BASIS;
+    UInt32 hash = OFFSET_BASIS;
 
     char c = 0;
 

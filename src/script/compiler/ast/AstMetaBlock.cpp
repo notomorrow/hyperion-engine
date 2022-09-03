@@ -13,15 +13,15 @@
 
 #include <script/compiler/emit/BytecodeChunk.hpp>
 #include <script/compiler/emit/BytecodeUtil.hpp>
-#include <script/compiler/emit/aex-builder/AEXGenerator.hpp>
+#include <script/compiler/emit/codegen/CodeGenerator.hpp>
 
 #include <script/vm/VM.hpp>
 #include <script/vm/InstructionHandler.hpp>
 #include <script/vm/BytecodeStream.hpp>
-#include <script/vm/ImmutableString.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/Object.hpp>
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMString.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 
 #include <script/Hasher.hpp>
 
@@ -80,7 +80,7 @@ void AstMetaBlock::Visit(AstVisitor *visitor, Module *mod)
                 vm::Value *arg2 = params.args[2];
                 AssertThrow(arg2 != nullptr);
 
-                if (vm::ImmutableString *str_ptr = arg2->GetValue().ptr->GetPointer<vm::ImmutableString>()) {
+                if (vm::VMString *str_ptr = arg2->GetValue().ptr->GetPointer<vm::VMString>()) {
                     if (Identifier *ident = meta_context->m_mod->LookUpIdentifier(std::string(str_ptr->GetData()), false, true)) {
                         // @TODO return a "Variable" instance that gives info on the variable
                         std::cout << "found " << ident->GetName() << "\n";
@@ -106,10 +106,10 @@ void AstMetaBlock::Visit(AstVisitor *visitor, Module *mod)
             // create prototype object.
             vm::HeapValue *proto = state->HeapAlloc(thread);
             AssertThrow(proto != nullptr);
-            proto->Assign(vm::Object(&members[0], sizeof(members) / sizeof(members[0])));
+            proto->Assign(vm::VMObject(&members[0], sizeof(members) / sizeof(members[0])));
 
-            // create Object instance
-            vm::Object ins(proto);
+            // create VMObject instance
+            vm::VMObject ins(proto);
 
             vm::HeapValue *object = state->HeapAlloc(thread);
             AssertThrow(object != nullptr);
@@ -138,7 +138,7 @@ void AstMetaBlock::Visit(AstVisitor *visitor, Module *mod)
         build_params.block_offset = 0;
         build_params.local_offset = 0;
 
-        AEXGenerator gen(build_params);
+        CodeGenerator gen(build_params);
         gen.Visit(result.get());
 
         std::vector<std::uint8_t> bytes = gen.GetInternalByteStream().Bake();

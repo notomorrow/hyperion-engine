@@ -1,11 +1,11 @@
 #include <script/vm/VM.hpp>
 #include <script/vm/Value.hpp>
 #include <script/vm/HeapValue.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/Slice.hpp>
-#include <script/vm/Object.hpp>
-#include <script/vm/ImmutableString.hpp>
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMArraySlice.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMString.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 #include <script/vm/InstructionHandler.hpp>
 
 #include <Types.hpp>
@@ -436,7 +436,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
     }
     case MOV_ARRAYIDX: {
         BCRegister dst; bs->Read(&dst);
-        UInt32 index; bs->Read(&index);
+        UInt32 index; bs->Read(&index); // should be int64?
         BCRegister src; bs->Read(&src);
 
         handler.MovArrayIdx(
@@ -851,7 +851,6 @@ HYP_FORCE_INLINE static void HandleInstruction(
 }
 
 VM::VM()
-    : m_invoke_now_level(0)
 {
     m_state.m_vm = non_owning_ptr<VM>(this);
     // create main thread
@@ -919,7 +918,7 @@ void VM::Invoke(
                     Exception::NullReferenceException()
                 );
                 return;
-            } else if (Object *object = value.m_value.ptr->GetPointer<Object>()) {
+            } else if (VMObject *object = value.m_value.ptr->GetPointer<VMObject>()) {
                 if (Member *member = object->LookupMemberFromHash(hash_fnv_1("$invoke"))) {
                     const Int64 sp         = static_cast<Int64>(thread->m_stack.GetStackPointer());
                     const Int64 args_start = sp - nargs;
@@ -1012,8 +1011,8 @@ void VM::Invoke(
             HeapValue *hv = state->HeapAlloc(thread);
             AssertThrow(hv != nullptr);
 
-            // create Array object to hold variadic args
-            Array arr(varargs_amt);
+            // create VMArray object to hold variadic args
+            VMArray arr(varargs_amt);
 
             for (int i = varargs_amt - 1; i >= 0; i--) {
                 // push to array

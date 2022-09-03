@@ -1,4 +1,4 @@
-#include <script/vm/Object.hpp>
+#include <script/vm/VMObject.hpp>
 #include <script/vm/HeapValue.hpp>
 #include <script/Hasher.hpp>
 #include <system/Debug.hpp>
@@ -10,7 +10,7 @@
 namespace hyperion {
 namespace vm {
 
-const UInt32 Object::PROTO_MEMBER_HASH = hash_fnv_1("$proto");
+const UInt32 VMObject::PROTO_MEMBER_HASH = hash_fnv_1("$proto");
 
 ObjectMap::ObjectBucket::ObjectBucket()
     : m_data(new Member*[DEFAULT_BUCKET_CAPACITY]),
@@ -152,12 +152,12 @@ Member *ObjectMap::Get(UInt32 hash)
     return res;
 }
 
-Object::Object(HeapValue *proto)
+VMObject::VMObject(HeapValue *proto)
     : m_proto(proto)
 {
     AssertThrow(proto != nullptr);
 
-    const Object *proto_obj = proto->GetPointer<Object>();
+    const VMObject *proto_obj = proto->GetPointer<VMObject>();
     AssertThrow(proto_obj != nullptr);
 
     SizeType size = proto_obj->GetSize();
@@ -181,7 +181,7 @@ Object::Object(HeapValue *proto)
     m_object_map->Push(hash, &m_members[i]);*/
 }
 
-Object::Object(const Member *members, size_t size, HeapValue *proto)
+VMObject::VMObject(const Member *members, size_t size, HeapValue *proto)
     : m_proto(proto)
 {
     AssertThrow(members != nullptr);
@@ -195,7 +195,7 @@ Object::Object(const Member *members, size_t size, HeapValue *proto)
     }
 }
 
-Object::Object(const Object &other)
+VMObject::VMObject(const VMObject &other)
     : m_proto(other.m_proto)
 {
     const SizeType size = other.GetSize();
@@ -212,7 +212,7 @@ Object::Object(const Object &other)
     }
 }
 
-Object::~Object()
+VMObject::~VMObject()
 {
     m_proto = nullptr;
 
@@ -223,7 +223,7 @@ Object::~Object()
     m_members = nullptr;
 }
 
-void Object::GetRepresentation(
+void VMObject::GetRepresentation(
     std::stringstream &ss,
     bool add_type_name,
     int depth

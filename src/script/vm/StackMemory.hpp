@@ -9,16 +9,17 @@
 namespace hyperion {
 namespace vm {
 
-class Stack {
+class StackMemory
+{
 public:
     static const size_t STACK_SIZE;
 
-    friend std::ostream &operator<<(std::ostream &os, const Stack &stack);
+    friend std::ostream &operator<<(std::ostream &os, const StackMemory &stack);
 
 public:
-    Stack();
-    Stack(const Stack &other) = delete;
-    ~Stack();
+    StackMemory();
+    StackMemory(const StackMemory &other) = delete;
+    ~StackMemory();
 
     /** Purge all items on the stack */
     void Purge();

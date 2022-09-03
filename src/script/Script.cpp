@@ -10,7 +10,7 @@
 #include <script/compiler/Parser.hpp>
 #include <script/compiler/Compiler.hpp>
 #include <script/compiler/dis/DecompilationUnit.hpp>
-#include <script/compiler/emit/aex-builder/AEXGenerator.hpp>
+#include <script/compiler/emit/codegen/CodeGenerator.hpp>
 #include <script/compiler/dis/DecompilationUnit.hpp>
 #include <script/compiler/builtins/Builtins.hpp>
 
@@ -118,7 +118,7 @@ void Script::Bake(BuildParams &build_params)
 {
     AssertThrow(IsCompiled());
 
-    AEXGenerator code_generator(build_params);
+    CodeGenerator code_generator(build_params);
     code_generator.Visit(m_bytecode_chunk.get());
 
     m_baked_bytes = code_generator.GetInternalByteStream().Bake();
@@ -147,12 +147,12 @@ void Script::CallFunction(FunctionHandle handle)
     CallFunctionArgV(handle, (Value *)nullptr, 0);
 }
 
-void Script::CallFunction(HashFnv1 hash)
+void Script::CallFunction(HashFNV1 hash)
 {
     CallFunctionArgV(hash, (Value *)nullptr, 0);
 }
 
-void Script::CallFunctionArgV(HashFnv1 hash, Value *args, ArgCount num_args)
+void Script::CallFunctionArgV(HashFNV1 hash, Value *args, ArgCount num_args)
 {
     Value handle;
     AssertThrow(GetExportedSymbols().Find(hash, &handle));

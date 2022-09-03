@@ -3,7 +3,8 @@
 
 namespace hyperion::v2 {
 
-enum TextureFormatDefault {
+enum TextureFormatDefault
+{
     TEXTURE_FORMAT_DEFAULT_NONE         = 0,
     TEXTURE_FORMAT_DEFAULT_COLOR        = 1 << 0,
     TEXTURE_FORMAT_DEFAULT_DEPTH        = 1 << 1,

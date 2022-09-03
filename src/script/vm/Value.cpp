@@ -1,9 +1,9 @@
 #include <script/vm/Value.hpp>
-#include <script/vm/Object.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/MemoryBuffer.hpp>
-#include <script/vm/Slice.hpp>
-#include <script/vm/ImmutableString.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMMemoryBuffer.hpp>
+#include <script/vm/VMArraySlice.hpp>
+#include <script/vm/VMString.hpp>
 
 #include <system/Debug.hpp>
 
@@ -14,11 +14,8 @@
 namespace hyperion {
 namespace vm {
 
-static const ImmutableString NULL_STRING = ImmutableString("null");
-static const ImmutableString BOOLEAN_STRINGS[2] = {
-    ImmutableString("false"),
-    ImmutableString("true")
-};
+static const VMString NULL_STRING = VMString("null");
+static const VMString BOOLEAN_STRINGS[2] = { VMString("false"), VMString("true") };
 
 Value::Value(const Value &other)
     : m_type(other.m_type),
@@ -45,7 +42,7 @@ void Value::Mark()
             HeapValue *ptr = m_value.ptr;
             
             if (ptr != nullptr) {
-                AssertThrowMsg(!(ptr->GetFlags() & GC_DESTROYED), "VM heap corruption! Object had flag GC_DESTROYED in Mark()");
+                AssertThrowMsg(!(ptr->GetFlags() & GC_DESTROYED), "VM heap corruption! VMObject had flag GC_DESTROYED in Mark()");
 
                 if (!(ptr->GetFlags() & GC_ALIVE)) {
                     ptr->Mark();
@@ -61,12 +58,16 @@ void Value::Mark()
 const char *Value::GetTypeString() const
 {
     switch (m_type) {
-        case NONE:    return "<Uninitialized Data>";
-        case I32:     // fallthrough
-        case I64:     return "Int";
-        case F32:     // fallthrough
-        case F64:     return "Float";
-        case BOOLEAN: return "Bool";
+        case NONE:
+            return "<Uninitialized Data>";
+        case I32: // fallthrough
+        case I64:
+            return "Int";
+        case F32: // fallthrough
+        case F64:
+            return "Float";
+        case BOOLEAN:
+            return "Bool";
         case VALUE_REF:
             AssertThrow(m_value.value_ref != nullptr);
             return m_value.value_ref->GetTypeString();
@@ -74,13 +75,13 @@ const char *Value::GetTypeString() const
         case HEAP_POINTER: 
             if (m_value.ptr == nullptr) {
                 return "Null";
-            } else if (m_value.ptr->GetPointer<ImmutableString>()) {
+            } else if (m_value.ptr->GetPointer<VMString>()) {
                 return "String";
-            } else if (m_value.ptr->GetPointer<Array>() || m_value.ptr->GetPointer<Slice>()) {
+            } else if (m_value.ptr->GetPointer<VMArray>() || m_value.ptr->GetPointer<VMArraySlice>()) {
                 return "Array";
-            } else if (m_value.ptr->GetPointer<MemoryBuffer>()) {
+            } else if (m_value.ptr->GetPointer<VMMemoryBuffer>()) {
                 return "MemoryBuffer";
-            } else if (Object *object = m_value.ptr->GetPointer<Object>()) {
+            } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
                 return "Object"; // TODO prototype name
             }
 
@@ -96,7 +97,7 @@ const char *Value::GetTypeString() const
     }
 }
 
-ImmutableString Value::ToString() const
+VMString Value::ToString() const
 {
     const size_t buf_size = 256;
     char buf[buf_size] = {0};
@@ -106,7 +107,7 @@ ImmutableString Value::ToString() const
     switch (m_type) {
         case Value::I32: {
             int n = snprintf(buf, buf_size, "%d", m_value.i32);
-            return ImmutableString(buf, n);
+            return VMString(buf, n);
         }
 
         case Value::I64: {
@@ -116,7 +117,7 @@ ImmutableString Value::ToString() const
                 "%" PRId64,
                 m_value.i64
             );
-            return ImmutableString(buf, n);
+            return VMString(buf, n);
         }
 
         case Value::F32: {
@@ -126,7 +127,7 @@ ImmutableString Value::ToString() const
                 "%g",
                 m_value.f
             );
-            return ImmutableString(buf, n);
+            return VMString(buf, n);
         }
 
         case Value::F64: {
@@ -136,7 +137,7 @@ ImmutableString Value::ToString() const
                 "%g",
                 m_value.d
             );
-            return ImmutableString(buf, n);
+            return VMString(buf, n);
         }
 
         case Value::BOOLEAN:
@@ -149,38 +150,38 @@ ImmutableString Value::ToString() const
         case Value::HEAP_POINTER: {
             if (m_value.ptr == nullptr) {
                 return NULL_STRING;
-            } else if (ImmutableString *string = m_value.ptr->GetPointer<ImmutableString>()) {
+            } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
                 return *string;
-            } else if (Array *array = m_value.ptr->GetPointer<Array>()) {
+            } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
                 std::stringstream ss;
                 array->GetRepresentation(ss, true, depth);
                 const std::string &str = ss.str();
-                return ImmutableString(str.c_str());
-            } else if (MemoryBuffer *memory_buffer = m_value.ptr->GetPointer<MemoryBuffer>()) {
+                return VMString(str.c_str());
+            } else if (VMMemoryBuffer *memory_buffer = m_value.ptr->GetPointer<VMMemoryBuffer>()) {
                 std::stringstream ss;
                 memory_buffer->GetRepresentation(ss, true, depth);
                 const std::string &str = ss.str();
-                return ImmutableString(str.c_str());
-            } else if (Slice *slice = m_value.ptr->GetPointer<Slice>()) {
+                return VMString(str.c_str());
+            } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
                 std::stringstream ss;
                 slice->GetRepresentation(ss, true, depth);
                 const std::string &str = ss.str();
-                return ImmutableString(str.c_str());
-            } else if (Object *object = m_value.ptr->GetPointer<Object>()) {
+                return VMString(str.c_str());
+            } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
                 std::stringstream ss;
                 object->GetRepresentation(ss, true, depth);
                 const std::string &str = ss.str();
-                return ImmutableString(str.c_str());
+                return VMString(str.c_str());
             } else {
                 // return memory address as string
                 int n = snprintf(buf, buf_size, "%p", (void*)m_value.ptr);
-                return ImmutableString(buf, n);
+                return VMString(buf, n);
             }
 
             break;
         }
 
-        default: return ImmutableString(GetTypeString());
+        default: return VMString(GetTypeString());
     }
 }
 
@@ -205,15 +206,15 @@ void Value::ToRepresentation(
         case Value::HEAP_POINTER:
             if (m_value.ptr == nullptr) {
                 ss << "null";
-            } else if (ImmutableString *string = m_value.ptr->GetPointer<ImmutableString>()) {
+            } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
                 ss << '\"';
                 ss << string->GetData();
                 ss << '\"';
-            } else if (Array *array = m_value.ptr->GetPointer<Array>()) {
+            } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
                 array->GetRepresentation(ss, add_type_name, depth - 1);
-            } else if (Slice *slice = m_value.ptr->GetPointer<Slice>()) {
+            } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
                 slice->GetRepresentation(ss, add_type_name, depth - 1);
-            } else if (Object *object = m_value.ptr->GetPointer<Object>()) {
+            } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
                 object->GetRepresentation(ss, add_type_name, depth - 1);
             } else {
                 if (add_type_name) {

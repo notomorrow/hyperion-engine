@@ -633,7 +633,7 @@ public:
     T *Add(T *object)
     {
         AssertThrow(object != nullptr);
-        AssertThrowMsg(object->GetId() == T::empty_id, "Adding object that already has id set");
+        AssertThrowMsg(object->GetID() == T::empty_id, "Adding object that already has id set");
 
         typename T::ID next_id;
 
@@ -642,7 +642,7 @@ public:
                 auto front = free_slots.front();
 
                 next_id = typename T::ID(TypeID::ForType<NormalizedType<T>>(), typename T::ID::ValueType(front + 1));
-                object->SetId(next_id);
+                object->SetID(next_id);
 
                 objects[front] = object;
                 free_slots.pop();
@@ -652,7 +652,7 @@ public:
         }
 
         next_id = typename T::ID(TypeID::ForType<NormalizedType<T>>(), typename T::ID::ValueType(objects.size() + 1));
-        object->SetId(next_id);
+        object->SetID(next_id);
 
         objects.push_back(object);
 
@@ -1006,11 +1006,11 @@ public:
 
         T *ptr = m_holder.Add(object);
 
-        auto it = m_ref_count_holder.Find(ptr->GetId());
-        AssertThrowMsg(it == m_ref_count_holder.End(), "ptr with id %u already exists!", ptr->GetId().value);
+        auto it = m_ref_count_holder.Find(ptr->GetID());
+        AssertThrowMsg(it == m_ref_count_holder.End(), "ptr with id %u already exists!", ptr->GetID().value);
 
         auto insert_result = m_ref_count_holder.Insert(
-            ptr->GetId(),
+            ptr->GetID(),
             new RefCount {
                 .ref_manager = this,
                 .count = 0
@@ -1054,7 +1054,7 @@ private:
     void Release(T *ptr)
     {
         AssertThrow(ptr != nullptr);
-        const auto id = ptr->GetId();
+        const auto id = ptr->GetID();
 
         DebugLog(
             LogType::Debug,

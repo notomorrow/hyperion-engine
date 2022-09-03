@@ -17,8 +17,6 @@
 #include <rendering/FinalPass.hpp>
 #include <scene/World.hpp>
 
-#include <ResourceMap.hpp>
-
 #include "GameThread.hpp"
 #include "Threads.hpp"
 #include "TaskSystem.hpp"
@@ -89,10 +87,11 @@ class Game;
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
 
-struct DebugMarker {
-    CommandBuffer     *command_buffer = nullptr;
-    const char * const name           = "<Unnamed debug marker>";
-    bool               is_ended       = false;
+struct DebugMarker
+{
+    CommandBuffer *command_buffer = nullptr;
+    const char * const name = "<Unnamed debug marker>";
+    bool is_ended = false;
 
     DebugMarker(CommandBuffer *command_buffer, const char *marker_name)
         : command_buffer(command_buffer),
@@ -304,7 +303,7 @@ public:
             return false;
         }
 
-        if (!handle->GetId()) {
+        if (!handle->GetID()) {
             return false;
         }
 

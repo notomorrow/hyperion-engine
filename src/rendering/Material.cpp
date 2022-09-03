@@ -167,7 +167,7 @@ void Material::EnqueueRenderUpdates()
     
     for (SizeType i = 0; i < num_bound_textures; i++) {
         if (const auto &texture = m_textures.ValueAt(i)) {
-            bound_texture_ids[i] = texture->GetId();
+            bound_texture_ids[i] = texture->GetID();
         }
     }
 

@@ -28,7 +28,7 @@ RendererInstance::~RendererInstance()
 void RendererInstance::RemoveFramebuffer(Framebuffer::ID id)
 {
     const auto it = m_fbos.FindIf([&](const auto &item) {
-        return item->GetId() == id;
+        return item->GetID() == id;
     });
 
     if (it == m_fbos.End()) {
@@ -107,8 +107,8 @@ void RendererInstance::RemoveEntity(Handle<Entity> &&entity, bool call_on_remove
         DebugLog(
             LogType::Info,
             "Entity #%u is already pending removal from pipeline #%u\n",
-            entity->GetId().value,
-            GetId().value
+            entity->GetID().value,
+            m_id.value
         );
     }
 
@@ -541,17 +541,17 @@ void RendererInstance::Render(Engine *engine, Frame *frame)
                     }
                 }
 
-                const auto entity_index = entity->GetId().value - 1;
+                const auto entity_index = entity->GetID().value - 1;
 
                 UInt material_index = 0;
 
                 if (entity->GetMaterial() != nullptr && entity->GetMaterial()->IsReady()) {
                     // TODO: rather than checking each call we should just add once
-                    material_index = entity->GetMaterial()->GetId().value - 1;
+                    material_index = entity->GetMaterial()->GetID().value - 1;
                 }
 
                 const auto skeleton_index = entity->GetSkeleton() != nullptr
-                    ? entity->GetSkeleton()->GetId().value - 1
+                    ? entity->GetSkeleton()->GetID().value - 1
                     : 0;
 
 #if HYP_FEATURES_BINDLESS_TEXTURES

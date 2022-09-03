@@ -34,7 +34,8 @@ struct Registers {
     void ResetFlags()              { m_flags = 0; }
 };
 
-struct ExceptionState {
+struct ExceptionState
+{
     // incremented each time BEGIN_TRY is encountered,
     // decremented each time END_TRY is encountered
     int m_try_counter = 0;
@@ -47,16 +48,17 @@ struct ExceptionState {
     void Reset() { m_try_counter = 0; m_exception_occured = false; }
 };
 
-struct ExecutionThread {
+struct ExecutionThread
+{
     friend struct VMState;
 
-    Stack m_stack;
+    StackMemory m_stack;
     ExceptionState m_exception_state;
     Registers m_regs;
 
     UInt m_func_depth = 0;
 
-    Stack &GetStack() { return m_stack; }
+    StackMemory &GetStack() { return m_stack; }
     ExceptionState &GetExceptionState() { return m_exception_state; }
     Registers &GetRegisters() { return m_regs; }
     int GetId() const { return m_id; }

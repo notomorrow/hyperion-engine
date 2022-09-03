@@ -150,7 +150,7 @@ public:
     void SetParentScene(const Handle<Scene> &parent_scene)
     {
         if (parent_scene != nullptr) {
-            m_shadow_pass.SetParentScene(parent_scene->GetId());
+            m_shadow_pass.SetParentScene(parent_scene->GetID());
         } else {
             m_shadow_pass.SetParentScene(Scene::empty_id);
         }

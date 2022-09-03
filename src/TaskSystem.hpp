@@ -17,7 +17,7 @@ namespace hyperion::v2 {
 
 class TaskSystem
 {
-    static constexpr Float target_ticks_per_second = 60.0f;
+    static constexpr UInt target_ticks_per_second = 60;
 
 public:
     struct TaskRef {

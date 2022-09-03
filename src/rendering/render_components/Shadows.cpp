@@ -281,7 +281,7 @@ void ShadowPass::Create(Engine *engine)
 
 void ShadowPass::Destroy(Engine *engine)
 {
-    engine->GetWorld().RemoveScene(m_scene->GetId());
+    engine->GetWorld().RemoveScene(m_scene->GetID());
     m_scene.Reset();
 
     engine->GetRenderScheduler().Enqueue([this, engine](...) {
@@ -487,7 +487,7 @@ void ShadowRenderer::OnRender(Engine *engine, Frame *frame)
 
     AssertReady();
 
-    const auto scene_index = m_shadow_pass.GetScene()->GetId().value - 1;
+    const auto scene_index = m_shadow_pass.GetScene()->GetID().value - 1;
 
     if (const auto &camera = m_shadow_pass.GetScene()->GetCamera()) {
         engine->shader_globals->shadow_maps.Set(
@@ -537,7 +537,7 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
         auto corners = aabb.GetCorners();
 
         auto maxes = MathUtil::MinSafeValue<Vector3>(),
-             mins  = MathUtil::MaxSafeValue<Vector3>();
+             mins = MathUtil::MaxSafeValue<Vector3>();
 
         for (auto &corner : corners) {
             corner = camera->GetViewMatrix() * corner;

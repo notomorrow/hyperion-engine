@@ -41,11 +41,11 @@ enum class PageState
 
 struct PatchInfo
 {
-    Extent3D       extent;
-    PatchCoord     coord { 0.0f };
-    Vector3        scale { 1.0f };
-    PageState      state { PageState::UNLOADED };
-    float          unload_timer { 0.0f };
+    Extent3D extent;
+    PatchCoord coord { 0.0f };
+    Vector3 scale { 1.0f };
+    PageState state { PageState::UNLOADED };
+    Float unload_timer { 0.0f };
     PatchNeighbors neighbors{};
 };
 
@@ -80,7 +80,8 @@ protected:
     virtual void OnPatchAdded(Patch *patch) = 0;
     virtual void OnPatchRemoved(Patch *patch) = 0;
 
-    struct PatchUpdate {
+    struct PatchUpdate
+    {
         PatchCoord coord;
         PageState new_state;
     };
@@ -115,13 +116,13 @@ protected:
     void InitPatch(Patch *patch);
 
     FlatMap<PatchCoord, std::unique_ptr<Patch>> m_patches;
-    Queue<PatchUpdate>                          m_queue;
-    FlatSet<PatchCoord>                         m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
-    Extent3D                                    m_patch_size;
-    Vector3                                     m_scale;
-    Float                                       m_max_distance;
-    GameCounter::TickUnit                       m_update_timer;
-    GameCounter::TickUnit                       m_queue_timer;
+    Queue<PatchUpdate> m_queue;
+    FlatSet<PatchCoord> m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
+    Extent3D m_patch_size;
+    Vector3 m_scale;
+    Float m_max_distance;
+    GameCounter::TickUnit m_update_timer;
+    GameCounter::TickUnit m_queue_timer;
 };
 
 } // namespace hyperion::v2

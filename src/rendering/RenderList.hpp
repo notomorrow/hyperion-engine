@@ -20,7 +20,7 @@ class Engine;
 class RenderListContainer
 {
 public:
-    static const std::array<TextureFormatDefault, num_gbuffer_textures> gbuffer_textures;
+    static const FixedArray<TextureFormatDefault, num_gbuffer_textures> gbuffer_textures;
     
     class RenderListBucket
     {

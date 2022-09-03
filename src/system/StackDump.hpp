@@ -18,7 +18,8 @@ using StackFrameSymbolInfoHandle = void *;
 
 namespace hyperion {
 
-struct StackFrame {
+struct StackFrame
+{
 	StackFrameSymbolInfoHandle symbol_info = nullptr;
 };
 

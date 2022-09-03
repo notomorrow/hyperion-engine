@@ -2,8 +2,9 @@
 #define HYP_PACKING
 
 //#define HYP_PACK_NORMALS 1
-//#define HYP_NORMAL_PACKING_0
+#define HYP_NORMAL_PACKING_0
 //#define HYP_NORMAL_PACKING_1
+//#define HYP_NORMAL_PACKING_2
 
 vec2 PackNormalVec2(vec3 n)
 {
@@ -13,9 +14,13 @@ vec2 PackNormalVec2(vec3 n)
         enc /= scale;
         enc = enc*0.5+0.5;
         return enc;
-    #else
+    #elif defined(HYP_NORMAL_PACKING_1)
         float p = sqrt(n.z*8+8);
         return n.xy / p + 0.5;
+    #elif defined(HYP_NORMAL_PACKING_2)
+        return (vec2(atan(n.x, n.y) / 3.141592654, n.z) + 1.0) * 0.5;
+    #else
+        #error No packing mode defined
     #endif
 }
 
@@ -31,7 +36,7 @@ vec3 UnpackNormalVec2(vec2 enc)
         n.xy = g*nn.xy;
         n.z = g-1.0;
         return n;
-    #else
+    #elif defined(HYP_NORMAL_PACKING_1)
         vec2 fenc = enc.xy*4-2;
         float f = dot(fenc,fenc);
         float g = sqrt(1-f/4);
@@ -39,6 +44,13 @@ vec3 UnpackNormalVec2(vec2 enc)
         n.xy = fenc*g;
         n.z = 1-f/2;
         return n;
+    #elif defined(HYP_NORMAL_PACKING_2)
+        vec2 ang = enc*2-1;
+        vec2 scth = vec2(sin(ang.x * 3.141592654), cos(ang.x * 3.141592654));
+        vec2 scphi = vec2(sqrt(1.0 - ang.y * ang.y), ang.y);
+        return vec3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
+    #else
+        #error No packing mode defined
     #endif
 }
 

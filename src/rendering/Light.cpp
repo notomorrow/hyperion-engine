@@ -72,7 +72,7 @@ void Light::EnqueueRenderUpdates() const
     };
 
     GetEngine()->GetRenderScheduler().Enqueue([this, shader_data](...) {
-        GetEngine()->shader_globals->lights.Set(GetId().value - 1, LightShaderData {
+        GetEngine()->shader_globals->lights.Set(GetID().value - 1, LightShaderData {
             .position         = shader_data.position,
             .color            = shader_data.color,
 	        .light_type       = shader_data.light_type,

@@ -105,8 +105,8 @@ void main()
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
             (light.intensity / max(dist * dist, 0.0001)) : 1.0;
 
-        vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
-        vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
+        const vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
+        const vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
         
         const vec4 kD = (1.0 - F) * (1.0 - metalness);
 
@@ -125,5 +125,5 @@ void main()
         result = albedo;
     }
 
-    output_color = vec4(0.0);//result;
+    output_color = result;
 }

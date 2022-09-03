@@ -54,7 +54,7 @@ struct ScheduledFunctionID {
 template <class ReturnType, class ...Args>
 struct ScheduledFunction
 {
-    using Function = Proc<ReturnType, Args...>;//std::function<ReturnType(Args...)>;
+    using Function = Proc<ReturnType, Args...>;
 
     ScheduledFunctionID id;
     Function fn;
@@ -75,7 +75,6 @@ struct ScheduledFunction
           fn(std::move(other.fn))
     {
         other.id = {};
-        // other.fn = nullptr;
     }
 
     ScheduledFunction &operator=(ScheduledFunction &&other) noexcept

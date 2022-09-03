@@ -39,7 +39,7 @@ GetArgument(sdk::Params &params)
         return arg0;
     } else {
         static_assert(resolution_failure<ReturnType>, "Unable to use type as arg");
-        HYP_SCRIPT_GET_ARG_PTR(index, vm::Object, arg0);
+        HYP_SCRIPT_GET_ARG_PTR(index, vm::VMObject, arg0);
         HYP_SCRIPT_GET_MEMBER_PTR(arg0, "__intern", ReturnType, member);
 
         return member;
@@ -50,7 +50,7 @@ template <int index, class ReturnType>
 HYP_ENABLE_IF(std::is_class_v<ReturnType>, ReturnType &)
 GetArgument(sdk::Params &params)
 {
-    HYP_SCRIPT_GET_ARG_PTR(index, vm::Object, arg0);
+    HYP_SCRIPT_GET_ARG_PTR(index, vm::VMObject, arg0);
     HYP_SCRIPT_GET_MEMBER_PTR(arg0, "__intern", ReturnType, member);
 
     return *member;
@@ -88,7 +88,7 @@ HYP_SCRIPT_FUNCTION(CxxMemberFn)
         const auto prototype_it = APIInstance::class_bindings.class_prototypes.find(class_name_it->second);
         AssertThrowMsg(prototype_it != APIInstance::class_bindings.class_prototypes.end(), "Class not registered!");
 
-        vm::Object result_value(prototype_it->second); // construct from prototype
+        vm::VMObject result_value(prototype_it->second); // construct from prototype
         HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
 
         HYP_SCRIPT_CREATE_PTR(result_value, ptr);
@@ -134,7 +134,7 @@ HYP_SCRIPT_FUNCTION(CxxMemberFn)
         const auto prototype_it = APIInstance::class_bindings.class_prototypes.find(class_name_it->second);
         AssertThrowMsg(prototype_it != APIInstance::class_bindings.class_prototypes.end(), "Class not registered!");
 
-        vm::Object result_value(prototype_it->second); // construct from prototype
+        vm::VMObject result_value(prototype_it->second); // construct from prototype
         HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
 
         HYP_SCRIPT_CREATE_PTR(result_value, ptr);
@@ -169,7 +169,7 @@ HYP_SCRIPT_FUNCTION(CxxCtor)
         const auto prototype_it = APIInstance::class_bindings.class_prototypes.find(class_name_it->second);
         AssertThrowMsg(prototype_it != APIInstance::class_bindings.class_prototypes.end(), "Class not registered!");
 
-        vm::Object result_value(prototype_it->second); // construct from prototype
+        vm::VMObject result_value(prototype_it->second); // construct from prototype
         HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
 
         HYP_SCRIPT_CREATE_PTR(result_value, ptr);
@@ -206,7 +206,7 @@ HYP_SCRIPT_FUNCTION(CxxFn)
         const auto prototype_it = APIInstance::class_bindings.class_prototypes.find(class_name_it->second);
         AssertThrowMsg(prototype_it != APIInstance::class_bindings.class_prototypes.end(), "Class not registered!");
 
-        vm::Object result_value(prototype_it->second); // construct from prototype
+        vm::VMObject result_value(prototype_it->second); // construct from prototype
         HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
 
         HYP_SCRIPT_CREATE_PTR(result_value, ptr);

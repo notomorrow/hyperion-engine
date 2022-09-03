@@ -465,7 +465,7 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
         if (m_entity != nullptr) {
             has_entity_hit = ray.TestAABB(
                 m_entity->GetWorldAABB(),
-                m_entity->GetId().value,
+                m_entity->GetID().value,
                 m_entity.Get(),
                 out_results
             );

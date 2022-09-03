@@ -1,15 +1,18 @@
 #ifndef SOURCE_FILE_HPP
 #define SOURCE_FILE_HPP
 
+#include <Types.hpp>
+
 #include <string>
 #include <cstddef>
 
 namespace hyperion {
 
-class SourceFile {
+class SourceFile
+{
 public:
     SourceFile();
-    SourceFile(const std::string &filepath, size_t size);
+    SourceFile(const std::string &filepath, SizeType size);
     SourceFile(const SourceFile &other);
     SourceFile &operator=(const SourceFile &other);
     ~SourceFile();
@@ -21,16 +24,16 @@ public:
 
     const std::string &GetFilePath() const { return m_filepath; }
     char *GetBuffer() const { return m_buffer; }
-    size_t GetSize() const { return m_size; }
-    void SetSize(size_t size) { m_size = size; }
+    SizeType GetSize() const { return m_size; }
+    void SetSize(SizeType size) { m_size = size; }
     
-    void ReadIntoBuffer(const char *data, size_t size);
+    void ReadIntoBuffer(const char *data, SizeType size);
 
 private:
     std::string m_filepath;
     char *m_buffer;
-    size_t m_position;
-    size_t m_size;
+    SizeType m_position;
+    SizeType m_size;
 };
 
 } // namespace hyperion

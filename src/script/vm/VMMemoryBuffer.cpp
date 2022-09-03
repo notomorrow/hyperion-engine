@@ -1,4 +1,4 @@
-#include <script/vm/MemoryBuffer.hpp>
+#include <script/vm/VMMemoryBuffer.hpp>
 
 #include <system/Debug.hpp>
 
@@ -8,25 +8,25 @@
 namespace hyperion {
 namespace vm {
 
-MemoryBuffer::MemoryBuffer(size_t size)
+VMMemoryBuffer::VMMemoryBuffer(size_t size)
     : m_size(size),
       m_buffer(std::malloc(size))
 {
 }
 
-MemoryBuffer::MemoryBuffer(const MemoryBuffer &other)
+VMMemoryBuffer::VMMemoryBuffer(const VMMemoryBuffer &other)
     : m_size(other.m_size),
       m_buffer(std::malloc(other.m_size))
 {
     hyperion::Memory::Copy(m_buffer, other.m_buffer, m_size);
 }
 
-MemoryBuffer::~MemoryBuffer()
+VMMemoryBuffer::~VMMemoryBuffer()
 {
     std::free(m_buffer);
 }
 
-MemoryBuffer &MemoryBuffer::operator=(const MemoryBuffer &other)
+VMMemoryBuffer &VMMemoryBuffer::operator=(const VMMemoryBuffer &other)
 {
     if (&other == this) {
         return *this;
@@ -47,7 +47,7 @@ MemoryBuffer &MemoryBuffer::operator=(const MemoryBuffer &other)
     return *this;
 }
 
-void MemoryBuffer::GetRepresentation(
+void VMMemoryBuffer::GetRepresentation(
     std::stringstream &ss,
     bool add_type_name,
     int depth

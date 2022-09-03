@@ -5,6 +5,7 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
+#include <math/MathUtil.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -17,9 +18,10 @@
 namespace hyperion {
 namespace renderer {
 
-struct AttachmentRefInstance {
+struct AttachmentRefInstance
+{
     const char *cls;
-    void       *ptr;
+    void *ptr;
 
     bool operator==(const AttachmentRefInstance &other) const
     {
@@ -71,12 +73,13 @@ enum class StoreOperation
 
 // for making it easier to track holders
 #define HYP_ATTACHMENT_REF_INSTANCE \
-    ::hyperion::renderer::AttachmentRefInstance{ \
+    ::hyperion::renderer::AttachmentRefInstance { \
         .cls = typeid(*this).name(),     \
         .ptr = static_cast<void *>(this) \
     }
 
-class AttachmentRef {
+class AttachmentRef
+{
     friend class Attachment;
 public:
 
@@ -98,17 +101,17 @@ public:
     AttachmentRef &operator=(const AttachmentRef &other) = delete;
     ~AttachmentRef();
 
-    Attachment *GetAttachment() const        { return m_attachment; }
+    Attachment *GetAttachment() const { return m_attachment; }
 
-    ImageView *GetImageView() const          { return m_image_view.get(); }
-    Sampler *GetSampler() const              { return m_sampler.get(); }
+    ImageView *GetImageView() const { return m_image_view.get(); }
+    Sampler *GetSampler() const { return m_sampler.get(); }
 
-    LoadOperation GetLoadOperation() const   { return m_load_operation; }
+    LoadOperation GetLoadOperation() const { return m_load_operation; }
     StoreOperation GetStoreOperation() const { return m_store_operation; }
 
-    UInt GetBinding() const                  { return m_binding.value_or(UINT32_MAX); }
-    void SetBinding(UInt binding)            { m_binding = binding; }
-    bool HasBinding() const                  { return m_binding.has_value(); }
+    UInt GetBinding() const { return m_binding; }
+    void SetBinding(UInt binding) { m_binding = binding; }
+    bool HasBinding() const { return m_binding != UINT_MAX; }
 
     Image::InternalFormat GetFormat() const;
     bool IsDepthAttachment() const;
@@ -126,8 +129,8 @@ public:
         VkFormat format,
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
-        size_t num_mipmaps,
-        size_t num_faces
+        UInt num_mipmaps,
+        UInt num_faces
     );
 
     Result Destroy(Device *device);
@@ -158,12 +161,12 @@ private:
     
     LoadOperation m_load_operation;
     StoreOperation m_store_operation;
-    std::optional<UInt> m_binding{};
+    UInt m_binding = MathUtil::MaxSafeValue<UInt>();
 
     VkImageLayout m_initial_layout, m_final_layout;
 
     RefCount *m_ref_count = nullptr;
-    bool m_is_created     = false;
+    bool m_is_created = false;
 };
 
 class Attachment {
@@ -199,8 +202,8 @@ public:
         VkFormat format,
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
-        size_t num_mipmaps,
-        size_t num_faces,
+        UInt num_mipmaps,
+        UInt num_faces,
         LoadOperation load_operation,
         StoreOperation store_operation,
         AttachmentRef **out = nullptr
@@ -240,20 +243,21 @@ private:
     std::vector<AttachmentRef::RefCount *> m_ref_counts;
 };
 
-class AttachmentSet {
+class AttachmentSet
+{
 public:
-    AttachmentSet(RenderPassStage stage, size_t width, size_t height);
+    AttachmentSet(RenderPassStage stage, UInt width, UInt height);
     AttachmentSet(const AttachmentSet &other) = delete;
     AttachmentSet &operator=(const AttachmentSet &other) = delete;
     ~AttachmentSet();
 
-    size_t GetWidth() const { return m_width; }
-    size_t GetHeight() const { return m_height; }
+    UInt GetWidth() const { return m_width; }
+    UInt GetHeight() const { return m_height; }
     RenderPassStage GetStage() const { return m_stage; }
 
-    bool Has(uint32_t binding) const;
+    bool Has(UInt binding) const;
 
-    AttachmentRef *Get(uint32_t binding) const;
+    AttachmentRef *Get(UInt binding) const;
 
     /*! \brief Add a new owned attachment, constructed using the width/height provided to this class,
      * along with the given format argument.
@@ -266,7 +270,7 @@ public:
      * @param image The unique pointer to a non-initialized (but constructed)
      * Image which will be used to render to for this attachment.
      */
-    Result Add(Device *device, uint32_t binding, std::unique_ptr<Image> &&image);
+    Result Add(Device *device, UInt binding, std::unique_ptr<Image> &&image);
 
     /*! \brief Add a reference to an existing attachment, not owned.
      * An AttachmentRef is created and its reference count incremented.
@@ -274,10 +278,10 @@ public:
      * @param attachment Pointer to an Attachment that exists elsewhere and will be used
      * as an input for this set of attachments. The operation will be an OP_LOAD.
      */
-    Result Add(Device *device, uint32_t binding, Attachment *attachment);
+    Result Add(Device *device, UInt binding, Attachment *attachment);
 
     /*! \brief Remove an attachment reference by the binding argument */
-    Result Remove(Device *device, uint32_t binding);
+    Result Remove(Device *device, UInt binding);
 
     Result Create(Device *device);
     Result Destroy(Device *device);
@@ -285,10 +289,10 @@ public:
 private:
     void SortAttachmentRefs();
 
-    size_t m_width, m_height;
+    UInt m_width, m_height;
     RenderPassStage m_stage;
     std::vector<std::unique_ptr<Attachment>> m_attachments;
-    std::vector<std::pair<uint32_t, AttachmentRef *>> m_attachment_refs;
+    std::vector<std::pair<UInt, AttachmentRef *>> m_attachment_refs;
 };
 
 } // namespace renderer

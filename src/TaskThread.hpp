@@ -43,7 +43,7 @@ protected:
         m_is_running = true;
 
         const bool is_locked = m_target_ticks_per_second != 0;
-        LockstepGameCounter counter(is_locked ? (1.0f / static_cast<float>(m_target_ticks_per_second)) : 1.0f);
+        LockstepGameCounter counter(is_locked ? (1.0f / static_cast<Float>(m_target_ticks_per_second)) : 1.0f);
 
         while (m_is_running) {
             if (is_locked) {

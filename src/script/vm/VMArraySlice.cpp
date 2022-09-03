@@ -1,4 +1,4 @@
-#include <script/vm/Slice.hpp>
+#include <script/vm/VMArraySlice.hpp>
 
 #include <system/Debug.hpp>
 
@@ -7,7 +7,7 @@
 namespace hyperion {
 namespace vm {
 
-Slice::Slice(Array *ary, SizeType start, SizeType end)
+VMArraySlice::VMArraySlice(VMArray *ary, SizeType start, SizeType end)
     : m_ary(ary),
       m_start(start),
       m_end(end)
@@ -16,7 +16,7 @@ Slice::Slice(Array *ary, SizeType start, SizeType end)
     AssertThrow(m_end >= m_start);
 }
 
-Slice::Slice(const Slice &other)
+VMArraySlice::VMArraySlice(const VMArraySlice &other)
     : m_ary(other.m_ary),
       m_start(other.m_start),
       m_end(other.m_end)
@@ -25,7 +25,7 @@ Slice::Slice(const Slice &other)
     AssertThrow(m_end >= m_start);
 }
 
-Slice &Slice::operator=(const Slice &other)
+VMArraySlice &VMArraySlice::operator=(const VMArraySlice &other)
 {
     if (&other == this) {
         return *this;
@@ -41,7 +41,7 @@ Slice &Slice::operator=(const Slice &other)
     return *this;
 }
 
-void Slice::GetRepresentation(
+void VMArraySlice::GetRepresentation(
     std::stringstream &ss,
     bool add_type_name,
     int depth

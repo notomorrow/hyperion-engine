@@ -371,7 +371,7 @@ void DynString<T, IsUtf8>::Append(const DynString &other)
         new (&Base::m_buffer[Base::m_size++].data_buffer) T(other[i]);
     }
 
-    Base::PushBack(T{0});
+    Base::PushBack(T { 0 });
 
     m_length += other.m_length;
 }
@@ -416,7 +416,7 @@ void DynString<T, IsUtf8>::Append(const T &value)
     Base::PopBack(); // current NT char
 
     new (&Base::m_buffer[Base::m_size++].data_buffer) T(value);
-    Base::PushBack(T{0});
+    Base::PushBack(T { 0 });
 
     ++m_length;
 }
@@ -435,7 +435,7 @@ void DynString<T, IsUtf8>::Append(T &&value)
     Base::PopBack(); // current NT char
 
     new (&Base::m_buffer[Base::m_size++].data_buffer) T(std::forward<T>(value));
-    Base::PushBack(T{0});
+    Base::PushBack(T { 0 });
 
     ++m_length;
 }
@@ -453,7 +453,7 @@ auto DynString<T, IsUtf8>::PopBack() -> typename Base::ValueType&&
     --m_length;
     Base::PopBack(); // pop NT-char
     auto &&res = Base::PopBack();
-    Base::PushBack(T{0}); // add NT-char
+    Base::PushBack(T { 0 }); // add NT-char
     return res;
 }
 
@@ -461,7 +461,7 @@ template <class T, bool IsUtf8>
 void DynString<T, IsUtf8>::Clear()
 {
     Base::Clear();
-    Base::PushBack(T{0}); // NT char
+    Base::PushBack(T { 0 }); // NT char
     m_length = 0;
 }
 
@@ -492,27 +492,26 @@ auto DynString<T, IsUtf8>::StrStr(const DynString &other) const -> const T*
         return nullptr;
     }
 
-    const T *a, *b;
-    b = other.Data();
+    const T *other_str = other.Data();
 
     for (const T *str = Data(); *str != 0; ++str) {
-        if (*str != *b) {
+        if (*str != *other_str) {
             continue;
         }
 
-        a = str;
+        T *this_str = str;
 
         for (;;) {
-            if (*b == 0) {
+            if (*other_str == '\0') {
                 return str;
             }
 
-            if (*a++ != *b++) {
+            if (*this_str++ != *other_str++) {
                 break;
             }
         }
 
-        b = other.Data();
+        other_str = other.Data();
     }
 
     return nullptr;

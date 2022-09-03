@@ -11,8 +11,10 @@
 
 namespace hyperion {
 namespace detail {
+
 template <SizeType Sz>
-struct ProcFunctorMemory {
+struct ProcFunctorMemory
+{
     UByte bytes[Sz];
 
     HYP_FORCE_INLINE void *GetPointer()
@@ -23,7 +25,8 @@ struct ProcFunctorMemory {
 };
 
 template <SizeType Sz, class ReturnType, class ...Args>
-struct ProcFunctorInternal {
+struct ProcFunctorInternal
+{
     ProcFunctorMemory<Sz> memory;
     ReturnType (*invoke_fn)(void *, Args &&...);
     void (*delete_fn)(void *);
@@ -118,7 +121,8 @@ struct Invoker<void, Args...>
 // with inline storage so no heap allocation occurs.
 // supports move-only types.
 template <class ReturnType, class ...Args>
-struct Proc {
+struct Proc
+{
     static constexpr UInt inline_storage_size_bytes = 256u;
 
     Proc()

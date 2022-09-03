@@ -26,7 +26,7 @@ public:
 protected:
     std::unique_ptr<Script> m_script;
 
-    Value                   m_node_script_value;
+    Value m_node_script_value;
 };
 
 } // namespace hyperion::v2

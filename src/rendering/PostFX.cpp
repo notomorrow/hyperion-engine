@@ -164,8 +164,8 @@ void PostProcessing::Destroy(Engine *engine)
     m_pre_effects.Clear();
     m_post_effects.Clear();
 
-    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+    for (const auto descriptor_set_index : DescriptorSet::global_buffer_mapping) {
+        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(descriptor_set_index);
 
         descriptor_set->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
             ->RemoveSubDescriptor(0);

@@ -7,7 +7,8 @@
 
 namespace hyperion::compiler {
 
-class BuildableVisitor {
+class BuildableVisitor
+{
 public:
     virtual ~BuildableVisitor() = default;
 

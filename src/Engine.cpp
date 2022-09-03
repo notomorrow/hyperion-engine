@@ -625,7 +625,7 @@ Handle<RendererInstance> Engine::FindOrCreateRendererInstance(const Handle<Shade
     }
 
     RenderableAttributeSet new_renderable_attributes(renderable_attributes);
-    new_renderable_attributes.shader_id = shader->GetId();
+    new_renderable_attributes.shader_id = shader->GetID();
 
     std::lock_guard guard(m_renderer_instance_mapping_mutex);
 

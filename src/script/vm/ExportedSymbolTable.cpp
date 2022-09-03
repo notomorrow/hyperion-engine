@@ -18,7 +18,7 @@ bool ExportedSymbolTable::Find(const char *name, Value *out)
     return Find(hash_fnv_1(name), out);
 }
 
-bool ExportedSymbolTable::Find(HashFnv1 hash, Value *out)
+bool ExportedSymbolTable::Find(HashFNV1 hash, Value *out)
 {
     const auto it = m_symbols.Find(hash);
 
@@ -36,7 +36,7 @@ auto ExportedSymbolTable::Store(const char *name, const Value &value) -> typenam
     return Store(hash_fnv_1(name), value);
 }
 
-auto ExportedSymbolTable::Store(HashFnv1 hash, const Value &value) -> typename SymbolMap::InsertResult
+auto ExportedSymbolTable::Store(HashFNV1 hash, const Value &value) -> typename SymbolMap::InsertResult
 {
     return m_symbols.Insert(hash, value);
 }
