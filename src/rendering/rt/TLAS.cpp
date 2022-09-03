@@ -13,14 +13,14 @@ Tlas::~Tlas()
     Teardown();
 }
 
-void Tlas::AddBlas(Ref<Blas> &&blas)
+void Tlas::AddBlas(Handle<Blas> &&blas)
 {
     if (blas == nullptr) {
         return;
     }
 
     if (IsInitCalled()) {
-        blas.Init();
+        GetEngine()->InitObject(blas);
     }
 
     m_blas.push_back(std::move(blas));
@@ -37,7 +37,7 @@ void Tlas::Init(Engine *engine)
     for (size_t i = 0; i < m_blas.size(); i++) {
         AssertThrow(m_blas[i] != nullptr);
 
-        m_blas[i].Init();
+        engine->InitObject(m_blas[i]);
         blas[i] = &m_blas[i]->Get();
     }
 

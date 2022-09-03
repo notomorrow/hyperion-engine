@@ -53,9 +53,32 @@ bool Threads::IsOnThread(ThreadMask mask)
     return false;
 }
 
+bool Threads::IsOnThread(ThreadID thread_id)
+{
+#ifdef HYP_ENABLE_THREAD_ID
+    if (thread_id == current_thread_id) {
+        return true;
+    }
+
+#else
+    DebugLog(
+        LogType::Error,
+        "IsOnThread() called but thread IDs are currently disabled!\n"
+    );
+#endif
+
+    return false;
+}
+
 ThreadID Threads::GetThreadID(ThreadName thread_name)
 {
     return thread_ids.At(thread_name);
 }
+
+ThreadID Threads::CurrentThreadID()
+{
+    return current_thread_id;
+}
+
 
 } // namespace hyperion::v2

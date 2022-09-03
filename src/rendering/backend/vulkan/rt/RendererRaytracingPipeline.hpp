@@ -12,7 +12,8 @@
 namespace hyperion {
 namespace renderer {
 
-class RaytracingPipeline : public Pipeline {
+class RaytracingPipeline : public Pipeline
+{
 public:
     RaytracingPipeline(std::unique_ptr<ShaderProgram> &&shader_program);
     RaytracingPipeline(const RaytracingPipeline &other) = delete;

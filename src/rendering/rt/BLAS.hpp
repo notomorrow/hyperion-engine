@@ -16,13 +16,14 @@ using renderer::AccelerationStructureFlags;
 class Blas : public EngineComponentWrapper<STUB_CLASS(Blas), BottomLevelAccelerationStructure>
 {
 public:
-    Blas(Ref<Mesh> &&mesh, const Transform &transform);
+    Blas(Handle<Mesh> &&mesh, const Transform &transform);
     Blas(const Blas &other) = delete;
     Blas &operator=(const Blas &other) = delete;
     ~Blas();
-
-    Mesh *GetMesh() const { return m_mesh.ptr; }
-    void SetMesh(Ref<Mesh> &&mesh);
+    
+    Handle<Mesh> &GetMesh() { return m_mesh; }
+    const Handle<Mesh> &GetMesh() const { return m_mesh; }
+    void SetMesh(Handle<Mesh> &&mesh);
 
     const Transform &GetTransform() const         { return m_transform; }
     void SetTransform(const Transform &transform);
@@ -37,7 +38,7 @@ private:
     bool NeedsUpdate() const
         { return m_wrapped.GetFlags() & AccelerationStructureFlags::ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING; }
 
-    Ref<Mesh> m_mesh;
+    Handle<Mesh> m_mesh;
     Transform m_transform;
 };
 

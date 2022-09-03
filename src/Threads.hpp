@@ -37,8 +37,9 @@ public:
 
     static void AssertOnThread(ThreadMask mask);
     static bool IsOnThread(ThreadMask mask);
-
+    static bool IsOnThread(ThreadID thread_id);
     static ThreadID GetThreadID(ThreadName thread_name);
+    static ThreadID CurrentThreadID();
 };
 
 } // namespace hyperion::v2

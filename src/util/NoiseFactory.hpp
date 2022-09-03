@@ -13,7 +13,6 @@
 
 #include <Types.hpp>
 
-#include <vector>
 #include <map>
 #include <utility>
 
@@ -21,12 +20,14 @@ namespace hyperion {
 
 using Seed = UInt32;
 
-enum NoiseGenerationType {
+enum NoiseGenerationType
+{
     SIMPLEX_NOISE,
     WORLEY_NOISE
 };
 
-class NoiseGenerator {
+class NoiseGenerator
+{
     friend class NoiseFactory;
 public:
     NoiseGenerator(NoiseGenerationType type, Seed seed);
@@ -71,7 +72,8 @@ private:
     WorleyNoise *m_worley_noise;
 };
 
-class NoiseCombinator {
+class NoiseCombinator
+{
 public:
     enum class Mode {
         ADDITIVE,
@@ -96,7 +98,7 @@ public:
 
     template <class NoiseGeneratorType>
     NoiseCombinator &Use(
-        UInt priority,
+        Int priority,
         Mode mode = Mode::ADDITIVE,
         Float multiplier = 1.0f,
         Float bias = 0.0f,
@@ -182,12 +184,14 @@ protected:
 };
 
 
-struct NoiseGeneratorRefCounter {
+struct NoiseGeneratorRefCounter
+{
     NoiseGenerator *noise;
-    size_t          uses;
+    SizeType uses;
 };
 
-class NoiseFactory {
+class NoiseFactory
+{
 public:
     static NoiseFactory *instance;
     static NoiseFactory *GetInstance();

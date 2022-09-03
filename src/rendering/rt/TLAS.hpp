@@ -18,12 +18,12 @@ public:
     Tlas &operator=(const Tlas &other) = delete;
     ~Tlas();
 
-    void AddBlas(Ref<Blas> &&blas);
+    void AddBlas(Handle<Blas> &&blas);
 
     void Init(Engine *engine);
 
 private:
-    std::vector<Ref<Blas>> m_blas;
+    std::vector<Handle<Blas>> m_blas;
 };
 
 } // namespace hyperion::v2

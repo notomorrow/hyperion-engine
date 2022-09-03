@@ -73,7 +73,7 @@ using namespace hyperion::v2;
 
 
 #define HYPERION_VK_TEST_VCT 1
-#define HYPERION_VK_TEST_RAYTRACING 1
+#define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
 namespace hyperion::v2 {
@@ -185,7 +185,7 @@ public:
         material_test_obj->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         material_test_obj->Scale(6.45f);
         material_test_obj->Translate(Vector3(0, 9, 0));
-        m_scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
+        //m_scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -239,7 +239,7 @@ public:
 #if HYPERION_VK_TEST_VCT
         m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
             VoxelConeTracing::Params {
-                test_model->GetWorldAABB()
+                BoundingBox(-128, 128)//test_model->GetWorldAABB()
             }
         );
 #endif
@@ -698,25 +698,21 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    my_game->material_test_obj->GetChild(0).Get()->GetEntity()->SetTransform({{ 0, 7, 0 }});
 
+    auto cube_obj = engine->CreateHandle<Mesh>(MeshBuilder::Cube().release());
 
     ProbeGrid probe_system({
         .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}
     });
     probe_system.Init(engine);
 
-    auto my_tlas = std::make_unique<Tlas>();
-
-    my_tlas->AddBlas(engine->resources->blas.Add(new Blas(
-        engine->resources->meshes.IncRef(my_game->material_test_obj->GetChild(0).Get()->GetEntity()->GetMesh()),
-        my_game->material_test_obj->GetChild(0).Get()->GetEntity()->GetTransform()
-    )));
+    auto my_tlas = engine->CreateHandle<Tlas>();//std::make_unique<Tlas>();
     
-    my_tlas->AddBlas(engine->resources->blas.Add(new Blas(
-        engine->resources->meshes.IncRef(my_game->cube_obj->GetChild(0).Get()->GetEntity()->GetMesh()),
-        my_game->cube_obj->GetChild(0).Get()->GetEntity()->GetTransform()
-    )));
+    
+    my_tlas->AddBlas(engine->CreateHandle<Blas>(
+        std::move(cube_obj),
+        Transform { Vector3 { 0, 7, 0 } }
+    ));
 
     engine->InitObject(my_tlas);
     
@@ -788,7 +784,7 @@ int main()
             engine->GetInstance()->GetSwapchain()
         ));
 
-        frame = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
+        auto *frame = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
         auto *command_buffer = frame->GetCommandBuffer();
         const auto frame_index = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
@@ -830,12 +826,10 @@ int main()
         );
 
         
-        probe_system.RenderProbes(engine, frame->GetCommandBuffer());
-        probe_system.ComputeIrradiance(engine, frame->GetCommandBuffer());
+        probe_system.RenderProbes(engine, frame);
+        probe_system.ComputeIrradiance(engine, frame);
 
         engine->RenderDeferred(frame);
-        
-
         engine->RenderFinalPass(frame);
 
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine->GetInstance()->GetDevice()));

@@ -31,9 +31,9 @@ class IndirectDrawState;
 
 enum DeferredFlags : DeferredFlagBits
 {
-    DEFERRED_FLAGS_NONE              = 0,
-    DEFERRED_FLAGS_SSR_ENABLED       = 1 << 0,
-    DEFERRED_FLAGS_VCT_ENABLED       = 1 << 1,
+    DEFERRED_FLAGS_NONE = 0,
+    DEFERRED_FLAGS_SSR_ENABLED = 1 << 0,
+    DEFERRED_FLAGS_VCT_ENABLED = 1 << 1,
     DEFERRED_FLAGS_ENV_PROBE_ENABLED = 1 << 2
 };
 
@@ -71,7 +71,7 @@ public:
     DeferredRenderer &operator=(const DeferredRenderer &other) = delete;
     ~DeferredRenderer();
 
-    PostProcessing &GetPostProcessing()              { return m_post_processing; }
+    PostProcessing &GetPostProcessing() { return m_post_processing; }
     const PostProcessing &GetPostProcessing() const  { return m_post_processing; }
 
     void Create(Engine *engine);
@@ -82,19 +82,19 @@ private:
     void RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect);
     void RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect);
 
-    DeferredPass                                                               m_indirect_pass;
-    DeferredPass                                                               m_direct_pass;
-    PostProcessing                                                             m_post_processing;
+    DeferredPass m_indirect_pass;
+    DeferredPass m_direct_pass;
+    PostProcessing m_post_processing;
 
-    ScreenspaceReflectionRenderer                                              m_ssr;
-    DepthPyramidRenderer                                                       m_dpr;
+    ScreenspaceReflectionRenderer m_ssr;
+    DepthPyramidRenderer m_dpr;
 
-    FixedArray<Handle<Texture>, max_frames_in_flight>                          m_mipmapped_results;
-    std::unique_ptr<Sampler>                                                   m_sampler;
-    std::unique_ptr<Sampler>                                                   m_depth_sampler;
+    FixedArray<Handle<Texture>, max_frames_in_flight> m_mipmapped_results;
+    std::unique_ptr<Sampler> m_sampler;
+    std::unique_ptr<Sampler> m_depth_sampler;
 
-    IndirectDrawState                                                          m_indirect_draw_state;
-    CullData                                                                   m_cull_data;
+    IndirectDrawState m_indirect_draw_state;
+    CullData m_cull_data;
 };
 
 } // namespace hyperion::v2

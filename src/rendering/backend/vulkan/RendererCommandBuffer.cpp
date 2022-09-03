@@ -1,6 +1,7 @@
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <Types.hpp>
@@ -33,7 +34,7 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
         level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         break;
     default:
-        AssertThrowMsg(0, "Unsupported command buffer type");
+        AssertThrowMsg(false, "Unsupported command buffer type");
     }
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
@@ -61,11 +62,11 @@ Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 
 Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
-    VkCommandBufferInheritanceInfo inheritance_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
-    inheritance_info.subpass     = 0;
+    VkCommandBufferInheritanceInfo inheritance_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+    inheritance_info.subpass = 0;
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
-    VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    VkCommandBufferBeginInfo begin_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
@@ -125,24 +126,24 @@ Result CommandBuffer::SubmitPrimary(
     SemaphoreChain *semaphore_chain
 )
 {
-    VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkSubmitInfo submit_info { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
     if (semaphore_chain != nullptr) {
-        submit_info.waitSemaphoreCount   = static_cast<UInt32>(semaphore_chain->m_wait_semaphores_view.size());
-        submit_info.pWaitSemaphores      = semaphore_chain->m_wait_semaphores_view.data();
+        submit_info.waitSemaphoreCount = static_cast<UInt32>(semaphore_chain->m_wait_semaphores_view.size());
+        submit_info.pWaitSemaphores = semaphore_chain->m_wait_semaphores_view.data();
         submit_info.signalSemaphoreCount = static_cast<UInt32>(semaphore_chain->m_signal_semaphores_view.size());
-        submit_info.pSignalSemaphores    = semaphore_chain->m_signal_semaphores_view.data();
-        submit_info.pWaitDstStageMask    = semaphore_chain->m_wait_semaphores_stage_view.data();
+        submit_info.pSignalSemaphores = semaphore_chain->m_signal_semaphores_view.data();
+        submit_info.pWaitDstStageMask = semaphore_chain->m_wait_semaphores_stage_view.data();
     } else {
-        submit_info.waitSemaphoreCount   = 0;
-        submit_info.pWaitSemaphores      = nullptr;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = nullptr;
         submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores    = nullptr;
-        submit_info.pWaitDstStageMask    = nullptr;
+        submit_info.pSignalSemaphores = nullptr;
+        submit_info.pWaitDstStageMask = nullptr;
     }
 
-    submit_info.commandBufferCount       = 1;
-    submit_info.pCommandBuffers          = &m_command_buffer;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_command_buffer;
 
     HYPERION_VK_CHECK_MSG(
         vkQueueSubmit(queue, 1, &submit_info, fence->GetHandle()),
@@ -181,7 +182,7 @@ void CommandBuffer::DrawIndexed(
 
 void CommandBuffer::DrawIndexedIndirect(
     const GPUBuffer *buffer,
-    UInt             buffer_offset
+    UInt buffer_offset
 ) const
 {
     vkCmdDrawIndexedIndirect(
@@ -271,10 +272,10 @@ void CommandBuffer::BindDescriptorSets(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool  &pool,
+    const DescriptorPool &pool,
     const ComputePipeline *pipeline,
-    const DescriptorSet   *descriptor_set,
-    DescriptorSet::Index   binding
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding
 ) const
 {
     BindDescriptorSet(
@@ -289,12 +290,12 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool  &pool,
+    const DescriptorPool &pool,
     const ComputePipeline *pipeline,
-    const DescriptorSet   *descriptor_set,
-    DescriptorSet::Index   binding,
-    const UInt32          *offsets,
-    size_t                 num_offsets
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding,
+    const UInt32 *offsets,
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSet(
@@ -349,7 +350,7 @@ void CommandBuffer::BindDescriptorSet(
     DescriptorSet::Index set,
     DescriptorSet::Index binding,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSet(
@@ -368,9 +369,9 @@ void CommandBuffer::BindDescriptorSets(
     const ComputePipeline *pipeline,
     const DescriptorSet::Index *sets,
     const DescriptorSet::Index *bindings,
-    size_t num_descriptor_sets,
+    SizeType num_descriptor_sets,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSets(
@@ -386,10 +387,10 @@ void CommandBuffer::BindDescriptorSets(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool     &pool,
+    const DescriptorPool &pool,
     const RaytracingPipeline *pipeline,
-    const DescriptorSet      *descriptor_set,
-    DescriptorSet::Index      binding
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding
 ) const
 {
     BindDescriptorSet(
@@ -404,12 +405,12 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool     &pool,
+    const DescriptorPool &pool,
     const RaytracingPipeline *pipeline,
-    const DescriptorSet      *descriptor_set,
-    DescriptorSet::Index      binding,
-    const UInt32             *offsets,
-    size_t                    num_offsets
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding,
+    const UInt32 *offsets,
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSet(
@@ -424,9 +425,9 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool     &pool,
+    const DescriptorPool &pool,
     const RaytracingPipeline *pipeline,
-    DescriptorSet::Index      set
+    DescriptorSet::Index set
 ) const
 {
     BindDescriptorSet(
@@ -441,10 +442,10 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool     &pool,
+    const DescriptorPool &pool,
     const RaytracingPipeline *pipeline,
-    DescriptorSet::Index      set,
-    DescriptorSet::Index      binding
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding
 ) const
 {
     BindDescriptorSet(
@@ -459,12 +460,12 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool     &pool,
+    const DescriptorPool &pool,
     const RaytracingPipeline *pipeline,
-    DescriptorSet::Index      set,
-    DescriptorSet::Index      binding,
-    const UInt32             *offsets,
-    size_t                    num_offsets
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding,
+    const UInt32 *offsets,
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSet(
@@ -479,13 +480,13 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSets(
-    const DescriptorPool       &pool,
-    const RaytracingPipeline   *pipeline,
+    const DescriptorPool &pool,
+    const RaytracingPipeline *pipeline,
     const DescriptorSet::Index *sets,
     const DescriptorSet::Index *bindings,
-    size_t                      num_descriptor_sets,
-    const UInt32               *offsets,
-    size_t                      num_offsets
+    SizeType num_descriptor_sets,
+    const UInt32 *offsets,
+    SizeType num_offsets
 ) const
 {
     BindDescriptorSets(
@@ -507,7 +508,7 @@ void CommandBuffer::BindDescriptorSet(
     DescriptorSet::Index set,
     DescriptorSet::Index binding,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     const auto set_index = static_cast<UInt>(set);
@@ -550,7 +551,7 @@ void CommandBuffer::BindDescriptorSet(
     const DescriptorSet *descriptor_set,
     DescriptorSet::Index binding,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     const auto binding_index = DescriptorSet::GetDesiredIndex(binding);
@@ -574,9 +575,9 @@ void CommandBuffer::BindDescriptorSets(
     VkPipelineBindPoint bind_point,
     const DescriptorSet::Index *sets,
     const DescriptorSet::Index *bindings,
-    size_t num_descriptor_sets,
+    SizeType num_descriptor_sets,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     constexpr UInt max_bound_descriptor_sets = 8;
@@ -642,9 +643,9 @@ void CommandBuffer::BindDescriptorSets(
     VkPipelineBindPoint bind_point,
     const DescriptorSet *descriptor_sets,
     const DescriptorSet::Index *bindings,
-    size_t num_descriptor_sets,
+    SizeType num_descriptor_sets,
     const UInt32 *offsets,
-    size_t num_offsets
+    SizeType num_offsets
 ) const
 {
     constexpr UInt max_bound_descriptor_sets = 8;

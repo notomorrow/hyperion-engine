@@ -4,6 +4,7 @@
 #include <Engine.hpp>
 #include <builders/MeshBuilder.hpp>
 
+#if 0
 namespace hyperion::v2 {
 
 using renderer::Frame;
@@ -173,3 +174,5 @@ void FinalPass::Render(Engine *engine, Frame *frame)
     m_renderer_instance->GetFramebuffers()[acquired_image_index]->EndCapture(frame->GetCommandBuffer());
 }
 } // namespace hyperion::v2
+
+#endif

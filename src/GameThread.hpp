@@ -20,12 +20,13 @@ namespace hyperion::v2 {
 class Engine;
 class Game;
 
-class GameThread : public Thread<Scheduler<ScheduledFunction<void, GameCounter::TickUnit>>,
-                                 Engine *, Game *, SystemWindow *>
+class GameThread
+    : public Thread<Scheduler<ScheduledFunction<void, GameCounter::TickUnit>>, Engine *, Game *, SystemWindow *>
 {
 public:
     GameThread();
 
+    /*! \brief Atomically load the boolean value indicating that this thread is actively running */
     bool IsRunning() const
         { return m_is_running.load(std::memory_order_relaxed); }
 

@@ -83,18 +83,21 @@ private:
     UInt32 state;
 };
 
-struct alignas(256) CubemapUniforms {
+struct alignas(256) CubemapUniforms
+{
     Matrix4 projection_matrices[6];
     Matrix4 view_matrices[6];
 };
 
-struct alignas(256) SkeletonShaderData {
+struct alignas(256) SkeletonShaderData
+{
     static constexpr SizeType max_bones = 128;
 
     Matrix4 bones[max_bones];
 };
 
-struct alignas(256) ObjectShaderData {
+struct alignas(256) ObjectShaderData
+{
     // 0
     Matrix4 model_matrix;
 
@@ -119,7 +122,8 @@ struct alignas(256) ObjectShaderData {
 
 static_assert(sizeof(ObjectShaderData) == 256);
 
-struct MaterialShaderData {
+struct MaterialShaderData
+{
     static constexpr UInt max_bound_textures = 16u;
 
     // 0
@@ -150,7 +154,8 @@ struct MaterialShaderData {
 
 static_assert(sizeof(MaterialShaderData) == 128);
 
-struct alignas(256) SceneShaderData {
+struct alignas(256) SceneShaderData
+{
     static constexpr UInt32 max_environment_textures = 1;
 
     Matrix4 view;
@@ -172,14 +177,15 @@ struct alignas(256) SceneShaderData {
     Vector4 aabb_max;
     Vector4 aabb_min;
 
-    float   global_timer;
-    UInt32  num_environment_shadow_maps;
-    UInt32  num_lights;
+    float global_timer;
+    UInt32 num_environment_shadow_maps;
+    UInt32 num_lights;
 };
 
 static_assert(sizeof(SceneShaderData) == 256);
 
-struct alignas(256) LightShaderData {
+struct alignas(256) LightShaderData
+{
     Vector4  position; //direction for directional lights
     UInt32   color;
     UInt32   light_type;
@@ -190,7 +196,8 @@ struct alignas(256) LightShaderData {
 
 static_assert(sizeof(LightShaderData) == 256);
 
-struct alignas(16) ShadowShaderData {
+struct alignas(16) ShadowShaderData
+{
     Matrix4 projection;
     Matrix4 view;
     UInt32  scene_index;
@@ -198,12 +205,14 @@ struct alignas(16) ShadowShaderData {
 
 //static_assert(sizeof(ShadowShaderData) == 128);
 
-enum EnvProbeFlags : UInt32 {
+enum EnvProbeFlags : UInt32
+{
     ENV_PROBE_NONE = 0x0,
     ENV_PROBE_PARALLAX_CORRECTED = 0x1
 };
 
-struct alignas(16) EnvProbeShaderData {
+struct alignas(16) EnvProbeShaderData
+{
     ShaderVec4<Float> aabb_max;
     ShaderVec4<Float> aabb_min;
     ShaderVec4<Float> world_position;
@@ -211,27 +220,38 @@ struct alignas(16) EnvProbeShaderData {
     UInt32 flags;
 };
 
+struct alignas(16) ObjectInstance
+{
+    UInt32 entity_id;
+    UInt32 draw_command_index;
+    UInt32 batch_index;
+    UInt32 num_indices;
+    ShaderVec4<Float> aabb_max;
+    ShaderVec4<Float> aabb_min;
+    UInt32 packed_data;
+};
+
 /* max number of skeletons, based on size in mb */
-constexpr SizeType max_skeletons         = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
-constexpr SizeType max_skeletons_bytes   = max_skeletons * sizeof(SkeletonShaderData);
+constexpr SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
+constexpr SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
 /* max number of materials, based on size in mb */
-constexpr SizeType max_materials         = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
-constexpr SizeType max_materials_bytes   = max_materials * sizeof(MaterialShaderData);
+constexpr SizeType max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
+constexpr SizeType max_materials_bytes = max_materials * sizeof(MaterialShaderData);
 /* max number of objects, based on size in mb */
-constexpr SizeType max_objects           = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
-constexpr SizeType max_objects_bytes     = max_materials * sizeof(ObjectShaderData);
+constexpr SizeType max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+constexpr SizeType max_objects_bytes = max_materials * sizeof(ObjectShaderData);
 /* max number of scenes (cameras, essentially), based on size in kb */
-constexpr SizeType max_scenes            = (32ull * 1024ull) / sizeof(SceneShaderData);
-constexpr SizeType max_scenes_bytes      = max_scenes * sizeof(SceneShaderData);
+constexpr SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
+constexpr SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 /* max number of lights, based on size in kb */
-constexpr SizeType max_lights            = (16ull * 1024ull) / sizeof(LightShaderData);
-constexpr SizeType max_lights_bytes      = max_lights * sizeof(LightShaderData);
+constexpr SizeType max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
+constexpr SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
 /* max number of shadow maps, based on size in kb */
-constexpr SizeType max_shadow_maps       = (16ull * 1024ull) / sizeof(ShadowShaderData);
+constexpr SizeType max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
 constexpr SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 /* max number of env probes, based on size in kb */
-constexpr SizeType max_env_probes        = (16ull * 1024ull) / sizeof(EnvProbeShaderData);
-constexpr SizeType max_env_probes_bytes  = max_env_probes * sizeof(EnvProbeShaderData);
+constexpr SizeType max_env_probes = (16ull * 1024ull) / sizeof(EnvProbeShaderData);
+constexpr SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
 
 template <class Buffer, class StructType, SizeType Size>
 class ShaderData
@@ -369,7 +389,7 @@ private:
                 auto &current_dirty = dirty[buffer_index];
 
                 const auto dirty_end = current_dirty.GetEnd(),
-                           dirty_start = current_dirty.GetStart();
+                    dirty_start = current_dirty.GetStart();
 
                 if (dirty_end <= dirty_start) {
                     return;

@@ -54,8 +54,8 @@ protected:
 
             counter.NextTick();
 
-            if (m_scheduler->NumEnqueued()) {
-                m_scheduler->AcceptAll(m_task_queue);
+            if (m_scheduler.NumEnqueued()) {
+                m_scheduler.AcceptAll(m_task_queue);
 
                 // do not execute within lock
                 while (m_task_queue.Any()) {
