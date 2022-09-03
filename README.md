@@ -23,6 +23,9 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 
 Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
 
+## Docs
+In the works
+
 ## Screenshots
 
 ![screenshot](/screenshots/sponza-vk.png)
@@ -39,3 +42,7 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 This section will be updated soon. Hyperion uses a pretty simple CMake set up, using vcpkg for MSVC on Windows, and a build script (`build.sh`) for macOS and Linux.
 
 Make sure you install the required packages listed in CMakeLists.txt.
+
+### Known issues
+* Currently some resources are not being cleaned up properly on close
+* Sometimes, may run into a race condition, some things need to be more thread-safe
