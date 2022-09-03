@@ -61,7 +61,7 @@ struct VisibilityState
     using Nonce = VisibilityStateSnapshot::Nonce;
 
     static constexpr UInt max_scenes = sizeof(Bitmask) * CHAR_BIT;
-    static constexpr UInt cursor_size = 3u;
+    static constexpr UInt cursor_size = 6u;
 
     // /* map from scene index (id - 1) -> visibility boolean */
     // std::atomic<Bitmask> bits { 0u };

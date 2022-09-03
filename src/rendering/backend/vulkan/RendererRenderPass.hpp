@@ -6,9 +6,9 @@
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererAttachment.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Types.hpp>
 
-#include <optional>
+#include <vulkan/vulkan.h>
 
 namespace hyperion {
 namespace renderer {
@@ -16,25 +16,28 @@ namespace renderer {
 class CommandBuffer;
 class FramebufferObject;
 
-class RenderPass {
+class RenderPass
+{
     friend class FramebufferObject;
     friend class GraphicsPipeline;
-public:
 
-    enum class Mode {
+public:
+    enum class Mode
+    {
         RENDER_PASS_INLINE = 0,
         RENDER_PASS_SECONDARY_COMMAND_BUFFER = 1
     };
 
     RenderPass(RenderPassStage stage, Mode mode);
-    RenderPass(RenderPassStage stage, Mode mode, uint32_t num_multiview_layers);
+    RenderPass(RenderPassStage stage, Mode mode, UInt num_multiview_layers);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
-    RenderPassStage GetStage() const    { return m_stage; }
+    RenderPassStage GetStage() const { return m_stage; }
+
     bool IsMultiview() const { return m_num_multiview_layers != 0; }
-    uint32_t NumMultiviewLayers() const { return m_num_multiview_layers; }
+    UInt NumMultiviewLayers() const { return m_num_multiview_layers; }
 
     void AddAttachmentRef(AttachmentRef *attachment_ref)
     {
@@ -83,7 +86,7 @@ private:
 
     RenderPassStage m_stage;
     Mode m_mode;
-    uint32_t m_num_multiview_layers;
+    UInt m_num_multiview_layers;
 
     std::vector<AttachmentRef *> m_render_pass_attachment_refs;
 

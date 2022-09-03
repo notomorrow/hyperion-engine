@@ -2,7 +2,7 @@
 #define OBJECT_HPP
 
 #include <script/vm/Value.hpp>
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 #include <Types.hpp>
 
 #include <sstream>
@@ -58,22 +58,22 @@ private:
     SizeType m_size;
 };
 
-class Object
+class VMObject
 {
 public:
     static const UInt32 PROTO_MEMBER_HASH;
 
     // construct from prototype (holds pointer)
-    Object(HeapValue *proto);
-    Object(const Member *members, SizeType size, HeapValue *proto = nullptr);
-    Object(const Object &other);
-    ~Object();
+    VMObject(HeapValue *proto);
+    VMObject(const Member *members, SizeType size, HeapValue *proto = nullptr);
+    VMObject(const VMObject &other);
+    ~VMObject();
 
-    Object &operator=(const Object &other) = delete;
-    Object &operator=(Object &&other) noexcept = delete;
+    VMObject &operator=(const VMObject &other) = delete;
+    VMObject &operator=(VMObject &&other) noexcept = delete;
 
     // compare by memory address
-    bool operator==(const Object &other) const { return this == &other; }
+    bool operator==(const VMObject &other) const { return this == &other; }
 
     Member *LookupMemberFromHash(uint32_t hash) const
         { return m_object_map->Get(hash); }

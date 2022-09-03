@@ -9,7 +9,8 @@
 
 namespace hyperion::v2 {
 
-class TerrainErosion {
+class TerrainErosion
+{
     static constexpr UInt num_iterations = 250u;
     static constexpr Float erosion_scale = 0.05f;
     static constexpr Float evaporation = 0.9f;

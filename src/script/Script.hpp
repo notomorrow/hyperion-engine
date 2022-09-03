@@ -26,7 +26,8 @@ using namespace vm;
 
 class APIInstance;
 
-class Script {
+class Script
+{
 public:
     using Bytes = std::vector<UByte>;
 
@@ -38,14 +39,14 @@ public:
 
     const ErrorList &GetErrors() const { return m_errors; }
 
-    ExportedSymbolTable &GetExportedSymbols()             { return m_vm.GetState().GetExportedSymbols(); }
+    ExportedSymbolTable &GetExportedSymbols() { return m_vm.GetState().GetExportedSymbols(); }
     const ExportedSymbolTable &GetExportedSymbols() const { return m_vm.GetState().GetExportedSymbols(); }
 
     VM &GetVM() { return m_vm; }
     const VM &GetVM() const { return m_vm; }
 
-    bool IsBaked() const               { return !m_baked_bytes.empty(); }
-    bool IsCompiled() const            { return m_bytecode_chunk != nullptr; }
+    bool IsBaked() const { return !m_baked_bytes.empty(); }
+    bool IsCompiled() const { return m_bytecode_chunk != nullptr; }
 
     bool Compile(APIInstance &api_instance);
 
@@ -102,9 +103,9 @@ public:
 
     void CallFunction(FunctionHandle handle);
     void CallFunction(const char *name);
-    void CallFunction(HashFnv1 hash);
+    void CallFunction(HashFNV1 hash);
     void CallFunctionArgV(const char *name, Value *args, ArgCount num_args);
-    void CallFunctionArgV(HashFnv1 hash, Value *args, ArgCount num_args);
+    void CallFunctionArgV(HashFNV1 hash, Value *args, ArgCount num_args);
     void CallFunctionArgV(FunctionHandle handle, Value *args, ArgCount num_args);
 
     bool GetExportedValue(const char *name, Value *value)
@@ -134,7 +135,7 @@ public:
     }
 
     template <class ...Args>
-    void CallFunction(HashFnv1 hash, Args &&... args)
+    void CallFunction(HashFNV1 hash, Args &&... args)
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 

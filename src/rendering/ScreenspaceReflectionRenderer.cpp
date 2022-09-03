@@ -26,8 +26,8 @@ void ScreenspaceReflectionRenderer::Create(Engine *engine)
     CreateComputePipelines(engine);
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        for (UInt j = 0; j < static_cast<UInt>(m_ssr_image_outputs[i].size()); j++) {
-            m_ssr_image_outputs[i][j] = SSRImageOutput {
+        for (auto &image_output : m_ssr_image_outputs[i]) {
+            image_output = SSRImageOutput {
                 .image = std::make_unique<StorageImage>(
                     Extent3D(m_extent),
                     Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
@@ -37,7 +37,7 @@ void ScreenspaceReflectionRenderer::Create(Engine *engine)
                 .image_view = std::make_unique<ImageView>()
             };
 
-            m_ssr_image_outputs[i][j].Create(engine->GetDevice());
+            image_output.Create(engine->GetDevice());
         }
 
         m_ssr_radius_output[i] = SSRImageOutput {
@@ -209,9 +209,9 @@ void ScreenspaceReflectionRenderer::Render(
             .width                  = m_extent.width,
             .height                 = m_extent.height,
             .ray_step               = 1.5f,
-            .num_iterations         = 128.0f,
-            .max_ray_distance       = 512.0f,
-            .distance_bias          = 0.1f,
+            .num_iterations         = 64.0f,
+            .max_ray_distance       = 128.0f,
+            .distance_bias          = 0.15f,
             .offset                 = 0.01f,
             .eye_fade_start         = 0.95f,
             .eye_fade_end           = 0.98f,

@@ -55,11 +55,9 @@ bool TraceRays(
         }
     }
 
-    const int max_binary_search_steps = 8;
-
 	if (intersect) {
 		// binary search
-		for (i = 0; i < max_binary_search_steps; i++) {
+		for (; i < ssr_params.num_iterations; i++) {
             step *= 0.5;
             marching_position = marching_position - step * sign(step_delta);
 
@@ -101,7 +99,7 @@ float CalculateAlpha(
 
 void main(void)
 {
-    ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
 	vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
     const mat4 inverse_proj = inverse(scene.projection);
@@ -112,7 +110,6 @@ void main(void)
 
     vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, FetchDepth(texcoord)).xyz;
     vec3 ray_direction = normalize(reflect(normalize(ray_origin), view_space_normal));
-
 
 	vec2 hit_pixel;
     vec3 hit_point;

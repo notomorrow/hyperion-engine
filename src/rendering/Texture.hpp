@@ -45,26 +45,33 @@ public:
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
     
-    Image &GetImage()                          { return m_image; }
-    const Image &GetImage() const              { return m_image; }
-    ImageView &GetImageView()                  { return m_image_view; }
-    const ImageView &GetImageView() const      { return m_image_view; }
-    Sampler &GetSampler()                      { return m_sampler; }
-    const Sampler &GetSampler() const          { return m_sampler; }
-    Image::Type GetType() const                { return m_image.GetType(); }
-    UInt NumFaces() const                      { return m_image.NumFaces(); }
-    bool IsTextureCube() const                 { return m_image.IsTextureCube(); }
-    const Extent3D &GetExtent() const          { return m_image.GetExtent(); }
-    Image::InternalFormat GetFormat() const    { return m_image.GetTextureFormat(); }
-    Image::FilterMode GetFilterMode() const    { return m_sampler.GetFilterMode(); }
-    Image::WrapMode GetWrapMode() const        { return m_sampler.GetWrapMode(); }
+    Image &GetImage() { return m_image; }
+    const Image &GetImage() const { return m_image; }
+
+    ImageView &GetImageView() { return m_image_view; }
+    const ImageView &GetImageView() const { return m_image_view; }
+
+    Sampler &GetSampler() { return m_sampler; }
+    const Sampler &GetSampler() const { return m_sampler; }
+
+    Image::Type GetType() const { return m_image.GetType(); }
+
+    UInt NumFaces() const { return m_image.NumFaces(); }
+
+    bool IsTextureCube() const { return m_image.IsTextureCube(); }
+
+    const Extent3D &GetExtent() const { return m_image.GetExtent(); }
+
+    Image::InternalFormat GetFormat() const { return m_image.GetTextureFormat(); }
+    Image::FilterMode GetFilterMode() const { return m_sampler.GetFilterMode(); }
+    Image::WrapMode GetWrapMode() const { return m_sampler.GetWrapMode(); }
     
     void Init(Engine *engine);
 
 protected:
-    Image        m_image;
-    ImageView    m_image_view;
-    Sampler      m_sampler;
+    Image m_image;
+    ImageView m_image_view;
+    Sampler m_sampler;
 };
 
 class Texture2D : public Texture
@@ -141,8 +148,7 @@ public:
     )
     {
         if (m_image.GetBytes() != nullptr) {
-            SizeType offset = 0,
-                     face_size = 0;
+            SizeType offset = 0, face_size = 0;
 
             for (auto &texture : texture_faces) {
                 if (texture != nullptr) {

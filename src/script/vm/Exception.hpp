@@ -6,7 +6,8 @@
 namespace hyperion {
 namespace vm {
 
-class Exception {
+class Exception
+{
 public:
     Exception(const char *str);
     Exception(const Exception &other);

@@ -262,8 +262,8 @@ void SparseVoxelOctree::Build(Engine *engine)
 
     m_counter->Reset(engine);
 
-    static constexpr UInt32 build_info[] = {0, 8};
-    static constexpr UInt32 indirect_info[] = {1, 1, 1};
+    static constexpr UInt32 build_info[] = { 0, 8 };
+    static constexpr UInt32 indirect_info[] = { 1, 1, 1 };
 
     const renderer::ComputePipeline::PushConstantData push_constants{
         .octree_data = {

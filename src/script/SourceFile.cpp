@@ -15,7 +15,7 @@ SourceFile::SourceFile()
 {
 }
 
-SourceFile::SourceFile(const std::string &filepath, size_t size)
+SourceFile::SourceFile(const std::string &filepath, SizeType size)
     : m_filepath(filepath),
       m_position(0),
       m_size(size)
@@ -75,7 +75,7 @@ SourceFile &SourceFile::operator>>(const std::string &str)
 {
     AssertThrowMsg(m_buffer != nullptr, "Not allocated");
 
-    size_t length = str.length();
+    const auto length = str.length();
     // make sure we have enough space in the buffer
     if (m_position + length >= m_size) {
         throw std::out_of_range("not enough space in buffer");
@@ -88,7 +88,7 @@ SourceFile &SourceFile::operator>>(const std::string &str)
     return *this;
 }
 
-void SourceFile::ReadIntoBuffer(const char *data, size_t size)
+void SourceFile::ReadIntoBuffer(const char *data, SizeType size)
 {
     AssertThrowMsg(m_buffer != nullptr, "Not allocated");
     AssertThrow(m_size >= size);

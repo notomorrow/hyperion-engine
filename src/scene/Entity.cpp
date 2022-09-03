@@ -129,14 +129,9 @@ void Entity::Update(Engine *engine, GameCounter::TickUnit delta)
         }
 
         const auto &octree_visibility_state = m_octree->GetVisibilityState();
-        const auto visibility_cursor = m_octree->LoadVisibilityCursor();
-
-        // m_visibility_state = m_octree->GetVisibilityState();
+        const auto visibility_cursor = m_octree->LoadPreviousVisibilityCursor();
 
         m_visibility_state.snapshots[visibility_cursor] = octree_visibility_state.snapshots[visibility_cursor];
-
-        // m_visibility_state.bits.store(octree_visibility_state.bits.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        // m_visibility_state.nonces[visibility_cursor].store(octree_visibility_state.nonces[visibility_cursor].load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
 
     if (m_shader_data_state.IsDirty()) {
@@ -160,19 +155,19 @@ void Entity::EnqueueRenderUpdates()
     AssertReady();
 
     const Skeleton::ID skeleton_id = m_skeleton != nullptr
-        ? m_skeleton->GetId()
+        ? m_skeleton->GetID()
         : Skeleton::empty_id;
 
     const Material::ID material_id = m_material != nullptr
-        ? m_material->GetId()
+        ? m_material->GetID()
         : Material::empty_id;
 
     const Mesh::ID mesh_id = m_mesh != nullptr
-        ? m_mesh->GetId()
+        ? m_mesh->GetID()
         : Mesh::empty_id;
 
     const Scene::ID scene_id = m_scene != nullptr
-        ? m_scene->GetId()
+        ? m_scene->GetID()
         : Scene::empty_id;
 
     const EntityDrawProxy draw_proxy {
@@ -297,7 +292,7 @@ void Entity::SetShader(Handle<Shader> &&shader)
         }
 
         RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-        new_renderable_attributes.shader_id = m_shader->GetId();
+        new_renderable_attributes.shader_id = m_shader->GetID();
         SetRenderableAttributes(new_renderable_attributes);
     } else {
         RebuildRenderableAttributes();
@@ -380,7 +375,7 @@ void Entity::RebuildRenderableAttributes()
     }
 
     new_renderable_attributes.shader_id = m_shader != nullptr
-        ? m_shader->GetId()
+        ? m_shader->GetID()
         : Shader::empty_id;
     
 
@@ -587,7 +582,7 @@ void Entity::RemoveFromOctree(Engine *engine)
     DebugLog(
         LogType::Debug,
         "Remove entity #%u from octree\n",
-        GetId().value
+        GetID().value
     );
 
     m_octree->OnEntityRemoved(engine, this);

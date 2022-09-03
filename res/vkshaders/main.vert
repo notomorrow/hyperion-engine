@@ -26,12 +26,14 @@ layout (location = 7) in vec4 a_bone_indices;
 
 #define HYP_ENABLE_SKINNING 1
 
-struct Skeleton {
+struct Skeleton
+{
     mat4 bones[128];
 };
 
 
-layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer {
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer
+{
     Skeleton skeleton;
 };
 
@@ -74,8 +76,8 @@ void main() {
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_camera_position = scene.camera_position.xyz;
     
-    v_tangent    = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
-	v_bitangent  = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
+    v_tangent = (normal_matrix * vec4(a_tangent, 0.0)).xyz;
+	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
     
     v_view_space_position = (scene.view * position).xyz;

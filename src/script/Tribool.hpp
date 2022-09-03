@@ -1,7 +1,8 @@
 #ifndef TRIBOOL_HPP
 #define TRIBOOL_HPP
 
-class Tribool {
+class Tribool
+{
 public:
     enum TriboolValue : signed char {
         TRI_INDETERMINATE = -1,

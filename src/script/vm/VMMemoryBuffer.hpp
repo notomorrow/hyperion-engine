@@ -8,14 +8,14 @@
 namespace hyperion {
 namespace vm {
 
-class MemoryBuffer {
+class VMMemoryBuffer {
 public:
-    MemoryBuffer(size_t size = 0);
-    MemoryBuffer(const MemoryBuffer &other);
-    ~MemoryBuffer();
+    VMMemoryBuffer(size_t size = 0);
+    VMMemoryBuffer(const VMMemoryBuffer &other);
+    ~VMMemoryBuffer();
 
-    MemoryBuffer &operator=(const MemoryBuffer &other);
-    bool operator==(const MemoryBuffer &other) const { return this == &other; }
+    VMMemoryBuffer &operator=(const VMMemoryBuffer &other);
+    bool operator==(const VMMemoryBuffer &other) const { return this == &other; }
 
     size_t GetSize() const { return m_size; }
     void *GetBuffer() const { return m_buffer; }

@@ -1,4 +1,4 @@
-#include <script/compiler/emit/aex-builder/InternalByteStream.hpp>
+#include <script/compiler/emit/codegen/InternalByteStream.hpp>
 
 #include <system/Debug.hpp>
 #include <iostream>

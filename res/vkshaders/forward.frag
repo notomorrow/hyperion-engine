@@ -54,7 +54,7 @@ void main()
     
     gbuffer_albedo = material.albedo;
     
-    float ao        = 1.0;
+    float ao = 1.0;
     float metalness = material.metalness;
     float roughness = material.roughness;
     
@@ -104,8 +104,6 @@ void main()
     if (HAS_TEXTURE(MATERIAL_TEXTURE_AO_MAP)) {
         ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
-
-    // gbuffer_albedo = vec4(normal.xyz * 0.5 + 0.5, 1.0);
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(roughness, metalness, 0.0, ao);

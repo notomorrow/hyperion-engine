@@ -19,7 +19,8 @@ struct LabelInfo {
     LabelPosition position;
 };
 
-struct BuildParams {
+struct BuildParams
+{
     size_t block_offset = 0;
     size_t local_offset = 0;
     std::vector<LabelInfo> labels;

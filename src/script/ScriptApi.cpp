@@ -508,7 +508,7 @@ void API::ModuleDefine::BindType(
             member_data.push_back(member_data_instance);
         }
 
-        vm::Object prototype_object(
+        vm::VMObject prototype_object(
             member_data.data(),
             member_data.size()
         );
@@ -550,7 +550,7 @@ void API::ModuleDefine::BindType(
         }
 
 
-        vm::Object class_object(
+        vm::VMObject class_object(
             member_data.data(),
             member_data.size(),
             prototype_ptr

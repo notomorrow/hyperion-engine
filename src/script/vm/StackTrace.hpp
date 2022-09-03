@@ -3,7 +3,8 @@
 
 #include <core/Core.hpp>
 
-struct StackTrace {
+struct StackTrace
+{
     int call_addresses[10];
 
     StackTrace()

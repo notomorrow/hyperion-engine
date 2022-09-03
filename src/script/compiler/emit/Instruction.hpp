@@ -16,13 +16,15 @@
 
 namespace hyperion::compiler {
 
-struct Instruction : public Buildable {
+struct Instruction : public Buildable
+{
     Opcode opcode;
 
     virtual ~Instruction() = default;
 };
 
-struct LabelMarker final : public Buildable {
+struct LabelMarker final : public Buildable
+{
     LabelId id;
 
     LabelMarker(LabelId id)
@@ -32,7 +34,8 @@ struct LabelMarker final : public Buildable {
     virtual ~LabelMarker() = default;
 };
 
-struct Jump final : public Buildable {
+struct Jump final : public Buildable
+{
     enum JumpClass {
         JMP,
         JE,
@@ -52,8 +55,10 @@ struct Jump final : public Buildable {
     virtual ~Jump() = default;
 };
 
-struct Comparison final : public Buildable {
-    enum ComparisonClass {
+struct Comparison final : public Buildable
+{
+    enum ComparisonClass
+    {
         CMP,
         CMPZ
     } comparison_class;
@@ -79,7 +84,8 @@ struct Comparison final : public Buildable {
     virtual ~Comparison() = default;
 };
 
-struct FunctionCall : public Buildable {
+struct FunctionCall : public Buildable
+{
     RegIndex reg;
     uint8_t nargs;
 
@@ -93,12 +99,14 @@ struct FunctionCall : public Buildable {
     virtual ~FunctionCall() = default;
 };
 
-struct Return : public Buildable {
+struct Return : public Buildable
+{
     Return() = default;
     virtual ~Return() = default;
 };
 
-struct StoreLocal : public Buildable {
+struct StoreLocal : public Buildable
+{
     RegIndex reg;
 
     StoreLocal() = default;
@@ -109,7 +117,8 @@ struct StoreLocal : public Buildable {
     virtual ~StoreLocal() = default;
 };
 
-struct PopLocal : public Buildable {
+struct PopLocal : public Buildable
+{
     size_t amt;
 
     PopLocal() = default;
@@ -120,7 +129,8 @@ struct PopLocal : public Buildable {
     virtual ~PopLocal() = default;
 };
 
-struct LoadRef : public Buildable {
+struct LoadRef : public Buildable
+{
     RegIndex dst;
     RegIndex src;
 
@@ -134,7 +144,8 @@ struct LoadRef : public Buildable {
     virtual ~LoadRef() = default;
 };
 
-struct LoadDeref : public Buildable {
+struct LoadDeref : public Buildable
+{
     RegIndex dst;
     RegIndex src;
 
@@ -148,7 +159,8 @@ struct LoadDeref : public Buildable {
     virtual ~LoadDeref() = default;
 };
 
-struct ConstI32 : public Buildable {
+struct ConstI32 : public Buildable
+{
     RegIndex reg;
     int32_t value;
 
@@ -162,7 +174,8 @@ struct ConstI32 : public Buildable {
     virtual ~ConstI32() = default;
 };
 
-struct ConstI64 : public Buildable {
+struct ConstI64 : public Buildable
+{
     RegIndex reg;
     int64_t value;
 
@@ -176,7 +189,8 @@ struct ConstI64 : public Buildable {
     virtual ~ConstI64() = default;
 };
 
-struct ConstU32 : public Buildable {
+struct ConstU32 : public Buildable
+{
     RegIndex reg;
     uint32_t value;
 
@@ -190,7 +204,8 @@ struct ConstU32 : public Buildable {
     virtual ~ConstU32() = default;
 };
 
-struct ConstU64 : public Buildable {
+struct ConstU64 : public Buildable
+{
     RegIndex reg;
     uint64_t value;
 
@@ -204,7 +219,8 @@ struct ConstU64 : public Buildable {
     virtual ~ConstU64() = default;
 };
 
-struct ConstF32 : public Buildable {
+struct ConstF32 : public Buildable
+{
     RegIndex reg;
     float value;
 
@@ -218,7 +234,8 @@ struct ConstF32 : public Buildable {
     virtual ~ConstF32() = default;
 };
 
-struct ConstF64 : public Buildable {
+struct ConstF64 : public Buildable
+{
     RegIndex reg;
     double value;
 
@@ -232,7 +249,8 @@ struct ConstF64 : public Buildable {
     virtual ~ConstF64() = default;
 };
 
-struct ConstBool : public Buildable {
+struct ConstBool : public Buildable
+{
     RegIndex reg;
     bool value;
 
@@ -246,7 +264,8 @@ struct ConstBool : public Buildable {
     virtual ~ConstBool() = default;
 };
 
-struct ConstNull : public Buildable {
+struct ConstNull : public Buildable
+{
     RegIndex reg;
 
     ConstNull() = default;
@@ -258,18 +277,21 @@ struct ConstNull : public Buildable {
     virtual ~ConstNull() = default;
 };
 
-struct BuildableTryCatch final : public Buildable {
+struct BuildableTryCatch final : public Buildable
+{
     LabelId catch_label_id;
 };
 
-struct BuildableFunction final : public Buildable {
+struct BuildableFunction final : public Buildable
+{
     RegIndex reg;
     LabelId label_id;
     uint8_t nargs;
     uint8_t flags;
 };
 
-struct BuildableType final : public Buildable {
+struct BuildableType final : public Buildable
+{
     RegIndex reg;
     std::string name;
     std::vector<std::string> members;
@@ -277,14 +299,16 @@ struct BuildableType final : public Buildable {
     virtual ~BuildableType() = default;
 };
 
-struct BuildableString final : public Buildable {
+struct BuildableString final : public Buildable
+{
     RegIndex reg;
     std::string value;
 
     virtual ~BuildableString() = default;
 };
 
-struct BinOp final : public Instruction {
+struct BinOp final : public Instruction
+{
     RegIndex reg_lhs;
     RegIndex reg_rhs;
     RegIndex reg_dst;
@@ -292,7 +316,8 @@ struct BinOp final : public Instruction {
     virtual ~BinOp() = default;
 };
 
-struct Comment final : public Instruction {
+struct Comment final : public Instruction
+{
     std::string value;
 
     Comment() = default;
@@ -301,7 +326,8 @@ struct Comment final : public Instruction {
     virtual ~Comment() = default;
 };
 
-struct SymbolExport final : public Instruction {
+struct SymbolExport final : public Instruction
+{
     RegIndex reg;
     std::string name;
 
@@ -312,7 +338,8 @@ struct SymbolExport final : public Instruction {
 };
 
 template <class...Args>
-struct RawOperation final : public Instruction {
+struct RawOperation final : public Instruction
+{
     std::vector<char> data;
 
     RawOperation() = default;
@@ -353,102 +380,5 @@ struct RawOperation<T, Ts...> : RawOperation<Ts...> {
 
 } // namespace hyperion::compiler
 
-
-/*template <class...Ts>
-struct Instruction {
-public:
-    Instruction()
-    {
-    }
-
-    Instruction(const Instruction &other)
-        : m_data(other.m_data)
-    {
-    }
-
-    bool Empty() const
-        { return !m_data.empty() && !m_data.back().empty(); }
-    char GetOpcode() const
-        { return m_data.back().back(); }
-
-    std::vector<std::vector<char>> m_data;
-
-protected:
-    void Accept(NamesPair_t name)
-    {
-        std::vector<char> operand;
-
-        char header[sizeof(name.first)];
-        std::memcpy(&header[0], &name.first, sizeof(name.first));
-
-        for (size_t j = 0; j < sizeof(name.first); j++) {
-            operand.push_back(header[j]);
-        }
-        
-        for (size_t j = 0; j < name.second.size(); j++) {
-            operand.push_back(name.second[j]);
-        }
-        
-        m_data.push_back(operand);
-    }
-
-    void Accept(std::vector<NamesPair_t> names)
-    {
-        std::vector<char> operand;
-
-        for (size_t i = 0; i < names.size(); i++) {
-            char header[sizeof(names[i].first)];
-            std::memcpy(&header[0], &names[i].first, sizeof(names[i].first));
-
-            for (size_t j = 0; j < sizeof(names[i].first); j++) {
-                operand.push_back(header[j]);
-            }
-            for (size_t j = 0; j < names[i].second.size(); j++) {
-                operand.push_back(names[i].second[j]);
-            }
-        }
-        
-        m_data.push_back(operand);
-    }
-
-    void Accept(const char *str)
-    {
-        // do not copy NUL byte
-        size_t length = std::strlen(str);
-        std::vector<char> operand;
-        if (length) {
-            operand.resize(length);
-            std::memcpy(&operand[0], str, length);
-        }
-        m_data.push_back(operand);
-    }
-
-    template <typename T>
-    void Accept(std::vector<T> ts)
-    {
-        std::vector<char> operand;
-        operand.resize(sizeof(T) * ts.size());
-        std::memcpy(&operand[0], &ts[0], sizeof(T) * ts.size());
-        m_data.push_back(operand);
-    }
-
-    template <typename T>
-    void Accept(T t)
-    {
-        std::vector<char> operand;
-        operand.resize(sizeof(t));
-        std::memcpy(&operand[0], &t, sizeof(t));
-        m_data.push_back(operand);
-    }
-
-private:
-    size_t pos = 0;
-};
-
-template <class T, class... Ts>
-struct Instruction<T, Ts...> : Instruction<Ts...> {
-    Instruction(T t, Ts...ts) : Instruction<Ts...>(ts...)
-        { this->Accept(t); }
-};*/
 
 #endif

@@ -57,14 +57,14 @@ void main(void)
             const float max_mip_level = 4.0;
 
             const vec2 delta_p = (uv - texcoord) * ssr_params.dimension;
-            float adj_length   = length(delta_p);
+            float adj_length = length(delta_p);
             const vec2 adj_dir = normalize(delta_p);
 
             vec2 sample_texcoord = texcoord;//+ (offset * filter_size);
-            ivec2 sample_coord   = ivec2(sample_texcoord * vec2(ssr_params.dimension));
+            ivec2 sample_coord = ivec2(sample_texcoord * vec2(ssr_params.dimension));
 
-            vec4  hit_data = imageLoad(ssr_uv_image, sample_coord);
-            vec2  hit_uv   = hit_data.xy;
+            vec4 hit_data = imageLoad(ssr_uv_image, sample_coord);
+            vec2 hit_uv = hit_data.xy;
             float hit_mask = hit_data.w;
 
             if (hit_mask >= 0.001) {

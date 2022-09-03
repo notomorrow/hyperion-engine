@@ -5,11 +5,11 @@
 #include <script/vm/VM.hpp>
 #include <script/vm/Value.hpp>
 #include <script/vm/HeapValue.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/MemoryBuffer.hpp>
-#include <script/vm/Object.hpp>
-#include <script/vm/ImmutableString.hpp>
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMMemoryBuffer.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMString.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 
 #include <script/Instructions.hpp>
 #include <Types.hpp>
@@ -26,7 +26,7 @@
     do { \
         switch (result.m_type) { \
             case Value::I32: \
-                result.m_value.i32 = a.i oper b.i; \
+                result.m_value.i32 = static_cast<Int32>(a.i) oper static_cast<Int32>(b.i); \
                 break; \
             case Value::I64: \
                 result.m_value.i64 = a.i oper b.i; \
@@ -35,12 +35,12 @@
                 if (a.flags & Number::FLAG_SIGNED) { \
                     result.m_value.u32 = static_cast<UInt32>(a.i); \
                 } else { \
-                    result.m_value.u32 = a.u; \
+                    result.m_value.u32 = static_cast<UInt32>(a.u); \
                 } \
                 if (b.flags & Number::FLAG_SIGNED) { \
                     result.m_value.u32 oper##= static_cast<UInt32>(b.i); \
                 } else { \
-                    result.m_value.u32 oper##= b.u; \
+                    result.m_value.u32 oper##= static_cast<UInt32>(b.u); \
                 } \
                 break; \
             case Value::U64: \
@@ -50,7 +50,7 @@
                     result.m_value.u64 = a.u; \
                 } \
                 if (b.flags & Number::FLAG_SIGNED) { \
-                    result.m_value.u64 oper##= static_cast<UInt32>(b.i); \
+                    result.m_value.u64 oper##= static_cast<UInt64>(b.i); \
                 } else { \
                     result.m_value.u64 oper##= b.u; \
                 } \
@@ -61,14 +61,14 @@
                 } else if (a.flags & Number::FLAG_UNSIGNED) { \
                     result.m_value.f = static_cast<Float32>(a.u); \
                 } else { \
-                    result.m_value.f = a.f; \
+                    result.m_value.f = static_cast<Float32>(a.f); \
                 } \
                 if (b.flags & Number::FLAG_SIGNED) { \
                     result.m_value.f oper##= static_cast<Float32>(b.i); \
                 } else if (a.flags & Number::FLAG_UNSIGNED) { \
                     result.m_value.f oper##= static_cast<Float32>(b.u); \
                 } else { \
-                    result.m_value.f oper##= b.f; \
+                    result.m_value.f oper##= static_cast<Float32>(b.f); \
                 } \
                 break; \
             case Value::F64: \
@@ -97,7 +97,7 @@
     do { \
         switch (result.m_type) { \
             case Value::I32: \
-                result.m_value.i32 = a.i oper b.i; \
+                result.m_value.i32 = static_cast<Int32>(a.i) oper static_cast<Int32>(b.i); \
                 break; \
             case Value::I64: \
                 result.m_value.i64 = a.i oper b.i; \
@@ -106,12 +106,12 @@
                 if (a.flags & Number::FLAG_SIGNED) { \
                     result.m_value.u32 = static_cast<UInt32>(a.i); \
                 } else { \
-                    result.m_value.u32 = a.u; \
+                    result.m_value.u32 = static_cast<UInt32>(a.u); \
                 } \
                 if (b.flags & Number::FLAG_SIGNED) { \
                     result.m_value.u32 oper##= static_cast<UInt32>(b.i); \
                 } else { \
-                    result.m_value.u32 oper##= b.u; \
+                    result.m_value.u32 oper##= static_cast<UInt32>(b.u); \
                 } \
                 break; \
             case Value::U64: \
@@ -121,7 +121,7 @@
                     result.m_value.u64 = a.u; \
                 } \
                 if (b.flags & Number::FLAG_SIGNED) { \
-                    result.m_value.u64 oper##= static_cast<UInt32>(b.i); \
+                    result.m_value.u64 oper##= static_cast<UInt64>(b.i); \
                 } else { \
                     result.m_value.u64 oper##= b.u; \
                 } \
@@ -135,7 +135,9 @@
 namespace hyperion {
 namespace vm {
 
-struct InstructionHandler {
+class InstructionHandler
+{
+public:
     VMState *state;
     ExecutionThread *thread;
     BytecodeStream *bs;
@@ -154,7 +156,7 @@ struct InstructionHandler {
         // the value will be freed on
         // the destructor call of state->m_static_memory
         HeapValue *hv = new HeapValue();
-        hv->Assign(ImmutableString(str));
+        hv->Assign(VMString(str));
 
         Value sv;
         sv.m_type = Value::HEAP_POINTER;
@@ -192,7 +194,7 @@ struct InstructionHandler {
         // the value will be freed on
         // the destructor call of state->m_static_memory
         HeapValue *hv = new HeapValue();
-        hv->Assign(TypeInfo(type_name, size, names));
+        hv->Assign(VMTypeInfo(type_name, size, names));
 
         Value sv;
         sv.m_type = Value::HEAP_POINTER;
@@ -281,7 +283,7 @@ struct InstructionHandler {
     HYP_FORCE_INLINE void LoadString(BCRegister reg, uint32_t len, const char *str)
     {
         if (HeapValue *hv = state->HeapAlloc(thread)) {
-            hv->Assign(ImmutableString(str));
+            hv->Assign(VMString(str));
 
             // assign register value to the allocated object
             Value &sv = thread->m_regs[reg];
@@ -333,7 +335,7 @@ struct InstructionHandler {
         }
 
         // create prototype object
-        hv->Assign(Object(members, size));
+        hv->Assign(VMObject(members, size));
 
         delete[] members;
 
@@ -357,7 +359,7 @@ struct InstructionHandler {
                     Exception::NullReferenceException()
                 );
                 return;
-            } else if (Object *obj_ptr = hv->GetPointer<Object>()) {
+            } else if (VMObject *obj_ptr = hv->GetPointer<VMObject>()) {
                 AssertThrow(index < obj_ptr->GetSize());
                 thread->m_regs[dst] = obj_ptr->GetMember(index).value;
                 return;
@@ -366,7 +368,7 @@ struct InstructionHandler {
 
         state->ThrowException(
             thread,
-            Exception("Cannot access member by index: Not an Object")
+            Exception("Cannot access member by index: Not an VMObject")
         );
     }
 
@@ -383,7 +385,7 @@ struct InstructionHandler {
                     Exception::NullReferenceException()
                 );
                 return;
-            } else if (Object *object = hv->GetPointer<Object>()) {
+            } else if (VMObject *object = hv->GetPointer<VMObject>()) {
                 if (Member *member = object->LookupMemberFromHash(hash)) {
                     thread->m_regs[dst_reg] = member->value;
                 } else {
@@ -398,7 +400,7 @@ struct InstructionHandler {
 
         state->ThrowException(
             thread,
-            Exception("Cannot access member by hash: Not an Object")
+            Exception("Cannot access member by hash: Not an VMObject")
         );
     }
 
@@ -423,9 +425,10 @@ struct InstructionHandler {
             return;
         }
 
-        union {
+        union
+        {
             Int64 index;
-            ImmutableString *str;
+            VMString *str;
         } key;
 
         if (!thread->m_regs[index_reg].GetInteger(&key.index)) {
@@ -436,11 +439,11 @@ struct InstructionHandler {
             return;
         }
 
-        Array *array = ptr->GetPointer<Array>();
+        VMArray *array = ptr->GetPointer<VMArray>();
 
         if (array == nullptr) {
-            if (auto *memory_buffer = ptr->GetPointer<MemoryBuffer>()) {
-                if ((size_t)key.index >= memory_buffer->GetSize()) {
+            if (auto *memory_buffer = ptr->GetPointer<VMMemoryBuffer>()) {
+                if (static_cast<SizeType>(key.index) >= memory_buffer->GetSize()) {
                     state->ThrowException(
                         thread,
                         Exception::OutOfBoundsException()
@@ -451,8 +454,8 @@ struct InstructionHandler {
 
                 if (key.index < 0) {
                     // wrap around (python style)
-                    key.index = (Int64)(memory_buffer->GetSize() + key.index);
-                    if (key.index < 0 || (size_t)key.index >= memory_buffer->GetSize()) {
+                    key.index = static_cast<Int64>(memory_buffer->GetSize() + key.index);
+                    if (key.index < 0 || static_cast<SizeType>(key.index) >= memory_buffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -461,9 +464,10 @@ struct InstructionHandler {
                     }
                 }
 
+                // load the uint8 in the memory buffer, store it as int32
                 Value memory_buffer_data;
                 memory_buffer_data.m_type = Value::I32;
-                memory_buffer_data.m_value.i32 = static_cast<Int32>(reinterpret_cast<char *>(memory_buffer->GetBuffer())[key.index]);
+                memory_buffer_data.m_value.i32 = static_cast<Int32>(static_cast<UInt8 *>(memory_buffer->GetBuffer())[key.index]);
 
                 thread->m_regs[dst_reg] = memory_buffer_data;
 
@@ -478,7 +482,7 @@ struct InstructionHandler {
             return;
         }
         
-        if ((size_t)key.index >= array->GetSize()) {
+        if (static_cast<SizeType>(key.index) >= array->GetSize()) {
             state->ThrowException(
                 thread,
                 Exception::OutOfBoundsException()
@@ -558,7 +562,7 @@ struct InstructionHandler {
         if (sv.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
                 thread,
-                Exception("Cannot assign member by index: Not an Object")
+                Exception("Cannot assign member by index: Not an VMObject")
             );
             return;
         }
@@ -572,11 +576,11 @@ struct InstructionHandler {
             return;
         }
         
-        Object *object = hv->GetPointer<Object>();
+        VMObject *object = hv->GetPointer<VMObject>();
         if (object == nullptr) {
             state->ThrowException(
                 thread,
-                Exception("Cannot assign member by index: Not an Object")
+                Exception("Cannot assign member by index: Not an VMObject")
             );
             return;
         }
@@ -599,7 +603,7 @@ struct InstructionHandler {
         if (sv.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
                 thread,
-                Exception("Cannot assign member by hash: Not an Object")
+                Exception("Cannot assign member by hash: Not an VMObject")
             );
             return;
         }
@@ -613,11 +617,11 @@ struct InstructionHandler {
             return;
         }
 
-        Object *object = hv->GetPointer<Object>();
+        VMObject *object = hv->GetPointer<VMObject>();
         if (object == nullptr) {
             state->ThrowException(
                 thread,
-                Exception("Cannot assign member by hash: Not an Object")
+                Exception("Cannot assign member by hash: Not an VMObject")
             );
             return;
         }
@@ -656,11 +660,11 @@ struct InstructionHandler {
             return;
         }
 
-        Array *array = hv->GetPointer<Array>();
+        VMArray *array = hv->GetPointer<VMArray>();
 
         if (array == nullptr) {
-            if (auto *memory_buffer = hv->GetPointer<MemoryBuffer>()) {
-                if ((size_t)index >= memory_buffer->GetSize()) {
+            if (auto *memory_buffer = hv->GetPointer<VMMemoryBuffer>()) {
+                if (static_cast<SizeType>(index) >= memory_buffer->GetSize()) {
                     state->ThrowException(
                         thread,
                         Exception::OutOfBoundsException()
@@ -671,8 +675,8 @@ struct InstructionHandler {
 
                 if (index < 0) {
                     // wrap around (python style)
-                    index = (Int64)(memory_buffer->GetSize() + index);
-                    if (index < 0 || (size_t)index >= memory_buffer->GetSize()) {
+                    index = static_cast<Int64>(memory_buffer->GetSize() + static_cast<SizeType>(index));
+                    if (index < 0 || static_cast<SizeType>(index) >= memory_buffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -692,9 +696,7 @@ struct InstructionHandler {
                     return;
                 }
 
-                reinterpret_cast<unsigned char *>(memory_buffer->GetBuffer())[index] = dst_data.flags & Number::FLAG_SIGNED
-                    ? static_cast<UInt64>(dst_data.i)
-                    : dst_data.u;
+                Memory::Copy(&static_cast<UInt8 *>(memory_buffer->GetBuffer())[index], &dst_data, sizeof(dst_data));
 
                 return;
             }
@@ -750,7 +752,7 @@ struct InstructionHandler {
             return;
         }
 
-        Array *array = hv->GetPointer<Array>();
+        VMArray *array = hv->GetPointer<VMArray>();
 
         Number index;
         Value &index_register_value = thread->m_regs[index_reg];
@@ -765,7 +767,7 @@ struct InstructionHandler {
         }
 
         if (array == nullptr) {
-            if (auto *memory_buffer = hv->GetPointer<MemoryBuffer>()) {
+            if (auto *memory_buffer = hv->GetPointer<VMMemoryBuffer>()) {
                 Number dst_data;
 
                 if (!thread->m_regs[src_reg].GetSignedOrUnsigned(&dst_data)) {
@@ -780,7 +782,7 @@ struct InstructionHandler {
                 if (index.flags & Number::FLAG_SIGNED) {
                     Int64 index_value = index.i;
 
-                    if ((size_t)index_value >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -791,8 +793,8 @@ struct InstructionHandler {
 
                     if (index_value < 0) {
                         // wrap around (python style)
-                        index_value = (Int64)(memory_buffer->GetSize() + index_value);
-                        if (index_value < 0 || (size_t)index_value >= memory_buffer->GetSize()) {
+                        index_value = static_cast<Int64>(memory_buffer->GetSize() + static_cast<SizeType>(index_value));
+                        if (index_value < 0 || static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
                             state->ThrowException(
                                 thread,
                                 Exception::OutOfBoundsException()
@@ -800,14 +802,12 @@ struct InstructionHandler {
                             return;
                         }
                     }
-
-                    reinterpret_cast<unsigned char *>(memory_buffer->GetBuffer())[index_value] = dst_data.flags & Number::FLAG_SIGNED
-                        ? static_cast<UInt64>(dst_data.i)
-                        : dst_data.u;
+                    
+                    Memory::Copy(&static_cast<UInt8 *>(memory_buffer->GetBuffer())[index_value], &dst_data, sizeof(dst_data));
                 } else { // unsigned
-                    UInt64 index_value = index.u;
+                    const UInt64 index_value = index.u;
 
-                    if ((size_t)index_value >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -816,9 +816,7 @@ struct InstructionHandler {
                         return;
                     }
 
-                    reinterpret_cast<unsigned char *>(memory_buffer->GetBuffer())[index_value] = dst_data.flags & Number::FLAG_SIGNED
-                        ? static_cast<UInt64>(dst_data.i)
-                        : dst_data.u;
+                    Memory::Copy(&static_cast<UInt8 *>(memory_buffer->GetBuffer())[index_value], &dst_data, sizeof(dst_data));
                 }
 
                 return;
@@ -834,7 +832,7 @@ struct InstructionHandler {
         if (index.flags & Number::FLAG_SIGNED) {
             Int64 index_value = index.i;
 
-            if ((size_t)index_value >= array->GetSize()) {
+            if (static_cast<SizeType>(index_value) >= array->GetSize()) {
                 state->ThrowException(
                     thread,
                     Exception::OutOfBoundsException()
@@ -845,8 +843,8 @@ struct InstructionHandler {
 
             if (index_value < 0) {
                 // wrap around (python style)
-                index_value = (Int64)(array->GetSize() + index_value);
-                if (index_value < 0 || (size_t)index_value >= array->GetSize()) {
+                index_value = static_cast<Int64>(array->GetSize() + static_cast<SizeType>(index_value));
+                if (index_value < 0 || static_cast<SizeType>(index_value >= array->GetSize())) {
                     state->ThrowException(
                         thread,
                         Exception::OutOfBoundsException()
@@ -857,9 +855,9 @@ struct InstructionHandler {
 
             array->AtIndex(index_value) = thread->m_regs[src_reg];
         } else { // unsigned
-            UInt64 index_value = index.u;
+            const UInt64 index_value = index.u;
 
-            if ((size_t)index_value >= array->GetSize()) {
+            if (static_cast<SizeType>(index_value) >= array->GetSize()) {
                 state->ThrowException(
                     thread,
                     Exception::OutOfBoundsException()
@@ -885,7 +883,7 @@ struct InstructionHandler {
         dst.m_type = Value::BOOLEAN;
 
         if (src.m_type == Value::HEAP_POINTER && src.m_value.ptr != nullptr) {
-            if (Object *object = src.m_value.ptr->GetPointer<Object>()) {
+            if (VMObject *object = src.m_value.ptr->GetPointer<VMObject>()) {
                 dst.m_value.b = (object->LookupMemberFromHash(hash) != nullptr);
                 return;
             }
@@ -931,7 +929,7 @@ struct InstructionHandler {
             return;
         }
 
-        Array *array = hv->GetPointer<Array>();
+        VMArray *array = hv->GetPointer<VMArray>();
         if (array == nullptr) {
             state->ThrowException(
                 thread,
@@ -1035,10 +1033,10 @@ struct InstructionHandler {
 
         // the NEW instruction makes a copy of the $proto data member
         // of the prototype object.
-        Object *proto_obj = proto_sv.m_value.ptr->GetPointer<Object>();
-        AssertThrowMsg(proto_obj != nullptr, "NEW operand should be an Object");
+        VMObject *proto_obj = proto_sv.m_value.ptr->GetPointer<VMObject>();
+        AssertThrowMsg(proto_obj != nullptr, "NEW operand should be an VMObject");
 
-        Member *proto_mem = proto_obj->LookupMemberFromHash(Object::PROTO_MEMBER_HASH);
+        Member *proto_mem = proto_obj->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH);
         AssertThrow(proto_mem != nullptr);
 
         if (proto_mem->value.m_value.ptr == nullptr) {
@@ -1053,12 +1051,12 @@ struct InstructionHandler {
         Value &res = thread->m_regs[dst];
 
         if (proto_mem->value.m_type == Value::HEAP_POINTER) {
-            if (Object *proto_mem_obj = proto_mem->value.m_value.ptr->GetPointer<Object>()) {
+            if (VMObject *proto_mem_obj = proto_mem->value.m_value.ptr->GetPointer<VMObject>()) {
                 // allocate heap value for new object
                 HeapValue *hv = state->HeapAlloc(thread);
                 AssertThrow(hv != nullptr);
 
-                hv->Assign(Object(proto_mem_obj->GetMembers(), proto_mem_obj->GetSize(), proto_mem->value.m_value.ptr));
+                hv->Assign(VMObject(proto_mem_obj->GetMembers(), proto_mem_obj->GetSize(), proto_mem->value.m_value.ptr));
 
                 res.m_type = Value::HEAP_POINTER;
                 res.m_value.ptr = hv;
@@ -1084,8 +1082,8 @@ struct InstructionHandler {
         HeapValue *hv = state->HeapAlloc(thread);
         AssertThrow(hv != nullptr);
         
-        // create the Object from the proto
-        hv->Assign(Object(proto_mem->value.m_value.ptr));
+        // create the VMObject from the proto
+        hv->Assign(VMObject(proto_mem->value.m_value.ptr));
 
         // assign register value to the allocated object
         Value &sv = thread->m_regs[dst];
@@ -1099,7 +1097,7 @@ struct InstructionHandler {
         HeapValue *hv = state->HeapAlloc(thread);
         AssertThrow(hv != nullptr);
 
-        hv->Assign(Array(size));
+        hv->Assign(VMArray(size));
 
         // assign register value to the allocated object
         Value &sv = thread->m_regs[dst];
@@ -1318,7 +1316,7 @@ struct InstructionHandler {
                     state->ThrowException(thread, Exception::DivisionByZeroException());
                     break;
                 }
-                result.m_value.i32 = a.i / b.i;
+                result.m_value.i32 = static_cast<Int32>(a.i / b.i);
                 break;
             case Value::I64:
                 if (b.i == 0) {
@@ -1344,7 +1342,7 @@ struct InstructionHandler {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.u32 = result.m_value.u32 / b.u;
+                    result.m_value.u32 = result.m_value.u32 / static_cast<UInt32>(b.u);
                 }
                 break;
             case Value::U64:
@@ -1373,7 +1371,7 @@ struct InstructionHandler {
                 } else if (a.flags & Number::FLAG_UNSIGNED) {
                     result.m_value.f = static_cast<Float32>(a.u);
                 } else {
-                    result.m_value.f = a.f;
+                    result.m_value.f = static_cast<Float32>(a.f);
                 }
                 if (b.flags & Number::FLAG_SIGNED) {
                     result.m_value.f = result.m_value.f / static_cast<Float32>(b.i);
@@ -1392,7 +1390,7 @@ struct InstructionHandler {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.f = result.m_value.f / b.f;
+                    result.m_value.f = result.m_value.f / static_cast<Float32>(b.f);
                 }
                 break;
             case Value::F64:
@@ -1461,7 +1459,7 @@ struct InstructionHandler {
                     state->ThrowException(thread, Exception::DivisionByZeroException());
                     break;
                 }
-                result.m_value.i32 = a.i % b.i;
+                result.m_value.i32 = static_cast<Int32>(a.i % b.i);
                 break;
             case Value::I64:
                 if (b.i == 0) {
@@ -1474,7 +1472,7 @@ struct InstructionHandler {
                 if (a.flags & Number::FLAG_SIGNED) {
                     result.m_value.u32 = static_cast<UInt32>(a.i);
                 } else {
-                    result.m_value.u32 = a.u;
+                    result.m_value.u32 = static_cast<UInt32>(a.u);
                 }
                 if (b.flags & Number::FLAG_SIGNED) {
                     if (b.i == 0) {
@@ -1487,7 +1485,7 @@ struct InstructionHandler {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.u32 = result.m_value.u32 % b.u;
+                    result.m_value.u32 = result.m_value.u32 % static_cast<UInt32>(b.u);
                 }
                 break;
             case Value::U64:
@@ -1516,7 +1514,7 @@ struct InstructionHandler {
                 } else if (a.flags & Number::FLAG_UNSIGNED) {
                     result.m_value.f = static_cast<Float32>(a.u);
                 } else {
-                    result.m_value.f = a.f;
+                    result.m_value.f = static_cast<Float32>(a.f);
                 }
                 if (b.flags & Number::FLAG_SIGNED) {
                     if (b.i == 0) {

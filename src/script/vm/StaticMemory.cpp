@@ -3,7 +3,7 @@
 namespace hyperion {
 namespace vm {
 
-const uint16_t StaticMemory::static_size = 1000;
+const UInt16 StaticMemory::static_size = 1000;
 
 StaticMemory::StaticMemory()
     : m_data(new Value[static_size]),

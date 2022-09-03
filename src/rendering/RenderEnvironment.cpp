@@ -37,7 +37,7 @@ void RenderEnvironment::Init(Engine *engine)
                 auto &front = m_lights_pending_addition.Front();
 
                 if (front != nullptr) {
-                    const auto id = front->GetId();
+                    const auto id = front->GetID();
 
                     m_lights.Insert(id, std::move(front));
                 }
@@ -49,7 +49,7 @@ void RenderEnvironment::Init(Engine *engine)
                 auto &front = m_lights_pending_removal.Front();
 
                 if (front != nullptr) {
-                    const auto id = front->GetId();
+                    const auto id = front->GetID();
 
                     m_lights.Erase(id);
                 }
@@ -79,7 +79,7 @@ void RenderEnvironment::Init(Engine *engine)
                 auto &front = m_env_probes_pending_addition.Front();
 
                 if (front != nullptr) {
-                    const auto id = front->GetId();
+                    const auto id = front->GetID();
 
                     m_env_probes.Insert(id, std::move(front));
                 }
@@ -91,7 +91,7 @@ void RenderEnvironment::Init(Engine *engine)
                 auto &front = m_env_probes_pending_removal.Front();
 
                 if (front != nullptr) {
-                    const auto id = front->GetId();
+                    const auto id = front->GetID();
 
                     m_env_probes.Erase(id);
                 }
@@ -302,7 +302,7 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
             auto &front = m_lights_pending_addition.Front();
 
             if (front != nullptr) {
-                const auto id = front->GetId();
+                const auto id = front->GetID();
 
                 GetEngine()->render_state.BindLight(id);
 
@@ -316,7 +316,7 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
             const auto &front = m_lights_pending_removal.Front();
 
             if (front != nullptr) {
-                const auto id = front->GetId();
+                const auto id = front->GetID();
 
                 // TODO: scene switch wouldnt unbind light
                 GetEngine()->render_state.UnbindLight(id);
@@ -337,7 +337,7 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
             auto &front = m_env_probes_pending_addition.Front();
 
             if (front != nullptr) {
-                const auto id = front->GetId();
+                const auto id = front->GetID();
 
                 m_env_probes.Insert(id, std::move(front));
             }
@@ -349,7 +349,7 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
             const auto &front = m_env_probes_pending_removal.Front();
 
             if (front != nullptr) {
-                const auto id = front->GetId();
+                const auto id = front->GetID();
 
                 // TODO: scene switch wouldnt unbind light
                 // GetEngine()->render_state.UnbindLight(id);

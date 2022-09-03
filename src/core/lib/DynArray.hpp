@@ -313,26 +313,26 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
 
         if (other.m_is_dynamic) {
             m_is_dynamic = true;
-            m_buffer     = static_cast<Storage *>(std::malloc(sizeof(Storage) * other.m_capacity));
-            m_capacity   = other.m_capacity;
+            m_buffer = static_cast<Storage *>(std::malloc(sizeof(Storage) * other.m_capacity));
+            m_capacity = other.m_capacity;
         } else {
-            m_buffer     = &m_inline_buffer[0];
+            m_buffer = &m_inline_buffer[0];
             m_is_dynamic = false;
-            m_capacity   = num_inline_elements;
+            m_capacity= num_inline_elements;
         }
 
-        m_size         = other.m_size;
+        m_size = other.m_size;
         m_start_offset = other.m_start_offset;
 
         // copy all objects
-        for (SizeType i = m_start_offset; i < m_size; i++) {
+        for (SizeType i = m_start_offset; i < m_size; ++i) {
             Memory::Construct<T>(&m_buffer[i].data_buffer, other.m_buffer[i].Get());
         }
     } else {
         // have to destroy excess items
         if (other.Size() < Size()) {
-            for (Int64 i = Size(); i > other.Size(); --i) {
-                Memory::Destruct(m_buffer[m_start_offset + i - 1].Get());
+            for (auto i = other.Size(); i < Size(); ++i) {
+                Memory::Destruct(m_buffer[m_start_offset + i].Get());
             }
         }
 
@@ -366,22 +366,22 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
 
 
     if (other.m_is_dynamic) {
-        m_size         = other.m_size;
-        m_capacity     = other.m_capacity;
-        m_buffer       = other.m_buffer;
+        m_size = other.m_size;
+        m_capacity = other.m_capacity;
+        m_buffer = other.m_buffer;
         m_start_offset = other.m_start_offset;
-        m_is_dynamic   = true;
+        m_is_dynamic = true;
     } else {
-        m_buffer       = &m_inline_buffer[0];
-        m_capacity     = num_inline_elements;
-        m_is_dynamic   = false;
+        m_buffer = &m_inline_buffer[0];
+        m_capacity = num_inline_elements;
+        m_is_dynamic = false;
 
         // move items individually
         for (SizeType i = 0; i < other.Size(); i++) {
             Memory::Construct<T>(&m_buffer[i].data_buffer, std::move(other.m_buffer[other.m_start_offset + i].Get()));
         }
 
-        m_size         = other.Size();
+        m_size = other.Size();
         m_start_offset = 0;
 
         // manually call destructors
@@ -407,7 +407,7 @@ void DynArray<T>::ResetOffsets()
     }
 
     // shift all items to left
-    for (SizeType index = m_start_offset; index < m_size; index++) {
+    for (SizeType index = m_start_offset; index < m_size; ++index) {
         const auto move_index = index - m_start_offset;
 
         if constexpr (std::is_move_constructible_v<T>) {

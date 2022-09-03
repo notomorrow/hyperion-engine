@@ -12,8 +12,10 @@
 namespace hyperion {
 namespace vm {
 
-class ExportedSymbolTable {
-    using SymbolMap = FlatMap<HashFnv1, Value>;
+class ExportedSymbolTable
+{
+    using SymbolMap = FlatMap<HashFNV1, Value>;
+
 public:
     ExportedSymbolTable();
     ExportedSymbolTable(const ExportedSymbolTable &other) = delete;
@@ -22,9 +24,9 @@ public:
     void MarkAll();
 
     bool Find(const char *name, Value *out);
-    bool Find(HashFnv1 hash, Value *out);
+    bool Find(HashFNV1 hash, Value *out);
     typename SymbolMap::InsertResult Store(const char *name, const Value &value);
-    typename SymbolMap::InsertResult Store(HashFnv1 hash, const Value &value);
+    typename SymbolMap::InsertResult Store(HashFNV1 hash, const Value &value);
 
 private:
     SymbolMap m_symbols;

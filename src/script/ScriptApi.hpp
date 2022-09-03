@@ -1,9 +1,9 @@
 #ifndef SCRIPT_API_HPP
 #define SCRIPT_API_HPP
 
-#include <script/vm/Object.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/ImmutableString.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMString.hpp>
 #include <script/vm/Value.hpp>
 #include <script/vm/InstructionHandler.hpp>
 
@@ -254,9 +254,9 @@ namespace vm {
 class VM;
 struct VMState;
 //struct Value;
-class ExecutionThread;
+struct ExecutionThread;
 class InstructionHandler;
-class ImmutableString;
+class VMString;
 
 } // namespace vm
 
@@ -264,7 +264,8 @@ using namespace compiler;
 
 class APIInstance;
 
-class API {
+class API
+{
 public:
     struct NativeVariableDefine {
         std::string name;
@@ -549,9 +550,11 @@ public:
     };
 };
 
-class APIInstance {
+class APIInstance
+{
 public:
-    static struct ClassBindings {
+    static struct ClassBindings
+    {
         TypeMap<std::string> class_names;
         std::unordered_map<std::string, vm::HeapValue *> class_prototypes;
     } class_bindings;

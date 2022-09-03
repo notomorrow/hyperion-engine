@@ -1,5 +1,5 @@
 #include <script/ScriptBindings.hpp>
-#include <script/vm/MemoryBuffer.hpp>
+#include <script/vm/VMMemoryBuffer.hpp>
 
 #include <script/ScriptBindingDef.hpp>
 
@@ -21,10 +21,10 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::NodeGetName)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
-    vm::Object *self = nullptr;
+    vm::VMObject *self = nullptr;
 
     if (params.args[0]->GetType() != vm::Value::HEAP_POINTER ||
-        !(self = params.args[0]->GetValue().ptr->GetPointer<vm::Object>())) {
+        !(self = params.args[0]->GetValue().ptr->GetPointer<vm::VMObject>())) {
         params.handler->state->ThrowException(params.handler->thread, vm::Exception("Node::GetName() expects one argument of type Node"));
         return;
     }
@@ -39,7 +39,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::NodeGetName)
     vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
     AssertThrow(ptr != nullptr);
 
-    ptr->Assign(ImmutableString(node_ptr->GetName().Data()));
+    ptr->Assign(VMString(node_ptr->GetName().Data()));
     ptr->Mark();
 
     HYP_SCRIPT_RETURN_PTR(ptr);
@@ -49,10 +49,10 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::NodeGetLocalTranslation)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
-    vm::Object *self = nullptr;
+    vm::VMObject *self = nullptr;
 
     if (params.args[0]->GetType() != vm::Value::HEAP_POINTER ||
-        !(self = params.args[0]->GetValue().ptr->GetPointer<vm::Object>())) {
+        !(self = params.args[0]->GetValue().ptr->GetPointer<vm::VMObject>())) {
         params.handler->state->ThrowException(params.handler->thread, vm::Exception("Node::GetLocalTranslation() expects one argument of type Node"));
         return;
     }
@@ -93,7 +93,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Vector3ToString)
         vector3_value.z
     );
 
-    ptr->Assign(ImmutableString(buffer));
+    ptr->Assign(VMString(buffer));
     ptr->Mark();
 
     HYP_SCRIPT_RETURN_PTR(ptr);
@@ -120,10 +120,10 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::ArraySize)
 
     if (target_ptr->GetType() == Value::ValueType::HEAP_POINTER) {
         union {
-            ImmutableString *str_ptr;
-            Array *array_ptr;
-            MemoryBuffer *memory_buffer_ptr;
-            Object *obj_ptr;
+            VMString *str_ptr;
+            VMArray *array_ptr;
+            VMMemoryBuffer *memory_buffer_ptr;
+            VMObject *obj_ptr;
         } data;
 
         if (target_ptr->GetValue().ptr == nullptr) {
@@ -131,16 +131,16 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::ArraySize)
                 params.handler->thread,
                 vm::Exception::NullReferenceException()
             );
-        } else if ((data.str_ptr = target_ptr->GetValue().ptr->GetPointer<ImmutableString>()) != nullptr) {
+        } else if ((data.str_ptr = target_ptr->GetValue().ptr->GetPointer<VMString>()) != nullptr) {
             // get length of string
             len = data.str_ptr->GetLength();
-        } else if ((data.array_ptr = target_ptr->GetValue().ptr->GetPointer<Array>()) != nullptr) {
+        } else if ((data.array_ptr = target_ptr->GetValue().ptr->GetPointer<VMArray>()) != nullptr) {
             // get length of array
             len = data.array_ptr->GetSize();
-        } else if ((data.memory_buffer_ptr = target_ptr->GetValue().ptr->GetPointer<MemoryBuffer>()) != nullptr) {
+        } else if ((data.memory_buffer_ptr = target_ptr->GetValue().ptr->GetPointer<VMMemoryBuffer>()) != nullptr) {
             // get length of memory buffer
             len = data.memory_buffer_ptr->GetSize();
-        } else if ((data.obj_ptr = target_ptr->GetValue().ptr->GetPointer<Object>()) != nullptr) {
+        } else if ((data.obj_ptr = target_ptr->GetValue().ptr->GetPointer<VMObject>()) != nullptr) {
             // get number of members in object
             len = data.obj_ptr->GetSize();
         } else {
@@ -163,14 +163,14 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::ArrayPush)
     vm::Exception e("ArrayPush() requires an array argument");
 
     if (target_ptr->GetType() == vm::Value::ValueType::HEAP_POINTER) {
-        vm::Array *array_ptr = nullptr;
+        vm::VMArray *array_ptr = nullptr;
 
         if (target_ptr->GetValue().ptr == nullptr) {
             params.handler->state->ThrowException(
                 params.handler->thread,
                 vm::Exception::NullReferenceException()
             );
-        } else if ((array_ptr = target_ptr->GetValue().ptr->GetPointer<vm::Array>()) != nullptr) {
+        } else if ((array_ptr = target_ptr->GetValue().ptr->GetPointer<vm::VMArray>()) != nullptr) {
             array_ptr->PushMany(params.nargs - 1, &params.args[1]);
         } else {
             params.handler->state->ThrowException(params.handler->thread, e);
@@ -195,14 +195,14 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::ArrayPop)
     vm::Value value; // value that was popped from array
 
     if (target_ptr->GetType() == vm::Value::ValueType::HEAP_POINTER) {
-        vm::Array *array_ptr = nullptr;
+        vm::VMArray *array_ptr = nullptr;
 
         if (target_ptr->GetValue().ptr == nullptr) {
             params.handler->state->ThrowException(
                 params.handler->thread,
                 vm::Exception::NullReferenceException()
             );
-        } else if ((array_ptr = target_ptr->GetValue().ptr->GetPointer<vm::Array>()) != nullptr) {
+        } else if ((array_ptr = target_ptr->GetValue().ptr->GetPointer<vm::VMArray>()) != nullptr) {
             if (array_ptr->GetSize() == 0) {
                 params.handler->state->ThrowException(
                     params.handler->thread,
@@ -233,7 +233,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Puts)
     vm::ExecutionThread *thread = params.handler->thread;
     vm::VMState *state = params.handler->state;
 
-    const auto *string_arg = params.args[0]->GetValue().ptr->GetPointer<ImmutableString>();
+    const auto *string_arg = params.args[0]->GetValue().ptr->GetPointer<VMString>();
 
     if (!string_arg) {
         state->ThrowException(
@@ -281,7 +281,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Format)
     if (target_ptr->GetType() == vm::Value::ValueType::HEAP_POINTER) {
         if (target_ptr->GetValue().ptr == nullptr) {
             params.handler->state->ThrowException(params.handler->thread, vm::Exception::NullReferenceException());
-        } else if (vm::ImmutableString *str_ptr = target_ptr->GetValue().ptr->GetPointer<vm::ImmutableString>()) {
+        } else if (vm::VMString *str_ptr = target_ptr->GetValue().ptr->GetPointer<vm::VMString>()) {
             // scan through string and merge each argument where there is a '%'
             const size_t original_length = str_ptr->GetLength();
 
@@ -308,7 +308,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Format)
                     buffer_idx = 0;
                     buffer[0] = '\0';
 
-                    vm::ImmutableString str = params.args[num_fmts++]->ToString();
+                    vm::VMString str = params.args[num_fmts++]->ToString();
 
                     result_string.append(str.GetData());
                 } else {
@@ -329,7 +329,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Format)
             }
 
             while (num_fmts < params.nargs) {
-                vm::ImmutableString str = params.args[num_fmts++]->ToString();
+                vm::VMString str = params.args[num_fmts++]->ToString();
 
                 result_string.append(str.GetData());
             }
@@ -338,7 +338,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Format)
             vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
             AssertThrow(ptr != nullptr);
             // assign it to the formatted string
-            ptr->Assign(vm::ImmutableString(result_string.data()));
+            ptr->Assign(vm::VMString(result_string.data()));
 
             vm::Value res;
             // assign register value to the allocated object
@@ -368,7 +368,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Print)
     if (target_ptr->GetType() == vm::Value::ValueType::HEAP_POINTER) {
         if (target_ptr->GetValue().ptr == nullptr) {
             params.handler->state->ThrowException(params.handler->thread, vm::Exception::NullReferenceException());
-        } else if (vm::ImmutableString *str_ptr = target_ptr->GetValue().ptr->GetPointer<vm::ImmutableString>()) {
+        } else if (vm::VMString *str_ptr = target_ptr->GetValue().ptr->GetPointer<vm::VMString>()) {
             // scan through string and merge each argument where there is a '%'
             const size_t original_length = str_ptr->GetLength();
 
@@ -395,7 +395,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Print)
                     buffer_idx = 0;
                     buffer[0] = '\0';
 
-                    vm::ImmutableString str = params.args[num_fmts++]->ToString();
+                    vm::VMString str = params.args[num_fmts++]->ToString();
 
                     result_string.append(str.GetData());
                 } else {
@@ -416,7 +416,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Print)
             }
 
             while (num_fmts < params.nargs) {
-                vm::ImmutableString str = params.args[num_fmts++]->ToString();
+                vm::VMString str = params.args[num_fmts++]->ToString();
 
                 result_string.append(str.GetData());
             }
@@ -452,7 +452,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Malloc)
             : num.u;
 
         AssertThrow(ptr != nullptr);
-        ptr->Assign(vm::MemoryBuffer(malloc_size));
+        ptr->Assign(vm::VMMemoryBuffer(malloc_size));
 
         vm::Value res;
         // assign register value to the allocated object
@@ -614,7 +614,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             "ArraySize",
             BuiltinTypes::INT,
             {
-                { "self", BuiltinTypes::ANY } // one of: Array, String, Object
+                { "self", BuiltinTypes::ANY } // one of: VMArray, VMString, VMObject
             },
             ArraySize
         )

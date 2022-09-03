@@ -3,15 +3,17 @@
 
 #include <script/vm/Value.hpp>
 #include <system/Debug.hpp>
+#include <Types.hpp>
 
 #include <utility>
 
 namespace hyperion {
 namespace vm {
 
-class StaticMemory {
+class StaticMemory
+{
 public:
-    static const uint16_t static_size;
+    static const UInt16 static_size;
 
 public:
     StaticMemory();
@@ -21,13 +23,13 @@ public:
     /** Delete everything in static memory */
     void Purge();
 
-    Value &operator[](size_t index)
+    Value &operator[](SizeType index)
     {
         AssertThrowMsg(index < static_size, "out of bounds");
         return m_data[index];
     }
 
-    const Value &operator[](size_t index) const
+    const Value &operator[](SizeType index) const
     {
         AssertThrowMsg(index < static_size, "out of bounds");
         return m_data[index];
@@ -42,7 +44,7 @@ public:
 
 private:
     Value *m_data;
-    size_t m_sp;
+    SizeType m_sp;
 };
 
 } // namespace vm

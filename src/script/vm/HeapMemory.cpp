@@ -1,12 +1,12 @@
 #include <script/vm/HeapMemory.hpp>
 
-#include <script/vm/Object.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/MemoryBuffer.hpp>
-#include <script/vm/Slice.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMMemoryBuffer.hpp>
+#include <script/vm/VMArraySlice.hpp>
 #include <script/vm/Value.hpp>
-#include <script/vm/ImmutableString.hpp>
-#include <script/vm/TypeInfo.hpp>
+#include <script/vm/VMString.hpp>
+#include <script/vm/VMTypeInfo.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -34,12 +34,12 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
 
         {
             union {
-                ImmutableString *str_ptr;
-                Array *array_ptr;
-                MemoryBuffer *memory_buffer_ptr;
-                Slice *slice_ptr;
-                Object *obj_ptr;
-                TypeInfo *type_info_ptr;
+                VMString *str_ptr;
+                VMArray *array_ptr;
+                VMMemoryBuffer *memory_buffer_ptr;
+                VMArraySlice *slice_ptr;
+                VMObject *obj_ptr;
+                VMTypeInfo *type_info_ptr;
             } data;
             
             if (!tmp_head->value.HasValue()) {
@@ -47,11 +47,11 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
 
                 os << std::setw(16);
                 os << "null";
-            } else if ((data.str_ptr = tmp_head->value.GetPointer<ImmutableString>()) != nullptr) {
+            } else if ((data.str_ptr = tmp_head->value.GetPointer<VMString>()) != nullptr) {
                 os << "String" << "| ";
 
                 os << "\"" << data.str_ptr->GetData() << "\"" << std::setw(16);
-            } else if ((data.array_ptr = tmp_head->value.GetPointer<Array>()) != nullptr) {
+            } else if ((data.array_ptr = tmp_head->value.GetPointer<VMArray>()) != nullptr) {
                 os << "Array" << "| ";
 
                 os << std::setw(16);
@@ -59,7 +59,7 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
                 std::stringstream ss;
                 data.array_ptr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.memory_buffer_ptr = tmp_head->value.GetPointer<MemoryBuffer>()) != nullptr) {
+            } else if ((data.memory_buffer_ptr = tmp_head->value.GetPointer<VMMemoryBuffer>()) != nullptr) {
                 os << "MemoryBuffer" << "| ";
 
                 os << std::setw(16);
@@ -67,21 +67,21 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
                 std::stringstream ss;
                 data.memory_buffer_ptr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.slice_ptr = tmp_head->value.GetPointer<Slice>()) != nullptr) {
+            } else if ((data.slice_ptr = tmp_head->value.GetPointer<VMArraySlice>()) != nullptr) {
                 os << "ArraySlice" << "| ";
                 os << std::setw(16);
 
                 std::stringstream ss;
                 data.slice_ptr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.obj_ptr = tmp_head->value.GetPointer<Object>()) != nullptr) {
+            } else if ((data.obj_ptr = tmp_head->value.GetPointer<VMObject>()) != nullptr) {
                 os << "Object" << "| ";
 
                 os << std::setw(16);
                 std::stringstream ss;
                 data.obj_ptr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.type_info_ptr = tmp_head->value.GetPointer<TypeInfo>()) != nullptr) {
+            } else if ((data.type_info_ptr = tmp_head->value.GetPointer<VMTypeInfo>()) != nullptr) {
                 os << "TypeInfo" << "| ";
 
                 os << std::setw(16);

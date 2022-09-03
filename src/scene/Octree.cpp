@@ -250,7 +250,7 @@ Octree::Result Octree::Insert(Engine *engine, Entity *entity)
             DebugLog(
                 LogType::Warn,
                 "Failed to rebuild octree when inserting entity #%lu\n",
-                entity->GetId().value
+                entity->GetID().value
             );
 
             return rebuild_result;
@@ -391,7 +391,7 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
             DebugLog(
                 LogType::Debug,
                 "In root, but does not contain node aabb, so rebuilding octree. %lu\n",
-                entity->GetId().value
+                entity->GetID().value
             );
 #endif
 
@@ -403,7 +403,7 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
             DebugLog(
                 LogType::Debug,
                 "Moving entity #%lu into the closest fitting (or root) parent\n",
-                entity->GetId().value
+                entity->GetID().value
             );
 #endif
 
@@ -452,7 +452,7 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
                 DebugLog(
                     LogType::Debug,
                     "In child, no parents contain AABB so calling Move() on last valid octant (root). This will invalidate `this`.. %lu\n",
-                    entity->GetId().value
+                    entity->GetID().value
                 );
 #endif
 
@@ -591,7 +591,7 @@ Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
                 DebugLog(
                     LogType::Error,
                     "Entity #%u was not attached to a Scene!\n",
-                    entity->GetId().value
+                    entity->GetID().value
                 );
 
                 continue;
@@ -742,11 +742,11 @@ void Octree::CalculateVisibility(Scene *scene)
         return;
     }
 
-    if (scene->GetId().value - 1 >= VisibilityState::max_scenes) {
+    if (scene->GetID().value - 1 >= VisibilityState::max_scenes) {
         DebugLog(
             LogType::Error,
             "Scene #%lu out of bounds of octree scene visibility bitset. Cannot update visibility state.\n",
-            scene->GetId().value
+            scene->GetID().value
         );
 
         return;
@@ -765,7 +765,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
     const auto &frustum = scene->GetCamera()->GetFrustum();
 
     const auto cursor = m_root->visibility_cursor.load(std::memory_order_relaxed);
-    m_visibility_state.SetVisible(scene->GetId(), cursor);
+    m_visibility_state.SetVisible(scene->GetID(), cursor);
 
     if (!m_is_divided) {
         return;
@@ -790,7 +790,7 @@ void Octree::OnEntityRemoved(Engine *engine, Entity *entity)
     }
     
     if (!Remove(engine, entity)) {
-        DebugLog(LogType::Error, "Failed to find Entity #%lu in octree\n", entity->GetId().value);
+        DebugLog(LogType::Error, "Failed to find Entity #%lu in octree\n", entity->GetID().value);
     }
 }
 
@@ -812,7 +812,7 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
 
             if (ray.TestAABB(
                 node.aabb,
-                node.entity->GetId().value,
+                node.entity->GetID().value,
                 static_cast<void *>(node.entity),
                 out_results
             )) {

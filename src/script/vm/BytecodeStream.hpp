@@ -8,7 +8,8 @@
 namespace hyperion {
 namespace vm {
 
-class BytecodeStream {
+class BytecodeStream
+{
 public:
     static BytecodeStream FromSourceFile(SourceFile *file_ptr);
 

@@ -26,7 +26,7 @@ class Octree
 
     enum
     {
-        DEPTH_SEARCH_INF       = -1,
+        DEPTH_SEARCH_INF = -1,
         DEPTH_SEARCH_ONLY_THIS = 0
     };
 
@@ -67,13 +67,13 @@ public:
     struct Octant
     {
         std::unique_ptr<Octree> octree;
-        BoundingBox             aabb;
+        BoundingBox aabb;
     };
 
     struct Node
     {
-        Entity          *entity;
-        BoundingBox      aabb;
+        Entity *entity;
+        BoundingBox aabb;
         VisibilityState *visibility_state = nullptr;
     };
 

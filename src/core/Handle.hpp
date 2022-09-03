@@ -110,14 +110,11 @@ protected:
             Base::m_ref->strong_count = 1u;
             Base::m_ref->weak_count = 0u;
 
-            if (ptr->GetId()) {
+            if (ptr->GetID()) {
                 // ptr already has ID set,
                 // we take that ID
-                m_id = ptr->GetId();//HandleID(TypeID::ForType<NormalizedType<T>>(), ptr->GetId().value);
-            }/* else {// temp
-                m_id = NextID<T>();
-                ptr->SetId(m_id);
-            }*/
+                m_id = ptr->GetID();
+            }
         }
     }
 
@@ -133,14 +130,11 @@ protected:
             ++Base::m_ref->strong_count;
 
             if (auto *ptr = static_cast<T *>(Base::m_ref->value)) {
-                if (ptr->GetId()) {
+                if (ptr->GetID()) {
                     // ptr already has ID set,
                     // we take that ID
-                    m_id = ptr->GetId();HandleID(TypeID::ForType<NormalizedType<T>>(), ptr->GetId().value);
-                } /*else { // temp
-                    m_id = NextID<T>();
-                    ptr->SetId(m_id);
-                }*/
+                    m_id = ptr->GetID();HandleID(TypeID::ForType<NormalizedType<T>>(), ptr->GetID().value);
+                }
             }
         }
     }
@@ -323,7 +317,7 @@ public:
     {
         Base::m_id = id;
         if (auto *ptr = Get()) {
-            ptr->SetId(m_id);
+            ptr->SetID(m_id);
         }
     }
 

@@ -1,38 +1,10 @@
 #ifndef INSTRUCTIONS_HPP
 #define INSTRUCTIONS_HPP
 
-#include <stdint.h>
+#include <Types.hpp>
 
-using bc_address_t = uint32_t;
-using bc_reg_t = uint8_t;
-
-enum class DataStoreMode {
-    DataStoreString = 0x00,
-    DataStoreAddress = 0x01,
-    DataStoreFunction = 0x02,
-    DataStoreType = 0x03
-};
-
-enum class MovRegMode {
-    RegToStackOffset = 0x00,
-    StackOffsetToReg = 0x01,
-    RegToStackIndex = 0x02,
-    StackIndexToReg = 0x03
-};
-
-enum class MovIndexMode {
-    RegToIndex = 0x00,
-    IndexToReg = 0x01,
-};
-
-enum class JumpMode {
-    JumpEqual = 0x00,
-    JumpNotEqual = 0x01,
-    JumpGreater = 0x02,
-    JumpGreaterEqual = 0x03
-};
-
-enum FunctionFlags : uint8_t {
+enum FunctionFlags : hyperion::UInt8
+{
     NONE = 0x00,
     VARIADIC = 0x01,
     GENERATOR = 0x02,
@@ -62,7 +34,8 @@ enum FunctionFlags : uint8_t {
 // NOTE: instructions that load data from stack index load from the main/global thread.
 // instructions that load from stack offset load from their own thread.
 
-enum Instructions : char {
+enum Instructions : char
+{
     /* No operation */
     NOP = 0x00, // nop
 

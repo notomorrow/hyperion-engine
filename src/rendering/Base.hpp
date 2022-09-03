@@ -50,24 +50,6 @@ public:
         }
     }
 
-    // template <class T>
-    // T *Get(const HandleID &id)
-    // {
-    //     auto it = m_attachments.template Find<T>();
-
-    //     if (it == m_attachments.End()) {
-    //         return nullptr;
-    //     }
-
-    //     const auto objects_it = it->second.objects.Find(id);
-
-    //     if (objects_it == it->second.objects.End()) {
-    //         return nullptr;
-    //     }
-
-    //     return static_cast<T *>(objects_it->second.Get());
-    // }
-
     template <class T>
     void Attach(Parent *parent, Handle<T> &handle, bool init_immediately)
     {
@@ -86,10 +68,8 @@ public:
         if (it == m_attachments.End()) {
             m_attachments.template Set<NormalizedType<T>>(AttachmentSet<Parent> {
                 .init_fn = [](WeakHandleBase &handle, Parent *parent) {
-                    auto handle_casted = handle.template Lock<T>();
+                    auto handle_casted = handle.Lock<T>();
                     AssertThrow(handle_casted);
-
-                    // handle_casted->Init(parent->GetEngine());
 
                     parent->GetEngine()->template Attach<T>(handle_casted);
                 },
@@ -131,31 +111,27 @@ private:
 };
 
 template <class T, class ClassName>
-struct StubbedClass : public Class<ClassName> {
+struct StubbedClass : public Class<ClassName>
+{
     using InnerType = T;
 
     StubbedClass() = default;
     ~StubbedClass() = default;
-
-    renderer::Result Create(Engine *) { return renderer::Result::OK; }
-    renderer::Result Destroy(Engine *) { return renderer::Result::OK; }
 };
 
 template <auto X>
-struct ClassName {
+struct ClassName
+{
     using Sequence = IntegerSequenceFromString<X>;
 };
 
 #define STUB_CLASS(name) ::hyperion::v2::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>
 
-#define ENGINE_COMPONENT_DELEGATE_METHODS \
-    decltype(m_wrapped) *operator->() { return &m_wrapped; } \
-    const decltype(m_wrapped) *operator->() const { return &m_wrapped; }
-
 using ComponentFlagBits = UInt;
 
 template <class T>
-struct ComponentInitInfo {
+struct ComponentInitInfo
+{
     enum Flags : ComponentFlagBits {};
 
     ComponentFlagBits flags = 0x0;
@@ -197,15 +173,21 @@ public:
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase() {}
 
-    HYP_FORCE_INLINE ID GetId() const { return m_id; }
-
     HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo() { return m_init_info; }
     HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
 
+    HYP_FORCE_INLINE ID GetID() const
+        { return m_id; }
+
     /* To be called from ObjectHolder<Type> */
-    void SetId(const ID &id) { m_id = id; }
-    bool IsInitCalled() const { return m_init_called; }
-    bool IsReady() const { return m_is_ready; }
+    void SetID(const ID &id)
+        { m_id = id; }
+
+    bool IsInitCalled() const
+        { return m_init_called.load(); }
+
+    bool IsReady() const
+        { return m_is_ready.load(); }
 
     auto &GetClass() { return Type::GetInstance(); }
     const auto &GetClass() const { return Type::GetInstance(); }
@@ -237,10 +219,13 @@ public:
     }
 
 protected:
+    using Class = Type;
+    using Base = EngineComponentBase<Type>;
+
     void Teardown()
     {
         if (IsInitCalled()) {
-            GetEngine()->registry.template Release<InnerType>(GetId());
+            GetEngine()->registry.template Release<InnerType>(GetID());
         }
 
         CallbackTrackable::Teardown();
@@ -258,10 +243,6 @@ protected:
     void Detach(const typename Handle<T>::ID &id)
         { m_attachment_map.template Detach<T>(id); }
 
-protected:
-    using Class = Type;
-    using Base = EngineComponentBase<Type>;
-
     void Destroy()
     {
         m_init_called = false;
@@ -269,7 +250,7 @@ protected:
     }
     
     void SetReady(bool is_ready)
-        { m_is_ready = is_ready; }
+        { m_is_ready.store(is_ready); }
 
     HYP_FORCE_INLINE void AssertReady() const
     {
@@ -281,11 +262,11 @@ protected:
         );
     }
 
-    ID                      m_id;
-    std::atomic_bool        m_init_called;
-    std::atomic_bool        m_is_ready;
-    Engine                 *m_engine;
-    ComponentInitInfo       m_init_info;
+    ID m_id;
+    std::atomic_bool m_init_called;
+    std::atomic_bool m_is_ready;
+    Engine *m_engine;
+    ComponentInitInfo m_init_info;
 
     AttachmentMap<InnerType> m_attachment_map;
 };

@@ -91,7 +91,7 @@ void CubemapRenderer::Init(Engine *engine)
                     }
 
                     if (m_renderer_instance != nullptr) {
-                        m_renderer_instance->RemoveFramebuffer(m_framebuffers[i]->GetId());
+                        m_renderer_instance->RemoveFramebuffer(m_framebuffers[i]->GetID());
                     }
                 }
             }

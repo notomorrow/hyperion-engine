@@ -12,7 +12,8 @@
 
 namespace hyperion::compiler {
 
-class DecompilationUnit {
+class DecompilationUnit
+{
 public:
     DecompilationUnit();
     DecompilationUnit(const DecompilationUnit &other) = delete;
@@ -21,11 +22,13 @@ public:
         uint8_t code,
         hyperion::vm::BytecodeStream &bs,
         InstructionStream &is,
-        utf::utf8_ostream *os = nullptr);
+        utf::utf8_ostream *os = nullptr
+    );
 
     InstructionStream Decompile(
         hyperion::vm::BytecodeStream &bs,
-        utf::utf8_ostream *os = nullptr);
+        utf::utf8_ostream *os = nullptr
+    );
 };
 
 } // namespace hyperion::compiler

@@ -31,9 +31,14 @@ public:
     HeapValue &operator=(const HeapValue &other) = delete;
     ~HeapValue();
 
-    const TypeID &GetTypeID() const { return m_any.GetTypeID(); }
-    int &GetFlags() { return m_flags; }
-    int GetFlags() const  { return m_flags; }
+    const TypeID &GetTypeID() const
+        { return m_any.GetTypeID(); }
+
+    int &GetFlags()
+        { return m_flags; }
+
+    int GetFlags() const
+        { return m_flags; }
 
     template <class T>
     bool TypeCompatible() const 
@@ -48,31 +53,15 @@ public:
 
     template <typename T>
     void Assign(T &&value)
-    {
-        // if (m_holder != nullptr) {
-        //     delete m_holder;
-        //     m_holder = nullptr;
-        // }
-
-        // auto holder = new DerivedHolder<std::decay_t<T>>(std::forward<T>(value));
-
-        // m_ptr = reinterpret_cast<void *>(&holder->m_value);
-        // m_holder = holder;
-
-        m_any = std::move(value);
-    }
+        { m_any = std::move(value);  }
 
     template <typename T>
     T &Get()
-    {
-        return m_any.Get<T>();
-    }
+        { return m_any.Get<T>(); }
 
     template <typename T>
     const T &Get() const
-    {
-        return m_any.Get<T>();
-    }
+        { return m_any.Get<T>(); }
 
     template <class T>
     auto GetRawPointer() -> NormalizedType<T> *

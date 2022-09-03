@@ -14,9 +14,10 @@ namespace hyperion::v2 {
 using renderer::ImageView;
 using renderer::Extent3D;
 
-struct CullData {
+struct CullData
+{
     FixedArray<const ImageView *, max_frames_in_flight> depth_pyramid_image_views;
-    Extent3D                                            depth_pyramid_dimensions;
+    Extent3D depth_pyramid_dimensions;
 
     bool operator==(const CullData &other) const
     {

@@ -14,7 +14,8 @@ using renderer::CommandBuffer;
 using renderer::IndirectBuffer;
 using renderer::DescriptorSet;
 
-class ComputePipeline : public EngineComponentBase<STUB_CLASS(ComputePipeline)> {
+class ComputePipeline : public EngineComponentBase<STUB_CLASS(ComputePipeline)>
+{
 public:
     ComputePipeline(Handle<Shader> &&shader);
     ComputePipeline(Handle<Shader> &&shader, const DynArray<const DescriptorSet *> &used_descriptor_sets);

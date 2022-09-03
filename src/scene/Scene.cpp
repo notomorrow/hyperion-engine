@@ -88,7 +88,7 @@ void Scene::SetWorld(World *world)
             DebugLog(
                 LogType::Debug,
                 "[scene] Remove entity #%u from octree\n",
-                entity->GetId().value
+                entity->GetID().value
             );
 
             entity->RemoveFromOctree(GetEngine());
@@ -114,7 +114,7 @@ void Scene::SetWorld(World *world)
         DebugLog(
             LogType::Debug,
             "Add entity #%u to octree\n",
-            entity->GetId().value
+            entity->GetID().value
         );
 #endif
 
@@ -129,11 +129,11 @@ bool Scene::AddEntity(Handle<Entity> &&entity)
     AssertReady();
     AssertThrow(entity != nullptr);
 
-    if (m_entities.Contains(entity->GetId())) {
+    if (m_entities.Contains(entity->GetID())) {
         DebugLog(
             LogType::Warn,
             "Entity #%u already exists in Scene #%u\n",
-            entity->GetId().value,
+            entity->GetID().value,
             m_id.value
         );
 
@@ -167,30 +167,30 @@ bool Scene::RemoveEntity(const Handle<Entity> &entity)
     AssertReady();
     AssertThrow(entity != nullptr);
 
-    auto it = m_entities.Find(entity->GetId());
+    const auto it = m_entities.Find(entity->GetID());
 
     if (it == m_entities.End()) {
         DebugLog(
             LogType::Warn,
             "Could not remove entity with id #%u: not found\n",
-            entity->GetId().value
+            entity->GetID().value
         );
 
         return false;
     }
 
-    if (m_entities_pending_removal.Contains(entity->GetId())) {
+    if (m_entities_pending_removal.Contains(entity->GetID())) {
         DebugLog(
             LogType::Warn,
             "Could not remove entity with id #%u: already pending removal\n",
-            entity->GetId().value
+            entity->GetID().value
         );
 
         return false;
     }
 
     m_environment->OnEntityRemoved(it->second);
-    m_entities_pending_removal.Insert(entity->GetId());
+    m_entities_pending_removal.Insert(entity->GetID());
 
     return true;
 }
@@ -202,7 +202,7 @@ void Scene::AddPendingEntities()
     }
 
     for (auto &entity : m_entities_pending_addition) {
-        const auto id = entity->GetId();
+        const auto id = entity->GetID();
 
         if (entity->IsRenderable() && !entity->GetPrimaryRendererInstance()) {
             if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetShader(), entity->GetRenderableAttributes())) {
@@ -217,7 +217,7 @@ void Scene::AddPendingEntities()
                 DebugLog(
                     LogType::Error,
                     "Could not find or create optimal RendererInstance for Entity #%lu!\n",
-                    entity->GetId().value
+                    entity->GetID().value
                 );
 
                 continue;
@@ -230,7 +230,7 @@ void Scene::AddPendingEntities()
                 DebugLog(
                     LogType::Debug,
                     "Add entity #%u to octree\n",
-                    entity->GetId().value
+                    entity->GetID().value
                 );
 #endif
 
@@ -262,7 +262,7 @@ void Scene::RemovePendingEntities()
             DebugLog(
                 LogType::Debug,
                 "[scene] Remove entity #%u from octree\n",
-                found_entity->GetId().value
+                found_entity->GetID().value
             );
 
             found_entity->RemoveFromOctree(GetEngine());
@@ -271,7 +271,7 @@ void Scene::RemovePendingEntities()
         DebugLog(
             LogType::Debug,
             "Remove entity with ID #%u (with material: %s) from scene with ID #%u\n",
-            found_entity->GetId().value,
+            found_entity->GetID().value,
             found_entity->GetMaterial()
                 ? found_entity->GetMaterial()->GetName().Data()
                 : " no material ",
@@ -354,7 +354,7 @@ void Scene::RequestRendererInstanceUpdate(Handle<Entity> &entity)
         DebugLog(
             LogType::Error,
             "Could not find or create optimal RendererInstance for Entity #%lu!\n",
-            entity->GetId().value
+            entity->GetID().value
         );
     }
 }

@@ -11,19 +11,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::Extent3D;
-
-// struct TerrainChunkNeighborInfo {
-//     Vector2 position;
-//     bool    in_queue;
-// };
-
-// struct TerrainChunkInfo {
-//     Extent3D extent;
-//     Vector2  position;
-//     Vector3  scale;
-// };
-
 } // namespace hyperion::v2
 
 #endif

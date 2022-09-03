@@ -8,7 +8,8 @@
 
 namespace hyperion {
 
-class SourceStream {
+class SourceStream
+{
 public:
     SourceStream(SourceFile *file);
     SourceStream(const SourceStream &other);

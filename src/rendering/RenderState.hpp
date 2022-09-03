@@ -51,7 +51,7 @@ struct RenderState
         scene_ids.push(
             scene == nullptr
                 ? SceneBinding { }
-                : SceneBinding { scene->GetId(), scene->GetParentId() }
+                : SceneBinding { scene->GetID(), scene->GetParentId() }
         );
     }
 

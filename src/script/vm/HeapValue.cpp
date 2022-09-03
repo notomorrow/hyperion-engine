@@ -1,8 +1,8 @@
 #include <script/vm/HeapValue.hpp>
-#include <script/vm/Object.hpp>
-#include <script/vm/Array.hpp>
-#include <script/vm/Slice.hpp>
-#include <script/vm/ImmutableString.hpp>
+#include <script/vm/VMObject.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMArraySlice.hpp>
+#include <script/vm/VMString.hpp>
 
 #include <iostream>
 
@@ -22,7 +22,7 @@ void HeapValue::Mark()
 
     m_flags |= GC_MARKED;
 
-    if (Object *object = GetPointer<Object>()) {
+    if (VMObject *object = GetPointer<VMObject>()) {
         HeapValue *proto = nullptr;
 
         do {
@@ -35,10 +35,10 @@ void HeapValue::Mark()
             if ((proto = object->GetPrototype()) != nullptr) {
                 proto->Mark();
 
-                object = proto->GetPointer<Object>();
+                object = proto->GetPointer<VMObject>();
 
                 // get object value of prototype
-                // if ((object = proto->GetPointer<Object>()) == nullptr) {
+                // if ((object = proto->GetPointer<VMObject>()) == nullptr) {
                 //     // if prototype is not an object (has been modified to another value), we're done.
                 //     return;
                 // }
@@ -46,13 +46,13 @@ void HeapValue::Mark()
                 object = nullptr;
             }
         } while (object != nullptr);
-    } else if (Array *array = GetPointer<Array>()) {
+    } else if (VMArray *array = GetPointer<VMArray>()) {
         const auto size = array->GetSize();
 
         for (SizeType i = 0; i < size; i++) {
             array->AtIndex(i).Mark();
         }
-    } else if (Slice *slice = GetPointer<Slice>()) {
+    } else if (VMArraySlice *slice = GetPointer<VMArraySlice>()) {
         const auto size = slice->GetSize();
 
         for (SizeType i = 0; i < size; i++) {

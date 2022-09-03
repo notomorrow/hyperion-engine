@@ -41,7 +41,7 @@ void BasicCharacterController::OnUpdate(GameCounter::TickUnit)
                             mesh->GetVertices(),
                             mesh->GetIndices(),
                             lookup_result->GetTransform(),
-                            lookup_result->GetId().value,
+                            lookup_result->GetID().value,
                             triangle_mesh_results
                         );
                     }

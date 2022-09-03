@@ -15,19 +15,21 @@
 
 namespace hyperion {
 
-enum SystemEventType {
+enum SystemEventType
+{
     EVENT_WINDOW_EVENT  = SDL_WINDOWEVENT,
-    EVENT_KEYDOWN       = SDL_KEYDOWN,
-    EVENT_SHUTDOWN      = SDL_QUIT,
-    EVENT_KEYUP         = SDL_KEYUP,
+    EVENT_KEYDOWN = SDL_KEYDOWN,
+    EVENT_SHUTDOWN = SDL_QUIT,
+    EVENT_KEYUP = SDL_KEYUP,
 
-    EVENT_MOUSEMOTION   = SDL_MOUSEMOTION,
+    EVENT_MOUSEMOTION = SDL_MOUSEMOTION,
     EVENT_MOUSEBUTTON_DOWN = SDL_MOUSEBUTTONDOWN,
     EVENT_MOUSEBUTTON_UP = SDL_MOUSEBUTTONUP,
-    EVENT_MOUSESCROLL    = SDL_MOUSEWHEEL
+    EVENT_MOUSESCROLL = SDL_MOUSEWHEEL
 };
 
-enum SystemWindowEventType {
+enum SystemWindowEventType
+{
     EVENT_WINDOW_MOVED = SDL_WINDOWEVENT_MOVED,
     EVENT_WINDOW_RESIZED = SDL_WINDOWEVENT_RESIZED,
 
@@ -112,16 +114,18 @@ enum SystemKey {
     KEY_ARROW_UP    = SDL_SCANCODE_UP,
 };
 
-enum MouseButton {
+enum MouseButton
+{
     MOUSE_BUTTON_LEFT = SDL_BUTTON_LEFT,
     MOUSE_BUTTON_MIDDLE,
     MOUSE_BUTTON_RIGHT,
 };
 
-using MouseButtonMask = uint32_t;
+using MouseButtonMask = UInt32;
 
 
-class SystemEvent {
+class SystemEvent
+{
 public:
     SystemEventType GetType() const
     {
@@ -151,7 +155,8 @@ private:
     SDL_Event sdl_event;
 };
 
-class SystemWindow {
+class SystemWindow
+{
 public:
     SystemWindow(const char *_title, int _width, int _height);
     SystemWindow(const SystemWindow &other) = delete;
@@ -181,7 +186,8 @@ private:
     SDL_Window *window = nullptr;
 };
 
-class SystemSDL {
+class SystemSDL
+{
 public:
     SystemSDL();
     ~SystemSDL();

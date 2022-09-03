@@ -18,9 +18,11 @@
 namespace hyperion {
 namespace renderer {
 
-class Features {
+class Features
+{
 public:
-    struct DynamicFunctions {
+    struct DynamicFunctions
+    {
 #define HYP_DECL_FN(name) PFN_##name name = nullptr
 
         HYP_DECL_FN(vkGetBufferDeviceAddressKHR);
@@ -95,8 +97,10 @@ public:
     const VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT &GetSamplerMinMaxProperties() const
         { return m_sampler_minmax_properties; }
 
-    struct DeviceRequirementsResult {
-        enum {
+    struct DeviceRequirementsResult
+    {
+        enum
+        {
             DEVICE_REQUIREMENTS_OK = 0,
             DEVICE_REQUIREMENTS_ERR = 1
         } result;
@@ -185,8 +189,8 @@ public:
     }
 
     bool IsSupportedFormat(
-        VkFormat             format,
-        VkImageTiling        tiling,
+        VkFormat format,
+        VkImageTiling tiling,
         VkFormatFeatureFlags features
     ) const
     {
@@ -234,7 +238,11 @@ public:
 
     /* get the first supported format out of the provided list of format choices. */
     template <size_t Size>
-    Image::InternalFormat FindSupportedFormat(const std::array<Image::InternalFormat, Size> &possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    Image::InternalFormat FindSupportedFormat(
+        const std::array<Image::InternalFormat, Size> &possible_formats,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features
+    ) const
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
@@ -264,8 +272,8 @@ public:
     template <size_t Size>
     VkFormat FindSupportedFormat(
         const std::array<VkFormat, Size> &possible_formats,
-        VkImageTiling                     tiling,
-        VkFormatFeatureFlags              features
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features
     ) const
     {
         static_assert(Size > 0, "Size must be greater than zero!");
@@ -278,7 +286,7 @@ public:
             possible_formats[0]
         );
 
-        if (m_physical_device == nullptr) {
+        if (m_physical_device == VK_NULL_HANDLE) {
             DebugLog(LogType::Debug, "No physical device set -- cannot find supported format!\n");
             return VK_FORMAT_UNDEFINED;
         }
@@ -296,7 +304,11 @@ public:
 
     /* get the first supported format out of the provided list of format choices. */
     template <size_t Size, class LambdaFunction>
-    Image::InternalFormat FindSupportedSurfaceFormat(const SwapchainSupportDetails &details, const std::array<Image::InternalFormat, Size> &possible_formats, LambdaFunction predicate) const
+    Image::InternalFormat FindSupportedSurfaceFormat(
+        const SwapchainSupportDetails &details,
+        const std::array<Image::InternalFormat, Size> &possible_formats,
+        LambdaFunction predicate
+    ) const
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
@@ -352,11 +364,11 @@ public:
     }
 
     Result GetImageFormatProperties(
-        VkFormat                format,
-        VkImageType             type,
-        VkImageTiling           tiling,
-        VkImageUsageFlags       usage,
-        VkImageCreateFlags      flags,
+        VkFormat format,
+        VkImageType type,
+        VkImageTiling tiling,
+        VkImageUsageFlags usage,
+        VkImageCreateFlags flags,
         VkImageFormatProperties *out_properties
     ) const
     {
@@ -390,9 +402,9 @@ public:
             : size;
     }
 
-    bool SupportsGeometryShaders() const                      { return m_features.geometryShader; }
+    bool SupportsGeometryShaders() const { return m_features.geometryShader; }
 
-    bool IsRaytracingDisabled() const                         { return !SupportsRaytracing() || m_is_raytracing_disabled; }
+    bool IsRaytracingDisabled() const { return !SupportsRaytracing() || m_is_raytracing_disabled; }
     void SetIsRaytracingDisabled(bool is_raytracing_disabled) { m_is_raytracing_disabled = is_raytracing_disabled; }
 
     bool SupportsRaytracing() const

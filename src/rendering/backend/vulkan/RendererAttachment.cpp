@@ -26,7 +26,6 @@ AttachmentRef::AttachmentRef(
 ) : m_attachment(attachment),
     m_load_operation(load_operation),
     m_store_operation(store_operation),
-    m_binding{},
     m_initial_layout(attachment->GetInitialLayout()),
     m_final_layout(attachment->GetFinalLayout()),
     m_image_view(std::move(image_view)),
@@ -133,23 +132,14 @@ const AttachmentRef *AttachmentRef::IncRef(AttachmentRefInstance &&ins) const
 
     m_ref_count->m_holder_instances.insert(std::move(ins));
 
-    //++m_ref_count->count;
-    //++m_owned_ref_count;
-
     return this;
 }
 
 const AttachmentRef *AttachmentRef::DecRef(AttachmentRefInstance &&ins) const
 {
-    //AssertThrow(m_owned_ref_count != 0);
     AssertThrow(m_ref_count != nullptr);
     
     m_ref_count->m_holder_instances.erase(ins);
-
-    //AssertThrow(m_ref_count->count != 0);
-
-    //--m_ref_count->count;
-    //--m_owned_ref_count;
 
     return this;
 }
@@ -173,8 +163,8 @@ Result AttachmentRef::Create(
     VkFormat format,
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
-    size_t num_mipmaps,
-    size_t num_faces
+    UInt num_mipmaps,
+    UInt num_faces
 )
 {
     AssertThrow(!m_is_created);
@@ -238,7 +228,7 @@ Attachment::~Attachment()
 {
     AssertThrowMsg(!m_is_created, "Attachment must not be in `created` state on destructor call");
 
-    for (size_t i = 0; i < m_ref_counts.size(); i++) {
+    for (SizeType i = 0; i < m_ref_counts.size(); i++) {
         AssertThrowMsg(
             m_ref_counts[i]->m_holder_instances.empty(),
             "Expected ref count at %llu to be zero after decrement but was %llu -- object still in use somewhere else.",
@@ -292,8 +282,8 @@ Result Attachment::AddAttachmentRef(
     VkFormat format,
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
-    size_t num_mipmaps,
-    size_t num_faces,
+    UInt num_mipmaps,
+    UInt num_faces,
     LoadOperation load_operation,
     StoreOperation store_operation,
     AttachmentRef **out
@@ -394,7 +384,7 @@ Result Attachment::Destroy(Device *device)
     return result;
 }
 
-AttachmentSet::AttachmentSet(RenderPassStage stage, size_t width, size_t height)
+AttachmentSet::AttachmentSet(RenderPassStage stage, UInt width, UInt height)
     : m_stage(stage),
       m_width(width),
       m_height(height)
@@ -407,14 +397,14 @@ AttachmentSet::~AttachmentSet()
     AssertThrowMsg(m_attachment_refs.empty(), "Expected all attachment refs to be cleared at destructor call");
 }
 
-bool AttachmentSet::Has(uint32_t binding) const
+bool AttachmentSet::Has(UInt binding) const
 {
     return std::any_of(m_attachment_refs.begin(), m_attachment_refs.end(), [binding](const auto &it) {
         return it.first == binding;
     });
 }
 
-AttachmentRef *AttachmentSet::Get(uint32_t binding) const
+AttachmentRef *AttachmentSet::Get(UInt binding) const
 {
     const auto it = std::find_if(m_attachment_refs.begin(), m_attachment_refs.end(), [binding](const auto &it) {
         return it.first == binding;
@@ -427,12 +417,12 @@ AttachmentRef *AttachmentSet::Get(uint32_t binding) const
     return it->second;
 }
 
-Result AttachmentSet::Add(Device *device, uint32_t binding, Image::InternalFormat format)
+Result AttachmentSet::Add(Device *device, UInt binding, Image::InternalFormat format)
 {
-    return Add(device, binding, std::make_unique<FramebufferImage2D>(Extent2D{uint32_t(m_width), uint32_t(m_height)}, format, nullptr));
+    return Add(device, binding, std::make_unique<FramebufferImage2D>(Extent2D { m_width, m_height }, format, nullptr));
 }
 
-Result AttachmentSet::Add(Device *device, uint32_t binding, std::unique_ptr<Image> &&image)
+Result AttachmentSet::Add(Device *device, UInt binding, std::unique_ptr<Image> &&image)
 {
     if (Has(binding)) {
         return {Result::RENDERER_ERR, "Cannot set duplicate bindings"};
@@ -446,7 +436,7 @@ Result AttachmentSet::Add(Device *device, uint32_t binding, std::unique_ptr<Imag
     return Add(device, binding, m_attachments.back().get());
 }
 
-Result AttachmentSet::Add(Device *device, uint32_t binding, Attachment *attachment)
+Result AttachmentSet::Add(Device *device, UInt binding, Attachment *attachment)
 {
     AssertThrow(attachment != nullptr);
 
@@ -472,7 +462,7 @@ Result AttachmentSet::Add(Device *device, uint32_t binding, Attachment *attachme
     HYPERION_RETURN_OK;
 }
 
-Result AttachmentSet::Remove(Device *device, uint32_t binding)
+Result AttachmentSet::Remove(Device *device, UInt binding)
 {
     const auto it = std::find_if(m_attachment_refs.begin(), m_attachment_refs.end(), [binding](const auto &it) {
         return it.first == binding;

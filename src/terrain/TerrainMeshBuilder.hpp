@@ -15,7 +15,8 @@ namespace hyperion::v2 {
 
 class PatchInfo;
 
-class TerrainMeshBuilder {
+class TerrainMeshBuilder
+{
 public:
     TerrainMeshBuilder(const PatchInfo &patch_info);
     TerrainMeshBuilder(const TerrainMeshBuilder &other) = delete;

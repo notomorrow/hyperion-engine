@@ -170,7 +170,7 @@ void Mesh::Init(Engine *engine)
         DebugLog(
             LogType::Debug,
             "Destroy mesh with id %u\n",
-            GetId().value
+            GetID().value
         );
 
         m_indices_count = 0;

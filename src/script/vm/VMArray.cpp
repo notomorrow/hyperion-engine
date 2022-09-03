@@ -1,4 +1,4 @@
-#include <script/vm/Array.hpp>
+#include <script/vm/VMArray.hpp>
 
 #include <system/Debug.hpp>
 
@@ -9,7 +9,7 @@
 namespace hyperion {
 namespace vm {
 
-Array::Array(SizeType size)
+VMArray::VMArray(SizeType size)
     : m_size(size),
       m_capacity(GetCapacityForSize(size)),
       m_buffer(new Value[m_capacity])
@@ -20,7 +20,7 @@ Array::Array(SizeType size)
     }
 }
 
-Array::Array(const Array &other)
+VMArray::VMArray(const VMArray &other)
     : m_size(other.m_size),
       m_capacity(other.m_capacity),
       m_buffer(new Value[other.m_capacity])
@@ -31,12 +31,12 @@ Array::Array(const Array &other)
     }
 }
 
-Array::~Array()
+VMArray::~VMArray()
 {
     delete[] m_buffer;
 }
 
-Array &Array::operator=(const Array &other)
+VMArray &VMArray::operator=(const VMArray &other)
 {
     if (&other == this) {
         return *this;
@@ -58,7 +58,7 @@ Array &Array::operator=(const Array &other)
     return *this;
 }
 
-void Array::Resize(SizeType capacity)
+void VMArray::Resize(SizeType capacity)
 {
     // delete and copy all over again
     m_capacity = capacity;
@@ -83,7 +83,7 @@ void Array::Resize(SizeType capacity)
     m_buffer = new_buffer;
 }
 
-void Array::Push(const Value &value)
+void VMArray::Push(const Value &value)
 {
     const SizeType index = m_size;
 
@@ -96,7 +96,7 @@ void Array::Push(const Value &value)
     m_size++;
 }
 
-void Array::PushMany(SizeType n, Value *values)
+void VMArray::PushMany(SizeType n, Value *values)
 {
     const SizeType index = m_size;
 
@@ -113,7 +113,7 @@ void Array::PushMany(SizeType n, Value *values)
     m_size += n;
 }
 
-void Array::PushMany(SizeType n, Value **values)
+void VMArray::PushMany(SizeType n, Value **values)
 {
     const SizeType index = m_size;
 
@@ -131,12 +131,12 @@ void Array::PushMany(SizeType n, Value **values)
     m_size += n;
 }
 
-void Array::Pop()
+void VMArray::Pop()
 {
     m_size--;
 }
 
-void Array::GetRepresentation(
+void VMArray::GetRepresentation(
     std::stringstream &ss,
     bool add_type_name,
     int depth

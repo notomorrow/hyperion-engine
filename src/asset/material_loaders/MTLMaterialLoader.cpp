@@ -143,7 +143,7 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 color.w = 1.0f;
             }
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_ALBEDO] = ParameterDef{
+            LastMaterial(object).parameters[Material::MATERIAL_KEY_ALBEDO] = ParameterDef {
                 .values = std::vector<float>(std::begin(color.values), std::end(color.values))
             };
 
@@ -159,8 +159,8 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
 
             const auto spec = StringUtil::Parse<int>(tokens[1]);
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_ROUGHNESS] = ParameterDef{
-                .values = {1.0f - MathUtil::Clamp(float(spec) / 1000.0f, 0.0f, 1.0f)}
+            LastMaterial(object).parameters[Material::MATERIAL_KEY_ROUGHNESS] = ParameterDef {
+                .values = { 1.0f - MathUtil::Clamp(float(spec) / 1000.0f, 0.0f, 1.0f) }
             };
 
             return;
@@ -175,8 +175,8 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
 
             const auto illum_model = StringUtil::Parse<int>(tokens[1]);
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_METALNESS] = ParameterDef{
-                .values = {float(illum_model) / 9.0f} /* rough approx */
+            LastMaterial(object).parameters[Material::MATERIAL_KEY_METALNESS] = ParameterDef {
+                .values = { float(illum_model) / 9.0f } /* rough approx */
             };
 
             return;

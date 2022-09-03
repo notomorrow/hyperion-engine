@@ -7,10 +7,12 @@ namespace vm {
 }
 
 class APIInstance;
+
 namespace compiler {
 class CompilationUnit;
 
-class Meta {
+class Meta
+{
 public:
     static void BuildMetaLibrary(hyperion::vm::VM &vm,
         CompilationUnit &compilation_unit,
