@@ -14,9 +14,7 @@ layout(location=12) in vec3 v_view_space_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_positions;
-layout(location=3) out vec4 gbuffer_material;
-
+layout(location=2) out vec4 gbuffer_material;
 
 #define PARALLAX_ENABLED 1
 
@@ -40,6 +38,5 @@ void main()
     
     gbuffer_albedo = vec4(1.0);
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_positions = vec4(0.0); // not used
     gbuffer_material = vec4(roughness, metalness, 0.0, 1.0);
 }
