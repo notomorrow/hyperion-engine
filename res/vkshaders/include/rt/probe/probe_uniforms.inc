@@ -30,7 +30,10 @@ layout(std430, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 10) buffer ProbeRa
 
 ProbeRayData GetProbeRayData(uvec2 coord)
 {
-    return probe_rays[PROBE_RAY_DATA_INDEX(coord)];
+    uint index = PROBE_RAY_DATA_INDEX(coord);
+    //index = min(index, probe_system.image_dimensions.x * probe_system.image_dimensions.y);
+
+    return probe_rays[index];
 }
 
 void SetProbeRayData(uvec2 coord, ProbeRayData ray_data)

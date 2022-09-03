@@ -128,5 +128,9 @@ void main()
         result /= total_weight;
     }
     
-    imageStore(OUTPUT_IMAGE, ivec2(coord), vec4(result.rgb, 1.0));
+    imageStore(
+        OUTPUT_IMAGE,
+        ivec2(coord),
+        vec4(result.rgb, 1.0)
+    );
 }
