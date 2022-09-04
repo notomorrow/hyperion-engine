@@ -186,6 +186,11 @@
 
 #define HYP_ENABLE_THREAD_ID // undef if needing to debug and getting crt errors
 
+#define HYP_WAIT_IDLE() \
+    do { \
+        /* do nothing */ \
+    } while (0) \
+
 // conditionals
 
 #if defined(HYP_APPLE) && HYP_APPLE

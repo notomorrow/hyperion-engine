@@ -54,7 +54,7 @@ private:
     Queue<TerrainGenerationResult> m_shared_terrain_mesh_queue;
     Queue<TerrainGenerationResult> m_owned_terrain_mesh_queue;
 
-    FlatMap<PatchCoord, TaskSystem::TaskRef> m_enqueued_patches;
+    FlatMap<PatchCoord, TaskRef> m_enqueued_patches;
 };
 
 } // namespace hyperion::v2

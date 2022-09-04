@@ -103,12 +103,21 @@ struct ScheduledFunction
 template <class ScheduledFunction>
 class Scheduler
 {
-    using ScheduledFunctionQueue = DynArray<ScheduledFunction>;
-    using Iterator = typename ScheduledFunctionQueue::Iterator;
-
 public:
     using Task = ScheduledFunction;
     using TaskID = ScheduledFunctionID;
+
+private:
+    struct ScheduledTaskData
+    {
+        Task task;
+        std::atomic<UInt> *atomic_counter = nullptr;
+    };
+
+    using ScheduledFunctionQueue = DynArray<ScheduledTaskData>;
+    using Iterator = typename ScheduledFunctionQueue::Iterator;
+
+public:
 
     Scheduler()
         : m_owner_thread(Threads::CurrentThreadID())
@@ -132,8 +141,11 @@ public:
     }
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
-     * called from a non-owner thread. */
-    ScheduledFunctionID Enqueue(ScheduledFunction &&fn)
+     * called from a non-owner thread. 
+     * @param fn The task to execute
+     *
+     */
+    ScheduledFunctionID Enqueue(Task &&fn)
     {
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -141,7 +153,29 @@ public:
         std::unique_lock lock(m_mutex);
 #endif
 
-        auto result = EnqueueInternal(std::forward<ScheduledFunction>(fn));
+        auto result = EnqueueInternal(std::forward<Task>(fn), nullptr /* No atomic counter */);
+
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Signal();
+#endif
+
+        return result;
+    }
+
+    /*! \brief Enqueue a function to be executed on the owner thread. This is to be
+     * called from a non-owner thread.
+     * @param fn The task to execute
+     * @param atomic_counter A pointer to an atomic UInt variable that is incremented upon completion.
+     */
+    ScheduledFunctionID Enqueue(Task &&fn, std::atomic<UInt> *atomic_counter)
+    {
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_sp.Wait();
+#else
+        std::unique_lock lock(m_mutex);
+#endif
+
+        auto result = EnqueueInternal(std::forward<Task>(fn), atomic_counter);
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Signal();
@@ -154,7 +188,7 @@ public:
      * @returns a boolean value indicating whether or not the function was successfully dequeued */
     bool Dequeue(ScheduledFunctionID id)
     {
-        if (id == ScheduledFunction::empty_id) {
+        if (id == Task::empty_id) {
             return false;
         }
         
@@ -188,7 +222,7 @@ public:
     /*! \brief For each item, remove a function from the owner thread's queue, if it exists
      * @returns a FixedArray of booleans, each holding whether or not the corresponding function was successfully dequeued */
     template <SizeType Sz>
-    FixedArray<bool, Sz> DequeueMany(const FixedArray<ScheduledFunctionID, Sz> &ids)
+    FixedArray<bool, Sz> DequeueMany(const FixedArray<TaskID, Sz> &ids)
     {
         FixedArray<bool, Sz> results {};
 
@@ -205,7 +239,7 @@ public:
         for (SizeType i = 0; i < ids.Size(); i++) {
             const auto &id = ids[i];
 
-            if (id == ScheduledFunction::empty_id) {
+            if (id == Task::empty_id) {
                 results[i] = false;
 
                 continue;
@@ -271,7 +305,8 @@ public:
 #endif
 
         if (m_scheduled_functions.Any()) {
-            out_container.Push(std::move(m_scheduled_functions.Front()));
+            auto &front = m_scheduled_functions.Front();
+            out_container.Push(std::move(front.task));
             m_scheduled_functions.PopFront();
 
             --m_num_enqueued;
@@ -299,7 +334,8 @@ public:
 #endif
 
         for (auto it = m_scheduled_functions.Begin(); it != m_scheduled_functions.End(); ++it) {
-            out_container.Push(std::move(*it));
+            // just moving task not atomic counter.
+            out_container.Push(std::move(it->task));
         }
 
         m_scheduled_functions.Clear();
@@ -328,7 +364,13 @@ public:
 #endif
 
         while (m_scheduled_functions.Any()) {
-            executor(m_scheduled_functions.Front());
+            auto &task_data = m_scheduled_functions.Front();
+
+            executor(task_data.task);
+
+            if (task_data.atomic_counter != nullptr) {
+                task_data.atomic_counter->fetch_add(1u, std::memory_order_relaxed);
+            }
 
             m_scheduled_functions.PopFront();
         }
@@ -345,25 +387,28 @@ public:
     }
     
 private:
-    ScheduledFunctionID EnqueueInternal(ScheduledFunction &&fn)
+    ScheduledFunctionID EnqueueInternal(Task &&fn, std::atomic<UInt> *atomic_counter = nullptr)
     {
         fn.id = ++m_id_counter;
 
-        m_scheduled_functions.PushBack(std::forward<ScheduledFunction>(fn));
+        m_scheduled_functions.PushBack(ScheduledTaskData {
+            .task = std::forward<Task>(fn),
+            .atomic_counter = atomic_counter
+        });
 
         ++m_num_enqueued;
 
-        return m_scheduled_functions.Back().id;
+        return m_scheduled_functions.Back().task.id;
     }
 
-    Iterator Find(ScheduledFunctionID id)
+    Iterator Find(TaskID id)
     {
         return m_scheduled_functions.FindIf([&id](const auto &item) {
-            return item.id == id;
+            return item.task.id == id;
         });
     }
 
-    bool DequeueInternal(ScheduledFunctionID id)
+    bool DequeueInternal(TaskID id)
     {
         const auto it = Find(id);
 
