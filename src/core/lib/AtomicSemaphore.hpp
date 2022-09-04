@@ -3,13 +3,15 @@
 
 #include <core/Memory.hpp>
 #include <Types.hpp>
+#include <util/Defines.hpp>
 
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion::v2
+{
 
 // counting semaphore
-template <class T = int>
+template <class T = Int>
 class AtomicSemaphore {
 public:
     AtomicSemaphore() = default;
@@ -31,7 +33,8 @@ private:
 };
 
 // binary semaphore
-class BinarySemaphore {
+class BinarySemaphore
+{
 public:
     BinarySemaphore() = default;
     BinarySemaphore(const BinarySemaphore &other) = delete;
@@ -40,12 +43,12 @@ public:
     BinarySemaphore &operator=(BinarySemaphore &&other) = delete;
     ~BinarySemaphore() = default;
 
-    void Signal()
+    HYP_FORCE_INLINE void Signal()
     {
         m_value.fetch_add(1u, std::memory_order_release);
     }
 
-    void Wait()
+    HYP_FORCE_INLINE void Wait()
     {
         auto value = m_value.load(std::memory_order_relaxed);
 

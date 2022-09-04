@@ -130,7 +130,7 @@ public:
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
 
-    HYP_FORCE_INLINE UInt NumEnqueued() const { return m_num_enqueued.load(); }
+    HYP_FORCE_INLINE UInt NumEnqueued() const { return m_num_enqueued.load(std::memory_order_relaxed); }
 
     /*! \brief Set the given thread ID to be the owner thread of this Scheduler.
      *  Tasks are to be enqueued from any other thread, and executed only from the owner thread.
@@ -285,7 +285,7 @@ public:
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         // TODO: do we need this?
-        while (m_num_enqueued.load() != 0u);
+        //while (m_num_enqueued.load() != 0u);
 #else
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
@@ -309,7 +309,7 @@ public:
             out_container.Push(std::move(front.task));
             m_scheduled_functions.PopFront();
 
-            --m_num_enqueued;
+            m_num_enqueued.fetch_sub(1u, std::memory_order_relaxed);
         }
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
@@ -339,7 +339,7 @@ public:
         }
 
         m_scheduled_functions.Clear();
-        m_num_enqueued.store(0u);
+        m_num_enqueued.store(0u, std::memory_order_relaxed);
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Signal();
@@ -375,7 +375,7 @@ public:
             m_scheduled_functions.PopFront();
         }
 
-        m_num_enqueued.store(0u);
+        m_num_enqueued.store(0u, std::memory_order_relaxed);
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Signal();
@@ -396,7 +396,7 @@ private:
             .atomic_counter = atomic_counter
         });
 
-        ++m_num_enqueued;
+        m_num_enqueued.fetch_add(1u, std::memory_order_relaxed);
 
         return m_scheduled_functions.Back().task.id;
     }
@@ -418,7 +418,7 @@ private:
 
         m_scheduled_functions.Erase(it);
 
-        --m_num_enqueued;
+        m_num_enqueued.fetch_sub(1u, std::memory_order_relaxed);
 
         return true;
     }
