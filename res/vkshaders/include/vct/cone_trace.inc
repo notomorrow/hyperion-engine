@@ -9,13 +9,13 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_im
 #define VCT_DIFFUSE_RATIO(roughness)  RoughnessToConeAngle(roughness)
 #define VCT_SPECULAR_MAX_DIST         0.12
 
-#define VCT_SPECULAR_RATIO(roughness) 0.015 //RoughnessToConeAngle(roughness)
+#define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
 #define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.015)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
-    vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), 0.0);
+    vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
     rgba.rgb = pow(rgba.rgb, vec3(2.2));
     return rgba;
 }

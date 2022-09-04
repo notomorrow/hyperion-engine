@@ -21,7 +21,53 @@ struct UniquePtrHolder
 {
     void *value;
     TypeID type_id;
-    void(*dtor)(void *);
+    void (*dtor)(void *);
+
+    UniquePtrHolder()
+        : value(nullptr),
+          type_id(TypeID::ForType<void>()),
+          dtor(nullptr)
+    {
+    }
+
+    UniquePtrHolder(const UniquePtrHolder &other)
+        : value(other.value),
+          type_id(other.type_id),
+          dtor(other.dtor)
+    {
+    }
+
+    UniquePtrHolder &operator=(const UniquePtrHolder &other)
+    {
+        value = other.value;
+        type_id = other.type_id;
+        dtor = other.dtor;
+
+        return *this;
+    }
+
+    UniquePtrHolder(UniquePtrHolder &&other) noexcept
+        : value(other.value),
+          type_id(other.type_id),
+          dtor(other.dtor)
+    {
+        other.value = nullptr;
+        other.type_id = TypeID::ForType<void>();
+        other.dtor = nullptr;
+    }
+
+    UniquePtrHolder &operator=(UniquePtrHolder &&other) noexcept
+    {
+        value = other.value;
+        type_id = other.type_id;
+        dtor = other.dtor;
+
+        other.value = nullptr;
+        other.type_id = TypeID::ForType<void>();
+        other.dtor = nullptr;
+
+        return *this;
+    }
 
     template <class T, class ...Args>
     void Construct(Args &&... args)
@@ -46,17 +92,16 @@ struct UniquePtrHolder
     void Destruct()
     {
         dtor(value);
-        type_id = TypeID::ForType<void>();
-        value = nullptr;
-        dtor = nullptr;
     }
+
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return value != nullptr; }
 };
 
 class UniquePtrBase
 {
 public:
     UniquePtrBase()
-        : m_ref(nullptr)
     {
     }
 
@@ -64,17 +109,15 @@ public:
     UniquePtrBase &operator=(const UniquePtrBase &other) = delete;
 
     UniquePtrBase(UniquePtrBase &&other) noexcept
-        : m_ref(other.m_ref)
+        : m_holder(std::move(other.m_holder))
     {
-        other.m_ref = nullptr;
     }
 
     UniquePtrBase &operator=(UniquePtrBase &&other) noexcept
     {
         Reset();
 
-        m_ref = other.m_ref;
-        other.m_ref = nullptr;
+        std::swap(m_holder, other.m_holder);
 
         return *this;
     }
@@ -85,7 +128,7 @@ public:
     }
 
     [[nodiscard]] HYP_FORCE_INLINE void *Get() const
-        { return m_ref ? m_ref->value : nullptr; }
+        { return m_holder.value; }
 
     explicit operator bool() const
         { return Get() != nullptr; }
@@ -94,28 +137,28 @@ public:
         { return Get() == nullptr; }
 
     bool operator==(const UniquePtrBase &other) const
-        { return m_ref == other.m_ref; }
+        { return m_holder.value == other.m_holder.value; }
 
     bool operator==(std::nullptr_t) const
         { return Get() == nullptr; }
 
     bool operator!=(const UniquePtrBase &other) const
-        { return m_ref != other.m_ref; }
+        { return m_holder.value != other.m_holder.value; }
 
     bool operator!=(std::nullptr_t) const
         { return Get() != nullptr; }
 
     [[nodiscard]] const TypeID &GetTypeID() const
-        { return m_ref ? m_ref->type_id : TypeID::ForType<void>(); }
+        { return m_holder.type_id; }
 
     /*! \brief Attempts to cast the pointer directly to the given type.
-        If the types are not exact, no cast is performed and a null pointer
-        UniquePtr is returned. Otherwise, the value currently held in the UniquePtr
-        being casted is std::move'd to the returned value. */
+        If the types are not exact (or T is not void, in the case of a void pointer),
+        no cast is performed and a null UniquePtr is returned. Otherwise, the
+        value currently held in the UniquePtr being casted is std::move'd to the returned value. */
     template <class T>
     [[nodiscard]] HYP_FORCE_INLINE UniquePtr<T> Cast()
     {
-        if (GetTypeID() == TypeID::ForType<T>()) {
+        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
             return CastUnsafe<T>();
         }
 
@@ -125,10 +168,9 @@ public:
     /*! \brief Destroys any currently held object.  */
     HYP_FORCE_INLINE void Reset()
     {
-        if (m_ref) {
-            m_ref->Destruct();
-            delete m_ref;
-            m_ref = nullptr;
+        if (m_holder) {
+            m_holder.Destruct();
+            m_holder = UniquePtrHolder();
         }
     }
 
@@ -138,41 +180,35 @@ public:
         manually. */
     [[nodiscard]] HYP_FORCE_INLINE void *Release()
     {
-        if (!m_ref) {
-            return nullptr;
+        if (m_holder) {
+            auto *ptr = m_holder.value;
+            m_holder = UniquePtrHolder();
+            return ptr;
         }
 
-        void *ptr = m_ref->value;
-
-        // not calling m_ref->Destruct() because we don't
-        // need to invoke dtor and we _definitely_ don't want
-        // to invoke it while m_ref->value is still set.
-        delete m_ref;
-        m_ref = nullptr;
-
-        return ptr;
+        return nullptr;
     }
 
 protected:
-    explicit UniquePtrBase(UniquePtrHolder *holder)
-        : m_ref(holder)
+    explicit UniquePtrBase(UniquePtrHolder &&holder)
+        : m_holder(std::move(holder))
     {
     }
 
     template <class T>
-    UniquePtr<T> CastUnsafe()
+    HYP_FORCE_INLINE UniquePtr<T> CastUnsafe()
     {
         UniquePtr<T> unique;
-        unique.m_ref = m_ref;
-        m_ref = nullptr;
+        unique.m_holder = m_holder;
+        m_holder = UniquePtrHolder();
 
         return unique;
     }
 
-    UniquePtrHolder *m_ref;
+    UniquePtrHolder m_holder;
 };
 
-/*! \brief A unique pointer with type erasure built in */
+/*! \brief A unique pointer with type erasure built in, so anything could be stored as UniquePtr<void>. */
 template <class T>
 class UniquePtr : public UniquePtrBase
 {
@@ -200,15 +236,15 @@ public:
     }
 
     explicit UniquePtr(const T &value)
-        : Base(new UniquePtrHolder)
+        : Base()
     {
-        Base::m_ref->template Construct<T>(value);
+        Base::m_holder.template Construct<T>(value);
     }
 
     explicit UniquePtr(T &&value)
-        : Base(new UniquePtrHolder)
+        : Base()
     {
-        Base::m_ref->template Construct<T>(std::move(value));
+        Base::m_holder.template Construct<T>(std::move(value));
     }
 
     UniquePtr(const UniquePtr &other) = delete;
@@ -229,7 +265,7 @@ public:
     ~UniquePtr() = default;
 
     HYP_FORCE_INLINE T *Get() const
-        { return Base::m_ref ? static_cast<T *>(Base::m_ref->value) : nullptr; }
+        { return static_cast<T *>(Base::m_holder.value); }
 
     HYP_FORCE_INLINE T *operator->() const
         { return Get(); }
@@ -243,17 +279,15 @@ public:
     void Set(const T &value)
     {
         Base::Reset();
-
-        Base::m_ref = new UniquePtrHolder;
-        Base::m_ref->template Construct<T>(value);
+        
+        Base::m_holder.template Construct<T>(value);
     }
 
     void Set(T &&value)
     {
         Base::Reset();
-
-        Base::m_ref = new UniquePtrHolder;
-        Base::m_ref->template Construct<T>(std::move(value));
+        
+        Base::m_holder.template Construct<T>(std::move(value));
     }
 
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
@@ -264,8 +298,7 @@ public:
         Base::Reset();
 
         if (ptr) {
-            Base::m_ref = new UniquePtrHolder;
-            Base::m_ref->template TakeOwnership<T>(ptr);
+            Base::m_holder.template TakeOwnership<T>(ptr);
         }
     }
 
@@ -287,9 +320,15 @@ public:
 
         return rc;
     }
+
+    template <class ...Args>
+    static UniquePtr Construct(Args &&... args)
+    {
+        return UniquePtr(new T(std::forward<Args>(args)...));
+    }
 };
 
-// void pointer specialization -- just uses base class, but with Set() and Reset()
+// void pointer specialization
 template <>
 class UniquePtr<void> : public UniquePtrBase
 {
@@ -309,6 +348,8 @@ public:
 
     UniquePtr(const Base &other) = delete;
     UniquePtr &operator=(const Base &other) = delete;
+    UniquePtr(const UniquePtr &other) = delete;
+    UniquePtr &operator=(const UniquePtr &other) = delete;
 
     UniquePtr(Base &&other) noexcept
         : Base(std::move(other))
@@ -316,6 +357,18 @@ public:
     }
 
     UniquePtr &operator=(Base &&other) noexcept
+    {
+        Base::operator=(std::move(other));
+
+        return *this;
+    }
+
+    UniquePtr(UniquePtr &&other) noexcept
+        : Base(std::move(other))
+    {
+    }
+
+    UniquePtr &operator=(UniquePtr &&other) noexcept
     {
         Base::operator=(std::move(other));
 
@@ -331,18 +384,16 @@ public:
     void Set(const T &value)
     {
         Base::Reset();
-
-        Base::m_ref = new UniquePtrHolder;
-        Base::m_ref->template Construct<T>(value);
+        
+        Base::m_holder.template Construct<T>(value);
     }
 
     template <class T>
     void Set(T &&value)
     {
         Base::Reset();
-
-        Base::m_ref = new UniquePtrHolder;
-        Base::m_ref->template Construct<T>(std::move(value));
+        
+        Base::m_holder.template Construct<T>(std::move(value));
     }
 
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
@@ -354,8 +405,7 @@ public:
         Base::Reset();
 
         if (ptr) {
-            Base::m_ref = new UniquePtrHolder;
-            Base::m_ref->template TakeOwnership<T>(ptr);
+            Base::m_holder.template TakeOwnership<T>(ptr);
         }
     }
 

@@ -53,7 +53,7 @@ struct Pair {
 
     Pair &operator=(const Pair &other)
     {
-        first  = other.first;
+        first = other.first;
         second = other.second;
 
         return *this;
@@ -67,7 +67,7 @@ struct Pair {
 
     Pair &operator=(Pair &&other) noexcept
     {
-        first  = std::move(other.first);
+        first = std::move(other.first);
         second = std::move(other.second);
 
         return *this;
@@ -120,7 +120,7 @@ struct KeyValuePair : Pair<Key, Value>
     KeyValuePair(Key &&key, const Value &value) : Pair<Key, Value>(std::move(key), value) {}
     KeyValuePair(Key &&key, Value &&value) : Pair<Key, Value>(std::move(key), std::move(value)) {}
     KeyValuePair(const KeyValuePair &other) : Pair<Key, Value>(other) {}
-    KeyValuePair(KeyValuePair &&other) : Pair<Key, Value>(std::move(other)) {}
+    KeyValuePair(KeyValuePair &&other) noexcept : Pair<Key, Value>(std::move(other)) {}
 
     KeyValuePair &operator=(const KeyValuePair &other)
     {

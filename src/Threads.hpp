@@ -22,14 +22,14 @@ enum ThreadName : ThreadMask
 
     THREAD_TASK_0 = 0x10,
     THREAD_TASK_1 = 0x20,
-    THREAD_TASK_2 = 0x30,
-    THREAD_TASK_3 = 0x40,
-    THREAD_TASK_4 = 0x50,
-    THREAD_TASK_5 = 0x60,
-    THREAD_TASK_6 = 0x70,
-    THREAD_TASK_7 = 0x80,
+    THREAD_TASK_2 = 0x40,
+    THREAD_TASK_3 = 0x80,
+    THREAD_TASK_4 = 0x100,
+    THREAD_TASK_5 = 0x200,
+    THREAD_TASK_6 = 0x400,
+    THREAD_TASK_7 = 0x800,
 
-    THREAD_TASK = 0xF0
+    THREAD_TASK = 0xFF0
 };
 
 class Threads

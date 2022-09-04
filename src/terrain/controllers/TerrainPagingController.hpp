@@ -13,7 +13,8 @@
 
 namespace hyperion::v2 {
 
-class TerrainPagingController : public PagingController {
+class TerrainPagingController : public PagingController
+{
 public:
     TerrainPagingController(
         Seed seed,
@@ -36,7 +37,8 @@ protected:
     NoiseCombinator m_noise_combinator;
 
 private:
-    struct TerrainGenerationResult {
+    struct TerrainGenerationResult
+    {
         PatchInfo patch_info;
         std::unique_ptr<Mesh> mesh;
     };

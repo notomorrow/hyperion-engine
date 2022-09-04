@@ -72,7 +72,7 @@ using namespace hyperion;
 using namespace hyperion::v2;
 
 
-#define HYPERION_VK_TEST_VCT 0
+#define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -81,8 +81,6 @@ namespace hyperion::v2 {
 class MyGame : public Game {
 
 public:
-    Handle<Material> base_material;//hack
-
     Handle<Light> m_point_light;
 
     MyGame()
@@ -92,7 +90,7 @@ public:
 
     virtual void InitRender(Engine *engine) override
     {
-        //engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
+        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
@@ -108,8 +106,6 @@ public:
         );
 
         engine->GetWorld().AddScene(Handle<Scene>(m_scene));
-
-        base_material = engine->CreateHandle<Material>();
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
@@ -258,12 +254,6 @@ public:
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
         if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
-            // for (auto &child : test->GetChildren()) {
-            //     if (auto &ent = child->GetEntity()) {
-            //         std::cout << "Adding debug controller to  " << child->GetName() << "\n";
-            //         ent->AddController<AABBDebugController>(engine);
-            //     }
-            // }
         }
 
         auto quad = engine->CreateHandle<Mesh>(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
@@ -284,8 +274,8 @@ public:
         
         m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             Handle<Light>(my_light),
-            Vector3(0, 50, 0),
-            850.0f
+            Vector3(0, 0, 0),
+            150.0f
         );
 
         m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
@@ -541,7 +531,7 @@ int main()
 #endif
     
     SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1600, 1200);
+    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 1024);
     system.SetCurrentWindow(window);
 
     SystemEvent event;

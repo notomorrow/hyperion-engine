@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_CORE_THREAD_H
 #define HYPERION_V2_CORE_THREAD_H
 
-#include "lib/FixedString.hpp"
+#include <core/lib/FixedString.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -32,6 +32,7 @@ class Thread
 public:
     using Scheduler = SchedulerType;
     using Task = typename Scheduler::Task;
+    using TaskID = typename Scheduler::TaskID;
 
     Thread(const ThreadID &id);
     Thread(const Thread &other) = delete;
@@ -50,7 +51,7 @@ public:
      * @param atomic_counter An optionally provided pointer to atomic UInt which will be incremented
      *      upon completion
      */
-    auto ScheduleTask(Task &&task, std::atomic<UInt> *atomic_counter = nullptr) -> typename Scheduler::TaskID
+    TaskID ScheduleTask(Task &&task, std::atomic<UInt> *atomic_counter = nullptr)
     {
         return m_scheduler.Enqueue(std::forward<Task>(task), atomic_counter);
     }

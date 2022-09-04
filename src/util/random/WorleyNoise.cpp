@@ -45,7 +45,6 @@ double WorleyNoise::Noise(double x, double y, double z)
                     last_random = LCGRandom(last_random);
                     random_diff.z = double(last_random) / 0x100000000;
 
-
                     feature_point = Vector3(random_diff.x + cubex, random_diff.y + cubey, random_diff.z + cubez);
 
                     Insert(distance_array, EuclidianDistance(input_point, feature_point));

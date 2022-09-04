@@ -9,6 +9,7 @@
 #include <core/lib/Queue.hpp>
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/DynArray.hpp>
+#include <core/lib/UniquePtr.hpp>
 
 #include <math/BoundingSphere.hpp>
 
@@ -40,26 +41,29 @@ class IndirectDrawState
 public:
     static constexpr UInt batch_size = 256u;
     static constexpr UInt initial_count = batch_size;
-    // should sizes be scaled up to the next power of 2
+    // should sizes be scaled up to the next power of 2?
     static constexpr bool use_next_pow2_size = true;
 
     IndirectDrawState();
     ~IndirectDrawState();
 
     StorageBuffer *GetInstanceBuffer(UInt frame_index) const
-        { return m_instance_buffers[frame_index].get(); }
+        { return m_instance_buffers[frame_index].Get(); }
 
     IndirectBuffer *GetIndirectBuffer(UInt frame_index) const
-        { return m_indirect_buffers[frame_index].get(); }
+        { return m_indirect_buffers[frame_index].Get(); }
 
-    DynArray<EntityDrawProxy> &GetDrawProxies()             { return m_draw_proxies; }
-    const DynArray<EntityDrawProxy> &GetDrawProxies() const { return m_draw_proxies; }
+    DynArray<EntityDrawProxy> &GetDrawProxies()
+        { return m_draw_proxies; }
+
+    const DynArray<EntityDrawProxy> &GetDrawProxies() const
+        { return m_draw_proxies; }
 
     Result Create(Engine *engine);
     Result Destroy(Engine *engine);
 
     void PushDrawProxy(const EntityDrawProxy &draw_proxy);
-    void ResetDrawProxies();
+    void Reset();
     void Reserve(Engine *engine, Frame *frame, SizeType count);
 
     void UpdateBufferData(Engine *engine, Frame *frame, bool *out_was_resized);
@@ -71,27 +75,32 @@ private:
     // returns true if resize happened.
     bool ResizeIfNeeded(Engine *engine, Frame *frame, SizeType count);
 
-    DynArray<ObjectInstance>      m_object_instances;
-    DynArray<EntityDrawProxy>     m_draw_proxies;
+    DynArray<ObjectInstance> m_object_instances;
+    DynArray<EntityDrawProxy> m_draw_proxies;
 
-    FixedArray<std::unique_ptr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
-    FixedArray<std::unique_ptr<StorageBuffer>, max_frames_in_flight>  m_instance_buffers;
-    FixedArray<std::unique_ptr<StagingBuffer>, max_frames_in_flight>  m_staging_buffers;
-    FixedArray<bool, max_frames_in_flight>                            m_is_dirty;
+    FixedArray<UniquePtr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
+    FixedArray<UniquePtr<StorageBuffer>, max_frames_in_flight> m_instance_buffers;
+    FixedArray<UniquePtr<StagingBuffer>, max_frames_in_flight> m_staging_buffers;
+    FixedArray<bool, max_frames_in_flight>  m_is_dirty;
     UInt m_max_entity_id = 0;
 
 };
 
-struct alignas(16) IndirectParams {
+struct alignas(16) IndirectParams
+{
 };
 
-class IndirectRenderer {
+class IndirectRenderer
+{
 public:
     IndirectRenderer();
     ~IndirectRenderer();
 
-    IndirectDrawState &GetDrawState()             { return m_indirect_draw_state; }
-    const IndirectDrawState &GetDrawState() const { return m_indirect_draw_state; }
+    IndirectDrawState &GetDrawState()
+        { return m_indirect_draw_state; }
+
+    const IndirectDrawState &GetDrawState() const
+        { return m_indirect_draw_state; }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -107,7 +116,7 @@ private:
 
     IndirectDrawState m_indirect_draw_state;
     Handle<ComputePipeline> m_object_visibility;
-    FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
     FixedArray<UniformBuffer, max_frames_in_flight> m_indirect_params_buffers;
     CullData m_cached_cull_data;
     UInt8 m_cached_cull_data_updated_bits;

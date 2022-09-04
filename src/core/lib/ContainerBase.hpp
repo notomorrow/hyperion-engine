@@ -12,7 +12,8 @@
 namespace hyperion {
 
 template <class Container, class Key>
-class ContainerBase {
+class ContainerBase
+{
 protected:
     using Base = ContainerBase;
     using KeyType = Key;
@@ -177,6 +178,12 @@ public:
         }
 
         return hc;
+    }
+
+    template <class TaskSystem, class Lambda>
+    void ParallelForEach(TaskSystem &task_system, Lambda &&lambda)
+    {
+        task_system.ParallelForEach(*this, std::forward<Lambda>(lambda));
     }
 };
 

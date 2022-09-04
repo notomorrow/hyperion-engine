@@ -257,6 +257,11 @@ void Engine::Initialize()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+#ifdef HYP_WINDOWS
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    //SetThreadAffinityMask(GetCurrentThread(), (1 << 8));
+#endif
+
     HYPERION_ASSERT_RESULT(m_instance->Initialize(true));
 
     FindTextureFormatDefaults();
@@ -621,6 +626,11 @@ void Engine::RenderNextFrame(Game *game)
 Handle<RendererInstance> Engine::FindOrCreateRendererInstance(const Handle<Shader> &shader, const RenderableAttributeSet &renderable_attributes)
 {
     if (!shader) {
+        DebugLog(
+            LogType::Warn,
+            "Shader is empty; Cannot create or find RendererInstance.\n"
+        );
+
         return Handle<RendererInstance>::empty;
     }
 
@@ -676,7 +686,7 @@ void Engine::PreFrameUpdate(Frame *frame)
     Threads::AssertOnThread(THREAD_RENDER);
 
     m_render_list_container.AddPendingRendererInstances(this);
-
+    
     if (auto num_enqueued = render_scheduler.NumEnqueued()) {
         render_scheduler.Flush([frame](RenderFunctor &fn) {
             HYPERION_ASSERT_RESULT(fn(frame->GetCommandBuffer(), frame->GetFrameIndex()));

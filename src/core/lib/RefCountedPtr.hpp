@@ -139,10 +139,14 @@ public:
     const TypeID &GetTypeID() const
         { return m_ref ? m_ref->type_id : TypeID::ForType<void>(); }
 
+    /*! \brief Creates a new RefCountedPtr of T from the existing RefCountedPtr.
+     * If the types are not exact, or T is not equal to void (in the case of a void pointer),
+     * no conversion is performed and an empty RefCountedPtr is returned.
+     */
     template <class T>
     HYP_FORCE_INLINE RefCountedPtr<T, CountType> Cast()
     {
-        if (GetTypeID() == TypeID::ForType<T>()) {
+        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
             return CastUnsafe<T>();
         }
 

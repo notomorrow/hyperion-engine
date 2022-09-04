@@ -100,6 +100,8 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
     DebugLog(LogType::Info, "Terrain patch added at [%f, %f], enqueuing terrain generation\n", patch->info.coord.x, patch->info.coord.y);
     
     auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::TERRAIN);
+    AssertThrow(shader.HasValue());
+
     const auto vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes;
 
     patch->entity = GetEngine()->CreateHandle<Entity>(

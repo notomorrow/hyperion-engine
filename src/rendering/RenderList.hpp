@@ -24,6 +24,8 @@ public:
     
     class RenderListBucket
     {
+        friend class RenderListContainer;
+
         Bucket                                bucket{BUCKET_OPAQUE};
         Handle<RenderPass>                    render_pass;
         DynArray<Handle<Framebuffer>>         framebuffers;

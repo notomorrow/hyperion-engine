@@ -21,7 +21,7 @@ class Engine;
 class Game;
 
 class GameThread
-    : public Thread<Scheduler<ScheduledFunction<void, GameCounter::TickUnit>>, Engine *, Game *, SystemWindow *>
+    : public Thread<Scheduler<Task<void, GameCounter::TickUnit>>, Engine *, Game *, SystemWindow *>
 {
 public:
     GameThread();

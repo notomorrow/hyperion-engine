@@ -11,7 +11,8 @@
 
 #include <atomic>
 
-#define HYP_NUM_TASK_THREADS_4
+#define HYP_NUM_TASK_THREADS_2
+//#define HYP_NUM_TASK_THREADS_4
 //#define HYP_NUM_TASK_THREADS_8
 
 namespace hyperion::v2 {
@@ -19,13 +20,18 @@ namespace hyperion::v2 {
 struct TaskRef
 {
     TaskThread *runner;
-    TaskThread::Scheduler::TaskID id;
+    TaskID id;
 };
 
 struct TaskBatch
 {
     std::atomic<UInt> num_completed;
     UInt num_enqueued;
+
+    /*! \brief The priority / pool lane for which to place
+     * all of the threads in this batch into
+     */
+    TaskPriority priority = TaskPriority::MEDIUM;
 
     /* Number of tasks must remain constant from creation of the TaskBatch,
      * to completion. */
@@ -34,22 +40,18 @@ struct TaskBatch
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
     DynArray<TaskRef> task_refs;
-
+    
     /*! \brief Add a task to be ran with this batch. Note: adding a task while the batch is already running
      * does not mean the newly added task will be ran! You'll need to re-enqueue the batch after the previous one has been completed.
      */
-    void AddTask(TaskThread::Scheduler::Task &&task)
-    {
-        tasks.PushBack(std::move(task));
-    }
+    HYP_FORCE_INLINE void AddTask(TaskThread::Scheduler::Task &&task)
+        { tasks.PushBack(std::move(task)); }
 
-    bool IsCompleted() const
-    {
-        return num_completed.load(std::memory_order_relaxed) >= num_enqueued;
-    }
+    HYP_FORCE_INLINE bool IsCompleted() const
+        { return num_completed.load(std::memory_order_relaxed) >= num_enqueued; }
 
     /*! \brief Block the current thread until all tasks have been marked as completed. */
-    void AwaitCompletion() const
+    HYP_FORCE_INLINE void AwaitCompletion() const
     {
         while (!IsCompleted()) {
             HYP_WAIT_IDLE();
@@ -69,38 +71,30 @@ struct TaskBatch
 
 class TaskSystem
 {
-    static constexpr UInt target_ticks_per_second = 0;
+    static constexpr UInt target_ticks_per_second = 4096; // For base priority. Second priority is this number << 2, so 65536
+    static constexpr UInt num_threads_per_pool = 2;
+    
+    struct TaskThreadPool
+    {
+        std::atomic_uint cycle { 0u };
+        FixedArray<UniquePtr<TaskThread>, num_threads_per_pool> threads;
+    };
 
 public:
     TaskSystem()
-        : m_cycle { 0u },
-          m_task_thread_0(Threads::thread_ids.At(THREAD_TASK_0), target_ticks_per_second),
-          m_task_thread_1(Threads::thread_ids.At(THREAD_TASK_1), target_ticks_per_second),
-#if defined(HYP_NUM_TASK_THREADS_4) || defined(HYP_NUM_TASK_THREADS_8)
-          m_task_thread_2(Threads::thread_ids.At(THREAD_TASK_2), target_ticks_per_second),
-          m_task_thread_3(Threads::thread_ids.At(THREAD_TASK_3), target_ticks_per_second),
-#endif
-#ifdef HYP_NUM_TASK_THREADS_8
-          m_task_thread_4(Threads::thread_ids.At(THREAD_TASK_4), target_ticks_per_second),
-          m_task_thread_5(Threads::thread_ids.At(THREAD_TASK_5), target_ticks_per_second),
-          m_task_thread_6(Threads::thread_ids.At(THREAD_TASK_6), target_ticks_per_second),
-          m_task_thread_7(Threads::thread_ids.At(THREAD_TASK_7), target_ticks_per_second),
-#endif
-          m_task_threads {
-              &m_task_thread_0,
-              &m_task_thread_1,
-#if defined(HYP_NUM_TASK_THREADS_4) || defined(HYP_NUM_TASK_THREADS_8)
-              &m_task_thread_2,
-              &m_task_thread_3,
-#endif
-#ifdef HYP_NUM_TASK_THREADS_8
-              &m_task_thread_4,
-              &m_task_thread_5,
-              &m_task_thread_6,
-              &m_task_thread_7
-#endif
-          }
     {
+        ThreadMask mask = THREAD_TASK_0;
+        UInt priority_value = 0;
+
+        for (auto &pool : m_pools) {
+            for (auto &it : pool.threads) {
+                AssertThrow(THREAD_TASK & mask);
+                it.Reset(new TaskThread(Threads::thread_ids.At(static_cast<ThreadName>(mask)), target_ticks_per_second << (2 * priority_value)));
+                mask <<= 1;
+            }
+
+            ++priority_value;
+        }
     }
 
     TaskSystem(const TaskSystem &other) = delete;
@@ -113,32 +107,42 @@ public:
 
     void Start()
     {
-        for (auto &it : m_task_threads) {
-            AssertThrow(it->Start());
+        for (auto &pool : m_pools) {
+            for (auto &it : pool.threads) {
+                AssertThrow(it != nullptr);
+                AssertThrow(it->Start());
+            }
         }
     }
 
     void Stop()
     {
-        for (auto &it : m_task_threads) {
-            it->Stop();
-            it->Join();
+        for (auto &pool : m_pools) {
+            for (auto &it : pool.threads) {
+                AssertThrow(it != nullptr);
+                it->Stop();
+                it->Join();
+            }
         }
     }
 
-    template <class Task>
-    TaskRef ScheduleTask(Task &&task)
-    {
-        const auto cycle = m_cycle.load();
+    TaskThreadPool &GetPool(TaskPriority priority)
+        { return m_pools[static_cast<UInt>(priority)]; }
 
-        TaskThread *task_thread = m_task_threads[cycle];
+    template <class Task>
+    TaskRef ScheduleTask(Task &&task, TaskPriority priority = TaskPriority::MEDIUM)
+    {
+        auto &pool = GetPool(priority);
+
+        const auto cycle = pool.cycle.load(std::memory_order_relaxed);
+        auto &task_thread = pool.threads[cycle];
 
         const auto task_id = task_thread->ScheduleTask(std::forward<Task>(task));
 
-        m_cycle.store((cycle + 1) % m_task_threads.Size());
+        pool.cycle.store((cycle + 1) % pool.threads.Size(), std::memory_order_relaxed);
 
         return TaskRef {
-            task_thread,
+            task_thread.Get(),
             task_id
         };
     }
@@ -154,21 +158,24 @@ public:
 
         batch->task_refs.Resize(batch->tasks.Size());
 
+        auto &pool = GetPool(batch->priority);
+
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
-            const auto cycle = m_cycle.load(std::memory_order_relaxed);
-            auto *task_thread = m_task_threads[cycle];
+
+            const auto cycle = pool.cycle.load(std::memory_order_relaxed);
+            auto &task_thread = pool.threads[cycle];
             
             const auto task_id = task_thread->ScheduleTask(std::move(task), &batch->num_completed);
 
             ++batch->num_enqueued;
 
             batch->task_refs[i] = TaskRef {
-                task_thread,
+                task_thread.Get(),
                 task_id
             };
 
-            m_cycle.store((cycle + 1) % m_task_threads.Size(), std::memory_order_relaxed);
+            pool.cycle.store((cycle + 1) % pool.threads.Size(), std::memory_order_relaxed);
         }
 
         // all have been moved
@@ -203,31 +210,80 @@ public:
         return results;
     }
 
+    /*! \brief Creates a TaskBatch which will call the lambda for each and every item in the given container.
+     *  The tasks will be split evenly into \ref{num_groups} groups.
+        The lambda will be called with (item, index) for each item. */
+    template <class Container, class Lambda>
+    void ParallelForEach(TaskPriority priority, UInt num_groups, Container &&items, Lambda &&lambda)
+    {
+        TaskBatch batch;
+        batch.priority = priority;
+
+        const auto num_items = items.Size();
+        const auto items_per_thread = num_items / num_groups;
+        const auto num_items_divided = (num_items + items_per_thread - 1) / items_per_thread;
+        
+        for (SizeType group_index = 0; group_index < num_groups; group_index++) {
+            batch.AddTask([&items, group_index, num_items_divided, num_items, lambda](...) {
+                const SizeType offset_index = group_index * num_items_divided;
+                const SizeType max_iter = MathUtil::Min(offset_index + num_items_divided, num_items);
+
+                for (SizeType i = offset_index; i < max_iter; ++i) {
+                    lambda(items[i], i);
+                }
+            });
+        }
+
+        if (batch.tasks.Size() > 1) {
+            EnqueueBatch(&batch);
+            batch.AwaitCompletion();
+        } else if (batch.tasks.Size() == 1) {
+            // no point in enqueing for just 1 task, execute immediately
+            batch.ForceExecute();
+        }
+    }
+    
+    /*! \brief Creates a TaskBatch which will call the lambda for each and every item in the given container.
+     *  The tasks will be split evenly into groups, based on the number of threads in the pool for the given priority.
+        The lambda will be called with (item, index) for each item. */
+    template <class Container, class Lambda>
+    HYP_FORCE_INLINE void ParallelForEach(TaskPriority priority, Container &&items, Lambda &&lambda)
+    {
+        const auto &pool = GetPool(priority);
+
+        ParallelForEach(
+            priority,
+            static_cast<UInt>(pool.threads.Size()),
+            std::forward<Container>(items),
+            std::forward<Lambda>(lambda)
+        );
+    }
+    
+    /*! \brief Creates a TaskBatch which will call the lambda for each and every item in the given container.
+     *  The tasks will be split evenly into groups, based on the number of threads in the pool for the default priority.
+        The lambda will be called with (item, index) for each item. */
+    template <class Container, class Lambda>
+    HYP_FORCE_INLINE void ParallelForEach(Container &&items, Lambda &&lambda)
+    {
+        constexpr auto priority = TaskPriority::MEDIUM;
+        const auto &pool = GetPool(priority);
+
+        ParallelForEach(
+            priority,
+            static_cast<UInt>(pool.threads.Size()),
+            std::forward<Container>(items),
+            std::forward<Lambda>(lambda)
+        );
+    }
+
     bool Unschedule(const TaskRef &task_ref)
     {
         return task_ref.runner->GetScheduler().Dequeue(task_ref.id);
     }
 
 private:
-    std::atomic_uint m_cycle;
-    TaskThread m_task_thread_0;
-    TaskThread m_task_thread_1;
-#if defined(HYP_NUM_TASK_THREADS_4) || defined(HYP_NUM_TASK_THREADS_8)
-    TaskThread m_task_thread_2;
-    TaskThread m_task_thread_3;
-#endif
-#ifdef HYP_NUM_TASK_THREADS_8
-    TaskThread m_task_thread_4;
-    TaskThread m_task_thread_5;
-    TaskThread m_task_thread_6;
-    TaskThread m_task_thread_7;
-#endif
 
-#if defined(HYP_NUM_TASK_THREADS_8)
-    FixedArray<TaskThread *, 8> m_task_threads;
-#elif defined(HYP_NUM_TASK_THREADS_4)
-    FixedArray<TaskThread *, 4> m_task_threads;
-#endif
+    FixedArray<TaskThreadPool, 2> m_pools;
 
     DynArray<TaskBatch *> m_running_batches;
 };

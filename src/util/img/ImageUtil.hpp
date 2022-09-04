@@ -9,26 +9,27 @@ namespace hyperion {
 class ImageUtil {
 public:
     static inline
-    void ConvertBpp(
-        size_t width, size_t height, size_t depth,
-        UByte in_bpp, UByte out_bpp,
-        const UByte *const in_bytes,
-        UByte *out_bytes)
+    void ConvertBPP(
+        UInt width, UInt height, UInt depth,
+        UInt8 in_bpp, UInt8 out_bpp,
+        const UByte * const in_bytes,
+        UByte *out_bytes
+    )
     {
-        const UByte min_bpp = MathUtil::Min(in_bpp, out_bpp);
+        const auto min_bpp = MathUtil::Min(in_bpp, out_bpp);
 
-        for (size_t x = 0; x < width; x++) {
-            for (size_t y = 0; y < height; y++) {
-                for (size_t z = 0; z < depth; z++) {
-                    const size_t idx = x * height * depth + y * depth + z; //((z * width * height) + (y * height) + x);
-                    const size_t in_index  = idx * in_bpp;
-                    const size_t out_index = idx * out_bpp;
+        for (UInt x = 0; x < width; x++) {
+            for (UInt y = 0; y < height; y++) {
+                for (UInt z = 0; z < depth; z++) {
+                    const UInt idx = x * height * depth + y * depth + z;
+                    const UInt in_index = idx * in_bpp;
+                    const UInt out_index = idx * out_bpp;
 
-                    for (UByte i = 0; i < min_bpp; i++) {
+                    for (UInt8 i = 0; i < min_bpp; i++) {
                         out_bytes[out_index + i] = in_bytes[in_index + i];
                     }
 
-                    for (UByte i = min_bpp; i < out_bpp; i++) {
+                    for (UInt8 i = min_bpp; i < out_bpp; i++) {
                         out_bytes[out_index + i] = 255;
                     }
                 }

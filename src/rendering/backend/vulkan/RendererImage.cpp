@@ -65,38 +65,38 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
     AssertThrowMsg(false, "Unhandled image format case %d", int(fmt));
 }
 
-Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, uint8_t new_num_components)
+Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, UInt8 new_num_components)
 {
     if (new_num_components == 0) {
         return InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
     }
 
-    new_num_components = MathUtil::Clamp(new_num_components, uint8_t(1), uint8_t(4));
+    new_num_components = MathUtil::Clamp(new_num_components, static_cast<UInt8>(1), static_cast<UInt8>(4));
 
     int current_num_components = int(NumComponents(fmt));
 
     return InternalFormat(int(fmt) + int(new_num_components) - current_num_components);
 }
 
-size_t Image::NumComponents(InternalFormat format)
+UInt Image::NumComponents(InternalFormat format)
 {
     return NumComponents(GetBaseFormat(format));
 }
 
-size_t Image::NumComponents(BaseFormat format)
+UInt Image::NumComponents(BaseFormat format)
 {
     switch (format) {
-    case BaseFormat::TEXTURE_FORMAT_NONE:  return 0;
-    case BaseFormat::TEXTURE_FORMAT_R:     return 1;
-    case BaseFormat::TEXTURE_FORMAT_RG:    return 2;
-    case BaseFormat::TEXTURE_FORMAT_RGB:   return 3;
-    case BaseFormat::TEXTURE_FORMAT_BGR:   return 3;
-    case BaseFormat::TEXTURE_FORMAT_RGBA:  return 4;
-    case BaseFormat::TEXTURE_FORMAT_BGRA:  return 4;
+    case BaseFormat::TEXTURE_FORMAT_NONE: return 0;
+    case BaseFormat::TEXTURE_FORMAT_R: return 1;
+    case BaseFormat::TEXTURE_FORMAT_RG: return 2;
+    case BaseFormat::TEXTURE_FORMAT_RGB: return 3;
+    case BaseFormat::TEXTURE_FORMAT_BGR: return 3;
+    case BaseFormat::TEXTURE_FORMAT_RGBA: return 4;
+    case BaseFormat::TEXTURE_FORMAT_BGRA: return 4;
     case BaseFormat::TEXTURE_FORMAT_DEPTH: return 1;
     }
 
-    AssertThrowMsg(false, "Unhandled base image type %d", int(format));
+    AssertThrowMsg(false, "Unhandled base image type %d", static_cast<Int>(format));
 }
 
 bool Image::IsDepthFormat(InternalFormat fmt)
@@ -207,17 +207,15 @@ Image::Image(
       m_internal_info(internal_info),
       m_image(nullptr),
       m_is_blended(false),
-      m_bpp(NumComponents(GetBaseFormat(format))),
-      m_assigned_image_data(bytes != nullptr)
+      m_bpp(NumComponents(GetBaseFormat(format)))
 {
     m_size = m_extent.width * m_extent.height * m_extent.depth * m_bpp * NumFaces();
 
-    m_bytes = new unsigned char[m_size];
-
     if (bytes != nullptr) {
+        m_bytes = new unsigned char[m_size];
         Memory::Copy(m_bytes, bytes, m_size);
     } else {
-        Memory::Set(m_bytes, 0, m_size);
+        m_bytes = nullptr;
     }
 }
 
@@ -231,25 +229,32 @@ Image::Image(Image &&other) noexcept
       m_image(other.m_image),
       m_size(other.m_size),
       m_bpp(other.m_bpp),
-      m_assigned_image_data(other.m_assigned_image_data),
       m_bytes(other.m_bytes)
 {
     other.m_image = nullptr;
     other.m_bytes = nullptr;
     other.m_is_blended = false;
-    other.m_extent = Extent3D{};
-    other.m_assigned_image_data = false;
+    other.m_extent = Extent3D { };
 }
 
 Image::~Image()
 {
     AssertExit(m_image == nullptr);
 
-    delete[] m_bytes;
+    if (m_bytes != nullptr) {
+        delete[] m_bytes;
+    }
 }
 
-bool Image::IsDepthStencil() const      { return IsDepthFormat(m_format); }
-bool Image::IsSRGB() const              { return IsSRGBFormat(m_format); }
+bool Image::IsDepthStencil() const
+{
+    return IsDepthFormat(m_format);
+}
+
+bool Image::IsSRGB() const
+{
+    return IsSRGBFormat(m_format);
+}
 
 void Image::SetIsSRGB(bool srgb)
 {
@@ -346,7 +351,7 @@ Result Image::CreateImage(
             potential_fixes.emplace_back(std::make_pair(
                 "Convert to 32-bpp image",
                 [&]() -> Result {
-                    return ConvertTo32Bpp(
+                    return ConvertTo32BPP(
                         device,
                         image_type,
                         image_create_flags,
@@ -382,9 +387,9 @@ Result Image::CreateImage(
             DebugLog(
                 LogType::Error,
                 "Device does not support the format %u with requested tiling %d and format features %d\n",
-                static_cast<uint32_t>(format),
-                static_cast<int>(m_internal_info.tiling),
-                static_cast<int>(format_features)
+                static_cast<UInt>(format),
+                static_cast<Int>(m_internal_info.tiling),
+                static_cast<Int>(format_features)
             );
 
             HYP_BREAKPOINT;
@@ -394,24 +399,24 @@ Result Image::CreateImage(
     }
 
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
-    const uint32_t image_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
+    const UInt32 image_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
 
-    VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    image_info.imageType             = image_type;
-    image_info.extent.width          = m_extent.width;
-    image_info.extent.height         = m_extent.height;
-    image_info.extent.depth          = m_extent.depth;
-    image_info.mipLevels             = uint32_t(NumMipmaps());
-    image_info.arrayLayers           = uint32_t(NumFaces());
-    image_info.format                = format;
-    image_info.tiling                = m_internal_info.tiling;
-    image_info.initialLayout         = initial_layout;
-    image_info.usage                 = m_internal_info.usage_flags;
-    image_info.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.samples               = VK_SAMPLE_COUNT_1_BIT;
-    image_info.flags                 = image_create_flags; // TODO: look into flags for sparse s for VCT
-    image_info.pQueueFamilyIndices   = image_family_indices;
-    image_info.queueFamilyIndexCount = uint32_t(std::size(image_family_indices));
+    VkImageCreateInfo image_info { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    image_info.imageType = image_type;
+    image_info.extent.width = m_extent.width;
+    image_info.extent.height = m_extent.height;
+    image_info.extent.depth = m_extent.depth;
+    image_info.mipLevels = NumMipmaps();
+    image_info.arrayLayers = NumFaces();
+    image_info.format = format;
+    image_info.tiling = m_internal_info.tiling;
+    image_info.initialLayout = initial_layout;
+    image_info.usage = m_internal_info.usage_flags;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.flags = image_create_flags; // TODO: look into flags for sparse s for VCT
+    image_info.pQueueFamilyIndices = image_family_indices;
+    image_info.queueFamilyIndexCount = static_cast<UInt32>(std::size(image_family_indices));
 
     *out_image_info = image_info;
 
@@ -452,7 +457,7 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
     auto commands = instance->GetSingleTimeCommands();
     StagingBuffer staging_buffer;
 
-    if (m_assigned_image_data)  {
+    if (HasAssignedImageData())  {
         /* transition from 'undefined' layout state into one optimal for transfer */
         HYPERION_PASS_ERRORS(staging_buffer.Create(device, m_size), result);
 
@@ -478,11 +483,11 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
         // copy from staging to image
         const auto num_faces = NumFaces();
 
-        size_t buffer_offset_step = m_size / num_faces;
+        UInt buffer_offset_step = static_cast<UInt>(m_size) / num_faces;
 
-        for (uint32_t i = 0; i < num_faces; i++) {
+        for (UInt i = 0; i < num_faces; i++) {
             commands.Push([this, &staging_buffer, &image_info, i, buffer_offset_step](CommandBuffer *command_buffer) {
-                VkBufferImageCopy region{};
+                VkBufferImageCopy region { };
                 region.bufferOffset = i * buffer_offset_step;
                 region.bufferRowLength = 0;
                 region.bufferImageHeight = 0;
@@ -532,7 +537,7 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
     // execute command stack
     HYPERION_PASS_ERRORS(commands.Execute(device), result);
 
-    if (m_assigned_image_data) {
+    if (HasAssignedImageData()) {
         if (result) {
             // destroy staging buffer
             HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
@@ -540,7 +545,8 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
             HYPERION_IGNORE_ERRORS(staging_buffer.Destroy(device));
         }
 
-        m_assigned_image_data = false;
+        delete[] m_bytes;
+        m_bytes = nullptr;
     }
 
     return result;
@@ -590,22 +596,22 @@ Result Image::Blit(
     Rect dst_rect
 )
 {
-    const auto num_faces   = MathUtil::Min(NumFaces(), src_image->NumFaces());
+    const auto num_faces = MathUtil::Min(NumFaces(), src_image->NumFaces());
     const auto num_mipmaps = MathUtil::Min(NumMipmaps(), src_image->NumMipmaps());
 
-    for (uint32_t face = 0; face < num_faces; face++) {
+    for (UInt face = 0; face < num_faces; face++) {
         const ImageSubResource src {
-            .flags            = src_image->IsDepthStencil()
-                              ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
-                              : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
+            .flags = src_image->IsDepthStencil()
+                ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+                : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
             .base_array_layer = face,
-            .base_mip_level   = 0
+            .base_mip_level = 0
         };
 
         const ImageSubResource dst {
-            .flags            = IsDepthStencil()
-                              ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
-                              : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
+            .flags = IsDepthStencil()
+                ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+                : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
             .base_array_layer = face,
             .base_mip_level   = 0
         };
@@ -626,17 +632,17 @@ Result Image::Blit(
                 .baseArrayLayer = src.base_array_layer,
                 .layerCount     = src.num_layers
             },
-            .srcOffsets     = {
+            .srcOffsets = {
                 { (int32_t) src_rect.x0, (int32_t) src_rect.y0, 0 },
                 { (int32_t) src_rect.x1, (int32_t) src_rect.y1, 1 }
             },
             .dstSubresource = {
-                .aspectMask     = aspect_flag_bits,
-                .mipLevel       = dst.base_mip_level,
+                .aspectMask = aspect_flag_bits,
+                .mipLevel = dst.base_mip_level,
                 .baseArrayLayer = dst.base_array_layer,
-                .layerCount     = dst.num_layers
+                .layerCount = dst.num_layers
             },
-            .dstOffsets     = {
+            .dstOffsets = {
                 { (int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0 },
                 { (int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1 }
             }
@@ -775,20 +781,20 @@ void Image::CopyFromBuffer(
         | (flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
             
     // copy from staging to image
-    const auto num_faces            = NumFaces();
-    const size_t buffer_offset_step = m_size / num_faces;
+    const auto num_faces = NumFaces();
+    const auto buffer_offset_step = static_cast<UInt>(m_size) / num_faces;
 
-    for (uint32_t i = 0; i < num_faces; i++) {
+    for (UInt i = 0; i < num_faces; i++) {
         VkBufferImageCopy region{};
-        region.bufferOffset                    = i * buffer_offset_step;
-        region.bufferRowLength                 = 0;
-        region.bufferImageHeight               = 0;
-        region.imageSubresource.aspectMask     = aspect_flag_bits;
-        region.imageSubresource.mipLevel       = 0;
+        region.bufferOffset = i * buffer_offset_step;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = aspect_flag_bits;
+        region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = i;
-        region.imageSubresource.layerCount     = 1;
-        region.imageOffset                     = { 0, 0, 0 };
-        region.imageExtent                     = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
 
         vkCmdCopyBufferToImage(
             command_buffer->GetCommandBuffer(),
@@ -816,20 +822,20 @@ void Image::CopyToBuffer(
         | (flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
             
     // copy from staging to image
-    const auto num_faces            = NumFaces();
-    const size_t buffer_offset_step = m_size / num_faces;
+    const auto num_faces = NumFaces();
+    const auto buffer_offset_step = static_cast<UInt>(m_size) / num_faces;
 
-    for (uint32_t i = 0; i < num_faces; i++) {
-        VkBufferImageCopy region{};
-        region.bufferOffset                    = i * buffer_offset_step;
-        region.bufferRowLength                 = 0;
-        region.bufferImageHeight               = 0;
-        region.imageSubresource.aspectMask     = aspect_flag_bits;
-        region.imageSubresource.mipLevel       = 0;
+    for (UInt i = 0; i < num_faces; i++) {
+        VkBufferImageCopy region { };
+        region.bufferOffset = i * buffer_offset_step;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = aspect_flag_bits;
+        region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = i;
-        region.imageSubresource.layerCount     = 1;
-        region.imageOffset                     = { 0, 0, 0 };
-        region.imageExtent                     = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
 
         vkCmdCopyImageToBuffer(
             command_buffer->GetCommandBuffer(),
@@ -843,34 +849,36 @@ void Image::CopyToBuffer(
 }
 
 
-Result Image::ConvertTo32Bpp(
+Result Image::ConvertTo32BPP(
     Device *device,
     VkImageType image_type,
     VkImageCreateFlags image_create_flags,
     VkImageFormatProperties *out_image_format_properties,
     VkFormat *out_format)
 {
-    constexpr size_t new_bpp = 4;
+    constexpr UInt8 new_bpp = 4;
 
-    const size_t num_faces = NumFaces();
-    const size_t face_offset_step = m_size / num_faces;
+    const UInt num_faces = NumFaces();
+    const UInt face_offset_step = static_cast<UInt>(m_size) / num_faces;
 
-    const size_t new_size = num_faces * new_bpp * m_extent.width * m_extent.height * m_extent.depth;
-    const size_t new_face_offset_step = new_size / num_faces;
+    const UInt new_size = num_faces * new_bpp * m_extent.width * m_extent.height * m_extent.depth;
+    const UInt new_face_offset_step = new_size / num_faces;
+    
+    if (m_bytes != nullptr) {
+        auto *new_bytes = new unsigned char[new_size];
 
-    auto *new_bytes = new unsigned char[new_size];
+        for (UInt i = 0; i < num_faces; i++) {
+            ImageUtil::ConvertBPP(
+                m_extent.width, m_extent.height, m_extent.depth,
+                m_bpp, new_bpp,
+                &m_bytes[i * face_offset_step],
+                &new_bytes[i * new_face_offset_step]
+            );
+        }
 
-    for (int i = 0; i < num_faces; i++) {
-        ImageUtil::ConvertBpp(
-            m_extent.width, m_extent.height, m_extent.depth,
-            m_bpp, new_bpp,
-            &m_bytes[i * face_offset_step],
-            &new_bytes[i * new_face_offset_step]
-        );
+        delete[] m_bytes;
+        m_bytes = new_bytes;
     }
-
-    delete[] m_bytes;
-    m_bytes = new_bytes;
 
     m_format = FormatChangeNumComponents(m_format, new_bpp);
     m_bpp = new_bpp;
