@@ -632,7 +632,7 @@ void Octree::CopyVisibilityState(const VisibilityState &visibility_state)
 
     // tried having it just load from the current and next cursor. doesn't work. not sure why.
     // but it could be a slight performance boost.
-    for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.snapshots.size()); i++) {
+    for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.snapshots.Size()); i++) {
         // m_visibility_state.snapshots[i] = visibility_state.snapshots[i];
 
         m_visibility_state.snapshots[i].bits.fetch_or(visibility_state.snapshots[i].bits.load(std::memory_order_relaxed), std::memory_order_relaxed);

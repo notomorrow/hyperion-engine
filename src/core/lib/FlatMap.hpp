@@ -14,7 +14,8 @@
 namespace hyperion {
 
 template <class Key, class Value>
-class FlatMap : public ContainerBase<FlatMap<Key, Value>, Key> {
+class FlatMap : public ContainerBase<FlatMap<Key, Value>, Key>
+{
 public:
     using KeyValuePair = KeyValuePair<Key, Value>;
 
@@ -22,12 +23,12 @@ private:
     DynArray<KeyValuePair> m_vector;
 
 public:
-    using KeyType       = Key;
-    using ValueType     = Value;
+    using KeyType = Key;
+    using ValueType = Value;
 
-    using Iterator      = typename decltype(m_vector)::Iterator;
+    using Iterator= typename decltype(m_vector)::Iterator;
     using ConstIterator = typename decltype(m_vector)::ConstIterator;
-    using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
+    using InsertResult = std::pair<Iterator, bool>; // iterator, was inserted
 
     FlatMap();
     FlatMap(std::initializer_list<KeyValuePair> initializer_list)
@@ -189,7 +190,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, std::forward<KeyValuePair>(KeyValuePair { key, std::forward<Value>(value) }));
 
         return {it, true};
     }
@@ -233,7 +234,7 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::forward<Value>(value) });
+        auto it = m_vector.Insert(lower_bound, std::forward<KeyValuePair>(KeyValuePair { key, std::forward<Value>(value) }));
 
         return {it, true};
     }

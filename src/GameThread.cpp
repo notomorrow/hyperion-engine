@@ -2,6 +2,7 @@
 #include "Engine.hpp"
 #include "Game.hpp"
 #include "GameCounter.hpp"
+#include <util/Defines.hpp>
 #include <math/MathUtil.hpp>
 
 #define HYP_GAME_THREAD_LOCKED 1
@@ -18,6 +19,10 @@ GameThread::GameThread()
 
 void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 {
+#ifdef HYP_WINDOWS
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+#endif
+
 #if HYP_GAME_THREAD_LOCKED
     LockstepGameCounter counter(1.0f / game_thread_target_ticks_per_second);
 #else

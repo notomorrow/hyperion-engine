@@ -129,34 +129,7 @@ struct DebugMarker
 
 class IndirectDrawState;
 
-
-
-// struct RenderFunctor : public ScheduledFunction<renderer::Result, CommandBuffer * /* command_buffer */, UInt /* frame_index */>
-// {
-//     static constexpr UInt data_buffer_size = 256;
-
-//     UByte data_buffer[data_buffer_size];
-
-//     RenderFunctor() = default;
-
-//     template <class Lambda>
-//     RenderFunctor(Lambda &&lambda)
-//         : ScheduledFunction(std::forward<Lambda>(lambda))
-//     {
-//     }
-
-//     template <class DataStruct, class Lambda>
-//     RenderFunctor(DataStruct &&data_struct, Lambda &&lambda)
-//         : ScheduledFunction(std::forward<Lambda>(lambda))
-//     {
-//         static_assert(sizeof(data_struct) <= data_buffer_size, "DataStruct does not fit into buffer!");
-//         static_assert(std::is_pod_v<DataStruct>, "DataStruct must be a POD object!");
-
-//         Memory::Copy(&data_buffer[0], &data_struct, sizeof(data_struct));
-//     }
-// };
-
-using RenderFunctor = ScheduledFunction<renderer::Result, CommandBuffer * /* command_buffer */, UInt /* frame_index */>;
+using RenderFunctor = Task<Result, CommandBuffer * /* command_buffer */, UInt /* frame_index */>;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)

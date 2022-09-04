@@ -59,8 +59,17 @@ public:
 
     constexpr TypeID() : value { } { }
     constexpr TypeID(const Value &id) : value(id) {}
-    constexpr TypeID(const TypeID &other) = default;
-    TypeID &operator=(const TypeID &other) = default;
+    constexpr TypeID(const TypeID &other)
+        : value(other.value)
+    {
+    }
+
+    TypeID &operator=(const TypeID &other)
+    {
+        value = other.value;
+
+        return *this;
+    }
 
     constexpr TypeID(TypeID &&other) noexcept
         : value(other.value)

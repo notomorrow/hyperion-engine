@@ -183,6 +183,9 @@ public:
     HYP_FORCE_INLINE void *Get() const
         { return Base::Get(); }
 
+    HYP_FORCE_INLINE bool HasValue() const
+        { return Base::operator bool(); }
+
     HYP_FORCE_INLINE operator bool() const
         { return Base::operator bool(); }
 

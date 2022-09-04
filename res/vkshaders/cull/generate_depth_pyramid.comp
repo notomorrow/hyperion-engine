@@ -34,6 +34,11 @@ float GetDepthAtTexel(vec2 texcoord, ivec2 offset)
 void main()
 {
     const uvec2 coord = gl_GlobalInvocationID.xy;
+
+    if (any(greaterThan(coord, mip_dimensions - uvec2(1)))) {
+        return;
+    }
+
     const vec2 texcoord = vec2(coord) / vec2(mip_dimensions);
 
     float depth = 0.0;

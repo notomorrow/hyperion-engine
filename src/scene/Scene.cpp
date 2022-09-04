@@ -351,6 +351,9 @@ void Scene::RequestRendererInstanceUpdate(Handle<Entity> &entity)
             .changed = false
         };
     } else {
+        // don't continue requesting if we couldn't find or create a RendererInstance
+        entity->m_primary_renderer_instance.changed = false;
+
         DebugLog(
             LogType::Error,
             "Could not find or create optimal RendererInstance for Entity #%lu!\n",

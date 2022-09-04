@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_VISIBILITY_STATE_H
 #define HYPERION_V2_VISIBILITY_STATE_H
 
+#include <core/Containers.hpp>
 #include <Util.hpp>
 #include <Types.hpp>
 
@@ -73,7 +74,7 @@ struct VisibilityState
     //  */
     // std::array<std::atomic<Nonce>, cursor_size> nonces { };
 
-    std::array<VisibilityStateSnapshot, cursor_size> snapshots { };
+    FixedArray<VisibilityStateSnapshot, cursor_size> snapshots { };
 
     VisibilityState() = default;
     VisibilityState(const VisibilityState &other) = delete;

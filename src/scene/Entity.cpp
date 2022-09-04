@@ -129,9 +129,13 @@ void Entity::Update(Engine *engine, GameCounter::TickUnit delta)
         }
 
         const auto &octree_visibility_state = m_octree->GetVisibilityState();
-        const auto visibility_cursor = m_octree->LoadPreviousVisibilityCursor();
+        //const auto visibility_cursor = m_octree->LoadPreviousVisibilityCursor();
 
-        m_visibility_state.snapshots[visibility_cursor] = octree_visibility_state.snapshots[visibility_cursor];
+        //m_visibility_state.snapshots[visibility_cursor] = octree_visibility_state.snapshots[visibility_cursor];
+
+        for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.snapshots.Size()); i++) {
+            m_visibility_state.snapshots[i] = octree_visibility_state.snapshots[i];
+        }
     }
 
     if (m_shader_data_state.IsDirty()) {
@@ -189,20 +193,17 @@ void Entity::EnqueueRenderUpdates()
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
             ObjectShaderData {
-                .model_matrix   = transform_matrix,
-
+                .model_matrix = transform_matrix,
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
                 .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
-
-                .entity_id      = draw_proxy.entity_id.value,
-                .scene_id       = draw_proxy.scene_id.value,
-                .mesh_id        = draw_proxy.mesh_id.value,
-                .material_id    = draw_proxy.material_id.value,
-                .skeleton_id    = draw_proxy.skeleton_id.value,
-
-                .bucket         = static_cast<UInt32>(draw_proxy.bucket)
+                .entity_id = draw_proxy.entity_id.value,
+                .scene_id = draw_proxy.scene_id.value,
+                .mesh_id = draw_proxy.mesh_id.value,
+                .material_id = draw_proxy.material_id.value,
+                .skeleton_id = draw_proxy.skeleton_id.value,
+                .bucket = static_cast<UInt32>(draw_proxy.bucket)
             }
         );
 
@@ -238,9 +239,7 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
         return;
     }
 
-
     if (m_mesh && IsInitCalled()) {
-        DebugLog(LogType::Debug, "Mehs changed for %p to %p\n", m_mesh.Get(), mesh.Get());
         GetEngine()->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
     }
 
@@ -387,36 +386,6 @@ void Entity::RebuildRenderableAttributes()
 
     SetRenderableAttributes(new_renderable_attributes);
 }
-
-// void Entity::SetMeshAttributes(
-//     VertexAttributeSet vertex_attributes,
-//     FaceCullMode face_cull_mode,
-//     bool depth_write,
-//     bool depth_test
-// )
-// {
-//     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-//     new_renderable_attributes.vertex_attributes = vertex_attributes;
-//     new_renderable_attributes.cull_faces = face_cull_mode;
-//     new_renderable_attributes.depth_write = depth_write;
-//     new_renderable_attributes.depth_test = depth_test;
-
-//     SetRenderableAttributes(new_renderable_attributes);
-// }
-
-// void Entity::SetMeshAttributes(
-//     FaceCullMode face_cull_mode,
-//     bool depth_write,
-//     bool depth_test
-// )
-// {
-//     SetMeshAttributes(
-//         m_renderable_attributes.vertex_attributes,
-//         face_cull_mode,
-//         depth_write,
-//         depth_test
-//     );
-// }
 
 void Entity::SetStencilAttributes(const StencilState &stencil_state)
 {

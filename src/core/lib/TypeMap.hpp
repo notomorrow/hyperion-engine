@@ -102,7 +102,7 @@ public:
     {
         const auto id = TypeID::ForType<T>();
 
-        return m_map.Find(id) != m_map.End();
+        return m_map.Contains(id);
     }
     
     template <class T>

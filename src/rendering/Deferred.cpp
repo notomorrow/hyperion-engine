@@ -335,10 +335,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
-
-    if constexpr (use_draw_indirect) {
-        CollectDrawCalls(engine, frame);
-    }
+    
+    CollectDrawCalls(engine, frame);
 
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
@@ -447,6 +445,18 @@ void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
+    } else {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
+        
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
+
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
     }
 }
 
@@ -463,11 +473,11 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->Render(engine, frame);
+            pipeline->PerformRendering(engine, frame);
         }
         
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->Render(engine, frame);
+            pipeline->PerformRendering(engine, frame);
         }
     }
 }
@@ -480,7 +490,7 @@ void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->Render(engine, frame);
+            pipeline->PerformRendering(engine, frame);
         }
     }
 }

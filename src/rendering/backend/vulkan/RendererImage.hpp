@@ -13,15 +13,18 @@ namespace renderer {
 class Instance;
 class Device;
 
-class Image {
+class Image
+{
 public:
-    enum Type {
+    enum Type
+    {
         TEXTURE_TYPE_2D = 0,
         TEXTURE_TYPE_3D = 1,
         TEXTURE_TYPE_CUBEMAP = 2
     };
 
-    enum class BaseFormat {
+    enum class BaseFormat
+    {
         TEXTURE_FORMAT_NONE,
         TEXTURE_FORMAT_R,
         TEXTURE_FORMAT_RG,
@@ -34,7 +37,8 @@ public:
         TEXTURE_FORMAT_DEPTH
     };
 
-    enum class InternalFormat {
+    enum class InternalFormat
+    {
         TEXTURE_INTERNAL_FORMAT_NONE,
 
         TEXTURE_INTERNAL_FORMAT_R8,
@@ -91,7 +95,8 @@ public:
         TEXTURE_INTERNAL_FORMAT_DEPTH_32F
     };
 
-    enum class FilterMode {
+    enum class FilterMode
+    {
         TEXTURE_FILTER_NEAREST,
         TEXTURE_FILTER_LINEAR,
         TEXTURE_FILTER_NEAREST_MIPMAP,
@@ -99,7 +104,8 @@ public:
         TEXTURE_FILTER_MINMAX_MIPMAP
     };
 
-    enum class WrapMode {
+    enum class WrapMode
+    {
         TEXTURE_WRAP_CLAMP_TO_EDGE,
         TEXTURE_WRAP_CLAMP_TO_BORDER,
         TEXTURE_WRAP_REPEAT
@@ -108,12 +114,12 @@ public:
     static BaseFormat GetBaseFormat(InternalFormat);
     /* returns a texture format that has a shifted bytes-per-pixel count
      * e.g calling with RGB16 and num components = 4 --> RGBA16 */
-    static InternalFormat FormatChangeNumComponents(InternalFormat, uint8_t new_num_components);
+    static InternalFormat FormatChangeNumComponents(InternalFormat, UInt8 new_num_components);
 
     /* Get number of components (bytes-per-pixel) of a texture format */
-    static size_t NumComponents(InternalFormat format);
+    static UInt NumComponents(InternalFormat format);
     /* Get number of components (bytes-per-pixel) of a texture format */
-    static size_t NumComponents(BaseFormat format);
+    static UInt NumComponents(BaseFormat format);
 
     static bool IsDepthFormat(InternalFormat fmt);
     static bool IsDepthFormat(BaseFormat fmt);
@@ -125,8 +131,8 @@ public:
     static VkSamplerAddressMode ToVkSamplerAddressMode(WrapMode);
 
     struct InternalInfo {
-        VkImageTiling        tiling;
-        VkImageUsageFlags    usage_flags;
+        VkImageTiling tiling;
+        VkImageUsageFlags usage_flags;
     };
 
     Image(
@@ -181,7 +187,11 @@ public:
         GPUBuffer *dst_buffer
     ) const;
     
-    const unsigned char *GetBytes() const { return m_bytes; }
+    const unsigned char *GetBytes() const
+        { return m_bytes; }
+
+    bool HasAssignedImageData() const
+        { return m_bytes != nullptr; }
 
     void CopyImageData(const unsigned char *data, size_t count, size_t offset = 0)
     {
@@ -197,8 +207,11 @@ public:
     bool IsSRGB() const;
     void SetIsSRGB(bool srgb);
 
-    bool IsBlended() const             { return m_is_blended; }
-    void SetIsBlended(bool is_blended) { m_is_blended = is_blended; }
+    bool IsBlended() const
+        { return m_is_blended; }
+
+    void SetIsBlended(bool is_blended)
+        { m_is_blended = is_blended; }
 
     bool HasMipmaps() const
     {
@@ -207,41 +220,54 @@ public:
             || m_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP;
     }
 
-    uint32_t NumMipmaps() const
+    UInt NumMipmaps() const
     {
         return HasMipmaps()
-            ? static_cast<uint32_t>(MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth))) + 1
+            ? static_cast<UInt>(MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth))) + 1
             : 1;
     }
 
     bool IsTextureCube() const
         { return m_type == TEXTURE_TYPE_CUBEMAP; }
 
-    uint32_t NumFaces() const
+    UInt NumFaces() const
         { return IsTextureCube() ? 6 : 1; }
 
-    FilterMode GetFilterMode() const             { return m_filter_mode; }
-    void SetFilterMode(FilterMode filter_mode)   { m_filter_mode = filter_mode; }
+    FilterMode GetFilterMode() const
+        { return m_filter_mode; }
 
-    const Extent3D &GetExtent() const            { return m_extent; }
+    void SetFilterMode(FilterMode filter_mode)
+        { m_filter_mode = filter_mode; }
 
-    GPUImageMemory *GetGPUImage()                { return m_image; }
-    const GPUImageMemory *GetGPUImage() const    { return m_image; }
+    const Extent3D &GetExtent() const
+        { return m_extent; }
 
-    InternalFormat GetTextureFormat() const      { return m_format; }
-    void SetTextureFormat(InternalFormat format) { m_format = format; }
-    Type GetType() const                         { return m_type; }
+    GPUImageMemory *GetGPUImage()
+        { return m_image; }
+
+    const GPUImageMemory *GetGPUImage() const
+        { return m_image; }
+
+    InternalFormat GetTextureFormat() const
+        { return m_format; }
+
+    void SetTextureFormat(InternalFormat format)
+        { m_format = format; }
+
+    Type GetType() const
+        { return m_type; }
 
     VkFormat GetImageFormat() const;
     VkImageType GetImageType() const;
-    VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
+    VkImageUsageFlags GetImageUsageFlags() const
+        { return m_internal_info.usage_flags; }
     
 private:
     Result CreateImage(Device *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
 
-    Result ConvertTo32Bpp(Device *device,
+    Result ConvertTo32BPP(Device *device,
         VkImageType image_type,
         VkImageCreateFlags image_create_flags,
         VkImageFormatProperties *out_image_format_properties,
@@ -263,7 +289,8 @@ private:
     GPUImageMemory *m_image;
 };
 
-class StorageImage : public Image {
+class StorageImage : public Image
+{
 public:
     StorageImage(
         Extent3D extent,
@@ -278,7 +305,6 @@ public:
             bytes
         )
     {
-        
     }
 
     StorageImage(
@@ -304,7 +330,8 @@ public:
     }
 };
 
-class StorageImage2D : public StorageImage {
+class StorageImage2D : public StorageImage
+{
 public:
     StorageImage2D(
         Extent2D extent,
@@ -320,7 +347,8 @@ public:
     }
 };
 
-class StorageImage3D : public StorageImage {
+class StorageImage3D : public StorageImage
+{
 public:
     StorageImage3D(
         Extent3D extent,
@@ -336,7 +364,8 @@ public:
     }
 };
 
-class TextureImage : public Image {
+class TextureImage : public Image
+{
 public:
     TextureImage(
         Extent3D extent,
@@ -360,7 +389,8 @@ public:
     }
 };
 
-class TextureImage2D : public TextureImage {
+class TextureImage2D : public TextureImage
+{
 public:
     TextureImage2D(
         Extent2D extent,
@@ -378,7 +408,8 @@ public:
     }
 };
 
-class TextureImage3D : public TextureImage {
+class TextureImage3D : public TextureImage
+{
 public:
     TextureImage3D(
         Extent3D extent,
@@ -396,7 +427,8 @@ public:
     }
 };
 
-class TextureImageCube : public TextureImage {
+class TextureImageCube : public TextureImage
+{
 public:
     TextureImageCube(
         Extent2D extent,
@@ -414,7 +446,8 @@ public:
     }
 };
 
-class FramebufferImage : public Image {
+class FramebufferImage : public Image
+{
 public:
     FramebufferImage(
         Extent3D extent,
@@ -461,7 +494,8 @@ public:
     }
 };
 
-class FramebufferImage2D : public FramebufferImage {
+class FramebufferImage2D : public FramebufferImage
+{
 public:
     FramebufferImage2D(
         Extent2D extent,
@@ -490,7 +524,8 @@ public:
     }
 };
 
-class FramebufferImageCube : public FramebufferImage {
+class FramebufferImageCube : public FramebufferImage
+{
 public:
     FramebufferImageCube(
         Extent2D extent,

@@ -93,8 +93,7 @@ private:
     FixedArray<Handle<Texture>, max_frames_in_flight> m_mipmapped_results;
     std::unique_ptr<Sampler> m_sampler;
     std::unique_ptr<Sampler> m_depth_sampler;
-
-    IndirectDrawState m_indirect_draw_state;
+    
     CullData m_cull_data;
 };
 

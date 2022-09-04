@@ -11,11 +11,11 @@ using renderer::ShaderVec2;
 IndirectDrawState::IndirectDrawState()
 {
     for (auto &buffer : m_indirect_buffers) {
-        buffer.reset(new IndirectBuffer());
+        buffer.Reset(new IndirectBuffer());
     }
 
     for (auto &buffer : m_instance_buffers) {
-        buffer.reset(new StorageBuffer());
+        buffer.Reset(new StorageBuffer());
     }
 }
 
@@ -88,7 +88,7 @@ template <class BufferType>
 static bool ResizeBuffer(
     Engine *engine,
     Frame *frame,
-    FixedArray<std::unique_ptr<BufferType>, max_frames_in_flight> &buffers,
+    FixedArray<UniquePtr<BufferType>, max_frames_in_flight> &buffers,
     SizeType new_buffer_size
 )
 {
@@ -107,7 +107,7 @@ static bool ResizeBuffer(
             needs_create = true;
         }
     } else {
-        buffers[frame_index].reset(new BufferType());
+        buffers[frame_index].Reset(new BufferType());
 
         needs_create = true;
     }
@@ -150,15 +150,15 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
     packed_data = (1u << static_cast<UInt32>(draw_proxy.bucket)) & 0xFF;
 
     m_object_instances.PushBack(ObjectInstance {
-        .entity_id          = static_cast<UInt32>(draw_proxy.entity_id.value),
+        .entity_id = static_cast<UInt32>(draw_proxy.entity_id.value),
         .draw_command_index = draw_command_index,
-        .batch_index        = static_cast<UInt32>(m_object_instances.Size() / batch_size),
-        .num_indices        = static_cast<UInt32>(draw_proxy.mesh->NumIndices()),
+        .batch_index  = static_cast<UInt32>(m_object_instances.Size() / batch_size),
+        .num_indices = static_cast<UInt32>(draw_proxy.mesh->NumIndices()),
         // .packed_data        = packed_data,
-        .aabb_max           = draw_proxy.bounding_box.max.ToVector4(),
-        .aabb_min           = draw_proxy.bounding_box.min.ToVector4(),
+        .aabb_max = draw_proxy.bounding_box.max.ToVector4(),
+        .aabb_min = draw_proxy.bounding_box.min.ToVector4(),
 
-        .packed_data        = packed_data
+        .packed_data = packed_data
     });
 
     m_draw_proxies.PushBack(draw_proxy);
@@ -184,7 +184,7 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
     if (m_staging_buffers[frame->GetFrameIndex()] != nullptr) {
         HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Destroy(engine->GetDevice()));
     } else {
-        m_staging_buffers[frame->GetFrameIndex()].reset(new StagingBuffer());
+        m_staging_buffers[frame->GetFrameIndex()].Reset(new StagingBuffer());
     }
 
     HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Create(
@@ -200,7 +200,7 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
 
     m_indirect_buffers[frame->GetFrameIndex()]->CopyFrom(
         frame->GetCommandBuffer(),
-        m_staging_buffers[frame->GetFrameIndex()].get(),
+        m_staging_buffers[frame->GetFrameIndex()].Get(),
         m_staging_buffers[frame->GetFrameIndex()]->size
     );
 
@@ -244,7 +244,7 @@ bool IndirectDrawState::ResizeIfNeeded(Engine *engine, Frame *frame, SizeType co
     return resize_happened;
 }
 
-void IndirectDrawState::ResetDrawProxies()
+void IndirectDrawState::Reset()
 {
     // assume render thread
 
@@ -258,6 +258,8 @@ void IndirectDrawState::ResetDrawProxies()
 
 void IndirectDrawState::Reserve(Engine *engine, Frame *frame, SizeType count)
 {
+    // assume render thread
+
     m_draw_proxies.Reserve(count);
     m_object_instances.Reserve(count);
 
@@ -300,16 +302,14 @@ IndirectRenderer::IndirectRenderer()
 {
 }
 
-IndirectRenderer::~IndirectRenderer()
-{
-}
+IndirectRenderer::~IndirectRenderer() = default;
 
 void IndirectRenderer::Create(Engine *engine)
 {
     HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_descriptor_sets[frame_index] = std::make_unique<DescriptorSet>();
+        m_descriptor_sets[frame_index] = UniquePtr<DescriptorSet>::Construct();
     }
 
     engine->render_scheduler.Enqueue([this, engine](...) {
@@ -382,6 +382,8 @@ void IndirectRenderer::Create(Engine *engine)
         HYPERION_RETURN_OK;
     });
 
+    HYP_FLUSH_RENDER_QUEUE(engine);
+
     // create compute pipeline for object visibility (for indirect render)
     // TODO: cache pipelines: re-use this
     m_object_visibility = engine->CreateHandle<ComputePipeline>(
@@ -390,13 +392,10 @@ void IndirectRenderer::Create(Engine *engine)
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/cull/object_visibility.comp.spv")).Read()}}
             }
         ),
-        DynArray<const DescriptorSet *> { m_descriptor_sets[0].get() }
+        DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     engine->InitObject(m_object_visibility);
-
-
-    // RendererInstance flushes render queue on destroy
 }
 
 void IndirectRenderer::Destroy(Engine *engine)
@@ -440,6 +439,9 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     auto *command_buffer = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
+    AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index) != nullptr);
+    AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index)->size != 0);
+
     const UInt num_draw_proxies = static_cast<UInt>(m_indirect_draw_state.GetDrawProxies().Size());
     const UInt num_batches = (num_draw_proxies / IndirectDrawState::batch_size) + 1;
 
@@ -477,7 +479,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     command_buffer->BindDescriptorSet(
         engine->GetInstance()->GetDescriptorPool(),
         m_object_visibility->GetPipeline(),
-        m_descriptor_sets[frame_index].get(),
+        m_descriptor_sets[frame_index].Get(),
         static_cast<DescriptorSet::Index>(0),
         FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
     );
@@ -496,6 +498,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
             }
         });
 
+        //std::cout << "DISPATCH " << num_draw_proxies_in_batch << std::endl;
         m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { 1, 1, 1 });
 
         count_remaining -= num_draw_proxies_in_batch;

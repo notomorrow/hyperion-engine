@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_CORE_SCHEDULER_H
 #define HYPERION_V2_CORE_SCHEDULER_H
 
-#define HYP_SCHEDULER_USE_ATOMIC_LOCK 1
+#define HYP_SCHEDULER_USE_ATOMIC_LOCK 0
 
 #include "lib/AtomicSemaphore.hpp"
 #include "lib/DynArray.hpp"
@@ -30,95 +30,154 @@
 
 namespace hyperion::v2 {
 
-struct ScheduledFunctionID {
+enum class TaskPriority : UInt
+{
+    MEDIUM = 0,
+    HIGH = 1
+};
+
+struct TaskID
+{
     UInt value { 0 };
     
-    ScheduledFunctionID &operator=(UInt id)
+    TaskID &operator=(UInt id)
     {
         value = id;
 
         return *this;
     }
     
-    ScheduledFunctionID &operator=(const ScheduledFunctionID &other) = default;
+    TaskID &operator=(const TaskID &other) = default;
 
     bool operator==(UInt id) const { return value == id; }
     bool operator!=(UInt id) const { return value != id; }
-    bool operator==(const ScheduledFunctionID &other) const { return value == other.value; }
-    bool operator!=(const ScheduledFunctionID &other) const { return value != other.value; }
-    bool operator<(const ScheduledFunctionID &other) const { return value < other.value; }
+    bool operator==(const TaskID &other) const { return value == other.value; }
+    bool operator!=(const TaskID &other) const { return value != other.value; }
+    bool operator<(const TaskID &other) const { return value < other.value; }
 
     explicit operator bool() const { return value != 0; }
 };
 
 template <class ReturnType, class ...Args>
-struct ScheduledFunction
+struct Task
 {
     using Function = Proc<ReturnType, Args...>;
 
-    ScheduledFunctionID id;
+    TaskID id;
     Function fn;
+    TaskPriority priority = TaskPriority::MEDIUM;
 
-    constexpr static ScheduledFunctionID empty_id = ScheduledFunctionID { 0 };
+    constexpr static TaskID empty_id = TaskID { 0 };
 
     template <class Lambda>
-    ScheduledFunction(Lambda &&lambda)
+    Task(Lambda &&lambda)
         : id { },
           fn(std::forward<Lambda>(lambda))
     {
     }
 
-    ScheduledFunction(const ScheduledFunction &other) = delete;
-    ScheduledFunction &operator=(const ScheduledFunction &other) = delete;
-    ScheduledFunction(ScheduledFunction &&other) noexcept
+    Task(const Task &other) = delete;
+    Task &operator=(const Task &other) = delete;
+    Task(Task &&other) noexcept
         : id(other.id),
-          fn(std::move(other.fn))
+          fn(std::move(other.fn)),
+          priority(other.priority)
     {
         other.id = {};
+        other.priority = TaskPriority::MEDIUM;
     }
 
-    ScheduledFunction &operator=(ScheduledFunction &&other) noexcept
+    Task &operator=(Task &&other) noexcept
     {
         id = other.id;
         fn = std::move(other.fn);
+        priority = other.priority;
 
         other.id = {};
+        other.priority = TaskPriority::MEDIUM;
 
         return *this;
     }
     
-    ~ScheduledFunction() = default;
+    ~Task() = default;
     
     HYP_FORCE_INLINE ReturnType Execute(Args... args)
-    {
-        return fn(std::forward<Args>(args)...);
-    }
+        { return fn(std::forward<Args>(args)...); }
     
     HYP_FORCE_INLINE ReturnType operator()(Args... args)
-    {
-        return Execute(std::forward<Args>(args)...);
-    }
+        { return fn(std::forward<Args>(args)...); }
 };
 
-template <class ScheduledFunction>
+template <class TaskType>
 class Scheduler
 {
 public:
-    using Task = ScheduledFunction;
-    using TaskID = ScheduledFunctionID;
+    using Task = TaskType;
+    using TaskID = TaskID;
 
-private:
-    struct ScheduledTaskData
+    struct ScheduledTask
     {
         Task task;
         std::atomic<UInt> *atomic_counter = nullptr;
+
+        ScheduledTask() = default;
+
+        ScheduledTask(Task &&task, std::atomic<UInt> *atomic_counter)
+            : task(std::move(task)),
+              atomic_counter(atomic_counter)
+        {
+        }
+
+        ScheduledTask(const ScheduledTask &other) = delete;
+        ScheduledTask &operator=(const ScheduledTask &other) = delete;
+
+        ScheduledTask(ScheduledTask &&other) noexcept
+            : task(std::move(other.task)),
+              atomic_counter(other.atomic_counter)
+        {
+            other.atomic_counter = nullptr;
+        }
+
+        ScheduledTask &operator=(ScheduledTask &&other) noexcept
+        {
+            if (std::addressof(other) == this) {
+                return *this;
+            }
+
+            task = std::move(other.task);
+            atomic_counter = other.atomic_counter;
+
+            other.atomic_counter = nullptr;
+
+            return *this;
+        }
+
+        ~ScheduledTask() = default;
+
+        template <class Lambda>
+        void ExecuteWithLambda(Lambda &&lambda)
+        {
+            lambda(task);
+
+            if (atomic_counter != nullptr) {
+                atomic_counter->fetch_add(1u, std::memory_order_relaxed);
+            }
+        }
+
+        template <class ...Args>
+        void Execute(Args &&... args)
+        {
+            task.Execute(std::forward<Args>(args)...);
+
+            if (atomic_counter != nullptr) {
+                atomic_counter->fetch_add(1u, std::memory_order_relaxed);
+            }
+        }
     };
 
-    using ScheduledFunctionQueue = DynArray<ScheduledTaskData>;
+    using ScheduledFunctionQueue = DynArray<ScheduledTask>;
     using Iterator = typename ScheduledFunctionQueue::Iterator;
-
-public:
-
+    
     Scheduler()
         : m_owner_thread(Threads::CurrentThreadID())
     {
@@ -130,7 +189,8 @@ public:
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
 
-    HYP_FORCE_INLINE UInt NumEnqueued() const { return m_num_enqueued.load(std::memory_order_relaxed); }
+    HYP_FORCE_INLINE UInt NumEnqueued() const
+        { return m_num_enqueued.load(std::memory_order_relaxed); }
 
     /*! \brief Set the given thread ID to be the owner thread of this Scheduler.
      *  Tasks are to be enqueued from any other thread, and executed only from the owner thread.
@@ -145,7 +205,7 @@ public:
      * @param fn The task to execute
      *
      */
-    ScheduledFunctionID Enqueue(Task &&fn)
+    TaskID Enqueue(Task &&fn)
     {
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -167,7 +227,7 @@ public:
      * @param fn The task to execute
      * @param atomic_counter A pointer to an atomic UInt variable that is incremented upon completion.
      */
-    ScheduledFunctionID Enqueue(Task &&fn, std::atomic<UInt> *atomic_counter)
+    TaskID Enqueue(Task &&fn, std::atomic<UInt> *atomic_counter)
     {
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
@@ -186,7 +246,7 @@ public:
     
     /*! \brief Remove a function from the owner thread's queue, if it exists
      * @returns a boolean value indicating whether or not the function was successfully dequeued */
-    bool Dequeue(ScheduledFunctionID id)
+    bool Dequeue(TaskID id)
     {
         if (id == Task::empty_id) {
             return false;
@@ -284,8 +344,7 @@ public:
         }
 
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        // TODO: do we need this?
-        //while (m_num_enqueued.load() != 0u);
+        while (m_num_enqueued.load() != 0u);
 #else
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
@@ -297,7 +356,7 @@ public:
     void AcceptNext(Container &out_container)
     {
         AssertThrow(Threads::IsOnThread(m_owner_thread));
-
+        
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         m_sp.Wait();
 #else
@@ -306,7 +365,7 @@ public:
 
         if (m_scheduled_functions.Any()) {
             auto &front = m_scheduled_functions.Front();
-            out_container.Push(std::move(front.task));
+            out_container.Push(std::move(front));
             m_scheduled_functions.PopFront();
 
             m_num_enqueued.fetch_sub(1u, std::memory_order_relaxed);
@@ -334,8 +393,7 @@ public:
 #endif
 
         for (auto it = m_scheduled_functions.Begin(); it != m_scheduled_functions.End(); ++it) {
-            // just moving task not atomic counter.
-            out_container.Push(std::move(it->task));
+            out_container.Push(std::move(*it));
         }
 
         m_scheduled_functions.Clear();
@@ -364,12 +422,14 @@ public:
 #endif
 
         while (m_scheduled_functions.Any()) {
-            auto &task_data = m_scheduled_functions.Front();
+            auto &front = m_scheduled_functions.Front();
 
-            executor(task_data.task);
+            //task_data.ExecuteWithLambda(executor);
+            
+            executor(front.task);
 
-            if (task_data.atomic_counter != nullptr) {
-                task_data.atomic_counter->fetch_add(1u, std::memory_order_relaxed);
+            if (front.atomic_counter != nullptr) {
+                front.atomic_counter->fetch_add(1u, std::memory_order_relaxed);
             }
 
             m_scheduled_functions.PopFront();
@@ -387,14 +447,11 @@ public:
     }
     
 private:
-    ScheduledFunctionID EnqueueInternal(Task &&fn, std::atomic<UInt> *atomic_counter = nullptr)
+    TaskID EnqueueInternal(Task &&fn, std::atomic<UInt> *atomic_counter = nullptr)
     {
         fn.id = ++m_id_counter;
 
-        m_scheduled_functions.PushBack(ScheduledTaskData {
-            .task = std::forward<Task>(fn),
-            .atomic_counter = atomic_counter
-        });
+        m_scheduled_functions.PushBack(ScheduledTask(std::forward<Task>(fn), atomic_counter));
 
         m_num_enqueued.fetch_add(1u, std::memory_order_relaxed);
 

@@ -60,6 +60,10 @@ struct ProcFunctorInternal
 
     ProcFunctorInternal &operator=(ProcFunctorInternal &&other) noexcept
     {
+        if (std::addressof(other) == this) {
+            return *this;
+        }
+
         if (HasValue()) {
             delete_fn(memory.GetPointer());
         }
@@ -97,9 +101,9 @@ template <class ReturnType, class ...Args>
 struct Invoker
 {
     template <class Functor>
-    static ReturnType InvokeFn(void *ptr, Args &&... args)
+    static HYP_FORCE_INLINE ReturnType InvokeFn(void *ptr, Args &&... args)
     {
-        auto *functor_ptr = reinterpret_cast<Functor *>(ptr);
+        auto *functor_ptr = static_cast<Functor *>(ptr);
         return (*functor_ptr)(std::forward<Args>(args)...);
     }
 };
@@ -109,19 +113,24 @@ template <class ...Args>
 struct Invoker<void, Args...>
 {
     template <class Functor>
-    static void InvokeFn(void *ptr, Args &&... args)
+    static HYP_FORCE_INLINE void InvokeFn(void *ptr, Args &&... args)
     {
-        auto *functor_ptr = reinterpret_cast<Functor *>(ptr);
+        auto *functor_ptr = static_cast<Functor *>(ptr);
         (*functor_ptr)(std::forward<Args>(args)...);
     }
 };
+
+struct ProcBase
+{
+};
+
 } // namespace detail
 
 // non-copyable std::function alternative,
 // with inline storage so no heap allocation occurs.
 // supports move-only types.
 template <class ReturnType, class ...Args>
-struct Proc
+struct Proc : detail::ProcBase
 {
     static constexpr UInt inline_storage_size_bytes = 256u;
 
@@ -138,6 +147,8 @@ struct Proc
     template <class Functor>
     Proc(Functor &&fn)
     {
+        static_assert(!std::is_base_of_v<detail::ProcBase, NormalizedType<Functor>>, "Object should not be ProcBase");
+
         static_assert(sizeof(Functor) <= sizeof(functor.memory.bytes),
             "Functor object too large; must fit into inline storage");
 

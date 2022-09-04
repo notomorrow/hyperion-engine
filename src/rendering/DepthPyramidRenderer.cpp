@@ -19,7 +19,6 @@ DepthPyramidRenderer::DepthPyramidRenderer()
 DepthPyramidRenderer::~DepthPyramidRenderer()
 {
 }
-
 void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_attachment_ref)
 {
     AssertThrow(m_depth_attachment_ref == nullptr);

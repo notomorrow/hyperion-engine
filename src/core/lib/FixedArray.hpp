@@ -19,6 +19,8 @@ public:
     using Iterator = T *;
     using ConstIterator = const T *;
 
+    static constexpr SizeType size = Sz;
+
     FixedArray();
 
     template <class ... Args>
