@@ -42,7 +42,7 @@ struct ComponentInitInfo<STUB_CLASS(Entity)>
 {
     enum Flags : ComponentFlagBits
     {
-        ENTITY_FLAGS_NONE              = 0x0,
+        ENTITY_FLAGS_NONE = 0x0,
         ENTITY_FLAGS_RAY_TESTS_ENABLED = 0x1
     };
 

@@ -45,10 +45,14 @@ public:
     Scheduler &GetScheduler() { return m_scheduler; }
     const Scheduler &GetScheduler() const { return m_scheduler; }
 
-    template <class Task>
-    auto ScheduleTask(Task &&task) -> typename Scheduler::TaskID
+    /*! \brief Enqueue a task to be executed on this thread
+     * @param task The task to be executed
+     * @param atomic_counter An optionally provided pointer to atomic UInt which will be incremented
+     *      upon completion
+     */
+    auto ScheduleTask(Task &&task, std::atomic<UInt> *atomic_counter = nullptr) -> typename Scheduler::TaskID
     {
-        return m_scheduler.Enqueue(std::forward<Task>(task));
+        return m_scheduler.Enqueue(std::forward<Task>(task), atomic_counter);
     }
 
     bool Start(Args ...args);

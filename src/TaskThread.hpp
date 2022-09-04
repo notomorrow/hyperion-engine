@@ -55,14 +55,19 @@ protected:
             counter.NextTick();
 
             if (m_scheduler.NumEnqueued()) {
-                m_scheduler.AcceptAll(m_task_queue);
+                /*m_scheduler.AcceptAll(m_task_queue);
 
                 // do not execute within lock
                 while (m_task_queue.Any()) {
                     m_task_queue.Front().Execute();
 
                     m_task_queue.Pop();
-                }
+                }*/
+
+                // TEMP: Testing for atomic counter inc. Will have to move back
+                m_scheduler.Flush([](auto &task) {
+                    task();
+                });
             }
         }
     }

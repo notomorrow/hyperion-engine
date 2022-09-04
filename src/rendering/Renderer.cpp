@@ -367,6 +367,16 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
     auto *device = instance->GetDevice();
     auto *secondary_command_buffer = m_per_frame_data->At(frame->GetFrameIndex()).Get<CommandBuffer>();
 
+    TaskBatch tb;
+    tb.AddTask([](...) {
+        HYPERION_RETURN_OK;
+    });
+
+    tb.AddTask([](...) {
+        HYPERION_RETURN_OK;
+    });
+    engine->task_system.EnqueueBatch(&tb);
+
     secondary_command_buffer->Record(
         device,
         m_pipeline->GetConstructionInfo().render_pass,
@@ -457,6 +467,8 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
         });
     
     secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer());
+
+    tb.AwaitCompletion();
 }
 
 
