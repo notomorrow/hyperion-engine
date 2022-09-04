@@ -55,6 +55,16 @@ struct TaskBatch
             HYP_WAIT_IDLE();
         }
     }
+
+    /*! \brief Execute each non-enqueued task in serial (not async). */
+    void ForceExecute()
+    {
+        for (auto &task : tasks) {
+            task.Execute();
+        }
+
+        tasks.Clear();
+    }
 };
 
 class TaskSystem
@@ -146,7 +156,7 @@ public:
 
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
-            const auto cycle = m_cycle.load();
+            const auto cycle = m_cycle.load(std::memory_order_relaxed);
             auto *task_thread = m_task_threads[cycle];
             
             const auto task_id = task_thread->ScheduleTask(std::move(task), &batch->num_completed);
@@ -158,7 +168,7 @@ public:
                 task_id
             };
 
-            m_cycle.store((cycle + 1) % m_task_threads.Size());
+            m_cycle.store((cycle + 1) % m_task_threads.Size(), std::memory_order_relaxed);
         }
 
         // all have been moved

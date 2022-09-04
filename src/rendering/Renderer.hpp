@@ -77,28 +77,43 @@ public:
     const DynArray<Handle<Framebuffer>> &GetFramebuffers() const { return m_fbos; }
     
     void Init(Engine *engine);
-    
+
+    /*! \brief Collect drawable objects, must only be used with non-indirect rendering!
+     */
+    void CollectDrawCalls(
+        Engine *engine,
+        Frame *frame
+    );
+
+    /*! \brief Collect drawable objects, then run the culling compute shader
+     * to mark any occluded objects as such. Must be used with indirect rendering.
+     */
     void CollectDrawCalls(
         Engine *engine,
         Frame *frame,
         const CullData &cull_data
     );
 
+    /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
     void PerformRendering(
         Engine *engine,
         Frame *frame
     );
+    
+    /*! \brief Render objects using indirect rendering. The objects must have had the culling shader ran on them,
+     * using CollectDrawCalls(). */
+    void PerformRenderingIndirect(
+        Engine *engine,
+        Frame *frame
+    );
 
-    // render non-indirect
+    // render non-indirect (collects draw calls, then renders)
     void Render(
         Engine *engine,
         Frame *frame
     );
 
 private:
-    static FixedArray<DynArray<EntityDrawProxy>, num_async_rendering_command_buffers>
-        GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies);
-
     void PerformEnqueuedEntityUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedEntitiesFlag()

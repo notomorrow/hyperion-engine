@@ -50,9 +50,9 @@ protected:
                 while (counter.Waiting()) {
                     /* wait */
                 }
-            }
 
-            counter.NextTick();
+                counter.NextTick();
+            }
 
             if (m_scheduler.NumEnqueued()) {
                 /*m_scheduler.AcceptAll(m_task_queue);

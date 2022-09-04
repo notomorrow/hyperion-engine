@@ -72,7 +72,7 @@ using namespace hyperion;
 using namespace hyperion::v2;
 
 
-#define HYPERION_VK_TEST_VCT 1
+#define HYPERION_VK_TEST_VCT 0
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -92,7 +92,7 @@ public:
 
     virtual void InitRender(Engine *engine) override
     {
-        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
+        //engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
