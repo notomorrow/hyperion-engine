@@ -1,13 +1,17 @@
 #ifndef HYPERION_RENDERER_QUEUE_H
 #define HYPERION_RENDERER_QUEUE_H
 
+#include <core/lib/FixedArray.hpp>
+#include <Types.hpp>
+
 namespace hyperion {
 namespace renderer {
 
-struct DeviceQueue {
-    uint32_t      family;
-    VkQueue       queue;
-    VkCommandPool command_pool;
+struct DeviceQueue
+{
+    UInt family;
+    VkQueue queue;
+    FixedArray<VkCommandPool, 8> command_pools;
 };
 
 } // namespace renderer
