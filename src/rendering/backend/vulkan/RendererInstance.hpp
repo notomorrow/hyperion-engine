@@ -23,10 +23,13 @@
 
 #include <util/Defines.hpp>
 
+#include <Types.hpp>
+
 namespace hyperion {
 namespace renderer {
 
-class Instance {
+class Instance
+{
     static Result CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
     static ExtensionMap GetExtensionMap();
 
@@ -37,42 +40,40 @@ class Instance {
     Result SetupDebug();
     Result SetupDebugMessenger();
 
-    Result CreateCommandPool(DeviceQueue &queue);
+    Result CreateCommandPool(DeviceQueue &queue, UInt index);
 
 public:
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
     
-    void WaitImageReady(Frame *frame);
-
-    DescriptorPool &GetDescriptorPool()                   { return this->descriptor_pool; }
-    const DescriptorPool &GetDescriptorPool() const       { return this->descriptor_pool; }
+    DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
+    const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
                                                           
-    DeviceQueue &GetGraphicsQueue()                       { return this->queue_graphics; }
-    const DeviceQueue &GetGraphicsQueue() const           { return this->queue_graphics; }
-    DeviceQueue &GetTransferQueue()                       { return this->queue_transfer; }
-    const DeviceQueue &GetTransferQueue() const           { return this->queue_transfer; }
-    DeviceQueue &GetPresentQueue()                        { return this->queue_present; }
-    const DeviceQueue &GetPresentQueue() const            { return this->queue_present; }
-    DeviceQueue &GetComputeQueue()                        { return this->queue_compute; }
-    const DeviceQueue &GetComputeQueue() const            { return this->queue_compute; }
+    DeviceQueue &GetGraphicsQueue() { return this->queue_graphics; }
+    const DeviceQueue &GetGraphicsQueue() const { return this->queue_graphics; }
+    DeviceQueue &GetTransferQueue() { return this->queue_transfer; }
+    const DeviceQueue &GetTransferQueue() const { return this->queue_transfer; }
+    DeviceQueue &GetPresentQueue() { return this->queue_present; }
+    const DeviceQueue &GetPresentQueue() const { return this->queue_present; }
+    DeviceQueue &GetComputeQueue() { return this->queue_compute; }
+    const DeviceQueue &GetComputeQueue() const { return this->queue_compute; }
                                                           
-    VkCommandPool GetGraphicsCommandPool() const          { return this->queue_graphics.command_pool; }
-    VkCommandPool GetComputeCommandPool() const           { return this->queue_compute.command_pool; }
+    VkCommandPool GetGraphicsCommandPool(UInt index = 0) const { return this->queue_graphics.command_pools[index]; }
+    VkCommandPool GetComputeCommandPool(UInt index = 0) const { return this->queue_compute.command_pools[index]; }
     
-    VkInstance GetInstance() const                        { return this->instance; }
+    VkInstance GetInstance() const { return this->instance; }
 
-    Swapchain *GetSwapchain()                             { return swapchain; }
-    const Swapchain *GetSwapchain() const                 { return swapchain; }
+    Swapchain *GetSwapchain() { return swapchain; }
+    const Swapchain *GetSwapchain() const { return swapchain; }
                                                           
-    FrameHandler *GetFrameHandler()                       { return frame_handler; }
-    const FrameHandler *GetFrameHandler() const           { return frame_handler; }
+    FrameHandler *GetFrameHandler() { return frame_handler; }
+    const FrameHandler *GetFrameHandler() const { return frame_handler; }
 
-    StagingBufferPool &GetStagingBufferPool()             { return m_staging_buffer_pool; }
+    StagingBufferPool &GetStagingBufferPool() { return m_staging_buffer_pool; }
     const StagingBufferPool &GetStagingBufferPool() const { return m_staging_buffer_pool; }
 
-    VmaAllocator GetAllocator() const                     { return allocator; }
+    VmaAllocator GetAllocator() const { return allocator; }
 
     helpers::SingleTimeCommands GetSingleTimeCommands();
 
@@ -97,22 +98,22 @@ public:
 
 private:
 
-    SystemWindow   *window = nullptr;
-    SystemSDL      system;
+    SystemWindow *window = nullptr;
+    SystemSDL system;
 
-    VkInstance     instance = nullptr;
-    VkSurfaceKHR   surface = nullptr;
+    VkInstance instance = nullptr;
+    VkSurfaceKHR surface = nullptr;
 
     DescriptorPool descriptor_pool;
 
-    VmaAllocator   allocator = nullptr;
+    VmaAllocator allocator = nullptr;
 
-    Device        *device = nullptr;
+    Device *device = nullptr;
 
-    DeviceQueue    queue_graphics,
-                   queue_transfer,
-                   queue_present,
-                   queue_compute;
+    DeviceQueue queue_graphics,
+        queue_transfer,
+        queue_present,
+        queue_compute;
     
     std::vector<const char *> validation_layers;
 

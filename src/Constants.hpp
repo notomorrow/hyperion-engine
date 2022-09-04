@@ -9,6 +9,8 @@
 namespace hyperion {
 
 constexpr UInt max_frames_in_flight = 2;
+constexpr UInt num_async_rendering_command_buffers = 4;
+constexpr UInt num_async_compute_command_buffers = 1;
 constexpr UInt max_bound_env_probes = 1; // temp
 
 constexpr UInt num_gbuffer_textures = 5;

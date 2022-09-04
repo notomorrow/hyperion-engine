@@ -113,7 +113,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"sponza/sponza.obj",
+            "models/sponza/sponza.obj", //testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -231,8 +231,8 @@ public:
         ));
 
         // m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
-        test_model->Scale(10.0f);
-        //test_model->Scale(0.15f);//14.075f);
+        //test_model->Scale(10.0f);
+        test_model->Scale(0.15f);//14.075f);
 
 
 #if HYPERION_VK_TEST_VCT
