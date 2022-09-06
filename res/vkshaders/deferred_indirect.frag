@@ -261,7 +261,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    // result = reflections.rgb;
+    result = reflections.rgb;
     output_color = vec4(result, 1.0);
 
 

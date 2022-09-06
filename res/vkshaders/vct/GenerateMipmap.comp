@@ -35,19 +35,16 @@ void main()
         return;
     }
 
-    const vec3 texcoord = vec3(coord) / vec3(mip_dimensions.xyz);
+    const vec3 texcoord = vec3(coord) / vec3(mip_dimensions.xyz - uvec3(1.0));
 
     vec4 color = GetVoxelAtTexel(texcoord, ivec3(0));
     vec4 final_color = color;
 
-    //if (mip_level == 0) {
-        //vec4 temporal_blending_value = Texture3D(voxel_map_sampler, temporal_blending, texcoord);
-        //color.rgb = mix(temporal_blending_value.rgb, color.rgb, 1.0 - temporal_blending_value.a);
-        //final_color.rgb = vec3(0.0);
-       // final_color.rgb = (1.0 - temporal_blending_value.a) * color.rgb;
-        //final_color.rgb += (temporal_blending_value.a) * temporal_blending_value.rgb;
-        // final_color.rgb = vec3(temporal_blending_value.a);
-    //}
+    // if (mip_level == 0) {
+        vec4 temporal_blending_value = Texture3D(voxel_map_sampler, temporal_blending, texcoord);
+        // final_color.rgb = mix(temporal_blending_value.rgb, color.rgb, temporal_blending_value.a);
+        final_color.rgb = temporal_blending_value.rgb;
+    // }
 
     imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1.0)), final_color);
 }
