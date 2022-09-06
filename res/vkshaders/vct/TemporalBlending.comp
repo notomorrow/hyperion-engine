@@ -1,0 +1,35 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+#include "../include/vct/uniforms.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D voxel_image;
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 2, rgba8) uniform image3D temporal_blending_image;
+
+#define HYP_VCT_TEMPORAL_BLENDING_IMAGE_EXTENT 64
+
+void main(void)
+{
+    ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);
+
+    if (any(greaterThan(coord, ivec3(HYP_VCT_TEMPORAL_BLENDING_IMAGE_EXTENT - 1)))) {
+        return;
+    }
+
+    // load current value, reducing the alpha channel (blend amt)
+    const vec4 current_blend_value = imageLoad(temporal_blending_image, coord);
+
+    vec3 texcoord = vec3(coord) / vec3(HYP_VCT_TEMPORAL_BLENDING_IMAGE_EXTENT);
+    ivec3 voxel_image_coord = clamp(ivec3(texcoord * vec3(vct_params.extent.xyz - uvec3(1))), ivec3(0), ivec3(vct_params.extent.xyz));
+
+    const vec4 target_value = imageLoad(voxel_image, voxel_image_coord);
+
+    // temp
+
+    const vec3 result_value = mix(current_blend_value.rgb, target_value.rgb, 0.25);
+
+    const float blend = clamp(distance(current_blend_value.rgb, result_value.rgb) * 50.0, 0.0, 1.0);
+    
+    imageStore(temporal_blending_image, coord, vec4(result_value, blend));
+}

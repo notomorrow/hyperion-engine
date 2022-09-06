@@ -64,6 +64,7 @@ void VoxelConeTracing::Init(Engine *engine)
         m_renderer_instance.Reset();
         m_clear_voxels.Reset();
         m_generate_mipmap.Reset();
+        m_perform_temporal_blending.Reset();
 
         engine->GetRenderScheduler().Enqueue([this, engine](...) {
 
@@ -233,6 +234,41 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
 
     engine->render_state.UnbindScene();
 
+
+    // temporal blending needs to happen after voxels are written,
+    // but before mipmapping
+    // write to the temporal image the values that have been stored into the voxel image
+    m_temporal_blending_image->GetImage().GetGPUImage()->InsertBarrier(
+        command_buffer,
+        renderer::GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
+
+    m_perform_temporal_blending->GetPipeline()->Bind(command_buffer);
+
+    command_buffer->BindDescriptorSet(
+        engine->GetInstance()->GetDescriptorPool(),
+        m_perform_temporal_blending->GetPipeline(),
+        DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
+    );
+
+    // dispatch to generate this mip level
+    m_perform_temporal_blending->GetPipeline()->Dispatch(
+        command_buffer,
+        Extent3D {
+            (64 + 7) / 8,
+            (64 + 7) / 8,
+            (64 + 7) / 8
+        }
+    );
+    
+    // put it back in default state after writing,
+    // so mipmap generation shader can read this
+    m_temporal_blending_image->GetImage().GetGPUImage()->InsertBarrier(
+        command_buffer,
+        renderer::GPUMemory::ResourceState::SHADER_RESOURCE
+    );
+
+
     if constexpr (manual_mipmap_generation) {
         const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
         const auto voxel_image_extent = m_voxel_image->GetImage().GetExtent();
@@ -297,7 +333,10 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
     } else {
 
         /* unset our state */
-        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::COPY_DST);
+        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(
+            command_buffer,
+            renderer::GPUMemory::ResourceState::COPY_DST
+        );
 
         /* finally, generate mipmaps. we go through GetImage() because we want to
         * directly call the renderer functions rather than enqueueing a command.
@@ -307,8 +346,10 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
             result
         );
 
-        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-
+        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(
+            command_buffer,
+            renderer::GPUMemory::ResourceState::SHADER_RESOURCE
+        );
     }
 
     HYPERION_ASSERT_RESULT(result);
@@ -337,6 +378,19 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 
     engine->InitObject(m_voxel_image);
 
+    m_temporal_blending_image = engine->CreateHandle<Texture>(
+        StorageImage(
+            Extent3D { 64, 64, 64 },
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8, // alpha channel is used as temporal blending amount.
+            Image::Type::TEXTURE_TYPE_3D,
+            Image::FilterMode::TEXTURE_FILTER_NEAREST
+        ),
+        Image::FilterMode::TEXTURE_FILTER_NEAREST,
+        Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER
+    );
+
+    engine->InitObject(m_temporal_blending_image);
+
     if constexpr (manual_mipmap_generation) {
         const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
 
@@ -353,7 +407,8 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
     engine->render_scheduler.Enqueue([this, engine](...) {
         HYPERION_BUBBLE_ERRORS(m_uniform_buffer.Create(engine->GetDevice(), sizeof(VoxelUniforms)));
 
-        const VoxelUniforms uniforms {
+        const VoxelUniforms uniforms
+        {
             .extent = voxel_map_size,
             .aabb_max = m_params.aabb.GetMax().ToVector4(),
             .aabb_min = m_params.aabb.GetMin().ToVector4(),
@@ -435,6 +490,16 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
 
         engine->InitObject(m_generate_mipmap);
     }
+
+    m_perform_temporal_blending = engine->CreateHandle<ComputePipeline>(
+        engine->CreateHandle<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/TemporalBlending.comp.spv")).Read()}}
+            }
+        )
+    );
+
+    engine->InitObject(m_perform_temporal_blending);
 }
 
 void VoxelConeTracing::CreateShader(Engine *engine)
@@ -522,6 +587,10 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
                         .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
                     });
 
+                mip_descriptor_set
+                    ->GetOrAddDescriptor<renderer::ImageDescriptor>(3)
+                    ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_temporal_blending_image->GetImageView() });
+
                 m_generate_mipmap_descriptor_sets[i].PushBack(std::move(mip_descriptor_set));
             }
         }
@@ -540,6 +609,10 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
         descriptor_set
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
             ->SetSubDescriptor({ .element_index = 0u, .buffer = &m_uniform_buffer });
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(2)
+            ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_temporal_blending_image->GetImageView() });
         
         for (UInt i = 0; i < max_frames_in_flight; i++) {
             auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);

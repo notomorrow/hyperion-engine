@@ -120,17 +120,17 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
-        // for (int i = 0; i < 10; i++) {
-        //     auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
-        //     sphere->Scale(1.0f);
-        //     sphere->SetName("sphere");
-        //     sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.1f, 0.8f, 0.35f, 1.0f));
-        //     sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
-        //     sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-        //     sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
-        //     sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 7.0f, -5.0f));
-        //     m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
-        // }
+        for (int i = 0; i < 10; i++) {
+            auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
+            sphere->Scale(1.0f);
+            sphere->SetName("sphere");
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.1f, 0.8f, 0.35f, 1.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+            sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 7.0f, -5.0f));
+            m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
+        }
 
 #if 0// serialize/deseriale test
 
@@ -343,18 +343,18 @@ public:
 
         HandleCameraMovement();
 
-        #if 0 // bad performance on large meshes. need bvh
+        #if 1 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
-            const auto &mouse_position = input_manager->GetMousePosition();
+            const auto &mouse_position = GetInputManager()->GetMousePosition();
 
             const auto mouse_x = mouse_position.x.load();
             const auto mouse_y = mouse_position.y.load();
 
             const auto mouse_world = m_scene->GetCamera()->TransformScreenToWorld(
                 Vector2(
-                    mouse_x / static_cast<float>(input_manager->GetWindow()->width),
-                    mouse_y / static_cast<float>(input_manager->GetWindow()->height)
+                    mouse_x / static_cast<float>(GetInputManager()->GetWindow()->width),
+                    mouse_y / static_cast<float>(GetInputManager()->GetWindow()->height)
                 )
             );
 
@@ -362,7 +362,7 @@ public:
 
             // std::cout << "ray direction: " << ray_direction << "\n";
 
-            Ray ray{m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
+            Ray ray { m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction) };
             RayTestResults results;
 
             if (engine->GetWorld().GetOctree().TestRay(ray, results)) {
@@ -371,8 +371,7 @@ public:
 
                 for (const auto &hit : results) {
                     // now ray test each result as triangle mesh to find exact hit point
-
-                    if (auto lookup_result = engine->resources->entities.Lookup(Entity::ID{hit.id})) {
+                    if (auto lookup_result = engine->registry.template Lookup<Entity>(Entity::ID { TypeID::ForType<Entity>(), hit.id })) {
                         if (auto &mesh = lookup_result->GetMesh()) {
                             ray.TestTriangleList(
                                 mesh->GetVertices(),

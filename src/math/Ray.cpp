@@ -118,10 +118,10 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
 
     if (t > 0.0f) {
         out_results.AddHit({
-            .hitpoint  = position + (direction * t),
-            .normal    = v0v1.Cross(v0v2),
+            .hitpoint = position + (direction * t),
+            .normal = v0v1.Cross(v0v2),
             .distance  = t,
-            .id        = hit_id,
+            .id = hit_id,
             .user_data = user_data
         });
 

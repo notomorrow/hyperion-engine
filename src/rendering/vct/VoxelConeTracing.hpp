@@ -93,10 +93,12 @@ private:
     Handle<RendererInstance> m_renderer_instance;
     Handle<ComputePipeline> m_clear_voxels;
     Handle<ComputePipeline> m_generate_mipmap;
+    Handle<ComputePipeline> m_perform_temporal_blending;
     FixedArray<DynArray<std::unique_ptr<ImageView>>, max_frames_in_flight> m_mips;
     FixedArray<DynArray<std::unique_ptr<DescriptorSet>>, max_frames_in_flight> m_generate_mipmap_descriptor_sets;
                                                        
     Handle<Texture> m_voxel_image;
+    Handle<Texture> m_temporal_blending_image;
     UniformBuffer m_uniform_buffer;
 };
 
