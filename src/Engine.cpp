@@ -442,6 +442,7 @@ void Engine::Initialize()
     auto *vct_descriptor_set = GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
+    // voxel image
     vct_descriptor_set
         ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
         ->SetSubDescriptor({
@@ -449,11 +450,20 @@ void Engine::Initialize()
             .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8Storage()
         });
 
+    // voxel uniforms
     vct_descriptor_set
         ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
         ->SetSubDescriptor({
             .element_index = 0u,
             .buffer = GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(GetDevice(), sizeof(VoxelUniforms))
+        });
+
+    // temporal blend image
+    vct_descriptor_set
+        ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(2)
+        ->SetSubDescriptor({
+            .element_index = 0u,
+            .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8Storage()
         });
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {

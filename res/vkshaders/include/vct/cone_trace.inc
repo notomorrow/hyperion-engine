@@ -9,7 +9,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_im
 #define VCT_DIFFUSE_RATIO(roughness)  RoughnessToConeAngle(roughness)
 #define VCT_SPECULAR_MAX_DIST         0.12
 
-#define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
+#define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(0.015)
 
 #define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.015)
 

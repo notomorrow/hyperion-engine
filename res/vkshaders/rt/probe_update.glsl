@@ -103,7 +103,7 @@ void main()
 {
     const uvec2 coord = uvec2(gl_GlobalInvocationID.xy) + (uvec2(gl_WorkGroupID.xy) * uvec2(2)) + uvec2(2);
     
-    vec3  result       = vec3(0.0);
+    vec3  result = vec3(0.0);
     float total_weight = 0.0;
 
     uint remaining_rays = probe_system.num_rays_per_probe;
