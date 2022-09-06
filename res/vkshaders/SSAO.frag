@@ -51,7 +51,7 @@ const float gdisplace = 0.4; //gauss bell center //0.4
 #define CAP_MIN_DISTANCE 0.0001
 #define CAP_MAX_DISTANCE 0.1
 #define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
-#define SSAO_STRENGTH 0.7
+#define SSAO_STRENGTH 1.35
 #define SSAO_CLAMP_AMOUNT 0.125
 #define SSAO_RADIUS 5.0
 
