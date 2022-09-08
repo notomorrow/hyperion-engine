@@ -10,6 +10,8 @@
 
 #include <util/NonOwningPtr.hpp>
 
+#include <Types.hpp>
+
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
@@ -23,7 +25,7 @@ class Frame {
 public:
     static Frame TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index);
 
-    Frame(uint32_t frame_index);
+    Frame(UInt frame_index);
     Frame(const Frame &other) = delete;
     Frame &operator=(const Frame &other) = delete;
     Frame(Frame &&other) noexcept;
@@ -32,12 +34,12 @@ public:
     Result Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd);
     Result Destroy(Device *device);
 
-    uint32_t GetFrameIndex() const                       { return m_frame_index; }
+    HYP_FORCE_INLINE UInt GetFrameIndex() const { return m_frame_index; }
 
-    CommandBuffer *GetCommandBuffer()             { return command_buffer.get(); }
+    CommandBuffer *GetCommandBuffer() { return command_buffer.get(); }
     const CommandBuffer *GetCommandBuffer() const { return command_buffer.get(); }
 
-    SemaphoreChain &GetPresentSemaphores()             { return m_present_semaphores; }
+    SemaphoreChain &GetPresentSemaphores() { return m_present_semaphores; }
     const SemaphoreChain &GetPresentSemaphores() const { return m_present_semaphores; }
 
     /* Start recording into the command buffer */
@@ -51,7 +53,7 @@ public:
     std::unique_ptr<Fence>        fc_queue_submit;
 
 private:
-    uint32_t       m_frame_index;
+    UInt m_frame_index;
     SemaphoreChain m_present_semaphores;
 };
 

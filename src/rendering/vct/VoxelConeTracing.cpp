@@ -117,8 +117,8 @@ void VoxelConeTracing::Init(Engine *engine)
         
         HYP_FLUSH_RENDER_QUEUE(engine);
 
-        engine->SafeReleaseRenderResource<Texture>(std::move(m_voxel_image));
-        engine->SafeReleaseRenderResource<Shader>(std::move(m_shader));
+        engine->SafeReleaseHandle<Texture>(std::move(m_voxel_image));
+        engine->SafeReleaseHandle<Shader>(std::move(m_shader));
         
         SetReady(false);
     });
@@ -612,14 +612,14 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
             ->SetSubDescriptor({ .element_index = 0u, .buffer = &m_uniform_buffer });
 
         descriptor_set
-            ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(2)
+            ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(6)
             ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_temporal_blending_image->GetImageView() });
 
         descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(3)
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(7)
             ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_voxel_image->GetImageView() });
         descriptor_set
-            ->GetOrAddDescriptor<renderer::SamplerDescriptor>(4)
+            ->GetOrAddDescriptor<renderer::SamplerDescriptor>(8)
             ->SetSubDescriptor({ .element_index = 0u, .sampler = &m_voxel_image->GetSampler() });
         
         for (UInt i = 0; i < max_frames_in_flight; i++) {

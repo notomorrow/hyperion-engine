@@ -7,17 +7,19 @@ namespace hyperion {
 namespace renderer {
 
 Pipeline::Pipeline()
-    : pipeline(VK_NULL_HANDLE),
+    : m_has_custom_descriptor_sets(false),
+      pipeline(VK_NULL_HANDLE),
       layout(VK_NULL_HANDLE),
-      push_constants{}
+      push_constants { }
 {
 }
 
 Pipeline::Pipeline(const DynArray<const DescriptorSet *> &used_descriptor_sets)
     : m_used_descriptor_sets(used_descriptor_sets),
+      m_has_custom_descriptor_sets(true),
       pipeline(VK_NULL_HANDLE),
       layout(VK_NULL_HANDLE),
-      push_constants{}
+      push_constants { }
 {
 
 }
@@ -28,46 +30,54 @@ Pipeline::~Pipeline()
     AssertThrowMsg(layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }
 
-std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool) const
+void Pipeline::AssignDefaultDescriptorSets(DescriptorPool *descriptor_pool)
+{
+    m_has_custom_descriptor_sets = false;
+
+#if HYP_FEATURES_BINDLESS_TEXTURES
+    m_used_descriptor_sets.Set({
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING)
+    });
+#else
+    m_used_descriptor_sets.Set({
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT),
+        descriptor_pool->GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES)
+    });
+#endif
+}
+
+std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool)
 {
     // TODO: set specialization constants based on these values so the indices all match up
 
-    std::vector<VkDescriptorSetLayout> used_layouts;
-
-    if (m_used_descriptor_sets.Any()) {
-        for (auto *descriptor_set : m_used_descriptor_sets.Get()) {
-            used_layouts.push_back(descriptor_set->m_layout);
-        }
+    if (m_used_descriptor_sets.HasValue()) {
+        m_has_custom_descriptor_sets = true;
     } else {
-        DynArray<DescriptorSet::Index> all_layouts;
-        const auto &pool_layouts = descriptor_pool->GetDescriptorSetLayouts();
+        AssignDefaultDescriptorSets(descriptor_pool);
+    }
+    
+    std::vector<VkDescriptorSetLayout> used_layouts;
+    used_layouts.reserve(m_used_descriptor_sets.Get().Size());
 
-#if HYP_FEATURES_BINDLESS_TEXTURES
-        all_layouts = DynArray<DescriptorSet::Index> {
-            DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING
-        };
-#else
-        all_layouts = DynArray<DescriptorSet::Index> {
-            DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,
-            DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
-        };
-#endif
+    for (auto *descriptor_set : m_used_descriptor_sets.Get()) {
+        AssertThrow(descriptor_set != nullptr);
+        AssertThrow(descriptor_set->IsCreated());
 
-        used_layouts.reserve(all_layouts.Size());
+        //if (descriptor_set->GetIndex() == DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED) {
+       //     continue;
+        //}
 
-        for (auto item : all_layouts) {
-            used_layouts.push_back(pool_layouts.At(item));
-        }
+        used_layouts.push_back(descriptor_set->m_layout);
     }
 
     return used_layouts;

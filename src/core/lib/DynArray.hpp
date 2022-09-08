@@ -2,6 +2,7 @@
 #define HYPERION_V2_LIB_DYN_ARRAY_H
 
 #include "ContainerBase.hpp"
+#include "FixedArray.hpp"
 #include "Pair.hpp"
 #include <util/Defines.hpp>
 #include <Types.hpp>
@@ -26,9 +27,8 @@ namespace hyperion {
 template <class T>
 class DynArray : public ContainerBase<DynArray<T>, UInt> {
 public:
-    using Base = DynArray<T>;
-
-    using SizeType = UInt64;
+    using Base = ContainerBase<DynArray<T>, UInt>;
+    using KeyType = typename Base::KeyType;
     using ValueType = T;
 
     static constexpr SizeType num_inline_bytes = 512u;
@@ -41,7 +41,7 @@ protected:
     static constexpr SizeType push_front_padding = 4;
 
 public:
-    using Iterator      = T *;
+    using Iterator = T *;
     using ConstIterator = const T *;
     using InsertResult  = Pair<Iterator, bool>; // iterator, was inserted
 
@@ -65,6 +65,28 @@ public:
 
         for (auto it = items.begin(); it != items.end(); ++it) {
             PushBack(*it);
+        }
+    }
+
+    template <SizeType Sz>
+    DynArray(const FixedArray<T, Sz> &items)
+        : DynArray()
+    {
+        Resize(Sz);
+
+        for (SizeType i = 0; i < Sz; i++) {
+            Base::Set(static_cast<KeyType>(i), items[i]);
+        }
+    }
+
+    template <SizeType Sz>
+    DynArray(FixedArray<T, Sz> &&items)
+        : DynArray()
+    {
+        Resize(Sz);
+
+        for (SizeType i = 0; i < Sz; i++) {
+            Base::Set(static_cast<KeyType>(i), std::move(items[i]));
         }
     }
 
@@ -94,22 +116,43 @@ public:
     */
 
     
-    [[nodiscard]] SizeType Size() const                             { return m_size - m_start_offset; }
+    [[nodiscard]] SizeType Size() const { return m_size - m_start_offset; }
 
-    [[nodiscard]] ValueType *Data()                                 { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }
-    [[nodiscard]] const ValueType *Data() const                     { return &reinterpret_cast<const T *>(m_buffer)[m_start_offset]; }
+    [[nodiscard]] ValueType *Data() { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }
+    [[nodiscard]] const ValueType *Data() const { return &reinterpret_cast<const T *>(m_buffer)[m_start_offset]; }
 
-    [[nodiscard]] ValueType &Front()                                { return m_buffer[m_start_offset].Get(); }
-    [[nodiscard]] const ValueType &Front() const                    { return m_buffer[m_start_offset].Get(); }
+    [[nodiscard]] ValueType &Front() { return m_buffer[m_start_offset].Get(); }
+    [[nodiscard]] const ValueType &Front() const { return m_buffer[m_start_offset].Get(); }
 
-    [[nodiscard]] ValueType &Back()                                 { return m_buffer[m_size - 1].Get(); }
-    [[nodiscard]] const ValueType &Back() const                     { return m_buffer[m_size - 1].Get(); }
+    [[nodiscard]] ValueType &Back() { return m_buffer[m_size - 1].Get(); }
+    [[nodiscard]] const ValueType &Back() const { return m_buffer[m_size - 1].Get(); }
 
-    [[nodiscard]] bool Empty() const                                { return Size() == 0; }
-    [[nodiscard]] bool Any() const                                  { return Size() != 0; }
+    [[nodiscard]] bool Empty() const { return Size() == 0; }
+    [[nodiscard]] bool Any() const { return Size() != 0; }
 
-    ValueType &operator[](SizeType index)                           { return m_buffer[m_start_offset + index].Get(); }
-    [[nodiscard]] const ValueType &operator[](SizeType index) const { return m_buffer[m_start_offset + index].Get(); }
+    ValueType &operator[](KeyType index) { return m_buffer[m_start_offset + index].Get(); }
+    [[nodiscard]] const ValueType &operator[](KeyType index) const { return m_buffer[m_start_offset + index].Get(); }
+
+    // ValueType &Get(KeyType index)
+    // {
+    //     AssertThrow(index < static_cast<KeyType>(Size()));
+    //     return m_buffer[m_start_offset + index].Get();
+    // }
+
+    // const ValueType &Get(KeyType index) const
+    //     { return const_cast<const DynArray *>(this)->Get(index); }
+
+    // void Set(KeyType index, const ValueType &value)
+    // {
+    //     AssertThrow(index < static_cast<KeyType>(Size()));
+    //     m_buffer[m_start_offset + index].Get() = value;
+    // }
+
+    // void Set(KeyType index, ValueType &&value)
+    // {
+    //     AssertThrow(index < static_cast<KeyType>(Size()));
+    //     m_buffer[m_start_offset + index].Get() = std::forward<ValueType>(value);
+    // }
 
     void Reserve(SizeType capacity);
     void Resize(SizeType new_size);
@@ -274,10 +317,10 @@ DynArray<T>::DynArray(DynArray &&other) noexcept
         }
     }
 
-    other.m_size        = 0;
-    other.m_capacity    = num_inline_elements;
-    other.m_buffer      = &other.m_inline_buffer[0];
-    other.m_is_dynamic  = false;
+    other.m_size = 0;
+    other.m_capacity = num_inline_elements;
+    other.m_buffer = &other.m_inline_buffer[0];
+    other.m_is_dynamic = false;
     other.m_start_offset = 0;
 }
 

@@ -10,7 +10,7 @@ Frame Frame::TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index)
     return frame;
 }
 
-Frame::Frame(uint32_t frame_index)
+Frame::Frame(UInt frame_index)
     : m_frame_index(frame_index),
       command_buffer(nullptr),
       fc_queue_submit(nullptr),

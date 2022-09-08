@@ -16,11 +16,35 @@ class ContainerBase
 {
 protected:
     using Base = ContainerBase;
+public:
+    using SizeType = SizeType;
     using KeyType = Key;
 
-public:
     ContainerBase() { }
     ~ContainerBase() { }
+
+    auto &Get(KeyType index)
+    {
+        AssertThrow(index < static_cast<KeyType>(static_cast<const Container *>(this)->Size()));
+        return static_cast<Container *>(this)->operator[](index);
+    }
+
+    [[nodiscard]] const auto &Get(KeyType index) const
+        { return const_cast<const ContainerBase *>(this)->Get(index); }
+
+    template <class ValueType>
+    void Set(KeyType index, const ValueType &value)
+    {
+        AssertThrow(index < static_cast<KeyType>(static_cast<const Container *>(this)->Size()));
+        static_cast<Container *>(this)->operator[](index) = value;
+    }
+
+    template <class ValueType>
+    void Set(KeyType index, ValueType &&value)
+    {
+        AssertThrow(index < static_cast<KeyType>(static_cast<const Container *>(this)->Size()));
+        static_cast<Container *>(this)->operator[](index) = std::forward<ValueType>(value);
+    }
 
     template <class T>
     [[nodiscard]] auto Find(const T &value)
@@ -169,6 +193,12 @@ public:
         return static_cast<KeyType>(std::distance(static_cast<const Container *>(this)->Begin(), iter));
     }
 
+    template <class TaskSystem, class Lambda>
+    void ParallelForEach(TaskSystem &task_system, Lambda &&lambda)
+    {
+        task_system.ParallelForEach(*this, std::forward<Lambda>(lambda));
+    }
+    
     [[nodiscard]] HashCode GetHashCode() const
     {
         HashCode hc;
@@ -180,11 +210,6 @@ public:
         return hc;
     }
 
-    template <class TaskSystem, class Lambda>
-    void ParallelForEach(TaskSystem &task_system, Lambda &&lambda)
-    {
-        task_system.ParallelForEach(*this, std::forward<Lambda>(lambda));
-    }
 };
 
 

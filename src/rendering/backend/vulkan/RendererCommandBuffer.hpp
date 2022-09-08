@@ -89,7 +89,7 @@ public:
         size_t                          num_offsets
     ) const;
 
-    template <size_t Size>
+    template <SizeType Size>
     void BindDescriptorSet(
         const DescriptorPool           &pool,
         const GraphicsPipeline         *pipeline,
@@ -118,7 +118,7 @@ public:
         size_t                           num_offsets
     ) const;
 
-    template <size_t NumDescriptorSets, size_t NumOffsets>
+    template <SizeType NumDescriptorSets, SizeType NumOffsets>
     void BindDescriptorSets(
         const DescriptorPool                                      &pool,
         const GraphicsPipeline                                    *pipeline,
@@ -154,7 +154,7 @@ public:
         size_t                 num_offsets
     ) const;
 
-    template <size_t NumOffsets>
+    template <SizeType NumOffsets>
     void BindDescriptorSet(
         const DescriptorPool                 &pool,
         const ComputePipeline                *pipeline,
@@ -195,7 +195,7 @@ public:
         size_t                 num_offsets
     ) const;
 
-    template <size_t NumOffsets>
+    template <SizeType NumOffsets>
     void BindDescriptorSet(
         const DescriptorPool                 &pool,
         const ComputePipeline                *pipeline,
@@ -219,12 +219,12 @@ public:
         const ComputePipeline *pipeline,
         const DescriptorSet::Index *sets,
         const DescriptorSet::Index *bindings,
-        size_t num_descriptor_sets,
+        SizeType num_descriptor_sets,
         const UInt32 *offsets,
-        size_t num_offsets
+        SizeType num_offsets
     ) const;
 
-    template <size_t NumDescriptorSets, size_t NumOffsets>
+    template <SizeType NumDescriptorSets, SizeType NumOffsets>
     void BindDescriptorSets(
         const DescriptorPool &pool,
         const ComputePipeline *pipeline,
@@ -252,12 +252,12 @@ public:
     ) const;
 
     void BindDescriptorSet(
-        const DescriptorPool     &pool,
+        const DescriptorPool &pool,
         const RaytracingPipeline *pipeline,
-        const DescriptorSet      *descriptor_set,
-        DescriptorSet::Index      binding,
-        const UInt32             *offsets,
-        size_t                    num_offsets
+        const DescriptorSet *descriptor_set,
+        DescriptorSet::Index binding,
+        const UInt32 *offsets,
+        SizeType num_offsets
     ) const;
 
     template <size_t NumOffsets>

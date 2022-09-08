@@ -54,7 +54,7 @@ void Material::Init(Engine *engine)
 
         for (SizeType i = 0; i < m_textures.Size(); i++) {
             if (auto &texture = m_textures.ValueAt(i)) {
-                engine->SafeReleaseRenderResource<Texture>(std::move(texture));
+                engine->SafeReleaseHandle<Texture>(std::move(texture));
             }
         }
 
@@ -272,7 +272,7 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
     }
 
     if (m_textures[key] != nullptr) {
-        GetEngine()->SafeReleaseRenderResource<Texture>(std::move(m_textures[key]));
+        GetEngine()->SafeReleaseHandle<Texture>(std::move(m_textures[key]));
     }
 
     if (texture && IsInitCalled()) {

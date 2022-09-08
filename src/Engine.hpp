@@ -171,9 +171,15 @@ public:
     Handle<RendererInstance> AddRendererInstance(std::unique_ptr<RendererInstance> &&renderer_instance);
 
     template <class T>
-    void SafeReleaseRenderResource(Handle<T> &&resource)
+    void SafeReleaseHandle(Handle<T> &&resource)
     {
-        m_safe_deleter.SafeReleaseRenderResource(std::move(resource));
+        m_safe_deleter.SafeReleaseHandle(std::move(resource));
+    }
+
+    template <class T>
+    void SafeRelease(UniquePtr<T> &&object)
+    {
+        m_safe_deleter.SafeRelease(std::move(object));
     }
 
     bool IsRenderLoopActive() const

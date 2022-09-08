@@ -137,16 +137,19 @@ public:
         { return Get() == nullptr; }
 
     bool operator==(const UniquePtrBase &other) const
-        { return m_holder.value == other.m_holder.value; }
+        { return Get() == other.Get(); }
 
     bool operator==(std::nullptr_t) const
         { return Get() == nullptr; }
 
     bool operator!=(const UniquePtrBase &other) const
-        { return m_holder.value != other.m_holder.value; }
+        { return Get() != other.Get(); }
 
     bool operator!=(std::nullptr_t) const
         { return Get() != nullptr; }
+
+    bool operator<(const UniquePtrBase &other) const
+        { return uintptr_t(Get()) < uintptr_t(other.Get()); }
 
     [[nodiscard]] const TypeID &GetTypeID() const
         { return m_holder.type_id; }
@@ -216,11 +219,6 @@ protected:
     using Base = UniquePtrBase;
 
 public:
-    using Base::operator==;
-    using Base::operator!=;
-    using Base::operator!;
-    using Base::operator bool;
-
     UniquePtr()
         : Base()
     {
@@ -336,11 +334,6 @@ protected:
     using Base = UniquePtrBase;
 
 public:
-    using Base::operator==;
-    using Base::operator!=;
-    using Base::operator!;
-    using Base::operator bool;
-
     UniquePtr()
         : Base()
     {
@@ -408,6 +401,10 @@ public:
             Base::m_holder.template TakeOwnership<T>(ptr);
         }
     }
+
+    /*! \brief Destroys any currently held object.  */
+    HYP_FORCE_INLINE void Reset()
+        { Base::Reset(); }
 
     /*! \brief Constructs a new RefCountedPtr from this object.
         The value held within this UniquePtr will be unset,

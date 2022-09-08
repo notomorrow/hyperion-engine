@@ -171,7 +171,7 @@ void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet
 
 void FullScreenPass::Destroy(Engine *engine)
 {
-    engine->SafeReleaseRenderResource<Mesh>(std::move(m_full_screen_quad));
+    engine->SafeReleaseHandle<Mesh>(std::move(m_full_screen_quad));
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         if (m_framebuffers[i] != nullptr) {

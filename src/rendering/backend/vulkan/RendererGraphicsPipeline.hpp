@@ -22,7 +22,8 @@ namespace renderer {
 
 class FramebufferObject;
 
-class GraphicsPipeline : public Pipeline {
+class GraphicsPipeline : public Pipeline
+{
 public:
     struct ConstructionInfo {
         VertexAttributeSet vertex_attributes;
@@ -32,8 +33,8 @@ public:
         FillMode fill_mode = FillMode::FILL;
 
         bool depth_test = true,
-             depth_write = true,
-             blend_enabled = false;
+            depth_write = true,
+            blend_enabled = false;
 
         ShaderProgram *shader = nullptr;
         RenderPass *render_pass = nullptr;
@@ -76,7 +77,7 @@ private:
     VkViewport viewport;
     VkRect2D scissor;
 
-    std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions{};
+    std::vector<VkVertexInputBindingDescription> vertex_binding_descriptions { };
     std::vector<VkVertexInputAttributeDescription> vertex_attributes{};
 
     ConstructionInfo m_construction_info;

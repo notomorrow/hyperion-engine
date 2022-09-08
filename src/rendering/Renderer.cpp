@@ -367,39 +367,17 @@ GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies)
 
     const auto num_draw_proxies = draw_proxies.Size();
 
-    constexpr UInt ideal_tasks_per_thread = 100;
+    // split evenly
+    const auto num_draw_calls_divided = (num_draw_proxies + num_async_rendering_command_buffers - 1) / num_async_rendering_command_buffers;
 
-    /*if (num_draw_proxies < ideal_tasks_per_thread * num_async_rendering_command_buffers) {
-        SizeType draw_proxies_remaining = num_draw_proxies;
-        SizeType container_index = 0;
+    SizeType draw_proxy_index = 0;
 
-        for (SizeType i = 0; i < num_draw_proxies; i += ideal_tasks_per_thread) {
-            const auto max_iteration = MathUtil::Min(ideal_tasks_per_thread, draw_proxies_remaining);
+    for (SizeType container_index = 0; container_index < num_async_rendering_command_buffers; container_index++) {
+        auto &container = divided_draw_proxies[container_index];
+        container.Reserve(num_draw_calls_divided);
 
-            auto &container = divided_draw_proxies[container_index];
-            container.Reserve(max_iteration);
-
-            for (SizeType draw_proxy_index = i; draw_proxy_index < i + max_iteration; draw_proxy_index++) {
-                container.PushBack(draw_proxies[draw_proxy_index]);
-
-                --draw_proxies_remaining;
-            }
-
-            ++container_index;
-        }
-    } else*/ {
-        // split evenly
-        const auto num_draw_calls_divided = (num_draw_proxies + num_async_rendering_command_buffers - 1) / num_async_rendering_command_buffers;
-
-        SizeType draw_proxy_index = 0;
-
-        for (SizeType container_index = 0; container_index < num_async_rendering_command_buffers; container_index++) {
-            auto &container = divided_draw_proxies[container_index];
-            container.Reserve(num_draw_calls_divided);
-
-            for (SizeType i = 0; i < num_draw_calls_divided && draw_proxy_index < num_draw_proxies; i++, draw_proxy_index++) {
-                container.PushBack(draw_proxies[draw_proxy_index]);
-            }
+        for (SizeType i = 0; i < num_draw_calls_divided && draw_proxy_index < num_draw_proxies; i++, draw_proxy_index++) {
+            container.PushBack(draw_proxies[draw_proxy_index]);
         }
     }
 
@@ -412,6 +390,7 @@ RenderAll(
     Engine *engine,
     Frame *frame,
     FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> &command_buffers,
+    UInt &command_buffer_index,
     renderer::GraphicsPipeline *pipeline,
     IndirectRenderer *indirect_renderer,
     const DynArray<EntityDrawProxy> &draw_proxies
@@ -424,10 +403,12 @@ RenderAll(
     auto *device = instance->GetDevice();
 
     const auto frame_index = frame->GetFrameIndex();
-
-    UInt num_recorded_command_buffers = 0;
     
     auto divided_draw_proxies = GetDividedDrawCalls(draw_proxies);
+
+    // rather than using a single integer, we have to set states in a fixed array
+    // because otherwise we'd need to use an atomic integer
+    FixedArray<UInt, num_async_rendering_command_buffers> command_buffers_recorded_states { };
     
     // always run renderer items as HIGH priority,
     // so we do not lock up because we're waiting for a large process to
@@ -435,15 +416,15 @@ RenderAll(
     engine->task_system.ParallelForEach(
         TaskPriority::HIGH,
         RendererInstance::parallel_rendering
-            ? static_cast<UInt>(engine->task_system.GetPool(TaskPriority::HIGH).threads.Size())
+            ? MathUtil::Min(static_cast<UInt>(engine->task_system.GetPool(TaskPriority::HIGH).threads.Size()), num_async_rendering_command_buffers)
             : 1u,
         divided_draw_proxies,
-        [engine, pipeline, indirect_renderer, &num_recorded_command_buffers, &command_buffers, frame_index, scene_id](const DynArray<EntityDrawProxy> &draw_proxies, const SizeType container_index) {
+        [engine, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, command_buffer_index, frame_index, scene_id](const DynArray<EntityDrawProxy> &draw_proxies, UInt index, UInt batch_index) {
             if (draw_proxies.Empty()) {
                 return;
             }
 
-            command_buffers[frame_index][container_index]->Record(
+            command_buffers[frame_index][(command_buffer_index + batch_index) % static_cast<UInt>(command_buffers.Size())]->Record(
                 engine->GetDevice(),
                 pipeline->GetConstructionInfo().render_pass,
                 [&](CommandBuffer *secondary) {
@@ -538,15 +519,22 @@ RenderAll(
                     }
 
                     HYPERION_RETURN_OK;
-                });
+                }
+            );
 
-        ++num_recorded_command_buffers;
-    });
+            command_buffers_recorded_states[batch_index] = 1u;
+        }
+    );
+
+    const auto num_recorded_command_buffers = command_buffers_recorded_states.Sum();
 
     // submit all command buffers
     for (UInt i = 0; i < num_recorded_command_buffers; i++) {
-        command_buffers[frame_index][i]->SubmitSecondary(frame->GetCommandBuffer());
+        command_buffers[frame_index][(command_buffer_index + i) % static_cast<UInt>(command_buffers.Size())]
+            ->SubmitSecondary(frame->GetCommandBuffer());
     }
+
+    command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % static_cast<UInt>(command_buffers.Size());
 }
 
 void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
@@ -558,6 +546,7 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
         engine,
         frame,
         m_command_buffers,
+        m_command_buffer_index,
         m_pipeline.get(),
         &m_indirect_renderer,
         m_indirect_renderer.GetDrawState().GetDrawProxies()
@@ -573,6 +562,7 @@ void RendererInstance::PerformRenderingIndirect(Engine *engine, Frame *frame)
         engine,
         frame,
         m_command_buffers,
+        m_command_buffer_index,
         m_pipeline.get(),
         &m_indirect_renderer,
         m_indirect_renderer.GetDrawState().GetDrawProxies()

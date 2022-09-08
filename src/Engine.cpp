@@ -441,7 +441,8 @@ void Engine::Initialize()
     // add VCT descriptor placeholders
     auto *vct_descriptor_set = GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
-
+    
+#if 0
     // voxel image
     vct_descriptor_set
         ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
@@ -460,26 +461,43 @@ void Engine::Initialize()
 
     // temporal blend image
     vct_descriptor_set
-        ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(2)
+        ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(6)
         ->SetSubDescriptor({
             .element_index = 0u,
             .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8Storage()
         });
     // voxel image (texture3D)
     vct_descriptor_set
-        ->GetOrAddDescriptor<renderer::ImageDescriptor>(3)
+        ->GetOrAddDescriptor<renderer::ImageDescriptor>(7)
         ->SetSubDescriptor({
             .element_index = 0u,
             .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8()
         });
     // voxel sampler
     vct_descriptor_set
-        ->GetOrAddDescriptor<renderer::SamplerDescriptor>(4)
+        ->GetOrAddDescriptor<renderer::SamplerDescriptor>(8)
         ->SetSubDescriptor({
             .element_index = 0u,
             .sampler = &GetPlaceholderData().GetSamplerLinear()
         });
-    
+
+#else // svo tests
+    // atomic counter
+    vct_descriptor_set
+        ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(0)
+        ->SetSubDescriptor({
+            .element_index = 0u,
+            .buffer = GetPlaceholderData().GetOrCreateBuffer<renderer::AtomicCounterBuffer>(GetDevice(), sizeof(UInt32))
+        });
+
+    // fragment list
+    vct_descriptor_set
+        ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(1)
+        ->SetSubDescriptor({
+            .element_index = 0u,
+            .buffer = GetPlaceholderData().GetOrCreateBuffer<renderer::StorageBuffer>(GetDevice(), sizeof(ShaderVec2<UInt32>))
+        });
+#endif
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto *descriptor_set_globals = GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
@@ -497,6 +515,14 @@ void Engine::Initialize()
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
+            });
+
+        // sparse voxel octree buffer
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SVO_BUFFER)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .buffer = GetPlaceholderData().GetOrCreateBuffer<renderer::StorageBuffer>(GetDevice(), sizeof(ShaderVec2<UInt32>))
             });
     }
 
@@ -574,7 +600,7 @@ void Engine::FinalizeStop()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    SafeReleaseRenderResource<Mesh>(std::move(m_full_screen_quad));
+    SafeReleaseHandle<Mesh>(std::move(m_full_screen_quad));
 
     m_is_stopping = true;
     m_is_render_loop_active = false;
@@ -595,7 +621,7 @@ void Engine::FinalizeStop()
         HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
     }
 
-    m_safe_deleter.ForceReleaseAll();
+    m_safe_deleter.ForceReleaseAll(this);
 
     HYP_FLUSH_RENDER_QUEUE(this);
 
@@ -729,7 +755,7 @@ void Engine::ResetRenderState()
 
 void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
 {
-    m_safe_deleter.PerformEnqueuedDeletions();
+    m_safe_deleter.PerformEnqueuedDeletions(this);
 
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);

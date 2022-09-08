@@ -116,7 +116,7 @@ Result ComputePipeline::Create(
     layout_info.pSetLayouts = used_layouts.data();
     
     layout_info.pushConstantRangeCount = static_cast<uint32_t>(std::size(push_constant_ranges));
-    layout_info.pPushConstantRanges    = push_constant_ranges;
+    layout_info.pPushConstantRanges = push_constant_ranges;
 
     HYPERION_VK_CHECK_MSG(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),

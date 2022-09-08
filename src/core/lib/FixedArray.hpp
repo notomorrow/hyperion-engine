@@ -12,8 +12,9 @@
 namespace hyperion {
 
 template <class T, SizeType Sz>
-class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt> {
-    T m_data[MathUtil::Max(Sz, 1)];
+class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt>
+{
+    T m_values[MathUtil::Max(Sz, 1)];
 
 public:
     using Iterator = T *;
@@ -25,7 +26,7 @@ public:
 
     template <class ... Args>
     constexpr FixedArray(Args &&... args)
-        : m_data { std::forward<Args>(args)... }
+        : m_values { std::forward<Args>(args)... }
     {
     }
 
@@ -50,11 +51,11 @@ public:
 
     HYP_FORCE_INLINE
     T &operator[](typename FixedArray::Base::KeyType index)
-        { return m_data[index]; }
+        { return m_values[index]; }
 
     [[nodiscard]] HYP_FORCE_INLINE
     const T &operator[](typename FixedArray::Base::KeyType index) const
-        { return m_data[index]; }
+        { return m_values[index]; }
 
     HYP_FORCE_INLINE
     constexpr SizeType Size() const
@@ -70,18 +71,18 @@ public:
 
     [[nodiscard]] HYP_FORCE_INLINE
     T *Data()
-        { return static_cast<T *>(m_data); }
+        { return static_cast<T *>(m_values); }
 
     [[nodiscard]] HYP_FORCE_INLINE
     const T *Data() const
-        { return static_cast<const T *>(m_data); }
+        { return static_cast<const T *>(m_values); }
 
-    HYP_DEF_STL_BEGIN_END(&m_data[0], &m_data[Sz])
+    HYP_DEF_STL_BEGIN_END(&m_values[0], &m_values[Sz])
 };
 
 template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray()
-    : m_data{}
+    : m_values{}
 {
 }
 
@@ -89,7 +90,7 @@ template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray(const FixedArray &other)
 {
     for (SizeType i = 0; i < Sz; i++) {
-        m_data[i] = other.m_data[i];
+        m_values[i] = other.m_values[i];
     }
 }
 
@@ -97,7 +98,7 @@ template <class T, SizeType Sz>
 auto FixedArray<T, Sz>::operator=(const FixedArray &other) -> FixedArray&
 {
     for (SizeType i = 0; i < Sz; i++) {
-        m_data[i] = other.m_data[i];
+        m_values[i] = other.m_values[i];
     }
 
     return *this;
@@ -107,7 +108,7 @@ template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray(FixedArray &&other) noexcept
 {
     for (SizeType i = 0; i < Sz; i++) {
-        m_data[i] = std::move(other.m_data[i]);
+        m_values[i] = std::move(other.m_values[i]);
     }
 }
 
@@ -115,7 +116,7 @@ template <class T, SizeType Sz>
 auto FixedArray<T, Sz>::operator=(FixedArray &&other) noexcept -> FixedArray&
 {
     for (SizeType i = 0; i < Sz; i++) {
-        m_data[i] = std::move(other.m_data[i]);
+        m_values[i] = std::move(other.m_values[i]);
     }
 
     return *this;

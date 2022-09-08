@@ -1,6 +1,8 @@
 #include "Voxelizer.hpp"
 #include "../Engine.hpp"
 
+#include <rendering/backend/RendererFeatures.hpp>
+
 #include <math/MathUtil.hpp>
 #include <asset/ByteReader.hpp>
 #include <camera/OrthoCamera.hpp>
@@ -39,18 +41,8 @@ void Voxelizer::Init(Engine *engine)
     );
 
     engine->InitObject(m_scene);
-
-    if (m_counter == nullptr) {
-        m_counter = std::make_unique<AtomicCounter>();
-        m_counter->Create(engine);
-    }
-
-    if (m_fragment_list_buffer == nullptr) {
-        m_fragment_list_buffer = std::make_unique<StorageBuffer>();
-
-        HYPERION_ASSERT_RESULT(m_fragment_list_buffer->Create(engine->GetInstance()->GetDevice(), default_fragment_list_buffer_size));
-    }
     
+    CreateBuffers(engine);
     CreateShader(engine);
     CreateRenderPass(engine);
     CreateFramebuffer(engine);
@@ -60,40 +52,43 @@ void Voxelizer::Init(Engine *engine)
     OnTeardown([this]() {
         auto *engine = GetEngine();
 
-        auto result = renderer::Result::OK;
-
-        if (m_counter != nullptr) {
-            m_counter->Destroy(engine);
-            m_counter.reset();
-        }
-
-        if (m_fragment_list_buffer != nullptr) {
-            HYPERION_PASS_ERRORS(
-                m_fragment_list_buffer->Destroy(engine->GetInstance()->GetDevice()),
-                result
-            );
-
-            m_fragment_list_buffer.reset();
-        }
-
         m_shader.Reset();
         m_framebuffer.Reset();
         m_render_pass.Reset();
 
-        for (auto &attachment : m_attachments) {
-            HYPERION_PASS_ERRORS(
-                attachment->Destroy(engine->GetInstance()->GetDevice()),
-                result
-            );
-        }
+        engine->GetRenderScheduler().Enqueue([this, engine](...) {
+            auto result = renderer::Result::OK;
 
-        m_attachments.clear();
+            if (m_counter != nullptr) {
+                m_counter->Destroy(engine);
+            }
+
+            if (m_fragment_list_buffer != nullptr) {
+                HYPERION_PASS_ERRORS(
+                    m_fragment_list_buffer->Destroy(engine->GetInstance()->GetDevice()),
+                    result
+                );
+            }
+
+            for (auto &attachment : m_attachments) {
+                HYPERION_PASS_ERRORS(
+                    attachment->Destroy(engine->GetInstance()->GetDevice()),
+                    result
+                );
+            }
+
+            m_num_fragments = 0;
+
+            return result;
+        });
+
+        HYP_FLUSH_RENDER_QUEUE(engine);
 
         m_renderer_instance.Reset();
+        m_attachments.clear();
 
-        m_num_fragments = 0;
-
-        HYPERION_ASSERT_RESULT(result);
+        m_fragment_list_buffer.reset();
+        m_counter.reset();
     });
 }
 
@@ -129,16 +124,42 @@ void Voxelizer::CreatePipeline(Engine *engine)
     engine->InitObject(m_renderer_instance);
 }
 
+void Voxelizer::CreateBuffers(Engine *engine)
+{
+    m_counter = std::make_unique<AtomicCounter>();
+    m_fragment_list_buffer = std::make_unique<StorageBuffer>();
+
+    engine->GetRenderScheduler().Enqueue([this, engine](...) {
+        auto result = Result::OK;
+
+        m_counter->Create(engine);
+        
+        HYPERION_PASS_ERRORS(
+            m_fragment_list_buffer->Create(engine->GetInstance()->GetDevice(), default_fragment_list_buffer_size),
+            result
+        );
+
+        return result;
+    });
+}
+
 void Voxelizer::CreateShader(Engine *engine)
 {
-    m_shader = engine->CreateHandle<Shader>(
-        std::vector<SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
-            {ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
-        }
-    );
+    std::vector<SubShader> sub_shaders = {
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
+    };
 
+    if (engine->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
+        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}});
+    } else {
+        DebugLog(
+            LogType::Debug,
+            "Geometry shaders not supported on device, continuing without adding geometry shader to voxelizer pipeline.\n"
+        );
+    }
+    
+    m_shader = engine->CreateHandle<Shader>(sub_shaders);
     engine->InitObject(m_shader);
 }
 
@@ -164,24 +185,34 @@ void Voxelizer::CreateFramebuffer(Engine *engine)
 
 void Voxelizer::CreateDescriptors(Engine *engine)
 {
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
-        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
+    engine->GetRenderScheduler().Enqueue([this, engine](...) {
+        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
-    descriptor_set
-        ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-        ->SetSubDescriptor({.buffer = m_counter->GetBuffer()});
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(0)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .buffer = m_counter->GetBuffer()
+            });
 
-    descriptor_set
-        ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
-        ->SetSubDescriptor({.buffer = m_fragment_list_buffer.get()});
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(1)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .buffer = m_fragment_list_buffer.get()
+            });
+
+        HYPERION_RETURN_OK;
+    });
 }
 
 /* We only reconstruct the buffer if the number of rendered fragments is
  * greater than what our buffer can hold (or the buffer has not yet been created).
  * We round up to the nearest power of two. */
-void Voxelizer::ResizeFragmentListBuffer(Engine *engine)
+void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *frame)
 {
-    const size_t new_size = m_num_fragments * sizeof(Fragment);
+    const SizeType new_size = m_num_fragments * sizeof(Fragment);
 
     if (new_size <= m_fragment_list_buffer->size) {
         return;
@@ -207,60 +238,53 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine)
         new_size
     ));
 
+    // TODO! frame index
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
     descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(1)->SetSubDescriptor({.buffer = m_fragment_list_buffer.get()});
+    descriptor_set->GetDescriptor(1)->SetSubDescriptor({
+        .element_index = 0u,
+        .buffer = m_fragment_list_buffer.get()
+    });
 
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
 }
 
-void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
+void Voxelizer::RenderFragmentList(Engine *engine, Frame *frame, bool count_mode)
 {
-    auto commands = engine->GetInstance()->GetSingleTimeCommands();
+    engine->render_state.BindScene(m_scene.Get());
 
-    /* count number of fragments */
-    commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
-        Frame frame = Frame::TemporaryFrame(command_buffer, 0);
+    m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
+        .grid_size = voxel_map_size,
+        .count_mode = count_mode
+    };
 
-        engine->render_state.BindScene(m_scene.Get());
+    m_framebuffer->BeginCapture(frame->GetCommandBuffer());
+    m_renderer_instance->Render(engine, frame);
+    m_framebuffer->EndCapture(frame->GetCommandBuffer());
 
-        m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
-            .grid_size = voxel_map_size,
-            .count_mode = count_mode
-        };
-
-        m_framebuffer->BeginCapture(command_buffer);
-        m_renderer_instance->Render(engine, &frame);
-        m_framebuffer->EndCapture(command_buffer);
-
-        engine->render_state.UnbindScene();
-
-        HYPERION_RETURN_OK;
-    });
-
-    HYPERION_ASSERT_RESULT(commands.Execute(engine->GetInstance()->GetDevice()));
+    engine->render_state.UnbindScene();
 }
 
-void Voxelizer::Render(Engine *engine)
+void Voxelizer::Render(Engine *engine, Frame *frame)
 {
     m_scene->GetCamera()->UpdateMatrices();
 
     m_counter->Reset(engine);
 
-    RenderFragmentList(engine, true);
+    RenderFragmentList(engine, frame, true);
 
     m_num_fragments = m_counter->Read(engine);
     DebugLog(LogType::Debug, "Render %lu fragments (%llu MiB)\n", m_num_fragments, (m_num_fragments * sizeof(Fragment)) / 1000000ull);
 
-    ResizeFragmentListBuffer(engine);
+    ResizeFragmentListBuffer(engine, frame);
 
     m_counter->Reset(engine);
 
     /* now we render the scene again, this time storing color values into the
      * fragment list buffer.  */
-    RenderFragmentList(engine, false);
+    RenderFragmentList(engine, frame, false);
 }
 
 } // namespace hyperion::v2
