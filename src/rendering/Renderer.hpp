@@ -147,6 +147,12 @@ private:
     // std::mutex m_enqueued_entities_mutex;
     BinarySemaphore m_enqueued_entities_sp;
     std::atomic_bool m_enqueued_entities_flag { false };
+
+    // cycle through command buffers, so you can call Render()
+    // multiple times in a single pass, only running into issues if you
+    // try to call it more than num_async_rendering_command_buffers
+    // (or if parallel rendering is enabled, more than the number of task threads available (usually 2))
+    UInt m_command_buffer_index = 0u;
 };
 
 } // namespace hyperion::v2

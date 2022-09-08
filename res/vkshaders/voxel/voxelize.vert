@@ -6,6 +6,7 @@
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
+layout(location=3) out vec3 v_voxel;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -16,7 +17,6 @@ layout (location = 5) in vec3 a_bitangent;
 layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
-#include "../include/scene.inc"
 #include "../include/object.inc"
 #include "../include/voxel/shared.inc"
 
@@ -31,4 +31,5 @@ void main()
     vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0); //object.local_aabb_min.xyz; //scene.aabb_min.xyz;  //;
     
     gl_Position = vec4(ScaleToAABB(aabb_max, aabb_min, v_position), 1.0);
+    v_voxel = (gl_Position.xyz + vec3(1.0)) * 0.5;
 }

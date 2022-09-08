@@ -50,7 +50,10 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::VOXEL_IMAGE,           30},
 
             // result from depth pyramid generation
-            {DescriptorKey::DEPTH_PYRAMID_RESULT,  36}
+            {DescriptorKey::DEPTH_PYRAMID_RESULT,  36},
+
+            // sparse voxel octree buffer
+            {DescriptorKey::SVO_BUFFER,            40}
         }
     },
     {

@@ -319,7 +319,7 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_post_processing.Destroy(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        engine->SafeReleaseRenderResource<Texture>(std::move(m_mipmapped_results[i]));
+        engine->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[i]));
     }
     
     HYPERION_ASSERT_RESULT(m_depth_sampler->Destroy(engine->GetDevice()));

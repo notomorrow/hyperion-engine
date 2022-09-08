@@ -19,7 +19,8 @@ using renderer::StagingBuffer;
 
 class Engine;
 
-class AtomicCounter {
+class AtomicCounter
+{
 public:
     using CountType = UInt32;
 

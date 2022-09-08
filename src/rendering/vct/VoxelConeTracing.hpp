@@ -12,6 +12,7 @@
 #include <rendering/RenderPass.hpp>
 #include <scene/Scene.hpp>
 
+#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -25,6 +26,7 @@ namespace hyperion::v2 {
 using renderer::CommandBuffer;
 using renderer::StorageBuffer;
 using renderer::Frame;
+using renderer::DescriptorSet;
 
 class Engine;
 

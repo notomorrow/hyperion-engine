@@ -27,7 +27,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 vec2 texcoord = v_texcoord0;
 
-#define HYP_VCT_ENABLED 1
+#define HYP_VCT_ENABLED 0
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 #define HYP_ENV_PROBE_ENABLED 1
@@ -35,6 +35,8 @@ vec2 texcoord = v_texcoord0;
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
+#else
+#include "include/voxel/vct.inc"
 #endif
 
 /* Begin main shader program */
@@ -254,6 +256,8 @@ void main()
         result = kD * Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
+    
+        result = sampleSVO(position.xyz, vec3(-64.0), vec3(64.0), 0.0).rgb;
     } else {
         result = albedo.rgb;
     }
@@ -261,7 +265,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    result = reflections.rgb;
+    // result = reflections.rgb;
     output_color = vec4(result, 1.0);
 
 

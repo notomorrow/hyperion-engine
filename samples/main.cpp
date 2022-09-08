@@ -38,6 +38,7 @@
 #include <terrain/controllers/TerrainPagingController.hpp>
 
 #include <rendering/vct/VoxelConeTracing.hpp>
+#include <rendering/SparseVoxelOctree.hpp>
 
 #include <util/fs/FsUtil.hpp>
 #include <util/img/Bitmap.hpp>
@@ -72,16 +73,20 @@ using namespace hyperion;
 using namespace hyperion::v2;
 
 
-#define HYPERION_VK_TEST_VCT 1
+#define HYPERION_VK_TEST_VCT 0
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
 namespace hyperion::v2 {
     
-class MyGame : public Game {
+class MyGame : public Game
+{
 
 public:
     Handle<Light> m_point_light;
+    std::atomic_bool m_loaded { false };
+
+    SparseVoxelOctree svo;
 
     MyGame()
         : Game()
@@ -239,6 +244,8 @@ public:
         );
 #endif
 
+
+
         // test_model->Translate(Vector3(0, 0, -25.0f));
 
         /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
@@ -315,6 +322,8 @@ public:
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
         }
+
+        m_loaded = true;
     }
 
     virtual void Teardown(Engine *engine) override
@@ -325,11 +334,25 @@ public:
         Game::Teardown(engine);
     }
 
+    bool svo_ready_to_build = false;
+
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
         m_scene->GetEnvironment()->RenderComponents(engine, frame);
 
         engine->render_state.BindScene(m_scene.Get());
+        if (m_loaded) {    
+            svo.Init(engine);
+            svo_ready_to_build = true;
+            //HYP_FLUSH_RENDER_QUEUE(engine);
+
+            m_loaded = false;
+        } else if (svo_ready_to_build) {
+            
+            svo.Build(engine, frame);
+            svo_ready_to_build = false;
+        }
+
     }
 
     virtual void OnFrameEnd(Engine *engine, Frame *) override

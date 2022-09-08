@@ -3,27 +3,29 @@
 
 #include "Base.hpp"
 #include "../scene/Scene.hpp"
+#include <core/Containers.hpp>
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include "Shader.hpp"
 #include "Renderer.hpp"
 #include "Atomics.hpp"
+#include "Buffers.hpp"
 #include <Types.hpp>
 
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererFence.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererFrame.hpp>
 
 namespace hyperion::v2 {
+
+using renderer::Frame;
 
 class Engine;
 
 class Voxelizer : public EngineComponentBase<STUB_CLASS(Voxelizer)>
 {
-    struct Fragment
-    {
-        UInt32 x, y;
-    };
+    using Fragment = ShaderVec2<UInt32>;
 
 public:
     static constexpr UInt octree_depth = 10;
@@ -35,24 +37,35 @@ public:
     Voxelizer &operator=(const Voxelizer &other) = delete;
     ~Voxelizer();
 
-    Handle<Scene> &GetScene() { return m_scene; }
-    const Handle<Scene> &GetScene() const { return m_scene; }
+    Handle<Scene> &GetScene()
+        { return m_scene; }
 
-    UInt32 NumFragments() const { return m_num_fragments; }
+    const Handle<Scene> &GetScene() const
+        { return m_scene; }
+
+    StorageBuffer *GetFragmentListBuffer() const
+        { return m_fragment_list_buffer.get(); }
+
+    AtomicCounter *GetAtomicCounter() const
+        { return m_counter.get(); }
+
+    UInt32 NumFragments() const
+        { return m_num_fragments; }
 
     void Init(Engine *engine);
-    void Render(Engine *engine);
+    void Render(Engine *engine, Frame *frame);
 
 private:
+    void CreateBuffers(Engine *engine);
     void CreatePipeline(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateFramebuffer(Engine *engine);
     void CreateDescriptors(Engine *engine);
 
-    void ResizeFragmentListBuffer(Engine *engine);
+    void ResizeFragmentListBuffer(Engine *engine, Frame *frame);
 
-    void RenderFragmentList(Engine *engine, bool count_mode);
+    void RenderFragmentList(Engine *engine, Frame *frame, bool count_mode);
 
     Handle<Scene> m_scene;
 

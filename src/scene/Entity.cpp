@@ -95,9 +95,9 @@ void Entity::Init(Engine *engine)
 
         HYP_FLUSH_RENDER_QUEUE(engine);
         
-        engine->SafeReleaseRenderResource<Skeleton>(std::move(m_skeleton));
-        engine->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
-        engine->SafeReleaseRenderResource<Shader>(std::move(m_shader));
+        engine->SafeReleaseHandle<Skeleton>(std::move(m_skeleton));
+        engine->SafeReleaseHandle<Mesh>(std::move(m_mesh));
+        engine->SafeReleaseHandle<Shader>(std::move(m_shader));
     });
 }
 
@@ -240,7 +240,7 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
     }
 
     if (m_mesh && IsInitCalled()) {
-        GetEngine()->SafeReleaseRenderResource<Mesh>(std::move(m_mesh));
+        GetEngine()->SafeReleaseHandle<Mesh>(std::move(m_mesh));
     }
 
     m_mesh = std::move(mesh);
@@ -260,7 +260,7 @@ void Entity::SetSkeleton(Handle<Skeleton> &&skeleton)
     }
 
     if (m_skeleton && IsInitCalled()) {
-        GetEngine()->SafeReleaseRenderResource<Skeleton>(std::move(m_skeleton));
+        GetEngine()->SafeReleaseHandle<Skeleton>(std::move(m_skeleton));
     }
 
     m_skeleton = std::move(skeleton);
@@ -280,7 +280,7 @@ void Entity::SetShader(Handle<Shader> &&shader)
     }
 
     if (m_shader != nullptr && IsInitCalled()) {
-        GetEngine()->SafeReleaseRenderResource<Shader>(std::move(m_shader));
+        GetEngine()->SafeReleaseHandle<Shader>(std::move(m_shader));
     }
 
     m_shader = std::move(shader);
