@@ -11,6 +11,9 @@
 #include <rendering/Shader.hpp>
 #include <animation/Skeleton.hpp>
 
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+
 #include <Types.hpp>
 
 #include <mutex>
@@ -19,18 +22,26 @@
 
 namespace hyperion::v2 {
 
+
 class Engine;
 
-using RenderableDeletionMaskBits = UInt;
+using renderer::Device;
+using renderer::GPUBuffer;
+using renderer::GPUImageMemory;
 
-enum RenderableDeletionMask : RenderableDeletionMaskBits
+using HandleDeletionMaskBits = UInt;
+
+extern Device *GetEngineDevice(Engine *engine);
+
+enum HandleDeletionMask : HandleDeletionMaskBits
 {
-    RENDERABLE_DELETION_NONE      = 0,
-    RENDERABLE_DELETION_TEXTURES  = 1 << 0,
-    RENDERABLE_DELETION_MATERIALS = 1 << 1,
-    RENDERABLE_DELETION_MESHES    = 1 << 2,
-    RENDERABLE_DELETION_SKELETONS = 1 << 3,
-    RENDERABLE_DELETION_SHADERS   = 1 << 4
+    RENDERABLE_DELETION_NONE = 0,
+    RENDERABLE_DELETION_BUFFERS_OR_IMAGES = 1 << 0,
+    RENDERABLE_DELETION_TEXTURES = 1 << 1,
+    RENDERABLE_DELETION_MATERIALS = 1 << 2,
+    RENDERABLE_DELETION_MESHES = 1 << 3,
+    RENDERABLE_DELETION_SKELETONS = 1 << 4,
+    RENDERABLE_DELETION_SHADERS = 1 << 5
 };
 
 class SafeDeleter
@@ -38,79 +49,190 @@ class SafeDeleter
     static constexpr UInt8 initial_cycles_remaining = static_cast<UInt8>(max_frames_in_flight + 1);
 
 public:
-    void SafeReleaseRenderResource(Handle<Texture> &&resource)
+    void SafeReleaseHandle(Handle<Texture> &&resource)
     {
-        SafeReleaseRenderResourceImpl<Texture>(std::move(resource), RENDERABLE_DELETION_TEXTURES);
+        SafeReleaseHandleImpl<Texture>(std::move(resource), RENDERABLE_DELETION_TEXTURES);
     }
     
-    void SafeReleaseRenderResource(Handle<Mesh> &&resource)
+    void SafeReleaseHandle(Handle<Mesh> &&resource)
     {
-        SafeReleaseRenderResourceImpl<Mesh>(std::move(resource), RENDERABLE_DELETION_MESHES);
+        SafeReleaseHandleImpl<Mesh>(std::move(resource), RENDERABLE_DELETION_MESHES);
     }
     
-    void SafeReleaseRenderResource(Handle<Skeleton> &&resource)
+    void SafeReleaseHandle(Handle<Skeleton> &&resource)
     {
-        SafeReleaseRenderResourceImpl<Skeleton>(std::move(resource), RENDERABLE_DELETION_SKELETONS);
+        SafeReleaseHandleImpl<Skeleton>(std::move(resource), RENDERABLE_DELETION_SKELETONS);
     }
     
-    void SafeReleaseRenderResource(Handle<Shader> &&resource)
+    void SafeReleaseHandle(Handle<Shader> &&resource)
     {
-        SafeReleaseRenderResourceImpl<Shader>(std::move(resource), RENDERABLE_DELETION_SHADERS);
+        SafeReleaseHandleImpl<Shader>(std::move(resource), RENDERABLE_DELETION_SHADERS);
     }
 
     template <class T>
-    struct RenderableDeletionEntry : public KeyValuePair<Handle<T>, UInt8>
+    void SafeRelease(UniquePtr<T> &&resource)
+    {
+        static_assert(std::is_base_of_v<GPUBuffer, T> || std::is_base_of_v<GPUImageMemory, T>,
+            "Must be a class of GPUBuffer or GPUImageMemory");
+
+        if (resource) {
+            std::lock_guard guard(m_render_resource_deletion_mutex);
+            
+            m_buffers_and_images.Insert(BufferOrImageDeletionEntry(std::move(resource)));
+
+            m_render_resource_deletion_flag |= RENDERABLE_DELETION_BUFFERS_OR_IMAGES;
+        }
+    }
+    
+    template <class T>
+    struct HandleDeletionEntry : public KeyValuePair<Handle<T>, UInt8>
     {
         using Base = KeyValuePair<Handle<T>, UInt8>;
 
         static_assert(std::is_base_of_v<RenderResource, T>, "T must be a derived class of RenderResource");
 
-        RenderableDeletionEntry(Handle<T> &&renderable)
+        HandleDeletionEntry(Handle<T> &&renderable)
             : Base(std::move(renderable), initial_cycles_remaining)
         {
         }
 
-        RenderableDeletionEntry(const RenderableDeletionEntry &other) = delete;
-        RenderableDeletionEntry &operator=(const RenderableDeletionEntry &other) = delete;
+        HandleDeletionEntry(const HandleDeletionEntry &other) = delete;
+        HandleDeletionEntry &operator=(const HandleDeletionEntry &other) = delete;
 
-        RenderableDeletionEntry(RenderableDeletionEntry &&other) noexcept
+        HandleDeletionEntry(HandleDeletionEntry &&other) noexcept
             : Base(std::move(other))
         {
         }
 
-        RenderableDeletionEntry &operator=(RenderableDeletionEntry &&other) noexcept
+        HandleDeletionEntry &operator=(HandleDeletionEntry &&other) noexcept
         {
             Base::operator=(std::move(other));
 
             return *this;
         }
 
-        ~RenderableDeletionEntry() = default;
+        ~HandleDeletionEntry() = default;
 
-        void PerformDeletion()
+        void PerformDeletion(Engine *engine, bool force = false)
         {
             // cycle should be at zero
-            AssertThrow(Base::second == 0u);
+            AssertThrow(force || Base::second == 0u);
 
             Base::first.Reset();
         }
     };
 
-    void PerformEnqueuedDeletions();
+    // stores as UniquePtr<void> (type erasure)
+    struct BufferOrImageDeletionEntry : public KeyValuePair<UniquePtr<void>, UInt8>
+    {
+        using Base = KeyValuePair<UniquePtr<void>, UInt8>;
+
+        renderer::Result (*destroy_buffer_fn)(void *ptr, Device *device);
+
+        template <class T>
+        BufferOrImageDeletionEntry(UniquePtr<T> &&renderable)
+            : Base(renderable.template Cast<void>(), initial_cycles_remaining),
+              destroy_buffer_fn([](void *ptr, Device *device) {
+                  auto *t_ptr = static_cast<T *>(ptr);
+                  AssertThrow(t_ptr != nullptr);
+
+                  return t_ptr->Destroy(device);
+              })
+        {
+        }
+
+        BufferOrImageDeletionEntry(const BufferOrImageDeletionEntry &other) = delete;
+        BufferOrImageDeletionEntry &operator=(const BufferOrImageDeletionEntry &other) = delete;
+
+        BufferOrImageDeletionEntry(BufferOrImageDeletionEntry &&other) noexcept
+            : Base(std::move(other)),
+              destroy_buffer_fn(other.destroy_buffer_fn)
+        {
+            other.destroy_buffer_fn = nullptr;
+        }
+
+        BufferOrImageDeletionEntry &operator=(BufferOrImageDeletionEntry &&other) noexcept
+        {
+            Base::operator=(std::move(other));
+
+            destroy_buffer_fn = other.destroy_buffer_fn;
+            other.destroy_buffer_fn = nullptr;
+
+            return *this;
+        }
+
+        ~BufferOrImageDeletionEntry() = default;
+
+        void PerformDeletion(Engine *engine, bool force = false)
+        {
+            // cycle should be at zero
+            AssertThrow(force || Base::second == 0u);
+
+            if (Base::first != nullptr) {
+                AssertThrow(destroy_buffer_fn != nullptr);
+                auto result = destroy_buffer_fn(Base::first.Get(), GetEngineDevice(engine));
+
+                if (!result) {
+                    DebugLog(
+                        LogType::Error,
+                        "While deleting buffer or image, got error: %s [%d]\n",
+                        result.message,
+                        result.error_code
+                    );
+                }
+
+                // if there was an error previously, a crash here may happen.
+                Base::first.Reset();
+            }
+
+            destroy_buffer_fn = nullptr;
+        }
+    };
+
+    void PerformEnqueuedDeletions(Engine *engine);
+    void ForceReleaseAll(Engine *engine);
+
+    bool DeleteEnqueuedBuffersAndImages(Engine *engine)
+    {
+        auto &queue = m_buffers_and_images;
+
+        return DeleteEnqueuedItemsImpl(engine, queue);
+    }
+
+    void ForceDeleteBuffersAndImages(Engine *engine)
+    {
+        auto &queue = m_buffers_and_images;
+
+        ForceDeleteEnqueuedItemsImpl(engine, queue);
+    }
+
+    template <class T>
+    bool DeleteEnqueuedHandlesOfType(Engine *engine)
+    {
+        auto &queue = std::get<FlatSet<HandleDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
+
+        return DeleteEnqueuedItemsImpl(engine, queue);
+    }
+
+    template <class T>
+    void ForceDeleteHandlesOfType(Engine *engine)
+    {
+        auto &queue = std::get<FlatSet<HandleDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
+
+        ForceDeleteEnqueuedItemsImpl(engine, queue);
+    }
 
     // returns true if all were completed
-    template <class T>
-    bool DeleteEnqueuedItemsOfType()
+    template <class Container>
+    bool DeleteEnqueuedItemsImpl(Engine *engine, Container &queue)
     {
-        auto &queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
-
         for (auto it = queue.Begin(); it != queue.End();) {
-            RenderableDeletionEntry<T> &front = *it;
+            auto &front = *it;
 
             AssertThrow(front.first != nullptr);
 
             if (!front.second) {
-                front.PerformDeletion();
+                front.PerformDeletion(engine);
 
                 it = queue.Erase(it);
             } else {
@@ -123,48 +245,46 @@ public:
         return queue.Empty();
     }
 
-    template <class T>
-    bool DeleteAllItemsOfType()
+    template <class Container>
+    void ForceDeleteEnqueuedItemsImpl(Engine *engine, Container &queue)
     {
-        auto &queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
-
         for (auto it = queue.Begin(); it != queue.End();) {
-            RenderableDeletionEntry<T> &front = *it;
+            auto &front = *it;
 
             AssertThrow(front.first != nullptr);
-            front.first.Reset();
+            front.PerformDeletion(engine, true);
             it = queue.Erase(it);
         }
 
-        return queue.Empty();
+        AssertThrow(queue.Empty());
     }
-
-    void ForceReleaseAll();
 
 private:
     template <class T>
-    void SafeReleaseRenderResourceImpl(Handle<T> &&resource, UInt mask)
+    void SafeReleaseHandleImpl(Handle<T> &&resource, UInt mask)
     {
         if (resource) {// && resource.GetRefCount() == 1) {
             std::lock_guard guard(m_render_resource_deletion_mutex);
             
-            auto &deletion_queue = std::get<FlatSet<RenderableDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
+            auto &deletion_queue = std::get<FlatSet<HandleDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
     
-            deletion_queue.Insert(RenderableDeletionEntry<T>(std::move(resource)));
+            deletion_queue.Insert(HandleDeletionEntry<T>(std::move(resource)));
 
             m_render_resource_deletion_flag |= mask;
         }
     }
 
     std::tuple<
-        FlatSet<RenderableDeletionEntry<Texture>>,
-        FlatSet<RenderableDeletionEntry<Mesh>>,
-        FlatSet<RenderableDeletionEntry<Skeleton>>,
-        FlatSet<RenderableDeletionEntry<Shader>>
+        FlatSet<HandleDeletionEntry<Texture>>,
+        FlatSet<HandleDeletionEntry<Mesh>>,
+        FlatSet<HandleDeletionEntry<Skeleton>>,
+        FlatSet<HandleDeletionEntry<Shader>>
     > m_render_resource_deletion_queue_items;
+
+    FlatSet<BufferOrImageDeletionEntry> m_buffers_and_images;
     
     std::mutex m_render_resource_deletion_mutex;
-    std::atomic<RenderableDeletionMaskBits> m_render_resource_deletion_flag { RENDERABLE_DELETION_NONE };
+    std::atomic<HandleDeletionMaskBits> m_render_resource_deletion_flag { RENDERABLE_DELETION_NONE };
 };
 
 } // namespace hyperion::v2

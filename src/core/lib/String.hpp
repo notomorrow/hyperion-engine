@@ -20,9 +20,10 @@ namespace detail {
 using namespace ::utf;
 
 template <class T, bool IsUtf8>
-class DynString : DynArray<T> {
+class DynString : DynArray<T>
+{
 protected:
-    using Base = typename DynArray<T>::Base;
+    using Base = DynArray<T>;
 
 public:
     using ValueType = typename Base::ValueType;

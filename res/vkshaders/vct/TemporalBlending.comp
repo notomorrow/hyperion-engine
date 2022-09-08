@@ -6,9 +6,9 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 #include "../include/shared.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D voxel_image;
-layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 2, rgba8) uniform image3D temporal_blending_image;
-layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 3) uniform texture3D voxel_texture;
-layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 4) uniform sampler voxel_sampler;
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 6, rgba8) uniform image3D temporal_blending_image;
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 7) uniform texture3D voxel_texture;
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 8) uniform sampler voxel_sampler;
 
 #define HYP_VCT_TEMPORAL_BLENDING_IMAGE_EXTENT 32
 #define HYP_VCT_TEMPORAL_BLENDING_SENSITIVITY 50.0

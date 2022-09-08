@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_BUFFERS_H
 #define HYPERION_V2_BUFFERS_H
 
+#include <rendering/backend/RendererStructs.hpp>
+
 #include <math/Rect.hpp>
 #include <math/Matrix4.hpp>
 

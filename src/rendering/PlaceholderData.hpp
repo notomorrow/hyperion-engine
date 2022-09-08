@@ -77,10 +77,10 @@ public:
 
         const auto required_size_pow2 = MathUtil::NextPowerOf2(required_size);
 
-        auto uniform_buffer = std::make_unique<UniformBuffer>();
-        HYPERION_ASSERT_RESULT(uniform_buffer->Create(device, required_size_pow2));
+        auto buffer = std::make_unique<T>();
+        HYPERION_ASSERT_RESULT(buffer->Create(device, required_size_pow2));
 
-        const auto insert_result = buffer_container.Insert(required_size_pow2, std::move(uniform_buffer));
+        const auto insert_result = buffer_container.Insert(required_size_pow2, std::move(buffer));
         AssertThrow(insert_result.second); // was inserted
 
         return static_cast<T *>(insert_result.first->second.get());

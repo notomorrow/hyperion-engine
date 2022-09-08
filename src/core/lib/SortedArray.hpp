@@ -13,19 +13,20 @@
 namespace hyperion {
 
 template <class T>
-class SortedArray : public DynArray<T> {
+class SortedArray : public DynArray<T>
+{
 protected:
     using Base = DynArray<T>;
-    using ValueType = typename DynArray<T>::ValueType;
+    using ValueType = typename Base::ValueType;
 
 public:
-    using Iterator = typename DynArray<T>::Iterator;
-    using ConstIterator = typename DynArray<T>::ConstIterator;
+    using Iterator = typename Base::Iterator;
+    using ConstIterator = typename Base::ConstIterator;
 
     SortedArray();
 
     SortedArray(std::initializer_list<T> initializer_list)
-        : DynArray<T>(initializer_list)
+        : Base(initializer_list)
     {
     }
 
@@ -43,61 +44,61 @@ public:
 
     //! \brief Performs a direct call to DynArray::Erase(), erasing the element at the iterator
     //  position.
-    Iterator Erase(ConstIterator it)                      { return DynArray<T>::Erase(it); }
+    Iterator Erase(ConstIterator it)                      { return Base::Erase(it); }
     //! \brief Erase an element by value. The item is searched for using binary search,
     //  and if the item was found, it will be erased (and iterators will be invalidated)
     Iterator Erase(const T &value);
 
-    [[nodiscard]] size_t Size() const                     { return DynArray<T>::Size(); }
-    [[nodiscard]] T *Data()                               { return DynArray<T>::Data(); }
-    [[nodiscard]] T * const Data() const                  { return DynArray<T>::Data(); }
-    [[nodiscard]] bool Empty() const                      { return DynArray<T>::Empty(); }
-    [[nodiscard]] bool Any() const                        { return DynArray<T>::Any(); }
+    [[nodiscard]] size_t Size() const                     { return Base::Size(); }
+    [[nodiscard]] T *Data()                               { return Base::Data(); }
+    [[nodiscard]] T * const Data() const                  { return Base::Data(); }
+    [[nodiscard]] bool Empty() const                      { return Base::Empty(); }
+    [[nodiscard]] bool Any() const                        { return Base::Any(); }
     [[nodiscard]] bool Contains(const T &value) const     { return Find(value) != End(); }
-    void Clear()                                          { DynArray<T>::Clear(); }
+    void Clear()                                          { Base::Clear(); }
     
-    [[nodiscard]] T &Front()                              { return DynArray<T>::Front(); }
-    [[nodiscard]] const T &Front() const                  { return DynArray<T>::Front(); }
-    [[nodiscard]] T &Back()                               { return DynArray<T>::Back(); }
-    [[nodiscard]] const T &Back() const                   { return DynArray<T>::Back(); }
+    [[nodiscard]] T &Front()                              { return Base::Front(); }
+    [[nodiscard]] const T &Front() const                  { return Base::Front(); }
+    [[nodiscard]] T &Back()                               { return Base::Back(); }
+    [[nodiscard]] const T &Back() const                   { return Base::Back(); }
 
     HYP_DEF_STL_BEGIN_END(
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_start_offset]),
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_size])
+        reinterpret_cast<typename Base::ValueType *>(&Base::m_buffer[Base::m_start_offset]),
+        reinterpret_cast<typename Base::ValueType *>(&Base::m_buffer[Base::m_size])
     )
 };
 
 template <class T>
 SortedArray<T>::SortedArray()
-    : DynArray<T>()
+    : Base()
 {
     
 }
 
 template <class T>
 SortedArray<T>::SortedArray(const SortedArray &other)
-    : DynArray<T>(other)
+    : Base(other)
 {
 }
 
 template <class T>
 auto SortedArray<T>::operator=(const SortedArray &other) -> SortedArray&
 {
-    DynArray<T>::operator=(other);
+    Base::operator=(other);
 
     return *this;
 }
 
 template <class T>
 SortedArray<T>::SortedArray(SortedArray &&other) noexcept
-    : DynArray<T>(std::move(other))
+    : Base(std::move(other))
 {
 }
 
 template <class T>
 auto SortedArray<T>::operator=(SortedArray &&other) noexcept -> SortedArray&
 {
-    DynArray<T>::operator=(std::move(other));
+    Base::operator=(std::move(other));
 
     return *this;
 }
@@ -108,7 +109,7 @@ SortedArray<T>::~SortedArray() = default;
 template <class T>
 auto SortedArray<T>::Find(const T &value) -> Iterator
 {
-    const auto it = SortedArray<T>::Base::LowerBound(value);
+    const auto it = Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -120,7 +121,7 @@ auto SortedArray<T>::Find(const T &value) -> Iterator
 template <class T>
 auto SortedArray<T>::Find(const T &value) const -> ConstIterator
 {
-    const auto it = SortedArray<T>::Base::LowerBound(value);
+    const auto it = Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -132,17 +133,17 @@ auto SortedArray<T>::Find(const T &value) const -> ConstIterator
 template <class T>
 auto SortedArray<T>::Insert(const T &value) -> Iterator
 {
-    Iterator it = SortedArray<T>::Base::LowerBound(value);
+    Iterator it = Base::LowerBound(value);
 
-    return DynArray<T>::Insert(it, value);
+    return Base::Insert(it, value);
 }
 
 template <class T>
 auto SortedArray<T>::Insert(T &&value) -> Iterator
 {
-    Iterator it = SortedArray<T>::Base::LowerBound(value);
+    Iterator it = Base::LowerBound(value);
 
-    return DynArray<T>::Insert(it, std::forward<T>(value));
+    return Base::Insert(it, std::forward<T>(value));
 }
 
 template <class T>
@@ -154,7 +155,7 @@ auto SortedArray<T>::Erase(const T &value) -> Iterator
         return End();
     }
 
-    return DynArray<T>::Erase(iter);
+    return Base::Erase(iter);
 }
 
 } // namespace hyperion

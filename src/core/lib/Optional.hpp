@@ -28,6 +28,7 @@ public:
             m_has_value = true;
             new (&m_storage.data_buffer) T(value);
         }
+
         return *this;
     }
 
@@ -134,6 +135,16 @@ public:
         return *reinterpret_cast<const T *>(&m_storage.data_buffer);
     }
 
+    void Set(const T &value)
+    {
+        *this = value;
+    }
+
+    void Set(T &&value)
+    {
+        *this = std::forward<T>(value);
+    }
+
     // template <class U>
     // T GetOr(U &&default_value) const&
     // {
@@ -158,7 +169,8 @@ public:
             m_has_value = false;
         }
     }
-
+    
+    bool HasValue() const { return m_has_value; }
     bool Any() const { return m_has_value; }
     bool Empty() const { return !m_has_value; }
 

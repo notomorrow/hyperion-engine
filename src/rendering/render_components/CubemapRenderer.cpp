@@ -135,10 +135,10 @@ void CubemapRenderer::Init(Engine *engine)
         });
 
         for (auto &cubemap : m_cubemaps) {
-            engine->SafeReleaseRenderResource<Texture>(std::move(cubemap));
+            engine->SafeReleaseHandle<Texture>(std::move(cubemap));
         }
 
-        engine->SafeReleaseRenderResource<Shader>(std::move(m_shader));
+        engine->SafeReleaseHandle<Shader>(std::move(m_shader));
 
         m_env_probe.Reset();
         m_scene.Reset();

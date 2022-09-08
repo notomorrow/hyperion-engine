@@ -211,32 +211,34 @@ public:
     }
 
     /*! \brief Creates a TaskBatch which will call the lambda for each and every item in the given container.
-     *  The tasks will be split evenly into \ref{num_groups} groups.
+     *  The tasks will be split evenly into \ref{batches} batches.
         The lambda will be called with (item, index) for each item. */
     template <class Container, class Lambda>
-    void ParallelForEach(TaskPriority priority, UInt num_groups, Container &&items, Lambda &&lambda)
+    void ParallelForEach(TaskPriority priority, UInt num_batches, Container &&items, Lambda &&lambda)
     {
         TaskBatch batch;
         batch.priority = priority;
 
-        const auto num_items = items.Size();
-        const auto items_per_group = num_items / num_groups;
-        
-        for (SizeType group_index = 0; group_index < num_groups; group_index++) {
-            batch.AddTask([&items, group_index, items_per_group, num_items, lambda](...) {
-                const SizeType offset_index = group_index * items_per_group;
-                const SizeType max_iter = MathUtil::Min(offset_index + items_per_group, num_items);
+        const auto num_items = static_cast<UInt>(items.Size());
+        const auto items_per_batch = num_items / num_batches;
 
-                for (SizeType i = offset_index; i < max_iter; ++i) {
-                    lambda(items[i], i);
+        for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
+            batch.AddTask([&items, batch_index, items_per_batch, num_items, lambda](...) {
+                const UInt offset_index = batch_index * items_per_batch;
+                const UInt max_index = offset_index + items_per_batch <= num_items
+                    ? offset_index + items_per_batch
+                    : offset_index + (num_items % items_per_batch);
+
+                for (UInt i = offset_index; i < max_index; ++i) {
+                    lambda(items[i], i, batch_index);
                 }
             });
         }
 
-        if (batch.tasks.Size() > 1) {
+        if (num_batches > 1) {
             EnqueueBatch(&batch);
             batch.AwaitCompletion();
-        } else if (batch.tasks.Size() == 1) {
+        } else if (num_batches == 1) {
             // no point in enqueing for just 1 task, execute immediately
             batch.ForceExecute();
         }

@@ -19,12 +19,15 @@ namespace renderer {
 class Device;
 class DescriptorPool;
 
-class Pipeline {
+class Pipeline
+{
     friend class DescriptorPool;
 
 public:
-    struct alignas(128) PushConstantData {
-        union {
+    struct alignas(128) PushConstantData
+    {
+        union
+        {
             struct  // NOLINT(clang-diagnostic-nested-anon-types)
             {
                 UInt32 grid_size,
@@ -124,16 +127,33 @@ public:
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
 
+    bool HasCustomDescriptorSets() const
+        { return m_has_custom_descriptor_sets; }
+
+    const Optional<DynArray<const DescriptorSet *>> &GetUsedDescriptorSets() const
+        { return m_used_descriptor_sets; }
+
+    void SetUsedDescriptorSets(const DynArray<const DescriptorSet *> &used_descriptor_sets)
+    {
+        if (used_descriptor_sets.Any()) {
+            m_used_descriptor_sets = used_descriptor_sets;
+            m_has_custom_descriptor_sets = true;
+        } else {
+            m_used_descriptor_sets.Unset();
+            m_has_custom_descriptor_sets = false;
+        }
+    }
+
     void SetPushConstants(const PushConstantData &push_constants) { this->push_constants = push_constants; }
 
     VkPipelineLayout layout;
 
 protected:
-    std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool) const;
+    void AssignDefaultDescriptorSets(DescriptorPool *descriptor_pool);
+    std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool);
 
     VkPipeline pipeline;
-
-private:
+    bool m_has_custom_descriptor_sets;
     Optional<DynArray<const DescriptorSet *>> m_used_descriptor_sets;
 };
 

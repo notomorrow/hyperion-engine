@@ -12,7 +12,8 @@
 namespace hyperion {
 
 template <class T>
-class FlatSet : public SortedArray<T> {
+class FlatSet : public SortedArray<T>
+{
 protected:
     using Base = SortedArray<T>;
 

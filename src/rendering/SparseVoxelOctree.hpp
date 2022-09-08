@@ -4,19 +4,24 @@
 #include "Base.hpp"
 #include "Voxelizer.hpp"
 #include "Compute.hpp"
+#include <rendering/backend/RendererStructs.hpp>
+
+#include <core/Containers.hpp>
 
 namespace hyperion::v2 {
 
 using renderer::IndirectBuffer;
 using renderer::StorageBuffer;
+using renderer::DescriptorSet;
+using renderer::ShaderVec2;
 
 class SparseVoxelOctree
     : public EngineComponentBase<STUB_CLASS(SparseVoxelOctree)>
 {
-    static constexpr SizeType min_nodes = 10000;
-    static constexpr SizeType max_nodes = 10000000;
+    static constexpr UInt32 min_nodes = 10000;
+    static constexpr UInt32 max_nodes = 10000000;
 
-    using OctreeNode = UInt32[2];
+    using OctreeNode = ShaderVec2<UInt32>;
 
 public:
     SparseVoxelOctree();
@@ -27,10 +32,10 @@ public:
     Voxelizer *GetVoxelizer() const { return m_voxelizer.get(); }
 
     void Init(Engine *engine);
-    void Build(Engine *engine);
+    void Build(Engine *engine, Frame *frame);
 
 private:
-    SizeType CalculateNumNodes() const;
+    UInt32 CalculateNumNodes() const;
     void CreateBuffers(Engine *engine);
     void CreateDescriptors(Engine *engine);
     void CreateComputePipelines(Engine *engine);
@@ -40,11 +45,14 @@ private:
     void BindDescriptorSets(
         Engine *engine,
         CommandBuffer *command_buffer,
-        ComputePipeline *pipeline
+        UInt frame_index,
+        const ComputePipeline *pipeline
     ) const;
 
+    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+
     std::unique_ptr<Voxelizer> m_voxelizer;
-    std::unique_ptr<AtomicCounter>  m_counter;
+    std::unique_ptr<AtomicCounter> m_counter;
 
     std::unique_ptr<IndirectBuffer> m_indirect_buffer;
     std::unique_ptr<StorageBuffer> m_build_info_buffer;
