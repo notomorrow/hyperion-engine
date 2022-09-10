@@ -341,7 +341,7 @@ public:
         m_scene->GetEnvironment()->RenderComponents(engine, frame);
 
         engine->render_state.BindScene(m_scene.Get());
-        if (m_loaded) {    
+        /*if (m_loaded) {    
             svo.Init(engine);
             svo_ready_to_build = true;
             //HYP_FLUSH_RENDER_QUEUE(engine);
@@ -351,7 +351,7 @@ public:
             
             svo.Build(engine, frame);
             svo_ready_to_build = false;
-        }
+        }*/
 
     }
 
