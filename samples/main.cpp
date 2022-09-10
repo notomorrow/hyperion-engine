@@ -86,8 +86,6 @@ public:
     Handle<Light> m_point_light;
     std::atomic_bool m_loaded { false };
 
-    SparseVoxelOctree svo;
-
     MyGame()
         : Game()
     {
@@ -242,9 +240,9 @@ public:
                 BoundingBox(-128, 128)//test_model->GetWorldAABB()
             }
         );
+#else
+        // m_scene->GetEnvironment()->AddRenderComponent<SparseVoxelOctree>();
 #endif
-
-
 
         // test_model->Translate(Vector3(0, 0, -25.0f));
 
@@ -351,6 +349,8 @@ public:
             
             svo.Build(engine, frame);
             svo_ready_to_build = false;
+        } else if (svo_ready_to_build) {
+            ++svo_counter;
         }*/
 
     }

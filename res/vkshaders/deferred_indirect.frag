@@ -257,7 +257,7 @@ void main()
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
     
-        // result = sampleSVO(position.xyz, vec3(-64.0), vec3(64.0), 0.0).rgb;
+        // result = voxelTraceCone(position.xyz, R, vec3(64.0) + vec3(0.0, 0.0, 5.0), vec3(-64.0) + vec3(0.0, 0.0, 5.0), 0.1, 1.0).rgb;
     } else {
         result = albedo.rgb;
     }

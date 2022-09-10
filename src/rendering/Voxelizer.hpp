@@ -43,6 +43,12 @@ public:
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
+    Handle<RendererInstance> &GetRendererInstance()
+        { return m_renderer_instance; }
+
+    const Handle<RendererInstance> &GetRendererInstance() const
+        { return m_renderer_instance; }
+
     StorageBuffer *GetFragmentListBuffer() const
         { return m_fragment_list_buffer.get(); }
 

@@ -127,7 +127,8 @@ private:
 using WaitSemaphore = SemaphoreRefHolder<SemaphoreType::WAIT>;
 using SignalSemaphore = SemaphoreRefHolder<SemaphoreType::SIGNAL>;
 
-class SemaphoreChain {
+class SemaphoreChain
+{
     friend class CommandBuffer;
     friend class Instance;
 public:
@@ -136,8 +137,10 @@ public:
 
     static void Link(SemaphoreChain &signaler, SemaphoreChain &waitee);
     
-    SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_stage_flags,
-        const std::vector<VkPipelineStageFlags> &signal_stage_flags);
+    SemaphoreChain(
+        const std::vector<VkPipelineStageFlags> &wait_stage_flags,
+        const std::vector<VkPipelineStageFlags> &signal_stage_flags
+    );
     SemaphoreChain(const SemaphoreChain &other) = delete;
     SemaphoreChain &operator=(const SemaphoreChain &other) = delete;
     SemaphoreChain(SemaphoreChain &&other) noexcept = default;
