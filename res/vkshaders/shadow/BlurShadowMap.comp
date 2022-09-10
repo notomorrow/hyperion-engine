@@ -10,19 +10,24 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform texture2D src;
 layout(set = 0, binding = 1) uniform sampler src_sampler;
-layout(set = 0, binding = 2, rg16f) uniform image2D dst;
+layout(set = 0, binding = 2, rg32f) uniform image2D dst;
 
 layout(push_constant) uniform BlurShadowMapData
 {
-    uvec3 image_dimensions;
+    uvec2 image_dimensions;
 };
 
 void main(void)
 {
     const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-	const vec2 texcoord = vec2(coord) / vec2(image_dimensions);
 
-    const float radius = 1.0;
+    if (any(greaterThanEqual(coord, image_dimensions))) {
+        return;
+    }
+
+	const vec2 texcoord = vec2(coord) / vec2(image_dimensions - 1);
+
+    const float radius = 1.25;
 
     vec2 result = vec2(0.0);
 

@@ -29,7 +29,8 @@ void main()
     }
 #endif
 
-    const float depth = gl_FragCoord.z / gl_FragCoord.w;
+    const float depth = gl_FragCoord.z / gl_FragCoord.w; //distance(v_position, v_camera_position) * 0.5 + 0.5;
+    
 
 #if defined(HYP_SHADOW_VARIANCE) && HYP_SHADOW_VARIANCE
     vec2 moments = vec2(depth, HYP_FMATH_SQR(depth));

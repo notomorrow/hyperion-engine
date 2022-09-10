@@ -218,4 +218,9 @@ float RoughnessToConeAngle(float roughness)
     return acos(pow(xi, exponent));
 }
 
+float linstep(float min, float max, float v)
+{
+    return clamp((v - min) / (max - min), 0.0, 1.0);
+}
+
 #endif

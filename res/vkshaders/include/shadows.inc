@@ -9,7 +9,7 @@
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
 
-#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.35
+#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.1
 
 #define HYP_SHADOW_SAMPLES_4
 //#define HYP_SHADOW_SAMPLES_8
@@ -83,10 +83,10 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     const float moment2 = shadow_sample.g;
 
     const float variance = max(moment2 - HYP_FMATH_SQR(moment), HYP_FMATH_EPSILON);
-    const float d = coord.z - moment;
+    const float d = moment - coord.z;
     
     float percent_in_shadow = variance / (variance + HYP_FMATH_SQR(d));
-    percent_in_shadow = smoothstep(HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION, 1.0, percent_in_shadow);
+    percent_in_shadow = linstep(HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION, 1.0, percent_in_shadow);
     
     return percent_in_shadow;
 }

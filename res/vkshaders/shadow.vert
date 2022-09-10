@@ -74,4 +74,5 @@ void main()
 	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
 
     gl_Position = shadow_data.matrices[0].projection * shadow_data.matrices[0].view * position;
+    v_view_space_position = gl_Position.xyz;
 } 
