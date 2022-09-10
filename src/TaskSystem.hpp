@@ -225,9 +225,7 @@ public:
         for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
             batch.AddTask([&items, batch_index, items_per_batch, num_items, lambda](...) {
                 const UInt offset_index = batch_index * items_per_batch;
-                const UInt max_index = offset_index + items_per_batch <= num_items
-                    ? offset_index + items_per_batch
-                    : offset_index + (num_items % items_per_batch);
+                const UInt max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
 
                 for (UInt i = offset_index; i < max_index; ++i) {
                     lambda(items[i], i, batch_index);
@@ -235,10 +233,10 @@ public:
             });
         }
 
-        if (num_batches > 1) {
+        if (batch.tasks.Size() > 1) {
             EnqueueBatch(&batch);
             batch.AwaitCompletion();
-        } else if (num_batches == 1) {
+        } else if (batch.tasks.Size() == 1) {
             // no point in enqueing for just 1 task, execute immediately
             batch.ForceExecute();
         }
