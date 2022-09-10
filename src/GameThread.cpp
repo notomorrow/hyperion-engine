@@ -20,7 +20,7 @@ GameThread::GameThread()
 void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 {
 #ifdef HYP_WINDOWS
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
 #endif
 
 #if HYP_GAME_THREAD_LOCKED

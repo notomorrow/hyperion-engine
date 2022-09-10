@@ -360,23 +360,22 @@ void RendererInstance::CollectDrawCalls(
     );
 }
 
-static FixedArray<DynArray<EntityDrawProxy>, num_async_rendering_command_buffers>
-GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies)
+static DynArray<DynArray<EntityDrawProxy>>
+GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies, UInt num_batches)
 {
-    FixedArray<DynArray<EntityDrawProxy>, num_async_rendering_command_buffers> divided_draw_proxies;
+    DynArray<DynArray<EntityDrawProxy>> divided_draw_proxies;
+    divided_draw_proxies.Resize(num_batches);
 
-    const auto num_draw_proxies = draw_proxies.Size();
+    const UInt num_draw_proxies = static_cast<UInt>(draw_proxies.Size());
+    const UInt num_draw_proxies_divided = (num_draw_proxies + num_batches - 1) / num_batches;
 
-    // split evenly
-    const auto num_draw_calls_divided = (num_draw_proxies + num_async_rendering_command_buffers - 1) / num_async_rendering_command_buffers;
-
-    SizeType draw_proxy_index = 0;
+    UInt draw_proxy_index = 0;
 
     for (SizeType container_index = 0; container_index < num_async_rendering_command_buffers; container_index++) {
         auto &container = divided_draw_proxies[container_index];
-        container.Reserve(num_draw_calls_divided);
+        container.Reserve(num_draw_proxies_divided);
 
-        for (SizeType i = 0; i < num_draw_calls_divided && draw_proxy_index < num_draw_proxies; i++, draw_proxy_index++) {
+        for (SizeType i = 0; i < num_draw_proxies_divided && draw_proxy_index < num_draw_proxies; i++, draw_proxy_index++) {
             container.PushBack(draw_proxies[draw_proxy_index]);
         }
     }
@@ -403,8 +402,12 @@ RenderAll(
     auto *device = instance->GetDevice();
 
     const auto frame_index = frame->GetFrameIndex();
+
+    const auto num_batches = RendererInstance::parallel_rendering
+        ? MathUtil::Min(static_cast<UInt>(engine->task_system.GetPool(TaskPriority::HIGH).threads.Size()), num_async_rendering_command_buffers)
+        : 1u;
     
-    auto divided_draw_proxies = GetDividedDrawCalls(draw_proxies);
+    auto divided_draw_proxies = GetDividedDrawCalls(draw_proxies, num_async_rendering_command_buffers);
 
     // rather than using a single integer, we have to set states in a fixed array
     // because otherwise we'd need to use an atomic integer
@@ -415,16 +418,14 @@ RenderAll(
     // complete in the same thread
     engine->task_system.ParallelForEach(
         TaskPriority::HIGH,
-        RendererInstance::parallel_rendering
-            ? MathUtil::Min(static_cast<UInt>(engine->task_system.GetPool(TaskPriority::HIGH).threads.Size()), num_async_rendering_command_buffers)
-            : 1u,
+        num_batches,
         divided_draw_proxies,
-        [engine, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, command_buffer_index, frame_index, scene_id](const DynArray<EntityDrawProxy> &draw_proxies, UInt index, UInt batch_index) {
+        [engine, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, command_buffer_index, frame_index, scene_id](const DynArray<EntityDrawProxy> &draw_proxies, UInt index, UInt) {
             if (draw_proxies.Empty()) {
                 return;
             }
 
-            command_buffers[frame_index][(command_buffer_index + batch_index) % static_cast<UInt>(command_buffers.Size())]->Record(
+            command_buffers[frame_index][index/*(command_buffer_index + batch_index) % static_cast<UInt>(command_buffers.Size())*/]->Record(
                 engine->GetDevice(),
                 pipeline->GetConstructionInfo().render_pass,
                 [&](CommandBuffer *secondary) {
@@ -522,7 +523,7 @@ RenderAll(
                 }
             );
 
-            command_buffers_recorded_states[batch_index] = 1u;
+            command_buffers_recorded_states[index] = 1u;
         }
     );
 
@@ -530,7 +531,7 @@ RenderAll(
 
     // submit all command buffers
     for (UInt i = 0; i < num_recorded_command_buffers; i++) {
-        command_buffers[frame_index][(command_buffer_index + i) % static_cast<UInt>(command_buffers.Size())]
+        command_buffers[frame_index][/*(command_buffer_index + i) % static_cast<UInt>(command_buffers.Size())*/ i]
             ->SubmitSecondary(frame->GetCommandBuffer());
     }
 
