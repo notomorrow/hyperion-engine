@@ -47,8 +47,10 @@ void SemaphoreChain::Link(SemaphoreChain &signaler, SemaphoreChain &waitee)
     }
 }
 
-SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_stage_flags,
-    const std::vector<VkPipelineStageFlags> &signal_stage_flags)
+SemaphoreChain::SemaphoreChain(
+    const std::vector<VkPipelineStageFlags> &wait_stage_flags,
+    const std::vector<VkPipelineStageFlags> &signal_stage_flags
+)
 {
     m_wait_semaphores.reserve(wait_stage_flags.size());
     m_signal_semaphores.reserve(signal_stage_flags.size());

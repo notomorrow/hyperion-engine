@@ -4,6 +4,7 @@
 #include "Base.hpp"
 #include "Voxelizer.hpp"
 #include "Compute.hpp"
+#include <rendering/RenderComponent.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <core/Containers.hpp>
@@ -16,7 +17,8 @@ using renderer::DescriptorSet;
 using renderer::ShaderVec2;
 
 class SparseVoxelOctree
-    : public EngineComponentBase<STUB_CLASS(SparseVoxelOctree)>
+    : public EngineComponentBase<STUB_CLASS(SparseVoxelOctree)>,
+      public RenderComponent<SparseVoxelOctree>
 {
     static constexpr UInt32 min_nodes = 10000;
     static constexpr UInt32 max_nodes = 10000000;
@@ -24,6 +26,8 @@ class SparseVoxelOctree
     using OctreeNode = ShaderVec2<UInt32>;
 
 public:
+    static constexpr RenderComponentName component_name = RENDER_COMPONENT_SVO;
+
     SparseVoxelOctree();
     SparseVoxelOctree(const SparseVoxelOctree &other) = delete;
     SparseVoxelOctree &operator=(const SparseVoxelOctree &other) = delete;
@@ -32,13 +36,21 @@ public:
     Voxelizer *GetVoxelizer() const { return m_voxelizer.get(); }
 
     void Init(Engine *engine);
-    void Build(Engine *engine, Frame *frame);
+    void InitGame(Engine *engine); // init on game thread
+
+    void OnUpdate(Engine *engine, GameCounter::TickUnit delta);
+    void OnRender(Engine *engine, Frame *frame);
 
 private:
     UInt32 CalculateNumNodes() const;
     void CreateBuffers(Engine *engine);
     void CreateDescriptors(Engine *engine);
     void CreateComputePipelines(Engine *engine);
+
+    virtual void OnEntityAdded(Handle<Entity> &entity) override;
+    virtual void OnEntityRemoved(Handle<Entity> &entity) override;
+    virtual void OnEntityRenderableAttributesChanged(Handle<Entity> &entity) override;
+    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     void WriteMipmaps(Engine *engine);
 

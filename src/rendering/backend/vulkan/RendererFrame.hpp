@@ -23,8 +23,9 @@ using ::hyperion::non_owning_ptr;
 
 class Frame {
 public:
-    static Frame TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index);
+    static Frame TemporaryFrame(CommandBuffer *command_buffer);
 
+    explicit Frame();
     Frame(UInt frame_index);
     Frame(const Frame &other) = delete;
     Frame &operator=(const Frame &other) = delete;
@@ -50,7 +51,7 @@ public:
     Result Submit(DeviceQueue *queue);
     
     non_owning_ptr<CommandBuffer> command_buffer;
-    std::unique_ptr<Fence>        fc_queue_submit;
+    std::unique_ptr<Fence> fc_queue_submit;
 
 private:
     UInt m_frame_index;

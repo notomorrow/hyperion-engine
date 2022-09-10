@@ -32,12 +32,15 @@ layout(push_constant) uniform Constants {
     uint count_mode;
 };
 
+#define HYP_VCT_MODE HYP_VCT_MODE_SVO
+#include "../include/vct/Voxelize.inc"
+
 #define VOXEL_GRID_SCALE 1.0
 
 void main()
 {
-    uint current_fragment = atomicAdd(counter, 1u);
-    
+    const uint voxel_id = CreateVoxelID();
+
     if (!bool(count_mode)) {
         vec4 frag_color = material.albedo;
         
@@ -55,10 +58,6 @@ void main()
         
         //frag_color.rgb *= NdotL;
 
-        uint voxel_color = Vec4ToRGBA8Raw(frag_color * 255.0);
-        
-		uvec3 voxel = clamp(uvec3(g_voxel_pos * grid_size), uvec3(0u), uvec3(grid_size - 1u));
-		fragments[current_fragment].x = voxel.x | (voxel.y << 12u) | ((voxel.z & 0xffu) << 24u); // only have the last 8 bits of voxel.z
-		fragments[current_fragment].y = ((voxel.z >> 8u) << 28u) | (voxel_color & 0x00ffffffu);
+        WriteVoxel(voxel_id, g_voxel_pos, frag_color);
     }
 }
