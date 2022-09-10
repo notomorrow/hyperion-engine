@@ -20,9 +20,9 @@ vec2 Project(in vec3 v, in uint axis) { return axis == 0 ? v.yz : (axis == 1 ? v
 
 void main() {
 	// project the positions
-	vec3 pos0 = gl_in[0].gl_Position.xyz;
-	vec3 pos1 = gl_in[1].gl_Position.xyz;
-	vec3 pos2 = gl_in[2].gl_Position.xyz;
+	vec3 pos0 = v_voxel[0];
+	vec3 pos1 = v_voxel[1];
+	vec3 pos2 = v_voxel[2];
 
 	// get projection axis
 	vec3 axis_weight = abs(cross(pos1 - pos0, pos2 - pos0));
@@ -33,19 +33,19 @@ void main() {
     position = pos0;
     normal = v_normal[0];
 	texcoord = v_texcoord0[0];
-	voxel_pos = v_voxel[0];
+	voxel_pos = (pos0 + 1.0f) * 0.5f;
 	gl_Position = vec4(Project(pos0, axis), 1.0f, 1.0f);
 	EmitVertex();
     position = pos1;
     normal = v_normal[1];
 	texcoord = v_texcoord0[1];
-	voxel_pos = v_voxel[1];
+	voxel_pos = (pos1 + 1.0f) * 0.5f;
 	gl_Position = vec4(Project(pos1, axis), 1.0f, 1.0f);
 	EmitVertex();
     position = pos2;
     normal = v_normal[2];
 	texcoord = v_texcoord0[2];
-	voxel_pos = v_voxel[2];
+	voxel_pos = (pos2 + 1.0f) * 0.5f;
 	gl_Position = vec4(Project(pos2, axis), 1.0f, 1.0f);
 	EmitVertex();
 	EndPrimitive();

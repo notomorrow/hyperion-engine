@@ -1,6 +1,8 @@
 #ifndef HYPERION_RENDERER_HELPERS_H
 #define HYPERION_RENDERER_HELPERS_H
 
+#include <core/lib/Proc.hpp>
+
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererFence.hpp>
@@ -21,7 +23,8 @@ UInt MipmapSize(UInt src_size, int lod);
 
 VkIndexType ToVkIndexType(DatumType);
 
-class SingleTimeCommands {
+class SingleTimeCommands
+{
 public:
     SingleTimeCommands() : command_buffer{}, pool{}, family_indices{} {}
 

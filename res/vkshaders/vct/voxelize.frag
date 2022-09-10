@@ -23,6 +23,9 @@ layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D v
 #define HYP_VCT_LIGHTING 0
 #define HYP_VCT_LIGHTING_AMBIENT 0.1
 
+#define HYP_VCT_MODE HYP_VCT_MODE_TEXTURE
+#include "../include/vct/Voxelize.inc"
+
 void main()
 {
     vec4 frag_color = material.albedo;
@@ -45,5 +48,5 @@ void main()
     frag_color.rgb = pow(frag_color.rgb, vec3(1.0 / 2.2));
     frag_color.a = 1.0;
 
-	imageStore(voxel_image, clamp(ivec3(VctStoragePosition(g_voxel)), ivec3(0), ivec3(vct_params.extent.xyz)), frag_color);
+	WriteVoxel(g_voxel, frag_color);
 }

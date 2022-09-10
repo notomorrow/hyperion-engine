@@ -40,6 +40,5 @@ void main()
 
     v_voxel = VctWorldToAABB(position.xyz);
     
-    // blah
     gl_Position = vec4(vec3(v_voxel.x, v_voxel.y, v_voxel.z * 0.5 + 0.5), 1.0);
 }

@@ -3,11 +3,19 @@
 namespace hyperion {
 namespace renderer {
 
-Frame Frame::TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index)
+Frame Frame::TemporaryFrame(CommandBuffer *command_buffer)
 {
-    Frame frame(frame_index);
+    Frame frame;
     frame.command_buffer = non_owning_ptr(command_buffer);
     return frame;
+}
+
+Frame::Frame()
+    : m_frame_index(0),
+      command_buffer(nullptr),
+      fc_queue_submit(nullptr),
+      m_present_semaphores({}, {})
+{
 }
 
 Frame::Frame(UInt frame_index)

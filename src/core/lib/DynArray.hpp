@@ -25,7 +25,8 @@ namespace hyperion {
 */
 
 template <class T>
-class DynArray : public ContainerBase<DynArray<T>, UInt> {
+class DynArray : public ContainerBase<DynArray<T>, UInt>
+{
 public:
     using Base = ContainerBase<DynArray<T>, UInt>;
     using KeyType = typename Base::KeyType;
@@ -43,7 +44,7 @@ protected:
 public:
     using Iterator = T *;
     using ConstIterator = const T *;
-    using InsertResult  = Pair<Iterator, bool>; // iterator, was inserted
+    using InsertResult = Pair<Iterator, bool>; // iterator, was inserted
 
     DynArray();
 
@@ -97,25 +98,6 @@ public:
     DynArray &operator=(const DynArray &other);
     DynArray &operator=(DynArray &&other) noexcept;
 
-    /*[[nodiscard]] SizeType Size() const                             { return m_size - m_start_offset; }
-
-    [[nodiscard]] ValueType *Data()                                 { return &m_values[m_start_offset]; }
-    [[nodiscard]] const ValueType *Data() const                     { return &m_values[m_start_offset]; }
-
-    [[nodiscard]] ValueType &Front()                                { return m_values[m_start_offset]; }
-    [[nodiscard]] const ValueType &Front() const                    { return m_values[m_start_offset]; }
-
-    [[nodiscard]] ValueType &Back()                                 { return m_values[m_size - 1]; }
-    [[nodiscard]] const ValueType &Back() const                     { return m_values[m_size - 1]; }
-
-    [[nodiscard]] bool Empty() const                                { return Size() == 0; }
-    [[nodiscard]] bool Any() const                                  { return Size() != 0; }
-
-    ValueType &operator[](SizeType index)                           { return m_values[m_start_offset + index]; }
-    [[nodiscard]] const ValueType &operator[](SizeType index) const { return m_values[m_start_offset + index]; }
-    */
-
-    
     [[nodiscard]] SizeType Size() const { return m_size - m_start_offset; }
 
     [[nodiscard]] ValueType *Data() { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }

@@ -34,9 +34,9 @@ void Voxelizer::Init(Engine *engine)
     m_scene = engine->CreateHandle<Scene>(
         engine->CreateHandle<Camera>(new OrthoCamera(
             voxel_map_size, voxel_map_size,
-            -voxel_map_size_signed, voxel_map_size_signed,
-            -voxel_map_size_signed, voxel_map_size_signed,
-            -voxel_map_size_signed, voxel_map_size_signed
+            -voxel_map_size_signed / 2, voxel_map_size_signed / 2,
+            -voxel_map_size_signed / 2, voxel_map_size_signed / 2,
+            -voxel_map_size_signed / 2, voxel_map_size_signed / 2
         ))
     );
 
@@ -64,10 +64,7 @@ void Voxelizer::Init(Engine *engine)
             }
 
             if (m_fragment_list_buffer != nullptr) {
-                HYPERION_PASS_ERRORS(
-                    m_fragment_list_buffer->Destroy(engine->GetInstance()->GetDevice()),
-                    result
-                );
+                engine->SafeRelease(UniquePtr<StorageBuffer>(m_fragment_list_buffer.release()));
             }
 
             for (auto &attachment : m_attachments) {
@@ -210,7 +207,7 @@ void Voxelizer::CreateDescriptors(Engine *engine)
 /* We only reconstruct the buffer if the number of rendered fragments is
  * greater than what our buffer can hold (or the buffer has not yet been created).
  * We round up to the nearest power of two. */
-void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *frame)
+void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *)
 {
     const SizeType new_size = m_num_fragments * sizeof(Fragment);
 
@@ -227,9 +224,7 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *frame)
         new_size
     );
 
-    HYPERION_ASSERT_RESULT(m_fragment_list_buffer->Destroy(
-        engine->GetInstance()->GetDevice()
-    ));
+    engine->SafeRelease(UniquePtr<StorageBuffer>(m_fragment_list_buffer.release()));
 
     m_fragment_list_buffer.reset(new StorageBuffer);
     
@@ -251,20 +246,34 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *frame)
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
 }
 
-void Voxelizer::RenderFragmentList(Engine *engine, Frame *frame, bool count_mode)
+void Voxelizer::RenderFragmentList(Engine *engine, Frame *, bool count_mode)
 {
-    engine->render_state.BindScene(m_scene.Get());
-
     m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
         .grid_size = voxel_map_size,
         .count_mode = count_mode
     };
 
-    m_framebuffer->BeginCapture(frame->GetCommandBuffer());
-    m_renderer_instance->Render(engine, frame);
-    m_framebuffer->EndCapture(frame->GetCommandBuffer());
+    auto single_time_commands = engine->GetInstance()->GetSingleTimeCommands();
 
-    engine->render_state.UnbindScene();
+    single_time_commands.Push([&](CommandBuffer *command_buffer) {
+        auto temp_frame = Frame::TemporaryFrame(command_buffer);
+
+        m_framebuffer->BeginCapture(command_buffer);
+        
+        if (engine->render_state.scene_ids.empty()) {
+        engine->render_state.BindScene(m_scene.Get());
+        m_renderer_instance->Render(engine, &temp_frame);
+        engine->render_state.UnbindScene();
+        } else {
+        m_renderer_instance->Render(engine, &temp_frame);
+        }
+
+        m_framebuffer->EndCapture(command_buffer);
+
+        HYPERION_RETURN_OK;
+    });
+
+    HYPERION_ASSERT_RESULT(single_time_commands.Execute(engine->GetDevice()));
 }
 
 void Voxelizer::Render(Engine *engine, Frame *frame)

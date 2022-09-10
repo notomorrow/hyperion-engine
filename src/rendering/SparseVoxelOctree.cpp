@@ -1,4 +1,5 @@
 #include "SparseVoxelOctree.hpp"
+#include <rendering/RenderEnvironment.hpp>
 #include <Engine.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -13,7 +14,8 @@ using Context = renderer::StagingBufferPool::Context;
 inline static constexpr UInt32 group_x_64(UInt32 x) { return (x >> 6u) + ((x & 0x3fu) ? 1u : 0u); }
 
 SparseVoxelOctree::SparseVoxelOctree()
-    : EngineComponentBase()
+    : EngineComponentBase(),
+      RenderComponent(550 /* TEMP */)
 {
 }
 
@@ -41,9 +43,13 @@ void SparseVoxelOctree::Init(Engine *engine)
     CreateBuffers(engine);
     CreateDescriptors(engine);
     CreateComputePipelines(engine);
+    
+    SetReady(true);
 
     OnTeardown([this]() {
         auto *engine = GetEngine();
+
+        SetReady(false);
 
         engine->GetRenderScheduler().Enqueue([this, engine](...) {
             auto result = Result::OK;
@@ -105,6 +111,85 @@ void SparseVoxelOctree::Init(Engine *engine)
     });
 }
 
+// called from game thread
+void SparseVoxelOctree::InitGame(Engine *engine)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+
+    // add all entities from environment scene
+    AssertThrow(GetParent()->GetScene() != nullptr);
+
+    for (auto &it : GetParent()->GetScene()->GetEntities()) {
+        auto &entity = it.second;
+
+        if (entity == nullptr) {
+            continue;
+        }
+
+        if (BucketHasGlobalIllumination(entity->GetBucket())
+            && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+                & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
+
+            m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(it.second));
+        }
+    }
+}
+
+void SparseVoxelOctree::OnEntityAdded(Handle<Entity> &entity)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    if (BucketHasGlobalIllumination(entity->GetBucket())
+        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+            & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
+        m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(entity));
+    }
+}
+
+void SparseVoxelOctree::OnEntityRemoved(Handle<Entity> &entity)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    m_voxelizer->GetRendererInstance()->RemoveEntity(Handle<Entity>(entity));
+}
+
+void SparseVoxelOctree::OnEntityRenderableAttributesChanged(Handle<Entity> &entity)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+    if (BucketHasGlobalIllumination(entity->GetBucket())
+        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+            & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
+        m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(entity));
+    } else {
+        m_voxelizer->GetRendererInstance()->RemoveEntity(Handle<Entity>(entity));
+    }
+}
+
+void SparseVoxelOctree::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
+{
+    // Threads::AssertOnThread(THREAD_GAME);
+    AssertReady();
+}
+
+void SparseVoxelOctree::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+{
+    //m_shadow_pass.SetShadowMapIndex(new_index);
+    AssertThrowMsg(false, "Not implemented");
+
+    // TODO: Remove descriptor, set new descriptor
+}
+
 UInt32 SparseVoxelOctree::CalculateNumNodes() const
 {
     AssertThrow(m_voxelizer != nullptr);
@@ -116,7 +201,7 @@ UInt32 SparseVoxelOctree::CalculateNumNodes() const
     if (num_nodes > max_nodes) {
         DebugLog(
             LogType::Warn,
-            "Attempt to allocate %llu nodes which is greater than maximum of %llu, capping at max\n",
+            "Calculated as requiring %llu nodes which is greater than maximum of %llu, capping at max\n",
             num_nodes,
             max_nodes
         );
@@ -233,6 +318,15 @@ void SparseVoxelOctree::CreateDescriptors(Engine *engine)
                 engine->GetDevice(),
                 &engine->GetInstance()->GetDescriptorPool()
             ));
+
+            // set octree buffer in global descriptor set
+            auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
+                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+            
+            descriptor_set_globals->GetDescriptor(DescriptorKey::SVO_BUFFER)->SetSubDescriptor({
+                .element_index = 0u,
+                .buffer = m_octree_buffer.get()
+            });
         }
 
         HYPERION_RETURN_OK;
@@ -250,7 +344,7 @@ void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_alloc_nodes);
+    AssertThrow(engine->InitObject(m_alloc_nodes));
 
     m_init_nodes = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
@@ -261,7 +355,7 @@ void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_init_nodes);
+    AssertThrow(engine->InitObject(m_init_nodes));
 
     m_tag_nodes = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
@@ -272,7 +366,7 @@ void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_tag_nodes);
+    AssertThrow(engine->InitObject(m_tag_nodes));
 
     m_modify_args = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
@@ -283,7 +377,7 @@ void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_modify_args);
+    AssertThrow(engine->InitObject(m_modify_args));
 
     m_write_mipmaps = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
@@ -294,13 +388,22 @@ void SparseVoxelOctree::CreateComputePipelines(Engine *engine)
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_write_mipmaps);
+    AssertThrow(engine->InitObject(m_write_mipmaps));
 }
 
-void SparseVoxelOctree::Build(Engine *engine, Frame *frame)
+void SparseVoxelOctree::OnRender(Engine *engine, Frame *frame)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+
     AssertThrow(m_voxelizer != nullptr);
     m_voxelizer->Render(engine, frame);
+    
+    // temp
+    m_descriptor_sets[0]
+        ->GetDescriptor(1)
+        ->SetSubDescriptor({ .element_index = 0u, .buffer = m_voxelizer->GetFragmentListBuffer() });
+
+    m_descriptor_sets[0]->ApplyUpdates(engine->GetDevice());
 
     m_counter->Reset(engine);
 
@@ -310,7 +413,8 @@ void SparseVoxelOctree::Build(Engine *engine, Frame *frame)
     const renderer::ComputePipeline::PushConstantData push_constants {
         .octree_data = {
             .num_fragments = m_voxelizer->NumFragments(),
-            .voxel_grid_size = static_cast<UInt32>(m_voxelizer->voxel_map_size)
+            .voxel_grid_size = static_cast<UInt32>(m_voxelizer->voxel_map_size),
+            .mipmap_level = 0u
         }
     };
 
@@ -420,9 +524,9 @@ void SparseVoxelOctree::Build(Engine *engine, Frame *frame)
 
 void SparseVoxelOctree::WriteMipmaps(Engine *engine)
 {
-    renderer::ComputePipeline::PushConstantData push_constants{
+    renderer::ComputePipeline::PushConstantData push_constants {
         .octree_data = {
-            .num_fragments   = m_voxelizer->NumFragments(),
+            .num_fragments = m_voxelizer->NumFragments(),
             .voxel_grid_size = static_cast<UInt32>(m_voxelizer->voxel_map_size)
         }
     };
