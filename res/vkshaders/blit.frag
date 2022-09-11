@@ -21,8 +21,12 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba16f)  uniform image2D rt_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8)  uniform image2D rt_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 2, rgba8)  uniform image2D rt_normals_roughness_weight_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f)  uniform image2D rt_depth_image;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D irradiance_image;
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
@@ -43,7 +47,13 @@ void main()
     //out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     
-    out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
+    // out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
+    // out_color = imageLoad(rt_normals_roughness_weight_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
+    out_color = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0);
+    // out_color = imageLoad(rt_depth_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
+    
+    // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
+    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 
    // ivec2 size = imageSize(irradiance_image);
    // out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
