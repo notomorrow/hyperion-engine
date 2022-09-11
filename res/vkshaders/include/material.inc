@@ -32,7 +32,8 @@ struct Material
     unpackUnorm4x8(material.packed_params[(index) / 4])[(index) % 4]
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer {
+    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
+    {
         Material material;
     };
 

@@ -3,6 +3,7 @@
 #extension GL_EXT_scalar_block_layout : enable
 
 #include "../include/defines.inc"
+#include "../include/noise.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT tlas;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8) uniform image2D image;
@@ -12,6 +13,16 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8) uniform image2D 
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 4
+
+void compute_default_basis(const vec3 normal, out vec3 x, out vec3 y, out vec3 z)
+{
+  // ZAP's default coordinate system for compatibility
+  z = normal;
+  const float yz = -z.y * z.z;
+  y = normalize(((abs(z.z) > 0.99999f) ? vec3(-z.x * z.y, 1.0f - z.y * z.y, yz) : vec3(-z.x * z.z, yz, 1.0f - z.z * z.z)));
+
+  x = cross(y, z);
+}
 
 void main() 
 {
@@ -33,17 +44,38 @@ void main()
 
     vec3 color = vec3(0.0);
 
+    uint seed = 0u;//tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchID.x, frame_number);
+
     for (int i = 0; i < MAX_RECURSION; i++) {
         traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
         vec3 hit_color = payload.color;
+        float hit_roughness = payload.roughness;
 
         if (payload.distance < 0.0) {
             color += hit_color;
             break;
         } else if (payload.roughness < 1.0) {
             const vec4 hit_position = origin + direction * payload.distance;
-            origin.xyz = hit_position.xyz + payload.normal * 0.001f;
-            direction.xyz = reflect(direction.xyz, payload.normal);
+            origin.xyz = hit_position.xyz + payload.normal * 0.001;
+
+            vec3 ray_dir = payload.normal;
+
+            // float r1 = radinv2(seed);
+            // float r2 = radinv_fl(seed, 3);
+            // float sq = sqrt(1.0 - r2);
+
+            // vec3 x, y, z;
+            // compute_default_basis(payload.normal.xyz, x, y, z);
+
+            // vec3 ray_dir = vec3(cos(2 * HYP_FMATH_PI * r1) * sq, sin(2 * HYP_FMATH_PI * r1) * sq, sqrt(r2));
+            // ray_dir = ray_dir.x * x + ray_dir.y * y + ray_dir.z * z;
+            // seed++;
+
+            // direction.xyz = ray_dir;
+
+            // color += hit_color;
+
+            direction.xyz = reflect(direction.xyz, ray_dir);
         } else {
             color += hit_color;
             break;
