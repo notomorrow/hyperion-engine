@@ -1,14 +1,22 @@
-struct RayPayload {
-	vec3  color;
+struct RayPayload
+{
+	vec3 color;
 	float distance;
-	vec3  normal;
+	vec3 normal;
 	float roughness;
 };
 
-struct RayProbePayload {
+struct RayProbePayload
+{
 	vec3 color;
 	vec3 normal;
 	float distance;
 	float rand;
 	vec3 diffuse;
+};
+
+struct RayHit
+{
+	RayPayload payload;
+	vec3 position;
 };

@@ -31,39 +31,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radi
 
 #ifdef HYP_SSR_USE_GAUSSIAN_BLUR
 
-#define GAUSS_TABLE_SIZE 15
-
-const float gauss_table[GAUSS_TABLE_SIZE + 1] = float[](
-    0.1847392078702266,
-    0.16595854345772326,
-    0.12031364177766891,
-    0.07038755277896766,
-    0.03322925565155569,
-    0.012657819729901945,
-    0.0038903040680094217,
-    0.0009646503390864025,
-    0.00019297087402915717,
-    0.000031139936308099136,
-    0.000004053309048174758,
-    4.255228059965837e-7,
-    3.602517634249573e-8,
-    2.4592560765896795e-9,
-    1.3534945386863618e-10,
-    0.0 //one more for interpolation
-);
-
-float GaussianWeight(float value)
-{
-    float idxf;
-    float c = modf(max(0.0, value * float(GAUSS_TABLE_SIZE)), idxf);
-    int idx = int(idxf);
-    if (idx >= GAUSS_TABLE_SIZE + 1) {
-        return 0.0;
-    }
-
-    return mix(gauss_table[idx], gauss_table[idx + 1], c);
-}
-
 void GaussianBlurAccum(
     vec2 texcoord,
     int direction,
@@ -112,35 +79,27 @@ void GaussianBlurAccum(
 
 void main(void)
 {
-    const ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
-	const vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
-
-    const float gradient_noise = InterleavedGradientNoise(vec2(coord));
-
-    // const float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
+    const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+	const vec2 texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
     vec4 reflection_sample = vec4(0.0);
-    float accum_radius     = 0.0;
+    float accum_radius = 0.0;
 
 #ifdef HYP_SSR_USE_GAUSSIAN_BLUR
-    // if (roughness < HYP_SSR_ROUGHNESS_MAX) {
-        float divisor = gauss_table[0];
+    float divisor = gauss_table[0];
 
-        reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord) * divisor;
-        accum_radius      = imageLoad(ssr_radius_image, coord).r * divisor;
+    reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord) * divisor;
+    accum_radius = imageLoad(ssr_radius_image, coord).r * divisor;
 
-        GaussianBlurAccum(texcoord, 1, reflection_sample, accum_radius, divisor);
-        GaussianBlurAccum(texcoord, -1, reflection_sample, accum_radius, divisor);
-        
-        if (divisor > 0.0) {
-            reflection_sample /= divisor;
-            accum_radius /= divisor;
-        }
-    // }
-
+    GaussianBlurAccum(texcoord, 1, reflection_sample, accum_radius, divisor);
+    GaussianBlurAccum(texcoord, -1, reflection_sample, accum_radius, divisor);
+    
+    if (divisor > 0.0) {
+        reflection_sample /= divisor;
+        accum_radius /= divisor;
+    }
 #else
 
-    // reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord);
     accum_radius  = imageLoad(ssr_radius_image, coord).r;
     const float blur_amount = mix(HYP_SSR_BLUR_MIN, HYP_SSR_MAX_BLUR_INCREMENT, Saturate(accum_radius * HYP_SSR_BLUR_MULTIPLIER));
 
