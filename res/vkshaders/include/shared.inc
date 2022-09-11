@@ -112,6 +112,19 @@ float LinearDepth(mat4 projection, float depth)
     return projection[3][2] / (depth * projection[2][3] - projection[2][2]);
 }
 
+float ProjectedDepth(mat4 projection, float depth)
+{
+    return (projection * vec4(0.0, 0.0, depth, 1.0)).z;
+
+    /*float result = depth;
+    result *= projection[3][2];
+    result += projection[2][2];
+    result /= projection[2][3];
+    
+    return result;*/
+}
+
+
 float ViewDepth(float depth, float near, float far)
 {
    /* float x = 1.0 - (far / near);
@@ -235,6 +248,102 @@ int GetNumLevels(sampler samp, texture3D tex)
 int GetNumLevels(sampler samp, textureCube tex)
 {
     return textureQueryLevels(samplerCube(tex, samp));
+}
+
+float linstep(float min, float max, float v)
+{
+    return clamp((v - min) / (max - min), 0.0, 1.0);
+}
+
+
+#define GAUSS_TABLE_SIZE 15
+
+const float gauss_table[GAUSS_TABLE_SIZE + 1] = float[](
+    0.1847392078702266,
+    0.16595854345772326,
+    0.12031364177766891,
+    0.07038755277896766,
+    0.03322925565155569,
+    0.012657819729901945,
+    0.0038903040680094217,
+    0.0009646503390864025,
+    0.00019297087402915717,
+    0.000031139936308099136,
+    0.000004053309048174758,
+    4.255228059965837e-7,
+    3.602517634249573e-8,
+    2.4592560765896795e-9,
+    1.3534945386863618e-10,
+    0.0
+);
+
+float GaussianWeight(float value)
+{
+    float idxf;
+    float c = modf(max(0.0, value * float(GAUSS_TABLE_SIZE)), idxf);
+    int idx = int(idxf);
+    if (idx >= GAUSS_TABLE_SIZE + 1) {
+        return 0.0;
+    }
+
+    return mix(gauss_table[idx], gauss_table[idx + 1], c);
+}
+
+#if 0
+void GaussianBlur(
+    texture2D tex, sampler samp,
+    vec2 texcoord,
+    vec2 blur_step,
+    float radius,
+    inout vec4 result,
+    inout float divisor
+)
+{
+    for (int i = 1; i < GAUSS_TABLE_SIZE; i++) {
+        const float d = float(i) * 25.0;
+
+        vec2 tc = texcoord + blur_step * d;
+
+        if (d < radius) {
+            float weight = GaussianWeight(d / radius);
+
+            result += Texture2D(samp, tex, tc) * weight;
+            divisor += weight;
+        }
+    }
+}
+
+#endif
+
+vec4 GaussianBlur9(
+    texture2D tex, sampler samp,
+    vec2 uv,
+    vec2 direction,
+    float radius
+) {
+    vec4 color = vec4(0.0);
+    vec2 offset1 = vec2(1.3846153846) * direction;
+    vec2 offset2 = vec2(3.2307692308) * direction;
+    color += Texture2D(samp, tex, uv) * 0.2270270270;
+    color += Texture2D(samp, tex, uv + (offset1 * radius)) * 0.3162162162;
+    color += Texture2D(samp, tex, uv - (offset1 * radius)) * 0.3162162162;
+    color += Texture2D(samp, tex, uv + (offset2 * radius)) * 0.0702702703;
+    color += Texture2D(samp, tex, uv - (offset2 * radius)) * 0.0702702703;
+    return color; 
+}
+
+vec4 GaussianBlur5(
+    texture2D tex, sampler samp,
+    vec2 uv,
+    vec2 direction,
+    float radius
+) {
+    vec4 color = vec4(0.0);
+    vec2 offset = vec2(1.3333333333333333) * direction;
+    color += Texture2D(samp, tex, uv) * 0.29411764705882354;
+    color += Texture2D(samp, tex, uv + (offset * radius)) * 0.35294117647058826;
+    color += Texture2D(samp, tex, uv - (offset * radius)) * 0.35294117647058826;
+    return color; 
 }
 
 #endif
