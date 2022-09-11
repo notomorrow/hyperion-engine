@@ -61,10 +61,10 @@ void GatherRays(uvec2 coord, uint num_rays, inout vec3 result, inout float total
     ProbeRayData ray;
     
     for (uint i = 0; i < num_rays; i++) {
-        ray                = ray_cache[i];
+        ray = ray_cache[i];
         vec3 ray_direction = ray.direction_depth.xyz;
-        vec3 ray_origin    = ray.origin.xyz;
-        float ray_depth    = ray.direction_depth.w;
+        vec3 ray_origin = ray.origin.xyz;
+        float ray_depth = ray.direction_depth.w;
         vec4 radiance;
         
 #if DEPTH

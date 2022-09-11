@@ -29,7 +29,7 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStr
 layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
 layout(buffer_reference, scalar) buffer IndexBuffer { uint indices[]; };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer MeshDescriptions
+layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDescriptions
 {
     MeshDescription mesh_descriptions[];
 };
