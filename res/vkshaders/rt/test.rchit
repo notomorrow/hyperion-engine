@@ -4,16 +4,25 @@
 #extension GL_EXT_scalar_block_layout  : require
 #extension GL_EXT_buffer_reference2    : require
 
+#define HYP_NO_CUBEMAP
+
 #include "../include/defines.inc"
 #include "../include/vertex.inc"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/material.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 #include "../include/rt/mesh.inc"
 #include "../include/rt/payload.inc"
 
+#undef HYP_NO_CUBEMAP
 
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
 
-struct PackedVertex {
+struct PackedVertex
+{
     float position_x;
     float position_y;
     float position_z;
@@ -27,11 +36,20 @@ struct PackedVertex {
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
-layout(buffer_reference, scalar) buffer IndexBuffer        { uint indices[]; };
+layout(buffer_reference, scalar) buffer IndexBuffer { uint indices[]; };
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer Meshes {
-    Mesh meshes[];
+layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer MeshDescriptions
+{
+    MeshDescription mesh_descriptions[];
 };
+
+layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) readonly buffer MaterialBuffer
+{
+    Material materials[];
+};
+
+// for RT, all textures are bindless
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[];
 
 Vertex UnpackVertex(PackedVertex packed_vertex)
 {
@@ -59,10 +77,10 @@ Vertex UnpackVertex(PackedVertex packed_vertex)
 
 void main()
 {
-    Mesh mesh = meshes[gl_InstanceCustomIndexEXT];
+    MeshDescription mesh_description = mesh_descriptions[gl_InstanceCustomIndexEXT];
     
-    PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh.vertex_buffer_address);
-    IndexBuffer index_buffer         = IndexBuffer(mesh.index_buffer_address);
+    PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh_description.vertex_buffer_address);
+    IndexBuffer index_buffer = IndexBuffer(mesh_description.index_buffer_address);
     
     ivec3 index = ivec3(
         index_buffer.indices[3 * gl_PrimitiveID],
@@ -75,15 +93,27 @@ void main()
     Vertex v2 = UnpackVertex(vertex_buffer.vertices[index.z]);
 
     // Interpolate normal
-    const vec3 barycentric_coords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-    vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
+    const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    const vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
+    const vec2 texcoord = v0.texcoord0 * barycentric_coords.x + v1.texcoord0 * barycentric_coords.y + v2.texcoord0 * barycentric_coords.z;
 
     // Basic lighting
-    vec3 lightVector    = normalize(vec3(-0.5));
-    float dot_product   = max(dot(lightVector, normal), 0.6);
+    vec3 lightVector = normalize(vec3(-0.5));
+    float dot_product = max(dot(lightVector, normal), 0.6);
+
+    const uint32_t material_index = mesh_description.material_index;
+    const Material material = materials[material_index];
     
-    payload.color     = vec3(1.0, 0.0, 0.0) * vec3(dot_product);
-    payload.distance  = gl_RayTmaxEXT;
-    payload.normal    = normal;
-    payload.roughness = 0.0f;//gl_InstanceCustomIndexEXT == 1 ? 0.0f : 1.0f; 
+    vec4 material_color = material.albedo;
+
+    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
+        
+        material_color *= albedo_texture;
+    }
+
+    payload.color = material_color.rgb;
+    payload.distance = gl_RayTmaxEXT;
+    payload.normal = normal;
+    payload.roughness = material.roughness;
 }

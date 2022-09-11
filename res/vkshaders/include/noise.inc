@@ -1,5 +1,8 @@
 #ifndef HYP_NOISE_GLSL
 #define HYP_NOISE_GLSL
+
+#include "noise/NoiseSampling.inc"
+
 float rand(vec2 n)
 { 
     return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
