@@ -27,10 +27,11 @@ struct PackedVertex {
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
-layout(buffer_reference, scalar) buffer IndexBuffer        { uint indices[]; };
+layout(buffer_reference, scalar) buffer IndexBuffer { uint indices[]; };
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer Meshes {
-    Mesh meshes[];
+layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer MeshDescriptions
+{
+    MeshDescription mesh_descriptions[];
 };
 
 Vertex UnpackVertex(PackedVertex packed_vertex)
@@ -59,10 +60,10 @@ Vertex UnpackVertex(PackedVertex packed_vertex)
 
 void main()
 {
-    Mesh mesh = meshes[gl_InstanceCustomIndexEXT];
+    MeshDescription mesh_description = mesh_descriptions[gl_InstanceCustomIndexEXT];
     
-    PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh.vertex_buffer_address);
-    IndexBuffer index_buffer         = IndexBuffer(mesh.index_buffer_address);
+    PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh_description.vertex_buffer_address);
+    IndexBuffer index_buffer = IndexBuffer(mesh_description.index_buffer_address);
     
     ivec3 index = ivec3(
         index_buffer.indices[3 * gl_PrimitiveID],
@@ -79,10 +80,10 @@ void main()
     vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
 
     // Basic lighting
-    vec3 lightVector    = normalize(vec3(-0.5));
-    float dot_product   = max(dot(lightVector, normal), 0.6);
+    vec3 lightVector = normalize(vec3(-0.5));
+    float dot_product = max(dot(lightVector, normal), 0.6);
     
-    payload.diffuse   = vec3(1.0, 0.0, 0.0) * dot_product; /* TODO material albedo */
-    payload.distance  = gl_RayTminEXT + gl_HitTEXT;
-    payload.normal    = normal;
+    payload.diffuse = vec3(1.0, 0.0, 0.0) * dot_product; /* TODO material albedo */
+    payload.distance = gl_RayTminEXT + gl_HitTEXT;
+    payload.normal  = normal;
 }

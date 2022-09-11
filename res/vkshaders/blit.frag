@@ -43,13 +43,13 @@ void main()
     //out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     
-    //out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
+    out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
 
    // ivec2 size = imageSize(irradiance_image);
    // out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
 
 
-    out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0));
-    out_color = vec4(Tonemap(out_color.rgb), 1.0);
+    // out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0));
+    // out_color = vec4(Tonemap(out_color.rgb), 1.0);
     
 }

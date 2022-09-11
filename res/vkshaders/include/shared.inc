@@ -82,6 +82,8 @@ vec4 Texture3DTexelLod(sampler samp, texture3D tex, ivec3 coord, int lod)
     return texelFetch(sampler3D(tex, samp), coord, lod);
 }
 
+#ifndef HYP_NO_CUBEMAP
+
 vec4 TextureCube(samplerCube tex, vec3 texcoord)
 {
     return texture(tex, texcoord);
@@ -101,6 +103,8 @@ vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
 {
     return texture(samplerCube(tex, samp), texcoord, lod);
 }
+
+#endif
 
 
 float LinearDepth(mat4 projection, float depth)
