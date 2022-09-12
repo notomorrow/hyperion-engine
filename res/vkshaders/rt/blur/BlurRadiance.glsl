@@ -14,7 +14,7 @@ layout(set = 0, binding = 5, rgba8) uniform writeonly image2D blur_output_image;
 #include "../../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#define HYP_RADIANCE_USE_GAUSSIAN_BLUR
+//#define HYP_RADIANCE_USE_GAUSSIAN_BLUR
 
 layout(std140, set = 0, binding = 10, row_major) readonly buffer SceneBuffer
 {
