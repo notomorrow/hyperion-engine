@@ -1,7 +1,7 @@
 #include "Scene.hpp"
 #include <Engine.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/render_components/CubemapRenderer.hpp>
+#include <rendering/CubemapRenderer.hpp>
 
 namespace hyperion::v2 {
 

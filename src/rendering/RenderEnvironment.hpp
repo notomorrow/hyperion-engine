@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_ENVIRONMENT_H
 #define HYPERION_V2_ENVIRONMENT_H
 
-#include <rendering/render_components/Shadows.hpp>
+#include <rendering/Shadows.hpp>
 #include "Base.hpp"
 #include "Light.hpp"
 #include "EnvProbe.hpp"
