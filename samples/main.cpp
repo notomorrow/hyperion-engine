@@ -63,7 +63,7 @@
 #include <list>
 
 #include "rendering/RenderEnvironment.hpp"
-#include "rendering/render_components/CubemapRenderer.hpp"
+#include "rendering/CubemapRenderer.hpp"
 
 #include <script/ScriptBindings.hpp>
 

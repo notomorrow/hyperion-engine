@@ -6,7 +6,7 @@
 #include <rendering/PostFX.hpp>
 #include <rendering/RenderList.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/render_components/Shadows.hpp>
+#include <rendering/Shadows.hpp>
 #include <rendering/Resources.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
