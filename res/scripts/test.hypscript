@@ -1,0 +1,11 @@
+let tnum : uint = 0;
+
+function TestFunc() {
+    for (let i : uint = 0; i < 10; i += 1) {
+        tnum += (i * 2);
+    }
+    return tnum;
+}
+
+
+TestFunc();
