@@ -97,7 +97,7 @@ void ParticleSpawner::CreateNoiseMap()
     static constexpr UInt seed = 0xff;
 
     SimplexNoiseGenerator noise_generator(seed);
-    m_noise_map = noise_generator.CreateBitmap(128, 128, 64.0f);
+    m_noise_map = noise_generator.CreateBitmap(128, 128, 0.1f);
 }
 
 void ParticleSpawner::CreateBuffers()
