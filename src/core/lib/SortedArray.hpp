@@ -149,7 +149,7 @@ auto SortedArray<T>::Insert(T &&value) -> Iterator
 template <class T>
 auto SortedArray<T>::Erase(const T &value) -> Iterator
 {
-    const ConstIterator iter = Find(value);
+    const ConstIterator iter = Base::Find(value);
 
     if (iter == End()) {
         return End();

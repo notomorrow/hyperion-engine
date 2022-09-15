@@ -333,14 +333,14 @@ void IndirectRenderer::Create(Engine *engine)
             m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
                 ->SetSubDescriptor({
                     .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get(),
-                    .range  = static_cast<UInt>(sizeof(ObjectShaderData))
+                    .range = static_cast<UInt>(sizeof(ObjectShaderData))
                 });
 
             // global scene data
             m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
                 ->SetSubDescriptor({
                     .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
-                    .range  = static_cast<UInt>(sizeof(SceneShaderData))
+                    .range = static_cast<UInt>(sizeof(SceneShaderData))
                 });
 
             // params buffer
@@ -381,8 +381,6 @@ void IndirectRenderer::Create(Engine *engine)
 
         HYPERION_RETURN_OK;
     });
-
-    HYP_FLUSH_RENDER_QUEUE(engine);
 
     // create compute pipeline for object visibility (for indirect render)
     // TODO: cache pipelines: re-use this

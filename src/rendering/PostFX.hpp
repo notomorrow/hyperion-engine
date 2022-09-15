@@ -201,7 +201,7 @@ private:
 
     TypeMap<std::unique_ptr<PostProcessingEffect>> m_pre_effects;
     TypeMap<std::unique_ptr<PostProcessingEffect>> m_post_effects;
-    UniformBuffer                                  m_uniform_buffer;
+    UniformBuffer m_uniform_buffer;
 };
 
 } // namespace hyperion::v2

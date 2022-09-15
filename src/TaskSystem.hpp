@@ -2,6 +2,7 @@
 #define HYPERION_V2_TASK_SYSTEM_HPP
 
 #include <core/lib/FixedArray.hpp>
+#include <math/MathUtil.hpp>
 #include <util/Defines.hpp>
 
 #include "Threads.hpp"
@@ -47,6 +48,9 @@ struct TaskBatch
     HYP_FORCE_INLINE void AddTask(TaskThread::Scheduler::Task &&task)
         { tasks.PushBack(std::move(task)); }
 
+    // we can use memory_order_relaxed because we do not add taks once the 
+    // batch has been enqueued, so once num_completed is equal to num_enqueued,
+    // we know it's done
     HYP_FORCE_INLINE bool IsCompleted() const
         { return num_completed.load(std::memory_order_relaxed) >= num_enqueued; }
 
@@ -216,10 +220,14 @@ public:
     template <class Container, class Lambda>
     void ParallelForEach(TaskPriority priority, UInt num_batches, Container &&items, Lambda &&lambda)
     {
+        const auto num_items = static_cast<UInt>(items.Size());
+
+        num_batches = MathUtil::Max(num_batches, 1u);
+        num_batches = MathUtil::Min(num_batches, num_items);
+
         TaskBatch batch;
         batch.priority = priority;
 
-        const auto num_items = static_cast<UInt>(items.Size());
         const auto items_per_batch = num_items / num_batches;
 
         for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {

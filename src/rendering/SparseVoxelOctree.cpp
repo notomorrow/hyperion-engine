@@ -128,8 +128,10 @@ void SparseVoxelOctree::InitGame(Engine *engine)
             continue;
         }
 
-        if (BucketHasGlobalIllumination(entity->GetBucket())
-            && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+        const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+        if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+            && (renderable_attributes.mesh_attributes.vertex_attributes
                 & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
 
             m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(it.second));
@@ -143,8 +145,10 @@ void SparseVoxelOctree::OnEntityAdded(Handle<Entity> &entity)
 
     AssertReady();
 
-    if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(entity));
     }
@@ -167,8 +171,8 @@ void SparseVoxelOctree::OnEntityRenderableAttributesChanged(Handle<Entity> &enti
 
     const auto &renderable_attributes = entity->GetRenderableAttributes();
 
-    if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_voxelizer->GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_voxelizer->GetRendererInstance()->AddEntity(Handle<Entity>(entity));
     } else {

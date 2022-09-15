@@ -111,7 +111,7 @@ Result FrameHandler::Destroy(Device *device, VkCommandPool pool)
     auto result = Result::OK;
 
     for (UInt i = 0; i < m_per_frame_data.NumFrames(); i++) {
-        HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<CommandBuffer>()->Destroy(device, pool), result);
+        HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<CommandBuffer>()->Destroy(device), result);
         HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<Frame>()->Destroy(device), result);
     }
 

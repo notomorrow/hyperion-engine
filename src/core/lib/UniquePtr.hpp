@@ -137,36 +137,19 @@ public:
         { return Get() == nullptr; }
 
     bool operator==(const UniquePtrBase &other) const
-        { return Get() == other.Get(); }
+        { return m_holder.value == other.m_holder.value; }
 
     bool operator==(std::nullptr_t) const
         { return Get() == nullptr; }
 
     bool operator!=(const UniquePtrBase &other) const
-        { return Get() != other.Get(); }
+        { return m_holder.value != other.m_holder.value; }
 
     bool operator!=(std::nullptr_t) const
         { return Get() != nullptr; }
 
-    bool operator<(const UniquePtrBase &other) const
-        { return uintptr_t(Get()) < uintptr_t(other.Get()); }
-
     [[nodiscard]] const TypeID &GetTypeID() const
         { return m_holder.type_id; }
-
-    /*! \brief Attempts to cast the pointer directly to the given type.
-        If the types are not exact (or T is not void, in the case of a void pointer),
-        no cast is performed and a null UniquePtr is returned. Otherwise, the
-        value currently held in the UniquePtr being casted is std::move'd to the returned value. */
-    template <class T>
-    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<T> Cast()
-    {
-        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
-            return CastUnsafe<T>();
-        }
-
-        return UniquePtr<T>();
-    }
 
     /*! \brief Destroys any currently held object.  */
     HYP_FORCE_INLINE void Reset()
@@ -224,13 +207,23 @@ public:
     {
     }
 
-    /*! \brief Takes ownership of ptr. Do not delete the pointer passed to this,
+    /*! \brief Takes ownership of ptr.
+    
+        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        for conversion back to UniquePtr<Ty> using Cast<Ty>().
+    
+        Do not delete the pointer passed to this,
         as it will be automatically deleted when this object or any object that takes ownership
         over from this object is destroyed. */
-    explicit UniquePtr(T *ptr)
+
+    template <class Ty>
+    explicit UniquePtr(Ty *ptr)
         : Base()
     {
-        Reset(ptr);
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
+
+        Reset<Ty>(ptr);
     }
 
     explicit UniquePtr(const T &value)
@@ -273,32 +266,64 @@ public:
 
     HYP_FORCE_INLINE const T &operator*() const
         { return *Get(); }
-
+    
+    HYP_FORCE_INLINE bool operator<(const UniquePtr &other) const
+        { return uintptr_t(Base::Get()) < uintptr_t(other.Base::Get()); }
+    
+    /*! \brief Drops any currently held valeu and constructs a new value using \ref{value}.
+        
+        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        for conversion back to UniquePtr<Ty> using Cast<Ty>(). */
+    template <class Ty>
     void Set(const T &value)
     {
-        Base::Reset();
-        
-        Base::m_holder.template Construct<T>(value);
-    }
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
 
-    void Set(T &&value)
-    {
         Base::Reset();
         
-        Base::m_holder.template Construct<T>(std::move(value));
+        Base::m_holder.template Construct<TyN>(value);
+    }
+    
+    /*! \brief Drops any currently held valeu and constructs a new value using \ref{value}.
+        
+        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        for conversion back to UniquePtr<Ty> using Cast<Ty>(). */
+    template <class Ty>
+    void Set(Ty &&value)
+    {
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
+
+        Base::Reset();
+        
+        Base::m_holder.template Construct<TyN>(std::move(value));
     }
 
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
-        if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
+        if any.
+        
+        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        for conversion back to UniquePtr<Ty> using Cast<Ty>().
+        
+        Note, do not delete the ptr after passing it to Reset(), as it will be deleted
         automatically. */
-    void Reset(T *ptr)
+    template <class Ty>
+    void Reset(Ty *ptr)
     {
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
+
         Base::Reset();
 
         if (ptr) {
-            Base::m_holder.template TakeOwnership<T>(ptr);
+            Base::m_holder.template TakeOwnership<TyN>(ptr);
         }
     }
+
+    /*! \brief Destroys any currently held object.  */
+    HYP_FORCE_INLINE void Reset()
+        { Base::Reset(); }
 
     /*! \brief Releases the ptr to be managed externally.
         The value held within the UniquePtr will be unset,
@@ -323,6 +348,29 @@ public:
     static UniquePtr Construct(Args &&... args)
     {
         return UniquePtr(new T(std::forward<Args>(args)...));
+    }
+
+    /*! \brief Attempts to cast the pointer directly to the given type.
+        If the types are not compatible (Derived -> Base) or equal (or T is not void, in the case of a void pointer),
+        no cast is performed and a null UniquePtr is returned. Otherwise, the
+        value currently held in the UniquePtr being casted is std::move'd to the returned value. */
+    template <class Ty>
+    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<Ty> Cast()
+    {
+        if (GetTypeID() == TypeID::ForType<Ty>()
+            || std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
+            || std::is_same_v<Ty, void>) {
+            return Base::CastUnsafe<Ty>();
+        }
+
+        return UniquePtr<Ty>();
+    }
+
+    /*! \brief Conversion to base class UniquePtr. Performs a Cast(). */
+    template <class Ty, typename = typename std::enable_if_t<std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>>>
+    operator UniquePtr<Ty>()
+    {
+        return CastUnsafe<Ty>();
     }
 };
 
@@ -372,6 +420,9 @@ public:
 
     HYP_FORCE_INLINE void *Get() const
         { return Base::Get(); }
+    
+    HYP_FORCE_INLINE bool operator<(const UniquePtr &other) const
+        { return uintptr_t(Base::Get()) < uintptr_t(other.Base::Get()); }
 
     template <class T>
     void Set(const T &value)
@@ -405,6 +456,23 @@ public:
     /*! \brief Destroys any currently held object.  */
     HYP_FORCE_INLINE void Reset()
         { Base::Reset(); }
+
+    /*! \brief Attempts to cast the pointer directly to the given type.
+        If the types are not EXACT (or T is not void, in the case of a void pointer),
+        no cast is performed and a null UniquePtr is returned. Otherwise, the
+        value currently held in the UniquePtr being casted is std::move'd to the returned value.
+        
+        Please remember, casting from UniquePtr<void> -> UniquePtr<T> will not be able to do any base class checking
+        so you can only from UniquePtr<void> to the exact specified type */
+    template <class T>
+    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<T> Cast()
+    {
+        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
+            return Base::CastUnsafe<T>();
+        }
+
+        return UniquePtr<T>();
+    }
 
     /*! \brief Constructs a new RefCountedPtr from this object.
         The value held within this UniquePtr will be unset,

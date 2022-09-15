@@ -144,7 +144,7 @@ void Engine::FindTextureFormatDefaults()
 void Engine::PrepareFinalPass()
 {
     m_full_screen_quad = CreateHandle<Mesh>(MeshBuilder::Quad().release());
-    InitObject(m_full_screen_quad);
+    AssertThrow(InitObject(m_full_screen_quad));
 
     auto shader = CreateHandle<Shader>(
         std::vector<SubShader> {
@@ -153,7 +153,7 @@ void Engine::PrepareFinalPass()
         }
     );
 
-    InitObject(shader);
+    AssertThrow(InitObject(shader));
 
     UInt iteration = 0;
     
@@ -191,7 +191,7 @@ void Engine::PrepareFinalPass()
         );
 
         renderer::AttachmentRef *color_attachment_ref,
-                                *depth_attachment_ref;
+            *depth_attachment_ref;
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
             m_instance->GetDevice(),
@@ -774,7 +774,7 @@ void Engine::RenderDeferred(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    m_deferred_renderer.Render(this, frame);
+    m_deferred_renderer.Render(this, frame, render_state.GetScene().render_environment);
 }
 
 void Engine::RenderFinalPass(Frame *frame) const

@@ -12,7 +12,8 @@ const vec3 aabb_corners[8] = {
     vec3(1.0)
 };
 
-struct AABB {
+struct AABB
+{
     vec3 min;
     vec3 max;
 };

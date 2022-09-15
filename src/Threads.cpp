@@ -33,6 +33,33 @@ void Threads::AssertOnThread(ThreadMask mask)
         current.name.CString(),
         current.value
     );
+
+#else
+    DebugLog(
+        LogType::Error,
+        "AssertOnThread() called but thread IDs are currently disabled!\n"
+    );
+#endif
+}
+
+void Threads::AssertOnThread(const ThreadID &thread_id)
+{
+#ifdef HYP_ENABLE_THREAD_ID
+    const auto &current = current_thread_id;
+
+    AssertThrowMsg(
+        thread_id == current,
+        "Expected current thread to be %u (%s), but got %u (%s)",
+        thread_id.value,
+        thread_id.name.CString(),
+        current.value,
+        current.name.CString()
+    );
+#else
+    DebugLog(
+        LogType::Error,
+        "AssertOnThread() called but thread IDs are currently disabled!\n"
+    );
 #endif
 }
 
@@ -53,7 +80,7 @@ bool Threads::IsOnThread(ThreadMask mask)
     return false;
 }
 
-bool Threads::IsOnThread(ThreadID thread_id)
+bool Threads::IsOnThread(const ThreadID &thread_id)
 {
 #ifdef HYP_ENABLE_THREAD_ID
     if (thread_id == current_thread_id) {
@@ -70,12 +97,12 @@ bool Threads::IsOnThread(ThreadID thread_id)
     return false;
 }
 
-ThreadID Threads::GetThreadID(ThreadName thread_name)
+const ThreadID &Threads::GetThreadID(ThreadName thread_name)
 {
     return thread_ids.At(thread_name);
 }
 
-ThreadID Threads::CurrentThreadID()
+const ThreadID &Threads::CurrentThreadID()
 {
     return current_thread_id;
 }

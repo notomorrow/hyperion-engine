@@ -16,12 +16,14 @@
 
 namespace hyperion::v2 {
 
+class RenderEnvironment;
+
 struct RenderState
 {
     struct SceneBinding
     {
         Scene::ID id;
-        Scene::ID parent_id;
+        RenderEnvironment *render_environment = nullptr;
 
         explicit operator bool() const { return bool(id); }
     };
@@ -51,7 +53,7 @@ struct RenderState
         scene_ids.push(
             scene == nullptr
                 ? SceneBinding { }
-                : SceneBinding { scene->GetID(), scene->GetParentId() }
+                : SceneBinding { scene->GetID(), scene->GetEnvironment() }
         );
     }
 

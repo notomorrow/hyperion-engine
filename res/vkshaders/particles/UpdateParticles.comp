@@ -1,0 +1,99 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+#include "../include/shared.inc"
+#include "../include/defines.inc"
+#include "./Particle.glsl"
+
+#define HYP_PARTICLE_NOISE_MAP_EXTENT 128
+#define HYP_PARTICLE_NOISE_MAP_SIZE HYP_FMATH_SQR(HYP_PARTICLE_NOISE_MAP_EXTENT)
+
+struct IndirectDrawCommand
+{
+    // VkDrawIndexedIndirectCommand
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int vertex_offset;
+    uint first_instance;
+
+    HYP_PAD_STRUCT_HERE(float, 7);
+};
+
+layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
+{
+    IndirectDrawCommand indirect_draw_command;
+};
+
+layout(set = 0, binding = 2) buffer NoiseBuffer
+{
+    float noise_values[HYP_PARTICLE_NOISE_MAP_SIZE];
+};
+
+layout(push_constant) uniform ParticleSpawnerData
+{
+    vec4 origin;
+    float spawn_radius;
+    float randomness;
+    float avg_lifespan;
+    uint max_particles;
+    float delta_time;
+    uint global_counter;
+} push_constants;
+
+vec3 GetNoiseValue()
+{
+    const uint base_offset = gl_GlobalInvocationID.x * 3u;
+
+    const uvec3 indices = uvec3(
+        (push_constants.global_counter + base_offset) % HYP_PARTICLE_NOISE_MAP_SIZE,
+        (push_constants.global_counter + base_offset + 1u) % HYP_PARTICLE_NOISE_MAP_SIZE,
+        (push_constants.global_counter + base_offset + 2u) % HYP_PARTICLE_NOISE_MAP_SIZE
+    );
+
+    return vec3(noise_values[indices[0]], noise_values[indices[1]], noise_values[indices[2]]) * 2.0 - 1.0;
+}
+
+void main()
+{
+    const uint id = gl_GlobalInvocationID.x;
+    const uint index = id;
+
+    if (id >= push_constants.max_particles) {
+        return;
+    }
+
+    float time = float(push_constants.global_counter) * push_constants.delta_time;
+
+    ParticleShaderData particle = instances[index];
+
+    vec3 next_position = particle.position.xyz + (particle.velocity.xyz * push_constants.delta_time);
+
+    float has_gravity = 0.0;
+
+    vec3 noise_value = GetNoiseValue();
+    vec3 random_direction = normalize(noise_value);
+    vec3 starting_velocity = random_direction;//vec3(1.0, 5.0, 1.0);// * (noise_value.y * push_constants.randomness);
+
+    vec3 starting_position = push_constants.origin.xyz;
+    starting_position += mix(vec3(0.0), vec3(sin((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI), 0.0, cos((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI)), push_constants.randomness * (noise_value.y * 0.5 + 0.5)) * push_constants.spawn_radius;
+
+    float starting_lifetime = push_constants.avg_lifespan;
+    starting_lifetime += noise_value.z * push_constants.randomness * (push_constants.avg_lifespan * 0.5);
+
+    // reset the particle if lifetime has expired
+    float is_alive = step(0.0, particle.lifetime);
+    particle.position.xyz = mix(starting_position, next_position, is_alive);
+    particle.direction.xyz = mix(random_direction, particle.direction.xyz, is_alive);
+    particle.velocity.xyz = mix(starting_velocity, particle.velocity.xyz - (vec3(0, 9.81, 0) * push_constants.delta_time * has_gravity), is_alive);
+    particle.lifetime = mix(starting_lifetime, particle.lifetime - push_constants.delta_time, is_alive);
+    particle.color_packed = packUnorm4x8(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, particle.lifetime / push_constants.avg_lifespan), is_alive));
+
+    instances[index] = particle;
+
+    atomicAdd(indirect_draw_command.instance_count, 1u);//uint(is_alive));
+}

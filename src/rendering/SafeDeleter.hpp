@@ -72,8 +72,8 @@ public:
     template <class T>
     void SafeRelease(UniquePtr<T> &&resource)
     {
-        static_assert(std::is_base_of_v<GPUBuffer, T> || std::is_base_of_v<GPUImageMemory, T>,
-            "Must be a class of GPUBuffer or GPUImageMemory");
+        // static_assert(std::is_base_of_v<GPUBuffer, T> || std::is_base_of_v<GPUImageMemory, T>,
+        //     "Must be a class of GPUBuffer or GPUImageMemory");
 
         if (resource) {
             std::lock_guard guard(m_render_resource_deletion_mutex);

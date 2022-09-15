@@ -21,7 +21,19 @@ struct Pixel
 
     Pixel() = default;
 
-    template <class Vector>
+    template <class ValueType, typename = typename std::enable_if_t<std::is_same_v<std::true_type, std::conditional_t<(NumComponents == 1), std::true_type, std::false_type>>>>
+    Pixel(ValueType value)
+    {
+        if constexpr (std::is_same_v<ValueType, Float32>) {
+            bytes[0] = static_cast<UByte>(value * 255.0f);
+        } else if constexpr (std::is_same_v<ValueType, UByte>) {
+            bytes[0] = value;
+        } else {
+            static_assert(resolution_failure<ValueType>, "Invalid type to pass to Pixel constructor");
+        }
+    }
+
+    template <class Vector, typename = typename std::enable_if_t<std::is_same_v<std::true_type, std::conditional_t<(NumComponents == Vector::size), std::true_type, std::false_type>>>>
     Pixel(const Vector &color)
     {
         for (UInt i = 0; i < MathUtil::Min(byte_size, Vector::size); i++) {
@@ -64,11 +76,18 @@ struct Pixel
     }
 };
 
+template <UInt NumComponents>
 class Bitmap
 {
-    using Pixel = Pixel<3>;
+    using Pixel = Pixel<NumComponents>;
 
 public:
+    Bitmap()
+        : m_width(0u),
+          m_height(0u)
+    {
+    }
+
     Bitmap(UInt width, UInt height)
         : m_width(width),
           m_height(height)
@@ -76,10 +95,57 @@ public:
         m_pixels.Resize(width * height);
     }
 
+    Bitmap(const Bitmap &other)
+        : m_width(other.m_width),
+          m_height(other.m_height),
+          m_pixels(other.m_pixels)
+    {
+    }
+
+    Bitmap &operator=(const Bitmap &other)
+    {
+        m_width = other.m_width;
+        m_height = other.m_height;
+        m_pixels = other.m_pixels;
+
+        return *this;
+    }
+
+    Bitmap(Bitmap &&other) noexcept
+        : m_width(other.m_width),
+          m_height(other.m_height),
+          m_pixels(std::move(other.m_pixels))
+    {
+    }
+
+    Bitmap &operator=(Bitmap &&other) noexcept
+    {
+        m_width = other.m_width;
+        m_height = other.m_height;
+        m_pixels = std::move(other.m_pixels);
+
+        return *this;
+    }
+
+    ~Bitmap() = default;
+
+    UInt GetWidth() const
+        { return m_width; }
+
+    UInt GetHeight() const
+        { return m_height; }
+
+    SizeType GetByteSize() const
+    {
+        return static_cast<SizeType>(m_width)
+            * static_cast<SizeType>(m_height)
+            * static_cast<SizeType>(NumComponents);
+    }
+
     Pixel &GetPixel(UInt x, UInt y)
     {
         const UInt index = ((x + m_width) % m_width)
-                + (((m_height - y) + m_height) % m_height) * m_width;
+            + (((m_height - y) + m_height) % m_height) * m_width;
 
         return m_pixels[index];
     }
@@ -87,16 +153,32 @@ public:
     const Pixel &GetPixel(UInt x, UInt y) const
         { return const_cast<const Bitmap *>(this)->GetPixel(x, y); }
 
+    void GetUnpackedBytes(DynArray<UByte> &out)
+    {
+        out.Resize(m_pixels.Size() * Pixel::byte_size);
+
+        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += Pixel::byte_size, j++) {
+            for (UInt k = 0; k < Pixel::byte_size; k++) {
+                out[i + k] = m_pixels[j].bytes[k];
+            }
+        }
+    }
+
+    void GetUnpackedFloats(DynArray<Float> &out)
+    {
+        out.Resize(m_pixels.Size() * Pixel::byte_size);
+
+        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += Pixel::byte_size, j++) {
+            for (UInt k = 0; k < Pixel::byte_size; k++) {
+                out[i + k] = static_cast<Float>(m_pixels[j].bytes[k]) / 255.0f;
+            }
+        }
+    }
+
     void Write(const String &filepath)
     {
         DynArray<UByte> unpacked_bytes;
-        unpacked_bytes.Resize(m_pixels.Size() * Pixel::byte_size);
-
-        for (SizeType i = 0, j = 0; i < unpacked_bytes.Size(); i += Pixel::byte_size, j++) {
-            for (UInt k = 0; k < Pixel::byte_size; k++) {
-                unpacked_bytes[i + k] = m_pixels[j].bytes[k];
-            }
-        }
+        GetUnpackedBytes(unpacked_bytes);
 
         WriteBitmap::Write(filepath.Data(), m_width, m_height, unpacked_bytes.Data());
     }

@@ -53,7 +53,7 @@ public:
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     virtual ~FullScreenPass();
     
-    CommandBuffer *GetCommandBuffer(UInt index) const { return m_command_buffers[index].get(); }
+    CommandBuffer *GetCommandBuffer(UInt index) const { return m_command_buffers[index].Get(); }
 
     Handle<Framebuffer> &GetFramebuffer(UInt index) { return m_framebuffers[index]; }
     const Handle<Framebuffer> &GetFramebuffer(UInt index) const { return m_framebuffers[index]; }
@@ -89,7 +89,7 @@ public:
 protected:
     void CreateQuad(Engine *engine);
 
-    FixedArray<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
+    FixedArray<UniquePtr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Handle<Shader> m_shader;
     Handle<RenderPass> m_render_pass;
