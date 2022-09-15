@@ -16,6 +16,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/RenderPass.hpp>
 #include <rendering/Mesh.hpp>
+#include <rendering/Texture.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -199,6 +200,7 @@ private:
 
 struct ParticleSpawnerParams
 {
+    Handle<Texture> texture;
     SizeType max_particles;
     Vector3 origin;
     Float origin_radius;

@@ -51,6 +51,10 @@ void ParticleSpawner::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
+    if (m_params.texture) {
+        engine->InitObject(m_params.texture);
+    }
+
     CreateNoiseMap();
     CreateBuffers();
     CreateShader();
@@ -59,15 +63,14 @@ void ParticleSpawner::Init(Engine *engine)
     CreateComputePipelines();
 
     OnTeardown([this](...) {
-        m_update_particles.Reset();
-
-        m_renderer_instance->GetPipeline()->SetUsedDescriptorSets({ });
         m_renderer_instance.Reset();
+        m_update_particles.Reset();
 
         GetEngine()->SafeRelease(std::move(m_particle_buffer));
         GetEngine()->SafeRelease(std::move(m_indirect_buffer));
         GetEngine()->SafeRelease(std::move(m_noise_buffer));
-        GetEngine()->SafeReleaseHandle<Shader>(std::move(m_shader));
+        GetEngine()->SafeReleaseHandle(std::move(m_params.texture));
+        GetEngine()->SafeReleaseHandle(std::move(m_shader));
 
         GetEngine()->GetRenderScheduler().Enqueue([this](...) {
             auto *engine = GetEngine();
@@ -97,7 +100,7 @@ void ParticleSpawner::CreateNoiseMap()
     static constexpr UInt seed = 0xff;
 
     SimplexNoiseGenerator noise_generator(seed);
-    m_noise_map = noise_generator.CreateBitmap(128, 128, 0.1f);
+    m_noise_map = noise_generator.CreateBitmap(128, 128, 100.0f);
 }
 
 void ParticleSpawner::CreateBuffers()
@@ -186,6 +189,22 @@ void ParticleSpawner::CreateDescriptorSets()
             ->SetSubDescriptor({
                 .buffer = GetEngine()->shader_globals->scenes.GetBuffers()[frame_index].get(),
                 .range = static_cast<UInt32>(sizeof(SceneShaderData))
+            });
+
+        m_descriptor_sets[frame_index]
+            .AddDescriptor<renderer::ImageDescriptor>(6)
+            ->SetSubDescriptor({
+                .image_view = m_params.texture
+                    ? &m_params.texture->GetImageView()
+                    : &GetEngine()->GetPlaceholderData().GetImageView2D1x1R8()
+            });
+
+        m_descriptor_sets[frame_index]
+            .AddDescriptor<renderer::SamplerDescriptor>(7)
+            ->SetSubDescriptor({
+                .sampler = m_params.texture
+                    ? &m_params.texture->GetSampler()
+                    : &GetEngine()->GetPlaceholderData().GetSamplerLinear()
             });
     }
 
@@ -409,7 +428,7 @@ void ParticleSystem::UpdateParticles(Engine *engine, Frame *frame)
                 .origin = ShaderVec4<Float32>(Vector4(spawner->GetParams().origin, 1.0f)),
                 .spawn_radius = 15.0f,
                 .randomness = 0.8f,
-                .avg_lifespan = 1.0f,
+                .avg_lifespan = 5.0f,
                 .max_particles = static_cast<UInt32>(max_particles),
                 .delta_time = 0.016f, // TODO! Delta time for particles. we currentl don't have delta time for render thread.
                 .global_counter = m_counter

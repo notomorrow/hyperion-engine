@@ -80,7 +80,7 @@ void main()
     vec3 starting_velocity = random_direction;//vec3(1.0, 5.0, 1.0);// * (noise_value.y * push_constants.randomness);
 
     vec3 starting_position = push_constants.origin.xyz;
-    starting_position += mix(vec3(0.0), vec3(sin((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI), 0.0, cos((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI)), push_constants.randomness * (noise_value.y * 0.5 + 0.5)) * push_constants.spawn_radius;
+    starting_position += vec3(sin((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI), 0.0, cos((noise_value.x * 0.5 + 0.5) * HYP_FMATH_PI)) * push_constants.randomness * (noise_value.y * 0.5 + 0.5) * push_constants.spawn_radius;
 
     float starting_lifetime = push_constants.avg_lifespan;
     starting_lifetime += noise_value.z * push_constants.randomness * (push_constants.avg_lifespan * 0.5);

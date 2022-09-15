@@ -555,8 +555,8 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
         static_cast<OrthoCamera *>(camera.Get())->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             mins.x, maxes.x,
             mins.y, maxes.y,
-            -m_shadow_pass.GetMaxDistance(),
-            m_shadow_pass.GetMaxDistance()
+            -m_shadow_pass.GetMaxDistance() * 0.5f,
+            m_shadow_pass.GetMaxDistance() * 0.5f
         );
 
         break;
