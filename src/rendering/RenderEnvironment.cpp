@@ -26,6 +26,9 @@ void RenderEnvironment::Init(Engine *engine)
     }
     
     EngineComponentBase::Init(engine);
+
+    m_particle_system = engine->CreateHandle<ParticleSystem>();
+    engine->InitObject(m_particle_system);
     
     const auto update_marker_value = m_update_marker.load();
 
@@ -118,6 +121,7 @@ void RenderEnvironment::Init(Engine *engine)
     OnTeardown([this]() {
         auto *engine = GetEngine();
 
+        m_particle_system.Reset();
         m_lights.Clear();
 
         const auto update_marker_value = m_update_marker.load();
@@ -144,7 +148,7 @@ void RenderEnvironment::Init(Engine *engine)
         // from render thread so we don't run into a race condition.
         // and can't directly Clear() because destructors may enqueue
         // into render scheduler
-        ComponentSetUnique<RenderComponentBase> tmp_render_components;
+        TypeMap<UniquePtr<RenderComponentBase>> tmp_render_components;
 
         engine->GetRenderScheduler().Enqueue([this, &tmp_render_components](...) {
             m_current_enabled_render_components_mask = 0u;

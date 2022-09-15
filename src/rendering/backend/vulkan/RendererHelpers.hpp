@@ -88,7 +88,7 @@ private:
         HYPERION_PASS_ERRORS(m_fence->WaitForGPU(device), result);
         HYPERION_PASS_ERRORS(m_fence->Destroy(device), result);
 
-        HYPERION_PASS_ERRORS(command_buffer->Destroy(device, pool), result);
+        HYPERION_PASS_ERRORS(command_buffer->Destroy(device), result);
 
         return result;
     }

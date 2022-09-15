@@ -60,4 +60,8 @@ glslc --target-env=$VULKAN_TARGET vct/clear_voxels.comp -o vct/clear_voxels.comp
 glslc --target-env=$VULKAN_TARGET vct/GenerateMipmap.comp -o vct/GenerateMipmap.comp.spv
 glslc --target-env=$VULKAN_TARGET vct/TemporalBlending.comp -o vct/TemporalBlending.comp.spv
 
+glslc --target-env=$VULKAN_TARGET particles/UpdateParticles.comp -o particles/UpdateParticles.comp.spv
+glslc --target-env=$VULKAN_TARGET particles/Particle.frag -o particles/Particle.frag.spv
+glslc --target-env=$VULKAN_TARGET particles/Particle.vert -o particles/Particle.vert.spv
+
 popd

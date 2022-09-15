@@ -395,14 +395,6 @@ void Entity::SetStencilAttributes(const StencilState &stencil_state)
     SetRenderableAttributes(new_renderable_attributes);
 }
 
-void Entity::SetBucket(Bucket bucket)
-{
-    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-    new_renderable_attributes.material_attributes.bucket = bucket;
-
-    SetRenderableAttributes(new_renderable_attributes);
-}
-
 void Entity::SetTranslation(const Vector3 &translation)
 {
     if (m_node != nullptr) {

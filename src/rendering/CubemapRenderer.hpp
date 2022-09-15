@@ -1,17 +1,17 @@
 #ifndef HYPERION_V2_CUBEMAP_RENDERER_H
 #define HYPERION_V2_CUBEMAP_RENDERER_H
 
-#include "../Base.hpp"
-#include "../PostFX.hpp"
-#include "../Renderer.hpp"
-#include "../Light.hpp"
-#include "../RenderComponent.hpp"
-#include "../Buffers.hpp"
-#include "../EnvProbe.hpp"
-
-#include <core/lib/FixedArray.hpp>
+#include <rendering/Base.hpp>
+#include <rendering/PostFX.hpp>
+#include <rendering/Renderer.hpp>
+#include <rendering/Light.hpp>
+#include <rendering/RenderComponent.hpp>
+#include <rendering/Buffers.hpp>
+#include <rendering/EnvProbe.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
+
+#include <core/lib/FixedArray.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <scene/Scene.hpp>

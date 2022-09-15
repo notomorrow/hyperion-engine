@@ -13,17 +13,20 @@ namespace renderer {
 
 CommandBuffer::CommandBuffer(Type type)
     : m_type(type),
-      m_command_buffer(nullptr)
+      m_command_buffer(VK_NULL_HANDLE),
+      m_command_pool(VK_NULL_HANDLE)
 {
 }
 
 CommandBuffer::~CommandBuffer()
 {
-    AssertThrowMsg(m_command_buffer == nullptr, "command buffer should have been destroyed");
+    AssertThrowMsg(m_command_buffer == VK_NULL_HANDLE, "command buffer should have been destroyed");
 }
 
 Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
 {
+    AssertThrow(command_pool != VK_NULL_HANDLE);
+
     VkCommandBufferLevel level;
 
     switch (m_type) {
@@ -38,9 +41,11 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
     }
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    alloc_info.level              = level;
-    alloc_info.commandPool        = command_pool;
+    alloc_info.level = level;
+    alloc_info.commandPool = command_pool;
     alloc_info.commandBufferCount = 1;
+
+    m_command_pool = command_pool;
 
     HYPERION_VK_CHECK_MSG(
         vkAllocateCommandBuffers(device->GetDevice(), &alloc_info, &m_command_buffer),
@@ -50,12 +55,16 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
+Result CommandBuffer::Destroy(Device *device)
 {
+    AssertThrow(m_command_buffer != VK_NULL_HANDLE);
+    AssertThrow(m_command_pool != VK_NULL_HANDLE);
+
     auto result = Result::OK;
 
-    vkFreeCommandBuffers(device->GetDevice(), command_pool, 1, &m_command_buffer);
-    m_command_buffer = nullptr;
+    vkFreeCommandBuffers(device->GetDevice(), m_command_pool, 1, &m_command_buffer);
+    m_command_buffer = VK_NULL_HANDLE;
+    m_command_pool = VK_NULL_HANDLE;
 
     return result;
 }
@@ -182,7 +191,7 @@ void CommandBuffer::DrawIndexed(
 
 void CommandBuffer::DrawIndexedIndirect(
     const GPUBuffer *buffer,
-    UInt buffer_offset
+    UInt32 buffer_offset
 ) const
 {
     vkCmdDrawIndexedIndirect(
@@ -266,6 +275,26 @@ void CommandBuffer::BindDescriptorSets(
         sets,
         bindings,
         num_descriptor_sets,
+        offsets,
+        num_offsets
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const GraphicsPipeline *pipeline,
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding,
+    const UInt32 *offsets,
+    SizeType num_offsets
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        descriptor_set,
+        binding,
         offsets,
         num_offsets
     );

@@ -141,7 +141,7 @@ private:
     DynArray<Handle<Entity>> m_entities_pending_removal; // shared
 
     // for each frame in flight - have an array of command buffers to use
-    // for async command buffer recording. size will never change once created
+    // for async command buffer recording.
     FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> m_command_buffers;
 
     // std::mutex m_enqueued_entities_mutex;

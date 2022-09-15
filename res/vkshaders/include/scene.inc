@@ -51,25 +51,30 @@ struct ShadowMap {
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneShaderData
+{
     Scene scene;
 };
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightDataBlock {
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
+{
     Light light;
 };
 
 layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform ShadowData {
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform ShadowShaderData
+{
     ShadowMap matrices[113];
 } shadow_data;
 
 
 // RenderComponentName enum
-#define HYP_RENDER_COMPONENT_VCT     0
+#define HYP_RENDER_COMPONENT_VCT 0
 #define HYP_RENDER_COMPONENT_SHADOWS 1
 #define HYP_RENDER_COMPONENT_CUBEMAP 2
+#define HYP_RENDER_COMPONENT_SVO 3
+#define HYP_RENDER_COMPONENT_PARTICLES 4
 
 bool IsRenderComponentEnabled(uint name)
 {

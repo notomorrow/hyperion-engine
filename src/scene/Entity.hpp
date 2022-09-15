@@ -139,8 +139,8 @@ public:
         { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
 
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
-
     void SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes);
+    void RebuildRenderableAttributes();
 
     // void SetMeshAttributes(
     //     VertexAttributeSet vertex_attributes,
@@ -159,11 +159,6 @@ public:
 
     RendererInstance *GetPrimaryRendererInstance() const
         { return m_primary_renderer_instance.renderer_instance; }
-
-    Bucket GetBucket() const
-        { return m_renderable_attributes.material_attributes.bucket; }
-
-    void SetBucket(Bucket bucket);
 
     const Vector3 &GetTranslation() const
         { return m_transform.GetTranslation(); }
@@ -238,8 +233,6 @@ public:
     void AddToOctree(Engine *engine, Octree &octree);
 
 private:
-    void RebuildRenderableAttributes();
-
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     
     void EnqueueRenderUpdates();

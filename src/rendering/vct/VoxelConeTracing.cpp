@@ -141,8 +141,10 @@ void VoxelConeTracing::InitGame(Engine *engine)
             continue;
         }
 
-        if (BucketHasGlobalIllumination(entity->GetBucket())
-            && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+        const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+        if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+            && (renderable_attributes.mesh_attributes.vertex_attributes
                 & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
 
             m_renderer_instance->AddEntity(Handle<Entity>(it.second));
@@ -156,8 +158,10 @@ void VoxelConeTracing::OnEntityAdded(Handle<Entity> &entity)
 
     AssertReady();
 
-    if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_renderer_instance->AddEntity(Handle<Entity>(entity));
     }
@@ -180,8 +184,8 @@ void VoxelConeTracing::OnEntityRenderableAttributesChanged(Handle<Entity> &entit
 
     const auto &renderable_attributes = entity->GetRenderableAttributes();
 
-    if (BucketHasGlobalIllumination(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_renderer_instance->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_renderer_instance->AddEntity(Handle<Entity>(entity));
     } else {

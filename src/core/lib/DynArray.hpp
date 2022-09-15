@@ -194,7 +194,8 @@ protected:
     SizeType m_size;
     SizeType m_capacity;
     
-    struct alignas(T) Storage {
+    struct alignas(T) Storage
+    {
         alignas(T) std::byte data_buffer[sizeof(T)];
 
         ValueType &Get()
@@ -781,7 +782,7 @@ auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
 template <class T>
 auto DynArray<T>::Erase(const T &value) -> Iterator
 {
-    ConstIterator iter = Find(value);
+    ConstIterator iter = Base::Find(value);
 
     if (iter != End()) {
         return Erase(iter);

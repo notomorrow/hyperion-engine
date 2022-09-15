@@ -182,7 +182,8 @@ void RaytracingPipeline::SubmitPushConstants(CommandBuffer *cmd) const
         cmd->GetCommandBuffer(),
         layout,
         push_constant_stage_flags,
-        0, sizeof(push_constants),
+        0,
+        static_cast<UInt32>(sizeof(push_constants)),
         &push_constants
     );
 }

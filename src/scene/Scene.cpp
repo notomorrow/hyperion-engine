@@ -179,6 +179,8 @@ bool Scene::RemoveEntity(const Handle<Entity> &entity)
         return false;
     }
 
+    entity->SetScene(nullptr);
+
     if (m_entities_pending_removal.Contains(entity->GetID())) {
         DebugLog(
             LogType::Warn,

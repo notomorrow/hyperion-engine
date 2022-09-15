@@ -38,10 +38,11 @@ public:
     static const FlatMap<ThreadName, ThreadID> thread_ids;
 
     static void AssertOnThread(ThreadMask mask);
+    static void AssertOnThread(const ThreadID &thread_id);
     static bool IsOnThread(ThreadMask mask);
-    static bool IsOnThread(ThreadID thread_id);
-    static ThreadID GetThreadID(ThreadName thread_name);
-    static ThreadID CurrentThreadID();
+    static bool IsOnThread(const ThreadID &thread_id);
+    static const ThreadID &GetThreadID(ThreadName thread_name);
+    static const ThreadID &CurrentThreadID();
 };
 
 } // namespace hyperion::v2

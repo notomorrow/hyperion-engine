@@ -277,20 +277,14 @@ void RendererInstance::Init(Engine *engine)
 
             m_shader.Reset();
 
+            for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                for (UInt i = 0; i < static_cast<UInt>(m_command_buffers[frame_index].Size()); i++) {
+                    engine->SafeRelease(std::move(m_command_buffers[frame_index][i]));
+                }
+            }
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 auto result = renderer::Result::OK;
-
-                for (UInt i = 0; i < max_frames_in_flight; i++) {
-                    for (UInt j = 0; j < static_cast<UInt>(m_command_buffers[i].Size()); j++) {
-                        HYPERION_PASS_ERRORS(
-                            m_command_buffers[i][j]->Destroy(
-                                engine->GetInstance()->GetDevice(),
-                                engine->GetInstance()->GetGraphicsCommandPool(j)
-                            ),
-                            result
-                        );
-                    }
-                }
 
                 HYPERION_PASS_ERRORS(m_pipeline->Destroy(engine->GetDevice()), result);
 
