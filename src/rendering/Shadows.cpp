@@ -162,7 +162,7 @@ void ShadowPass::CreateShadowMap(Engine *engine)
 {
     m_shadow_map_image = std::make_unique<StorageImage2D>(
         m_dimensions,
-        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F
     );
 
     m_shadow_map_image_view = std::make_unique<ImageView>();
