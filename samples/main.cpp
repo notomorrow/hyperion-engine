@@ -241,6 +241,9 @@ public:
         auto particle_system = UniquePtr<ParticleSystem>::Construct();
 
         auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
+            .texture = engine->CreateHandle<Texture>(
+                engine->assets.Load<Texture>("textures/smoke.png").release()
+            ),
             .max_particles = 4096u
         });
         engine->InitObject(particle_spawner);

@@ -236,13 +236,13 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
      * depthBiasClamp, slopeFactor etc. */
     rasterizer.depthBiasEnable = VK_FALSE;
 
-    VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-    multisampling.sampleShadingEnable   = VK_FALSE;
-    multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.minSampleShading      = 1.0f;
-    multisampling.pSampleMask           = nullptr;
+    VkPipelineMultisampleStateCreateInfo multisampling { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.minSampleShading = 1.0f;
+    multisampling.pSampleMask = nullptr;
     multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-    multisampling.alphaToOneEnable      = VK_FALSE; // Optional
+    multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
@@ -254,22 +254,24 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         }
 
         color_blend_attachments.push_back(VkPipelineColorBlendAttachmentState {
-            .blendEnable         = m_construction_info.blend_enabled,
+            .blendEnable = m_construction_info.blend_enabled,
             .srcColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
             .dstColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,
-            .colorBlendOp        = VK_BLEND_OP_ADD,
+            .colorBlendOp = VK_BLEND_OP_ADD,
             .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, 
             .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-            .alphaBlendOp        = VK_BLEND_OP_ADD,
-            .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+            .alphaBlendOp = VK_BLEND_OP_ADD,
+            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT
+                | VK_COLOR_COMPONENT_G_BIT
+                | VK_COLOR_COMPONENT_B_BIT
+                | VK_COLOR_COMPONENT_A_BIT
         });
     }
 
-    VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    color_blending.logicOpEnable     = VK_FALSE;
-    color_blending.attachmentCount   = static_cast<uint32_t>(color_blend_attachments.size());
-    color_blending.pAttachments      = color_blend_attachments.data();
+    VkPipelineColorBlendStateCreateInfo color_blending { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    color_blending.logicOpEnable = VK_FALSE;
+    color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachments.size());
+    color_blending.pAttachments = color_blend_attachments.data();
     color_blending.blendConstants[0] = 0.0f;
     color_blending.blendConstants[1] = 0.0f;
     color_blending.blendConstants[2] = 0.0f;
@@ -277,11 +279,11 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */
-    VkPipelineDynamicStateCreateInfo dynamic_state{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+    VkPipelineDynamicStateCreateInfo dynamic_state { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     const auto &states = GetDynamicStates();
 
     dynamic_state.dynamicStateCount = static_cast<uint32_t>(states.size());
-    dynamic_state.pDynamicStates    = states.data();
+    dynamic_state.pDynamicStates = states.data();
     DebugLog(
         LogType::Debug,
         "Enabling [%d] dynamic states\n",
@@ -289,7 +291,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     );
 
     /* Pipeline layout */
-    VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     auto used_layouts = GetDescriptorSetLayouts(device, descriptor_pool);
     const auto max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
@@ -312,19 +314,19 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     }
 
     layout_info.setLayoutCount = static_cast<uint32_t>(used_layouts.size());
-    layout_info.pSetLayouts    = used_layouts.data();
+    layout_info.pSetLayouts = used_layouts.data();
 
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {
         {
             .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
-            .offset     = 0,
-            .size       = static_cast<uint32_t>(device->GetFeatures().PaddedSize<PushConstantData>())
+            .offset = 0,
+            .size = static_cast<uint32_t>(device->GetFeatures().PaddedSize<PushConstantData>())
         }
     };
 
     layout_info.pushConstantRangeCount = static_cast<uint32_t>(std::size(push_constant_ranges));
-    layout_info.pPushConstantRanges    = push_constant_ranges;
+    layout_info.pPushConstantRanges = push_constant_ranges;
 
     DebugLog(
         LogType::Debug,
@@ -337,16 +339,16 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     );
 
     /* Depth / stencil */
-    VkPipelineDepthStencilStateCreateInfo depth_stencil{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-    depth_stencil.depthTestEnable       = m_construction_info.depth_test;
-    depth_stencil.depthWriteEnable      = m_construction_info.depth_write;
-    depth_stencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+    VkPipelineDepthStencilStateCreateInfo depth_stencil { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    depth_stencil.depthTestEnable = m_construction_info.depth_test;
+    depth_stencil.depthWriteEnable = m_construction_info.depth_write;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
-    depth_stencil.minDepthBounds        = 0.0f; // Optional
-    depth_stencil.maxDepthBounds        = 1.0f; // Optional
-    depth_stencil.stencilTestEnable     = VK_FALSE;
-    depth_stencil.front                 = {}; // Optional
-    depth_stencil.back                  = {}; // Optional
+    depth_stencil.minDepthBounds = 0.0f; // Optional
+    depth_stencil.maxDepthBounds = 1.0f; // Optional
+    depth_stencil.stencilTestEnable = VK_FALSE;
+    depth_stencil.front = {}; // Optional
+    depth_stencil.back = {}; // Optional
 
     if (m_construction_info.stencil_state.mode != StencilMode::NONE) {
         depth_stencil.stencilTestEnable = VK_TRUE;
