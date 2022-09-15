@@ -347,7 +347,7 @@ public:
         while (m_num_enqueued.load() != 0u);
 #else
         std::unique_lock lock(m_mutex);
-        m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
+        m_is_flushed.wait(lock, [this] { return m_num_enqueued.load() == 0u; });
 #endif
     }
 
@@ -423,8 +423,6 @@ public:
 
         while (m_scheduled_functions.Any()) {
             auto &front = m_scheduled_functions.Front();
-
-            //task_data.ExecuteWithLambda(executor);
             
             executor(front.task);
 

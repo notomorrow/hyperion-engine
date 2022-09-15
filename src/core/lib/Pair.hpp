@@ -11,7 +11,8 @@
 namespace hyperion {
 
 template <class First, class Second>
-struct Pair {
+struct Pair
+{
     First first;
     Second second;
 

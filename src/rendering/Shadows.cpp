@@ -257,7 +257,7 @@ void ShadowPass::Create(Engine *engine)
             engine->InitObject(m_framebuffers[i]);
         }
 
-        m_command_buffers[i] = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        m_command_buffers[i] = UniquePtr<CommandBuffer>::Construct(CommandBuffer::COMMAND_BUFFER_SECONDARY);
     }
 
     CreateRendererInstance(engine);
@@ -426,8 +426,10 @@ void ShadowRenderer::InitGame(Engine *engine)
             continue;
         }
 
-        if (BucketRendersShadows(entity->GetBucket())
-            && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+        const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+        if (BucketRendersShadows(renderable_attributes.material_attributes.bucket)
+            && (renderable_attributes.mesh_attributes.vertex_attributes
                 & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
 
             m_shadow_pass.GetRendererInstance()->AddEntity(Handle<Entity>(it.second));
@@ -441,8 +443,10 @@ void ShadowRenderer::OnEntityAdded(Handle<Entity> &entity)
 
     AssertReady();
 
-    if (BucketRendersShadows(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+    if (BucketRendersShadows(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_shadow_pass.GetRendererInstance()->AddEntity(Handle<Entity>(entity));
     }
@@ -463,8 +467,10 @@ void ShadowRenderer::OnEntityRenderableAttributesChanged(Handle<Entity> &entity)
 
     AssertReady();
     
-    if (BucketRendersShadows(entity->GetBucket())
-        && (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes
+    const auto &renderable_attributes = entity->GetRenderableAttributes();
+
+    if (BucketRendersShadows(renderable_attributes.material_attributes.bucket)
+        && (renderable_attributes.mesh_attributes.vertex_attributes
             & m_shadow_pass.GetRendererInstance()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
         m_shadow_pass.GetRendererInstance()->AddEntity(Handle<Entity>(entity));
     } else {

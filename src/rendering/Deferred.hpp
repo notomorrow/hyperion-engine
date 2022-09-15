@@ -3,6 +3,7 @@
 
 #include "FullScreenPass.hpp"
 #include "PostFX.hpp"
+#include "ParticleSystem.hpp"
 #include "Texture.hpp"
 #include "Compute.hpp"
 #include "IndirectDraw.hpp"
@@ -28,6 +29,7 @@ using renderer::AttachmentRef;
 using DeferredFlagBits = UInt;
 
 class IndirectDrawState;
+class RenderEnvironment;
 
 enum DeferredFlags : DeferredFlagBits
 {
@@ -76,12 +78,19 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, Frame *frame);
+    void Render(
+        Engine *engine,
+        Frame *frame,
+        RenderEnvironment *environment
+    );
 
 private:
     void CollectDrawCalls(Engine *engine, Frame *frame);
     void RenderOpaqueObjects(Engine *engine, Frame *frame);
     void RenderTranslucentObjects(Engine *engine, Frame *frame);
+
+    void UpdateParticles(Engine *engine, Frame *frame, RenderEnvironment *environment);
+    void RenderParticles(Engine *engine, Frame *frame, RenderEnvironment *environment);
 
     DeferredPass m_indirect_pass;
     DeferredPass m_direct_pass;

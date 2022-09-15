@@ -1,12 +1,14 @@
 #ifndef HYPERION_V2_LIB_COMPONENT_SET_H
 #define HYPERION_V2_LIB_COMPONENT_SET_H
 
+#include <core/lib/UniquePtr.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
 
 template <class Component>
-class ComponentSetUnique {
+class ComponentSetUnique
+{
 public:
     using ComponentID = UInt;
     using Map = FlatMap<ComponentID, std::unique_ptr<Component>>;

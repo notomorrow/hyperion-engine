@@ -3,6 +3,7 @@
 
 #include "random/Simplex.hpp"
 #include "random/WorleyNoise.hpp"
+#include <util/img/Bitmap.hpp>
 
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
@@ -17,6 +18,8 @@
 #include <utility>
 
 namespace hyperion {
+
+using namespace v2;
 
 using Seed = UInt32;
 
@@ -41,6 +44,8 @@ public:
     double GetNoise(const Vector2 &xy) const { return GetNoise(xy.x, xy.y); }
     double GetNoise(const Vector3 &xyz) const { return GetNoise(xyz.x, xyz.y, xyz.z); }
 
+    Bitmap<1> CreateBitmap(UInt width, UInt height, Float scale = 1.0f);
+
 protected:
     Seed m_seed;
 
@@ -48,7 +53,8 @@ private:
     NoiseGenerationType m_type;
 };
 
-class SimplexNoiseGenerator : public NoiseGenerator {
+class SimplexNoiseGenerator : public NoiseGenerator
+{
 public:
     SimplexNoiseGenerator(Seed seed);
     virtual ~SimplexNoiseGenerator();
@@ -60,7 +66,8 @@ private:
     SimplexNoiseData m_simplex_noise;
 };
 
-class WorleyNoiseGenerator : public NoiseGenerator {
+class WorleyNoiseGenerator : public NoiseGenerator
+{
 public:
     WorleyNoiseGenerator(Seed seed);
     virtual ~WorleyNoiseGenerator();

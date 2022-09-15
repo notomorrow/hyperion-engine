@@ -61,6 +61,16 @@ public:
         return m_map.Set(id, std::move(value));
     }
 
+    InsertResult Set(const TypeID &type_id, const Value &value)
+    {
+        return m_map.Set(type_id, value);
+    }
+
+    InsertResult Set(const TypeID &type_id, Value &&value)
+    {
+        return m_map.Set(type_id, std::move(value));
+    }
+
     template <class T>
     Iterator Find()
     {
@@ -109,6 +119,19 @@ public:
     bool Remove()
     {
         const auto it = Find<T>();
+
+        if (it == m_map.End()) {
+            return false;
+        }
+
+        m_map.Erase(it);
+
+        return true;
+    }
+
+    bool Remove(const TypeID &type_id)
+    {
+        const auto it = m_map.Find(type_id);
 
         if (it == m_map.End()) {
             return false;

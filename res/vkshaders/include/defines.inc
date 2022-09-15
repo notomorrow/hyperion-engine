@@ -56,12 +56,12 @@
 #define HYP_OBJECT_BUCKET_PARTICLE    6
 #define HYP_OBJECT_BUCKET_SKYBOX      7
 
-#define HYP_FMATH_SQR(num)     (num)*(num)
-#define HYP_FMATH_CUBE(num)    (num)*(num)*(num)
+#define HYP_FMATH_SQR(num)     ((num)*(num))
+#define HYP_FMATH_CUBE(num)    ((num)*(num)*(num))
 #define HYP_FMATH_PI           3.14159265359
 #define HYP_FMATH_PI_HALF      1.57079632679
-#define HYP_FMATH_DEG2RAD(deg) (deg) * HYP_FMATH_PI / 180.0
-#define HYP_FMATH_RAD2DEG(rad) (rad) * 180.0 / HYP_FMATH_PI
+#define HYP_FMATH_DEG2RAD(deg) ((deg) * HYP_FMATH_PI / 180.0)
+#define HYP_FMATH_RAD2DEG(rad) ((rad) * 180.0 / HYP_FMATH_PI)
 #define HYP_FMATH_EPSILON      0.000001
 
 #ifdef __COUNTER__

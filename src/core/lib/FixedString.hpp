@@ -8,7 +8,8 @@
 
 namespace hyperion::v2 {
 
-class FixedString {
+class FixedString
+{
 public:
     FixedString(const char *str = nullptr)
         : m_str(nullptr),

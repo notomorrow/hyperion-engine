@@ -14,6 +14,20 @@ NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed seed)
 {
 }
 
+Bitmap<1> NoiseGenerator::CreateBitmap(UInt width, UInt height, Float scale)
+{
+    Bitmap<1> bitmap(width, height);
+    
+    for (UInt x = 0; x < width; x++) {
+        for (UInt y = 0; y < height; y++) {
+            const auto noise_value = GetNoise(Vector2(static_cast<Float>(x), static_cast<Float>(y)) * scale);
+            bitmap.GetPixel(x, y) = static_cast<Float>(noise_value) * 0.5f + 0.5f;
+        }
+    }
+
+    return bitmap;
+}
+
 // simplex
 
 SimplexNoiseGenerator::SimplexNoiseGenerator(Seed seed)

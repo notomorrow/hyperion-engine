@@ -114,6 +114,17 @@ public:
             {
                 ShaderVec2<UInt32> image_dimensions;
             } blur_shadow_map_data;
+
+            struct // NOLINT(clang-diagnostic-nested-anon-types)
+            {
+                ShaderVec4<Float32> origin;
+                Float32 spawn_radius;
+                Float32 randomness;
+                Float32 avg_lifespan;
+                UInt32 max_particles;
+                Float32 delta_time;
+                UInt32 global_counter;
+            } particle_spawner_data;
         };
     } push_constants;
 
@@ -144,7 +155,8 @@ public:
         }
     }
 
-    void SetPushConstants(const PushConstantData &push_constants) { this->push_constants = push_constants; }
+    void SetPushConstants(const PushConstantData &push_constants)
+        { this->push_constants = push_constants; }
 
     VkPipelineLayout layout;
 

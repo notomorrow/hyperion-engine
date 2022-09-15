@@ -39,7 +39,20 @@ void ComputePipeline::Bind(CommandBuffer *command_buffer) const
         command_buffer->GetCommandBuffer(),
         layout,
         VK_SHADER_STAGE_COMPUTE_BIT,
-        0, sizeof(push_constants),
+        0,
+        static_cast<UInt32>(sizeof(push_constants)),
+        &push_constants
+    );
+}
+
+void ComputePipeline::SubmitPushConstants(CommandBuffer *cmd) const
+{
+    vkCmdPushConstants(
+        cmd->GetCommandBuffer(),
+        layout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0,
+        static_cast<UInt32>(sizeof(push_constants)),
         &push_constants
     );
 }
@@ -61,7 +74,9 @@ void ComputePipeline::Dispatch(
 {
     vkCmdDispatch(
         command_buffer->GetCommandBuffer(),
-        group_size.width, group_size.height, group_size.depth
+        group_size.width,
+        group_size.height,
+        group_size.depth
     );
 }
 

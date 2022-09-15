@@ -11,8 +11,7 @@
 
 namespace hyperion {
 
-struct IDBase
-{
+struct IDBase {
     using ValueType = UInt;
     
     HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }

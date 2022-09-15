@@ -81,9 +81,8 @@ private:
     FixedArray<UniquePtr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
     FixedArray<UniquePtr<StorageBuffer>, max_frames_in_flight> m_instance_buffers;
     FixedArray<UniquePtr<StagingBuffer>, max_frames_in_flight> m_staging_buffers;
-    FixedArray<bool, max_frames_in_flight>  m_is_dirty;
+    FixedArray<bool, max_frames_in_flight> m_is_dirty;
     UInt m_max_entity_id = 0;
-
 };
 
 struct alignas(16) IndirectParams

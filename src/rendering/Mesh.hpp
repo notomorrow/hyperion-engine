@@ -105,7 +105,7 @@ public:
         Engine *engine,
         CommandBuffer *cmd,
         const IndirectBuffer *indirect_buffer,
-        UInt buffer_offset
+        UInt32 buffer_offset = 0
     ) const;
 
     void PopulateIndirectDrawCommand(IndirectDrawCommand &out);

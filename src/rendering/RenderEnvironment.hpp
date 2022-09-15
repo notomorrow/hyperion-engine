@@ -5,7 +5,9 @@
 #include "Base.hpp"
 #include "Light.hpp"
 #include "EnvProbe.hpp"
+#include "ParticleSystem.hpp"
 
+#include <core/Containers.hpp>
 #include <core/lib/ComponentSet.hpp>
 #include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
@@ -56,8 +58,14 @@ public:
     // Call from render thread only!
     SizeType NumEnvProbes() const { return m_env_probes.Size(); }
 
+    Handle<ParticleSystem> &GetParticleSystem()
+        { return m_particle_system; }
+
+    const Handle<ParticleSystem> &GetParticleSystem() const
+        { return m_particle_system; }
+
     template <class T>
-    void AddRenderComponent(std::unique_ptr<T> &&component)
+    void AddRenderComponent(UniquePtr<T> &&component)
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
@@ -77,7 +85,7 @@ public:
     template <class T, class ...Args>
     void AddRenderComponent(Args &&... args)
     {
-        AddRenderComponent(std::make_unique<T>(std::forward<Args>(args)...));
+        AddRenderComponent(UniquePtr<T>::Construct(std::forward<Args>(args)...));
     }
 
     /*! CALL FROM RENDER THREAD ONLY */
@@ -86,11 +94,11 @@ public:
     {
         Threads::AssertOnThread(THREAD_RENDER);
 
-        if (!m_render_components.Has<T>()) {
+        if (!m_render_components.Contains<T>()) {
             return nullptr;
         }
 
-        return m_render_components.Get<T>();
+        return static_cast<T *>(m_render_components.At<T>().Get());
     }
 
     /*! CALL FROM RENDER THREAD ONLY */
@@ -102,7 +110,7 @@ public:
 
         Threads::AssertOnThread(THREAD_RENDER);
 
-        return m_render_components.Has<T>();
+        return m_render_components.Contains<T>();
     }
 
     template <class T>
@@ -115,7 +123,10 @@ public:
 
         m_render_component_sp.Wait();
 
-        m_render_components_pending_removal.Insert(Pair { decltype(m_render_components)::GetComponentID<T>(), T::ComponentName });
+        m_render_components_pending_removal.Insert(RenderComponentPendingRemovalEntry {
+            TypeID::ForType<T>(),
+            T::ComponentName
+        });
 
         m_render_component_sp.Signal();
 
@@ -138,7 +149,7 @@ public:
     void RenderComponents(Engine *engine, Frame *frame);
 
 private:
-    using RenderComponentPendingRemovalEntry = Pair<ComponentSetUnique<RenderComponentBase>::ComponentID, RenderComponentName>;
+    using RenderComponentPendingRemovalEntry = Pair<TypeID, RenderComponentName>;
 
     Scene *m_scene;
 
@@ -149,8 +160,8 @@ private:
     Queue<Handle<Entity>> m_entity_renderable_attribute_updates;
     BinarySemaphore m_entity_update_sp;
 
-    ComponentSetUnique<RenderComponentBase> m_render_components; // only touch from render thread
-    ComponentSetUnique<RenderComponentBase> m_render_components_pending_addition;
+    TypeMap<UniquePtr<RenderComponentBase>> m_render_components; // only touch from render thread
+    TypeMap<UniquePtr<RenderComponentBase>> m_render_components_pending_addition;
     FlatSet<RenderComponentPendingRemovalEntry> m_render_components_pending_removal;
     UInt32 m_current_enabled_render_components_mask;
     UInt32 m_next_enabled_render_components_mask;
@@ -164,6 +175,8 @@ private:
     Queue<Ref<EnvProbe>> m_env_probes_pending_addition;
     Queue<Ref<EnvProbe>> m_env_probes_pending_removal;
     BinarySemaphore m_env_probes_update_sp;
+
+    Handle<ParticleSystem> m_particle_system;
 
     float m_global_timer;
 

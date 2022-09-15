@@ -1,4 +1,8 @@
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererFence.hpp>
+#include <rendering/backend/RendererQueue.hpp>
 
 namespace hyperion {
 namespace renderer {

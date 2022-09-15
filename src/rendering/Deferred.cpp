@@ -1,10 +1,11 @@
 #include "Deferred.hpp"
-#include "../Engine.hpp"
+#include <Engine.hpp>
+#include <rendering/RenderEnvironment.hpp>
 
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
-#include "backend/vulkan/RendererFeatures.hpp"
+#include <rendering/backend/vulkan/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
 
@@ -97,7 +98,7 @@ void DeferredPass::Create(Engine *engine)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i];
         
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        auto command_buffer = UniquePtr<CommandBuffer>::Construct(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
         HYPERION_ASSERT_RESULT(command_buffer->Create(
             engine->GetInstance()->GetDevice(),
@@ -143,7 +144,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
 
     using renderer::Result;
 
-    auto *command_buffer = m_command_buffers[frame_index].get();
+    auto *command_buffer = m_command_buffers[frame_index].Get();
 
     auto record_result = command_buffer->Record(
         engine->GetInstance()->GetDevice(),
@@ -318,8 +319,8 @@ void DeferredRenderer::Destroy(Engine *engine)
 
     m_post_processing.Destroy(engine);
 
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        engine->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[i]));
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        engine->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[frame_index]));
     }
     
     HYPERION_ASSERT_RESULT(m_depth_sampler->Destroy(engine->GetDevice()));
@@ -329,7 +330,11 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_direct_pass.Destroy(engine);    // flushes render queue
 }
 
-void DeferredRenderer::Render(Engine *engine, Frame *frame)
+void DeferredRenderer::Render(
+    Engine *engine,
+    Frame *frame,
+    RenderEnvironment *environment
+)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -337,6 +342,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     const auto frame_index = frame->GetFrameIndex();
     
     CollectDrawCalls(engine, frame);
+
+    if (environment) {
+        UpdateParticles(engine, frame, environment);
+    }
 
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
@@ -393,6 +402,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     // begin translucent with forward rendering
     RenderTranslucentObjects(engine, frame);
 
+    if (environment) {
+        RenderParticles(engine, frame, environment);
+    }
+
     // end shading
     m_direct_pass.GetFramebuffer(frame_index)->EndCapture(primary);
 
@@ -434,28 +447,28 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
 
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame);
         }
 
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->CollectDrawCalls(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+            renderer_instance->CollectDrawCalls(engine, frame);
         }
     }
 }
@@ -464,20 +477,20 @@ void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->PerformRenderingIndirect(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+            renderer_instance->PerformRenderingIndirect(engine, frame);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->PerformRenderingIndirect(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+            renderer_instance->PerformRenderingIndirect(engine, frame);
         }
     } else {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+            renderer_instance->PerformRendering(engine, frame);
         }
         
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+            renderer_instance->PerformRendering(engine, frame);
         }
     }
 }
@@ -485,14 +498,28 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->PerformRenderingIndirect(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+            renderer_instance->PerformRenderingIndirect(engine, frame);
         }
     } else {
-        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
-            pipeline->PerformRendering(engine, frame);
+        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+            renderer_instance->PerformRendering(engine, frame);
         }
     }
+}
+
+void DeferredRenderer::UpdateParticles(Engine *engine, Frame *frame, RenderEnvironment *environment)
+{
+    AssertThrow(environment != nullptr);
+
+    environment->GetParticleSystem()->UpdateParticles(engine, frame);
+}
+
+void DeferredRenderer::RenderParticles(Engine *engine, Frame *frame, RenderEnvironment *environment)
+{
+    AssertThrow(environment != nullptr);
+
+    environment->GetParticleSystem()->Render(engine, frame);
 }
 
 } // namespace hyperion::v2

@@ -263,10 +263,10 @@ void Mesh::Render(Engine *, CommandBuffer *cmd) const
 }
 
 void Mesh::RenderIndirect(
-    Engine               *engine,
-    CommandBuffer        *cmd,
+    Engine *engine,
+    CommandBuffer *cmd,
     const IndirectBuffer *indirect_buffer,
-    UInt                  buffer_offset
+    UInt32 buffer_offset
 ) const
 {
     AssertReady();
@@ -285,15 +285,13 @@ void Mesh::RenderIndirect(
 void Mesh::PopulateIndirectDrawCommand(IndirectDrawCommand &out)
 {
 #if HYP_VULKAN
-    out.command = VkDrawIndexedIndirectCommand {
-        .indexCount    = 0,//static_cast<UInt32>(m_indices_count),
-        .instanceCount = 0, // rendering 0 by default
-        .firstIndex    = 0,
-        .vertexOffset  = 0,
-        .firstInstance = 0
+    out = {
+        .command = {
+            .indexCount = static_cast<UInt32>(m_indices_count)
+        }
     };
 #else
-#error Unsupported rendering backend
+    #error Not implemented for this platform!
 #endif
 }
 

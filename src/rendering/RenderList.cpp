@@ -28,11 +28,8 @@ void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
 
 void RenderListContainer::AddPendingRendererInstances(Engine *engine)
 {
-    int num_renderer_instances = 0;
     for (auto &bucket : m_buckets) {
         bucket.AddPendingRendererInstances(engine);
-
-        num_renderer_instances += bucket.renderer_instances.Size();
     }
 }
 

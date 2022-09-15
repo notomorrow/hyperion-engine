@@ -24,7 +24,8 @@ using renderer::Frame;
 
 class Engine;
 
-class Game {
+class Game
+{
     friend class GameThread;
 
 public:

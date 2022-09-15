@@ -24,7 +24,8 @@
 namespace hyperion {
 namespace renderer {
 
-enum class DatumType {
+enum class DatumType
+{
     UNSIGNED_BYTE,
     SIGNED_BYTE,
     UNSIGNED_SHORT,
@@ -34,18 +35,21 @@ enum class DatumType {
     FLOAT
 };
 
-enum class FaceCullMode : UInt {
+enum class FaceCullMode : UInt
+{
     NONE,
     BACK,
     FRONT
 };
 
-enum class FillMode : UInt {
+enum class FillMode : UInt
+{
     FILL,
     LINE
 };
 
-enum class Topology : UInt {
+enum class Topology : UInt 
+{
     TRIANGLES,
     TRIANGLE_FAN,
     TRIANGLE_STRIP,
@@ -55,14 +59,16 @@ enum class Topology : UInt {
     POINTS
 };
 
-enum class StencilMode : UInt {
+enum class StencilMode : UInt
+{
     NONE,
     FILL,
     OUTLINE
 };
 
-struct StencilState {
-    UInt id   = 0;
+struct StencilState
+{
+    UInt id = 0;
     StencilMode mode = StencilMode::NONE;
 
     HYP_DEF_STRUCT_COMPARE_EQL(StencilState);
@@ -73,9 +79,10 @@ struct StencilState {
     }
 };
 
-struct MeshBindingDescription {
-    UInt32            binding;
-    UInt32            stride;
+struct MeshBindingDescription
+{
+    UInt32 binding;
+    UInt32 stride;
     VkVertexInputRate input_rate;
 
     MeshBindingDescription()
@@ -98,8 +105,10 @@ struct MeshBindingDescription {
     }
 };
 
-struct VertexAttribute {
-    enum Type {
+struct VertexAttribute
+{
+    enum Type
+    {
         MESH_INPUT_ATTRIBUTE_UNDEFINED    = 0,
         MESH_INPUT_ATTRIBUTE_POSITION     = 1,
         MESH_INPUT_ATTRIBUTE_NORMAL       = 2,
@@ -113,10 +122,10 @@ struct VertexAttribute {
 
     static const EnumOptions<Type, VertexAttribute, 16> mapping;
 
-    UInt32      location;
-    UInt32      binding;
+    UInt32 location;
+    UInt32 binding;
     // total size -- num elements * sizeof(float)
-    size_t      size;
+    SizeType size;
 
     bool operator<(const VertexAttribute &other) const
         { return location < other.location; }
@@ -124,7 +133,7 @@ struct VertexAttribute {
     VkFormat GetFormat() const
     {
         switch (this->size) {
-        case sizeof(float):     return VK_FORMAT_R32_SFLOAT;
+        case sizeof(float): return VK_FORMAT_R32_SFLOAT;
         case sizeof(float) * 2: return VK_FORMAT_R32G32_SFLOAT;
         case sizeof(float) * 3: return VK_FORMAT_R32G32B32_SFLOAT;
         case sizeof(float) * 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -152,7 +161,8 @@ struct VertexAttribute {
     }
 };
 
-struct VertexAttributeSet {
+struct VertexAttributeSet
+{
     UInt64 flag_mask;
 
     constexpr VertexAttributeSet()
@@ -208,7 +218,7 @@ struct VertexAttributeSet {
 
     void Set(VertexAttribute::Type type, bool enable = true)
     {
-        Set(UInt64(type), enable);
+        Set(static_cast<UInt64>(type), enable);
     }
 
     void Merge(const VertexAttributeSet &other)
@@ -221,7 +231,7 @@ struct VertexAttributeSet {
         std::vector<VertexAttribute> attributes;
         attributes.reserve(VertexAttribute::mapping.Size());
 
-        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+        for (SizeType i = 0; i < VertexAttribute::mapping.Size(); i++) {
             const UInt64 iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
@@ -232,11 +242,11 @@ struct VertexAttributeSet {
         return attributes;
     }
 
-    size_t CalculateVertexSize() const
+    SizeType CalculateVertexSize() const
     {
-        size_t size = 0;
+        SizeType size = 0;
 
-        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+        for (SizeType i = 0; i < VertexAttribute::mapping.Size(); i++) {
             const UInt64 iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
@@ -271,7 +281,8 @@ constexpr VertexAttributeSet skeleton_vertex_attributes(
 );
 
 
-struct QueueFamilyIndices {
+struct QueueFamilyIndices
+{
     using Index = UInt32;
     
     std::optional<Index> graphics_family;
@@ -287,17 +298,20 @@ struct QueueFamilyIndices {
     }
 };
 
-struct SwapchainSupportDetails {
-    VkSurfaceCapabilitiesKHR             capabilities;
+struct SwapchainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
-    std::vector<VkSurfaceFormatKHR>      formats;
-    std::vector<VkPresentModeKHR>        present_modes;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> present_modes;
 };
 
 struct alignas(8) Extent2D
 {
-    union {
-        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+    union
+    {
+        struct // NOLINT(clang-diagnostic-nested-anon-types)
+        { 
             UInt32 width, height;
         };
 
@@ -349,8 +363,10 @@ static_assert(sizeof(Extent2D) == 8);
 
 struct alignas(16) Extent3D
 {
-    union {
-        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+    union
+    {
+        struct // NOLINT(clang-diagnostic-nested-anon-types)
+        {
             UInt32 width, height, depth;
         };
 
@@ -446,21 +462,22 @@ struct alignas(16) Extent3D
 
 static_assert(sizeof(Extent3D) == 16);
 
-
-struct PackedVertex {
+struct PackedVertex
+{
     float position_x,
-          position_y,
-          position_z,
-          normal_x,
-          normal_y,
-          normal_z,
-          texcoord0_x,
-          texcoord0_y;
+        position_y,
+        position_z,
+        normal_x,
+        normal_y,
+        normal_z,
+        texcoord0_x,
+        texcoord0_y;
 };
 
 static_assert(sizeof(PackedVertex) % 16 == 0);
 
-struct MeshDescription {
+struct MeshDescription
+{
     UInt64 vertex_buffer_address;
     UInt64 index_buffer_address;
 };
@@ -471,20 +488,22 @@ using PackedIndex = UInt32;
 
 using ImageSubResourceFlagBits = UInt;
 
-enum ImageSubResourceFlags : ImageSubResourceFlagBits {
-    IMAGE_SUB_RESOURCE_FLAGS_NONE    = 0,
-    IMAGE_SUB_RESOURCE_FLAGS_COLOR   = 1 << 0,
-    IMAGE_SUB_RESOURCE_FLAGS_DEPTH   = 1 << 1,
+enum ImageSubResourceFlags : ImageSubResourceFlagBits
+{
+    IMAGE_SUB_RESOURCE_FLAGS_NONE = 0,
+    IMAGE_SUB_RESOURCE_FLAGS_COLOR = 1 << 0,
+    IMAGE_SUB_RESOURCE_FLAGS_DEPTH = 1 << 1,
     IMAGE_SUB_RESOURCE_FLAGS_STENCIL = 1 << 2
 };
 
 /* images */
-struct ImageSubResource {
+struct ImageSubResource
+{
     ImageSubResourceFlagBits flags = IMAGE_SUB_RESOURCE_FLAGS_COLOR;
-    UInt32 base_array_layer        = 0;
-    UInt32 base_mip_level          = 0;
-    UInt32 num_layers              = 1;
-    UInt32 num_levels              = 1;
+    UInt32 base_array_layer = 0;
+    UInt32 base_mip_level = 0;
+    UInt32 num_layers = 1;
+    UInt32 num_levels = 1;
 
     bool operator==(const ImageSubResource &other) const
     {
@@ -497,8 +516,10 @@ struct ImageSubResource {
 };
 
 template<class ...Args>
-class PerFrameData {
-    struct FrameDataWrapper {
+class PerFrameData
+{
+    struct FrameDataWrapper
+    {
         std::tuple<std::unique_ptr<Args>...> tup;
 
         template <class T>
@@ -553,7 +574,8 @@ protected:
     std::vector<FrameDataWrapper> m_data;
 };
 
-struct alignas(4) IndirectDrawCommand {
+struct alignas(4) IndirectDrawCommand
+{
     // native vk object
     VkDrawIndexedIndirectCommand command;
 

@@ -283,12 +283,13 @@ private:
     VmaAllocationCreateInfo GetAllocationCreateInfo(Device *device) const;
     VkBufferCreateInfo GetBufferCreateInfo(Device *device) const;
 
-    VkBufferUsageFlags       usage_flags;
-    VmaMemoryUsage           vma_usage;
+    VkBufferUsageFlags usage_flags;
+    VmaMemoryUsage vma_usage;
     VmaAllocationCreateFlags vma_allocation_create_flags;
 };
 
-class VertexBuffer : public GPUBuffer {
+class VertexBuffer : public GPUBuffer
+{
 public:
     VertexBuffer();
 
@@ -308,70 +309,81 @@ private:
     DatumType m_datum_type = DatumType::UNSIGNED_INT;
 };
 
-class UniformBuffer : public GPUBuffer {
+class UniformBuffer : public GPUBuffer
+{
 public:
     UniformBuffer();
 };
 
-class StorageBuffer : public GPUBuffer {
+class StorageBuffer : public GPUBuffer
+{
 public:
     StorageBuffer();
 };
 
-class AtomicCounterBuffer : public GPUBuffer {
+class AtomicCounterBuffer : public GPUBuffer
+{
 public:
     AtomicCounterBuffer();
 };
 
-class StagingBuffer : public GPUBuffer {
+class StagingBuffer : public GPUBuffer
+{
 public:
     StagingBuffer();
 };
 
-class IndirectBuffer : public GPUBuffer {
+class IndirectBuffer : public GPUBuffer
+{
 public:
     IndirectBuffer();
 
     void DispatchIndirect(CommandBuffer *command_buffer, SizeType offset = 0) const;
 };
 
-class ShaderBindingTableBuffer : public GPUBuffer {
+class ShaderBindingTableBuffer : public GPUBuffer
+{
 public:
     ShaderBindingTableBuffer();
 
     VkStridedDeviceAddressRegionKHR region;
 };
 
-class AccelerationStructureBuffer : public GPUBuffer {
+class AccelerationStructureBuffer : public GPUBuffer
+{
 public:
     AccelerationStructureBuffer();
 };
 
-class AccelerationStructureInstancesBuffer : public GPUBuffer {
+class AccelerationStructureInstancesBuffer : public GPUBuffer
+{
 public:
     AccelerationStructureInstancesBuffer();
 };
 
-class PackedVertexStorageBuffer : public GPUBuffer {
+class PackedVertexStorageBuffer : public GPUBuffer
+{
 public:
     PackedVertexStorageBuffer();
 };
 
-class PackedIndexStorageBuffer : public GPUBuffer {
+class PackedIndexStorageBuffer : public GPUBuffer
+{
 public:
     PackedIndexStorageBuffer();
 };
 
-class ScratchBuffer : public GPUBuffer {
+class ScratchBuffer : public GPUBuffer
+{
 public:
     ScratchBuffer();
 };
 
 /* images */
 
-class GPUImageMemory : public GPUMemory {
+class GPUImageMemory : public GPUMemory
+{
 public:
-
     enum class Aspect {
         COLOR,
         DEPTH

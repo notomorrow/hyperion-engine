@@ -22,7 +22,8 @@ class GraphicsPipeline;
 class ComputePipeline;
 class RaytracingPipeline;
 
-class CommandBuffer {
+class CommandBuffer
+{
 public:
     enum Type {
         COMMAND_BUFFER_PRIMARY,
@@ -44,7 +45,7 @@ public:
     VkCommandBuffer GetCommandBuffer() const { return m_command_buffer; }
 
     Result Create(Device *device, VkCommandPool command_pool);
-    Result Destroy(Device *device, VkCommandPool command_pool);
+    Result Destroy(Device *device);
     Result Begin(Device *device, const RenderPass *render_pass = nullptr);
     Result End(Device *device);
     Result Reset(Device *device);
@@ -57,14 +58,14 @@ public:
     Result SubmitSecondary(CommandBuffer *primary);
 
     void DrawIndexed(
-        UInt32                          num_indices,
-        UInt32                          num_instances  = 1,
-        UInt32                          instance_index = 0
+        UInt32 num_indices,
+        UInt32 num_instances  = 1,
+        UInt32 instance_index = 0
     ) const;
 
     void DrawIndexedIndirect(
-        const GPUBuffer                *buffer,
-        UInt                            buffer_offset
+        const GPUBuffer *buffer,
+        UInt32 buffer_offset
     ) const;
 
     void BindDescriptorSet(
@@ -117,6 +118,34 @@ public:
         const UInt32                    *offsets,
         size_t                           num_offsets
     ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const GraphicsPipeline *pipeline,
+        const DescriptorSet *descriptor_set,
+        DescriptorSet::Index binding,
+        const UInt32 *offsets,
+        SizeType num_offsets
+    ) const;
+
+    template <SizeType NumOffsets>
+    void BindDescriptorSet(
+        const DescriptorPool                 &pool,
+        const GraphicsPipeline               *pipeline,
+        const DescriptorSet                  *descriptor_set,
+        DescriptorSet::Index                  binding,
+        const FixedArray<UInt32, NumOffsets> &offsets
+    ) const
+    {
+        BindDescriptorSet(
+            pool,
+            pipeline,
+            descriptor_set,
+            binding,
+            offsets.Data(),
+            NumOffsets
+        );
+    }
 
     template <SizeType NumDescriptorSets, SizeType NumOffsets>
     void BindDescriptorSets(
@@ -410,6 +439,7 @@ private:
 
     Type m_type;
     VkCommandBuffer m_command_buffer;
+    VkCommandPool m_command_pool;
 };
 
 } // namespace renderer

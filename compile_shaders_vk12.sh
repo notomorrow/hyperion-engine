@@ -70,4 +70,8 @@ glslc --target-env=$VULKAN_TARGET rt/probe.rchit -o rt/probe.rchit.spv
 glslc --target-env=$VULKAN_TARGET rt/probe_update_irradiance.comp -o rt/probe_update_irradiance.comp.spv
 glslc --target-env=$VULKAN_TARGET rt/probe_update_depth.comp -o rt/probe_update_depth.comp.spv
 
+glslc --target-env=$VULKAN_TARGET particles/UpdateParticles.comp -o particles/UpdateParticles.comp.spv
+glslc --target-env=$VULKAN_TARGET particles/Particle.frag -o particles/Particle.frag.spv
+glslc --target-env=$VULKAN_TARGET particles/Particle.vert -o particles/Particle.vert.spv
+
 popd

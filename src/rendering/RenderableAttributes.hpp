@@ -20,14 +20,15 @@ struct MaterialAttributes
 {
     using MaterialFlags = UInt;
 
-    enum MaterialFlagBits : MaterialFlags {
+    enum MaterialFlagBits : MaterialFlags
+    {
         RENDERABLE_ATTRIBUTE_FLAGS_NONE = 0x0,
         RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING = 0x1,
         RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE = 0x2,
         RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST = 0x4
     };
 
-    Bucket bucket { Bucket::BUCKET_OPAQUE };
+    Bucket bucket = Bucket::BUCKET_OPAQUE;
     MaterialFlags flags = RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE | RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST;
 
     auto ToTuple() const

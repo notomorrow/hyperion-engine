@@ -65,6 +65,8 @@
 #include "rendering/RenderEnvironment.hpp"
 #include "rendering/CubemapRenderer.hpp"
 
+#include <rendering/ParticleSystem.hpp>
+
 #include <script/ScriptBindings.hpp>
 
 #include <util/UTF8.hpp>
@@ -174,7 +176,7 @@ public:
 #endif
         
         if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-            //grass->GetChild(0)->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
             grass.Scale(1.0f);
             grass.Translate({0, 1, 0});
@@ -205,12 +207,15 @@ public:
         cubemap->GetImage().SetIsSRGB(true);
         engine->InitObject(cubemap);
 
-        zombie->GetChild(0).Get()->GetEntity()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(1.25f);
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 0.5f));
+        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+        zombie->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
         // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        // m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
 
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -232,6 +237,15 @@ public:
         // m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
         //test_model->Scale(10.0f);
         test_model->Scale(0.15f);//14.075f);
+
+        auto particle_system = UniquePtr<ParticleSystem>::Construct();
+
+        auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
+            .max_particles = 4096u
+        });
+        engine->InitObject(particle_spawner);
+
+        m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
 
 
 #if HYPERION_VK_TEST_VCT
@@ -296,10 +310,10 @@ public:
         auto skybox_material = engine->CreateHandle<Material>();
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
+        skybox_material->SetBucket(BUCKET_SKYBOX);
 
         auto &skybox_spatial = cube_obj->GetChild(0).Get()->GetEntity();
         skybox_spatial->SetMaterial(std::move(skybox_material));
-        skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         // skybox_spatial->SetMeshAttributes(
         //     FaceCullMode::FRONT,

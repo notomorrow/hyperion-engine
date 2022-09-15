@@ -66,7 +66,7 @@ void FullScreenPass::Create(Engine *engine)
         
         engine->InitObject(m_framebuffers[i]);
         
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        auto command_buffer = UniquePtr<CommandBuffer>::Construct(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
         HYPERION_ASSERT_RESULT(command_buffer->Create(
             engine->GetInstance()->GetDevice(),
@@ -195,20 +195,12 @@ void FullScreenPass::Destroy(Engine *engine)
     m_render_pass.Reset();
     m_renderer_instance.Reset();
 
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        engine->SafeRelease(std::move(m_command_buffers[i]));
+    }
+
     engine->render_scheduler.Enqueue([this, engine](...) {
         auto result = renderer::Result::OK;
-
-        for (UInt32 i = 0; i < max_frames_in_flight; i++) {
-            HYPERION_PASS_ERRORS(
-                m_command_buffers[i]->Destroy(
-                    engine->GetInstance()->GetDevice(),
-                    engine->GetInstance()->GetGraphicsCommandPool()
-                ),
-                result
-            );
-        }
-
-        m_command_buffers = { };
 
         for (auto &attachment : m_attachments) {
             HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
@@ -228,7 +220,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
 
     using renderer::Result;
 
-    auto *command_buffer = m_command_buffers[frame_index].get();
+    auto *command_buffer = m_command_buffers[frame_index].Get();
 
     auto record_result = command_buffer->Record(
         engine->GetInstance()->GetDevice(),
@@ -306,7 +298,7 @@ void FullScreenPass::Render(Engine *engine, Frame *frame)
 
     m_framebuffers[frame_index]->BeginCapture(frame->GetCommandBuffer());
 
-    auto *secondary_command_buffer = m_command_buffers[frame_index].get();
+    auto *secondary_command_buffer = m_command_buffers[frame_index].Get();
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
 
     m_framebuffers[frame_index]->EndCapture(frame->GetCommandBuffer());
