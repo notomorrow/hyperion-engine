@@ -318,20 +318,22 @@ void Scene::Update(
 
     EnqueueRenderUpdates();
 
-    if (m_world != nullptr && update_octree_visibility) {
-        m_world->GetOctree().CalculateVisibility(this);
-    }
+    // if (m_world != nullptr && update_octree_visibility) {
+    //     m_world->GetOctree().CalculateVisibility(this);
+    // }
 
-    m_environment->Update(engine, delta);
+    if (!IsVirtualScene()) {
+        m_environment->Update(engine, delta);
 
-    for (auto &it : m_entities) {
-        auto &entity = it.second;
-        AssertThrow(entity != nullptr);
+        for (auto &it : m_entities) {
+            auto &entity = it.second;
+            AssertThrow(entity != nullptr);
 
-        entity->Update(engine, delta);
+            entity->Update(engine, delta);
 
-        if (entity->m_primary_renderer_instance.changed) {
-            RequestRendererInstanceUpdate(entity);
+            if (entity->m_primary_renderer_instance.changed) {
+                RequestRendererInstanceUpdate(entity);
+            }
         }
     }
 }
@@ -394,7 +396,8 @@ void Scene::EnqueueRenderUpdates()
     };
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
-        SceneShaderData shader_data {
+        SceneShaderData shader_data
+        {
             .enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask(),
             .aabb_max = params.aabb.max.ToVector4(),
             .aabb_min = params.aabb.min.ToVector4(),
@@ -407,6 +410,8 @@ void Scene::EnqueueRenderUpdates()
             shader_data.view = m_camera->GetDrawProxy().view;
             shader_data.projection = m_camera->GetDrawProxy().projection;
             shader_data.camera_position = m_camera->GetDrawProxy().position.ToVector4();
+            shader_data.camera_direction = m_camera->GetDrawProxy().direction.ToVector4();
+            shader_data.camera_up = m_camera->GetDrawProxy().up.ToVector4();
             shader_data.camera_near = m_camera->GetDrawProxy().clip_near;
             shader_data.camera_fov = m_camera->GetDrawProxy().fov;
             shader_data.camera_far = m_camera->GetDrawProxy().clip_far;

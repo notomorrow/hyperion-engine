@@ -25,16 +25,16 @@ public:
     Quaternion(const Quaternion &other);
 
     float GetX() const { return x; }
-    float &GetX()      { return x; }
+    float &GetX() { return x; }
     void SetX(float x) { this->x = x; }
     float GetY() const { return y; }
-    float &GetY()      { return y; }
+    float &GetY() { return y; }
     void SetY(float y) { this->y = y; }
     float GetZ() const { return z; }
-    float &GetZ()      { return z; }
+    float &GetZ() { return z; }
     void SetZ(float z) { this->z = z; }
     float GetW() const { return w; }
-    float &GetW()      { return w; }
+    float &GetW() { return w; }
     void SetW(float w) { this->w = w; }
 
     Quaternion &operator=(const Quaternion &other);
@@ -55,6 +55,8 @@ public:
     float Yaw() const;
 
     static Quaternion Identity();
+    static Quaternion LookAt(const Vector3 &direction, const Vector3 &up);
+    static Quaternion AxisAngles(const Vector3 &axis, float radians);
 };
 } // namespace hyperion
 

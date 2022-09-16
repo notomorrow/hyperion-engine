@@ -118,13 +118,13 @@ float ViewDepth(float depth, float near, float far)
     return (far * near) / (far - depth * (far - near));
 }
 
-vec4 ReconstructWorldSpacePositionFromDepth(mat4 inverse_view_projection, vec2 coord, float depth)
+vec4 ReconstructWorldSpacePositionFromDepth(mat4 inverse_projection, mat4 inverse_view, vec2 coord, float depth)
 {
     vec4 ndc = vec4(coord * 2.0 - 1.0, depth, 1.0);
 
-    vec4 inversed = inverse_view_projection * ndc;
+    vec4 inversed = inverse_projection * ndc;
     inversed /= inversed.w;
-    inversed.w = 1.0;
+    inversed = inverse_view * inversed;
 
     return inversed;
 }

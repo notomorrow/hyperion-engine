@@ -207,7 +207,7 @@ Result AttachmentRef::AddAttachmentRef(Device *device, StoreOperation store_oper
     HYPERION_BUBBLE_ERRORS(result = m_attachment->AddAttachmentRef(device, LoadOperation::LOAD, store_operation, out));
 
     (*out)->m_initial_layout = m_final_layout;
-    (*out)->m_final_layout   = m_final_layout;
+    (*out)->m_final_layout = m_final_layout;
 
     return result;
 }

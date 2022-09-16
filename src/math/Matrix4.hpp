@@ -19,21 +19,25 @@ class Quaternion;
 class Matrix4 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
-    static Matrix4 Translation(const Vector3 &);
-    static Matrix4 Rotation(const Quaternion &);
+    static Matrix4 Translation(const Vector3 &translation);
+#if 0
+    static Matrix4 Rotation(const Matrix4 &transform);
+#endif
+    static Matrix4 Rotation(const Quaternion &rotation);
     static Matrix4 Rotation(const Vector3 &axis, float radians);
-    static Matrix4 Scaling(const Vector3 &);
+    static Matrix4 Scaling(const Vector3 &scaling);
     static Matrix4 Perspective(float fov, int w, int h, float n, float f);
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
     static Matrix4 LookAt(const Vector3 &dir, const Vector3 &up);
     static Matrix4 LookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
-    
+
     union {
         Vector4 rows[4];
-        float   values[16];
+        float values[16];
     };
 
     Matrix4();
+    explicit Matrix4(const Vector4 *rows);
     explicit Matrix4(const float *v);
     Matrix4(const Matrix4 &other);
 
@@ -57,6 +61,8 @@ public:
     Vector3 operator*(const Vector3 &vec) const;
     Vector4 operator*(const Vector4 &vec) const;
 
+    Vector4 GetColumn(UInt index) const;
+
     bool operator==(const Matrix4 &other) const
     {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
 
@@ -70,7 +76,7 @@ public:
     constexpr float &At(int i, int j) { return rows[i][j]; }
 #pragma endregion
 
-    constexpr Vector4 &operator[](UInt row)             { return rows[row]; }
+    constexpr Vector4 &operator[](UInt row) { return rows[row]; }
     constexpr const Vector4 &operator[](UInt row) const { return rows[row]; }
 
     static Matrix4 Zeros();

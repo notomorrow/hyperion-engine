@@ -307,6 +307,7 @@ void RendererInstance::CollectDrawCalls(Engine *engine, Frame *frame)
     }
     
     m_indirect_renderer.GetDrawState().Reset();
+    m_divided_draw_proxies.Clear();
 
     const auto scene_binding = engine->render_state.GetScene();
     const auto scene_id = scene_binding.id;
@@ -354,11 +355,13 @@ void RendererInstance::CollectDrawCalls(
     );
 }
 
-static DynArray<DynArray<EntityDrawProxy>>
-GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies, UInt num_batches)
+static void GetDividedDrawCalls(
+    const DynArray<EntityDrawProxy> &draw_proxies,
+    UInt num_batches,
+    DynArray<DynArray<EntityDrawProxy>> &out_divided_draw_proxies
+)
 {
-    DynArray<DynArray<EntityDrawProxy>> divided_draw_proxies;
-    divided_draw_proxies.Resize(num_batches);
+    out_divided_draw_proxies.Resize(num_batches);
 
     const UInt num_draw_proxies = static_cast<UInt>(draw_proxies.Size());
     const UInt num_draw_proxies_divided = (num_draw_proxies + num_batches - 1) / num_batches;
@@ -366,15 +369,13 @@ GetDividedDrawCalls(const DynArray<EntityDrawProxy> &draw_proxies, UInt num_batc
     UInt draw_proxy_index = 0;
 
     for (SizeType container_index = 0; container_index < num_async_rendering_command_buffers; container_index++) {
-        auto &container = divided_draw_proxies[container_index];
+        auto &container = out_divided_draw_proxies[container_index];
         container.Reserve(num_draw_proxies_divided);
 
         for (SizeType i = 0; i < num_draw_proxies_divided && draw_proxy_index < num_draw_proxies; i++, draw_proxy_index++) {
             container.PushBack(draw_proxies[draw_proxy_index]);
         }
     }
-
-    return divided_draw_proxies;
 }
 
 template <bool IsIndirect>
@@ -386,7 +387,8 @@ RenderAll(
     UInt &command_buffer_index,
     renderer::GraphicsPipeline *pipeline,
     IndirectRenderer *indirect_renderer,
-    const DynArray<EntityDrawProxy> &draw_proxies
+    const DynArray<EntityDrawProxy> &draw_proxies,
+    DynArray<DynArray<EntityDrawProxy>> &divided_draw_proxies
 )
 {
     const auto scene_binding = engine->render_state.GetScene();
@@ -401,7 +403,11 @@ RenderAll(
         ? MathUtil::Min(static_cast<UInt>(engine->task_system.GetPool(TaskPriority::HIGH).threads.Size()), num_async_rendering_command_buffers)
         : 1u;
     
-    auto divided_draw_proxies = GetDividedDrawCalls(draw_proxies, num_async_rendering_command_buffers);
+    GetDividedDrawCalls(
+        draw_proxies,
+        num_async_rendering_command_buffers,
+        divided_draw_proxies
+    );
 
     // rather than using a single integer, we have to set states in a fixed array
     // because otherwise we'd need to use an atomic integer
@@ -544,7 +550,8 @@ void RendererInstance::PerformRendering(Engine *engine, Frame *frame)
         m_command_buffer_index,
         m_pipeline.get(),
         &m_indirect_renderer,
-        m_indirect_renderer.GetDrawState().GetDrawProxies()
+        m_indirect_renderer.GetDrawState().GetDrawProxies(),
+        m_divided_draw_proxies
     );
 }
 
@@ -560,7 +567,8 @@ void RendererInstance::PerformRenderingIndirect(Engine *engine, Frame *frame)
         m_command_buffer_index,
         m_pipeline.get(),
         &m_indirect_renderer,
-        m_indirect_renderer.GetDrawState().GetDrawProxies()
+        m_indirect_renderer.GetDrawState().GetDrawProxies(),
+        m_divided_draw_proxies
     );
 }
 

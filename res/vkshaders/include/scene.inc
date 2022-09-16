@@ -1,41 +1,35 @@
 #include "defines.inc"
 
-struct Scene {
-    // 0
+struct Scene
+{
     mat4 view;
     mat4 projection;
-    // 128
+
     vec4 camera_position;
-
-    // 144
+    vec4 camera_direction;
+    vec4 camera_up;
     float camera_near;
-    // 148
     float camera_far;
-
     float camera_fov;
 
     uint enabled_render_components_mask;
     
-    // 152
     uint environment_texture_index;
     uint environment_texture_usage;
     uint resolution_x;
     uint resolution_y;
     
-    // 168
     vec4 aabb_max;
     vec4 aabb_min;
 
-    // 200
     float global_timer;
 
-    // 204
     uint num_environment_shadow_maps;
-    // 208
     uint num_lights;
 };
 
-struct Light {
+struct Light
+{
     vec4 position; // or direction for directional lights
     uint color_encoded;
     uint type;

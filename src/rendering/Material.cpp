@@ -271,11 +271,12 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
         return;
     }
 
-    if (m_textures[key] != nullptr) {
-        GetEngine()->SafeReleaseHandle<Texture>(std::move(m_textures[key]));
-    }
+    if (IsInitCalled()) {
+        // release current texture
+        if (m_textures[key] != nullptr) {
+            GetEngine()->SafeReleaseHandle<Texture>(std::move(m_textures[key]));
+        }
 
-    if (texture && IsInitCalled()) {
         GetEngine()->InitObject(texture);
     }
 

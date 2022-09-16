@@ -162,22 +162,24 @@ struct alignas(256) SceneShaderData
 
     Matrix4 view;
     Matrix4 projection;
-    Vector4 camera_position;
+
+    ShaderVec4<Float32> camera_position;
+    ShaderVec4<Float32> camera_direction;
+    ShaderVec4<Float32> camera_up;
 
     float camera_near;
     float camera_far;
     float camera_fov;
 
     UInt32 enabled_render_components_mask;
-    
 
     UInt32 environment_texture_index;
     UInt32 environment_texture_usage;
     UInt32 resolution_x;
     UInt32 resolution_y;
     
-    Vector4 aabb_max;
-    Vector4 aabb_min;
+    ShaderVec4<Float32> aabb_max;
+    ShaderVec4<Float32> aabb_min;
 
     float global_timer;
     UInt32 num_environment_shadow_maps;
@@ -188,12 +190,12 @@ static_assert(sizeof(SceneShaderData) == 256);
 
 struct alignas(256) LightShaderData
 {
-    Vector4  position; //direction for directional lights
-    UInt32   color;
-    UInt32   light_type;
-    float    intensity;
-    float    radius;
-    UInt32   shadow_map_index; // ~0 == no shadow map
+    Vector4 position; //direction for directional lights
+    UInt32 color;
+    UInt32 light_type;
+    float intensity;
+    float radius;
+    UInt32 shadow_map_index; // ~0 == no shadow map
 };
 
 static_assert(sizeof(LightShaderData) == 256);
