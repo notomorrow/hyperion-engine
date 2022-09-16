@@ -33,7 +33,7 @@ void main()
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
 
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
     vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     const float roughness = material.r;
@@ -58,8 +58,6 @@ void main()
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
 
     float NdotV = max(0.0001, dot(N, V));
-    
-    const float perceptual_roughness = sqrt(roughness);
  
     vec4 result = vec4(0.0);
     
@@ -95,7 +93,6 @@ void main()
 
         const vec2 AB = BRDFMap(roughness, NdotV);
         const vec4 dfg = F * AB.x + AB.y;
-        
         const vec4 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
 
         // const vec4 diffuse_color = (albedo) * (1.0 - metalness);

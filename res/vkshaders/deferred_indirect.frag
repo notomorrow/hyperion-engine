@@ -42,7 +42,7 @@ vec2 texcoord = v_texcoord0;
 /* Begin main shader program */
 
 #define IBL_INTENSITY 40000.0
-#define IRRADIANCE_MULTIPLIER 1.0
+#define IRRADIANCE_MULTIPLIER 8.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -109,7 +109,7 @@ void main()
 
     // vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
     vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
@@ -127,6 +127,7 @@ void main()
     vec3 irradiance = vec3(0.0);
     vec4 reflections = vec4(0.0);
     vec3 ibl = vec3(0.0);
+    vec3 F = vec3(0.0);
     
     if (perform_lighting) {
         const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
@@ -137,7 +138,7 @@ void main()
         
         float NdotV = max(0.0001, dot(N, V));
 
-        const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
+        const vec3 diffuse_color = albedo_linear;// * (1.0 - metalness);
 
         // const float material_reflectance = 0.5;
         // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
@@ -147,20 +148,22 @@ void main()
         const float IOR = 1.5;
 
         // Reflectance of the surface when looking straight at it along the negative normal
-        const vec3 reflectance = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        vec3 F0 = albedo_linear * metalness + (reflectance * (1.0 - metalness));
+        // const vec3 reflectance = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        F0 = mix(F0, vec3(0.04), metalness);
+        // vec3 F0 = albedo_linear * metalness + (reflectance * (1.0 - metalness));
     
         // F0 = mix(F0, albedo_linear, metalness);
 
         //const vec3 F0 = albedo_linear * (1.0 - metalness);//albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
-        const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
-        const vec3 F = SchlickFresnelRoughness(F0, roughness, NdotV);
+        // const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+        F = SchlickFresnelRoughness(F0, roughness, NdotV);
         
         const vec2 AB = BRDFMap(roughness, NdotV);
         const vec3 dfg = F * AB.x + AB.y;
         
         const vec3 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
-        const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
+        const float perceptual_roughness = sqrt(roughness);
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
@@ -232,7 +235,8 @@ void main()
 
         const vec3 kD = (1.0 - F) * (1.0 - metalness);
 
-        vec3 Fd = diffuse_color * irradiance / HYP_FMATH_PI;  //(diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao);
+        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) / HYP_FMATH_PI;  //
+        // vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) / HYP_FMATH_PI);
 
         // vec3 Fd = diffuse_color * irradiance * (vec3(1.0) - dfg) * ao;
 
@@ -256,8 +260,10 @@ void main()
         result = kD * Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
-    
+        // result = dfg;
+        // result = kD * Fd.rgb;//ibl * (F * AB.x + AB.y);
         // result = voxelTraceCone(position.xyz, R, vec3(64.0) + vec3(0.0, 0.0, 5.0), vec3(-64.0) + vec3(0.0, 0.0, 5.0), 0.1, 1.0).rgb;
+        // result = vec3(AB, 0.0);
     } else {
         result = albedo.rgb;
     }
@@ -265,7 +271,6 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    // result = reflections.rgb;
     output_color = vec4(result, 1.0);
 
 

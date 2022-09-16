@@ -449,9 +449,9 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
     range.baseArrayLayer = 0;
     range.layerCount = NumFaces();*/
 
-    const ImageSubResource sub_resource{
-        .num_layers  = NumFaces(),
-        .num_levels  = NumMipmaps()
+    const ImageSubResource sub_resource {
+        .num_layers = NumFaces(),
+        .num_levels = NumMipmaps()
     };
 
     auto commands = instance->GetSingleTimeCommands();

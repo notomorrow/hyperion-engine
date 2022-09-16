@@ -14,6 +14,7 @@
 #include <core/lib/Proc.hpp>
 #include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/UniquePtr.hpp>
+#include <core/ThreadSafeContainer.hpp>
 #include <math/MathUtil.hpp>
 #include <Types.hpp>
 

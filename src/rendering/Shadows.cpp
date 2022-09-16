@@ -44,7 +44,7 @@ void ShadowPass::SetParentScene(Scene::ID id)
     m_parent_scene_id = id;
 
     if (m_scene != nullptr) {
-        m_scene->SetParentId(m_parent_scene_id);
+        m_scene->SetParentID(m_parent_scene_id);
     }
 }
 
@@ -239,7 +239,7 @@ void ShadowPass::Create(Engine *engine)
         ))
     );
 
-    m_scene->SetParentId(m_parent_scene_id);
+    m_scene->SetParentID(m_parent_scene_id);
     engine->InitObject(m_scene);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {

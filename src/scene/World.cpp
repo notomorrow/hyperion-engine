@@ -55,6 +55,12 @@ void World::Update(
 
     for (auto &it : m_scenes) {
         auto &scene = it.second;
+
+        m_octree.CalculateVisibility(scene.Get());
+    }
+
+    for (auto &it : m_scenes) {
+        auto &scene = it.second;
         AssertThrow(scene != nullptr);
 
         scene->Update(engine, delta);

@@ -45,14 +45,25 @@ void main()
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
 
     ParticleShaderData instance = instances[instance_id];
-    position.xyz += instance.position.xyz;
 
-    mat4 view_matrix = scene.view;
-    view_matrix[0].xyz = vec3(1.0, 0.0, 0.0);
-    // view_matrix[1].xyz = vec3(0.0, 1.0, 1.0);
-    view_matrix[2].xyz = vec3(0.0, 0.0, 1.0);
+    const vec4 position_world = instance.position;
+
+    const vec3 lookat_dir = normalize(scene.camera_position.xyz - position_world.xyz);
+    const vec3 lookat_z = lookat_dir;
+    const vec3 lookat_x = normalize(cross(vec3(0.0, 1.0, 0.0), lookat_dir));
+    const vec3 lookat_y = normalize(cross(lookat_dir, lookat_x));
+    
+    const mat4 lookat_matrix = {
+        vec4(lookat_x, 0.0),
+        vec4(lookat_y, 0.0),
+        vec4(lookat_z, 0.0),
+        vec4(vec3(0.0), 1.0)
+    };
+
+    position = lookat_matrix * position;
+    position.xyz += position_world.xyz;
 
     v_color = unpackUnorm4x8(instance.color_packed);
 
-    gl_Position = scene.projection * view_matrix * position;
+    gl_Position = scene.projection * scene.view * position;
 } 

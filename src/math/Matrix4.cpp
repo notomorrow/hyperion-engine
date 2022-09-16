@@ -18,19 +18,55 @@ Matrix4 Matrix4::Translation(const Vector3 &translation)
     return mat;
 }
 
+#if 0
+Matrix4 Matrix4::Rotation(const Matrix4 &t)
+{
+    Matrix4 mat;
+    Matrix4 transform = t;
+
+    const float scale_x = 1.0f / Vector3(transform.GetColumn(0)).Length();
+    const float scale_y = 1.0f / Vector3(transform.GetColumn(1)).Length();
+    const float scale_z = 1.0f / Vector3(transform.GetColumn(2)).Length();
+
+    mat[0] = {
+        transform[0][0] * scale_x,
+        transform[0][1] * scale_x,
+        transform[0][2] * scale_x,
+        0.0f
+    };
+
+    mat[1] = {
+        transform[1][0] * scale_y,
+        transform[1][1] * scale_y,
+        transform[1][2] * scale_y,
+        0.0f
+    };
+
+    mat[2] = {
+        transform[2][0] * scale_z,
+        transform[2][1] * scale_z,
+        transform[2][2] * scale_z,
+        0.0f
+    };
+
+    return mat;
+}
+
+#endif
+
 Matrix4 Matrix4::Rotation(const Quaternion &rotation)
 {
     Matrix4 mat;
 
     const float xx = rotation.x * rotation.x,
-                xy = rotation.x * rotation.y,
-                xz = rotation.x * rotation.z,
-                xw = rotation.x * rotation.w,
-                yy = rotation.y * rotation.y,
-                yz = rotation.y * rotation.z,
-                yw = rotation.y * rotation.w,
-                zz = rotation.z * rotation.z,
-                zw = rotation.z * rotation.w;
+        xy = rotation.x * rotation.y,
+        xz = rotation.x * rotation.z,
+        xw = rotation.x * rotation.w,
+        yy = rotation.y * rotation.y,
+        yz = rotation.y * rotation.z,
+        yw = rotation.y * rotation.w,
+        zz = rotation.z * rotation.z,
+        zw = rotation.z * rotation.w;
 
     mat[0] = {
         1.0f - 2.0f * (yy + zz),
@@ -104,27 +140,35 @@ Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float
     float ty = ((b + t) / (b - t));
     float tz = ((-n) / (f - n));
     
-    mat[0] = {x_orth, 0, 0, 0};
-    mat[1] = {0, y_orth, 0, 0};
-    mat[2] = {0, 0, z_orth, 0};
-    mat[3] = {tx, ty, tz, 1};
+    mat[0] = { x_orth, 0, 0, 0 };
+    mat[1] = { 0, y_orth, 0, 0 };
+    mat[2] = { 0, 0, z_orth, 0 };
+    mat[3] = { tx, ty, tz, 1 };
     
     mat.Transpose();
 
     return mat;
 }
 
-Matrix4 Matrix4::LookAt(const Vector3 &dir, const Vector3 &up)
+Matrix4 Matrix4::LookAt(const Vector3 &direction, const Vector3 &up)
 {
     auto mat = Identity();
 
-    const Vector3 z = Vector3(dir).Normalize();
-    const Vector3 x = Vector3(dir).Normalize().Cross(up).Normalize();
+    const Vector3 z = direction.Normalized();
+    const Vector3 x = direction.Cross(up).Normalize();
     const Vector3 y = x.Cross(z).Normalize();
 
     mat[0] = Vector4(x, 0.0f);
     mat[1] = Vector4(y, 0.0f);
     mat[2] = Vector4(z, 0.0f);
+
+    // const Vector3 z = direction.Normalized();
+    // const Vector3 x = up.Cross(direction).Normalized();
+    // const Vector3 y = direction.Cross(x).Normalized();
+
+    // mat[0] = Vector4(x, 0.0f);
+    // mat[1] = Vector4(y, 0.0f);
+    // mat[2] = Vector4(z, 0.0f);
 
     return mat;
 }
@@ -135,11 +179,21 @@ Matrix4 Matrix4::LookAt(const Vector3 &pos, const Vector3 &target, const Vector3
 }
 
 Matrix4::Matrix4()
-    : rows{
-          {1.0f, 0.0f, 0.0f, 0.0f},
-          {0.0f, 1.0f, 0.0f, 0.0f},
-          {0.0f, 0.0f, 1.0f, 0.0f},
-          {0.0f, 0.0f, 0.0f, 1.0f}
+    : rows {
+          { 1.0f, 0.0f, 0.0f, 0.0f },
+          { 0.0f, 1.0f, 0.0f, 0.0f },
+          { 0.0f, 0.0f, 1.0f, 0.0f },
+          { 0.0f, 0.0f, 0.0f, 1.0f }
+      }
+{
+}
+
+Matrix4::Matrix4(const Vector4 *rows)
+    : rows {
+          rows[0],
+          rows[1],
+          rows[2],
+          rows[3]
       }
 {
 }
@@ -373,6 +427,16 @@ Vector4 Matrix4::operator*(const Vector4 &vec) const
         vec.x * values[4]  + vec.y * values[5]  + vec.z * values[6]  + vec.w * values[7],
         vec.x * values[8]  + vec.y * values[9]  + vec.z * values[10] + vec.w * values[11],
         vec.x * values[12] + vec.y * values[13] + vec.z * values[14] + vec.w * values[15]
+    };
+}
+
+Vector4 Matrix4::GetColumn(UInt index) const
+{
+    return {
+        rows[0][index],
+        rows[1][index],
+        rows[2][index],
+        rows[3][index]
     };
 }
 

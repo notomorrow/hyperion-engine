@@ -3,9 +3,8 @@
 
 struct ParticleShaderData
 {
-    vec4 position;
-    vec4 direction;
-    vec4 velocity;
+    vec4 position; // alpha is scale
+    vec4 velocity; // alpha is final scale
     float lifetime;
     uint color_packed;
 };

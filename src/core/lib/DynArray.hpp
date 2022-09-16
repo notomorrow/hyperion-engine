@@ -926,7 +926,7 @@ void DynArray<T>::Clear()
     m_size = 0;
     m_start_offset = 0;
 
-    Refit();
+    //Refit();
 }
 
 // deduction guide

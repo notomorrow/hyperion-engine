@@ -105,30 +105,15 @@ vec3 mon2lin(vec3 x)
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
 }
 
-// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
-vec3 EnvBRDFApprox(vec3 specular_color, float roughness, float ndotv)
-{
-	const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
-	const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
-	vec4 r = roughness * c0 + c1;
-	float a004 = min(r.x * r.x, exp2(-9.28 * ndotv)) * r.x + r.y;
-	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
-	return specular_color * AB.x + AB.y;
-}
-
-// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
-vec4 EnvBRDFApprox(vec4 specular_color, float roughness, float ndotv)
-{
-	const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
-	const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
-	vec4 r = roughness * c0 + c1;
-	float a004 = min(r.x * r.x, exp2(-9.28 * ndotv)) * r.x + r.y;
-	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
-	return specular_color * AB.x + AB.y;
-}
-
 vec2 BRDFMap(float roughness, float NdotV)
 {
+    // Same as EnvBRDFApprox( 0.04, Roughness, NoV )
+    // const vec2 c0 = { -1.0, -0.0275 };
+    // const vec2 c1 = { 1.0, 0.0425 };
+    // vec2 r = roughness * c0 + c1;
+    // float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
+    // return vec2( -1.04, 1.04 ) * a004;
+
     const vec4 c0 = vec4( -1, -0.0275, -0.572, 0.022 );
     const vec4 c1 = vec4( 1, 0.0425, 1.04, -0.04 );
     vec4 r = roughness * c0 + c1;

@@ -154,6 +154,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
             renderer::AttachmentRef *depth_attachment;
 
+            // reuse the depth attachment.
             HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(depth_texture_index)->AddAttachmentRef(
                 engine->GetInstance()->GetDevice(),
                 renderer::StoreOperation::STORE,
@@ -164,6 +165,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
         } else {
+            // create new depth attachment.
             attachments.PushBack(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
