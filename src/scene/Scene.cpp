@@ -436,7 +436,7 @@ void Scene::EnqueueRenderUpdates()
 
         // DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
         
-        GetEngine()->shader_globals->scenes.Set(m_id.value - 1, shader_data);
+        GetEngine()->GetRenderData()->scenes.Set(m_id.value - 1, shader_data);
 
         HYPERION_RETURN_OK;
     });

@@ -244,8 +244,6 @@ void Engine::PrepareFinalPass()
 
         ++iteration;
     }
-    
-    //m_root_pipeline->SetFaceCullMode(FaceCullMode::FRONT);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
         m_render_list_container.AddFramebuffersToPipelines(this);

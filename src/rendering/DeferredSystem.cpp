@@ -1,10 +1,9 @@
-#include "RenderList.hpp"
-
-#include "../Engine.hpp"
+#include <rendering/DeferredSystem.hpp>
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 
-const FixedArray<TextureFormatDefault, num_gbuffer_textures> RenderListContainer::gbuffer_textures = {
+const FixedArray<TextureFormatDefault, num_gbuffer_textures> DeferredSystem::gbuffer_textures = {
     TEXTURE_FORMAT_DEFAULT_COLOR,   // color
     TEXTURE_FORMAT_DEFAULT_NORMALS, // normal
     TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT, // material
@@ -12,28 +11,28 @@ const FixedArray<TextureFormatDefault, num_gbuffer_textures> RenderListContainer
     TEXTURE_FORMAT_DEFAULT_DEPTH    // depth
 };
 
-RenderListContainer::RenderListContainer()
+DeferredSystem::DeferredSystem()
 {
     for (size_t i = 0; i < m_buckets.Size(); i++) {
         m_buckets[i].SetBucket(Bucket(i));
     }
 }
 
-void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
+void DeferredSystem::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
         bucket.AddFramebuffersToPipelines();
     }
 }
 
-void RenderListContainer::AddPendingRendererInstances(Engine *engine)
+void DeferredSystem::AddPendingRendererInstances(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
         bucket.AddPendingRendererInstances(engine);
     }
 }
 
-void RenderListContainer::Create(Engine *engine)
+void DeferredSystem::Create(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
         bucket.CreateRenderPass(engine);
@@ -41,22 +40,22 @@ void RenderListContainer::Create(Engine *engine)
     }
 }
 
-void RenderListContainer::Destroy(Engine *engine)
+void DeferredSystem::Destroy(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
         bucket.Destroy(engine);
     }
 }
 
-RenderListContainer::RenderListBucket::RenderListBucket()
+DeferredSystem::RendererInstanceHolder::RendererInstanceHolder()
 {
 }
 
-RenderListContainer::RenderListBucket::~RenderListBucket()
+DeferredSystem::RendererInstanceHolder::~RendererInstanceHolder()
 {
 }
 
-void RenderListContainer::RenderListBucket::AddRendererInstance(Handle<RendererInstance> &&renderer_instance)
+void DeferredSystem::RendererInstanceHolder::AddRendererInstance(Handle<RendererInstance> &&renderer_instance)
 {
     AddFramebuffersToPipeline(renderer_instance);
 
@@ -66,7 +65,7 @@ void RenderListContainer::RenderListBucket::AddRendererInstance(Handle<RendererI
     renderer_instances_changed.Set(true);
 }
 
-void RenderListContainer::RenderListBucket::AddPendingRendererInstances(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -91,21 +90,21 @@ void RenderListContainer::RenderListBucket::AddPendingRendererInstances(Engine *
     renderer_instances_changed.Set(false);
 }
 
-void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines()
+void DeferredSystem::RendererInstanceHolder::AddFramebuffersToPipelines()
 {
     for (auto &pipeline : renderer_instances) {
         AddFramebuffersToPipeline(pipeline);
     }
 }
 
-void RenderListContainer::RenderListBucket::AddFramebuffersToPipeline(Handle<RendererInstance> &pipeline)
+void DeferredSystem::RendererInstanceHolder::AddFramebuffersToPipeline(Handle<RendererInstance> &pipeline)
 {
     for (auto &framebuffer : framebuffers) {
         pipeline->AddFramebuffer(Handle<Framebuffer>(framebuffer));
     }
 }
 
-void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
 {
     AssertThrow(render_pass == nullptr);
 
@@ -120,7 +119,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         mode
     );
 
-    if (IsRenderableBucket()) { // add gbuffer attachments
+    if (BucketIsRenderable(bucket)) { // add gbuffer attachments
         AttachmentRef *attachment_ref;
 
         for (UInt i = 0; i < gbuffer_textures.Size() - 1 /* because depth already accounted for */; i++) {
@@ -149,7 +148,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         /* Add depth attachment */
         if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.
-            auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
+            auto &forward_fbo = engine->GetDeferredSystem()[BUCKET_OPAQUE].framebuffers[0];
             AssertThrow(forward_fbo != nullptr);
 
             renderer::AttachmentRef *depth_attachment;
@@ -193,7 +192,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
     engine->InitObject(render_pass);
 }
 
-void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::CreateFramebuffers(Engine *engine)
 {
     AssertThrow(framebuffers.Empty());
     
@@ -212,7 +211,7 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
     }
 }
 
-void RenderListContainer::RenderListBucket::Destroy(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 

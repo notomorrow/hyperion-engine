@@ -57,7 +57,7 @@ void DeferredPass::CreateShader(Engine *engine)
 
 void DeferredPass::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = Handle<RenderPass>(engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass());
+    m_render_pass = Handle<RenderPass>(engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass());
 }
 
 void DeferredPass::CreateDescriptors(Engine *engine)
@@ -96,7 +96,7 @@ void DeferredPass::Create(Engine *engine)
     CreateRenderPass(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i];
+        m_framebuffers[i] = engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i];
         
         auto command_buffer = UniquePtr<CommandBuffer>::Construct(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
@@ -240,14 +240,14 @@ void DeferredRenderer::Create(Engine *engine)
         engine->InitObject(m_mipmapped_results[i]);
     }
     
-    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
+    m_sampler = UniquePtr<Sampler>::Construct(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
     HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
 
-    m_depth_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_NEAREST);
+    m_depth_sampler = UniquePtr<Sampler>::Construct(Image::FilterMode::TEXTURE_FILTER_NEAREST);
     HYPERION_ASSERT_RESULT(m_depth_sampler->Create(engine->GetDevice()));
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
+        auto &opaque_fbo = engine->GetDeferredSystem()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
         
         auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
@@ -257,7 +257,7 @@ void DeferredRenderer::Create(Engine *engine)
         UInt attachment_index = 0;
 
         /* Gbuffer textures */
-        for (; attachment_index < RenderListContainer::gbuffer_textures.Size() - 1; attachment_index++) {
+        for (; attachment_index < DeferredSystem::gbuffer_textures.Size() - 1; attachment_index++) {
             descriptor_set_globals
                 ->GetDescriptor(DescriptorKey::GBUFFER_TEXTURES)
                 ->SetSubDescriptor({
@@ -285,14 +285,14 @@ void DeferredRenderer::Create(Engine *engine)
         descriptor_set_globals
             ->AddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
             ->SetSubDescriptor({
-                .sampler = m_depth_sampler.get()
+                .sampler = m_depth_sampler.Get()
             });
 
         /* Gbuffer sampler */
         descriptor_set_globals
             ->AddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
             ->SetSubDescriptor({
-                .sampler = m_sampler.get()
+                .sampler = m_sampler.Get()
             });
 
         descriptor_set_globals
@@ -322,9 +322,9 @@ void DeferredRenderer::Destroy(Engine *engine)
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         engine->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[frame_index]));
     }
-    
-    HYPERION_ASSERT_RESULT(m_depth_sampler->Destroy(engine->GetDevice()));
-    HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetDevice()));
+
+    engine->SafeRelease(std::move(m_sampler));
+    engine->SafeRelease(std::move(m_depth_sampler));
 
     m_indirect_pass.Destroy(engine);  // flushes render queue
     m_direct_pass.Destroy(engine);    // flushes render queue
@@ -373,7 +373,7 @@ void DeferredRenderer::Render(
         m_direct_pass.Record(engine, frame_index);
     }
 
-    auto &render_list = engine->GetRenderListContainer();
+    auto &render_list = engine->GetDeferredSystem();
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
     
     // begin opaque objs
@@ -447,27 +447,27 @@ void DeferredRenderer::Render(
 void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
         
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
 
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame);
         }
         
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame);
         }
 
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             renderer_instance->CollectDrawCalls(engine, frame);
         }
     }
@@ -477,19 +477,19 @@ void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             renderer_instance->PerformRenderingIndirect(engine, frame);
         }
         
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             renderer_instance->PerformRenderingIndirect(engine, frame);
         }
     } else {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_SKYBOX).GetRendererInstances()) {
             renderer_instance->PerformRendering(engine, frame);
         }
         
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
             renderer_instance->PerformRendering(engine, frame);
         }
     }
@@ -498,11 +498,11 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             renderer_instance->PerformRenderingIndirect(engine, frame);
         }
     } else {
-        for (auto &renderer_instance : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
+        for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             renderer_instance->PerformRendering(engine, frame);
         }
     }

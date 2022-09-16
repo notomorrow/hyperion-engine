@@ -190,7 +190,7 @@ void Entity::EnqueueRenderUpdates()
         // update m_draw_proxy on render thread.
         m_draw_proxy = draw_proxy;
 
-        GetEngine()->shader_globals->objects.Set(
+        GetEngine()->GetRenderData()->objects.Set(
             m_id.value - 1,
             ObjectShaderData {
                 .model_matrix = transform_matrix,

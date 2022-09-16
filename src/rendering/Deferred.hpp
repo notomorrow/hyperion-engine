@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_DEFERRED_H
-#define HYPERION_V2_DEFERRED_H
+#ifndef HYPERION_V2_DEFERRED_HPP
+#define HYPERION_V2_DEFERRED_HPP
 
 #include "FullScreenPass.hpp"
 #include "PostFX.hpp"
@@ -100,8 +100,8 @@ private:
     DepthPyramidRenderer m_dpr;
 
     FixedArray<Handle<Texture>, max_frames_in_flight> m_mipmapped_results;
-    std::unique_ptr<Sampler> m_sampler;
-    std::unique_ptr<Sampler> m_depth_sampler;
+    UniquePtr<Sampler> m_sampler;
+    UniquePtr<Sampler> m_depth_sampler;
     
     CullData m_cull_data;
 };
