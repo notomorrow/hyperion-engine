@@ -11,6 +11,12 @@
 
 namespace hyperion {
 
+namespace v2 {
+
+class Engine;
+
+} // namespace v2
+
 struct IDBase {
     using ValueType = UInt;
     

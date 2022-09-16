@@ -80,7 +80,7 @@ void EnvProbe::Update(Engine *engine)
             texture_index = it->second.Get();
         }
 
-        GetEngine()->shader_globals->env_probes.Set(
+        GetEngine()->GetRenderData()->env_probes.Set(
             m_id.value - 1,
             EnvProbeShaderData {
                 .aabb_max = Vector4(m_draw_proxy.aabb.max, 1.0f),

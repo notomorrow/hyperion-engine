@@ -200,7 +200,7 @@ void Material::EnqueueRenderUpdates()
             }
         }
 
-        GetEngine()->GetShaderData()->materials.Set(m_id.value - 1, shader_data);
+        GetEngine()->GetRenderData()->materials.Set(m_id.value - 1, shader_data);
 
         HYPERION_RETURN_OK;
     });

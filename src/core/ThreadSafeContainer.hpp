@@ -2,9 +2,9 @@
 #define HYPERION_V2_LIB_THREAD_SAFE_CONTAINER_HPP
 
 #include <core/Handle.hpp>
+#include <core/Thread.hpp>
 #include <core/lib/DynArray.hpp>
 
-#include <Thread.hpp>
 #include <Threads.hpp>
 
 #include <Types.hpp>
@@ -13,6 +13,8 @@
 #include <atomic>
 
 namespace hyperion {
+
+using namespace v2;
 
 template <class T>
 class ThreadSafeContainer
@@ -91,6 +93,7 @@ public:
     /*! \brief Adds and removes all pending items to be added or removed.
         Only call from the owner thread.
         @param engine A pointer to the Engine object. Used to initialize any newly objects. */
+    template <class Engine>
     void UpdateItems(Engine *engine)
     {
         Threads::AssertOnThread(m_owner_thread);

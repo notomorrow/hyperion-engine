@@ -138,7 +138,7 @@ void main()
         
         float NdotV = max(0.0001, dot(N, V));
 
-        const vec3 diffuse_color = albedo_linear;// * (1.0 - metalness);
+        const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
         // const float material_reflectance = 0.5;
         // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
@@ -147,20 +147,23 @@ void main()
         // Index of refraction for common dielectrics. Corresponds to f0 4%
         const float IOR = 1.5;
 
-        // Reflectance of the surface when looking straight at it along the negative normal
-        // const vec3 reflectance = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        F0 = mix(F0, vec3(0.04), metalness);
+        const float material_reflectance = 0.5;
+
+        // dialetric f0
+        const float reflectance = 0.16 * material_reflectance * material_reflectance;
+        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        // vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        // F0 = mix(F0, vec3(0.04), metalness);
         // vec3 F0 = albedo_linear * metalness + (reflectance * (1.0 - metalness));
     
         // F0 = mix(F0, albedo_linear, metalness);
 
-        //const vec3 F0 = albedo_linear * (1.0 - metalness);//albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
         // const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         F = SchlickFresnelRoughness(F0, roughness, NdotV);
         
         const vec2 AB = BRDFMap(roughness, NdotV);
         const vec3 dfg = F * AB.x + AB.y;
+        const vec3 E = mix(dfg.xxx, dfg.yyy, F0);
         
         const vec3 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
         const float perceptual_roughness = sqrt(roughness);
@@ -245,7 +248,7 @@ void main()
         // vec3 specular_ao = vec3(SpecularAO_Cones(bent_normal, ao, perceptual_roughness, R));
         specular_ao *= energy_compensation;
 
-        vec3 Fr = dfg * ibl * specular_ao;
+        vec3 Fr = E * ibl * specular_ao;
 
         vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
         Fd *= multibounce;
@@ -255,7 +258,7 @@ void main()
         Fd *= exposure * IBL_INTENSITY;
 
         reflections.rgb *= specular_ao;
-        Fr = (Fr * (1.0 - reflections.a)) + (dfg * reflections.rgb);
+        Fr = (Fr * (1.0 - reflections.a)) + (E * reflections.rgb);
 
         result = kD * Fd + Fr;
 

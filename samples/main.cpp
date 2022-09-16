@@ -126,8 +126,8 @@ public:
         material_test_obj = std::move(loaded_assets[3]);
 
         for (int i = 0; i < 10; i++) {
-            auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
-            sphere->Scale(4.0f);
+            auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj"); //material_sphere/material_sphere.obj");
+            sphere->Scale(1.0f);
             sphere->SetName("sphere");
             // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
@@ -700,7 +700,7 @@ int main()
     {
         auto translucent_renderer_instance = std::make_unique<RendererInstance>(
             Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)),
-            Handle<v2::RenderPass>(engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass()),
+            Handle<v2::RenderPass>(engine->GetDeferredSystem().Get(BUCKET_TRANSLUCENT).GetRenderPass()),
             RenderableAttributeSet(
                 MeshAttributes {
                     .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes

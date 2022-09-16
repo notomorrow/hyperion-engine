@@ -55,7 +55,7 @@ void Skeleton::EnqueueRenderUpdates() const
     const auto num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
-        SkeletonShaderData &shader_data = GetEngine()->shader_globals->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
+        SkeletonShaderData &shader_data = GetEngine()->GetRenderData()->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
 
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();
 
@@ -73,7 +73,7 @@ void Skeleton::EnqueueRenderUpdates() const
             }
         }
 
-        GetEngine()->shader_globals->skeletons.Set(m_id.value - 1, shader_data);
+        GetEngine()->GetRenderData()->skeletons.Set(m_id.value - 1, shader_data);
     }
     
     m_shader_data_state = ShaderDataState::CLEAN;
