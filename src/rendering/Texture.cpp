@@ -56,7 +56,7 @@ void Texture::Init(Engine *engine)
         HYPERION_BUBBLE_ERRORS(m_sampler.Create(engine->GetInstance()->GetDevice()));
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
-        engine->shader_globals->textures.AddResource(this);
+        engine->GetRenderData()->textures.AddResource(this);
 #endif
         
         SetReady(true);
@@ -71,7 +71,7 @@ void Texture::Init(Engine *engine)
 
         engine->GetRenderScheduler().Enqueue([this, engine](...) {
 #if HYP_FEATURES_BINDLESS_TEXTURES
-            engine->shader_globals->textures.RemoveResource(m_id);
+            engine->GetRenderData()->textures.RemoveResource(m_id);
 #endif
 
             HYPERION_BUBBLE_ERRORS(m_sampler.Destroy(engine->GetInstance()->GetDevice()));

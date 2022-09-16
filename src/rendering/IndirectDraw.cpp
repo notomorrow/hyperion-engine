@@ -332,14 +332,14 @@ void IndirectRenderer::Create(Engine *engine)
             // global object data
             m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
                 ->SetSubDescriptor({
-                    .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get(),
+                    .buffer = engine->GetRenderData()->objects.GetBuffers()[frame_index].get(),
                     .range = static_cast<UInt>(sizeof(ObjectShaderData))
                 });
 
             // global scene data
             m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
                 ->SetSubDescriptor({
-                    .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
+                    .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
                     .range = static_cast<UInt>(sizeof(SceneShaderData))
                 });
 

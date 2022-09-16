@@ -47,9 +47,8 @@ private:
     void CreateDescriptors(Engine *engine);
     void CreateComputePipelines(Engine *engine);
     
-    struct SSRImageOutput
-    {
-        std::unique_ptr<Image> image;
+    struct SSRImageOutput {
+        std::unique_ptr<Image>     image;
         std::unique_ptr<ImageView> image_view;
 
         void Create(Device *device)

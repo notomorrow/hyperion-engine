@@ -49,6 +49,15 @@ static bool BucketFrustumCullingEnabled(Bucket bucket)
         || bucket == BUCKET_PARTICLE;
 }
 
+HYP_FORCE_INLINE
+static bool BucketIsRenderable(Bucket bucket)
+{
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT
+        || bucket == BUCKET_SKYBOX
+        || bucket == BUCKET_PARTICLE;
+}
+
 } // namespace hyperion::v2
 
 #endif

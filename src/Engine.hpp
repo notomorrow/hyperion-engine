@@ -4,8 +4,8 @@
 #include <asset/Assets.hpp>
 
 #include <rendering/PostFX.hpp>
-#include <rendering/RenderList.hpp>
 #include <rendering/Deferred.hpp>
+#include <rendering/DeferredSystem.hpp>
 #include <rendering/Shadows.hpp>
 #include <rendering/Resources.hpp>
 #include <rendering/ShaderManager.hpp>
@@ -140,29 +140,28 @@ public:
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
     
-    Instance *GetInstance() const                                  { return m_instance.get(); }
-    Device   *GetDevice() const                                    { return m_instance ? m_instance->GetDevice() : nullptr; }
+    Instance *GetInstance() const { return m_instance.get(); }
+    Device *GetDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
 
-    DeferredRenderer &GetDeferredRenderer()                        { return m_deferred_renderer; }
-    const DeferredRenderer &GetDeferredRenderer() const            { return m_deferred_renderer; }
+    DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
+    const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
 
-    RenderListContainer &GetRenderListContainer()                  { return m_render_list_container; }
-    const RenderListContainer &GetRenderListContainer() const      { return m_render_list_container; }
+    DeferredSystem &GetDeferredSystem() { return m_render_list_container; }
+    const DeferredSystem &GetDeferredSystem() const { return m_render_list_container; }
 
-    auto &GetRenderScheduler()                                     { return render_scheduler; }
-    const auto &GetRenderScheduler() const                         { return render_scheduler; }
+    auto &GetRenderScheduler() { return render_scheduler; }
+    const auto &GetRenderScheduler() const { return render_scheduler; }
 
-    auto &GetShaderData()                                          { return shader_globals; }
-    const auto &GetShaderData() const                              { return shader_globals; }
+    ShaderGlobals *GetRenderData() const { return shader_globals; }
     
-    PlaceholderData &GetPlaceholderData()                          { return m_placeholder_data; }
-    const PlaceholderData &GetPlaceholderData() const              { return m_placeholder_data; }
+    PlaceholderData &GetPlaceholderData() { return m_placeholder_data; }
+    const PlaceholderData &GetPlaceholderData() const { return m_placeholder_data; }
     
-    ComponentRegistry<Entity> &GetComponentRegistry()              { return m_component_registry; }
-    const ComponentRegistry<Entity> &GetComponentRegistry() const  { return m_component_registry; }
+    ComponentRegistry<Entity> &GetComponentRegistry() { return m_component_registry; }
+    const ComponentRegistry<Entity> &GetComponentRegistry() const { return m_component_registry; }
     
-    World &GetWorld()                                              { return m_world; }
-    const World &GetWorld() const                                  { return m_world; }
+    World &GetWorld() { return m_world; }
+    const World &GetWorld() const { return m_world; }
 
     Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -325,7 +324,7 @@ private:
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 16> m_texture_format_defaults;
 
     DeferredRenderer m_deferred_renderer;
-    RenderListContainer m_render_list_container;
+    DeferredSystem m_render_list_container;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;

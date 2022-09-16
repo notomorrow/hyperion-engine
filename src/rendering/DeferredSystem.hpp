@@ -1,11 +1,12 @@
-#ifndef HYPERION_V2_RENDER_LIST_H
-#define HYPERION_V2_RENDER_LIST_H
+#ifndef HYPERION_V2_DEFERRED_SYSTEM_HPP
+#define HYPERION_V2_DEFERRED_SYSTEM_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
 #include <core/lib/AtomicVar.hpp>
 #include <core/Handle.hpp>
 #include <rendering/Renderer.hpp>
+#include <rendering/RenderBucket.hpp>
 #include <rendering/DefaultFormats.hpp>
 #include <scene/Scene.hpp>
 #include <Types.hpp>
@@ -17,14 +18,14 @@ namespace hyperion::v2 {
 
 class Engine;
 
-class RenderListContainer
+class DeferredSystem
 {
 public:
     static const FixedArray<TextureFormatDefault, num_gbuffer_textures> gbuffer_textures;
     
-    class RenderListBucket
+    class RendererInstanceHolder
     {
-        friend class RenderListContainer;
+        friend class DeferredSystem;
 
         Bucket                                bucket{BUCKET_OPAQUE};
         Handle<RenderPass>                    render_pass;
@@ -36,8 +37,8 @@ public:
         std::mutex                            renderer_instances_mutex;
 
     public:
-        RenderListBucket();
-        ~RenderListBucket();
+        RendererInstanceHolder();
+        ~RendererInstanceHolder();
 
         Bucket GetBucket() const { return bucket; }
         void SetBucket(Bucket bucket) { this->bucket = bucket; }
@@ -51,14 +52,6 @@ public:
         DynArray<Handle<RendererInstance>> &GetRendererInstances() { return renderer_instances; }
         const DynArray<Handle<RendererInstance>> &GetRendererInstances() const { return renderer_instances; }
 
-        bool IsRenderableBucket() const
-        {
-            return bucket == Bucket::BUCKET_OPAQUE
-                || bucket == Bucket::BUCKET_TRANSLUCENT
-                || bucket == Bucket::BUCKET_SKYBOX
-                || bucket == Bucket::BUCKET_PARTICLE;
-        }
-
         void AddRendererInstance(Handle<RendererInstance> &&renderer_instance);
         void AddPendingRendererInstances(Engine *engine);
         void AddFramebuffersToPipelines();
@@ -68,10 +61,10 @@ public:
         void Destroy(Engine *engine);
     };
 
-    RenderListContainer();
-    RenderListContainer(const RenderListContainer &other) = delete;
-    RenderListContainer &operator=(const RenderListContainer &other) = delete;
-    ~RenderListContainer() = default;
+    DeferredSystem();
+    DeferredSystem(const DeferredSystem &other) = delete;
+    DeferredSystem &operator=(const DeferredSystem &other) = delete;
+    ~DeferredSystem() = default;
 
     auto &GetBuckets()
         { return m_buckets; }
@@ -79,16 +72,16 @@ public:
     const auto &GetBuckets() const
         { return m_buckets; }
 
-    RenderListBucket &Get(Bucket bucket)
-        { return m_buckets[int(bucket)]; }
+    RendererInstanceHolder &Get(Bucket bucket)
+        { return m_buckets[static_cast<UInt>(bucket)]; }
 
-    const RenderListBucket &Get(Bucket bucket) const
-        { return m_buckets[int(bucket)]; }
+    const RendererInstanceHolder &Get(Bucket bucket) const
+        { return m_buckets[static_cast<UInt>(bucket)]; }
 
-    RenderListBucket &operator[](Bucket bucket)
+    RendererInstanceHolder &operator[](Bucket bucket)
         { return Get(bucket); }
 
-    const RenderListBucket &operator[](Bucket bucket) const
+    const RendererInstanceHolder &operator[](Bucket bucket) const
         { return Get(bucket); }
 
     void Create(Engine *engine);
@@ -98,7 +91,7 @@ public:
     void AddFramebuffersToPipelines(Engine *engine);
 
 private:
-    FixedArray<RenderListBucket, Bucket::BUCKET_MAX> m_buckets;
+    FixedArray<RendererInstanceHolder, Bucket::BUCKET_MAX> m_buckets;
 };
 
 } // namespace hyperion::v2

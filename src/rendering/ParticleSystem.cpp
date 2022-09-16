@@ -195,7 +195,7 @@ void ParticleSpawner::CreateDescriptorSets()
         m_descriptor_sets[frame_index]
             .AddDescriptor<renderer::DynamicStorageBufferDescriptor>(4)
             ->SetSubDescriptor({
-                .buffer = GetEngine()->shader_globals->scenes.GetBuffers()[frame_index].get(),
+                .buffer = GetEngine()->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
                 .range = static_cast<UInt32>(sizeof(SceneShaderData))
             });
 
@@ -237,7 +237,7 @@ void ParticleSpawner::CreateRendererInstance()
     // we don't want any other objects to use our RendererInstance then!
     m_renderer_instance = GetEngine()->CreateHandle<RendererInstance>(
         Handle<Shader>(m_shader),
-        Handle<RenderPass>(GetEngine()->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass()),
+        Handle<RenderPass>(GetEngine()->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass()),
         RenderableAttributeSet(
             MeshAttributes {
                 .vertex_attributes = renderer::static_mesh_vertex_attributes,
@@ -251,7 +251,7 @@ void ParticleSpawner::CreateRendererInstance()
         )
     );
 
-    for (auto &framebuffer : GetEngine()->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()) {
+    for (auto &framebuffer : GetEngine()->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()) {
         m_renderer_instance->AddFramebuffer(Handle<Framebuffer>(framebuffer));
     }
 

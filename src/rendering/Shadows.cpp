@@ -496,7 +496,7 @@ void ShadowRenderer::OnRender(Engine *engine, Frame *frame)
     const auto scene_index = m_shadow_pass.GetScene()->GetID().value - 1;
 
     if (const auto &camera = m_shadow_pass.GetScene()->GetCamera()) {
-        engine->shader_globals->shadow_maps.Set(
+        engine->GetRenderData()->shadow_maps.Set(
             m_shadow_pass.GetShadowMapIndex(),
             {
                 .projection = camera->GetDrawProxy().projection,
@@ -505,7 +505,7 @@ void ShadowRenderer::OnRender(Engine *engine, Frame *frame)
             }
         );
     } else {
-        engine->shader_globals->shadow_maps.Set(
+        engine->GetRenderData()->shadow_maps.Set(
             m_shadow_pass.GetShadowMapIndex(),
             {
                 .projection = Matrix4::Identity(),
