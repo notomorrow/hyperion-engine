@@ -73,6 +73,7 @@ struct DrawProxy<STUB_CLASS(Camera)>
     Matrix4 projection;
     Vector3 position;
     Vector3 direction;
+    Vector3 up;
     Extent2D dimensions;
     Float clip_near;
     Float clip_far;

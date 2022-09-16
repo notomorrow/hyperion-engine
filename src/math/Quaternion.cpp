@@ -16,46 +16,97 @@ Quaternion::Quaternion(float x, float y, float z, float w)
 {
 }
 
-Quaternion::Quaternion(const Matrix4 &mat)
+Quaternion::Quaternion(const Matrix4 &m)
 {
-    const float xx = mat(0, 0),
-        xy = mat(1, 0),
-        xz = mat(2, 0),
+    Vector3 m0 = Vector3(m[0]),//m.GetColumn(0)),
+        m1 = Vector3(m[1]),//.GetColumn(1)),
+        m2 = Vector3(m[2]);//.GetColumn(2));
 
-        yx = mat(0, 1),
-        yy = mat(1, 1),
-        yz = mat(2, 1),
+    float length_sqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
 
-        zx = mat(0, 2),
-        zy = mat(1, 2),
-        zz = mat(2, 2);
-
-    float amt = xx + yy + zz;
-    if (amt >= 0.0f) {
-        float s = sqrt(amt + 1);
-        w = 0.5f * s;
-        x = (zy - yz) * (0.5f / s);
-        y = (xz - zx) * (0.5f / s);
-        z = (yx - xy) * (0.5f / s);
-    } else if ((xx > yy) && (xx > zz)) {
-        float s = sqrt(1 + xx - yy - zz);
-        x = s * 0.5f;
-        y = (yx + xy) * (0.5f / s);
-        z = (xz + zx) * (0.5f / s);
-        w = (zy - yz) * (0.5f / s);
-    } else if (yy > zz) {
-        float s = sqrt(1 + yy - xx - zz);
-        y = s * 0.5f;
-        x = (yx + xy) * (0.5f / s);
-        z = (zy + yz) * (0.5f / s);
-        w = (xz - zx) * (0.5f / s);
-    } else {
-        float s = sqrt(1 + zz - xx - yy);
-        z = s * 0.5f;
-        x = (xz + zx) * (0.5f / s);
-        y = (zy + yz) * (0.5f / s);
-        w = (yx - xy) * (0.5f / s);
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[0] *= length_sqr;
+        m1[0] *= length_sqr;
+        m2[0] *= length_sqr;
     }
+
+    length_sqr = m0[1] * m0[1] + m1[1] * m1[1] + m2[1] * m2[1];
+
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[1] *= length_sqr;
+        m1[1] *= length_sqr;
+        m2[1] *= length_sqr;
+    }
+
+    length_sqr = m0[2] * m0[2] + m1[2] * m1[2] + m2[2] * m2[2];
+
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[2] *= length_sqr;
+        m1[2] *= length_sqr;
+        m2[2] *= length_sqr;
+    }
+
+    const float tr = m0[0] + m1[1] + m2[2];
+
+    if (tr > 0.0f) { 
+        float S = sqrt(tr + 1.0f) * 2.0f; // S=4*qw 
+        x = (m2[1] - m1[2]) / S;
+        y = (m0[2] - m2[0]) / S; 
+        z = (m1[0] - m0[1]) / S; 
+        w = 0.25f * S;
+    } else if ((m0[0] > m1[1]) && (m0[0] > m2[2])) { 
+        float S = sqrt(1.0f + m0[0] - m1[1] - m2[2]) * 2.0f; // S=4*qx 
+        x = 0.25f * S;
+        y = (m0[1] + m1[0]) / S; 
+        z = (m0[2] + m2[0]) / S; 
+        w = (m2[1] - m1[2]) / S;
+    } else if (m1[1] > m2[2]) { 
+        float S = sqrt(1.0f + m1[1] - m0[0] - m2[2]) * 2.0f; // S=4*qy
+        x = (m0[1] + m1[0]) / S; 
+        y = 0.25f * S;
+        z = (m1[2] + m2[1]) / S; 
+        w = (m0[2] - m2[0]) / S;
+    } else { 
+        float S = sqrt(1.0f + m2[2] - m0[0] - m1[1]) * 2.0f; // S=4*qz
+        x = (m0[2] + m2[0]) / S;
+        y = (m1[2] + m2[1]) / S;
+        z = 0.25f * S;
+        w = (m1[0] - m0[1]) / S;
+    }
+
+    /*if (tr >= 0.0) {
+        s = sqrt(tr + mat[W][W]);
+        qu.w = s*0.5;
+        s = 0.5 / s;
+        qu.x = (mat[Z][Y] - mat[Y][Z]) * s;
+        qu.y = (mat[X][Z] - mat[Z][X]) * s;
+        qu.z = (mat[Y][X] - mat[X][Y]) * s;
+    } else {
+        int h = X;
+        if (mat[Y][Y] > mat[X][X]) h = Y;
+        if (mat[Z][Z] > mat[h][h]) h = Z;
+        switch (h) {
+    #define caseMacro(i,j,k,I,J,K) \
+        case I:\
+            s = sqrt( (mat[I][I] - (mat[J][J]+mat[K][K])) + mat[W][W] );\
+            qu.i = s*0.5;\
+            s = 0.5 / s;\
+            qu.j = (mat[I][J] + mat[J][I]) * s;\
+            qu.k = (mat[K][I] + mat[I][K]) * s;\
+            qu.w = (mat[K][J] - mat[J][K]) * s;\
+            break
+        caseMacro(x,y,z,X,Y,Z);
+        caseMacro(y,z,x,Y,Z,X);
+        caseMacro(z,x,y,Z,X,Y);
+    #undef caseMacro
+        }
+    }
+    if (mat[W][W] != 1.0) {
+    s = 1.0/sqrt(mat[W][W]);
+    qu.w *= s; qu.x *= s; qu.y *= s; qu.z *= s; }*/
 }
 
 Quaternion::Quaternion(const Vector3 &euler)
@@ -82,7 +133,7 @@ Quaternion::Quaternion(const Vector3 &axis, float radians)
     }
 
     if (tmp != Vector3::Zero()) {
-        float half_angle = radians / 2;
+        float half_angle = radians * 0.5f;
         float sin_half_angle = sin(half_angle);
 
         x = sin_half_angle * tmp.x;
@@ -255,6 +306,27 @@ float Quaternion::Yaw() const
 Quaternion Quaternion::Identity()
 {
     return Quaternion(0.0, 0.0, 0.0, 1.0);
+}
+
+Quaternion Quaternion::LookAt(const Vector3 &direction, const Vector3 &up)
+{
+    const Vector3 z = direction.Normalized();
+    const Vector3 x = up.Cross(direction).Normalized();
+    const Vector3 y = direction.Cross(x).Normalized();
+
+    Vector4 rows[] = {
+        Vector4(x, 0.0f),
+        Vector4(y, 0.0f),
+        Vector4(z, 0.0f),
+        Vector4::UnitW()
+    };
+
+    return Quaternion(Matrix4(rows));
+}
+
+Quaternion Quaternion::AxisAngles(const Vector3 &axis, float radians)
+{
+    return Quaternion(axis, radians);
 }
 
 std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output

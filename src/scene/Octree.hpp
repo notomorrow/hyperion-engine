@@ -36,6 +36,9 @@ class Octree
     };
 
     static constexpr float growth_factor = 1.5f;
+    // the length value at which to stop recusively dividing
+    // for a small enough object
+    static constexpr float min_aabb_size = 1.0f; 
     static const BoundingBox default_bounds;
 
     Octree(Octree *parent, const BoundingBox &aabb, UInt8 index);
@@ -103,6 +106,10 @@ public:
     );
 
     Octree(const BoundingBox &aabb = default_bounds);
+    Octree(const Octree &other) = delete;
+    Octree &operator=(const Octree &other) = delete;
+    Octree(Octree &&other) noexcept = delete;
+    Octree &operator=(Octree &&other) noexcept = delete;
     ~Octree();
 
     const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
@@ -145,8 +152,8 @@ private:
         );
     }
 
-    bool IsRoot() const   { return m_parent == nullptr; }
-    bool Empty() const    { return m_nodes.empty(); }
+    bool IsRoot() const { return m_parent == nullptr; }
+    bool Empty() const { return m_nodes.empty(); }
     Root *GetRoot() const { return m_root; }
     
     void SetParent(Octree *parent);
@@ -162,7 +169,7 @@ private:
     Result UpdateInternal(Engine *engine, Entity *entity);
     Result RemoveInternal(Engine *engine, Entity *entity);
     Result RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb);
-    void UpdateVisibilityState(Scene *scene);
+    void UpdateVisibilityState(Scene *scene, UInt8 cursor);
 
     /* Called from entity - remove the pointer */
     void OnEntityRemoved(Engine *engine, Entity *entity);

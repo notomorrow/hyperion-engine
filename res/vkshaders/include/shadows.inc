@@ -73,7 +73,7 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 float GetShadowVariance(uint index, vec3 pos, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = textureLod(shadow_maps[index], coord.xy, 1.0);
+    const vec4 shadow_sample = Texture2D(shadow_maps[index], coord.xy);
     const float moment = shadow_sample.r;
 
     if (coord.z <= moment) {

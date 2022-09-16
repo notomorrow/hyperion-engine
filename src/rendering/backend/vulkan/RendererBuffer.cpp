@@ -441,7 +441,7 @@ VkBufferCreateInfo GPUBuffer::GetBufferCreateInfo(Device *device) const
 
 VmaAllocationCreateInfo GPUBuffer::GetAllocationCreateInfo(Device *device) const
 {
-    VmaAllocationCreateInfo alloc_info{};
+    VmaAllocationCreateInfo alloc_info { };
     alloc_info.flags = vma_allocation_create_flags;
     alloc_info.usage = vma_usage;
     alloc_info.pUserData = reinterpret_cast<void *>(index);
@@ -905,8 +905,6 @@ ScratchBuffer::ScratchBuffer()
 {
 }
 
-
-
 GPUImageMemory::GPUImageMemory()
     : GPUMemory(),
       image(nullptr)
@@ -1093,8 +1091,8 @@ Result GPUImageMemory::Create(Device *device, SizeType size, VkImageCreateInfo *
 
     GPUMemory::Create();
 
-    VmaAllocationCreateInfo alloc_info{};
-    alloc_info.usage     = VMA_MEMORY_USAGE_GPU_ONLY;
+    VmaAllocationCreateInfo alloc_info { };
+    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.pUserData = reinterpret_cast<void *>(uintptr_t(index));
 
     HYPERION_VK_CHECK_MSG(

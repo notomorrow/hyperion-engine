@@ -148,6 +148,9 @@ private:
     BinarySemaphore m_enqueued_entities_sp;
     std::atomic_bool m_enqueued_entities_flag { false };
 
+    // cache so we don't allocate every frame
+    DynArray<DynArray<EntityDrawProxy>> m_divided_draw_proxies;
+
     // cycle through command buffers, so you can call Render()
     // multiple times in a single pass, only running into issues if you
     // try to call it more than num_async_rendering_command_buffers

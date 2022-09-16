@@ -36,7 +36,7 @@ void main(void)
     vec4 reflection_sample = vec4(0.0);
 
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth).xyz;
+    vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth).xyz;
     vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
     vec3 V = normalize(scene.camera_position.xyz - P);
     float roughness = 0.0;

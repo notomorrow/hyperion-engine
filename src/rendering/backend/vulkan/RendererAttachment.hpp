@@ -144,9 +144,8 @@ public:
     Result RemoveSelf(Device *device);
 
 private:
-    struct RefCount {
-        //UInt count = 0;
-
+    struct RefCount
+    {
         std::unordered_set<AttachmentRefInstance> m_holder_instances;
     };
 
@@ -169,7 +168,8 @@ private:
     bool m_is_created = false;
 };
 
-class Attachment {
+class Attachment
+{
     friend class AttachmentRef;
 
 public:

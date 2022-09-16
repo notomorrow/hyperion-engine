@@ -126,14 +126,18 @@ public:
         material_test_obj = std::move(loaded_assets[3]);
 
         for (int i = 0; i < 10; i++) {
-            auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
-            sphere->Scale(1.0f);
+            auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
+            sphere->Scale(4.0f);
             sphere->SetName("sphere");
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.1f, 0.8f, 0.35f, 1.0f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f + 0.01f, 0.05f, 0.95f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
-            sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 7.0f, -5.0f));
+            sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
             m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
 
@@ -176,7 +180,7 @@ public:
 #endif
         
         if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-            grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            // grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
             grass.Scale(1.0f);
             grass.Translate({0, 1, 0});
@@ -244,7 +248,7 @@ public:
             .texture = engine->CreateHandle<Texture>(
                 engine->assets.Load<Texture>("textures/smoke.png").release()
             ),
-            .max_particles = 4096u
+            .max_particles = 1024u
         });
         engine->InitObject(particle_spawner);
 
@@ -383,7 +387,7 @@ public:
 
         HandleCameraMovement();
 
-        #if 1 // bad performance on large meshes. need bvh
+        #if 0 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
             const auto &mouse_position = GetInputManager()->GetMousePosition();
@@ -429,6 +433,7 @@ public:
 
                     if (auto sphere = m_scene->GetRoot().Select("sphere")) {
                         sphere.SetLocalTranslation(mesh_hit.hitpoint);
+                        sphere.SetLocalRotation(Quaternion::LookAt((m_scene->GetCamera()->GetTranslation() - mesh_hit.hitpoint).Normalized(), Vector3::UnitY()));
                     }
                 }
             }

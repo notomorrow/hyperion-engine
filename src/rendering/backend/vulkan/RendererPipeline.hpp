@@ -122,6 +122,7 @@ public:
                 Float32 randomness;
                 Float32 avg_lifespan;
                 UInt32 max_particles;
+                Float32 max_particles_sqrt;
                 Float32 delta_time;
                 UInt32 global_counter;
             } particle_spawner_data;

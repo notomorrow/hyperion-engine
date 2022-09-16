@@ -123,7 +123,7 @@ Vector4 Camera::TransformNDCToWorld(const Vector3 &ndc) const
     Vector4 clip(ndc.x, ndc.y, -1.0f, 1.0f);
 
     Vector4 eye = m_proj_mat.Inverted() * clip;
-    eye         = Vector4(eye.x, eye.y, -1.0f, 0.0f);
+    eye = Vector4(eye.x, eye.y, -1.0f, 0.0f);
 
     return m_view_mat.Inverted() * eye;
 }
@@ -157,14 +157,15 @@ void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
 
     // enqueue render update to update the draw_proxy proxy object
     EnqueueDrawProxyUpdate(engine, CameraDrawProxy {
-        .view       = m_view_mat,
+        .view = m_view_mat,
         .projection = m_proj_mat,
-        .position   = m_translation,
-        .direction  = m_direction,
-        .dimensions = { static_cast<UInt>(m_width), static_cast<UInt>(m_height) },
-        .clip_near  = m_near,
-        .clip_far   = m_far,
-        .fov        = m_fov
+        .position = m_translation,
+        .direction = m_direction,
+        .up = m_up,
+        .dimensions = Extent2D { static_cast<UInt>(m_width), static_cast<UInt>(m_height) },
+        .clip_near = m_near,
+        .clip_far = m_far,
+        .fov = m_fov
     });
 }
 

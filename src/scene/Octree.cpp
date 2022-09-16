@@ -96,7 +96,7 @@ bool Octree::EmptyDeep(int depth, UInt8 octant_mask) const
 
 void Octree::InitOctants()
 {
-    const Vector3 divided_aabb_dimensions = m_aabb.GetExtent() / 2;
+    const Vector3 divided_aabb_dimensions = m_aabb.GetExtent() / 2.0f;
 
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < 2; y++) {
@@ -118,7 +118,7 @@ void Octree::Divide(Engine *engine)
 {
     AssertThrow(!m_is_divided);
 
-    for (size_t i = 0; i < m_octants.size(); i++) {
+    for (SizeType i = 0; i < m_octants.size(); i++) {
         auto &octant = m_octants[i];
 
         AssertThrow(octant.octree == nullptr);
@@ -162,7 +162,7 @@ void Octree::CollapseParents(Engine *engine)
     }
 
     Octree *iteration = m_parent,
-           *highest_empty = nullptr;
+        *highest_empty = nullptr;
 
     while (iteration != nullptr && iteration->Empty()) {
         for (const Octant &octant : iteration->m_octants) {
@@ -257,15 +257,18 @@ Octree::Result Octree::Insert(Engine *engine, Entity *entity)
         }
     }
 
-    for (Octant &octant : m_octants) {
-        if (octant.aabb.Contains(entity_aabb)) {
-            if (!m_is_divided) {
-                Divide(engine);
+    // stop recursing if our aabb is too small
+    if (m_aabb.GetExtent().Length() >= min_aabb_size) {
+        for (Octant &octant : m_octants) {
+            if (octant.aabb.Contains(entity_aabb)) {
+                if (!m_is_divided) {
+                    Divide(engine);
+                }
+
+                AssertThrow(octant.octree != nullptr);
+
+                return octant.octree->Insert(engine, entity);
             }
-
-            AssertThrow(octant.octree != nullptr);
-
-            return octant.octree->Insert(engine, entity);
         }
     }
 
@@ -411,7 +414,7 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
         bool inserted = false;
 
         /* Contains is false at this point */
-        Octree *parent      = m_parent;
+        Octree *parent = m_parent;
         Octree *last_parent = m_parent;
 
         while (parent != nullptr) {
@@ -462,42 +465,45 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
     }
 
     // CONTAINS AABB HERE
-    
-    for (Octant &octant : m_octants) {
-        if (octant.aabb.Contains(new_aabb)) {
-            /* we /can/ go a level deeper than current, so no matter what we dispatch the
-             * event that the entity was 'removed' from this octant, as it will be added
-             * deeper regardless.
-             * note: we don't call OnRemovedFromOctree() on the entity, we don't want the Entity's
-             * m_octree ptr to be nullptr at any point, which could cause flickering when we go to render
-             * stuff. that's the purpose for this whole method, to set it in one pass
-             */
-            if (it != nullptr) {
-                if (m_root != nullptr) {
-                    m_root->events.on_remove_node(engine, this, entity);
-                    m_root->node_to_octree.erase(entity);
+
+    // if our AABB is too small, stop recursing...
+    if (m_aabb.GetExtent().Length() >= min_aabb_size) {
+        for (Octant &octant : m_octants) {
+            if (octant.aabb.Contains(new_aabb)) {
+                /* we /can/ go a level deeper than current, so no matter what we dispatch the
+                * event that the entity was 'removed' from this octant, as it will be added
+                * deeper regardless.
+                * note: we don't call OnRemovedFromOctree() on the entity, we don't want the Entity's
+                * m_octree ptr to be nullptr at any point, which could cause flickering when we go to render
+                * stuff. that's the purpose for this whole method, to set it in one pass
+                */
+                if (it != nullptr) {
+                    if (m_root != nullptr) {
+                        m_root->events.on_remove_node(engine, this, entity);
+                        m_root->node_to_octree.erase(entity);
+                    }
+
+                    m_nodes.erase(*it);
                 }
 
-                m_nodes.erase(*it);
+                if (!m_is_divided) {
+                    Divide(engine);
+                }
+                
+                AssertThrow(octant.octree != nullptr);
+
+                const auto octant_move_result = octant.octree->Move(engine, entity, nullptr);
+                AssertThrow(octant_move_result);
+
+                return octant_move_result;
             }
-
-            if (!m_is_divided) {
-                Divide(engine);
-            }
-            
-            AssertThrow(octant.octree != nullptr);
-
-            const auto octant_move_result = octant.octree->Move(engine, entity, nullptr);
-            AssertThrow(octant_move_result);
-
-            return octant_move_result;
         }
     }
 
     if (it != nullptr) { /* Not moved */
         auto &entity_it = *it;
 
-        entity_it->aabb             = new_aabb;
+        entity_it->aabb = new_aabb;
         entity_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
         // force this octant to be visible to prevent flickering
@@ -702,7 +708,7 @@ bool Octree::GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> 
         }
     }
 
-    for (size_t i = 0; i < m_octants.size(); i++) {
+    for (SizeType i = 0; i < m_octants.size(); i++) {
         out[i] = m_octants[i].octree.get();
     }
 
@@ -753,33 +759,37 @@ void Octree::CalculateVisibility(Scene *scene)
     }
 
     const auto &frustum = scene->GetCamera()->GetFrustum();
-     
+
     if (frustum.ContainsAABB(m_aabb)) {
-        UpdateVisibilityState(scene);
+        const auto cursor = m_root->visibility_cursor.load(std::memory_order_relaxed);
+
+        UpdateVisibilityState(scene, cursor);
     }
 }
 
-void Octree::UpdateVisibilityState(Scene *scene)
+void Octree::UpdateVisibilityState(Scene *scene, UInt8 cursor)
 {
     /* assume we are already visible from CalculateVisibility() check */
     const auto &frustum = scene->GetCamera()->GetFrustum();
 
-    const auto cursor = m_root->visibility_cursor.load(std::memory_order_relaxed);
     m_visibility_state.SetVisible(scene->GetID(), cursor);
 
-    if (!m_is_divided) {
-        return;
-    }
+    if (m_is_divided) {
+        const auto nonce = m_visibility_state.snapshots[cursor].nonce.load(std::memory_order_relaxed);
 
-    const auto nonce = m_visibility_state.snapshots[cursor].nonce.load(std::memory_order_relaxed);
+        for (auto &octant : m_octants) {
+            if (!frustum.ContainsAABB(octant.aabb)) {
+                continue;
+            }
 
-    for (auto &octant : m_octants) {
-        if (!frustum.ContainsAABB(octant.aabb)) {
-            continue;
+            // if (nonce != octant.octree->m_visibility_state.snapshots[cursor].nonce.load(std::memory_order_relaxed)) {
+            //     // clear it out after first set
+            //     octant.octree->m_visibility_state.snapshots[cursor].bits.store(0u, std::memory_order_relaxed);
+            // }
+            
+            octant.octree->m_visibility_state.snapshots[cursor].nonce.store(nonce, std::memory_order_relaxed);
+            octant.octree->UpdateVisibilityState(scene, cursor);
         }
-
-        octant.octree->m_visibility_state.snapshots[cursor].nonce.store(nonce, std::memory_order_relaxed);
-        octant.octree->UpdateVisibilityState(scene);
     }
 }
 

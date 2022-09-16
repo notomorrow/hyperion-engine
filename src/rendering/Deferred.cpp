@@ -420,7 +420,7 @@ void DeferredRenderer::Render(
     {
         DebugMarker marker(primary, "Mipmap chain generation");
 
-        auto *framebuffer_image = m_direct_pass.GetFramebuffer(frame_index)->GetFramebuffer()//bucket.GetFramebuffers()[frame_index]->GetFramebuffer()
+        auto *framebuffer_image = m_direct_pass.GetFramebuffer(frame_index)->GetFramebuffer()
             .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
         
         framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_SRC);

@@ -22,7 +22,6 @@ using renderer::Pipeline;
 struct alignas(16) ParticleShaderData
 {
     ShaderVec4<Float32> position;
-    ShaderVec4<Float32> direction;
     ShaderVec4<Float32> velocity;
     Float32 lifetime;
     UInt32 color_packed;
@@ -100,7 +99,7 @@ void ParticleSpawner::CreateNoiseMap()
     static constexpr UInt seed = 0xff;
 
     SimplexNoiseGenerator noise_generator(seed);
-    m_noise_map = noise_generator.CreateBitmap(128, 128, 100.0f);
+    m_noise_map = noise_generator.CreateBitmap(128, 128, 1024.0f);
 }
 
 void ParticleSpawner::CreateBuffers()
@@ -124,6 +123,15 @@ void ParticleSpawner::CreateBuffers()
             GetEngine()->GetDevice(),
             m_noise_map.GetByteSize() * sizeof(Float)
         ));
+
+        // copy zeroes into particle buffer
+        // if we don't do this, garbage values could be in the particle buffer,
+        // meaning we'd get some crazy high lifetimes
+        m_particle_buffer->Memset(
+            GetEngine()->GetDevice(),
+            m_particle_buffer->size,
+            0u
+        );
 
         // copy bytes into noise buffer
         DynArray<Float> unpacked_floats;
@@ -426,10 +434,11 @@ void ParticleSystem::UpdateParticles(Engine *engine, Frame *frame)
         spawner->GetComputePipeline()->GetPipeline()->SetPushConstants(Pipeline::PushConstantData {
             .particle_spawner_data = {
                 .origin = ShaderVec4<Float32>(Vector4(spawner->GetParams().origin, 1.0f)),
-                .spawn_radius = 15.0f,
+                .spawn_radius = 25.0f,
                 .randomness = 0.8f,
                 .avg_lifespan = 5.0f,
                 .max_particles = static_cast<UInt32>(max_particles),
+                .max_particles_sqrt = MathUtil::Sqrt(static_cast<Float>(max_particles)),
                 .delta_time = 0.016f, // TODO! Delta time for particles. we currentl don't have delta time for render thread.
                 .global_counter = m_counter
             }

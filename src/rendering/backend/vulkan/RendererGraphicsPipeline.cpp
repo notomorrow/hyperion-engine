@@ -195,18 +195,18 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     }
 
     VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    VkViewport viewports[]       = {viewport};
+    VkViewport viewports[] = {viewport};
     viewport_state.viewportCount = 1;
-    viewport_state.pViewports    = viewports;
+    viewport_state.pViewports = viewports;
 
-    VkRect2D scissors[]         = {scissor};
+    VkRect2D scissors[] = {scissor};
     viewport_state.scissorCount = 1;
-    viewport_state.pScissors    = scissors;
+    viewport_state.pScissors = scissors;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    rasterizer.depthClampEnable        = VK_FALSE;
+    rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     switch (m_construction_info.cull_mode) {
     case FaceCullMode::BACK:

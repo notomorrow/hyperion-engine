@@ -56,8 +56,14 @@ public:
     World *GetWorld() const { return m_world; }
     void SetWorld(World *world);
 
-    Scene::ID GetParentId() const { return m_parent_id; }
-    void SetParentId(Scene::ID id) { m_parent_id = id; }
+    Scene::ID GetParentID() const { return m_parent_id; }
+    void SetParentID(Scene::ID id) { m_parent_id = id; }
+
+    /*! \brief A scene is a "virtual scene" if it exists not as an owner of entities,
+        but rather a simple container that has items based on another Scene. For example,
+        you could have a "shadow map" scene, which gathers entities from the main scene,
+        but does not call Update() on them. */
+    bool IsVirtualScene() const { return m_parent_id != Scene::empty_id; }
     
     void Init(Engine *engine);
 
