@@ -58,6 +58,7 @@ void main()
     float ao = 1.0;
     float metalness = material.metalness;
     float roughness = material.roughness;
+    float transmission = GET_MATERIAL_PARAM(MATERIAL_PARAM_TRANSMISSION);
 
     // float perceptual_roughness = sqrt(roughness);
     
@@ -84,16 +85,6 @@ void main()
 
         gbuffer_albedo *= albedo_texture;
     }
-
-    float transmission = 0.0;
-
-    // // temp
-    // if (gbuffer_albedo.a < 1.0) {
-    //     transmission = 0.99;
-
-        
-    //     // gbuffer_albedo.a = 0.0;
-    // }
 
     vec4 normals_texture = vec4(0.0);
 

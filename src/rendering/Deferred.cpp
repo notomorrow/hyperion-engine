@@ -303,14 +303,14 @@ void DeferredRenderer::Create(Engine *engine)
         }
 
         // depth attachment goes into separate slot
-        auto *depth_image = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
+        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
 
         /* Depth texture */
         descriptor_set_globals
             ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_DEPTH)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = depth_image->GetImageView()
+                .image_view = depth_attachment_ref->GetImageView()
             });
 
         /* Mip chain */
@@ -387,24 +387,49 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
                     .GetAttachmentRefs()[0]->GetImageView()
             });
 
-        // sampler
+        // mip chain
         descriptor_set
-            ->AddDescriptor<renderer::SamplerDescriptor>(2)
+            ->AddDescriptor<renderer::ImageDescriptor>(2)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .sampler = &m_results[frame_index]->GetSampler()
+                .image_view = &m_mipmapped_results[frame_index]->GetImageView()
+            });
+
+        // nearest sampler
+        descriptor_set
+            ->AddDescriptor<renderer::SamplerDescriptor>(3)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
+            });
+
+        // linear sampler
+        descriptor_set
+            ->AddDescriptor<renderer::SamplerDescriptor>(4)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
             });
 
         // output result
         descriptor_set
-            ->AddDescriptor<renderer::StorageImageDescriptor>(3)
+            ->AddDescriptor<renderer::StorageImageDescriptor>(5)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_results[frame_index]->GetImageView()
             });
 
+        // scene data (for camera matrices)
+        descriptor_set
+            ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(6)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
+                .range = static_cast<UInt32>(sizeof(SceneShaderData))
+            });
+
         { // gbuffer textures
-            auto *gbuffer_textures = descriptor_set->AddDescriptor<renderer::ImageDescriptor>(4);
+            auto *gbuffer_textures = descriptor_set->AddDescriptor<renderer::ImageDescriptor>(7);
 
             UInt element_index = 0u;
 
@@ -426,6 +451,17 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
 
             ++element_index;
         }
+
+        // add depth texture
+        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
+
+        /* Depth texture */
+        descriptor_set
+            ->GetOrAddDescriptor<ImageDescriptor>(8)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view = depth_attachment_ref->GetImageView()
+            });
 
         HYPERION_ASSERT_RESULT(descriptor_set->Create(
             engine->GetDevice(),
@@ -488,10 +524,13 @@ void DeferredRenderer::Render(
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    const auto &scene_binding = engine->render_state.GetScene();
-
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
+
+    const auto &scene_binding = engine->render_state.GetScene();
+    const auto scene_index = scene_binding
+        ? scene_binding.id.value - 1
+        : 0u;
     
     CollectDrawCalls(engine, frame);
 
@@ -590,7 +629,8 @@ void DeferredRenderer::Render(
         engine->GetInstance()->GetDescriptorPool(),
         m_combine->GetPipeline(),
         m_combine_descriptor_sets[frame_index].Get(),
-        static_cast<DescriptorSet::Index>(0)
+        static_cast<DescriptorSet::Index>(0),
+        FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
     );
 
     // TODO: benchmark difference vs using a framebuffer and just drawing another quad
@@ -611,12 +651,14 @@ void DeferredRenderer::Render(
         m_cull_data.depth_pyramid_dimensions = m_dpr.GetExtent();
     }
 
-    auto &src_image = m_results[frame_index]->GetImage();
+    auto *src_image = m_direct_pass.GetFramebuffer(frame_index)->GetRenderPass()
+        ->GetRenderPass().GetAttachmentRefs()[0]->GetAttachment()->GetImage();//;
 
-    GenerateMipChain(engine, frame, &src_image);
+    GenerateMipChain(engine, frame, src_image);
 
     // put src image in state for reading
-    src_image.GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+    src_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+    m_results[frame_index]->GetImage().GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
     m_post_processing.RenderPost(engine, frame);
 }

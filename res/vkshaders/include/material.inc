@@ -4,13 +4,13 @@
 #include "defines.inc"
 #include "shared.inc"
 
-struct Material {
+struct Material
+{
     vec4 albedo;
     
     float metalness;
     float roughness;
-    float param_0;
-    float param_1;
+    uvec2 packed_params;
 
     U32 uv_flip_s;
     U32 uv_flip_t;
@@ -24,6 +24,12 @@ struct Material {
     U32 _pad1;
     U32 _pad2;
 };
+
+// enum for packed params
+#define MATERIAL_PARAM_TRANSMISSION 0
+
+#define GET_MATERIAL_PARAM(index) \
+    unpackUnorm4x8(material.packed_params[(index) / 4])[(index) % 4]
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer {

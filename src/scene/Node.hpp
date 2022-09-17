@@ -26,13 +26,6 @@ class Node
     friend class Entity;
     friend class NodeProxy;
 
-    struct NodeRefCount {
-        UInt count = 0;
-    } m_ref_count;
-
-    void IncRef() { ++m_ref_count.count; }
-    void DecRef() { AssertThrow(m_ref_count.count != 0); --m_ref_count.count; }
-
 public:
     using NodeList = DynArray<NodeProxy>;
 
@@ -46,8 +39,7 @@ public:
     };
 
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
-     * @param name A c-string representing the name of the Node. The memory is copied internally so the string can be safely deleted
-     * after use.
+     * @param name A String representing the name of the Node.
      * @param local_transform An optional parameter representing the local-space transform of this Node.
      */
     Node(

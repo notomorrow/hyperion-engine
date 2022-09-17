@@ -3,7 +3,7 @@
 
 #include "defines.inc"
 
-#define NUM_GBUFFER_TEXTURES 5 // we do 5 not because of depth tex, but because translucent and opaque albedo are both stored in the array
+#define NUM_GBUFFER_TEXTURES 5 // we do 5 not because that is our count in C++ land (minus depth tex), but because translucent and opaque albedo are both stored in the array
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"

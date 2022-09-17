@@ -132,8 +132,6 @@ Node &Node::operator=(Node &&other) noexcept
 
 Node::~Node()
 {
-    AssertThrow(m_ref_count.count == 0);
-
     RemoveAllChildren();
     SetEntity(Handle<Entity>());
 }

@@ -129,19 +129,19 @@ struct MaterialShaderData
     static constexpr UInt max_bound_textures = 16u;
 
     // 0
-    Vector4 albedo;
+    ShaderVec4<Float32> albedo;
 
     // 16
-    float metalness;
-    float roughness;
-    UInt32 param_0; // vec4 of 0.0..1.0 values stuffed into uint32
-    UInt32 param_1; // vec4 of 0.0..1.0 values stuffed into uint32
+    Float32 metalness;
+    Float32 roughness;
+    // 2 vec4s of 0.0..1.0 values stuffed into uint32s
+    ShaderVec2<UInt32> packed_params;
 
     // 32
     UInt32 uv_flip_s;
     UInt32 uv_flip_t;
-    float uv_scale;
-    float parallax_height;
+    Float32 uv_scale;
+    Float32 parallax_height;
 
     // 48
     UInt32 texture_index[16];

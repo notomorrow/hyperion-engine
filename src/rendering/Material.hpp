@@ -71,13 +71,15 @@ public:
 
     struct Parameter
     {
-        union {
+        union
+        {
             float float_values[4];
             int int_values[4];
             void *ptr;
         } values;
 
-        enum Type : UInt {
+        enum Type : UInt
+        {
             MATERIAL_PARAMETER_TYPE_NONE,
             MATERIAL_PARAMETER_TYPE_FLOAT,
             MATERIAL_PARAMETER_TYPE_FLOAT2,
@@ -216,28 +218,29 @@ public:
         MATERIAL_STATE_DIRTY
     };
     
-    enum MaterialKey : uint64_t {
+    enum MaterialKey : UInt64
+    {
         MATERIAL_KEY_NONE = 0,
 
         // basic
         MATERIAL_KEY_ALBEDO                 = 1 << 0,
         MATERIAL_KEY_METALNESS              = 1 << 1,
         MATERIAL_KEY_ROUGHNESS              = 1 << 2,
-        MATERIAL_KEY_SUBSURFACE             = 1 << 3,  // UNUSED
-        MATERIAL_KEY_SPECULAR               = 1 << 4,  // UNUSED
-        MATERIAL_KEY_SPECULAR_TINT          = 1 << 5,  // UNUSED
-        MATERIAL_KEY_ANISOTROPIC            = 1 << 6,  // UNUSED
-        MATERIAL_KEY_SHEEN                  = 1 << 7,  // UNUSED
-        MATERIAL_KEY_SHEEN_TINT             = 1 << 8,  // UNUSED
-        MATERIAL_KEY_CLEARCOAT              = 1 << 9,  // UNUSED
-        MATERIAL_KEY_CLEARCOAT_GLOSS        = 1 << 10, // UNUSED
-        MATERIAL_KEY_EMISSIVENESS           = 1 << 11, // UNUSED
-        MATERIAL_KEY_FLIP_UV                = 1 << 12,
-        MATERIAL_KEY_UV_SCALE               = 1 << 13,
-        MATERIAL_KEY_PARALLAX_HEIGHT        = 1 << 14,
-        MATERIAL_KEY_RESERVED1              = 1 << 15,
-        MATERIAL_KEY_RESERVED2              = 1 << 16,
-        MATERIAL_KEY_RESERVED3              = 1 << 17,
+        MATERIAL_KEY_TRANSMISSION           = 1 << 3,
+        MATERIAL_KEY_EMISSIVE               = 1 << 4,  // UNUSED
+        MATERIAL_KEY_SPECULAR               = 1 << 5,  // UNUSED
+        MATERIAL_KEY_SPECULAR_TINT          = 1 << 6,  // UNUSED
+        MATERIAL_KEY_ANISOTROPIC            = 1 << 7,  // UNUSED
+        MATERIAL_KEY_SHEEN                  = 1 << 8,  // UNUSED
+        MATERIAL_KEY_SHEEN_TINT             = 1 << 9,  // UNUSED
+        MATERIAL_KEY_CLEARCOAT              = 1 << 10,  // UNUSED
+        MATERIAL_KEY_CLEARCOAT_GLOSS        = 1 << 11, // UNUSED
+        MATERIAL_KEY_SUBSURFACE             = 1 << 12,  // UNUSED
+        MATERIAL_KEY_FLIP_UV                = 1 << 13,
+        MATERIAL_KEY_UV_SCALE               = 1 << 14,
+        MATERIAL_KEY_PARALLAX_HEIGHT        = 1 << 15,
+        MATERIAL_KEY_RESERVED1              = 1 << 16,
+        MATERIAL_KEY_RESERVED2              = 1 << 17,
 
         // terrain
         MATERIAL_KEY_TERRAIN_LEVEL_0_HEIGHT = 1 << 18,
