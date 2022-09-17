@@ -15,7 +15,7 @@ layout(set = 0, binding = 0) uniform texture2D deferred_indirect_lighting;
 layout(set = 0, binding = 1) uniform texture2D deferred_direct_lighting;
 layout(set = 0, binding = 2) uniform sampler sampler_nearest;
 layout(set = 0, binding = 3, rgba16f) uniform image2D combined_result;
-layout(set = 0, binding = 4) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES * 2];
+layout(set = 0, binding = 4) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 
 layout(push_constant) uniform DeferredCombineData
 {

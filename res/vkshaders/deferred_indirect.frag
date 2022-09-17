@@ -236,10 +236,7 @@ void main()
 
         const vec3 kD = (1.0 - F) * (1.0 - metalness);
 
-        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao / HYP_FMATH_PI;  //
-        // vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) / HYP_FMATH_PI);
-
-        // vec3 Fd = diffuse_color * irradiance * (vec3(1.0) - dfg) * ao;
+        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) / HYP_FMATH_PI;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         // const vec3 bent_normal = (inverse(scene.view) * vec4(DecodeNormal(vec4(ssao_data.xyz, 1.0)).xyz, 0.0)).xyz;//ssao_data.xyz;
