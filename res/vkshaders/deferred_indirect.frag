@@ -146,9 +146,7 @@ void main()
         
         // Index of refraction for common dielectrics. Corresponds to f0 4%
         const float IOR = 1.5;
-
         const float material_reflectance = 0.5;
-
         // dialetric f0
         const float reflectance = 0.16 * material_reflectance * material_reflectance;
         const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
@@ -238,7 +236,7 @@ void main()
 
         const vec3 kD = (1.0 - F) * (1.0 - metalness);
 
-        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) / HYP_FMATH_PI;  //
+        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao / HYP_FMATH_PI;  //
         // vec3 Fd = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) / HYP_FMATH_PI);
 
         // vec3 Fd = diffuse_color * irradiance * (vec3(1.0) - dfg) * ao;
@@ -260,7 +258,7 @@ void main()
         reflections.rgb *= specular_ao;
         Fr = (Fr * (1.0 - reflections.a)) + (E * reflections.rgb);
 
-        result = kD * Fd + Fr;
+        result = Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
         // result = dfg;

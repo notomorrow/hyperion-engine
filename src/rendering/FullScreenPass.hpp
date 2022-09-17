@@ -76,6 +76,8 @@ public:
     void SetPushConstants(const PushConstantData &pc) { m_push_constant_data = pc; }
 
     virtual void CreateRenderPass(Engine *engine);
+    virtual void CreateCommandBuffers(Engine *engine);
+    virtual void CreateFramebuffers(Engine *engine);
     virtual void CreatePipeline(Engine *engine, const RenderableAttributeSet &renderable_attributes);
     virtual void CreatePipeline(Engine *engine);
     virtual void CreateDescriptors(Engine *engine) = 0;

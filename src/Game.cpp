@@ -29,6 +29,11 @@ void Game::Init(Engine *engine, SystemWindow *window)
     m_input_manager = new InputManager(window);
 
     m_is_init = true;
+
+    static_assert(THREAD_MAIN == THREAD_RENDER,
+        "InitRender must be enqueued instead of directly called if main thread != render thread!");
+
+    InitRender(engine);
 }
 
 void Game::InitRender(Engine *engine)

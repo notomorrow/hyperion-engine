@@ -3,12 +3,13 @@
 
 namespace hyperion::v2 {
 
-const FixedArray<TextureFormatDefault, num_gbuffer_textures> DeferredSystem::gbuffer_textures = {
-    TEXTURE_FORMAT_DEFAULT_COLOR,   // color
-    TEXTURE_FORMAT_DEFAULT_NORMALS, // normal
-    TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT, // material
-    TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT, // tangent
-    TEXTURE_FORMAT_DEFAULT_DEPTH    // depth
+const FixedArray<DeferredSystem::GBufferFormat, num_gbuffer_textures> DeferredSystem::gbuffer_texture_formats = {
+    GBufferFormat { TEXTURE_FORMAT_DEFAULT_COLOR },   // color
+    GBufferFormat { TEXTURE_FORMAT_DEFAULT_NORMALS }, // normal
+    GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // material
+    GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // tangent
+    // GBufferFormat { Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8 },
+    GBufferFormat { TEXTURE_FORMAT_DEFAULT_DEPTH }    // depth
 };
 
 DeferredSystem::DeferredSystem()
@@ -63,6 +64,13 @@ void DeferredSystem::RendererInstanceHolder::AddRendererInstance(Handle<Renderer
 
     renderer_instances_pending_addition.PushBack(std::move(renderer_instance));
     renderer_instances_changed.Set(true);
+
+    DebugLog(
+        LogType::Debug,
+        "Add RendererInstance (current count: %llu, pending: %llu)\n",
+        renderer_instances.Size(),
+        renderer_instances_pending_addition.Size()
+    );
 }
 
 void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances(Engine *engine)
@@ -122,10 +130,14 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
     if (BucketIsRenderable(bucket)) { // add gbuffer attachments
         AttachmentRef *attachment_ref;
 
-        for (UInt i = 0; i < gbuffer_textures.Size() - 1 /* because depth already accounted for */; i++) {
+        for (UInt i = 0; i < static_cast<UInt>(gbuffer_texture_formats.Size()) - 1 /* because depth already accounted for */; i++) {
+            const Image::InternalFormat format = gbuffer_texture_formats[i].Is<Image::InternalFormat>()
+                ? gbuffer_texture_formats[i].Get<Image::InternalFormat>()
+                : engine->GetDefaultFormat(gbuffer_texture_formats[i].Get<TextureFormatDefault>());
+            
             auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(gbuffer_textures[i]),
+                format,
                 nullptr
             );
 
@@ -144,7 +156,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
             render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
         }
 
-        constexpr SizeType depth_texture_index = gbuffer_textures.Size() - 1;
+        constexpr SizeType depth_texture_index = gbuffer_texture_formats.Size() - 1;
 
         /* Add depth attachment */
         if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.
@@ -164,11 +176,15 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
 
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
         } else {
+            const Image::InternalFormat depth_format = gbuffer_texture_formats[depth_texture_index].Is<Image::InternalFormat>()
+                ? gbuffer_texture_formats[depth_texture_index].Get<Image::InternalFormat>()
+                : engine->GetDefaultFormat(gbuffer_texture_formats[depth_texture_index].Get<TextureFormatDefault>());
+
             // create new depth attachment.
             attachments.PushBack(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
-                    engine->GetDefaultFormat(gbuffer_textures[depth_texture_index]),
+                    depth_format,
                     nullptr
                 ),
                 RenderPassStage::SHADER

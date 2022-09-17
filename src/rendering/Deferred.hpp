@@ -15,6 +15,7 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 namespace hyperion::v2 {
 
@@ -66,6 +67,7 @@ class DeferredRenderer
     static constexpr bool ssr_enabled = true;
     // perform occlusion culling using indirect draw
     static constexpr bool use_draw_indirect = true;
+    static const Extent2D mipmap_chain_extent;
 
 public:
     DeferredRenderer();
@@ -85,9 +87,14 @@ public:
     );
 
 private:
+    void CreateComputePipelines(Engine *engine);
+    void CreateDescriptorSets(Engine *engine);
+
     void CollectDrawCalls(Engine *engine, Frame *frame);
     void RenderOpaqueObjects(Engine *engine, Frame *frame);
     void RenderTranslucentObjects(Engine *engine, Frame *frame);
+
+    void GenerateMipChain(Engine *engine, Frame *frame, Image *image);
 
     void UpdateParticles(Engine *engine, Frame *frame, RenderEnvironment *environment);
     void RenderParticles(Engine *engine, Frame *frame, RenderEnvironment *environment);
@@ -96,9 +103,16 @@ private:
     DeferredPass m_direct_pass;
     PostProcessing m_post_processing;
 
+    FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_opaque_fbos;
+    FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_translucent_fbos;
+
+    Handle<ComputePipeline> m_combine;
+    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_combine_descriptor_sets;
+
     ScreenspaceReflectionRenderer m_ssr;
     DepthPyramidRenderer m_dpr;
 
+    FixedArray<Handle<Texture>, max_frames_in_flight> m_results;
     FixedArray<Handle<Texture>, max_frames_in_flight> m_mipmapped_results;
     UniquePtr<Sampler> m_sampler;
     UniquePtr<Sampler> m_depth_sampler;

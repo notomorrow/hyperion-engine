@@ -74,4 +74,6 @@ glslc --target-env=$VULKAN_TARGET particles/UpdateParticles.comp -o particles/Up
 glslc --target-env=$VULKAN_TARGET particles/Particle.frag -o particles/Particle.frag.spv
 glslc --target-env=$VULKAN_TARGET particles/Particle.vert -o particles/Particle.vert.spv
 
+glslc --target-env=$VULKAN_TARGET deferred/DeferredCombine.comp -o deferred/DeferredCombine.comp.spv
+
 popd

@@ -10,7 +10,7 @@ layout(location=4) out vec3 v_tangent;
 layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
-layout(location=12) out vec3 v_view_space_position;
+layout(location=12) out vec3 v_ndc_position;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -80,7 +80,9 @@ void main() {
 	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
     
-    v_view_space_position = (scene.view * position).xyz;
+    vec4 ndc = scene.projection * scene.view * position;
+    ndc /= ndc.w;
+    v_ndc_position = ndc.xyz;
 
     // v_fragment_position = (scene.projection * scene.view * position).xyz;
     // v_fragment_position.xy *= vec2(0.5);
