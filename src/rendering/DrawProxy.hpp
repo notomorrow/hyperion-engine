@@ -7,6 +7,7 @@
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
+#include <math/Frustum.hpp>
 
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -78,6 +79,7 @@ struct DrawProxy<STUB_CLASS(Camera)>
     Float clip_near;
     Float clip_far;
     Float fov;
+    Frustum frustum;
 };
 
 using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
