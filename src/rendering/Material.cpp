@@ -4,6 +4,7 @@
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
+#include <util/ByteUtil.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
@@ -163,9 +164,9 @@ void Material::EnqueueRenderUpdates()
     
     FixedArray<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids { };
 
-    const SizeType num_bound_textures = max_textures_to_set;
+    const UInt num_bound_textures = max_textures_to_set;
     
-    for (SizeType i = 0; i < num_bound_textures; i++) {
+    for (UInt i = 0; i < num_bound_textures; i++) {
         if (const auto &texture = m_textures.ValueAt(i)) {
             bound_texture_ids[i] = texture->GetID();
         }
@@ -176,6 +177,15 @@ void Material::EnqueueRenderUpdates()
             .albedo = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness = GetParameter<float>(MATERIAL_KEY_METALNESS),
             .roughness = GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
+            .packed_params = ShaderVec2<UInt32>(
+                ByteUtil::PackColorU32(Vector4(
+                    GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
+                    0.0f,
+                    0.0f,
+                    0.0f
+                )),
+                0
+            ),
             .uv_scale = GetParameter<float>(MATERIAL_KEY_UV_SCALE),
             .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
         };
@@ -250,7 +260,8 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_ALBEDO,          Vector4(1.0f));
     m_parameters.Set(MATERIAL_KEY_METALNESS,       0.0f);
     m_parameters.Set(MATERIAL_KEY_ROUGHNESS,       0.65f);
-    m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_TRANSMISSION,    0.0f);
+    m_parameters.Set(MATERIAL_KEY_EMISSIVE,        0.0f);
     m_parameters.Set(MATERIAL_KEY_SPECULAR,        0.0f);
     m_parameters.Set(MATERIAL_KEY_SPECULAR_TINT,   0.0f);
     m_parameters.Set(MATERIAL_KEY_ANISOTROPIC,     0.0f);
@@ -258,7 +269,7 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_SHEEN_TINT,      0.0f);
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
-    m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
+    m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
     m_parameters.Set(MATERIAL_KEY_UV_SCALE,        1.0f);
     m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.005f);
 

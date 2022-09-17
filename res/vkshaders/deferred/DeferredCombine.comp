@@ -9,18 +9,54 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #include "../include/shared.inc"
 #include "../include/defines.inc"
 #include "../include/gbuffer.inc"
+#include "../include/scene.inc"
+#include "../include/brdf.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 layout(set = 0, binding = 0) uniform texture2D deferred_indirect_lighting;
 layout(set = 0, binding = 1) uniform texture2D deferred_direct_lighting;
-layout(set = 0, binding = 2) uniform sampler sampler_nearest;
-layout(set = 0, binding = 3, rgba16f) uniform image2D combined_result;
-layout(set = 0, binding = 4) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
+layout(set = 0, binding = 2) uniform texture2D gbuffer_mip_chain;
+layout(set = 0, binding = 3) uniform sampler sampler_nearest;
+layout(set = 0, binding = 4) uniform sampler sampler_linear;
+layout(set = 0, binding = 5, rgba16f) uniform image2D combined_result;
+
+layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneShaderData
+{
+    Scene scene;
+};
+
+layout(set = 0, binding = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
+layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
 
 layout(push_constant) uniform DeferredCombineData
 {
     uvec2 image_dimensions;
 };
+
+struct Refraction
+{
+    vec3 position;
+    vec3 direction;
+};
+
+void RefractionSolidSphere(
+    vec3 P, vec3 N, vec3 V, float eta_ir,
+    out Refraction out_refraction
+)
+{
+    const float thickness = 0.8;
+
+    const vec3 R = refract(-V, N, eta_ir);
+    float NdotR = dot(N, R);
+    float d = thickness * -NdotR;
+
+    Refraction refraction;
+    refraction.position = vec3(P + R * d);
+    vec3 n1 = normalize(NdotR * R - N * 0.5);
+    refraction.direction = refract(R, n1, eta_ir);
+
+    out_refraction = refraction;
+}
 
 void main()
 {
@@ -36,7 +72,68 @@ void main()
     vec4 direct_lighting = Texture2D(sampler_nearest, deferred_direct_lighting, texcoord);
     vec4 forward_result = Texture2D(sampler_nearest, gbuffer_albedo_texture_translucent, texcoord);
 
+    vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
+    const float roughness = material.r;
+    const float metalness = material.g;
+    const float transmission = material.b;
+
+    const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
+    const vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
+    const vec3 P = position.xyz;
+    const vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+
     vec4 result = indirect_lighting + direct_lighting;
+
+    if (transmission > 0.0) {
+        const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
+
+        const float IOR = 1.5;
+        const float material_reflectance = 0.5;
+        // dialetric f0
+        const float reflectance = 0.16 * material_reflectance * material_reflectance;
+        const vec3 F0 = forward_result.rgb * metalness + (reflectance * (1.0 - metalness));
+
+        const vec3 F = SchlickFresnelRoughness(F0, roughness, NdotV);
+
+        const float sqrt_F0 = sqrt(F0.y);
+        const float material_ior = (1.0 + sqrt_F0) / (1.0 - sqrt_F0);
+        const float air_ior = 1.0;
+        const float eta_ir = air_ior / material_ior;
+        const float eta_ri = material_ior / air_ior;
+
+        Refraction refraction;
+        RefractionSolidSphere(P, N, V, eta_ir, refraction);
+
+        vec4 refraction_pos = scene.projection * scene.view * vec4(refraction.position, 1.0);
+        refraction_pos /= refraction_pos.w;
+
+        vec2 refraction_texcoord = refraction_pos.xy * 0.5 + 0.5;
+
+        float perceptual_roughness = sqrt(roughness);
+        perceptual_roughness = mix(perceptual_roughness, 0.0, Saturate(eta_ir * 3.0 - 2.0));
+
+        const float inv_log2_sqrt5 = 0.8614;
+        const float lod = max(0.0, (2.0 * log2(perceptual_roughness)) * inv_log2_sqrt5);
+
+        const vec2 AB = BRDFMap(roughness, NdotV);
+        const vec3 dfg = F * AB.x + AB.y;
+        const vec3 E = mix(dfg.xxx, dfg.yyy, F0);
+
+        vec3 Fd = forward_result.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (1.0 /* diffuse BRDF */);
+        Fd *= (1.0 - transmission);
+
+        vec3 Ft = Texture2DLod(sampler_linear, gbuffer_mip_chain, refraction_texcoord, lod).rgb;
+
+        Ft *= forward_result.rgb;
+        Ft *= 1.0 - E;
+        // Ft *= absorption;
+        Ft *= transmission;
+
+        result.rgb = Ft + Fd;
+    } else {
+        result += forward_result;
+    }
 
     // TODO: Do refraction
     // vec4 material_value = mix(
@@ -44,7 +141,6 @@ void main()
     //     Texture2D(sampler_nearest, gbuffer_material_texture_translucent, texcoord),
     // )
 
-    result += forward_result;
 
     result.a = 1.0;
 
