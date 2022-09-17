@@ -13,7 +13,7 @@ layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
-layout(location=12) in vec3 v_view_space_position;
+layout(location=12) in vec3 v_ndc_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
@@ -22,6 +22,7 @@ layout(location=3) out vec4 gbuffer_tangents;
 
 
 #define PARALLAX_ENABLED 1
+#define HAS_REFRACTION 1
 
 #include "include/scene.inc"
 #include "include/material.inc"
@@ -57,6 +58,8 @@ void main()
     float ao = 1.0;
     float metalness = material.metalness;
     float roughness = material.roughness;
+
+    // float perceptual_roughness = sqrt(roughness);
     
     vec2 texcoord = v_texcoord0 * material.uv_scale;
     
@@ -82,6 +85,16 @@ void main()
         gbuffer_albedo *= albedo_texture;
     }
 
+    float transmission = 0.0;
+
+    // // temp
+    // if (gbuffer_albedo.a < 1.0) {
+    //     transmission = 0.99;
+
+        
+    //     // gbuffer_albedo.a = 0.0;
+    // }
+
     vec4 normals_texture = vec4(0.0);
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP)) {
@@ -106,6 +119,6 @@ void main()
     }
 
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(roughness, metalness, 0.0, ao);
+    gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
 }

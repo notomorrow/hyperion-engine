@@ -14,7 +14,6 @@ enum Bucket
     /* === Scene objects === */
     BUCKET_OPAQUE,        /* Opaque items */
     BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
-    BUCKET_PARTICLE,      /* Specialized particle bucket */
     BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
     BUCKET_MAX
 };
@@ -45,8 +44,7 @@ static bool BucketFrustumCullingEnabled(Bucket bucket)
 {
     return bucket == BUCKET_SHADOW
         || bucket == BUCKET_OPAQUE
-        || bucket == BUCKET_TRANSLUCENT
-        || bucket == BUCKET_PARTICLE;
+        || bucket == BUCKET_TRANSLUCENT;
 }
 
 HYP_FORCE_INLINE
@@ -54,8 +52,7 @@ static bool BucketIsRenderable(Bucket bucket)
 {
     return bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT
-        || bucket == BUCKET_SKYBOX
-        || bucket == BUCKET_PARTICLE;
+        || bucket == BUCKET_SKYBOX;
 }
 
 } // namespace hyperion::v2

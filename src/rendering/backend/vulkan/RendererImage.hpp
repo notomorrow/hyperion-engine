@@ -162,12 +162,12 @@ public:
 
     Result Blit(
         CommandBuffer *command_buffer,
-        Image *src
+        const Image *src
     );
 
     Result Blit(
         CommandBuffer *command_buffer,
-        Image *src,
+        const Image *src,
         Rect src_rect,
         Rect dst_rect
     );

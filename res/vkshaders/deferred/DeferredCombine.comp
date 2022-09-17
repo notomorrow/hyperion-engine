@@ -1,0 +1,54 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/shared.inc"
+#include "../include/defines.inc"
+#include "../include/gbuffer.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+layout(set = 0, binding = 0) uniform texture2D deferred_indirect_lighting;
+layout(set = 0, binding = 1) uniform texture2D deferred_direct_lighting;
+layout(set = 0, binding = 2) uniform sampler sampler_nearest;
+layout(set = 0, binding = 3, rgba16f) uniform image2D combined_result;
+layout(set = 0, binding = 4) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES * 2];
+
+layout(push_constant) uniform DeferredCombineData
+{
+    uvec2 image_dimensions;
+};
+
+void main()
+{
+    const uvec2 index = gl_GlobalInvocationID.xy;
+
+    if (any(greaterThanEqual(index, image_dimensions))) {
+        return;
+    }
+
+    const vec2 texcoord = vec2(index) / vec2(image_dimensions - 1);
+
+    vec4 indirect_lighting = Texture2D(sampler_nearest, deferred_indirect_lighting, texcoord);
+    vec4 direct_lighting = Texture2D(sampler_nearest, deferred_direct_lighting, texcoord);
+    vec4 forward_result = Texture2D(sampler_nearest, gbuffer_albedo_texture_translucent, texcoord);
+
+    vec4 result = indirect_lighting + direct_lighting;
+
+    // TODO: Do refraction
+    // vec4 material_value = mix(
+    //     Texture2D(sampler_nearest, gbuffer_material_texture, texcoord),
+    //     Texture2D(sampler_nearest, gbuffer_material_texture_translucent, texcoord),
+    // )
+
+    result += forward_result;
+
+    result.a = 1.0;
+
+    // TODO: Do post FX combine here instead of in blit.frag
+
+    imageStore(combined_result, ivec2(index), result);
+}
