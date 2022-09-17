@@ -254,14 +254,6 @@ void DeferredRenderer::Create(Engine *engine)
             Image::FilterMode::TEXTURE_FILTER_NEAREST,
             Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
         );
-        
-        /*engine->CreateHandle<Texture>(new Texture2D(
-            engine->GetInstance()->GetSwapchain()->extent,
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-            Image::FilterMode::TEXTURE_FILTER_NEAREST,
-            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));*/
 
         engine->InitObject(m_results[i]);
 
@@ -282,30 +274,36 @@ void DeferredRenderer::Create(Engine *engine)
     m_depth_sampler = UniquePtr<Sampler>::Construct(Image::FilterMode::TEXTURE_FILTER_NEAREST);
     HYPERION_ASSERT_RESULT(m_depth_sampler->Create(engine->GetDevice()));
 
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
         
-        auto *gbuffer_textures = descriptor_set_globals->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
+        { // add gbuffer textures
+            auto *gbuffer_textures = descriptor_set_globals->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
 
-        // store opaque as first {num_gbuffer_textures-1}
-        // translucent starts at {num_gbuffer_textures-1}, goes to {(num_gbuffer_textures-1)*2}
-        UInt element_index = 0u;
+            UInt element_index = 0u;
 
-        for (auto *fbo : { m_opaque_fbos[i].Get(), m_translucent_fbos[i].Get() }) {
-            /* Gbuffer textures */
+            // not including depth texture here
             for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
                 gbuffer_textures->SetSubDescriptor({
                     .element_index = element_index,
-                    .image_view = fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
+                    .image_view = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
                 });
 
                 ++element_index;
             }
+
+            // add translucent bucket's albedo
+            gbuffer_textures->SetSubDescriptor({
+                .element_index = element_index,
+                .image_view = m_translucent_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView()
+            });
+
+            ++element_index;
         }
 
-        // last item is depth attachment
-        auto *depth_image = m_opaque_fbos[i]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
+        // depth attachment goes into separate slot
+        auto *depth_image = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
 
         /* Depth texture */
         descriptor_set_globals
@@ -320,7 +318,7 @@ void DeferredRenderer::Create(Engine *engine)
             ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = &m_mipmapped_results[i]->GetImageView()
+                .image_view = &m_mipmapped_results[frame_index]->GetImageView()
             });
 
         /* Gbuffer depth sampler */
@@ -343,14 +341,14 @@ void DeferredRenderer::Create(Engine *engine)
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEPTH_PYRAMID_RESULT)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = m_dpr.GetResults()[i].get()
+                .image_view = m_dpr.GetResults()[frame_index].get()
             });
             
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = &m_results[i]->GetImageView()
+                .image_view = &m_results[frame_index]->GetImageView()
             });
     }
     
@@ -405,23 +403,28 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
                 .image_view = &m_results[frame_index]->GetImageView()
             });
 
-        { // add array of textures of all gbuffer data (first {num_gbuffer_textures} are opaque, rest are translucent)
-            auto *gbuffer_textures_descriptor = descriptor_set
-                ->AddDescriptor<renderer::ImageDescriptor>(4);
+        { // gbuffer textures
+            auto *gbuffer_textures = descriptor_set->AddDescriptor<renderer::ImageDescriptor>(4);
 
             UInt element_index = 0u;
 
-            for (auto *fbo : { m_opaque_fbos[frame_index].Get(), m_translucent_fbos[frame_index].Get() }) {
-                /* Gbuffer textures */
-                for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
-                    gbuffer_textures_descriptor->SetSubDescriptor({
-                        .element_index = element_index,
-                        .image_view = fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
-                    });
+            // not including depth texture here
+            for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
+                gbuffer_textures->SetSubDescriptor({
+                    .element_index = element_index,
+                    .image_view = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
+                });
 
-                    ++element_index;
-                }
+                ++element_index;
             }
+
+            // add translucent bucket's albedo
+            gbuffer_textures->SetSubDescriptor({
+                .element_index = element_index,
+                .image_view = m_translucent_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView()
+            });
+
+            ++element_index;
         }
 
         HYPERION_ASSERT_RESULT(descriptor_set->Create(
