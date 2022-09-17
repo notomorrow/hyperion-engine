@@ -112,6 +112,61 @@ void DeferredSystem::RendererInstanceHolder::AddFramebuffersToPipeline(Handle<Re
     }
 }
 
+static void AddOwnedAttachment(
+    Engine *engine,
+    Image::InternalFormat format,
+    Handle<RenderPass> &render_pass,
+    DynArray<std::unique_ptr<Attachment>> &attachments
+)
+{
+    AttachmentRef *attachment_ref;
+
+    auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
+        engine->GetInstance()->swapchain->extent,
+        format,
+        nullptr
+    );
+
+    attachments.PushBack(std::make_unique<renderer::Attachment>(
+        std::move(framebuffer_image),
+        RenderPassStage::SHADER
+    ));
+
+    HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
+        engine->GetInstance()->GetDevice(),
+        renderer::LoadOperation::CLEAR,
+        renderer::StoreOperation::STORE,
+        &attachment_ref
+    ));
+
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+}
+
+static void AddSharedAttachment(
+    Engine *engine,
+    UInt attachment_index,
+    Handle<RenderPass> &render_pass,
+    DynArray<std::unique_ptr<Attachment>> &attachments
+)
+{
+    auto &opaque_fbo = engine->GetDeferredSystem()[BUCKET_OPAQUE].GetFramebuffers()[0];
+    AssertThrow(opaque_fbo != nullptr);
+
+    renderer::AttachmentRef *attachment_ref;
+
+    AssertThrow(attachment_index < opaque_fbo->GetFramebuffer().GetAttachmentRefs().size());
+
+    HYPERION_ASSERT_RESULT(opaque_fbo->GetFramebuffer().GetAttachmentRefs().at(attachment_index)->AddAttachmentRef(
+        engine->GetInstance()->GetDevice(),
+        renderer::StoreOperation::STORE,
+        &attachment_ref
+    ));
+
+    attachment_ref->SetBinding(attachment_index);
+
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+}
+
 void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
 {
     AssertThrow(render_pass == nullptr);
@@ -128,34 +183,46 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
     );
 
     if (BucketIsRenderable(bucket)) { // add gbuffer attachments
-        AttachmentRef *attachment_ref;
+        // color attachment is unique for all buckets
+        const auto color_format = gbuffer_texture_formats[0].Is<Image::InternalFormat>()
+            ? gbuffer_texture_formats[0].Get<Image::InternalFormat>()
+            : engine->GetDefaultFormat(gbuffer_texture_formats[0].Get<TextureFormatDefault>());
 
-        for (UInt i = 0; i < static_cast<UInt>(gbuffer_texture_formats.Size()) - 1 /* because depth already accounted for */; i++) {
-            const Image::InternalFormat format = gbuffer_texture_formats[i].Is<Image::InternalFormat>()
-                ? gbuffer_texture_formats[i].Get<Image::InternalFormat>()
-                : engine->GetDefaultFormat(gbuffer_texture_formats[i].Get<TextureFormatDefault>());
-            
-            auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
-                engine->GetInstance()->swapchain->extent,
-                format,
-                nullptr
-            );
+        AddOwnedAttachment(
+            engine,
+            color_format,
+            render_pass,
+            attachments
+        );
 
-            attachments.PushBack(std::make_unique<renderer::Attachment>(
-                std::move(framebuffer_image),
-                RenderPassStage::SHADER
-            ));
+        // opaque creates the main non-color gbuffer attachments,
+        // which will be shared with other renderable buckets
+        if (bucket == BUCKET_OPAQUE) {
+            for (UInt i = 1; i < static_cast<UInt>(gbuffer_texture_formats.Size()); i++) {
+                const auto format = gbuffer_texture_formats[i].Is<Image::InternalFormat>()
+                    ? gbuffer_texture_formats[i].Get<Image::InternalFormat>()
+                    : engine->GetDefaultFormat(gbuffer_texture_formats[i].Get<TextureFormatDefault>());
 
-            HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
-                engine->GetInstance()->GetDevice(),
-                renderer::LoadOperation::CLEAR,
-                renderer::StoreOperation::STORE,
-                &attachment_ref
-            ));
-
-            render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+                AddOwnedAttachment(
+                    engine,
+                    format,
+                    render_pass,
+                    attachments
+                );
+            }
+        } else {
+            // add the attachments shared with opaque bucket
+            for (UInt i = 1; i < static_cast<UInt>(gbuffer_texture_formats.Size()); i++) {
+                AddSharedAttachment(
+                    engine,
+                    i,
+                    render_pass,
+                    attachments
+                );
+            }
         }
 
+#if 0
         constexpr SizeType depth_texture_index = gbuffer_texture_formats.Size() - 1;
 
         /* Add depth attachment */
@@ -199,6 +266,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
 
             render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
         }
+#endif
     }
 
     for (auto &attachment : attachments) {
