@@ -7,17 +7,18 @@
 
 #include <core/lib/FixedArray.hpp>
 
-#include <array>
+#include <Types.hpp>
 
 namespace hyperion {
-class Frustum {
+class Frustum
+{
 public:
     Frustum();
     Frustum(const Frustum &other);
     Frustum(const Matrix4 &view_proj);
 
-    Vector4 &GetPlane(size_t index)             { return m_planes[index]; }
-    const Vector4 &GetPlane(size_t index) const { return m_planes[index]; }
+    Vector4 &GetPlane(UInt index) { return m_planes[index]; }
+    const Vector4 &GetPlane(UInt index) const { return m_planes[index]; }
 
     bool ContainsAABB(const BoundingBox &aabb) const;
 

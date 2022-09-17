@@ -407,12 +407,11 @@ void ParticleSystem::UpdateParticles(Engine *engine, Frame *frame)
     );
 
     for (auto &spawner : m_particle_spawners) {
+        const auto aabb = spawner->GetEstimatedAABB();
         const auto max_particles = spawner->GetParams().max_particles;
 
         AssertThrow(spawner->GetIndirectBuffer()->size == sizeof(IndirectDrawCommand));
         AssertThrow(spawner->GetParticleBuffer()->size >= sizeof(ParticleShaderData) * max_particles);
-
-        spawner->GetComputePipeline()->GetPipeline()->Bind(frame->GetCommandBuffer());
 
         spawner->GetIndirectBuffer()->InsertBarrier(
             frame->GetCommandBuffer(),
@@ -431,12 +430,18 @@ void ParticleSystem::UpdateParticles(Engine *engine, Frame *frame)
             renderer::GPUMemory::ResourceState::INDIRECT_ARG
         );
 
+        if (!engine->render_state.GetScene().camera.frustum.ContainsAABB(aabb)) {
+            continue;
+        }
+
+        spawner->GetComputePipeline()->GetPipeline()->Bind(frame->GetCommandBuffer());
+
         spawner->GetComputePipeline()->GetPipeline()->SetPushConstants(Pipeline::PushConstantData {
             .particle_spawner_data = {
                 .origin = ShaderVec4<Float32>(Vector4(spawner->GetParams().origin, 1.0f)),
-                .spawn_radius = 25.0f,
-                .randomness = 0.8f,
-                .avg_lifespan = 5.0f,
+                .spawn_radius = spawner->GetParams().radius,
+                .randomness = spawner->GetParams().randomness,
+                .avg_lifespan = spawner->GetParams().lifespan,
                 .max_particles = static_cast<UInt32>(max_particles),
                 .max_particles_sqrt = MathUtil::Sqrt(static_cast<Float>(max_particles)),
                 .delta_time = 0.016f, // TODO! Delta time for particles. we currentl don't have delta time for render thread.

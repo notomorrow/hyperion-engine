@@ -165,7 +165,8 @@ void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
         .dimensions = Extent2D { static_cast<UInt>(m_width), static_cast<UInt>(m_height) },
         .clip_near = m_near,
         .clip_far = m_far,
-        .fov = m_fov
+        .fov = m_fov,
+        .frustum = m_frustum
     });
 }
 

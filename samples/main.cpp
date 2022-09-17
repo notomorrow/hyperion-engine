@@ -231,14 +231,20 @@ public:
         ));
         m_scene->GetEnvironment()->AddLight(Handle<Light>(my_light));
 
-        m_point_light = engine->CreateHandle<Light>(new PointLight(
+        m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
             Vector3(0.0f, 6.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
-            1000.0f,
+            5000.0f,
             4.0f
-        ));
+        )));
 
-        // m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
+        m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+            Vector3(9.0f, 6.0f, -3.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            2500.0f,
+            1.0f
+        )));
+
         //test_model->Scale(10.0f);
         test_model->Scale(0.15f);//14.075f);
 
@@ -248,7 +254,9 @@ public:
             .texture = engine->CreateHandle<Texture>(
                 engine->assets.Load<Texture>("textures/smoke.png").release()
             ),
-            .max_particles = 1024u
+            .max_particles = 1024u,
+            .origin = Vector3(0.0f, 7.0f, -4.0f),
+            .lifespan = 8.0f
         });
         engine->InitObject(particle_spawner);
 

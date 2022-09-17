@@ -309,7 +309,7 @@ void RendererInstance::CollectDrawCalls(Engine *engine, Frame *frame)
     m_indirect_renderer.GetDrawState().Reset();
     m_divided_draw_proxies.Clear();
 
-    const auto scene_binding = engine->render_state.GetScene();
+    const auto &scene_binding = engine->render_state.GetScene();
     const auto scene_id = scene_binding.id;
     const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
@@ -391,7 +391,7 @@ RenderAll(
     DynArray<DynArray<EntityDrawProxy>> &divided_draw_proxies
 )
 {
-    const auto scene_binding = engine->render_state.GetScene();
+    const auto &scene_binding = engine->render_state.GetScene();
     const auto scene_id = scene_binding.id;
 
     auto *instance = engine->GetInstance();
