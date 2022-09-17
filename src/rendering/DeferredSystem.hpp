@@ -2,6 +2,7 @@
 #define HYPERION_V2_DEFERRED_SYSTEM_HPP
 
 #include <Constants.hpp>
+
 #include <core/Containers.hpp>
 #include <core/lib/AtomicVar.hpp>
 #include <core/Handle.hpp>
@@ -18,10 +19,14 @@ namespace hyperion::v2 {
 
 class Engine;
 
+using renderer::Image;
+
 class DeferredSystem
 {
 public:
-    static const FixedArray<TextureFormatDefault, num_gbuffer_textures> gbuffer_textures;
+    using GBufferFormat = Variant<TextureFormatDefault, Image::InternalFormat>;
+
+    static const FixedArray<GBufferFormat, num_gbuffer_textures> gbuffer_texture_formats;
     
     class RendererInstanceHolder
     {

@@ -233,21 +233,22 @@ public:
 
         m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
             Vector3(0.0f, 6.0f, 0.0f),
-            Vector4(1.0f, 0.3f, 0.1f, 1.0f),
-            5000.0f,
+            Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+            1000.0f,
             4.0f
         )));
 
-        m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
-            Vector3(9.0f, 6.0f, -3.0f),
-            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-            2500.0f,
-            1.0f
-        )));
+        // m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+        //     Vector3(9.0f, 6.0f, -3.0f),
+        //     Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+        //     2500.0f,
+        //     1.0f
+        // )));
 
         //test_model->Scale(10.0f);
         test_model->Scale(0.15f);//14.075f);
 
+#if 0
         auto particle_system = UniquePtr<ParticleSystem>::Construct();
 
         auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
@@ -261,7 +262,7 @@ public:
         engine->InitObject(particle_spawner);
 
         m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
-
+#endif
 
 #if HYPERION_VK_TEST_VCT
         m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(

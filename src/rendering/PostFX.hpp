@@ -67,7 +67,8 @@ class PostProcessingEffect
     : public EngineComponentBase<STUB_CLASS(PostProcessingEffect)>
 {
 public:
-    enum class Stage {
+    enum class Stage
+    {
         PRE_SHADING,
         POST_SHADING
     };

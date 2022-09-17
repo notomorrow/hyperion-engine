@@ -568,7 +568,7 @@ Result Image::Destroy(Device *device)
 
 Result Image::Blit(
     CommandBuffer *command_buffer,
-    Image *src
+    const Image *src
 )
 {
     return Blit(
@@ -591,7 +591,7 @@ Result Image::Blit(
 
 Result Image::Blit(
     CommandBuffer *command_buffer,
-    Image *src_image,
+    const Image *src_image,
     Rect src_rect,
     Rect dst_rect
 )
@@ -678,19 +678,21 @@ Result Image::GenerateMipmaps(
         for (Int32 i = 1; i < static_cast<Int32>(num_mipmaps + 1); i++) {
             const auto mip_width = static_cast<Int32>(helpers::MipmapSize(m_extent.width, i)),
                 mip_height = static_cast<Int32>(helpers::MipmapSize(m_extent.height, i)),
-                mip_depth  = static_cast<Int32>(helpers::MipmapSize(m_extent.depth, i));
+                mip_depth = static_cast<Int32>(helpers::MipmapSize(m_extent.depth, i));
 
             /* Memory barrier for transfer - note that after generating the mipmaps,
                 we'll still need to transfer into a layout primed for reading from shaders. */
 
             const ImageSubResource src {
-                .flags = IsDepthStencil() ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
+                .flags = IsDepthStencil()
+                    ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+                    : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
                 .base_array_layer = face,
                 .base_mip_level = static_cast<UInt32>(i - 1)
             };
 
             const ImageSubResource dst {
-                .flags  = src.flags,
+                .flags = src.flags,
                 .base_array_layer = src.base_array_layer,
                 .base_mip_level  = static_cast<UInt32>(i)
             };
@@ -720,14 +722,14 @@ Result Image::GenerateMipmaps(
                 | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
             
             /* Blit src -> dst */
-            const VkImageBlit blit{
+            const VkImageBlit blit {
                 .srcSubresource = {
                     .aspectMask = aspect_flag_bits,
                     .mipLevel = src.base_mip_level,
                     .baseArrayLayer = src.base_array_layer,
                     .layerCount = src.num_layers
                 },
-                .srcOffsets     = {
+                .srcOffsets = {
                     {0, 0, 0},
                     {
                         static_cast<Int32>(helpers::MipmapSize(m_extent.width, i - 1)),
@@ -741,7 +743,7 @@ Result Image::GenerateMipmaps(
                     .baseArrayLayer = dst.base_array_layer,
                     .layerCount = dst.num_layers
                 },
-                .dstOffsets     = {
+                .dstOffsets = {
                     {0, 0, 0},
                     {
                         mip_width,

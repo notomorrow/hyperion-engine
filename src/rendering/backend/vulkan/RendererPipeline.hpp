@@ -117,6 +117,11 @@ public:
 
             struct // NOLINT(clang-diagnostic-nested-anon-types)
             {
+                ShaderVec2<UInt32> image_dimensions;
+            } deferred_combine_data;
+
+            struct // NOLINT(clang-diagnostic-nested-anon-types)
+            {
                 ShaderVec4<Float32> origin;
                 Float32 spawn_radius;
                 Float32 randomness;

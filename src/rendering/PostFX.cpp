@@ -200,7 +200,9 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
         post_processing_uniforms.last_enabled_indices[i] = 0u;
 
         for (auto &it : *effects) {
-            if (it.second != nullptr && it.second->IsEnabled()) {
+            AssertThrow(it.second != nullptr);
+
+            if (it.second->IsEnabled()) {
                 AssertThrowMsg(it.second->GetIndex() != ~0u, "Not yet initialized - index not set yet");
 
                 post_processing_uniforms.masks[i] |= 1u << it.second->GetIndex();
@@ -218,11 +220,13 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
         &post_processing_uniforms
     );
 
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        descriptor_set_globals->AddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
             ->SetSubDescriptor({
-                .element_index = 0,
+                .element_index = 0u,
                 .buffer = &m_uniform_buffer
             });
     }
