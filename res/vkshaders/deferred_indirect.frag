@@ -158,7 +158,7 @@ void main()
 
         // const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         F = SchlickFresnelRoughness(F0, roughness, NdotV);
-        
+
         const vec2 AB = BRDFMap(roughness, NdotV);
         const vec3 dfg = F * AB.x + AB.y;
         const vec3 E = mix(dfg.xxx, dfg.yyy, F0);

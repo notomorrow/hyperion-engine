@@ -126,17 +126,26 @@ public:
         material_test_obj = std::move(loaded_assets[3]);
 
         for (int i = 0; i < 10; i++) {
-            auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj"); //material_sphere/material_sphere.obj");
-            sphere->Scale(1.0f);
+            auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
+            sphere->Scale(5.0f);
             sphere->SetName("sphere");
             // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->CreateHandle<Texture>(engine->assets.Load<Texture>("models/material_sphere/layered_fungus-ue/layered-fungus1_normal-dx.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f + 0.01f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.5f);
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.9f));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+
+            // if (i >= 5) {
+                sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+                sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                sphere->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
+            // }
             sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
             m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
@@ -180,7 +189,7 @@ public:
 #endif
         
         if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-            // grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
             grass.Scale(1.0f);
             grass.Translate({0, 1, 0});
@@ -275,18 +284,6 @@ public:
 #endif
 
         // test_model->Translate(Vector3(0, 0, -25.0f));
-
-        /*auto &terrain_material = test_model->GetChild(0)->GetEntity()->GetMaterial();
-        terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
-        terrain_material->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
-        terrain_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
-        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
-        test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
         if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
         }
