@@ -153,7 +153,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
             m_renderer_instance->GetPipeline()->push_constants = m_push_constant_data;
             m_renderer_instance->GetPipeline()->Bind(cmd);
 
-            const auto scene_binding = engine->render_state.GetScene();
+            const auto &scene_binding = engine->render_state.GetScene();
             const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
             cmd->BindDescriptorSet(

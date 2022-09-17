@@ -260,12 +260,12 @@ void Voxelizer::RenderFragmentList(Engine *engine, Frame *, bool count_mode)
 
         m_framebuffer->BeginCapture(command_buffer);
         
-        if (engine->render_state.scene_ids.empty()) {
-        engine->render_state.BindScene(m_scene.Get());
-        m_renderer_instance->Render(engine, &temp_frame);
-        engine->render_state.UnbindScene();
+        if (!engine->render_state.GetScene()) {
+            engine->render_state.BindScene(m_scene.Get());
+            m_renderer_instance->Render(engine, &temp_frame);
+            engine->render_state.UnbindScene();
         } else {
-        m_renderer_instance->Render(engine, &temp_frame);
+            m_renderer_instance->Render(engine, &temp_frame);
         }
 
         m_framebuffer->EndCapture(command_buffer);

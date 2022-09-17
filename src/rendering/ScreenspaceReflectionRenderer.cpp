@@ -192,7 +192,7 @@ void ScreenspaceReflectionRenderer::Render(
     Frame *frame
 )
 {
-    const auto scene_binding = engine->render_state.GetScene();
+    const auto &scene_binding = engine->render_state.GetScene();
     const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
     auto *command_buffer = frame->GetCommandBuffer();

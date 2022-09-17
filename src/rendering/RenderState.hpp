@@ -7,6 +7,7 @@
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/IndirectDraw.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <scene/Scene.hpp>
 
 #include <util/Defines.hpp>
@@ -22,13 +23,16 @@ struct RenderState
 {
     struct SceneBinding
     {
+        static const SceneBinding empty;
+
         Scene::ID id;
         RenderEnvironment *render_environment = nullptr;
+        CameraDrawProxy camera;
 
         explicit operator bool() const { return bool(id); }
     };
 
-    std::stack<SceneBinding> scene_ids;
+    std::stack<SceneBinding> scene_bindings;
     FlatSet<Light::ID> light_ids;
     FlatMap<EnvProbe::ID, Optional<UInt>> env_probes; // map to texture slot
     UInt8 visibility_cursor = 0u;
@@ -43,28 +47,31 @@ struct RenderState
         light_ids.Erase(light);
     }
 
-    void BindScenes(Scene::ID scene_id)
-    {
-        scene_ids.push(SceneBinding { scene_id });
-    }
-
     void BindScene(const Scene *scene)
     {
-        scene_ids.push(
-            scene == nullptr
-                ? SceneBinding { }
-                : SceneBinding { scene->GetID(), scene->GetEnvironment() }
-        );
+        if (scene == nullptr) {
+            scene_bindings.push(SceneBinding::empty);
+        } else {
+            scene_bindings.push(SceneBinding {
+                scene->GetID(),
+                scene->GetEnvironment(),
+                scene->GetCamera()
+                    ? scene->GetCamera()->GetDrawProxy()
+                    : CameraDrawProxy { }
+            });
+        }
     }
 
     void UnbindScene()
     {
-        scene_ids.pop();
+        scene_bindings.pop();
     }
 
-    SceneBinding GetScene() const
+    const SceneBinding &GetScene() const
     {
-        return scene_ids.empty() ? SceneBinding { } : scene_ids.top();
+        return scene_bindings.empty()
+            ? SceneBinding::empty
+            : scene_bindings.top();
     }
 
     void BindEnvProbe(EnvProbe::ID env_probe)
@@ -87,7 +94,7 @@ struct RenderState
         env_probes.Clear();
         m_env_probe_texture_slot_counter = 0u;
 
-        scene_ids = {};
+        scene_bindings = {};
 
         light_ids.Clear();
 
