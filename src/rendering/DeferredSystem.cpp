@@ -8,13 +8,12 @@ const FixedArray<DeferredSystem::GBufferFormat, num_gbuffer_textures> DeferredSy
     GBufferFormat { TEXTURE_FORMAT_DEFAULT_NORMALS }, // normal
     GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // material
     GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // tangent
-    // GBufferFormat { Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8 },
     GBufferFormat { TEXTURE_FORMAT_DEFAULT_DEPTH }    // depth
 };
 
 DeferredSystem::DeferredSystem()
 {
-    for (size_t i = 0; i < m_buckets.Size(); i++) {
+    for (SizeType i = 0; i < m_buckets.Size(); i++) {
         m_buckets[i].SetBucket(Bucket(i));
     }
 }
@@ -56,13 +55,13 @@ DeferredSystem::RendererInstanceHolder::~RendererInstanceHolder()
 {
 }
 
-void DeferredSystem::RendererInstanceHolder::AddRendererInstance(Handle<RendererInstance> &&renderer_instance)
+void DeferredSystem::RendererInstanceHolder::AddRendererInstance(Handle<RendererInstance> &renderer_instance)
 {
     AddFramebuffersToPipeline(renderer_instance);
 
     std::lock_guard guard(renderer_instances_mutex);
 
-    renderer_instances_pending_addition.PushBack(std::move(renderer_instance));
+    renderer_instances_pending_addition.PushBack(renderer_instance);
     renderer_instances_changed.Set(true);
 
     DebugLog(
@@ -94,7 +93,7 @@ void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances(Engine 
         renderer_instances.PushBack(std::move(*it));
     }
     
-    renderer_instances_pending_addition = {};
+    renderer_instances_pending_addition.Clear();
     renderer_instances_changed.Set(false);
 }
 
@@ -221,52 +220,6 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
                 );
             }
         }
-
-#if 0
-        constexpr SizeType depth_texture_index = gbuffer_texture_formats.Size() - 1;
-
-        /* Add depth attachment */
-        if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.
-            auto &forward_fbo = engine->GetDeferredSystem()[BUCKET_OPAQUE].framebuffers[0];
-            AssertThrow(forward_fbo != nullptr);
-
-            renderer::AttachmentRef *depth_attachment;
-
-            // reuse the depth attachment.
-            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(depth_texture_index)->AddAttachmentRef(
-                engine->GetInstance()->GetDevice(),
-                renderer::StoreOperation::STORE,
-                &depth_attachment
-            ));
-
-            depth_attachment->SetBinding(depth_texture_index);
-
-            render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
-        } else {
-            const Image::InternalFormat depth_format = gbuffer_texture_formats[depth_texture_index].Is<Image::InternalFormat>()
-                ? gbuffer_texture_formats[depth_texture_index].Get<Image::InternalFormat>()
-                : engine->GetDefaultFormat(gbuffer_texture_formats[depth_texture_index].Get<TextureFormatDefault>());
-
-            // create new depth attachment.
-            attachments.PushBack(std::make_unique<renderer::Attachment>(
-                std::make_unique<renderer::FramebufferImage2D>(
-                    engine->GetInstance()->swapchain->extent,
-                    depth_format,
-                    nullptr
-                ),
-                RenderPassStage::SHADER
-            ));
-
-            HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
-                engine->GetInstance()->GetDevice(),
-                renderer::LoadOperation::CLEAR,
-                renderer::StoreOperation::STORE,
-                &attachment_ref
-            ));
-
-            render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
-        }
-#endif
     }
 
     for (auto &attachment : attachments) {

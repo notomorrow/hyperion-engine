@@ -440,7 +440,7 @@ void Engine::Initialize()
     auto *vct_descriptor_set = GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
     
-#if 0
+#if 1
     // voxel image
     vct_descriptor_set
         ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
@@ -727,7 +727,7 @@ void Engine::AddRendererInstanceInternal(Handle<RendererInstance> &renderer_inst
 
     m_render_list_container
         .Get(renderer_instance->GetRenderableAttributes().material_attributes.bucket)
-        .AddRendererInstance(Handle<RendererInstance>(renderer_instance));
+        .AddRendererInstance(renderer_instance);
 }
 
 void Engine::PreFrameUpdate(Frame *frame)

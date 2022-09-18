@@ -32,14 +32,14 @@ public:
     {
         friend class DeferredSystem;
 
-        Bucket                                bucket{BUCKET_OPAQUE};
-        Handle<RenderPass>                    render_pass;
-        DynArray<Handle<Framebuffer>>         framebuffers;
+        Bucket bucket { BUCKET_OPAQUE };
+        Handle<RenderPass> render_pass;
+        DynArray<Handle<Framebuffer>> framebuffers;
         DynArray<std::unique_ptr<Attachment>> attachments;
-        DynArray<Handle<RendererInstance>>    renderer_instances;
-        DynArray<Handle<RendererInstance>>    renderer_instances_pending_addition;
-        AtomicVar<bool>                       renderer_instances_changed;
-        std::mutex                            renderer_instances_mutex;
+        DynArray<Handle<RendererInstance>> renderer_instances;
+        DynArray<Handle<RendererInstance>> renderer_instances_pending_addition;
+        AtomicVar<bool> renderer_instances_changed;
+        std::mutex renderer_instances_mutex;
 
     public:
         RendererInstanceHolder();
@@ -57,7 +57,7 @@ public:
         DynArray<Handle<RendererInstance>> &GetRendererInstances() { return renderer_instances; }
         const DynArray<Handle<RendererInstance>> &GetRendererInstances() const { return renderer_instances; }
 
-        void AddRendererInstance(Handle<RendererInstance> &&renderer_instance);
+        void AddRendererInstance(Handle<RendererInstance> &renderer_instance);
         void AddPendingRendererInstances(Engine *engine);
         void AddFramebuffersToPipelines();
         void AddFramebuffersToPipeline(Handle<RendererInstance> &pipeline);

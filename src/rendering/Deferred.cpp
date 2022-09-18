@@ -237,7 +237,7 @@ void DeferredRenderer::Create(Engine *engine)
         AssertThrow(m_translucent_fbos[frame_index]);
     }
     
-    const auto *depth_attachment_ref = engine->GetDeferredSystem()[Bucket::BUCKET_OPAQUE].GetRenderPass()->GetRenderPass().GetAttachmentRefs().back(); //m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs().back();//opaque_render_pass->GetRenderPass().GetAttachmentRefs().back();//.back();
+    const auto *depth_attachment_ref = engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass()->GetRenderPass().GetAttachmentRefs().back(); //m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs().back();//opaque_render_pass->GetRenderPass().GetAttachmentRefs().back();//.back();
     AssertThrow(depth_attachment_ref != nullptr);
 
     m_dpr.Create(engine, depth_attachment_ref);
