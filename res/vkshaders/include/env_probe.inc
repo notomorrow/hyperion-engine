@@ -79,9 +79,4 @@ vec4 EnvProbeSampleParallaxCorrected(
     return textureLod(tex, coord, lod);
 }
 
-int EnvProbeGetNumLevels(sampler samp, textureCube tex)
-{
-    return textureQueryLevels(samplerCube(tex, samp));
-}
-
 #endif

@@ -75,7 +75,7 @@ using namespace hyperion;
 using namespace hyperion::v2;
 
 
-#define HYPERION_VK_TEST_VCT 0
+#define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -86,7 +86,6 @@ class MyGame : public Game
 
 public:
     Handle<Light> m_point_light;
-    std::atomic_bool m_loaded { false };
 
     MyGame()
         : Game()
@@ -131,14 +130,13 @@ public:
             sphere->SetName("sphere");
             // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->CreateHandle<Texture>(engine->assets.Load<Texture>("models/material_sphere/layered_fungus-ue/layered-fungus1_normal-dx.png").release()));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f + 0.01f, 0.05f, 0.95f));
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.5f);
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.9f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.98f);
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.5f));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
 
             // if (i >= 5) {
@@ -182,31 +180,23 @@ public:
 #endif
 
 #if 0
-        if (auto terrain_node = m_scene->GetRoot().AddChild()) {
-            terrain_node.Get()->SetEntity(engine->CreateHandle<Entity>());
-            terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
+        { // paged procedural terrain
+            if (auto terrain_node = m_scene->GetRoot().AddChild()) {
+                terrain_node.Get()->SetEntity(engine->CreateHandle<Entity>());
+                terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
+            }
         }
 #endif
         
-        if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-            grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
-            grass.Scale(1.0f);
-            grass.Translate({0, 1, 0});
+        { // custom vegetation shader
+            if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
+                grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
+                grass.Scale(1.0f);
+                grass.Translate({0, 1, 0});
+            }
         }
 
-
-        material_test_obj->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
-        material_test_obj->Scale(6.45f);
-        material_test_obj->Translate(Vector3(0, 9, 0));
-        //m_scene->GetRoot().AddChild(NodeProxy(material_test_obj.release()));
-
-        // remove textures so we can manipulate the material and see our changes easier
-        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
-        //material_test_obj->GetChild(0)->GetEntity()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
-        
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
            engine->assets.Load<Texture>(
                "textures/chapel/posx.jpg",
@@ -220,103 +210,80 @@ public:
         cubemap->GetImage().SetIsSRGB(true);
         engine->InitObject(cubemap);
 
-        zombie->Scale(1.25f);
-        zombie->Translate({0, 0, -5});
-        zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 0.5f));
-        zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
-        zombie->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
-        // zombie->GetChild(0)->GetEntity()->AddController<AABBDebugController>(engine);
-        m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        { // hardware skinning
+            zombie->Scale(1.25f);
+            zombie->Translate({0, 0, -9});
+            zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
+            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.0f);
+            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
+            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+            zombie->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
+            m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+        }
+        
+        { // adding lights to scene
+            m_point_light = engine->CreateHandle<Light>(new DirectionalLight(
+                Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
+                Vector4::One(),
+                150000.0f
+            ));
+            m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
 
-        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
-        //zombie->GetChild(0)->GetEntity()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
+            m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+                Vector3(0.0f, 6.0f, 0.0f),
+                Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+                1000.0f,
+                4.0f
+            )));
+        }
 
-        auto my_light = engine->CreateHandle<Light>(new DirectionalLight(
-            Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
-            Vector4::One(),
-            150000.0f
-        ));
-        m_scene->GetEnvironment()->AddLight(Handle<Light>(my_light));
+        test_model->Scale(0.15f);
 
-        m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
-            Vector3(0.0f, 6.0f, 0.0f),
-            Vector4(1.0f, 0.0f, 0.0f, 1.0f),
-            1000.0f,
-            4.0f
-        )));
+        { // particles test
+            auto particle_system = UniquePtr<ParticleSystem>::Construct();
 
-        // m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
-        //     Vector3(9.0f, 6.0f, -3.0f),
-        //     Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-        //     2500.0f,
-        //     1.0f
-        // )));
+            auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
+                .texture = engine->CreateHandle<Texture>(
+                    engine->assets.Load<Texture>("textures/smoke.png").release()
+                ),
+                .max_particles = 1024u,
+                .origin = Vector3(0.0f, 7.0f, -4.0f),
+                .lifespan = 8.0f
+            });
+            engine->InitObject(particle_spawner);
 
-        //test_model->Scale(10.0f);
-        test_model->Scale(0.15f);//14.075f);
-
-#if 0
-        auto particle_system = UniquePtr<ParticleSystem>::Construct();
-
-        auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
-            .texture = engine->CreateHandle<Texture>(
-                engine->assets.Load<Texture>("textures/smoke.png").release()
-            ),
-            .max_particles = 1024u,
-            .origin = Vector3(0.0f, 7.0f, -4.0f),
-            .lifespan = 8.0f
-        });
-        engine->InitObject(particle_spawner);
-
-        m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
-#endif
+            m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
+        }
 
 #if HYPERION_VK_TEST_VCT
-        m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
-            VoxelConeTracing::Params {
-                BoundingBox(-128, 128)//test_model->GetWorldAABB()
-            }
-        );
-#else
-        // m_scene->GetEnvironment()->AddRenderComponent<SparseVoxelOctree>();
+        { // voxel cone tracing for indirect light and reflections
+            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+                VoxelConeTracing::Params {
+                    BoundingBox(-128, 128)//test_model->GetWorldAABB()
+                }
+            );
+        }
 #endif
-
-        // test_model->Translate(Vector3(0, 0, -25.0f));
 
         if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
         }
-
-        auto quad = engine->CreateHandle<Mesh>(MeshBuilder::NormalizedCubeSphere(8).release());//MeshBuilder::DividedQuad(8).release());    //MeshBuilder::Quad());
-        // quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-        auto quad_spatial = engine->CreateHandle<Entity>(
-            std::move(quad),
-            Handle<Shader>(engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)),
-            engine->CreateHandle<Material>()
-        );
-    
-        engine->InitObject(quad_spatial);
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));//0.00f, 0.4f, 0.9f, 1.0f));
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
-        quad_spatial->SetScale(Vector3(3.0f));
-        quad_spatial->SetRotation(Quaternion(Vector3(1, 1, 1), MathUtil::DegToRad(-40.0f)));
-        quad_spatial->SetTranslation(Vector3(0, 12.0f, 0));
-        // m_scene->AddEntity(std::move(quad_spatial));
         
-        m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-            Handle<Light>(my_light),
-            Vector3(0, 0, 0),
-            250.0f
-        );
+        { // adding shadow maps
+            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+                Handle<Light>(m_point_light),
+                Vector3(0, 0, 0),
+                250.0f
+            );
+        }
 
-        m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
-            renderer::Extent2D {128, 128},
-            BoundingBox { Vector(-128, -10, -128), Vector(128, 100, 128) },
-            renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
-        );
-        m_scene->ForceUpdate();
-
+        { // adding cubemap rendering with a bounding box
+            m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
+                renderer::Extent2D {128, 128},
+                BoundingBox { Vector(-128, -10, -128), Vector(128, 100, 128) },
+                renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
+            );
+        }
 
         cube_obj->Scale(50.0f);
 
@@ -347,8 +314,6 @@ public:
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
         }
-
-        m_loaded = true;
     }
 
     virtual void Teardown(Engine *engine) override
@@ -366,20 +331,6 @@ public:
         m_scene->GetEnvironment()->RenderComponents(engine, frame);
 
         engine->render_state.BindScene(m_scene.Get());
-        /*if (m_loaded) {    
-            svo.Init(engine);
-            svo_ready_to_build = true;
-            //HYP_FLUSH_RENDER_QUEUE(engine);
-
-            m_loaded = false;
-        } else if (svo_ready_to_build) {
-            
-            svo.Build(engine, frame);
-            svo_ready_to_build = false;
-        } else if (svo_ready_to_build) {
-            ++svo_counter;
-        }*/
-
     }
 
     virtual void OnFrameEnd(Engine *engine, Frame *) override
@@ -701,23 +652,6 @@ int main()
                 }
             )
         );
-    }
-    
-    {
-        auto translucent_renderer_instance = std::make_unique<RendererInstance>(
-            Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)),
-            Handle<v2::RenderPass>(engine->GetDeferredSystem().Get(BUCKET_TRANSLUCENT).GetRenderPass()),
-            RenderableAttributeSet(
-                MeshAttributes {
-                    .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-                },
-                MaterialAttributes {
-                    .bucket = Bucket::BUCKET_TRANSLUCENT
-                }
-            )
-        );
-        
-        engine->AddRendererInstance(std::move(translucent_renderer_instance));
     }
     
 

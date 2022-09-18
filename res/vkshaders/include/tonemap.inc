@@ -5,7 +5,7 @@
 //#define HDR_TONEMAP_REINHARD 1
 
 #ifndef HDR_EXPOSURE
-    #define HDR_EXPOSURE 5.0
+    #define HDR_EXPOSURE 6.0
 #endif
 
 const float A = 0.15;
