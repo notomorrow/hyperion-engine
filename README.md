@@ -3,7 +3,7 @@
 
 ## About
 
-Hyperion Engine is a 3D game engine written in C++, rendering on Vulkan.
+Hyperion Engine is a 3D game engine written in C++, rendering on Vulkan. Currently, it targets Windows, macOS and Linux.
 
 The goal of Hyperion is to be easy to understand and build games with, while still giving you ample control over the game engine.
 
