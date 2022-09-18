@@ -582,14 +582,20 @@ void DeferredRenderer::Render(
     
     m_post_processing.RenderPre(engine, frame);
 
+    auto &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer(frame_index);
+
     { // deferred lighting on opaque objects
         DebugMarker marker(primary, "Deferred shading");
 
-        m_indirect_pass.Render(engine, frame);
+        deferred_pass_framebuffer->BeginCapture(primary);
+
+        m_indirect_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary);
 
         if (engine->render_state.light_ids.Any()) {
-            m_direct_pass.Render(engine, frame);
+            m_direct_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary);
         }
+
+        deferred_pass_framebuffer->EndCapture(primary);
     }
 
     { // translucent objects
@@ -651,8 +657,8 @@ void DeferredRenderer::Render(
         m_cull_data.depth_pyramid_dimensions = m_dpr.GetExtent();
     }
 
-    auto *src_image = m_direct_pass.GetFramebuffer(frame_index)->GetRenderPass()
-        ->GetRenderPass().GetAttachmentRefs()[0]->GetAttachment()->GetImage();//;
+    auto *src_image = deferred_pass_framebuffer->GetRenderPass()
+        ->GetRenderPass().GetAttachmentRefs()[0]->GetAttachment()->GetImage();
 
     GenerateMipChain(engine, frame, src_image);
 
