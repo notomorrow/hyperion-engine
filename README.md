@@ -13,7 +13,7 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 * Skeletal animation
 * Serialization / deserialization system
 * Highly multi-threaded with async task system
-* Post processing pipeline - SSAO, Screen-space reflections, FXAA, Tonemapping
+* Post processing pipeline - SSAO, screen space reflections (SSR), screen space refraction, FXAA, Tonemapping
 * Parallax corrected dynamic cubemap rendering
 * Voxel Cone Tracing (global illumination and reflections)
 * Contact hardened softened shadows
