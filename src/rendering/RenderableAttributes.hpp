@@ -29,12 +29,16 @@ struct MaterialAttributes
     };
 
     Bucket bucket = Bucket::BUCKET_OPAQUE;
+    FillMode fill_mode = FillMode::FILL;
+    FaceCullMode cull_faces = FaceCullMode::BACK;
     MaterialFlags flags = RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE | RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST;
 
     auto ToTuple() const
     {
         return std::make_tuple(
             bucket,
+            fill_mode,
+            cull_faces,
             flags
         );
     }
@@ -42,6 +46,8 @@ struct MaterialAttributes
     bool operator==(const MaterialAttributes &other) const
     {
         return bucket == other.bucket
+            && fill_mode == other.fill_mode
+            && cull_faces == other.cull_faces
             && flags == other.flags;
     }
 
@@ -55,25 +61,19 @@ struct MeshAttributes
 {
     VertexAttributeSet vertex_attributes { renderer::static_mesh_vertex_attributes };
     Topology topology { Topology::TRIANGLES };
-    FillMode fill_mode { FillMode::FILL };
-    FaceCullMode cull_faces { FaceCullMode::BACK };
 
     auto ToTuple() const
     {
         return std::make_tuple(
             vertex_attributes,
-            topology,
-            fill_mode,
-            cull_faces
+            topology
         );
     }
 
     bool operator==(const MeshAttributes &other) const
     {
         return vertex_attributes == other.vertex_attributes
-            && topology == other.topology
-            && fill_mode == other.fill_mode
-            && cull_faces == other.cull_faces;
+            && topology == other.topology;
     }
 
     bool operator<(const MeshAttributes &other) const

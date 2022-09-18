@@ -196,7 +196,8 @@ public:
         }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
-           engine->assets.Load<Texture>(
+            engine->assets.Load<Texture>(
+                // "textures/hdr_cubemaps/alps_field_4k.hdr"
                "textures/chapel/posx.jpg",
                "textures/chapel/negx.jpg",
                "textures/chapel/posy.jpg",
@@ -260,9 +261,6 @@ public:
             );
         }
 #endif
-
-        if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
-        }
         
         { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
@@ -274,29 +272,33 @@ public:
 
         { // adding cubemap rendering with a bounding box
             m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
-                renderer::Extent2D {128, 128},
-                BoundingBox { Vector(-128, -10, -128), Vector(128, 100, 128) },
+                Extent2D { 512, 512 },
+                test_model->GetWorldAABB(),
                 renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
             );
         }
 
         cube_obj->Scale(50.0f);
 
+        AssertThrow(cubemap);
         auto skybox_material = engine->CreateHandle<Material>();
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
         skybox_material->SetBucket(BUCKET_SKYBOX);
+        skybox_material->SetIsDepthWriteEnabled(false);
+        skybox_material->SetIsDepthTestEnabled(false);
+        skybox_material->SetFaceCullMode(FaceCullMode::FRONT);
 
-        auto &skybox_spatial = cube_obj->GetChild(0).Get()->GetEntity();
+        auto skybox_spatial = cube_obj->GetChild(0).Get()->GetEntity();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
-        // skybox_spatial->SetMeshAttributes(
-        //     FaceCullMode::FRONT,
-        //     false,
-        //     false
-        // );
+        skybox_spatial->RebuildRenderableAttributes();
 
-        m_scene->AddEntity(Handle<Entity>(cube_obj->GetChild(0).Get()->GetEntity()));
+        m_scene->AddEntity(std::move(skybox_spatial));
+
+        // add test model
+        if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
+        }
 
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
         monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));

@@ -207,8 +207,8 @@ void RendererInstance::Init(Engine *engine)
             renderer::GraphicsPipeline::ConstructionInfo construction_info {
                 .vertex_attributes = m_renderable_attributes.mesh_attributes.vertex_attributes,
                 .topology          = m_renderable_attributes.mesh_attributes.topology,
-                .cull_mode         = m_renderable_attributes.mesh_attributes.cull_faces,
-                .fill_mode         = m_renderable_attributes.mesh_attributes.fill_mode,
+                .cull_mode         = m_renderable_attributes.material_attributes.cull_faces,
+                .fill_mode         = m_renderable_attributes.material_attributes.fill_mode,
                 .depth_test        = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST),
                 .depth_write       = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE),
                 .blend_enabled     = bool(m_renderable_attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING),

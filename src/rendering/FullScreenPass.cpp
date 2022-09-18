@@ -152,11 +152,11 @@ void FullScreenPass::CreatePipeline(Engine *engine)
 {
     CreatePipeline(engine, RenderableAttributeSet(
         MeshAttributes {
-            .vertex_attributes = renderer::static_mesh_vertex_attributes,
-            .fill_mode = FillMode::FILL,
+            .vertex_attributes = renderer::static_mesh_vertex_attributes
         },
         MaterialAttributes {
             .bucket = Bucket::BUCKET_INTERNAL,
+            .fill_mode = FillMode::FILL,
             .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
         }
     ));

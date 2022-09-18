@@ -142,7 +142,6 @@ void ShadowPass::CreateRendererInstance(Engine *engine)
         RenderableAttributeSet(
             MeshAttributes {
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-                // .cull_faces = FaceCullMode::FRONT
             },
             MaterialAttributes {
                 .bucket = BUCKET_SHADOW

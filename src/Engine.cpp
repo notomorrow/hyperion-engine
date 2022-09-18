@@ -230,8 +230,7 @@ void Engine::PrepareFinalPass()
                 Handle<RenderPass>(render_pass),
                 RenderableAttributeSet(
                     MeshAttributes {
-                        .vertex_attributes = renderer::static_mesh_vertex_attributes,
-                        .fill_mode = FillMode::FILL
+                        .vertex_attributes = renderer::static_mesh_vertex_attributes
                     },
                     MaterialAttributes {
                         .bucket = BUCKET_SWAPCHAIN
