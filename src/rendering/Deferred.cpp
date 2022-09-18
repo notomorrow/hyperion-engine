@@ -116,11 +116,11 @@ void DeferredPass::Create(Engine *engine)
 
     RenderableAttributeSet renderable_attributes(
         MeshAttributes {
-            .vertex_attributes = renderer::static_mesh_vertex_attributes,
-            .fill_mode = FillMode::FILL,
+            .vertex_attributes = renderer::static_mesh_vertex_attributes
         },
         MaterialAttributes {
             .bucket = Bucket::BUCKET_INTERNAL,
+            .fill_mode = FillMode::FILL,
             .flags = m_is_indirect_pass
                 ? MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
                 : MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING

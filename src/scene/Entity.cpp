@@ -376,13 +376,6 @@ void Entity::RebuildRenderableAttributes()
     new_renderable_attributes.shader_id = m_shader != nullptr
         ? m_shader->GetID()
         : Shader::empty_id;
-    
-
-    // if (m_material != nullptr) {
-    //     new_renderable_attributes.cull_faces        = face_cull_mode;
-    //     new_renderable_attributes.depth_write       = depth_write;
-    //     new_renderable_attributes.depth_test        = depth_test;
-    // }
 
     SetRenderableAttributes(new_renderable_attributes);
 }

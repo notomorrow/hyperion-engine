@@ -142,19 +142,6 @@ public:
     void SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes);
     void RebuildRenderableAttributes();
 
-    // void SetMeshAttributes(
-    //     VertexAttributeSet vertex_attributes,
-    //     FaceCullMode face_cull_mode = FaceCullMode::BACK,
-    //     bool depth_write = true,
-    //     bool depth_test = true
-    // );
-
-    // void SetMeshAttributes(
-    //     FaceCullMode face_cull_mode = FaceCullMode::BACK,
-    //     bool depth_write = true,
-    //     bool depth_test = true
-    // );
-
     void SetStencilAttributes(const StencilState &stencil_state);
 
     RendererInstance *GetPrimaryRendererInstance() const

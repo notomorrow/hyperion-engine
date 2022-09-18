@@ -345,6 +345,65 @@ struct alignas(8) Extent2D
     bool operator!=(const Extent2D &other) const
         { return !operator==(other); }
     
+    Extent2D operator*(const Extent2D &other) const
+    {
+        return Extent2D(width * other.width, height * other.height);
+    }
+
+    Extent2D &operator*=(const Extent2D &other)
+    {
+        width *= other.width;
+        height *= other.height;
+
+        return *this;
+    }
+    
+    Extent2D operator*(UInt32 scalar) const
+    {
+        return Extent2D(width * scalar, height * scalar);
+    }
+
+    Extent2D &operator*=(UInt32 scalar)
+    {
+        width *= scalar;
+        height *= scalar;
+
+        return *this;
+    }
+
+    Extent2D operator/(const Extent2D &other) const
+    {
+        AssertThrow(other.width != 0 && other.height != 0);
+        return Extent2D(width / other.width, height / other.height);
+    }
+
+    Extent2D &operator/=(const Extent2D &other)
+    {
+        AssertThrow(other.width != 0 && other.height != 0);
+
+        width  /= other.width;
+        height /= other.height;
+
+        return *this;
+    }
+    
+    Extent2D operator/(UInt32 scalar) const
+    {
+        AssertThrow(scalar != 0);
+
+        return Extent2D(width / scalar, height / scalar);
+    }
+
+    Extent2D &operator/=(UInt32 scalar)
+    {
+        AssertThrow(scalar != 0);
+
+        width /= scalar;
+        height /= scalar;
+
+        return *this;
+    }
+    
     constexpr UInt32 &operator[](UInt32 index) { return v[index]; }
     constexpr UInt32 operator[](UInt32 index) const { return v[index]; }
 
@@ -417,7 +476,11 @@ struct alignas(16) Extent3D
     bool operator!=(const Extent3D &other) const
         { return !operator==(other); }
     
-    Extent3D operator*(const Extent3D &other) const { return Extent3D(width * other.width, height * other.height, depth * other.depth); }
+    Extent3D operator*(const Extent3D &other) const
+    {
+        return Extent3D(width * other.width, height * other.height, depth * other.depth);
+    }
+
     Extent3D &operator*=(const Extent3D &other)
     {
         width *= other.width;
@@ -426,13 +489,52 @@ struct alignas(16) Extent3D
 
         return *this;
     }
+    
+    Extent3D operator*(UInt32 scalar) const
+    {
+        return Extent3D(width * scalar, height * scalar, depth * scalar);
+    }
 
-    Extent3D operator/(const Extent3D &other) const { return Extent3D(width / other.width, height / other.height, depth / other.depth); }
+    Extent3D &operator*=(UInt32 scalar)
+    {
+        width *= scalar;
+        height *= scalar;
+        depth *= scalar;
+
+        return *this;
+    }
+
+    Extent3D operator/(const Extent3D &other) const
+    {
+        AssertThrow(other.width != 0 && other.height != 0 && other.depth != 0);
+        return Extent3D(width / other.width, height / other.height, depth / other.depth);
+    }
+
     Extent3D &operator/=(const Extent3D &other)
     {
+        AssertThrow(other.width != 0 && other.height != 0 && other.depth != 0);
+
         width  /= other.width;
         height /= other.height;
         depth  /= other.depth;
+
+        return *this;
+    }
+    
+    Extent3D operator/(UInt32 scalar) const
+    {
+        AssertThrow(scalar != 0);
+
+        return Extent3D(width / scalar, height / scalar, depth / scalar);
+    }
+
+    Extent3D &operator/=(UInt32 scalar)
+    {
+        AssertThrow(scalar != 0);
+
+        width /= scalar;
+        height /= scalar;
+        depth /= scalar;
 
         return *this;
     }

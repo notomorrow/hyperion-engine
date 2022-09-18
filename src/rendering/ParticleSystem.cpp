@@ -240,11 +240,11 @@ void ParticleSpawner::CreateRendererInstance()
         Handle<RenderPass>(GetEngine()->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass()),
         RenderableAttributeSet(
             MeshAttributes {
-                .vertex_attributes = renderer::static_mesh_vertex_attributes,
-                .cull_faces = FaceCullMode::NONE
+                .vertex_attributes = renderer::static_mesh_vertex_attributes
             },
             MaterialAttributes {
                 .bucket = Bucket::BUCKET_TRANSLUCENT,
+                .cull_faces = FaceCullMode::NONE,
                 .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST
                     | MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING
             }

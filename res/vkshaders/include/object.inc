@@ -1,6 +1,7 @@
 #include "defines.inc"
 
-struct Object {
+struct Object
+{
     // 0
     mat4 model_matrix;
     
@@ -25,7 +26,8 @@ struct Object {
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std430, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer {
+layout(std430, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
+{
     Object object;
 };
 

@@ -371,8 +371,7 @@ void CubemapRenderer::CreateRendererInstance(Engine *engine)
         Handle<RenderPass>(m_render_pass),
         RenderableAttributeSet(
             MeshAttributes {
-                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-                .cull_faces = FaceCullMode::BACK
+                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
             },
             MaterialAttributes {
                 .bucket = BUCKET_INTERNAL,

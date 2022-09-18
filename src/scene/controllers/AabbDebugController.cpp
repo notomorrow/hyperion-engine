@@ -42,12 +42,12 @@ void AABBDebugController::OnAdded()
         std::move(material),
         RenderableAttributeSet(
             MeshAttributes {
-                .vertex_attributes = vertex_attributes,
-                .fill_mode = FillMode::LINE,
-                .cull_faces = FaceCullMode::NONE
+                .vertex_attributes = vertex_attributes
             },
             MaterialAttributes {
                 .bucket = Bucket::BUCKET_TRANSLUCENT,
+                .fill_mode = FillMode::LINE,
+                .cull_faces = FaceCullMode::NONE,
                 .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_ALPHA_BLENDING
             },
             shader_id
