@@ -74,10 +74,8 @@
 using namespace hyperion;
 using namespace hyperion::v2;
 
-
-#define HYPERION_VK_TEST_VCT 1
+#define HYPERION_VK_TEST_VCT 0
 #define HYPERION_VK_TEST_RAYTRACING 0
-#define HYPERION_RUN_TESTS 1
 
 namespace hyperion::v2 {
     
@@ -113,7 +111,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"
+            "models/sponza/sponza.obj",//testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -189,12 +187,12 @@ public:
 #endif
         
         { // custom vegetation shader
-            if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
+            /*if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
                 grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
                 grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
                 grass.Scale(1.0f);
                 grass.Translate({0, 1, 0});
-            }
+            }*/
         }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
@@ -216,10 +214,9 @@ public:
             zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
             zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
             zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.0f);
-            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
-            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
             zombie->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
-            m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+            //m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
         }
         
         { // adding lights to scene
@@ -241,19 +238,17 @@ public:
         test_model->Scale(0.15f);
 
         { // particles test
-            auto particle_system = UniquePtr<ParticleSystem>::Construct();
-
             auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = engine->CreateHandle<Texture>(
                     engine->assets.Load<Texture>("textures/smoke.png").release()
                 ),
                 .max_particles = 1024u,
-                .origin = Vector3(0.0f, 7.0f, -4.0f),
+                .origin = Vector3(0.0f, 8.0f, -17.0f),
                 .lifespan = 8.0f
             });
             engine->InitObject(particle_spawner);
 
-            m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
+            //m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
         }
 
 #if HYPERION_VK_TEST_VCT
@@ -304,12 +299,11 @@ public:
         m_scene->AddEntity(Handle<Entity>(cube_obj->GetChild(0).Get()->GetEntity()));
 
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
-
         monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
         monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
         monkey->Translate(Vector3(0, 22.5f, 0));
         monkey->Scale(4.0f);
-        m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
+        //m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
