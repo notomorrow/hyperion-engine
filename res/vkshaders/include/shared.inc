@@ -218,4 +218,19 @@ float RoughnessToConeAngle(float roughness)
     return acos(pow(xi, exponent));
 }
 
+int GetNumLevels(sampler samp, texture2D tex)
+{
+    return textureQueryLevels(sampler2D(tex, samp));
+}
+
+int GetNumLevels(sampler samp, texture3D tex)
+{
+    return textureQueryLevels(sampler3D(tex, samp));
+}
+
+int GetNumLevels(sampler samp, textureCube tex)
+{
+    return textureQueryLevels(samplerCube(tex, samp));
+}
+
 #endif

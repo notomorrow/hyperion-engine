@@ -27,7 +27,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 vec2 texcoord = v_texcoord0;
 
-#define HYP_VCT_ENABLED 0
+#define HYP_VCT_ENABLED 1
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 #define HYP_ENV_PROBE_ENABLED 1
@@ -41,8 +41,8 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 40000.0
-#define IRRADIANCE_MULTIPLIER 8.0
+#define IBL_INTENSITY 100000.0
+#define IRRADIANCE_MULTIPLIER 4.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -50,7 +50,8 @@ vec2 texcoord = v_texcoord0;
 
 #define DEFERRED_FLAG_SSR_ENABLED 0x1
 
-layout(push_constant) uniform DeferredParams {
+layout(push_constant) uniform DeferredParams
+{
     uint flags;
 } deferred_params;
 
@@ -95,8 +96,6 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 
 #endif
 
-
-
 void main()
 {
     vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
@@ -106,8 +105,6 @@ void main()
 
     vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
-
-    // vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
     vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
@@ -143,18 +140,14 @@ void main()
         // const float material_reflectance = 0.5;
         // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
         
-        
         // Index of refraction for common dielectrics. Corresponds to f0 4%
         const float IOR = 1.5;
         const float material_reflectance = 0.5;
         // dialetric f0
         const float reflectance = 0.16 * material_reflectance * material_reflectance;
-        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        // vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        // F0 = mix(F0, vec3(0.04), metalness);
-        // vec3 F0 = albedo_linear * metalness + (reflectance * (1.0 - metalness));
-    
-        // F0 = mix(F0, albedo_linear, metalness);
+        // const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        F0 = mix(F0, vec3(0.04), metalness);
 
         // const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         F = SchlickFresnelRoughness(F0, roughness, NdotV);
@@ -173,7 +166,7 @@ void main()
 
             if (probe.texture_index != ~0u) {
                 const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
-                const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
+                const int num_levels = GetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
                 const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
 
                 ibl = EnvProbeSample(
@@ -225,7 +218,7 @@ void main()
             if (probe.texture_index != ~0u) {
                 const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
 
-                const int num_levels = EnvProbeGetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
+                const int num_levels = GetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
 
                 vec4 env_probe_irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
 
