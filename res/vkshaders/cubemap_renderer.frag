@@ -20,7 +20,7 @@ layout(location=0) out vec4 output_color;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.3
+#define HYP_CUBEMAP_AMBIENT 0.1
 
 void main()
 {
@@ -48,4 +48,5 @@ void main()
     float NdotL = max(0.0001, dot(N, L));
 
     output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
+    // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 }

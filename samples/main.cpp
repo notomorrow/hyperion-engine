@@ -128,20 +128,20 @@ public:
             sphere->SetName("sphere");
             // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
             sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i) / 10.0f + 0.01f, 0.05f, 0.95f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i) / 10.0f, 0.05f, 0.95f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.98f);
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.5f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i + 1) / 10.0f + 0.01f, 0.05f, 0.95f));
+            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i + 1) / 10.0f, 0.0f, 1.0f));
+            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
             sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
 
-            // if (i >= 5) {
-                sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
-                sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+                // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
                 sphere->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
-            // }
             sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
             m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
         }
@@ -224,16 +224,16 @@ public:
             m_point_light = engine->CreateHandle<Light>(new DirectionalLight(
                 Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
                 Vector4::One(),
-                150000.0f
+                110000.0f
             ));
             m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
 
-            m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
-                Vector3(0.0f, 6.0f, 0.0f),
-                Vector4(1.0f, 0.0f, 0.0f, 1.0f),
-                1000.0f,
-                4.0f
-            )));
+            // m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+            //     Vector3(0.0f, 6.0f, 0.0f),
+            //     Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+            //     1000.0f,
+            //     4.0f
+            // )));
         }
 
         test_model->Scale(0.15f);
@@ -273,7 +273,7 @@ public:
         { // adding cubemap rendering with a bounding box
             m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
                 Extent2D { 512, 512 },
-                test_model->GetWorldAABB(),
+                BoundingBox(Vector3(-128, -8, -128), Vector3(128, 25, 128)),
                 renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
             );
         }
@@ -293,8 +293,25 @@ public:
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         skybox_spatial->RebuildRenderableAttributes();
-
         m_scene->AddEntity(std::move(skybox_spatial));
+
+        /*auto water_quad = engine->CreateHandle<Entity>();
+        water_quad->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Cube().release()));
+        water_quad->SetMaterial(engine->CreateHandle<Material>());
+        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.5f, 1.0f, 0.35f));
+        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
+        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+        water_quad->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->CreateHandle<Texture>(
+            engine->assets.Load<Texture>("textures/water.jpg").release()
+        ));
+        water_quad->GetMaterial()->SetIsAlphaBlended(true);
+        water_quad->GetMaterial()->SetBucket(BUCKET_TRANSLUCENT);
+        water_quad->SetScale(Vector3(18.0f));
+        water_quad->SetShader(Handle(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
+        water_quad->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
+        water_quad->RebuildRenderableAttributes();
+        GetScene()->AddEntity(std::move(water_quad));*/
+
 
         // add test model
         if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
@@ -304,8 +321,8 @@ public:
         monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
         monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
         monkey->Translate(Vector3(0, 22.5f, 0));
-        monkey->Scale(4.0f);
-        //m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
+        monkey->Scale(6.0f);
+        m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
@@ -340,7 +357,7 @@ public:
 
         HandleCameraMovement();
 
-        #if 0 // bad performance on large meshes. need bvh
+        #if 1 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
             const auto &mouse_position = GetInputManager()->GetMousePosition();

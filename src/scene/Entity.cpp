@@ -53,7 +53,10 @@ Entity::Entity(
 {
     if (m_mesh) {
         m_local_aabb = m_mesh->CalculateAABB();
-        m_world_aabb = m_local_aabb * m_transform;
+
+        if (!m_local_aabb.Empty()) {
+            m_world_aabb = m_local_aabb * m_transform;
+        }
     }
 }
 
@@ -245,8 +248,16 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
 
     m_mesh = std::move(mesh);
 
-    if (m_mesh && IsInitCalled()) {
-        GetEngine()->InitObject(m_mesh);
+    if (m_mesh) {
+        if (IsInitCalled()) {
+            GetEngine()->InitObject(m_mesh);
+        }
+
+        m_local_aabb = m_mesh->CalculateAABB();
+
+        if (!m_local_aabb.Empty()) {
+            m_world_aabb = m_local_aabb * m_transform;
+        }
     }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
@@ -436,7 +447,9 @@ void Entity::SetTransform(const Transform &transform)
     m_transform = transform;
     m_shader_data_state |= ShaderDataState::DIRTY;
 
-    m_world_aabb = m_local_aabb * transform;
+    if (!m_local_aabb.Empty()) {
+        m_world_aabb = m_local_aabb * transform;
+    }
 
     for (auto &it : m_controllers) {
         it.second->OnTransformUpdate(m_transform);
