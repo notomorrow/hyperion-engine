@@ -22,15 +22,15 @@ public:
     BoundingBox(const Vector3 &min, const Vector3 &max);
     BoundingBox(const BoundingBox &other);
 
-    const Vector3 &GetMin() const       { return min; }
-    void SetMin(const Vector3 &min)     { this->min = min; }
-    const Vector3 &GetMax() const       { return max; }
-    void SetMax(const Vector3 &max)     { this->max = max; }
+    const Vector3 &GetMin() const { return min; }
+    void SetMin(const Vector3 &min) { this->min = min; }
+    const Vector3 &GetMax() const { return max; }
+    void SetMax(const Vector3 &max) { this->max = max; }
     std::array<Vector3, 8> GetCorners() const;
     Vector3 GetCorner(UInt index) const;
-    Vector3 GetCenter() const           { return (max + min) / 2.0f; }
+    Vector3 GetCenter() const { return (max + min) / 2.0f; }
     void SetCenter(const Vector3 &center);
-    Vector3 GetExtent() const           { return max - min; }
+    Vector3 GetExtent() const { return max - min; }
     void SetExtent(const Vector3 &dimensions);
     float GetRadiusSquared() const;
     float GetRadius() const;
@@ -51,7 +51,7 @@ public:
     bool Empty() const
     { 
         return min == MathUtil::MaxSafeValue<Vector3>() && 
-               max == MathUtil::MinSafeValue<Vector3>();
+            max == MathUtil::MinSafeValue<Vector3>();
     }
 
     BoundingBox &Extend(const Vector3 &vec);

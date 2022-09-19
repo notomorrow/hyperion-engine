@@ -79,6 +79,10 @@ float BoundingBox::GetRadius() const
 
 BoundingBox &BoundingBox::operator*=(float scalar)
 {
+    if (Empty()) {
+        return *this;
+    }
+
     min *= scalar;
     max *= scalar;
 
@@ -87,6 +91,10 @@ BoundingBox &BoundingBox::operator*=(float scalar)
 
 BoundingBox BoundingBox::operator*(float scalar) const
 {
+    if (Empty()) {
+        return *this;
+    }
+
     BoundingBox other;
 
     for (const Vector3 &corner : GetCorners()) {
@@ -98,15 +106,15 @@ BoundingBox BoundingBox::operator*(float scalar) const
 
 BoundingBox BoundingBox::operator/(float scalar) const
 {
-    BoundingBox other(*this);
-    other.min /= scalar;
-    other.max /= scalar;
-
-    return other;
+    return BoundingBox(*this) /= scalar;
 }
 
 BoundingBox &BoundingBox::operator/=(float scalar)
 {
+    if (Empty()) {
+        return *this;
+    }
+
     min /= scalar;
     max /= scalar;
 
@@ -115,6 +123,10 @@ BoundingBox &BoundingBox::operator/=(float scalar)
 
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
 {
+    if (Empty()) {
+        return *this;
+    }
+
     min = transform.GetMatrix() * min;
     max = transform.GetMatrix() * max;
 

@@ -25,7 +25,9 @@ vec4 EnvProbeSample(
     vec3 coord, float lod
 )
 {
-    return textureLod(samplerCube(tex, samp), coord, lod);
+    vec4 color = textureLod(samplerCube(tex, samp), coord, lod);
+    //color.rgb = pow(color.rgb, vec3(2.2));
+    return color;
 }
 
 vec3 EnvProbeCoordParallaxCorrected(

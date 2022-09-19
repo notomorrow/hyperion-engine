@@ -41,8 +41,8 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 50000.0
-#define IRRADIANCE_MULTIPLIER 8.0
+#define IBL_INTENSITY 40000.0
+#define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -137,27 +137,25 @@ void main()
 
         const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
-        // const float material_reflectance = 0.5;
-        // const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
-        
         // Index of refraction for common dielectrics. Corresponds to f0 4%
         const float IOR = 1.5;
         const float material_reflectance = 0.5;
         // dialetric f0
         const float reflectance = 0.16 * material_reflectance * material_reflectance;
-        // const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        F0 = mix(F0, vec3(0.04), metalness);
+        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        // vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+        // F0 = mix(F0, vec3(0.04), metalness);
+        vec3 F90 = vec3(clamp(dot(F0.rgb, vec3(50.0 * 0.33)), 0.0, 1.0));
 
-        // const vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         F = SchlickFresnelRoughness(F0, roughness, NdotV);
+        // F = SchlickFresnel(F0, F90, NdotV);
 
-        const vec2 AB = BRDFMap(roughness, NdotV);
+        const float perceptual_roughness = sqrt(roughness);
+        const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
         const vec3 dfg = F * AB.x + AB.y;
         const vec3 E = mix(dfg.xxx, dfg.yyy, F0);
         
-        const vec3 energy_compensation = 1.0 + F0 * ((1.0 / max(dfg.y, 0.00001)) - 1.0);
-        const float perceptual_roughness = sqrt(roughness);
+        const vec3 energy_compensation = 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
@@ -182,9 +180,12 @@ void main()
 #endif
 
 #if HYP_VCT_ENABLED
+        vec4 vct_specular;
+        vec4 vct_diffuse;
+
         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
-            vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-            vec4 vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+            vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
+            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
 
 #if HYP_VCT_INDIRECT_ENABLED
             irradiance  = vct_diffuse.rgb;
@@ -226,35 +227,29 @@ void main()
             }
         }
 #endif
-
         const vec3 kD = (1.0 - F) * (1.0 - metalness);
-
-        vec3 Fd = diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) / HYP_FMATH_PI;
+        vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
-        // const vec3 bent_normal = (inverse(scene.view) * vec4(DecodeNormal(vec4(ssao_data.xyz, 1.0)).xyz, 0.0)).xyz;//ssao_data.xyz;
-        // vec3 specular_ao = vec3(SpecularAO_Cones(bent_normal, ao, perceptual_roughness, R));
         specular_ao *= energy_compensation;
 
-        vec3 Fr = E * ibl * specular_ao;
+        vec3 Fr = E * ibl;
+        Fr *= specular_ao;
 
-        vec3 multibounce = GTAOMultiBounce(ao, diffuse_color);
+        reflections.rgb *= specular_ao;
+
+        vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
         Fd *= multibounce;
         Fr *= multibounce;
 
         Fr *= exposure * IBL_INTENSITY;
         Fd *= exposure * IBL_INTENSITY;
 
-        reflections.rgb *= specular_ao;
         Fr = (Fr * (1.0 - reflections.a)) + (E * reflections.rgb);
 
         result = Fd + Fr;
 
         result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
-        // result = dfg;
-        // result = kD * Fd.rgb;//ibl * (F * AB.x + AB.y);
-        // result = voxelTraceCone(position.xyz, R, vec3(64.0) + vec3(0.0, 0.0, 5.0), vec3(-64.0) + vec3(0.0, 0.0, 5.0), 0.1, 1.0).rgb;
-        // result = vec3(AB, 0.0);
     } else {
         result = albedo.rgb;
     }
@@ -263,8 +258,4 @@ void main()
     result = vec3(ao);
 #endif
     output_color = vec4(result, 1.0);
-
-
-    // output_color.rgb = vec3(float(depth < 0.95)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
-    //output_color = ScreenSpaceReflection(material.r);
 }

@@ -62,18 +62,29 @@ float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
     return v;
 }
 
-
-float CookTorranceG(float NdotL, float NdotV, float LdotH, float NdotH)
+float Trowbridge(float NdotH, float roughness)
 {
-    return min(1, 2 * (NdotH / LdotH) * min(NdotL, NdotV));
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    float NdotH2 = NdotH * NdotH;
+    float denominator = PI * pow((alpha2 - 1) * NdotH2 + 1, 2);
+    return alpha2 / denominator;
+}
+
+float CookTorranceG(float NdotL, float NdotV, float HdotV, float NdotH)
+{
+    float first = 2 * NdotH * NdotV / HdotV;
+    float second = 2 * NdotH * NdotL / HdotV;
+    return min(1, min(first, second));
+    //return min(1, 2 * (NdotH / LdotH) * min(NdotL, NdotV));
 }
 
 vec3 SchlickFresnel(vec3 f0, vec3 f90, float u)
 {
-    const float Fc = pow(1 - u, 5.0);
-    return f0 * (1.0 - Fc) + f90 * Fc;
+    //const float Fc = pow(1 - u, 5.0);
+    //return f0 * (1.0 - Fc) + f90 * Fc;
 
-    // return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 vec4 SchlickFresnel(vec4 f0, vec4 f90, float u)
