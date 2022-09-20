@@ -12,27 +12,30 @@
 namespace hyperion::v2 {
 
 constexpr bool create_obj_indices = true;
-constexpr bool mesh_per_material  = true; // set true to create a new mesh on each instance of 'use <mtllib>'
-constexpr bool load_materials     = true;
+constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
+constexpr bool load_materials = true;
 
 using Tokens = std::vector<std::string>;
-using OBJModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;
+
+using OBJModel = OBJModelLoader::OBJModel;
+using OBJMesh = OBJModel::OBJMesh;
+using OBJIndex = OBJModel::OBJIndex;
 
 template <class Vector>
-static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
+static Vector ReadVector(const Tokens &tokens, SizeType offset = 1)
 {
-    Vector result{0.0f};
+    Vector result { 0.0f };
 
-    int value_index = 0;
+    Int value_index = 0;
 
-    for (size_t i = offset; i < tokens.size(); i++) {
+    for (SizeType i = offset; i < tokens.size(); i++) {
         const auto &token = tokens[i];
 
         if (token.empty()) {
             continue;
         }
 
-        result.values[value_index++] = float(std::atof(token.c_str()));
+        result.values[value_index++] = static_cast<Float>(std::atof(token.c_str()));
 
         if (value_index == std::size(result.values)) {
             break;
@@ -42,50 +45,50 @@ static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
     return result;
 }
 
-static void AddMesh(OBJModelLoader::Object &object, const std::string &tag, const std::string &material)
+static void AddMesh(OBJModel &model, const std::string &tag, const std::string &material)
 {
     std::string unique_tag(tag);
-    int counter = 0;
+    Int counter = 0;
 
     while (std::any_of(
-        object.meshes.begin(),
-        object.meshes.end(),
+        model.meshes.begin(),
+        model.meshes.end(),
         [&unique_tag](const auto &mesh) { return mesh.tag == unique_tag; }
     )) {
         unique_tag = tag + std::to_string(++counter);
     }
 
-    object.meshes.push_back({
+    model.meshes.push_back(OBJMesh {
         .tag = unique_tag,
         .material = material
     });
 }
 
-static auto &LastMesh(OBJModelLoader::Object &object)
+static auto &LastMesh(OBJModel &model)
 {
-    if (object.meshes.empty()) {
-        AddMesh(object, "default", "default");
+    if (model.meshes.empty()) {
+        AddMesh(model, "default", "default");
     }
 
-    return object.meshes.back();
+    return model.meshes.back();
 }
 
-static auto ParseObjIndex(const std::string &token)
+static auto ParseOBJIndex(const std::string &token)
 {
-    OBJModelLoader::Object::ObjIndex obj_index{0, 0, 0};
-    size_t token_index = 0;
+    OBJIndex obj_index { 0, 0, 0 };
+    SizeType token_index = 0;
 
     StringUtil::SplitBuffered(token, '/', [&token_index, &obj_index](const std::string &index_str) {
         if (!index_str.empty()) {
             switch (token_index) {
             case 0:
-                obj_index.vertex   = StringUtil::Parse<int64_t>(index_str) - 1;
+                obj_index.vertex = StringUtil::Parse<Int64>(index_str) - 1;
                 break;
             case 1:
-                obj_index.texcoord = StringUtil::Parse<int64_t>(index_str) - 1;
+                obj_index.texcoord = StringUtil::Parse<Int64>(index_str) - 1;
                 break;
             case 2:
-                obj_index.normal   = StringUtil::Parse<int64_t>(index_str) - 1;
+                obj_index.normal = StringUtil::Parse<Int64>(index_str) - 1;
                 break;
             default:
                 // ??
@@ -100,14 +103,14 @@ static auto ParseObjIndex(const std::string &token)
 }
 
 template <class Vector>
-Vector GetIndexedVertexProperty(int64_t vertex_index, const std::vector<Vector> &vectors)
+Vector GetIndexedVertexProperty(Int64 vertex_index, const std::vector<Vector> &vectors)
 {
-    const int64_t vertex_absolute = vertex_index >= 0
+    const Int64 vertex_absolute = vertex_index >= 0
         ? vertex_index
-        : int64_t(vectors.size()) + (vertex_index);
+        : static_cast<Int64>(vectors.size()) + (vertex_index);
 
     AssertReturnMsg(
-        vertex_absolute >= 0 && vertex_absolute < int64_t(vectors.size()),
+        vertex_absolute >= 0 && vertex_absolute < static_cast<Int64>(vectors.size()),
         Vector(),
         "Vertex index of %lld (absolute: %lld) is out of bounds (%llu)\n",
         vertex_index,
@@ -118,9 +121,10 @@ Vector GetIndexedVertexProperty(int64_t vertex_index, const std::vector<Vector> 
     return vectors[vertex_absolute];
 }
 
-LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
+OBJModel OBJModelLoader::LoadModel(LoaderState &state)
 {
-    object.filepath = state->filepath;
+    OBJModel model;
+    model.filepath = state.filepath;
 
     Tokens tokens;
     tokens.reserve(5);
@@ -131,11 +135,11 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
         }
     };
 
-    object.tag = "unnamed";
+    model.tag = "unnamed";
 
     std::string active_material;
 
-    state->stream.ReadLines([&](const std::string &line) {
+    state.stream.ReadLines([&](const std::string &line) {
         tokens.clear();
 
         const auto trimmed = StringUtil::Trim(line);
@@ -151,25 +155,25 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
         }
 
         if (tokens[0] == "v") {
-            object.positions.push_back(ReadVector<Vector3>(tokens, 1));
+            model.positions.push_back(ReadVector<Vector3>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "vn") {
-            object.normals.push_back(ReadVector<Vector3>(tokens, 1));
+            model.normals.push_back(ReadVector<Vector3>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "vt") {
-            object.texcoords.push_back(ReadVector<Vector2>(tokens, 1));
+            model.texcoords.push_back(ReadVector<Vector2>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "f") {
-            auto &last_mesh = LastMesh(object);
+            auto &last_mesh = LastMesh(model);
 
             /* we don't support per-face material so we compromise by setting the mesh's material
              * to the last 'usemtl' value when we hit the face command.
@@ -183,10 +187,10 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
             }
 
             /* Performs simple triangulation on quad faces */
-            for (int64_t i = 0; i < static_cast<int64_t>(tokens.size()) - 3; i++) {
-                last_mesh.indices.push_back(ParseObjIndex(tokens[1]));
-                last_mesh.indices.push_back(ParseObjIndex(tokens[2 + i]));
-                last_mesh.indices.push_back(ParseObjIndex(tokens[3 + i]));
+            for (Int64 i = 0; i < static_cast<Int64>(tokens.size()) - 3; i++) {
+                last_mesh.indices.push_back(ParseOBJIndex(tokens[1]));
+                last_mesh.indices.push_back(ParseOBJIndex(tokens[2 + i]));
+                last_mesh.indices.push_back(ParseOBJIndex(tokens[3 + i]));
             }
 
             return;
@@ -194,7 +198,7 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
 
         if (tokens[0] == "o") {
             if (tokens.size() != 1) {
-                object.tag = tokens[1];
+                model.tag = tokens[1];
             }
 
             return;
@@ -217,7 +221,7 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
                     material_library_name << tokens[i];
                 }
 
-                object.material_library = material_library_name.str();
+                model.material_library = material_library_name.str();
             }
 
             return;
@@ -230,7 +234,7 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
                 tag = tokens[1];
             }
             
-            AddMesh(object, tag, active_material);
+            AddMesh(model, tag, active_material);
 
             return;
         }
@@ -245,7 +249,7 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
             active_material = tokens[1];
 
             if constexpr (mesh_per_material) {
-                AddMesh(object, active_material, active_material);
+                AddMesh(model, active_material, active_material);
             }
 
             return;
@@ -254,18 +258,22 @@ LoaderResult OBJModelLoader::LoadFn(LoaderState *state, Object &object)
         DebugLog(LogType::Warn, "Unable to parse obj model line: %s\n", trimmed.c_str());
     });
 
-    return {};
+    return model;
 }
 
-std::unique_ptr<Node> OBJModelLoader::BuildFn(Engine *engine, const Object &object)
+LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 {
-    auto top = std::make_unique<Node>(object.tag.c_str());
+    AssertThrow(state.asset_manager != nullptr);
+    auto *engine = state.asset_manager->GetEngine();
+    AssertThrow(engine != nullptr);
+
+    auto top = UniquePtr<Node>::Construct(model.tag.c_str());
 
     std::unique_ptr<MaterialGroup> material_library;
     
-    if (load_materials && !object.material_library.empty()) {
+    if (load_materials && !model.material_library.empty()) {
         auto material_library_path = FileSystem::RelativePath(
-            StringUtil::BasePath(object.filepath) + "/" + object.material_library,
+            StringUtil::BasePath(model.filepath) + "/" + model.material_library,
             FileSystem::CurrentPath()
         );
 
@@ -280,23 +288,23 @@ std::unique_ptr<Node> OBJModelLoader::BuildFn(Engine *engine, const Object &obje
         }
     }
 
-    const bool has_vertices  = !object.positions.empty(),
-               has_normals   = !object.normals.empty(),
-               has_texcoords = !object.texcoords.empty();
+    const bool has_vertices = !model.positions.empty(),
+        has_normals = !model.normals.empty(),
+        has_texcoords = !model.texcoords.empty();
 
-    for (auto &obj_mesh : object.meshes) {
+    for (auto &obj_mesh : model.meshes) {
         std::vector<Vertex> vertices;
-        vertices.reserve(object.positions.size());
+        vertices.reserve(model.positions.size());
 
         std::vector<Mesh::Index> indices;
         indices.reserve(obj_mesh.indices.size());
 
-        std::map<ObjIndex, Mesh::Index> index_map;
+        std::map<OBJIndex, Mesh::Index> index_map;
 
         const bool has_indices = !obj_mesh.indices.empty();
 
         if (has_indices) {
-            for (const ObjIndex &obj_index : obj_mesh.indices) {
+            for (const OBJIndex &obj_index : obj_mesh.indices) {
                 const auto it = index_map.find(obj_index);
 
                 if (create_obj_indices) {
@@ -310,15 +318,15 @@ std::unique_ptr<Node> OBJModelLoader::BuildFn(Engine *engine, const Object &obje
                 Vertex vertex;
 
                 if (has_vertices) {
-                    vertex.SetPosition(GetIndexedVertexProperty(obj_index.vertex, object.positions));
+                    vertex.SetPosition(GetIndexedVertexProperty(obj_index.vertex, model.positions));
                 }
 
                 if (has_normals) {
-                    vertex.SetNormal(GetIndexedVertexProperty(obj_index.normal, object.normals));
+                    vertex.SetNormal(GetIndexedVertexProperty(obj_index.normal, model.normals));
                 }
 
                 if (has_texcoords) {
-                    vertex.SetTexCoord0(GetIndexedVertexProperty(obj_index.texcoord, object.texcoords));
+                    vertex.SetTexCoord0(GetIndexedVertexProperty(obj_index.texcoord, model.texcoords));
                 }
 
                 const auto index = Mesh::Index(vertices.size());
@@ -352,50 +360,48 @@ std::unique_ptr<Node> OBJModelLoader::BuildFn(Engine *engine, const Object &obje
             }
         }
 
-        engine->resources->Lock([&](Resources &resources) {
-            if (material == nullptr) {
-                material = engine->CreateHandle<Material>();
-            }
+        if (material == nullptr) {
+            material = engine->CreateHandle<Material>();
+        }
 
-            auto mesh = engine->CreateHandle<Mesh>(
-                vertices, 
-                indices,
-                Topology::TRIANGLES
-            );
+        auto mesh = engine->CreateHandle<Mesh>(
+            vertices, 
+            indices,
+            Topology::TRIANGLES
+        );
 
-            if (!has_normals) {
-                mesh->CalculateNormals();
-            }
+        if (!has_normals) {
+            mesh->CalculateNormals();
+        }
 
-            mesh->CalculateTangents();
+        mesh->CalculateTangents();
 
-            auto vertex_attributes = mesh->GetVertexAttributes();
+        auto vertex_attributes = mesh->GetVertexAttributes();
 
-            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-            const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
-            auto entity = engine->CreateHandle<Entity>(
-                std::move(mesh),
-                std::move(shader),
-                std::move(material),
-                RenderableAttributeSet(
-                    MeshAttributes {
-                        .vertex_attributes = vertex_attributes
-                    },
-                    MaterialAttributes {
-                        .bucket = Bucket::BUCKET_OPAQUE
-                    },
-                    shader_id
-                )
-            );
-            
-            auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
-            node->SetEntity(std::move(entity));
+        auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+        const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
+        auto entity = engine->CreateHandle<Entity>(
+            std::move(mesh),
+            std::move(shader),
+            std::move(material),
+            RenderableAttributeSet(
+                MeshAttributes {
+                    .vertex_attributes = vertex_attributes
+                },
+                MaterialAttributes {
+                    .bucket = Bucket::BUCKET_OPAQUE
+                },
+                shader_id
+            )
+        );
+        
+        auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
+        node->SetEntity(std::move(entity));
 
-            top->AddChild(NodeProxy(node.release()));
-        });
+        top->AddChild(NodeProxy(node.release()));
     }
 
-    return std::move(top);
+    return LoadAssetResultPair { { LoaderResult::Status::OK }, std::move(top) };
 }
 
 } // namespace hyperion::v2

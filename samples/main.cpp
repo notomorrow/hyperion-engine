@@ -109,77 +109,57 @@ public:
 
         engine->GetWorld().AddScene(Handle<Scene>(m_scene));
 
-
+    
         AssetManager am(engine);
         am.SetBasePath(FilePath::Join(HYP_ROOT_DIR, "..", "res"));
-        am.Register<OBJLoader>("obj");
+        am.Register<OBJModelLoader>("obj");
         am.Register<Texture2DLoader>("jpg");
+    
 
-        auto batch = am.CreateBatch();
-        batch.Add<Node>("models/cube.obj");
-        batch.Add<Texture>("textures/dummy.jpg");
-        batch.Add<Texture>("textures/dirt.jpg");
-        batch.LoadAsync();
-
-        auto res = batch.AwaitResults();
-        // for (auto &resource : res) {
-        //     auto x = resource.Get<Node>();
-        //     auto y = resource.Get<Texture>();
-        //     DebugLog(LogType::Debug, "Resource : % s, type : %u\n", resource.path.Data(), resource.value.GetTypeID().value);
-        // }
-
-        std::cout << " 1  :  " << res[0].Get<Node>().GetChild(0).GetName() << "\n";
-        std::cout << " 2  :  " << res[1].Get<Texture>()->GetImage().GetExtent().width << "\n";
-        std::cout << " 3  :  " << res[2].Get<Texture>()->GetImage().GetExtent().width << "\n";
-
-        HYP_BREAKPOINT;
-
-
-        auto loaded_assets = engine->assets.Load<Node>(
-            "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"
-            "models/cube.obj",
-            "models/material_sphere/material_sphere.obj",
-            "models/grass/grass.obj"
+        auto zombie = engine->assets.Load<Node>(
+            "models/ogrexml/dragger_Body.mesh.xml"
         );
 
-        zombie = std::move(loaded_assets[0]);
-        test_model = std::move(loaded_assets[1]);
-        cube_obj = std::move(loaded_assets[2]);
-        material_test_obj = std::move(loaded_assets[3]);
+        auto batch = am.CreateBatch();
+        batch.Add<Node>("models/sponza/sponza.obj");
+        batch.Add<Node>("models/cube.obj");
+        batch.Add<Node>("models/material_sphere/material_sphere.obj");
+        batch.Add<Node>("models/grass/grass.obj");
+        batch.LoadAsync();
+        auto obj_models = batch.AwaitResults();
+
+        auto test_model = obj_models[0].Get<Node>();
+        auto cube_obj = obj_models[1].Get<Node>();
+        auto material_test_obj = obj_models[2].Get<Node>();
 
         for (int i = 0; i < 10; i++) {
-            auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
-            sphere->Scale(5.0f);
-            sphere->SetName("sphere");
-            // sphere->GetChild(0).Get()->GetEntity()->SetMaterial(engine->CreateHandle<Material>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>());
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i + 1) / 10.0f + 0.01f, 0.05f, 0.95f));
-            sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i + 1) / 10.0f, 0.0f, 1.0f));
-            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            sphere->GetChild(0).Get()->GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+            auto sphere = am.Load<Node>("models/material_sphere/material_sphere.obj");
+            sphere.Scale(5.0f);
+            sphere.SetName("sphere");
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>());
+            sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i + 1) / 10.0f + 0.01f, 0.05f, 0.95f));
+            sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i + 1) / 10.0f, 0.0f, 1.0f));
+            // sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            // sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            sphere[0].GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
 
-                // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
-                // sphere->GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-                sphere->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
-            sphere->SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
-            m_scene->GetRoot().AddChild(NodeProxy(sphere.release()));
+            // sphere[0].GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+            // sphere[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            sphere[0].GetEntity()->RebuildRenderableAttributes();
+            sphere.SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
+            m_scene->GetRoot().AddChild(sphere);
         }
 
 #if 0// serialize/deseriale test
 
 #if 1
         FileByteWriter bw("data/dump/sponza.fbom");
-        // test_model->GetChild(0).Get()->GetEntity()->SetTranslation(Vector3(0, 9999, 0));
-        // test_model->GetChild(0).Get()->GetEntity()->SetScale(2.5f);
         fbom::FBOMWriter fw;
-        // fw.Append(*test_model->GetChild(0).Get()->GetEntity());
         fw.Append(*test_model);
         auto err = fw.Emit(&bw);
 
@@ -214,8 +194,8 @@ public:
         
         { // custom vegetation shader
             /*if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-                grass.GetChild(0).Get()->GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-                grass.GetChild(0).Get()->GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
+                grass[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                grass[0].GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
                 grass.Scale(1.0f);
                 grass.Translate({0, 1, 0});
             }*/
@@ -262,7 +242,7 @@ public:
             // )));
         }
 
-        test_model->Scale(0.15f);
+        test_model.Scale(0.15f);
 
         { // particles test
             auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
@@ -282,7 +262,7 @@ public:
         { // voxel cone tracing for indirect light and reflections
             m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
                 VoxelConeTracing::Params {
-                    BoundingBox(-128, 128)//test_model->GetWorldAABB()
+                    BoundingBox(-128, 128)
                 }
             );
         }
@@ -304,7 +284,7 @@ public:
             );
         }
 
-        cube_obj->Scale(50.0f);
+        cube_obj.Scale(50.0f);
 
         AssertThrow(cubemap);
         auto skybox_material = engine->CreateHandle<Material>();
@@ -315,7 +295,7 @@ public:
         skybox_material->SetIsDepthTestEnabled(false);
         skybox_material->SetFaceCullMode(FaceCullMode::FRONT);
 
-        auto skybox_spatial = cube_obj->GetChild(0).Get()->GetEntity();
+        auto skybox_spatial = cube_obj[0].GetEntity();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         skybox_spatial->RebuildRenderableAttributes();
@@ -340,15 +320,15 @@ public:
 
 
         // add test model
-        if (auto test = m_scene->GetRoot().AddChild(NodeProxy(test_model.release()))) {
+        if (auto test = m_scene->GetRoot().AddChild(test_model)) {
         }
 
-        auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
-        monkey->GetChild(0).Get()->GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
-        monkey->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
-        monkey->Translate(Vector3(0, 22.5f, 0));
-        monkey->Scale(6.0f);
-        m_scene->GetRoot().AddChild(NodeProxy(monkey.release()));
+        auto monkey = am.Load<Node>("models/monkey/monkey.obj");
+        monkey[0].GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
+        monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
+        monkey.Translate(Vector3(0, 22.5f, 0));
+        monkey.Scale(6.0f);
+        m_scene->GetRoot().AddChild(monkey);
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
@@ -490,7 +470,7 @@ public:
         }
     }
 
-    std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
+    std::unique_ptr<Node> zombie;
     GameCounter::TickUnit timer{};
     GameCounter::TickUnit ray_cast_timer{};
 

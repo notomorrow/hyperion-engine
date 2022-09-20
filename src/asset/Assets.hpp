@@ -3,7 +3,6 @@
 
 #include <asset/AssetBatch.hpp>
 #include <asset/AssetLoader.hpp>
-#include "model_loaders/OBJModelLoader.hpp"
 #include "material_loaders/MTLMaterialLoader.hpp"
 #include "model_loaders/OgreXMLModelLoader.hpp"
 #include "skeleton_loaders/OgreXMLSkeletonLoader.hpp"
@@ -31,47 +30,7 @@ namespace hyperion::v2 {
 
 class Engine;
 
-class QueuedAsset {
-public:
-    enum Priority {
-        LOWEST,
-        LOW,
-        MEDIUM,
-        HIGH,
-        HIGHEST,
-    };
-
-    QueuedAsset(const std::string &filename, const Priority priority)
-    { 
-        m_filename = filename;
-        m_priority = priority;
-
-
-    };
-
-    void SetPriority(const Priority priority) { m_priority = priority; }
-    float GetNiceness() { 
-        float niceness = (float)m_data_size / 100.0f;
-        uint8_t pr = Priority::HIGHEST - m_priority;
-        /* The lower the niceness, the higher the priority! */
-        return niceness + pr;
-    }
-
-private:
-    Priority m_priority;
-    std::string m_filename;
-    uint64_t m_data_size = 0;
-};
-
-class AssetPool {
-public:
-    AssetPool() { }
-    ~AssetPool() { }
-private:
-
-    std::vector<QueuedAsset> enqueued_assets;
-    std::thread pool_thread;
-};
+using LoadAssetResultPair = Pair<LoaderResult, UniquePtr<void>>;
 
 class Assets
 {
@@ -88,8 +47,8 @@ class Assets
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 15> extensions {
-                std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
+            constexpr StaticMap<const char *, LoaderFormat, 14> extensions {
+                // std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
                 std::make_pair(".mtl",          LoaderFormat::MTL_MATERIAL_LIBRARY),
                 std::make_pair(".mesh.xml",     LoaderFormat::OGRE_XML_MODEL),
                 std::make_pair(".skeleton.xml", LoaderFormat::OGRE_XML_SKELETON),
@@ -166,8 +125,6 @@ class Assets
         ConstructedAsset<Node> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
-            case LoaderFormat::OBJ_MODEL:
-                return LoadResource(engine, GetLoader<Node, LoaderFormat::OBJ_MODEL>());
             case LoaderFormat::OGRE_XML_MODEL:
                 return LoadResource(engine, GetLoader<Node, LoaderFormat::OGRE_XML_MODEL>());
             default:
@@ -513,6 +470,9 @@ public:
     void SetBasePath(const FilePath &base_path)
         { m_base_path = base_path; }
 
+    Engine *GetEngine() const
+        { return m_engine; }
+
     template <class Loader, class ... Formats>
     void Register(Formats &&... formats)
     {
@@ -564,13 +524,9 @@ private:
     FlatMap<String, UniquePtr<AssetLoaderBase>> m_loaders;
 };
 
-
-
 class AssetLoader : public AssetLoaderBase
 {
 protected:
-    using LoadAssetResultPair = Pair<LoaderResult, UniquePtr<void>>;
-
     static inline auto GetTryFilepaths(const FilePath &filepath, const FilePath &original_filepath)
     {
         const auto current_path = FilePath::Current();
@@ -603,7 +559,7 @@ public:
             LoaderState state {
                 .filepath = path.Data(),
                 .stream = path.Open(),
-                .engine = asset_manager.m_engine
+                .asset_manager = &asset_manager
             };
 
             if (!state.stream.IsOpen()) {
@@ -668,29 +624,6 @@ public:
         auto built_result = l.Build(state.engine, obj);
 
         return LoadAssetResultPair { result, UniquePtr<Texture>(built_result.release()).Cast<void>() };
-    }
-};
-
-class OBJLoader : public AssetLoader
-{
-public:
-    virtual ~OBJLoader() = default;
-
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override
-    {
-        LoaderObject<Node, LoaderFormat::OBJ_MODEL> loader_object;
-        auto l = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader();
-        auto loader_instance = l.Instance();
-
-        auto [result, obj] = loader_instance.Load(state);
-
-        if (!result) {
-            return LoadAssetResultPair { result, UniquePtr<void>() };
-        }
-
-        auto built_result = l.Build(state.engine, obj);
-
-        return LoadAssetResultPair { result, UniquePtr<Node>(built_result.release()).Cast<void>() };
     }
 };
 

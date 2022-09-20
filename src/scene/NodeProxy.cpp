@@ -103,6 +103,13 @@ const String &NodeProxy::GetName() const
         : String::empty;
 }
 
+void NodeProxy::SetName(const String &name)
+{
+    if (auto *node = Get()) {
+        node->SetName(name);
+    }
+}
+
 const Handle<Entity> &NodeProxy::GetEntity() const
 {
     return Get()
