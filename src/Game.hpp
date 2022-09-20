@@ -33,6 +33,7 @@ public:
     virtual ~Game();
 
     virtual void Init(Engine *engine, SystemWindow *window) final;
+    virtual void Update(Engine *engine, GameCounter::TickUnit delta) final;
     virtual void Teardown(Engine *engine);
 
     virtual void InitRender(Engine *engine);
@@ -40,12 +41,13 @@ public:
 
     virtual void OnFrameBegin(Engine *engine, Frame *frame) = 0;
     virtual void OnFrameEnd(Engine *engine, Frame *frame) = 0;
-    virtual void Logic(Engine *engine, GameCounter::TickUnit delta) = 0;
 
     virtual void HandleEvent(Engine *engine, SystemEvent &event) final;
     virtual void OnInputEvent(Engine *engine, const SystemEvent &event);
 
 protected:
+    virtual void Logic(Engine *engine, GameCounter::TickUnit delta) = 0;
+
     Handle<Scene> &GetScene()
         { return m_scene; }
 

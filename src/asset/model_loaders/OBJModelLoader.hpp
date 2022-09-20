@@ -9,32 +9,35 @@ namespace hyperion::v2 {
 
 template <>
 struct LoaderObject<Node, LoaderFormat::OBJ_MODEL> {
-    class Loader : public LoaderBase<Node, LoaderFormat::OBJ_MODEL> {
+    class Loader : public LoaderBase<Node, LoaderFormat::OBJ_MODEL>
+    {
         static LoaderResult LoadFn(LoaderState *state, Object &);
         static std::unique_ptr<Node> BuildFn(Engine *engine, const Object &);
 
     public:
         Loader()
             : LoaderBase({
-                .load_fn = LoadFn,
-                .build_fn = BuildFn
-            })
+                  .load_fn = LoadFn,
+                  .build_fn = BuildFn
+              })
         {
         }
     };
 
-    struct ObjIndex {
+    struct ObjIndex
+    {
         int64_t vertex,
-                normal,
-                texcoord;
+            normal,
+            texcoord;
 
         bool operator<(const ObjIndex &other) const
             { return std::tie(vertex, normal, texcoord) < std::tie(other.vertex, other.normal, other.texcoord); }
     };
 
-    struct ObjMesh {
-        std::string           tag;
-        std::string           material;
+    struct ObjMesh
+    {
+        std::string tag;
+        std::string material;
         std::vector<ObjIndex> indices;
     };
 
@@ -44,8 +47,8 @@ struct LoaderObject<Node, LoaderFormat::OBJ_MODEL> {
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
     std::vector<ObjMesh> meshes;
-    std::string          tag;
-    std::string          material_library;
+    std::string tag;
+    std::string material_library;
 };
 
 using ObjIndex = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::ObjIndex;

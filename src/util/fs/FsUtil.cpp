@@ -47,4 +47,16 @@ std::string FileSystem::RelativePath(const std::string &path, const std::string 
     return std::filesystem::proximate(path, base).string();
 }
 
+bool FilePath::Exists() const
+{
+    struct stat st;
+    
+    return stat(Data(), &st) == 0;
+}
+
+BufferedReader<2048> FilePath::Open() const
+{
+    return BufferedReader<2048>(Data());
+}
+
 } // namespace hyperion::v2

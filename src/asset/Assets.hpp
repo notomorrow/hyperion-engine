@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_ASSETS_H
 #define HYPERION_V2_ASSETS_H
 
+#include <asset/AssetBatch.hpp>
+#include <asset/AssetLoader.hpp>
 #include "model_loaders/OBJModelLoader.hpp"
 #include "material_loaders/MTLMaterialLoader.hpp"
 #include "model_loaders/OgreXMLModelLoader.hpp"
@@ -10,15 +12,20 @@
 #include "script_loaders/HypscriptLoader.hpp"
 #include "../scene/Node.hpp"
 
-#include <core/lib/StaticMap.hpp>
+#include <core/Containers.hpp>
 #include <util/fs/FsUtil.hpp>
 #include <util/Defines.hpp>
+#include <Threads.hpp>
 #include <Constants.hpp>
+#include <Component.hpp>
+
+#include <TaskSystem.hpp>
 
 #include <string>
 #include <unordered_map>
 #include <thread>
 #include <algorithm>
+#include <type_traits>
 
 namespace hyperion::v2 {
 
@@ -66,14 +73,17 @@ private:
     std::thread pool_thread;
 };
 
-class Assets {
+class Assets
+{
     template <class T>
-    struct ConstructedAsset {
+    struct ConstructedAsset
+    {
         std::unique_ptr<T> object;
-        LoaderResult       result;
+        LoaderResult result;
     };
 
-    struct HandleAssetFunctorBase {
+    struct HandleAssetFunctorBase
+    {
         std::string filepath;
 
         LoaderFormat GetResourceFormat() const
@@ -115,11 +125,13 @@ class Assets {
         template <class Loader>
         auto LoadResource(Engine *engine, const Loader &loader) -> ConstructedAsset<typename Loader::FinalType>
         {
-            auto [result, object] = loader.Instance().Load(LoaderState{
+            LoaderState state {
                 .filepath = filepath,
-                .stream = {filepath},
+                .stream = { filepath },
                 .engine = engine
-            });
+            };
+
+            auto [result, object] = loader.Instance().Load(state);
 
             if (result) {
                 /* TODO: Cache here */
@@ -287,10 +299,10 @@ class Assets {
     std::unique_ptr<Type> LoadSync(const std::string &path)
     {
         const std::string original_filepath = path;
-        const std::string filepath          = GetRebasedFilepath(path);
-        const auto try_filepaths            = GetTryFilepaths(filepath, original_filepath);
+        const std::string filepath = GetRebasedFilepath(path);
+        const auto try_filepaths = GetTryFilepaths(filepath, original_filepath);
 
-        ConstructedAsset<Type> result{};
+        ConstructedAsset<Type> result { };
         
         for (auto &try_filepath : try_filepaths) {
             DebugLog(LogType::Info, "Loading asset %s...\n", try_filepath.c_str());
@@ -476,8 +488,210 @@ public:
     }
 
 private:
-    Engine     *m_engine;
+    Engine *m_engine;
     std::string m_base_path;
+};
+
+class AssetManager
+{
+    friend struct AssetBatch;
+    friend class AssetLoader;
+
+public:
+    AssetManager(Engine *engine)
+        : m_engine(engine)
+    {
+    }
+
+    AssetManager(const AssetManager &other) = delete;
+    AssetManager &operator=(const AssetManager &other) = delete;
+    ~AssetManager() = default;
+
+    const FilePath &GetBasePath() const
+        { return m_base_path; }
+
+    void SetBasePath(const FilePath &base_path)
+        { m_base_path = base_path; }
+
+    template <class Loader, class ... Formats>
+    void Register(Formats &&... formats)
+    {
+        static_assert(std::is_base_of_v<AssetLoaderBase, Loader>,
+            "Loader must be a derived class of AssetLoaderBase!");
+
+        Threads::AssertOnThread(THREAD_GAME);
+
+        const FixedArray<String, sizeof...(formats)> format_strings {
+            formats...
+        };
+
+        for (auto &str : format_strings) {
+            m_loaders[str] = UniquePtr<Loader>::Construct();
+        }
+    }
+
+    template <class T>
+    auto Load(const String &path) -> typename AssetLoaderWrapper<NormalizedType<T>>::ResultType
+    {
+        const String extension(StringUtil::GetExtension(path.Data()).c_str());
+
+        if (extension.Empty()) {
+            return AssetLoaderWrapper<NormalizedType<T>>::EmptyResult();
+        }
+
+        const auto it = m_loaders.Find(extension);
+
+        if (it == m_loaders.End()) {
+            return AssetLoaderWrapper<NormalizedType<T>>::EmptyResult();
+        }
+
+        AssertThrow(it->second != nullptr);
+
+        return AssetLoaderWrapper<NormalizedType<T>>(*it->second)
+            .Load(*this, m_engine, path);
+    }
+
+    AssetBatch CreateBatch()
+    {
+        return AssetBatch(*this);
+    }
+
+private:
+    ComponentSystem &GetObjectSystem();
+
+    Engine *m_engine;
+    FilePath m_base_path;
+    FlatMap<String, UniquePtr<AssetLoaderBase>> m_loaders;
+};
+
+
+
+class AssetLoader : public AssetLoaderBase
+{
+protected:
+    using LoadAssetResultPair = Pair<LoaderResult, UniquePtr<void>>;
+
+    static inline auto GetTryFilepaths(const FilePath &filepath, const FilePath &original_filepath)
+    {
+        const auto current_path = FilePath::Current();
+
+        FixedArray<FilePath, 3> paths {
+            filepath,
+            FilePath::Relative(filepath, current_path),
+            FilePath::Relative(original_filepath, current_path)
+        };
+
+        return paths;
+    }
+
+public:
+    virtual ~AssetLoader() = default;
+
+    virtual LoadedAsset Load(AssetManager &asset_manager, const String &path) const override final
+    {
+        LoadedAsset asset;
+        asset.result = LoaderResult {
+            LoaderResult::Status::ERR_NOT_FOUND,
+            "File could not be found"
+        };
+
+        const auto original_filepath = FilePath(path);
+        const auto filepath = GetRebasedFilepath(asset_manager, original_filepath);
+        const auto paths = GetTryFilepaths(filepath, original_filepath);
+
+        for (const auto &path : paths) {
+            LoaderState state {
+                .filepath = path.Data(),
+                .stream = path.Open(),
+                .engine = asset_manager.m_engine
+            };
+
+            if (!state.stream.IsOpen()) {
+                // could not open... try next path
+                DebugLog(
+                    LogType::Warn,
+                    "Could not open file at path : %s, trying next path...\n",
+                    path.Data()
+                );
+
+                continue;
+            }
+
+            auto [result, ptr] = LoadAsset(state);
+            asset.result = result;
+
+            if (result) {
+                asset.ptr = std::move(ptr);
+
+                return asset;
+            }
+        }
+
+        return asset;
+    }
+
+protected:
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const = 0;
+
+    FilePath GetRebasedFilepath(AssetManager &asset_manager, String filepath) const
+    {
+        filepath = FilePath::Relative(filepath, FilePath::Current());
+
+        if (asset_manager.GetBasePath().Any()) {
+            return FilePath::Join(
+                asset_manager.GetBasePath().Data(),
+                filepath.Data()
+            );
+        }
+
+        return filepath;
+    }
+};
+
+class Texture2DLoader : public AssetLoader
+{
+public:
+    virtual ~Texture2DLoader() = default;
+
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override
+    {
+        LoaderObject<Texture, LoaderFormat::TEXTURE_2D> loader_object;
+        auto l = LoaderObject<Texture, LoaderFormat::TEXTURE_2D>::Loader();
+        auto loader_instance = l.Instance();
+
+        auto [result, obj] = loader_instance.Load(state);
+
+        if (!result) {
+            return LoadAssetResultPair { result, UniquePtr<void>() };
+        }
+
+        auto built_result = l.Build(state.engine, obj);
+
+        return LoadAssetResultPair { result, UniquePtr<Texture>(built_result.release()).Cast<void>() };
+    }
+};
+
+class OBJLoader : public AssetLoader
+{
+public:
+    virtual ~OBJLoader() = default;
+
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override
+    {
+        LoaderObject<Node, LoaderFormat::OBJ_MODEL> loader_object;
+        auto l = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader();
+        auto loader_instance = l.Instance();
+
+        auto [result, obj] = loader_instance.Load(state);
+
+        if (!result) {
+            return LoadAssetResultPair { result, UniquePtr<void>() };
+        }
+
+        auto built_result = l.Build(state.engine, obj);
+
+        return LoadAssetResultPair { result, UniquePtr<Node>(built_result.release()).Cast<void>() };
+    }
 };
 
 } // namespace hyperion::v2

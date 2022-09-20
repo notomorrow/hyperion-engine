@@ -16,7 +16,8 @@ template <class ... Ts>
 struct VariantHelper;
 
 template <class T, class ... Ts>
-struct VariantHelper<T, Ts...> {
+struct VariantHelper<T, Ts...>
+{
     static inline void CopyAssign(TypeID type_id, void *dst, const void *src)
     {
         if (type_id == TypeID::ForType<NormalizedType<T>>()) {
@@ -86,7 +87,8 @@ struct VariantHelper<T, Ts...> {
 };
 
 template <>
-struct VariantHelper<> {
+struct VariantHelper<>
+{
     static inline void CopyAssign(TypeID type_id, void *dst, const void *src) {}
     static inline bool CopyConstruct(TypeID type_id, void *dst, const void *src) { return false; }
     static inline void MoveAssign(TypeID type_id, void *dst, void *src) {}
@@ -100,13 +102,13 @@ struct VariantHelper<> {
 };
 
 template <class ... Types>
-class Variant {
+class Variant
+{
     using Helper = VariantHelper<Types...>;
 
     static const inline TypeID invalid_type_id = TypeID::ForType<void>();
 
 public:
-
     Variant()
         : m_current_type_id(invalid_type_id)
     {
@@ -223,6 +225,8 @@ public:
         }
     }
 
+    const TypeID &GetTypeID() const { return m_current_type_id; }
+
     bool operator==(const Variant &other) const
     {
         if (m_current_type_id != other.m_current_type_id) {
@@ -268,6 +272,16 @@ public:
         AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
 
         return *static_cast<const NormalizedType<T> *>(m_storage.GetPointer());
+    }
+
+    template <class T>
+    T *TryGet() const
+    {
+        if (!Is<T>()) {
+            return nullptr;
+        }
+
+        return static_cast<T *>(m_storage.GetPointer());
     }
 
     template <class T>

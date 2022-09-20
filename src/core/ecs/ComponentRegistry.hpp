@@ -40,7 +40,8 @@ private:
 };
 
 template <class Entity>
-class ComponentRegistry {
+class ComponentRegistry
+{
 public:
     ComponentRegistry() = default;
     ComponentRegistry(const ComponentRegistry &other) = delete;
