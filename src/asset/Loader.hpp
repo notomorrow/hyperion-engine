@@ -4,6 +4,8 @@
 #include <asset/ByteReader.hpp>
 #include <asset/BufferedByteReader.hpp>
 
+#include "LoaderObject.hpp"
+
 #include <vector>
 
 #define HYP_LOADER_BUFFER_SIZE 2048
@@ -12,14 +14,17 @@ namespace hyperion::v2 {
 
 class Engine;
 
-struct LoaderState {
-    std::string                                filepath;
-    BufferedReader<HYP_LOADER_BUFFER_SIZE>     stream;
-    Engine                                    *engine;
+struct LoaderState
+{
+    std::string filepath;
+    BufferedReader<HYP_LOADER_BUFFER_SIZE> stream;
+    Engine *engine;
 };
 
-struct LoaderResult {
-    enum class Status {
+struct LoaderResult
+{
+    enum class Status
+    {
         OK,
         ERR,
         ERR_NOT_FOUND,
@@ -34,14 +39,15 @@ struct LoaderResult {
 };
 
 template <class Object, class Handler>
-class LoaderImpl {
+class LoaderImpl
+{
     using Results = std::vector<std::pair<LoaderResult, Object>>;
 
 public:
     LoaderImpl(const Handler &handler)
         : m_handler(handler) {}
 
-    std::pair<LoaderResult, Object> Load(LoaderState &&state)
+    std::pair<LoaderResult, Object> Load(LoaderState &state)
     {
         if (!state.stream.IsOpen()) {
             return std::make_pair(
@@ -68,12 +74,14 @@ private:
 };
 
 template <class T, LoaderFormat Format>
-class LoaderBase {
+class LoaderBase
+{
 public:
     using FinalType = T;
     using Object  = LoaderObject<T, Format>;
     
-    struct Handler {
+    struct Handler
+    {
         std::function<LoaderResult(LoaderState *, Object &)> load_fn;
         std::function<std::unique_ptr<FinalType>(Engine *engine, const Object &)> build_fn;
     };

@@ -3,7 +3,7 @@
 
 #include <math/MathUtil.hpp>
 
-#include "../Types.hpp"
+#include <Types.hpp>
 
 #include <Util.hpp>
 #include <util/Defines.hpp>
@@ -17,8 +17,9 @@
 #include <mutex>
 
 namespace hyperion {
-template <size_t BufferSize, class Byte = UByte>
-class BufferedReader {
+template <SizeType BufferSize, class Byte = UByte>
+class BufferedReader
+{
 public:
     static_assert(sizeof(Byte) == 1);
 
@@ -78,16 +79,21 @@ public:
         delete file;
     }
 
+    /*! \brief Returns a boolean indicating whether or not the file could be opened without issue */
+    explicit operator bool() const
+        { return IsOpen(); }
+
     const std::string &GetFilepath() const
         { return filepath; }
 
+    /*! \brief Returns a boolean indicating whether or not the file could be opened without issue */
     bool IsOpen() const
         { return file->good(); }
 
-    size_t Position() const
+    SizeType Position() const
         { return pos; }
 
-    size_t Max() const
+    SizeType Max() const
         { return max_pos; }
 
     bool Eof() const
@@ -144,7 +150,7 @@ public:
             return {};
         }
 
-        const size_t remaining = max_pos - pos;
+        const SizeType remaining = max_pos - pos;
         
         std::vector<Byte> bytes;
         bytes.resize(remaining);
@@ -173,27 +179,27 @@ public:
         return lines;
     }
 
-    size_t Read(void *ptr, size_t count)
+    SizeType Read(void *ptr, SizeType count)
     {
-        return Read(ptr, count, [](void *ptr, const Byte *buffer, size_t chunk_size) {
+        return Read(ptr, count, [](void *ptr, const Byte *buffer, SizeType chunk_size) {
            Memory::Copy(ptr, buffer, chunk_size);
         });
     }
 
     /*! @returns The total number of bytes read */
-    template <class Lambda = std::add_pointer_t<void(void *, const Byte *, size_t)>>
-    size_t Read(void *ptr, size_t count, Lambda &&func)
+    template <class Lambda = std::add_pointer_t<void(void *, const Byte *, SizeType)>>
+    SizeType Read(void *ptr, SizeType count, Lambda &&func)
     {
         if (Eof()) {
             return 0;
         }
 
-        size_t total_read = 0;
+        SizeType total_read = 0;
 
         while (count) {
-            const size_t chunk_requested = MathUtil::Min(count, BufferSize);
-            const size_t chunk_returned = Read(chunk_requested);
-            const size_t offset = total_read;
+            const SizeType chunk_requested = MathUtil::Min(count, BufferSize);
+            const SizeType chunk_returned = Read(chunk_requested);
+            const SizeType offset = total_read;
 
             func(reinterpret_cast<void *>(uintptr_t(ptr) + offset), &buffer[0], chunk_returned);
 
@@ -215,7 +221,7 @@ public:
      * @returns The number of bytes read
      */
     template <class T>
-    size_t Read(T *ptr)
+    SizeType Read(T *ptr)
     {
         return Read(static_cast<void *>(ptr), sizeof(T));
     }
@@ -235,10 +241,10 @@ public:
             num_threads = 1; // do not use threading
         }
 
-        const size_t num_lines_per_thread = all_lines.size() / num_threads;
+        const SizeType num_lines_per_thread = all_lines.size() / num_threads;
 
-        size_t lines_remaining = all_lines.size();
-        size_t offset = 0;
+        SizeType lines_remaining = all_lines.size();
+        SizeType offset = 0;
 
         std::vector<std::thread> threads;
         std::mutex mutex;
@@ -246,14 +252,14 @@ public:
         std::vector<Functor> functors(num_threads);
 
         for (int i = 0; i < num_threads; i++) {
-            const size_t num_lines_this_thread = i == num_threads - 1
+            const SizeType num_lines_this_thread = i == num_threads - 1
                 ? lines_remaining
                 : num_lines_per_thread;
 
             threads.emplace_back([i, offset, num_lines_this_thread, &all_lines, &functors, &mutex, &args...]() mutable { // perfect capture, c++20 feature
                 functors[i] = Functor{};
 
-                for (size_t j = offset; j < offset + num_lines_this_thread; j++) {
+                for (SizeType j = offset; j < offset + num_lines_this_thread; j++) {
                     functors[i].HandleLine(all_lines[j], mutex, args...);
                 }
             });
@@ -278,7 +284,7 @@ public:
             std::string accum;
             accum.reserve(BufferSize);
             
-            for (size_t i = 0; i < all_bytes.size(); i++) {
+            for (SizeType i = 0; i < all_bytes.size(); i++) {
                 if (all_bytes[i] == '\n') {
                     func(accum);
                     accum.clear();
@@ -306,8 +312,8 @@ public:
         std::string accum;
         accum.reserve(BufferSize);
 
-        while (size_t count = Read()) {
-            for (size_t i = 0; i < count; i++) {
+        while (SizeType count = Read()) {
+            for (SizeType i = 0; i < count; i++) {
                 if (buffer[i] == '\n') {
                     func(accum);
                     accum.clear();
@@ -327,8 +333,8 @@ public:
     template <class LambdaFunction>
     void ReadChars(LambdaFunction func)
     {
-        while (size_t count = Read()) {
-            for (size_t i = 0; i < count; i++) {
+        while (SizeType count = Read()) {
+            for (SizeType i = 0; i < count; i++) {
                 func(static_cast<char>(buffer[i]));
             }
         }
@@ -341,7 +347,7 @@ private:
     std::streampos max_pos;
     std::array<Byte, BufferSize> buffer{};
 
-    size_t Read()
+    SizeType Read()
     {
         if (Eof()) {
             return 0;
@@ -349,7 +355,7 @@ private:
 
         file->read(reinterpret_cast<char *>(&buffer[0]), BufferSize);
 
-        const size_t count = file->gcount();
+        const SizeType count = file->gcount();
 
         AssertThrow(count <= BufferSize);
 
@@ -358,7 +364,7 @@ private:
         return count;
     }
 
-    size_t Read(size_t sz)
+    SizeType Read(SizeType sz)
     {
         AssertThrow(sz <= BufferSize);
 
@@ -368,7 +374,7 @@ private:
 
         file->read(reinterpret_cast<char *>(&buffer[0]), sz);
 
-        const size_t count = file->gcount();
+        const SizeType count = file->gcount();
         pos += count;
 
         return count;

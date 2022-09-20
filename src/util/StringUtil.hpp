@@ -248,6 +248,17 @@ public:
 
         return filename.substr(0, pos);
     }
+
+    static inline std::string GetExtension(const std::string &filename)
+    {
+        auto pos = filename.find_last_of(".");
+
+        if (pos == std::string::npos) {
+            return "";
+        }
+
+        return filename.substr(pos + 1);
+    }
     
     static inline bool Parse(const std::string &str, int *out_value)
     {
