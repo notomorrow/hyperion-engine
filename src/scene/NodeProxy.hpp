@@ -124,9 +124,15 @@ public:
     bool operator!=(const NodeProxy &other) const
         { return Get() != other.Get(); }
 
+    NodeProxy operator[](SizeType index)
+        { return GetChild(index); }
+
     /*! \brief If the Node exists, returns the String name of the Node.
         Otherwise, returns the empty String. */
     const String &GetName() const;
+
+    /*! \brief If the Node exists, sets the name of the Node. */
+    void SetName(const String &name);
 
     /* \brief If the NodeProxy is not empty, returns the Entity, if any,
         attached to the underlying Node. */

@@ -1,64 +1,66 @@
 #ifndef HYPERION_V2_OBJ_MODEL_LOADER_H
 #define HYPERION_V2_OBJ_MODEL_LOADER_H
 
-#include <asset/LoaderObject.hpp>
-#include <asset/Loader.hpp>
+#include <asset/Assets.hpp>
 #include <scene/Node.hpp>
+
+#include <Types.hpp>
 
 namespace hyperion::v2 {
 
-template <>
-struct LoaderObject<Node, LoaderFormat::OBJ_MODEL> {
-    class Loader : public LoaderBase<Node, LoaderFormat::OBJ_MODEL>
+class OBJModelLoader : public AssetLoader
+{
+public:
+    struct OBJModel
     {
-        static LoaderResult LoadFn(LoaderState *state, Object &);
-        static std::unique_ptr<Node> BuildFn(Engine *engine, const Object &);
-
-    public:
-        Loader()
-            : LoaderBase({
-                  .load_fn = LoadFn,
-                  .build_fn = BuildFn
-              })
+        struct OBJIndex
         {
-        }
-    };
+            Int64 vertex,
+                normal,
+                texcoord;
 
-    struct ObjIndex
-    {
-        int64_t vertex,
-            normal,
-            texcoord;
+            bool operator<(const OBJIndex &other) const
+                { return std::tie(vertex, normal, texcoord) < std::tie(other.vertex, other.normal, other.texcoord); }
+        };
 
-        bool operator<(const ObjIndex &other) const
-            { return std::tie(vertex, normal, texcoord) < std::tie(other.vertex, other.normal, other.texcoord); }
-    };
+        struct OBJMesh
+        {
+            std::string tag;
+            std::string material;
+            std::vector<OBJIndex> indices;
+        };
 
-    struct ObjMesh
-    {
+        std::string filepath;
+
+        std::vector<Vector3> positions;
+        std::vector<Vector3> normals;
+        std::vector<Vector2> texcoords;
+        std::vector<OBJMesh> meshes;
         std::string tag;
-        std::string material;
-        std::vector<ObjIndex> indices;
+        std::string material_library;
     };
 
-    std::string filepath;
+    virtual ~OBJModelLoader() = default;
 
-    std::vector<Vector3> positions;
-    std::vector<Vector3> normals;
-    std::vector<Vector2> texcoords;
-    std::vector<ObjMesh> meshes;
-    std::string tag;
-    std::string material_library;
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override
+    {
+        OBJModel model = LoadModel(state);
+
+        return BuildModel(state, model);
+    } 
+    
+    static OBJModel LoadModel(LoaderState &state);
+    static LoadAssetResultPair BuildModel(LoaderState &state, OBJModel &model);
 };
 
-using ObjIndex = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::ObjIndex;
+using OBJIndex = OBJModelLoader::OBJModel::OBJIndex;
 
 } // namespace hyperion::v2
 
 namespace std {
 template<>
-struct hash<hyperion::v2::ObjIndex> {
-    size_t operator()(const hyperion::v2::ObjIndex &obj) const
+struct hash<hyperion::v2::OBJIndex> {
+    size_t operator()(const hyperion::v2::OBJIndex &obj) const
     {
         hyperion::HashCode hc;
         hc.Add(obj.vertex);
