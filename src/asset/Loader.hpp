@@ -13,12 +13,14 @@
 namespace hyperion::v2 {
 
 class Engine;
+class AssetManager;
 
 struct LoaderState
 {
+    AssetManager *asset_manager;
     std::string filepath;
     BufferedReader<HYP_LOADER_BUFFER_SIZE> stream;
-    Engine *engine;
+    Engine *engine; // deprecated
 };
 
 struct LoaderResult
