@@ -132,13 +132,13 @@ void Entity::Update(Engine *engine, GameCounter::TickUnit delta)
         }
 
         const auto &octree_visibility_state = m_octree->GetVisibilityState();
-        //const auto visibility_cursor = m_octree->LoadPreviousVisibilityCursor();
+        const auto visibility_cursor = m_octree->LoadVisibilityCursor();
 
-        //m_visibility_state.snapshots[visibility_cursor] = octree_visibility_state.snapshots[visibility_cursor];
+        m_visibility_state.snapshots[visibility_cursor] = octree_visibility_state.snapshots[visibility_cursor];
 
-        for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.snapshots.Size()); i++) {
-            m_visibility_state.snapshots[i] = octree_visibility_state.snapshots[i];
-        }
+        // for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.snapshots.Size()); i++) {
+        //     m_visibility_state.snapshots[i] = octree_visibility_state.snapshots[i];
+        // }
     }
 
     if (m_shader_data_state.IsDirty()) {

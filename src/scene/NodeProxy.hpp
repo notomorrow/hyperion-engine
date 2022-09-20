@@ -2,11 +2,11 @@
 #define HYPERION_V2_NODE_PROXY_HPP
 
 #include <core/Containers.hpp>
-#include <GameCounter.hpp>
-#include "Entity.hpp"
-
+#include <core/Handle.hpp>
+#include <scene/Entity.hpp>
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
+#include <GameCounter.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
@@ -110,22 +110,27 @@ public:
     HYP_FORCE_INLINE Node *Get() { return Base::Get(); }
     HYP_FORCE_INLINE const Node *Get() const { return Base::Get(); }
 
-    /*! \brief If the Node exists, returns the String name of the Node.
-        Otherwise, returns the empty String. */
-    const String &GetName() const;
-
-    bool Any() const { return Get() != nullptr; }
+    HYP_FORCE_INLINE bool Any() const { return Get() != nullptr; }
+    HYP_FORCE_INLINE bool Empty() const { return Get() == nullptr; }
 
     /*! \brief Conversion operator to bool, to use in if-statements */
     explicit operator bool() const { return Any(); }
 
-    bool operator!() const { return !Any(); }
+    bool operator!() const { return Empty(); }
 
     bool operator==(const NodeProxy &other) const
         { return Get() == other.Get(); }
 
     bool operator!=(const NodeProxy &other) const
         { return Get() != other.Get(); }
+
+    /*! \brief If the Node exists, returns the String name of the Node.
+        Otherwise, returns the empty String. */
+    const String &GetName() const;
+
+    /* \brief If the NodeProxy is not empty, returns the Entity, if any,
+        attached to the underlying Node. */
+    const Handle<Entity> &GetEntity() const;
 
     /*! \brief If the NodeProxy is not empty, and index is not out of bounds,
         returns a new NodeProxy, holding a pointer to the child of the held Node at the given index.

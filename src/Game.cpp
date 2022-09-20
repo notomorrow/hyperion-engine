@@ -36,6 +36,13 @@ void Game::Init(Engine *engine, SystemWindow *window)
     InitRender(engine);
 }
 
+void Game::Update(Engine *engine, GameCounter::TickUnit delta)
+{
+    engine->GetWorld().Update(engine, delta);
+
+    Logic(engine, delta);
+}
+
 void Game::InitRender(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);

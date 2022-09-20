@@ -109,6 +109,32 @@ public:
 
         engine->GetWorld().AddScene(Handle<Scene>(m_scene));
 
+
+        AssetManager am(engine);
+        am.SetBasePath(FilePath::Join(HYP_ROOT_DIR, "..", "res"));
+        am.Register<OBJLoader>("obj");
+        am.Register<Texture2DLoader>("jpg");
+
+        auto batch = am.CreateBatch();
+        batch.Add<Node>("models/cube.obj");
+        batch.Add<Texture>("textures/dummy.jpg");
+        batch.Add<Texture>("textures/dirt.jpg");
+        batch.LoadAsync();
+
+        auto res = batch.AwaitResults();
+        // for (auto &resource : res) {
+        //     auto x = resource.Get<Node>();
+        //     auto y = resource.Get<Texture>();
+        //     DebugLog(LogType::Debug, "Resource : % s, type : %u\n", resource.path.Data(), resource.value.GetTypeID().value);
+        // }
+
+        std::cout << " 1  :  " << res[0].Get<Node>().GetChild(0).GetName() << "\n";
+        std::cout << " 2  :  " << res[1].Get<Texture>()->GetImage().GetExtent().width << "\n";
+        std::cout << " 3  :  " << res[2].Get<Texture>()->GetImage().GetExtent().width << "\n";
+
+        HYP_BREAKPOINT;
+
+
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
             "models/sponza/sponza.obj",//testbed/testbed.obj", //"San_Miguel/san-miguel-low-poly.obj", //"sibenik/sibenik.obj", //"
@@ -266,7 +292,7 @@ public:
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
                 Handle<Light>(m_point_light),
                 Vector3(0, 0, 0),
-                250.0f
+                450.0f
             );
         }
 
