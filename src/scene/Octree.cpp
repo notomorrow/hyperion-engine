@@ -278,9 +278,8 @@ Octree::Result Octree::Insert(Engine *engine, Entity *entity)
 Octree::Result Octree::InsertInternal(Engine *engine, Entity *entity)
 {
     m_nodes.push_back(Node {
-        .entity           = entity,
-        .aabb             = entity->GetWorldAABB(),
-        .visibility_state = &m_visibility_state
+        .entity = entity,
+        .aabb = entity->GetWorldAABB()
     });
 
     if (m_root != nullptr) {
@@ -504,15 +503,13 @@ Octree::Result Octree::Move(Engine *engine, Entity *entity, const std::vector<No
         auto &entity_it = *it;
 
         entity_it->aabb = new_aabb;
-        entity_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
         // force this octant to be visible to prevent flickering
         CopyVisibilityState(engine->GetWorld().GetOctree().GetVisibilityState());
 
         m_nodes.push_back(Node {
             .entity = entity,
-            .aabb = entity->GetWorldAABB(),
-            .visibility_state = &m_visibility_state
+            .aabb = entity->GetWorldAABB()
         });
 
         if (m_root != nullptr) {

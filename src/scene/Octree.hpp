@@ -77,7 +77,6 @@ public:
     {
         Entity *entity;
         BoundingBox aabb;
-        VisibilityState *visibility_state = nullptr;
     };
 
     struct Root

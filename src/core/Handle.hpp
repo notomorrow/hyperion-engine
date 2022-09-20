@@ -17,7 +17,8 @@ class Engine;
 
 } // namespace v2
 
-struct IDBase {
+struct IDBase
+{
     using ValueType = UInt;
     
     HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }
@@ -48,7 +49,8 @@ struct IDBase {
 template <class T>
 struct ComponentID : IDBase {};
 
-struct HandleID : IDBase {
+struct HandleID : IDBase
+{
     TypeID type_id;
 
     constexpr HandleID() = default;

@@ -103,6 +103,13 @@ const String &NodeProxy::GetName() const
         : String::empty;
 }
 
+const Handle<Entity> &NodeProxy::GetEntity() const
+{
+    return Get()
+        ? Get()->GetEntity()
+        : Handle<Entity>::empty;
+}
+
 NodeProxy NodeProxy::GetChild(SizeType index)
 {
     if (Get() && index < Get()->GetChildren().Size()) {
