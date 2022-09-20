@@ -43,6 +43,12 @@ struct EnqueuedAsset
     explicit operator bool() const { return value.IsValid(); }
 };
 
+
+// struct AssetMap : UnorderedFlatMap<String, EnqueuedAsset>
+// {
+
+// };
+
 struct AssetBatch : private TaskBatch
 {
 private:
@@ -80,11 +86,13 @@ public:
     AssetBatch &operator=(AssetBatch &&other) noexcept = delete;
     ~AssetBatch() = default;
 
+    /*! \brief Enqueue an asset of type T to be loaded in this batch.
+        Only call this method before LoadAsync() is called. */
     template <class T>
     void Add(const String &path)
     {
         AssertThrowMsg(IsCompleted(),
-            "Cannot add assets to be loaded while load is in progress!");
+            "Cannot add assets while loading!");
 
         const auto asset_index = enqueued_assets.Size();
 
