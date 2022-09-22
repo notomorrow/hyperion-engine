@@ -30,11 +30,11 @@ void DeferredPass::CreateShader(Engine *engine)
         m_shader = engine->CreateHandle<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
-                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
+                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred.vert.spv")).Read(),
                     {.name = "deferred indirect vert"}
                 }},
                 SubShader{ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_indirect.frag.spv")).Read(),
+                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred_indirect.frag.spv")).Read(),
                     {.name = "deferred indirect frag"}
                 }}
             }
@@ -43,11 +43,11 @@ void DeferredPass::CreateShader(Engine *engine)
         m_shader = engine->CreateHandle<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
-                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
+                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred.vert.spv")).Read(),
                     {.name = "deferred direct vert"}
                 }},
                 SubShader{ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_direct.frag.spv")).Read(),
+                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred_direct.frag.spv")).Read(),
                     {.name = "deferred direct frag"}
                 }}
             }
@@ -477,7 +477,7 @@ void DeferredRenderer::CreateComputePipelines(Engine *engine)
     m_combine = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred/DeferredCombine.comp.spv")).Read()}}
+                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred/DeferredCombine.comp.spv")).Read()}}
             }
         ),
         DynArray<const DescriptorSet *> { m_combine_descriptor_sets[0].Get() }

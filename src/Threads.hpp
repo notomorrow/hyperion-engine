@@ -39,6 +39,7 @@ public:
 
     static void AssertOnThread(ThreadMask mask);
     static void AssertOnThread(const ThreadID &thread_id);
+    static bool IsThreadInMask(const ThreadID &thread_id, ThreadMask mask);
     static bool IsOnThread(ThreadMask mask);
     static bool IsOnThread(const ThreadID &thread_id);
     static const ThreadID &GetThreadID(ThreadName thread_name);

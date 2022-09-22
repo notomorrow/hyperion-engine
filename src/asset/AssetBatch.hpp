@@ -1,7 +1,6 @@
 #ifndef HYPERION_V2_ASSET_BATCH_HPP
 #define HYPERION_V2_ASSET_BATCH_HPP
 
-#include <asset/AssetBatch.hpp>
 #include <asset/AssetLoader.hpp>
 #include <core/Containers.hpp>
 #include <core/Handle.hpp>
@@ -23,7 +22,7 @@ struct EnqueuedAsset
         the type of the value, if any, held within the variant, no error should occur and an 
         empty container will be returned. */
     template <class T>
-    auto Get()
+    auto Get() -> typename AssetLoaderWrapper<T>::CastedType
     {
         using Wrapper = AssetLoaderWrapper<T>;
 
@@ -43,12 +42,6 @@ struct EnqueuedAsset
     explicit operator bool() const { return value.IsValid(); }
 };
 
-
-// struct AssetMap : UnorderedFlatMap<String, EnqueuedAsset>
-// {
-
-// };
-
 struct AssetBatch : private TaskBatch
 {
 private:
@@ -65,7 +58,7 @@ private:
             AssertThrow(index < batch.enqueued_assets.Size());
 
             batch.enqueued_assets[index].value
-                = asset_manager.template Load<T>(batch.enqueued_assets[index].path);
+                = static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(batch.enqueued_assets[index].path));
         }
     };
 
@@ -100,16 +93,20 @@ public:
             .path = path
         });
 
-        AddTask([this, asset_index]() {
+        procs.PushBack([this, asset_index]() {
             LoadObjectWrapper<T>()(asset_manager, *this, asset_index);
         });
     }
 
-    void LoadAsync();
+    /*! \brief Begin loading this batch asynchronously. Note that
+        you may not add any more tasks to be loaded once you call this method. */
+    void LoadAsync(UInt num_batches = UINT_MAX);
     DynArray<EnqueuedAsset> AwaitResults();
+    DynArray<EnqueuedAsset> ForceLoad();
 
 private:
     AssetManager &asset_manager;
+    DynArray<Proc<void>> procs;
 };
 
 } // namespace hyperion::V2

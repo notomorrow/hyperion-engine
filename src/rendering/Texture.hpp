@@ -161,50 +161,7 @@ public:
                 //         [top]
                 // [right][back][left][front]
                 //       [bottom]
-
-#if 0 // todo
-
-                const auto width_per_face = other->GetImage().GetExtent().width / 4;
-                const auto height_per_face = width_per_face;
-
-                const auto face_size = width_per_face * height_per_face * Image::NumComponents(other->GetFormat());
-
-                AssertThrow(face_size * 6 < other->GetImage().GetByteSize());
-
-                // TODO: Project spherical onto sphere
-
-                for (UInt x = 0; x < width_per_face * Image::NumComponents(other->GetFormat(); x++) {
-                    for (UInt y = 0; y < height_per_face * Image::NumComponents(other->GetFormat(); y++) {
-                        
-                    }
-                }
-                SizeType src_offset = 0,
-                    dst_offset = 0;
-
-                // skip firstt in row
-                src_offset += face_size;
-
-                // copy top image
-                m_image.CopyImageData(other->GetImage().GetBytes() + src_offset, face_size, dst_offset);
-                dst_offset += face_size;
-                src_offset += face_size;
-
-                // skip next, move to row
-                src_offset += face_size;
-                src_offset += face_size;
-
-                for (UInt i = 0; i < 4; i++) {
-                    // copy 4 faces in row
-                    m_image.CopyImageData(other->GetImage().GetBytes() + src_offset, face_size, dst_offset);
-                    dst_offset += face_size;
-                    src_offset += face_size;
-                }
-
-                // skip first in row
-                src_offset += face_size;
-
-                m_image.CopyImageData(other->GetImage().GetBytes() + src_offset, face_size, dst_offset);
-#endif
+                // TODO
             } else {
                 m_image.CopyImageData(other->GetImage().GetBytes(), other->GetImage().GetByteSize(), 0);
             }
@@ -214,7 +171,7 @@ public:
     }
 
     TextureCube(
-        std::array<std::unique_ptr<Texture>, 6> &&texture_faces
+        FixedArray<Handle<Texture>, 6> &&texture_faces
     ) : Texture(
             texture_faces[0] ? texture_faces[0]->GetExtent() : Extent3D { },
             texture_faces[0] ? texture_faces[0]->GetFormat() : Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
@@ -230,13 +187,13 @@ public:
             face_size = 0;
 
         for (auto &texture : texture_faces) {
-            if (texture != nullptr) {
+            if (texture) {
                 face_size = texture->GetExtent().Size() * Image::NumComponents(texture->GetFormat());
 
                 m_image.CopyImageData(texture->GetImage().GetBytes(), face_size, offset);
             }
 
-            texture.reset();
+            texture.Reset();
 
             offset += face_size;
         }

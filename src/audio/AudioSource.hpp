@@ -1,19 +1,29 @@
 #ifndef HYPERION_AUDIO_SOURCE_H
 #define HYPERION_AUDIO_SOURCE_H
 
-#include "../math/Vector3.hpp"
+#include <rendering/Base.hpp>
+#include <core/Containers.hpp>
+#include <math/Vector3.hpp>
 
-namespace hyperion {
-class AudioSource {
+
+
+namespace hyperion::v2 {
+
+class Engine;
+
+class AudioSource : public EngineComponentBase<STUB_CLASS(AudioSource)>
+{
 public:
-    enum class Format {
+    enum class Format
+    {
         MONO8,
         MONO16,
         STEREO8,
         STEREO16
     };
 
-    enum class State {
+    enum class State
+    {
         UNDEFINED,
         STOPPED,
         PLAYING,
@@ -22,6 +32,8 @@ public:
 
     AudioSource(Format format, const unsigned char *data, size_t size, size_t freq);
     ~AudioSource();
+
+    void Init(Engine *engine);
 
     Format GetFormat() const { return m_format; }
     unsigned int GetSampleLength() const { return m_sample_length; }
@@ -41,11 +53,14 @@ public:
 private:
     void FindSampleLength();
 
-    Format       m_format;
+    Format m_format;
+    DynArray<UByte> m_data;
+    SizeType m_freq;
     unsigned int m_buffer_id;
     unsigned int m_source_id;
     unsigned int m_sample_length;
 };
-} // namespace hyperion
+
+} // namespace hyperion::v2
 
 #endif

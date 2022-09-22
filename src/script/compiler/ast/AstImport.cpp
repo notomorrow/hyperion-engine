@@ -9,6 +9,8 @@
 
 #include <util/StringUtil.hpp>
 
+#include <Types.hpp>
+
 #include <fstream>
 #include <iostream>
 #include <functional>
@@ -117,7 +119,7 @@ void AstImport::PerformImport(
     }
 
     // parse path into vector
-    std::vector<std::string> path_vec = StringUtil::SplitPath(filepath);
+    auto path_vec = StringUtil::SplitPath(filepath);
     // canonicalize the vector
     path_vec = StringUtil::CanonicalizePath(path_vec);
     // put it back into a string
@@ -174,12 +176,12 @@ void AstImport::PerformImport(
             ));
         } else {
             // get number of bytes
-            size_t max = file.tellg();
+            SizeType max = file.tellg();
             // seek to beginning
             file.seekg(0, std::ios::beg);
             // load stream into file buffer
             SourceFile source_file(filepath, max);
-            file.read(source_file.GetBuffer(), max);
+            file.read(reinterpret_cast<char *>(source_file.GetBuffer()), max);
 
             // use the lexer and parser on this file buffer
             TokenStream token_stream(TokenStreamInfo {

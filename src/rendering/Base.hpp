@@ -225,7 +225,7 @@ protected:
     void Teardown()
     {
         if (IsInitCalled()) {
-            GetEngine()->registry.template Release<InnerType>(GetID());
+            GetEngine()->GetObjectSystem().template Release<InnerType>(GetID());
         }
 
         CallbackTrackable::Teardown();

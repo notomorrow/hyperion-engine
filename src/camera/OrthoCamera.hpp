@@ -27,12 +27,12 @@ public:
 
     void Set(float left, float right, float bottom, float top, float _near, float _far)
     {
-        m_left   = left;
-        m_right  = right;
+        m_left = left;
+        m_right = right;
         m_bottom = bottom;
-        m_top    = top;
-        m_near   = _near;
-        m_far    = _far;
+        m_top = top;
+        m_near = _near;
+        m_far = _far;
 
         SetProjectionMatrix(Matrix4::Orthographic(
             m_left, m_right,

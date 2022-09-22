@@ -8,19 +8,24 @@
 
 #include <system/Debug.hpp>
 
+#include <Types.hpp>
+
 #include <memory>
 
 namespace hyperion::compiler {
 
-class Compiler : public AstVisitor {
+class Compiler : public AstVisitor
+{
 public:
-    struct CondInfo {
+    struct CondInfo
+    {
         AstStatement *cond;
         AstStatement *then_part;
         AstStatement *else_part;
     };
 
-    struct ExprInfo {
+    struct ExprInfo
+    {
         AstExpression *left;
         AstExpression *right;
     };
@@ -34,14 +39,14 @@ public:
     static std::unique_ptr<Buildable> BuildArgumentsEnd(
         AstVisitor *visitor,
         Module *mod,
-        size_t nargs
+        UInt8 nargs
     );
 
     static std::unique_ptr<Buildable> BuildCall(
         AstVisitor *visitor,
         Module *mod,
         const std::shared_ptr<AstExpression> &target,
-        uint8_t nargs
+        UInt8 nargs
     );
 
     static std::unique_ptr<Buildable> BuildMethodCall(
@@ -51,13 +56,13 @@ public:
         const std::vector<std::shared_ptr<AstArgument>> &args
     );
 
-    static std::unique_ptr<Buildable> LoadMemberFromHash(AstVisitor *visitor, Module *mod, uint32_t hash);
+    static std::unique_ptr<Buildable> LoadMemberFromHash(AstVisitor *visitor, Module *mod, UInt32 hash);
 
-    static std::unique_ptr<Buildable> StoreMemberFromHash(AstVisitor *visitor, Module *mod, uint32_t hash);
+    static std::unique_ptr<Buildable> StoreMemberFromHash(AstVisitor *visitor, Module *mod, UInt32 hash);
 
-    static std::unique_ptr<Buildable> LoadMemberAtIndex(AstVisitor *visitor, Module *mod, int dm_index);
+    static std::unique_ptr<Buildable> LoadMemberAtIndex(AstVisitor *visitor, Module *mod, UInt8 index);
 
-    static std::unique_ptr<Buildable> StoreMemberAtIndex(AstVisitor *visitor, Module *mod, int dm_index);
+    static std::unique_ptr<Buildable> StoreMemberAtIndex(AstVisitor *visitor, Module *mod, UInt8 index);
 
     /** Compiler a standard if-then-else statement into the program.
         If the `else` expression is nullptr it will be omitted.
@@ -87,7 +92,7 @@ public:
     */
     static std::unique_ptr<Buildable> LoadLeftAndStore(AstVisitor *visitor, Module *mod, ExprInfo info);
     /** Build a binary operation such as ADD, SUB, MUL, etc. */
-    static std::unique_ptr<Buildable> BuildBinOp(uint8_t opcode, AstVisitor *visitor, Module *mod, Compiler::ExprInfo info);
+    static std::unique_ptr<Buildable> BuildBinOp(UInt8 opcode, AstVisitor *visitor, Module *mod, Compiler::ExprInfo info);
     /** Pops from the stack N times. If N is greater than 1,
         the POP_N instruction is generated. Otherwise, the POP
         instruction is generated.

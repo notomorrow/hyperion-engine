@@ -269,7 +269,7 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
 
     auto top = UniquePtr<Node>::Construct(model.tag.c_str());
 
-    std::unique_ptr<MaterialGroup> material_library;
+    Handle<MaterialGroup> material_library;
     
     if (load_materials && !model.material_library.empty()) {
         auto material_library_path = FileSystem::RelativePath(
@@ -281,9 +281,9 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
             material_library_path += ".mtl";
         }
 
-        material_library = engine->assets.Load<MaterialGroup>(material_library_path);
+        material_library = state.asset_manager->Load<MaterialGroup>(material_library_path.c_str());
 
-        if (material_library == nullptr) {
+        if (!material_library) {
             DebugLog(LogType::Warn, "Obj model loader: Could not load material library at %s\n", material_library_path.c_str());
         }
     }
@@ -348,7 +348,7 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
 
         Handle<Material> material;
 
-        if (!obj_mesh.material.empty() && material_library != nullptr) {
+        if (!obj_mesh.material.empty() && material_library) {
             if (material_library->Has(obj_mesh.material)) {
                 material = material_library->Get(obj_mesh.material);
             } else {
@@ -360,7 +360,7 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
             }
         }
 
-        if (material == nullptr) {
+        if (!material) {
             material = engine->CreateHandle<Material>();
         }
 
