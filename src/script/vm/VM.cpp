@@ -814,10 +814,10 @@ HYP_FORCE_INLINE static void HandleInstruction(
 
         if (linemap_count != 0) {
             linemap = new Tracemap::LinemapEntry[linemap_count];
-            bs->ReadBytes((char*)linemap, sizeof(Tracemap::LinemapEntry) * linemap_count);
+            bs->Read(linemap, sizeof(Tracemap::LinemapEntry) * linemap_count);
         }
 
-        handler.state->m_tracemap.Set(std::move(stringmap), std::move(linemap));
+        handler.state->m_tracemap.Set(stringmap, linemap);
 
         break;
     }

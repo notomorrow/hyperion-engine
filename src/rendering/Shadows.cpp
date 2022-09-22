@@ -31,8 +31,8 @@ void ShadowPass::CreateShader(Engine *engine)
 {
     m_shader = engine->CreateHandle<Shader>(
         std::vector<SubShader> {
-            SubShader { ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
-            SubShader { ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
+            SubShader { ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read()} },
+            SubShader { ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/shadow_frag.spv")).Read()} }
         }
     );
 
@@ -144,7 +144,8 @@ void ShadowPass::CreateRendererInstance(Engine *engine)
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
             },
             MaterialAttributes {
-                .bucket = BUCKET_SHADOW
+                .bucket = BUCKET_SHADOW,
+                .cull_faces = FaceCullMode::FRONT
             }
         )
     );
@@ -212,7 +213,7 @@ void ShadowPass::CreateComputePipelines(Engine *engine)
     m_blur_shadow_map = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow/BlurShadowMap.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/shadow/BlurShadowMap.comp.spv")).Read()}}
             }
         ),
         DynArray<const DescriptorSet *> { &m_blur_descriptor_sets[0] }
@@ -371,6 +372,11 @@ ShadowRenderer::ShadowRenderer(Handle<Light> &&light)
 {
 }
 
+ShadowRenderer::ShadowRenderer(Handle<Light> &&light, const BoundingBox &aabb)
+    : ShadowRenderer(std::move(light), aabb.GetCenter(), aabb.GetExtent().Max() * 0.5f)
+{
+}
+
 ShadowRenderer::ShadowRenderer(Handle<Light> &&light, const Vector3 &origin, float max_distance)
     : EngineComponentBase(),
       RenderComponent()
@@ -524,7 +530,7 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
     const auto aabb = m_shadow_pass.GetAABB();
     const auto center = aabb.GetCenter();
 
-    const auto light_direction = m_shadow_pass.GetLight() != nullptr
+    const auto light_direction = m_shadow_pass.GetLight()
         ? m_shadow_pass.GetLight()->GetPosition()
         : Vector3::Zero();
 
@@ -554,8 +560,9 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
         static_cast<OrthoCamera *>(camera.Get())->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             mins.x, maxes.x,
             mins.y, maxes.y,
-            -m_shadow_pass.GetMaxDistance() * 0.5f,
-            m_shadow_pass.GetMaxDistance() * 0.5f
+            mins.z, maxes.z
+            // -m_shadow_pass.GetMaxDistance() * 0.5f,
+            // m_shadow_pass.GetMaxDistance() * 0.5f
         );
 
         break;

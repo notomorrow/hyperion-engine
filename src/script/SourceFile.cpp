@@ -20,7 +20,7 @@ SourceFile::SourceFile(const std::string &filepath, SizeType size)
       m_position(0),
       m_size(size)
 {
-    m_buffer = new char[m_size];
+    m_buffer = new UByte[m_size];
     std::memset(m_buffer, '\0', m_size);
 }
 
@@ -29,7 +29,7 @@ SourceFile::SourceFile(const SourceFile &other)
       m_position(other.m_position),
       m_size(other.m_size)
 {
-    m_buffer = new char[m_size];
+    m_buffer = new UByte[m_size];
 
     if (m_size != 0) {
         std::memcpy(m_buffer, other.m_buffer, m_size);
@@ -49,7 +49,7 @@ SourceFile &SourceFile::operator=(const SourceFile &other)
         }
 
         if (other.m_size != 0) {
-            m_buffer = new char[other.m_size];
+            m_buffer = new UByte[other.m_size];
         }
     }
 
@@ -75,23 +75,24 @@ SourceFile &SourceFile::operator>>(const std::string &str)
 {
     AssertThrowMsg(m_buffer != nullptr, "Not allocated");
 
-    const auto length = str.length();
+    const auto length = str.size();
     // make sure we have enough space in the buffer
     if (m_position + length >= m_size) {
         throw std::out_of_range("not enough space in buffer");
     }
 
-    for (size_t i = 0; i < length; i++) {
+    for (SizeType i = 0; i < length; i++) {
         m_buffer[m_position++] = str[i];
     }
 
     return *this;
 }
 
-void SourceFile::ReadIntoBuffer(const char *data, SizeType size)
+void SourceFile::ReadIntoBuffer(const UByte *data, SizeType size)
 {
     AssertThrowMsg(m_buffer != nullptr, "Not allocated");
     AssertThrow(m_size >= size);
+
     std::memcpy(m_buffer, data, size);
 }
 

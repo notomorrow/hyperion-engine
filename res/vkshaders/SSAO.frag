@@ -53,7 +53,7 @@ const float gdisplace = 0.4; //gauss bell center //0.4
 #define SSAO_SAMPLES 35 // NOTE: Even numbers breaking on linux nvidia drivers ??
 #define SSAO_STRENGTH 0.8
 #define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 8.0
+#define SSAO_RADIUS 3.0
 
 #if SSAO_MIST
 float CalculateMist()

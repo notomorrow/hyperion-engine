@@ -6,9 +6,14 @@
 namespace hyperion::v2 {
 
 using Tokens = std::vector<std::string>;
-using MTLMaterialLoader = LoaderObject<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>::Loader;
+using MaterialLibrary = MTLMaterialLoader::MaterialLibrary;
+using TextureMapping = MaterialLibrary::TextureMapping;
+using TextureDef = MaterialLibrary::TextureDef;
+using ParameterDef = MaterialLibrary::ParameterDef;
+using MaterialDef = MaterialLibrary::MaterialDef;
 
-enum IlluminationModel {
+enum IlluminationModel
+{
     ILLUM_COLOR,
     ILLUM_COLOR_AMBIENT,
     ILLUM_HIGHLIGHT,
@@ -23,20 +28,20 @@ enum IlluminationModel {
 };
 
 template <class Vector>
-static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
+static Vector ReadVector(const Tokens &tokens, SizeType offset = 1)
 {
-    Vector result{0.0f};
+    Vector result { 0.0f };
 
     int value_index = 0;
 
-    for (size_t i = offset; i < tokens.size(); i++) {
+    for (SizeType i = offset; i < tokens.size(); i++) {
         const auto &token = tokens[i];
 
         if (token.empty()) {
             continue;
         }
 
-        result.values[value_index++] = float(std::atof(token.c_str()));
+        result.values[value_index++] = static_cast<Float>(std::atof(token.c_str()));
 
         if (value_index == std::size(result.values)) {
             break;
@@ -46,31 +51,31 @@ static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
     return result;
 }
 
-static void AddMaterial(MTLMaterialLoader::Object &object, const std::string &tag)
+static void AddMaterial(MaterialLibrary &library, const std::string &tag)
 {
     std::string unique_tag(tag);
     int counter = 0;
 
     while (std::any_of(
-        object.materials.begin(),
-        object.materials.end(),
+        library.materials.begin(),
+        library.materials.end(),
         [&unique_tag](const auto &mesh) { return mesh.tag == unique_tag; }
     )) {
         unique_tag = tag + std::to_string(++counter);
     }
 
-    object.materials.push_back({
+    library.materials.push_back(MaterialDef {
         .tag = unique_tag
     });
 }
 
-static auto &LastMaterial(MTLMaterialLoader::Object &object)
+static auto &LastMaterial(MaterialLibrary &library)
 {
-    if (object.materials.empty()) {
-        AddMaterial(object, "default");
+    if (library.materials.empty()) {
+        AddMaterial(library, "default");
     }
 
-    return object.materials.back();
+    return library.materials.back();
 }
 
 static bool IsTransparencyModel(IlluminationModel illum_model)
@@ -81,19 +86,24 @@ static bool IsTransparencyModel(IlluminationModel illum_model)
         || illum_model == ILLUM_TRANSPARENT_REFLECTIVE_GLASS;
 }
 
-LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
+LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
 {
-    object.filepath = state->filepath;
+    AssertThrow(state.asset_manager != nullptr);
+    auto *engine = state.asset_manager->GetEngine();
+    AssertThrow(engine != nullptr);
 
-    const std::unordered_map<std::string, TextureMapping> texture_keys{
-        std::make_pair("map_kd", TextureMapping{.key = Material::MATERIAL_TEXTURE_ALBEDO_MAP, .srgb = true}),
-        std::make_pair("map_bump", TextureMapping{.key = Material::MATERIAL_TEXTURE_NORMAL_MAP}),
-        std::make_pair("bump", TextureMapping{.key = Material::MATERIAL_TEXTURE_NORMAL_MAP}),
-        std::make_pair("map_ka", TextureMapping{.key = Material::MATERIAL_TEXTURE_METALNESS_MAP}),
-        std::make_pair("map_ks", TextureMapping{.key = Material::MATERIAL_TEXTURE_METALNESS_MAP}),
-        std::make_pair("map_ns", TextureMapping{.key = Material::MATERIAL_TEXTURE_ROUGHNESS_MAP}),
-        std::make_pair("map_height", TextureMapping{.key = Material::MATERIAL_TEXTURE_PARALLAX_MAP}) /* custom */,
-        std::make_pair("map_ao", TextureMapping{.key = Material::MATERIAL_TEXTURE_AO_MAP})       /* custom */
+    MaterialLibrary library;
+    library.filepath = state.filepath;
+
+    const std::unordered_map<std::string, TextureMapping> texture_keys {
+        std::make_pair("map_kd", TextureMapping { .key = Material::MATERIAL_TEXTURE_ALBEDO_MAP, .srgb = true }),
+        std::make_pair("map_bump", TextureMapping { .key = Material::MATERIAL_TEXTURE_NORMAL_MAP }),
+        std::make_pair("bump", TextureMapping { .key = Material::MATERIAL_TEXTURE_NORMAL_MAP }),
+        std::make_pair("map_ka", TextureMapping { .key = Material::MATERIAL_TEXTURE_METALNESS_MAP }),
+        std::make_pair("map_ks", TextureMapping { .key = Material::MATERIAL_TEXTURE_METALNESS_MAP }),
+        std::make_pair("map_ns", TextureMapping { .key = Material::MATERIAL_TEXTURE_ROUGHNESS_MAP }),
+        std::make_pair("map_height", TextureMapping { .key = Material::MATERIAL_TEXTURE_PARALLAX_MAP }) /* custom */,
+        std::make_pair("map_ao", TextureMapping { .key = Material::MATERIAL_TEXTURE_AO_MAP })       /* custom */
     };
 
     Tokens tokens;
@@ -105,7 +115,7 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
         }
     };
 
-    state->stream.ReadLines([&](const std::string &line) {
+    state.stream.ReadLines([&](const std::string &line) {
         tokens.clear();
 
         const auto trimmed = StringUtil::Trim(line);
@@ -131,7 +141,7 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 DebugLog(LogType::Warn, "Obj Mtl loader: material arg name missing\n");
             }
 
-            AddMaterial(object, name);
+            AddMaterial(library, name);
 
             return;
         }
@@ -143,8 +153,8 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 color.w = 1.0f;
             }
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_ALBEDO] = ParameterDef {
-                .values = std::vector<float>(std::begin(color.values), std::end(color.values))
+            LastMaterial(library).parameters[Material::MATERIAL_KEY_ALBEDO] = ParameterDef {
+                .values = FixedArray<Float, 4> { color[0], color[1], color[2], color[3] }
             };
 
             return;
@@ -157,10 +167,10 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 return;
             }
 
-            const auto spec = StringUtil::Parse<int>(tokens[1]);
+            const auto spec = StringUtil::Parse<Int>(tokens[1]);
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_ROUGHNESS] = ParameterDef {
-                .values = { 1.0f - MathUtil::Clamp(float(spec) / 1000.0f, 0.0f, 1.0f) }
+            LastMaterial(library).parameters[Material::MATERIAL_KEY_ROUGHNESS] = ParameterDef {
+                .values = { 1.0f - MathUtil::Clamp(static_cast<Float>(spec) / 1000.0f, 0.0f, 1.0f) }
             };
 
             return;
@@ -173,9 +183,9 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 return;
             }
 
-            const auto illum_model = StringUtil::Parse<int>(tokens[1]);
+            const auto illum_model = StringUtil::Parse<Int>(tokens[1]);
 
-            LastMaterial(object).parameters[Material::MATERIAL_KEY_METALNESS] = ParameterDef {
+            LastMaterial(library).parameters[Material::MATERIAL_KEY_METALNESS] = ParameterDef {
                 .values = { float(illum_model) / 9.0f } /* rough approx */
             };
 
@@ -193,7 +203,7 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
                 DebugLog(LogType::Warn, "Obj Mtl loader: texture arg name missing\n");
             }
 
-            LastMaterial(object).textures.push_back({
+            LastMaterial(library).textures.push_back(TextureDef {
                 .mapping = texture_it->second,
                 .name = name
             });
@@ -204,20 +214,15 @@ LoaderResult MTLMaterialLoader::LoadFn(LoaderState *state, Object &object)
         DebugLog(LogType::Warn, "Obj Mtl loader: Unable to parse mtl material line: %s\n", trimmed.c_str());
     });
 
-    return {};
-}
+    auto material_group = UniquePtr<MaterialGroup>::Construct();
 
-std::unique_ptr<MaterialGroup> MTLMaterialLoader::BuildFn(Engine *engine, const Object &object)
-{
-    auto material_library = std::make_unique<MaterialGroup>();
-    
     std::unordered_map<std::string, std::string> texture_names_to_path;
 
-    for (const auto &item : object.materials) {
+    for (const auto &item : library.materials) {
         for (const auto &it : item.textures) {
             const auto texture_path = FileSystem::Join(
                 FileSystem::RelativePath(
-                    StringUtil::BasePath(object.filepath),
+                    StringUtil::BasePath(library.filepath),
                     FileSystem::CurrentPath()
                 ),
                 it.name
@@ -226,61 +231,64 @@ std::unique_ptr<MaterialGroup> MTLMaterialLoader::BuildFn(Engine *engine, const 
             texture_names_to_path[it.name] = texture_path;
         }
     }
+
+    std::unordered_map<std::string, Handle<Texture>> texture_refs;
     
-    std::vector<std::string> all_filepaths;
-    std::vector<std::unique_ptr<Texture>> loaded_textures;
+    {
+        std::vector<std::string> all_filepaths;
+        // DynArray<Handle<Texture>> loaded_textures;
 
-    if (!texture_names_to_path.empty()) {
-        for (auto &it : texture_names_to_path) {
-            all_filepaths.push_back(it.second);
+        if (!texture_names_to_path.empty()) {
+            auto textures_batch = state.asset_manager->CreateBatch();
+
+            for (auto &it : texture_names_to_path) {
+                all_filepaths.push_back(it.second);
+                textures_batch.Add<Texture>(String(it.second.c_str()));
+            }
+
+            textures_batch.LoadAsync();
+            auto loaded_textures = textures_batch.AwaitResults();
+
+            for (SizeType i = 0; i < loaded_textures.Size(); i++) {
+                if (loaded_textures[i]) {
+                    texture_refs[all_filepaths[i]] = loaded_textures[i].Get<Texture>();
+                }
+            }
         }
-
-        loaded_textures = engine->assets.Load<Texture>(all_filepaths);
     }
 
-    engine->resources->Lock([&](Resources &resources) {
-        std::unordered_map<std::string, Handle<Texture>> texture_refs;
+    for (auto &item : library.materials) {
+        auto material = engine->CreateHandle<Material>(item.tag.c_str());
 
-        for (size_t i = 0; i < loaded_textures.size(); i++) {
-            if (loaded_textures[i] == nullptr) {
-                texture_refs[all_filepaths[i]].Reset();
+        for (auto &it : item.parameters) {
+            material->SetParameter(it.first, Material::Parameter(
+                it.second.values.Data(),
+                it.second.values.Size()
+            ));
+        }
+
+        for (auto &it : item.textures) {
+            auto &texture = texture_refs[texture_names_to_path[it.name]];
+
+            if (!texture) {
+                DebugLog(
+                    LogType::Warn,
+                    "OBJ MTL loader: Texture %s could not be used because it could not be loaded\n",
+                    it.name.c_str()
+                );
 
                 continue;
             }
 
-            texture_refs[all_filepaths[i]] = engine->CreateHandle<Texture>(loaded_textures[i].release());
+            texture->GetImage().SetIsSRGB(it.mapping.srgb);
+
+            material->SetTexture(it.mapping.key, Handle<Texture>(texture));
         }
 
-        for (auto &item : object.materials) {
-            auto material = std::make_unique<Material>(item.tag.c_str());
+        material_group->Add(item.tag, std::move(material));
+    }
 
-            for (auto &it : item.parameters) {
-                material->SetParameter(it.first, Material::Parameter(it.second.values.data(), it.second.values.size()));
-            }
-
-            for (auto &it : item.textures) {
-                auto &texture = texture_refs[texture_names_to_path[it.name]];
-
-                if (texture == nullptr) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Obj Mtl loader: Texture %s could not be used because it could not be loaded\n",
-                        it.name.c_str()
-                    );
-
-                    continue;
-                }
-
-                texture->GetImage().SetIsSRGB(it.mapping.srgb);
-
-                material->SetTexture(it.mapping.key, Handle<Texture>(texture));
-            }
-
-            material_library->Add(item.tag, engine->CreateHandle<Material>(material.release()));
-        }
-    });
-
-    return std::move(material_library);
+    return { { LoaderResult::Status::OK }, std::move(material_group) };
 }
 
 } // namespace hyperion::v2

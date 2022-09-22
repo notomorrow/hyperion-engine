@@ -19,15 +19,28 @@
 
 #include <script/vm/VM.hpp>
 
-namespace hyperion {
+#include <Engine.hpp>
 
-using namespace compiler;
+namespace hyperion::v2 {
 
 Script::Script(const SourceFile &source_file)
-    : m_source_file(source_file),
-      m_bytecode_chunk(new BytecodeChunk())
+    : EngineComponentBase(),
+      m_source_file(source_file)
 {
+}
 
+Script::~Script()
+{
+    Teardown();
+}
+
+void Script::Init(Engine *engine)
+{
+    if (IsInitCalled()) {
+        return;
+    }
+
+    EngineComponentBase::Init(engine);
 }
 
 bool Script::Compile(APIInstance &api_instance)
@@ -78,14 +91,14 @@ bool Script::Compile(APIInstance &api_instance)
         Compiler compiler(&ast_iterator, &m_compilation_unit);
 
         if (auto builtins_result = builtins.Build(&m_compilation_unit)) {            
-            m_bytecode_chunk->Append(std::move(builtins_result));
+            m_bytecode_chunk.Append(std::move(builtins_result));
         } else {
             return false;
         }
 
         if (auto compile_result = compiler.Compile()) {
             // HYP_BREAKPOINT;
-            m_bytecode_chunk->Append(std::move(compile_result));
+            m_bytecode_chunk.Append(std::move(compile_result));
         } else {
             return false;
         }
@@ -100,7 +113,7 @@ InstructionStream Script::Decompile(utf::utf8_ostream *os) const
 {
     AssertThrow(IsCompiled() && IsBaked());
 
-    BytecodeStream bytecode_stream(reinterpret_cast<const char *>(m_baked_bytes.data()), m_baked_bytes.size());
+    BytecodeStream bytecode_stream(m_baked_bytes.data(), m_baked_bytes.size());
 
     return DecompilationUnit().Decompile(bytecode_stream, os);
 }
@@ -109,7 +122,7 @@ void Script::Bake()
 {
     AssertThrow(IsCompiled());
 
-    BuildParams build_params{};
+    BuildParams build_params { };
 
     Bake(build_params);
 }
@@ -119,10 +132,10 @@ void Script::Bake(BuildParams &build_params)
     AssertThrow(IsCompiled());
 
     CodeGenerator code_generator(build_params);
-    code_generator.Visit(m_bytecode_chunk.get());
+    code_generator.Visit(&m_bytecode_chunk);
 
     m_baked_bytes = code_generator.GetInternalByteStream().Bake();
-    m_bs = BytecodeStream(reinterpret_cast<const char *>(m_baked_bytes.data()), m_baked_bytes.size());
+    m_bs = BytecodeStream(m_baked_bytes.data(), m_baked_bytes.size());
 }
 
 void Script::Run()
@@ -134,7 +147,7 @@ void Script::Run()
 
 void Script::CallFunction(const char *name)
 {
-    CallFunctionArgV(name, (Value *)nullptr, 0);
+    CallFunctionArgV(name, nullptr, 0);
 }
 
 void Script::CallFunctionArgV(const char *name, Value *args, ArgCount num_args)
@@ -144,12 +157,12 @@ void Script::CallFunctionArgV(const char *name, Value *args, ArgCount num_args)
 
 void Script::CallFunction(FunctionHandle handle)
 {
-    CallFunctionArgV(handle, (Value *)nullptr, 0);
+    CallFunctionArgV(handle, nullptr, 0);
 }
 
 void Script::CallFunction(HashFNV1 hash)
 {
-    CallFunctionArgV(hash, (Value *)nullptr, 0);
+    CallFunctionArgV(hash, nullptr, 0);
 }
 
 void Script::CallFunctionArgV(HashFNV1 hash, Value *args, ArgCount num_args)
@@ -168,7 +181,7 @@ void Script::CallFunctionArgV(FunctionHandle handle, Value *args, ArgCount num_a
     if (num_args != 0) {
         AssertThrow(args != nullptr);
 
-        for (size_t i = 0; i < num_args; i++) {
+        for (ArgCount i = 0; i < num_args; i++) {
             main_thread->m_stack.Push(args[i]);
         }
     }
@@ -184,4 +197,4 @@ void Script::CallFunctionArgV(FunctionHandle handle, Value *args, ArgCount num_a
     }
 }
 
-} // namespace hyperion
+} // namespace hyperion::v2

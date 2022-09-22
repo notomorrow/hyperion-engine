@@ -143,12 +143,12 @@ void Voxelizer::CreateBuffers(Engine *engine)
 void Voxelizer::CreateShader(Engine *engine)
 {
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
     };
 
     if (engine->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
-        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}});
+        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}});
     } else {
         DebugLog(
             LogType::Debug,

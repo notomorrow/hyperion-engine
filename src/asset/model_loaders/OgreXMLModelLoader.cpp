@@ -8,27 +8,30 @@
 
 namespace hyperion::v2 {
 
-using OgreXMLModelLoader = LoaderObject<Node, LoaderFormat::OGRE_XML_MODEL>::Loader;
+using OgreXMLModel = OgreXMLModelLoader::OgreXMLModel;
+using BoneAssignment = OgreXMLModelLoader::OgreXMLModel::BoneAssignment;
+using SubMesh = OgreXMLModelLoader::OgreXMLModel::SubMesh;
 
-class OgreXMLSAXHandler : public xml::SAXHandler {
+class OgreXMLSAXHandler : public xml::SAXHandler
+{
 public:
-    OgreXMLSAXHandler(LoaderState *state, OgreXMLModelLoader::Object &object)
-        : m_object(object)
+    OgreXMLSAXHandler(LoaderState *state, OgreXMLModel &object)
+        : m_model(object)
     {
     }
 
-    OgreXMLModelLoader::Object::OgreSubMesh &LastSubMesh()
+    SubMesh &LastSubMesh()
     {
-        if (m_object.submeshes.empty()) {
-            m_object.submeshes.emplace_back();
+        if (m_model.submeshes.empty()) {
+            m_model.submeshes.emplace_back();
         }
 
-        return m_object.submeshes.back();
+        return m_model.submeshes.back();
     }
 
-    void AddBoneAssignment(size_t vertex_index, OgreXMLModelLoader::Object::BoneAssignment &&bone_assignment)
+    void AddBoneAssignment(UInt vertex_index, BoneAssignment &&bone_assignment)
     {
-        m_object.bone_assignments[vertex_index].push_back(std::move(bone_assignment));
+        m_model.bone_assignments[vertex_index].push_back(bone_assignment);
     }
 
     virtual void Begin(const std::string &name, const xml::AttributeMap &attributes) override
@@ -38,18 +41,18 @@ public:
             const auto y = StringUtil::Parse<float>(attributes.at("y"));
             const auto z = StringUtil::Parse<float>(attributes.at("z"));
 
-            m_object.positions.emplace_back(x, y, z);
+            m_model.positions.emplace_back(x, y, z);
         } else if (name == "normal") {
             const auto x = StringUtil::Parse<float>(attributes.at("x"));
             const auto y = StringUtil::Parse<float>(attributes.at("y"));
             const auto z = StringUtil::Parse<float>(attributes.at("z"));
 
-            m_object.normals.emplace_back(x, y, z);
+            m_model.normals.emplace_back(x, y, z);
         } else if (name == "texcoord") {
             const auto x = StringUtil::Parse<float>(attributes.at("u"));
             const auto y = StringUtil::Parse<float>(attributes.at("v"));
 
-            m_object.texcoords.emplace_back(x, y);
+            m_model.texcoords.emplace_back(x, y);
         } else if (name == "face") {
             if (attributes.size() != 3) {
                 DebugLog(LogType::Warn, "Ogre XML parser: `face` tag expected to have 3 attributes.\n");
@@ -59,7 +62,7 @@ public:
                 LastSubMesh().indices.push_back(StringUtil::Parse<Mesh::Index>(it.second));
             }
         } else if (name == "skeletonlink") {
-            m_object.skeleton_name = attributes.at("name");
+            m_model.skeleton_name = attributes.at("name");
         } else if (name == "vertexboneassignment") {
             const auto vertex_index = StringUtil::Parse<uint32_t>(attributes.at("vertexindex"));
             const auto bone_index   = StringUtil::Parse<uint32_t>(attributes.at("boneindex"));
@@ -67,7 +70,7 @@ public:
 
             AddBoneAssignment(vertex_index, {bone_index, bone_weight});
         } else if (name == "submesh") {
-            m_object.submeshes.emplace_back();
+            m_model.submeshes.emplace_back();
         } else if (name == "vertex") {
             /* no-op */
         }  else {
@@ -80,69 +83,69 @@ public:
     virtual void Comment(const std::string &comment) override {}
 
 private:
-    OgreXMLModelLoader::Object &m_object;
+    OgreXMLModel &m_model;
 };
 
-void BuildVertices(OgreXMLModelLoader::Object &object)
+void BuildVertices(OgreXMLModel &model)
 {
-    const bool has_normals   = !object.normals.empty(),
-               has_texcoords = !object.texcoords.empty();
+    const bool has_normals = !model.normals.empty(),
+        has_texcoords = !model.texcoords.empty();
 
     std::vector<Vertex> vertices;
-    vertices.resize(object.positions.size());
+    vertices.resize(model.positions.size());
 
-    for (size_t i = 0; i < vertices.size(); i++) {
+    for (SizeType i = 0; i < vertices.size(); i++) {
         Vector3 position;
         Vector3 normal;
         Vector2 texcoord;
 
-        if (i < object.positions.size()) {
-            position = object.positions[i];
+        if (i < model.positions.size()) {
+            position = model.positions[i];
         } else {
             DebugLog(
                 LogType::Warn,
                 "Ogre XML parser: Vertex index (%lu) out of bounds (%llu)\n",
                 i,
-                object.positions.size()
+                model.positions.size()
             );
 
             continue;
         }
 
         if (has_normals) {
-            if (i < object.normals.size()) {
-                normal = object.normals[i];
+            if (i < model.normals.size()) {
+                normal = model.normals[i];
             } else {
                 DebugLog(
                     LogType::Warn,
                     "Ogre XML parser: Normal index (%lu) out of bounds (%llu)\n",
                     i,
-                    object.normals.size()
+                    model.normals.size()
                 );
             }
         }
 
         if (has_texcoords) {
-            if (i < object.texcoords.size()) {
-                texcoord = object.texcoords[i];
+            if (i < model.texcoords.size()) {
+                texcoord = model.texcoords[i];
             } else {
                 DebugLog(
                     LogType::Warn,
                     "Ogre XML parser: Texcoord index (%lu) out of bounds (%llu)\n",
                     i,
-                    object.texcoords.size()
+                    model.texcoords.size()
                 );
             }
         }
 
         vertices[i] = Vertex(position, texcoord, normal);
 
-        const auto bone_it = object.bone_assignments.find(i);
+        const auto bone_it = model.bone_assignments.find(i);
 
-        if (bone_it != object.bone_assignments.end()) {
+        if (bone_it != model.bone_assignments.end()) {
             auto &bone_assignments = bone_it->second;
 
-            for (size_t j = 0; j < bone_assignments.size(); j++) {
+            for (SizeType j = 0; j < bone_assignments.size(); j++) {
                 if (j == 4) {
                     DebugLog(LogType::Warn, "Ogre XML parser: Attempt to add more than 4 bone assignments\n");
 
@@ -155,100 +158,96 @@ void BuildVertices(OgreXMLModelLoader::Object &object)
         }
     }
 
-    object.vertices = std::move(vertices);
+    model.vertices = std::move(vertices);
 }
 
-LoaderResult OgreXMLModelLoader::LoadFn(LoaderState *state, Object &object)
+LoadAssetResultPair OgreXMLModelLoader::LoadAsset(LoaderState &state) const
 {
-    object.filepath = state->filepath;
+    AssertThrow(state.asset_manager != nullptr);
+    auto *engine = state.asset_manager->GetEngine();
+    AssertThrow(engine != nullptr);
 
-    OgreXMLSAXHandler handler(state, object);
+    OgreXMLModel model;
+    model.filepath = state.filepath;
+
+    OgreXMLSAXHandler handler(&state, model);
 
     xml::SAXParser parser(&handler);
-    auto sax_result = parser.Parse(&state->stream);
+    auto sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        return {LoaderResult::Status::ERR, sax_result.message};
+        return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
     }
     
-    BuildVertices(object);
+    BuildVertices(model);
 
-    return {};
-}
+    auto top = UniquePtr<Node>::Construct();
 
-std::unique_ptr<Node> OgreXMLModelLoader::BuildFn(Engine *engine, const Object &object)
-{
-    auto top = std::make_unique<Node>();
+    Handle<Skeleton> skeleton;
 
-    std::unique_ptr<Skeleton> skeleton;
+    if (!model.skeleton_name.empty()) {
+        const auto skeleton_path = String((StringUtil::BasePath(model.filepath) + "/" + model.skeleton_name + ".xml").c_str());
 
-    if (!object.skeleton_name.empty()) {
-        const auto skeleton_path = StringUtil::BasePath(object.filepath) + "/" + object.skeleton_name + ".xml";
+        skeleton = state.asset_manager->Load<Skeleton>(skeleton_path);
 
-        skeleton = engine->assets.Load<Skeleton>(skeleton_path);
-
-        if (skeleton == nullptr) {
-            DebugLog(LogType::Warn, "Ogre XML parser: Could not load skeleton at %s\n", skeleton_path.c_str());
+        if (!skeleton) {
+            DebugLog(LogType::Warn, "Ogre XML parser: Could not load skeleton at %s\n", skeleton_path.Data());
         }
     }
 
-    engine->resources->Lock([&](Resources &resources) {
-        auto skeleton_ref = engine->CreateHandle<Skeleton>(skeleton.release());
+    for (auto &sub_mesh : model.submeshes) {
+        if (sub_mesh.indices.empty()) {
+            DebugLog(LogType::Info, "Ogre XML parser: Skipping submesh with empty indices\n");
 
-        for (auto &sub_mesh : object.submeshes) {
-            if (sub_mesh.indices.empty()) {
-                DebugLog(LogType::Info, "Ogre XML parser: Skipping submesh with empty indices\n");
-
-                continue;
-            }
-
-            auto material = engine->CreateHandle<Material>("ogrexml_material");
-
-            auto mesh = engine->CreateHandle<Mesh>(
-                object.vertices,
-                sub_mesh.indices,
-                Topology::TRIANGLES
-            );
-
-            if (object.normals.empty()) {
-                mesh->CalculateNormals();
-            }
-
-            mesh->CalculateTangents();
-
-            auto vertex_attributes = mesh->GetVertexAttributes();
-
-            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-            const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
-
-            auto entity = engine->CreateHandle<Entity>(
-                std::move(mesh),
-                std::move(shader),
-                std::move(material),
-                RenderableAttributeSet(
-                    MeshAttributes {
-                        .vertex_attributes = vertex_attributes
-                    },
-                    MaterialAttributes {
-                        .bucket = Bucket::BUCKET_OPAQUE
-                    },
-                    shader_id
-                )
-            );
-
-            if (skeleton_ref) {
-                entity->AddController<AnimationController>();
-                entity->SetSkeleton(std::move(skeleton_ref));
-            }
-            
-            auto node = std::make_unique<Node>();
-            node->SetEntity(std::move(entity));
-
-            top->AddChild(NodeProxy(node.release()));
+            continue;
         }
-    });
 
-    return std::move(top);
+        auto material = engine->CreateHandle<Material>("ogrexml_material");
+
+        auto mesh = engine->CreateHandle<Mesh>(
+            model.vertices,
+            sub_mesh.indices,
+            Topology::TRIANGLES
+        );
+
+        if (model.normals.empty()) {
+            mesh->CalculateNormals();
+        }
+
+        mesh->CalculateTangents();
+
+        auto vertex_attributes = mesh->GetVertexAttributes();
+
+        auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+        const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
+
+        auto entity = engine->CreateHandle<Entity>(
+            std::move(mesh),
+            std::move(shader),
+            std::move(material),
+            RenderableAttributeSet(
+                MeshAttributes {
+                    .vertex_attributes = vertex_attributes
+                },
+                MaterialAttributes {
+                    .bucket = Bucket::BUCKET_OPAQUE
+                },
+                shader_id
+            )
+        );
+
+        if (skeleton) {
+            entity->AddController<AnimationController>();
+            entity->SetSkeleton(std::move(skeleton));
+        }
+        
+        auto node = std::make_unique<Node>();
+        node->SetEntity(std::move(entity));
+
+        top->AddChild(NodeProxy(node.release()));
+    }
+
+    return LoadAssetResultPair { { LoaderResult::Status::OK }, std::move(top) };
 }
 
 } // namespace hyperion::v2

@@ -16,8 +16,8 @@ namespace hyperion {
 
 namespace vm {
 
-typedef uint32_t BCAddress;
-typedef uint8_t BCRegister;
+typedef UInt32 BCAddress;
+typedef UInt8 BCRegister;
 
 struct Value;
 
@@ -26,22 +26,25 @@ class ExecutionThread;
 class HeapValue;
 struct VMState;
 
-struct Number {
-    using FlagBits = uint32_t;
+struct Number
+{
+    using FlagBits = UInt32;
 
-    enum Flags : FlagBits {
-        FLAG_NONE           = 0x00,
-        FLAG_SIGNED         = 0x01,
-        FLAG_UNSIGNED       = 0x02,
+    enum Flags : FlagBits
+    {
+        FLAG_NONE = 0x00,
+        FLAG_SIGNED = 0x01,
+        FLAG_UNSIGNED = 0x02,
         FLAG_FLOATING_POINT = 0x04,
 
-        FLAG_32_BIT         = 0x08,
-        FLAG_64_BIT         = 0x10
+        FLAG_32_BIT = 0x08,
+        FLAG_64_BIT = 0x10
     };
 
     FlagBits flags;
 
-    union {
+    union
+    {
         Int64 i;
         UInt64 u;
         Float64 f;
@@ -56,7 +59,7 @@ struct Params
 {
     vm::InstructionHandler *handler;
     vm::Value **args;
-    int nargs;
+    Int32 nargs;
 };
 
 } // namespace sdk

@@ -1,33 +1,30 @@
 #ifndef HYPERION_V2_TEXTURE_LOADER_H
 #define HYPERION_V2_TEXTURE_LOADER_H
 
-#include <asset/LoaderObject.hpp>
-#include <asset/Loader.hpp>
+#include <asset/Assets.hpp>
+#include <scene/Node.hpp>
+#include <core/Containers.hpp>
+
+#include <Types.hpp>
 #include <rendering/Texture.hpp>
 
 namespace hyperion::v2 {
 
-template <>
-struct LoaderObject<Texture, LoaderFormat::TEXTURE_2D> {
-    class Loader : public LoaderBase<Texture, LoaderFormat::TEXTURE_2D> {
-        static LoaderResult LoadFn(LoaderState *state, Object &);
-        static std::unique_ptr<Texture> BuildFn(Engine *engine, const Object &);
+class TextureLoader : public AssetLoader
+{
+public:
+    virtual ~TextureLoader() = default;
 
-    public:
-        Loader()
-            : LoaderBase({
-                .load_fn = LoadFn,
-                .build_fn = BuildFn
-            })
-        {
-        }
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override;
+
+    struct TextureData
+    {
+        std::vector<unsigned char> data;
+        int width;
+        int height;
+        int num_components;
+        Image::InternalFormat format;
     };
-
-    std::vector<unsigned char> data;
-    int width;
-    int height;
-    int num_components;
-    Image::InternalFormat format;
 };
 
 } // namespace hyperion::v2

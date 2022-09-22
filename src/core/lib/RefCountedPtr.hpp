@@ -161,12 +161,6 @@ public:
     RefCountDataType *GetRefCountData() const
         { return m_ref; }
 
-protected:
-    explicit RefCountedPtrBase(RefCountDataType *ref)
-        : m_ref(ref)
-    {
-    }
-
     template <class T>
     RefCountedPtr<T, CountType> CastUnsafe()
     {
@@ -178,6 +172,12 @@ protected:
         }
 
         return rc;
+    }
+
+protected:
+    explicit RefCountedPtrBase(RefCountDataType *ref)
+        : m_ref(ref)
+    {
     }
 
     void DropRefCount()

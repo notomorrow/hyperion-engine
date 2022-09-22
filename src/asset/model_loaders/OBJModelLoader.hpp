@@ -3,6 +3,7 @@
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
+#include <core/Containers.hpp>
 
 #include <Types.hpp>
 
@@ -47,7 +48,7 @@ public:
         OBJModel model = LoadModel(state);
 
         return BuildModel(state, model);
-    } 
+    }
     
     static OBJModel LoadModel(LoaderState &state);
     static LoadAssetResultPair BuildModel(LoaderState &state, OBJModel &model);
