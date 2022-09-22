@@ -12,26 +12,27 @@
 
 namespace hyperion::v2 {
 
-using OgreXMLSkeletonLoader = LoaderObject<Skeleton, LoaderFormat::OGRE_XML_SKELETON>::Loader;
+using OgreXMLSkeleton = OgreXMLSkeletonLoader::OgreXMLSkeleton;
 
-class OgreXMLSkeletonSAXHandler : public xml::SAXHandler {
+class OgreXMLSkeletonSAXHandler : public xml::SAXHandler
+{
 public:
-    OgreXMLSkeletonSAXHandler(LoaderState *state, OgreXMLSkeletonLoader::Object &object)
+    OgreXMLSkeletonSAXHandler(LoaderState *state, OgreXMLSkeleton &skeleton)
         : m_state(state),
-          m_object(object)
+          m_skeleton(skeleton)
     {
     }
 
-    OgreXMLSkeletonLoader::Object::AnimationData &LastAnimation()
+    OgreXMLSkeleton::AnimationData &LastAnimation()
     {
-        if (m_object.animations.empty()) {
-            m_object.animations.emplace_back();
+        if (m_skeleton.animations.empty()) {
+            m_skeleton.animations.emplace_back();
         }
 
-        return m_object.animations.back();
+        return m_skeleton.animations.back();
     }
 
-    OgreXMLSkeletonLoader::Object::AnimationTrackData &LastAnimationTrack()
+    OgreXMLSkeleton::AnimationTrackData &LastAnimationTrack()
     {
         auto &animation = LastAnimation();
 
@@ -42,7 +43,7 @@ public:
         return animation.tracks.back();
     }
 
-    OgreXMLSkeletonLoader::Object::KeyframeData &LastKeyframe()
+    OgreXMLSkeleton::KeyframeData &LastKeyframe()
     {
         auto &track = LastAnimationTrack();
 
@@ -54,11 +55,11 @@ public:
     }
 
     template <class Lambda>
-    OgreXMLSkeletonLoader::Object::BoneData *GetBone(Lambda lambda)
+    OgreXMLSkeleton::BoneData *GetBone(Lambda lambda)
     {
-        auto it = std::find_if(m_object.bones.begin(), m_object.bones.end(), lambda);
+        auto it = std::find_if(m_skeleton.bones.begin(), m_skeleton.bones.end(), lambda);
 
-        if (it == m_object.bones.end()) {
+        if (it == m_skeleton.bones.end()) {
             return nullptr;
         }
 
@@ -71,7 +72,7 @@ public:
             std::string bone_name = attributes.at("name");
             auto id = StringUtil::Parse<UInt>(attributes.at("id"));
 
-            m_object.bones.push_back({
+            m_skeleton.bones.push_back({
                 .name = String(bone_name.c_str()),
                 .id = id
             });
@@ -80,8 +81,8 @@ public:
             auto y = StringUtil::Parse<float>(attributes.at("y"));
             auto z = StringUtil::Parse<float>(attributes.at("z"));
 
-            if (!m_object.bones.empty()) {
-                m_object.bones.back().binding_translation = Vector(x, y, z);
+            if (!m_skeleton.bones.empty()) {
+                m_skeleton.bones.back().binding_translation = Vector(x, y, z);
             } else {
                 DebugLog(LogType::Warn, "Ogre XML skeleton parser: Attempt to add position when no bones exist yet\n");
             }
@@ -106,7 +107,7 @@ public:
                 );
             }
         } else if (name == "animation") {
-            m_object.animations.push_back({
+            m_skeleton.animations.push_back({
                 .name = String(attributes.at("name").c_str())
             });
         } else if (name == "track") {
@@ -146,10 +147,10 @@ public:
                 if (m_binding_angles.empty()) {
                     DebugLog(LogType::Warn, "Ogre XML skeleton loader: Attempt to set bond binding rotation but no binding angles were set prior\n");
                 } else {
-                    if (m_object.bones.empty()) {
+                    if (m_skeleton.bones.empty()) {
                         DebugLog(LogType::Warn, "Ogre XML skeleton loader: Attempt to set bone binding rotation but no bones were found\n");
                     } else {
-                        m_object.bones.back().binding_rotation = Quaternion(axis, m_binding_angles.top());
+                        m_skeleton.bones.back().binding_rotation = Quaternion(axis, m_binding_angles.top());
                     }
 
                     m_binding_angles.pop();
@@ -170,31 +171,28 @@ public:
 
 private:
     LoaderState *m_state;
-    OgreXMLSkeletonLoader::Object &m_object;
+    OgreXMLSkeleton &m_skeleton;
 
     std::stack<std::string> m_element_tags;
     std::stack<float> m_binding_angles;
     std::stack<float> m_keyframe_angles;
 };
 
-LoaderResult OgreXMLSkeletonLoader::LoadFn(LoaderState *state, Object &object)
+LoadAssetResultPair OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
 {
-    OgreXMLSkeletonSAXHandler handler(state, object);
+    OgreXMLSkeleton object;
+
+    OgreXMLSkeletonSAXHandler handler(&state, object);
 
     xml::SAXParser parser(&handler);
-    auto sax_result = parser.Parse(&state->stream);
+    auto sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        return { LoaderResult::Status::ERR, sax_result.message };
+        return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
     }
-    
-    return { };
-}
 
-std::unique_ptr<Skeleton> OgreXMLSkeletonLoader::BuildFn(Engine *engine, const Object &object)
-{
-    auto skeleton = std::make_unique<Skeleton>();
-    
+    auto skeleton = UniquePtr<Skeleton>::Construct();
+
     for (const auto &item : object.bones) {
         auto bone = std::make_unique<Bone>(item.name);
 
@@ -259,8 +257,8 @@ std::unique_ptr<Skeleton> OgreXMLSkeletonLoader::BuildFn(Engine *engine, const O
 
         root_bone->UpdateBoneTransform();
     }
-
-    return skeleton;
+    
+    return { { LoaderResult::Status::OK }, skeleton.Cast<void>() };
 }
 
 } // namespace hyperion::v2

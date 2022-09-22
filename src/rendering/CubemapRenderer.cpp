@@ -69,23 +69,23 @@ void CubemapRenderer::Init(Engine *engine)
 
     // testing global skybox
     auto tex = engine->CreateHandle<Texture>(new TextureCube(
-            engine->assets.Load<Texture>(
-               "textures/chapel/posx.jpg",
-               "textures/chapel/negx.jpg",
-               "textures/chapel/posy.jpg",
-               "textures/chapel/negy.jpg",
-               "textures/chapel/posz.jpg",
-               "textures/chapel/negz.jpg"
-            )
-        ));
-        tex->GetImage().SetIsSRGB(true);
+        engine->GetAssetManager().Load<Texture>(
+            "textures/chapel/posx.jpg",
+            "textures/chapel/negx.jpg",
+            "textures/chapel/posy.jpg",
+            "textures/chapel/negy.jpg",
+            "textures/chapel/posz.jpg",
+            "textures/chapel/negz.jpg"
+        )
+    ));
+    tex->GetImage().SetIsSRGB(true);
 
     m_env_probe = engine->resources->env_probes.Add(new EnvProbe(
 
         // TEMP
-        std::move(tex),
+        // std::move(tex),
         
-        //Handle<Texture>(m_cubemaps[0]), // TODO
+        Handle<Texture>(m_cubemaps[0]), // TODO
         m_aabb
     ));
 
@@ -409,8 +409,8 @@ void CubemapRenderer::CreateRendererInstance(Engine *engine)
 void CubemapRenderer::CreateShader(Engine *engine)
 {
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/cubemap_renderer.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
     };
 
     m_shader = engine->CreateHandle<Shader>(sub_shaders);

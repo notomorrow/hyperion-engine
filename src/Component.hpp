@@ -40,9 +40,8 @@ public:
 
         auto &registered_components = GetRegisteredComponents<Normalized>();
 
-        registered_components.mutex.lock();
+        std::lock_guard guard(registered_components.mutex);
         registered_components.map[handle->GetID()] = WeakHandle<Normalized>(handle);
-        registered_components.mutex.unlock();
 
         return true;
     }

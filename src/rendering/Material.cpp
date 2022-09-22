@@ -312,7 +312,53 @@ const Texture *Material::GetTexture(TextureKey key) const
     return m_textures.Get(key).Get();
 }
 
-MaterialGroup::MaterialGroup() = default;
-MaterialGroup::~MaterialGroup() = default;
+MaterialGroup::MaterialGroup()
+    : EngineComponentBase()
+{
+}
+
+MaterialGroup::~MaterialGroup()
+{
+    Teardown();
+}
+
+void MaterialGroup::Init(Engine *engine)
+{
+    if (IsInitCalled()) {
+        return;
+    }
+
+    EngineComponentBase::Init(engine);
+
+    for (auto &it : m_materials) {
+        engine->InitObject(it.second);
+    }
+
+    OnTeardown([this](...) {
+        m_materials.clear();
+    });
+}
+
+void MaterialGroup::Add(const std::string &name, Handle<Material> &&material)
+{
+    if (IsInitCalled()) {
+        GetEngine()->InitObject(material);
+    }
+
+    m_materials[name] = std::move(material);
+}
+
+bool MaterialGroup::Remove(const std::string &name)
+{
+    const auto it = m_materials.find(name);
+
+    if (it != m_materials.end()) {
+        m_materials.erase(it);
+
+        return true;
+    }
+
+    return false;
+}
 
 } // namespace hyperion::v2

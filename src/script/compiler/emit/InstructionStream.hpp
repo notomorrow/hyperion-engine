@@ -4,13 +4,16 @@
 #include <script/compiler/emit/Instruction.hpp>
 #include <script/compiler/emit/StaticObject.hpp>
 
+#include <Types.hpp>
+
 #include <vector>
 #include <ostream>
 #include <cstdint>
 
 namespace hyperion::compiler {
 
-class InstructionStream {
+class InstructionStream
+{
     //friend std::ostream &operator<<(std::ostream &os, InstructionStream instruction_stream);
     
 public:
@@ -24,9 +27,9 @@ public:
 
     const std::vector<Instruction<>> &GetData() const { return m_data; }*/
 
-    uint8_t GetCurrentRegister() const { return m_register_counter; }
-    uint8_t IncRegisterUsage() { return ++m_register_counter; }
-    uint8_t DecRegisterUsage() { return --m_register_counter; }
+    UInt8 GetCurrentRegister() const { return m_register_counter; }
+    UInt8 IncRegisterUsage() { return ++m_register_counter; }
+    UInt8 DecRegisterUsage() { return --m_register_counter; }
 
     int GetStackSize() const { return m_stack_size; }
     void SetStackSize(int stack_size) { m_stack_size = stack_size; }
@@ -47,7 +50,7 @@ private:
     //std::vector<Instruction<>> m_data;
     // incremented and decremented each time a register
     // is used/unused
-    uint8_t m_register_counter;
+    UInt8 m_register_counter;
     // incremented each time a variable is pushed,
     // decremented each time a stack frame is closed
     int m_stack_size;

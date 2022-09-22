@@ -2,7 +2,6 @@
 #define SCRIPT_HPP
 
 #include <script/ScriptApi.hpp>
-
 #include <script/SourceFile.hpp>
 #include <script/compiler/ErrorList.hpp>
 #include <script/compiler/CompilationUnit.hpp>
@@ -11,10 +10,14 @@
 #include <script/vm/BytecodeStream.hpp>
 #include <script/vm/VM.hpp>
 
+#include <rendering/Base.hpp>
+
 #include <Constants.hpp>
 #include <Types.hpp>
 
 #include <util/UTF8.hpp>
+
+#include <Types.hpp>
 
 #include <memory>
 #include <array>
@@ -26,16 +29,22 @@ using namespace vm;
 
 class APIInstance;
 
-class Script
+namespace v2 {
+
+class Engine;
+
+class Script : public EngineComponentBase<STUB_CLASS(Script)>
 {
 public:
     using Bytes = std::vector<UByte>;
 
-    using ArgCount = uint16_t;
+    using ArgCount = UInt16;
     using FunctionHandle = Value;
 
     Script(const SourceFile &source_file);
-    ~Script() = default;
+    ~Script();
+
+    void Init(Engine *engine);
 
     const ErrorList &GetErrors() const { return m_errors; }
 
@@ -46,7 +55,7 @@ public:
     const VM &GetVM() const { return m_vm; }
 
     bool IsBaked() const { return !m_baked_bytes.empty(); }
-    bool IsCompiled() const { return m_bytecode_chunk != nullptr; }
+    bool IsCompiled() const { return !m_bytecode_chunk.buildables.empty(); }
 
     bool Compile(APIInstance &api_instance);
 
@@ -143,17 +152,19 @@ public:
     }
 
 private:
-    SourceFile                     m_source_file;
-    CompilationUnit                m_compilation_unit;
-    ErrorList                      m_errors;
+    SourceFile  m_source_file;
+    CompilationUnit m_compilation_unit;
+    ErrorList m_errors;
 
-    std::unique_ptr<BytecodeChunk> m_bytecode_chunk;
+    BytecodeChunk m_bytecode_chunk;
 
-    Bytes                          m_baked_bytes;
+    Bytes m_baked_bytes;
 
-    VM                             m_vm;
-    BytecodeStream                 m_bs;
+    VM m_vm;
+    BytecodeStream m_bs;
 };
+
+} // namespace v2
 
 } // namespace hyperion
 

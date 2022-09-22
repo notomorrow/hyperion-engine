@@ -1,54 +1,78 @@
 #include "AudioSource.hpp"
 #include "AudioManager.hpp"
 
-namespace hyperion {
+#include <Engine.hpp>
+
+namespace hyperion::v2 {
+
 AudioSource::AudioSource(Format format, const unsigned char *data, size_t size, size_t freq)
-    : m_format(format),
+    : EngineComponentBase(),
+      m_format(format),
+      m_freq(freq),
       m_buffer_id(~0u),
       m_source_id(~0u),
       m_sample_length(0)
 {
-    if (!AudioManager::GetInstance()->IsInitialized()) {
-        return;
-    }
-
-    auto al_format = AL_FORMAT_MONO8;
-
-    switch (format) {
-    case Format::MONO8:
-        al_format = AL_FORMAT_MONO8;
-        break;
-    case Format::MONO16:
-        al_format = AL_FORMAT_MONO16;
-        break;
-    case Format::STEREO8:
-        al_format = AL_FORMAT_STEREO8;
-        break;
-    case Format::STEREO16:
-        al_format = AL_FORMAT_STEREO16;
-        break;
-    }
-
-    alGenBuffers(1, &m_buffer_id);
-    alBufferData(m_buffer_id, al_format, (void*)data, size, freq);
-
-    alGenSources(1, &m_source_id);
-    alSourcei(m_source_id, AL_BUFFER, m_buffer_id);
-
-    FindSampleLength();
+    m_data.Resize(size);
+    Memory::Copy(m_data.Data(), data, size);
 }
 
 AudioSource::~AudioSource()
 {
-    Stop();
+    Teardown();
+}
 
-    if (m_source_id != ~0u) {
-        alDeleteSources(1, &m_source_id);
+void AudioSource::Init(Engine *engine)
+{
+    if (IsInitCalled()) {
+        return;
     }
 
-    if (m_buffer_id != ~0u) {
-        alDeleteBuffers(1, &m_buffer_id);
+    EngineComponentBase::Init(engine);
+
+    if (AudioManager::GetInstance()->IsInitialized()) {
+        auto al_format = AL_FORMAT_MONO8;
+
+        switch (m_format) {
+        case Format::MONO8:
+            al_format = AL_FORMAT_MONO8;
+            break;
+        case Format::MONO16:
+            al_format = AL_FORMAT_MONO16;
+            break;
+        case Format::STEREO8:
+            al_format = AL_FORMAT_STEREO8;
+            break;
+        case Format::STEREO16:
+            al_format = AL_FORMAT_STEREO16;
+            break;
+        }
+
+        alGenBuffers(1, &m_buffer_id);
+        alBufferData(m_buffer_id, al_format, m_data.Data(), m_data.Size(), m_freq);
+
+        alGenSources(1, &m_source_id);
+        alSourcei(m_source_id, AL_BUFFER, m_buffer_id);
+
+        FindSampleLength();
+
+        m_data.Clear();
+        m_data.Refit();
     }
+
+    OnTeardown([this](...) {
+        Stop();
+
+        if (m_source_id != ~0u) {
+            alDeleteSources(1, &m_source_id);
+            m_source_id = ~0u;
+        }
+
+        if (m_buffer_id != ~0u) {
+            alDeleteBuffers(1, &m_buffer_id);
+            m_buffer_id = ~0u;
+        }
+    });
 }
 
 AudioSource::State AudioSource::GetState() const
@@ -65,7 +89,7 @@ AudioSource::State AudioSource::GetState() const
     case AL_STOPPED: return State::STOPPED;
     case AL_PLAYING: return State::PLAYING;
     case AL_PAUSED:  return State::PAUSED;
-    default:         return State::UNDEFINED;
+    default: return State::UNDEFINED;
     }
 }
 
@@ -143,4 +167,4 @@ void AudioSource::FindSampleLength()
     m_sample_length = byte_size * 8 / (num_channels * bits);
 }
 
-} // namespace hyperion
+} // namespace hyperion::v2

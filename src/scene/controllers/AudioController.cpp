@@ -2,24 +2,29 @@
 
 #include <scene/Node.hpp>
 #include <math/MathUtil.hpp>
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 
 AudioController::AudioController()
-    : AudioController(nullptr)
+    : AudioController(Handle<AudioSource>())
 {
 }
 
-AudioController::AudioController(std::unique_ptr<AudioSource> &&source)
+AudioController::AudioController(Handle<AudioSource> &&source)
     : PlaybackController("AudioController"),
       m_source(std::move(source)),
       m_timer(0.0f)
 {
 }
 
-void AudioController::SetSource(std::unique_ptr<AudioSource> &&source)
+void AudioController::SetSource(Handle<AudioSource> &&source)
 {
     Stop();
+
+    if (GetOwner() != nullptr) {
+        GetEngine()->InitObject(source);
+    }
 
     m_source = std::move(source);
 }
@@ -49,6 +54,8 @@ void AudioController::Stop()
 void AudioController::OnAdded()
 {
     m_last_position = GetOwner()->GetTranslation();
+
+    GetEngine()->InitObject(m_source);
 }
 
 void AudioController::OnRemoved()

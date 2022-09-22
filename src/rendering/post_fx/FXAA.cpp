@@ -17,10 +17,10 @@ Handle<Shader> FXAAEffect::CreateShader(Engine *engine)
     return engine->CreateHandle<Shader>(
         std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/fxaa.frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/fxaa.frag.spv")).ReadBytes()
             }}
         }
     );

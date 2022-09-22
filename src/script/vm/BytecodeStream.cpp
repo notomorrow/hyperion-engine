@@ -5,10 +5,9 @@
 namespace hyperion {
 namespace vm {
 
-BytecodeStream BytecodeStream::FromSourceFile(SourceFile *file_ptr)
+BytecodeStream BytecodeStream::FromSourceFile(SourceFile &file)
 {
-    AssertThrow(file_ptr != nullptr);
-    return BytecodeStream(file_ptr->GetBuffer(), file_ptr->GetSize());
+    return BytecodeStream(file.GetBuffer(), file.GetSize());
 }
 
 BytecodeStream::BytecodeStream()
@@ -18,7 +17,7 @@ BytecodeStream::BytecodeStream()
 {
 }
 
-BytecodeStream::BytecodeStream(const char *buffer, size_t size, size_t position)
+BytecodeStream::BytecodeStream(const UByte *buffer, SizeType size, SizeType position)
     : m_buffer(buffer),
       m_size(size),
       m_position(position)
@@ -43,17 +42,14 @@ BytecodeStream &BytecodeStream::operator=(const BytecodeStream &other)
 
 void BytecodeStream::ReadZeroTerminatedString(char *ptr)
 {
-    char ch = 0;
-    size_t i = 0;
+    char ch = '\0';
+    SizeType i = 0;
 
     do {
-        if (m_position >= m_size) {
-            throw std::out_of_range("attempted to read past the limit");
-        }
+        AssertThrowMsg(m_position < m_size, "Attempted to read past end of buffer!");
 
         ptr[i++] = ch = m_buffer[m_position++];
-
-    } while (ch != 0);
+    } while (ch != '\0');
 }
 
 } // namespace vm

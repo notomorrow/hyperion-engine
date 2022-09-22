@@ -9,6 +9,14 @@
 #include <rendering/vct/VoxelConeTracing.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <asset/model_loaders/OBJModelLoader.hpp>
+#include <asset/material_loaders/MTLMaterialLoader.hpp>
+#include <asset/model_loaders/OgreXMLModelLoader.hpp>
+#include <asset/skeleton_loaders/OgreXMLSkeletonLoader.hpp>
+#include <asset/texture_loaders/TextureLoader.hpp>
+#include <asset/audio_loaders/WAVAudioLoader.hpp>
+#include <asset/script_loaders/ScriptLoader.hpp>
+
 #include <Game.hpp>
 
 #include <builders/MeshBuilder.hpp>
@@ -28,8 +36,9 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(new Resources(this)),
-      assets(this)
+      m_asset_manager(this)
 {
+    RegisterDefaultAssetLoaders();
 }
 
 Engine::~Engine()
@@ -48,6 +57,22 @@ Engine::~Engine()
     }
 
     m_instance->Destroy();
+}
+
+void Engine::RegisterDefaultAssetLoaders()
+{
+    m_asset_manager.SetBasePath(FilePath::Join(HYP_ROOT_DIR, "res"));
+
+    m_asset_manager.Register<OBJModelLoader>("obj");
+    m_asset_manager.Register<OgreXMLModelLoader>("mesh.xml");
+    m_asset_manager.Register<OgreXMLSkeletonLoader>("skeleton.xml");
+    m_asset_manager.Register<TextureLoader>(
+        "png", "jpg", "jpeg", "tga",
+        "bmp", "psd", "gif", "hdr", "tif"
+    );
+    m_asset_manager.Register<MTLMaterialLoader>("mtl");
+    m_asset_manager.Register<WAVAudioLoader>("wav");
+    m_asset_manager.Register<ScriptLoader>("hypscript");
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -148,8 +173,8 @@ void Engine::PrepareFinalPass()
 
     auto shader = CreateHandle<Shader>(
         std::vector<SubShader> {
-            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
+            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(GetAssetManager().GetBasePath().Data(), "vkshaders/blit_vert.spv")).Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(GetAssetManager().GetBasePath().Data(), "vkshaders/blit_frag.spv")).Read()}}
         }
     );
 

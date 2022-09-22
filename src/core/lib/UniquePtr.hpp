@@ -21,11 +21,13 @@ struct UniquePtrHolder
 {
     void *value;
     TypeID type_id;
+    TypeID base_type_id;
     void (*dtor)(void *);
 
     UniquePtrHolder()
         : value(nullptr),
           type_id(TypeID::ForType<void>()),
+          base_type_id(TypeID::ForType<void>()),
           dtor(nullptr)
     {
     }
@@ -33,6 +35,7 @@ struct UniquePtrHolder
     UniquePtrHolder(const UniquePtrHolder &other)
         : value(other.value),
           type_id(other.type_id),
+          base_type_id(other.base_type_id),
           dtor(other.dtor)
     {
     }
@@ -41,6 +44,7 @@ struct UniquePtrHolder
     {
         value = other.value;
         type_id = other.type_id;
+        base_type_id = other.base_type_id;
         dtor = other.dtor;
 
         return *this;
@@ -49,10 +53,12 @@ struct UniquePtrHolder
     UniquePtrHolder(UniquePtrHolder &&other) noexcept
         : value(other.value),
           type_id(other.type_id),
+          base_type_id(other.base_type_id),
           dtor(other.dtor)
     {
         other.value = nullptr;
         other.type_id = TypeID::ForType<void>();
+        other.base_type_id = TypeID::ForType<void>();
         other.dtor = nullptr;
     }
 
@@ -60,33 +66,37 @@ struct UniquePtrHolder
     {
         value = other.value;
         type_id = other.type_id;
+        base_type_id = other.base_type_id;
         dtor = other.dtor;
 
         other.value = nullptr;
         other.type_id = TypeID::ForType<void>();
+        other.base_type_id = TypeID::ForType<void>();
         other.dtor = nullptr;
 
         return *this;
     }
 
-    template <class T, class ...Args>
+    template <class Base, class Derived, class ...Args>
     void Construct(Args &&... args)
     {
-        using Normalized = NormalizedType<T>;
+        using Normalized = NormalizedType<Derived>;
 
         value = Memory::AllocateAndConstruct<Normalized>(std::forward<Args>(args)...);
         dtor = &Memory::DestructAndFree<Normalized>;
         type_id = TypeID::ForType<Normalized>();
+        base_type_id = TypeID::ForType<NormalizedType<Base>>();
     }
 
-    template <class T>
-    void TakeOwnership(T *ptr)
+    template <class Base, class Derived>
+    void TakeOwnership(Derived *ptr)
     {
-        using Normalized = NormalizedType<T>;
+        using Normalized = NormalizedType<Derived>;
 
         value = ptr;
         dtor = &Memory::DestructAndFree<Normalized>;
-        type_id = TypeID::ForType<T>();
+        type_id = TypeID::ForType<Normalized>();
+        base_type_id = TypeID::ForType<NormalizedType<Base>>();
     }
 
     void Destruct()
@@ -175,12 +185,6 @@ public:
         return nullptr;
     }
 
-protected:
-    explicit UniquePtrBase(UniquePtrHolder &&holder)
-        : m_holder(std::move(holder))
-    {
-    }
-
     template <class T>
     HYP_FORCE_INLINE UniquePtr<T> CastUnsafe()
     {
@@ -190,6 +194,15 @@ protected:
 
         return unique;
     }
+
+protected:
+    explicit UniquePtrBase(UniquePtrHolder &&holder)
+        : m_holder(std::move(holder))
+    {
+    }
+
+    [[nodiscard]] const TypeID &GetBaseTypeID() const
+        { return m_holder.base_type_id; }
 
     UniquePtrHolder m_holder;
 };
@@ -282,7 +295,7 @@ public:
 
         Base::Reset();
         
-        Base::m_holder.template Construct<TyN>(value);
+        Base::m_holder.template Construct<T, TyN>(value);
     }
     
     /*! \brief Drops any currently held valeu and constructs a new value using \ref{value}.
@@ -297,7 +310,7 @@ public:
 
         Base::Reset();
         
-        Base::m_holder.template Construct<TyN>(std::move(value));
+        Base::m_holder.template Construct<T, TyN>(std::move(value));
     }
 
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
@@ -317,7 +330,7 @@ public:
         Base::Reset();
 
         if (ptr) {
-            Base::m_holder.template TakeOwnership<TyN>(ptr);
+            Base::m_holder.template TakeOwnership<T, TyN>(ptr);
         }
     }
 
@@ -350,6 +363,15 @@ public:
         return UniquePtr(new T(std::forward<Args>(args)...));
     }
 
+    template <class Ty>
+    [[nodiscard]] bool Is() const
+    {
+        return GetTypeID() == TypeID::ForType<Ty>()
+            || GetBaseTypeID() == TypeID::ForType<Ty>()
+            || std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
+            || std::is_same_v<Ty, void>;
+    }
+
     /*! \brief Attempts to cast the pointer directly to the given type.
         If the types are not compatible (Derived -> Base) or equal (or T is not void, in the case of a void pointer),
         no cast is performed and a null UniquePtr is returned. Otherwise, the
@@ -357,9 +379,7 @@ public:
     template <class Ty>
     [[nodiscard]] HYP_FORCE_INLINE UniquePtr<Ty> Cast()
     {
-        if (GetTypeID() == TypeID::ForType<Ty>()
-            || std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
-            || std::is_same_v<Ty, void>) {
+        if (Is<Ty>()) {
             return Base::CastUnsafe<Ty>();
         }
 
@@ -374,6 +394,10 @@ public:
     }
 };
 
+/*! \brief A UniquePtr<void> cannot be constructed except for being moved from an existing
+    UniquePtr<T>. This is because UniquePtr<T> may hold a derived pointer, while still being convertible to
+    the derived type. In order to maintain that functionality on UniquePtr<void>, we need to store the TypeID of T.
+    We would not be able to do that with UniquePtr<void>.*/
 // void pointer specialization
 template <>
 class UniquePtr<void> : public UniquePtrBase
@@ -424,38 +448,46 @@ public:
     HYP_FORCE_INLINE bool operator<(const UniquePtr &other) const
         { return uintptr_t(Base::Get()) < uintptr_t(other.Base::Get()); }
 
-    template <class T>
-    void Set(const T &value)
-    {
-        Base::Reset();
+    // template <class T>
+    // void Set(const T &value)
+    // {
+    //     Base::Reset();
         
-        Base::m_holder.template Construct<T>(value);
-    }
+    //     Base::m_holder.template Construct<T>(value);
+    // }
 
-    template <class T>
-    void Set(T &&value)
-    {
-        Base::Reset();
+    // template <class T>
+    // void Set(T &&value)
+    // {
+    //     Base::Reset();
         
-        Base::m_holder.template Construct<T>(std::move(value));
-    }
+    //     Base::m_holder.template Construct<T>(std::move(value));
+    // }
 
-    /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
-        if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
-        automatically. */
-    template <class T>
-    void Reset(T *ptr)
-    {
-        Base::Reset();
+    // /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
+    //     if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
+    //     automatically. */
+    // template <class T>
+    // void Reset(T *ptr)
+    // {
+    //     Base::Reset();
 
-        if (ptr) {
-            Base::m_holder.template TakeOwnership<T>(ptr);
-        }
-    }
+    //     if (ptr) {
+    //         Base::m_holder.template TakeOwnership<T>(ptr);
+    //     }
+    // }
 
     /*! \brief Destroys any currently held object.  */
     HYP_FORCE_INLINE void Reset()
         { Base::Reset(); }
+
+    template <class Ty>
+    [[nodiscard]] bool Is() const
+    {
+        return GetTypeID() == TypeID::ForType<Ty>()
+            || GetBaseTypeID() == TypeID::ForType<Ty>()
+            || std::is_same_v<Ty, void>;
+    }
 
     /*! \brief Attempts to cast the pointer directly to the given type.
         If the types are not EXACT (or T is not void, in the case of a void pointer),
@@ -463,15 +495,15 @@ public:
         value currently held in the UniquePtr being casted is std::move'd to the returned value.
         
         Please remember, casting from UniquePtr<void> -> UniquePtr<T> will not be able to do any base class checking
-        so you can only from UniquePtr<void> to the exact specified type */
-    template <class T>
-    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<T> Cast()
+        so you can only go from UniquePtr<void> to the exact specified type! */
+    template <class Ty>
+    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<Ty> Cast()
     {
-        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
-            return Base::CastUnsafe<T>();
+        if (Is<Ty>()) {
+            return Base::CastUnsafe<Ty>();
         }
 
-        return UniquePtr<T>();
+        return UniquePtr<Ty>();
     }
 
     /*! \brief Constructs a new RefCountedPtr from this object.

@@ -87,13 +87,13 @@ void ProbeGrid::CreatePipeline(Engine *engine)
     auto rt_shader = std::make_unique<ShaderProgram>();
 
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rgen.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/probe.rgen.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rmiss.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/probe.rmiss.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rchit.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/probe.rchit.spv")).Read()
     });
 
     m_pipeline = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
@@ -105,7 +105,7 @@ void ProbeGrid::CreateComputePipelines(Engine *engine)
     m_update_irradiance = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/probe_update_irradiance.comp.spv")).Read()}}
+                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/probe_update_irradiance.comp.spv")).Read()}}
             }
         )
     );
@@ -115,7 +115,7 @@ void ProbeGrid::CreateComputePipelines(Engine *engine)
     m_update_depth = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/probe_update_depth.comp.spv")).Read()}}
+                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/probe_update_depth.comp.spv")).Read()}}
             }
         )
     );

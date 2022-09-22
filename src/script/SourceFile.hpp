@@ -23,15 +23,15 @@ public:
     SourceFile &operator>>(const std::string &str);
 
     const std::string &GetFilePath() const { return m_filepath; }
-    char *GetBuffer() const { return m_buffer; }
+    UByte *GetBuffer() const { return m_buffer; }
     SizeType GetSize() const { return m_size; }
     void SetSize(SizeType size) { m_size = size; }
     
-    void ReadIntoBuffer(const char *data, SizeType size);
+    void ReadIntoBuffer(const UByte *data, SizeType size);
 
 private:
     std::string m_filepath;
-    char *m_buffer;
+    UByte *m_buffer;
     SizeType m_position;
     SizeType m_size;
 };

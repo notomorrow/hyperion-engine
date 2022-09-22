@@ -19,6 +19,8 @@ const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
 
 #ifdef HYP_ENABLE_THREAD_ID
 thread_local ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
+#else
+static const ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif
 
 void Threads::AssertOnThread(ThreadMask mask)
@@ -61,6 +63,15 @@ void Threads::AssertOnThread(const ThreadID &thread_id)
         "AssertOnThread() called but thread IDs are currently disabled!\n"
     );
 #endif
+}
+
+bool Threads::IsThreadInMask(const ThreadID &thread_id, ThreadMask mask)
+{
+    if (mask & thread_id.value) {
+        return true;
+    }
+
+    return false;
 }
 
 bool Threads::IsOnThread(ThreadMask mask)

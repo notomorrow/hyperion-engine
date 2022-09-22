@@ -8,16 +8,18 @@ Hyperion Engine is a 3D game engine written in C++, rendering on Vulkan. Current
 The goal of Hyperion is to be easy to understand and build games with, while still giving you ample control over the game engine.
 
 ### Current features include:
+* Highly multi-threaded with async task system, async asset loading, etc.
 * Physically based rendering
 * Procedural, paged terrain generation
-* Skeletal animation
 * Serialization / deserialization system
-* Highly multi-threaded with async task system
-* Post processing pipeline - SSAO, screen space reflections (SSR), screen space refraction, FXAA, Tonemapping
-* Parallax corrected dynamic cubemap rendering
-* Voxel Cone Tracing (global illumination and reflections)
-* Contact hardened softened shadows
+* Skeletal animation
 * Scene graph + octree
+* GPU occlusion culling
+* GPU particle rendering
+* Post processing system - SSAO, screen space reflections (SSR), screen space refraction, FXAA, Tonemapping
+* Dynamic cubemap rendering with local correction, so reflections match up
+* Voxel cone tracing (dynamic global illumination and reflections), implemented both with a 3D texture and a sparse voxel octree
+* Shadows - Variance shadow maps, contact-hardened shadows
 * Scripting engine (Hypscript)
 * Ray tracing - DDGI implementation in development
 
@@ -28,10 +30,18 @@ In the works
 
 ## Screenshots
 
+Vulkan Renderer:
+---
+
 ![screenshot](/screenshots/sponza-vk.png)
-*The new Vulkan renderer*
+PBR and image-based lighting
+![screenshot](/screenshots/pbr1.jpg)
+Screen space reflection:
+![screenshot](/screenshots/pbr2.jpg)
+
+OpenGL renderer:
+---
 ![screenshot](/screenshots/screenshot1-ogl.PNG)
-*Old OpenGL renderer*
 
 ## Building
 

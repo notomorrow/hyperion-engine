@@ -1,11 +1,12 @@
 ﻿
 #include "system/SdlSystem.hpp"
 #include "system/Debug.hpp"
-#include "rendering/backend/RendererInstance.hpp"
-#include "rendering/backend/RendererDescriptorSet.hpp"
-#include "rendering/backend/RendererImage.hpp"
-#include "rendering/backend/RendererRenderPass.hpp"
-#include "rendering/backend/rt/RendererRaytracingPipeline.hpp"
+
+#include <rendering/backend/RendererInstance.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererRenderPass.hpp>
+#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <core/lib/Proc.hpp>
 
@@ -13,7 +14,6 @@
 #include <scene/Node.hpp>
 #include <rendering/Atomics.hpp>
 #include <animation/Bone.hpp>
-#include <asset/model_loaders/OBJModelLoader.hpp>
 #include <rendering/rt/AccelerationStructureBuilder.hpp>
 #include <rendering/ProbeSystem.hpp>
 #include <rendering/post_fx/SSAO.hpp>
@@ -107,33 +107,34 @@ public:
             ))
         );
 
+#if HYPERION_VK_TEST_VCT
+        { // voxel cone tracing for indirect light and reflections
+            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+                VoxelConeTracing::Params {
+                    BoundingBox(-128, 128)
+                }
+            );
+        }
+#endif
+
         engine->GetWorld().AddScene(Handle<Scene>(m_scene));
 
-    
-        AssetManager am(engine);
-        am.SetBasePath(FilePath::Join(HYP_ROOT_DIR, "..", "res"));
-        am.Register<OBJModelLoader>("obj");
-        am.Register<Texture2DLoader>("jpg");
-    
-
-        auto zombie = engine->assets.Load<Node>(
-            "models/ogrexml/dragger_Body.mesh.xml"
-        );
-
-        auto batch = am.CreateBatch();
-        batch.Add<Node>("models/sponza/sponza.obj");
+        auto batch = engine->GetAssetManager().CreateBatch();
+        batch.Add<Node>("models/ogrexml/dragger_Body.mesh.xml");
+        batch.Add<Node>("models/living_room/living_room.obj"); //sponza/sponza.obj");
         batch.Add<Node>("models/cube.obj");
         batch.Add<Node>("models/material_sphere/material_sphere.obj");
         batch.Add<Node>("models/grass/grass.obj");
         batch.LoadAsync();
         auto obj_models = batch.AwaitResults();
 
-        auto test_model = obj_models[0].Get<Node>();
-        auto cube_obj = obj_models[1].Get<Node>();
-        auto material_test_obj = obj_models[2].Get<Node>();
+        auto zombie = obj_models[0].Get<Node>();
+        auto test_model = obj_models[1].Get<Node>();
+        auto cube_obj = obj_models[2].Get<Node>();
+        auto material_test_obj = obj_models[3].Get<Node>();
 
-        for (int i = 0; i < 10; i++) {
-            auto sphere = am.Load<Node>("models/material_sphere/material_sphere.obj");
+        for (int i = 0; i < 0; i++) {
+            auto sphere = engine->GetAssetManager().Load<Node>("models/material_sphere/material_sphere.obj");
             sphere.Scale(5.0f);
             sphere.SetName("sphere");
             sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
@@ -202,28 +203,27 @@ public:
         }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
-            engine->assets.Load<Texture>(
-                // "textures/hdr_cubemaps/alps_field_4k.hdr"
-               "textures/chapel/posx.jpg",
-               "textures/chapel/negx.jpg",
-               "textures/chapel/posy.jpg",
-               "textures/chapel/negy.jpg",
-               "textures/chapel/posz.jpg",
-               "textures/chapel/negz.jpg"
+            engine->GetAssetManager().Load<Texture>(
+                "textures/chapel/posx.jpg",
+                "textures/chapel/negx.jpg",
+                "textures/chapel/posy.jpg",
+                "textures/chapel/negy.jpg",
+                "textures/chapel/posz.jpg",
+                "textures/chapel/negz.jpg"
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
         engine->InitObject(cubemap);
 
         { // hardware skinning
-            zombie->Scale(1.25f);
-            zombie->Translate({0, 0, -9});
-            zombie->GetChild(0).Get()->GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
-            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.0f);
-            zombie->GetChild(0).Get()->GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
-            zombie->GetChild(0).Get()->GetEntity()->RebuildRenderableAttributes();
-            //m_scene->GetRoot().AddChild(NodeProxy(zombie.release()));
+            zombie.Scale(1.25f);
+            zombie.Translate(Vector3(0, 0, -9));
+            zombie[0].GetEntity()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+            zombie[0].GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
+            zombie[0].GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.0f);
+            zombie[0].GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+            zombie[0].GetEntity()->RebuildRenderableAttributes();
+            //m_scene->GetRoot().AddChild(zombie);
         }
         
         { // adding lights to scene
@@ -242,13 +242,14 @@ public:
             // )));
         }
 
-        test_model.Scale(0.15f);
+        test_model.Scale(50.15f);
+
+        auto tex = engine->GetAssetManager().Load<Texture>("textures/smoke.png");
+        AssertThrow(tex);
 
         { // particles test
             auto particle_spawner = engine->CreateHandle<ParticleSpawner>(ParticleSpawnerParams {
-                .texture = engine->CreateHandle<Texture>(
-                    engine->assets.Load<Texture>("textures/smoke.png").release()
-                ),
+                .texture = engine->GetAssetManager().Load<Texture>("textures/smoke.png"),
                 .max_particles = 1024u,
                 .origin = Vector3(0.0f, 8.0f, -17.0f),
                 .lifespan = 8.0f
@@ -258,35 +259,16 @@ public:
             //m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
         }
 
-#if HYPERION_VK_TEST_VCT
-        { // voxel cone tracing for indirect light and reflections
-            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
-                VoxelConeTracing::Params {
-                    BoundingBox(-128, 128)
-                }
-            );
-        }
-#endif
-        
-        { // adding shadow maps
-            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-                Handle<Light>(m_point_light),
-                Vector3(0, 0, 0),
-                450.0f
-            );
-        }
-
         { // adding cubemap rendering with a bounding box
             m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
                 Extent2D { 512, 512 },
-                BoundingBox(Vector3(-128, -8, -128), Vector3(128, 25, 128)),
+                test_model.GetWorldAABB(),//BoundingBox(Vector3(-128, -8, -128), Vector3(128, 25, 128)),
                 renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
             );
         }
 
         cube_obj.Scale(50.0f);
 
-        AssertThrow(cubemap);
         auto skybox_material = engine->CreateHandle<Material>();
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
@@ -307,9 +289,7 @@ public:
         water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.5f, 1.0f, 0.35f));
         water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
         water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-        water_quad->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->CreateHandle<Texture>(
-            engine->assets.Load<Texture>("textures/water.jpg").release()
-        ));
+        water_quad->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->GetAssetManager().Load<Texture>("textures/water.jpg"));
         water_quad->GetMaterial()->SetIsAlphaBlended(true);
         water_quad->GetMaterial()->SetBucket(BUCKET_TRANSLUCENT);
         water_quad->SetScale(Vector3(18.0f));
@@ -323,12 +303,25 @@ public:
         if (auto test = m_scene->GetRoot().AddChild(test_model)) {
         }
 
-        auto monkey = am.Load<Node>("models/monkey/monkey.obj");
-        monkey[0].GetEntity()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
-        monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
-        monkey.Translate(Vector3(0, 22.5f, 0));
-        monkey.Scale(6.0f);
-        m_scene->GetRoot().AddChild(monkey);
+
+        { // adding shadow maps
+            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+                Handle<Light>(m_point_light),
+                test_model.GetWorldAABB()
+            );
+        }
+
+        if (auto monkey = engine->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
+            monkey.SetName("monkey");
+            monkey[0].GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+            monkey[0].GetEntity()->AddController<ScriptedController>(
+                engine->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
+            );
+            monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
+            monkey.Translate(Vector3(0, 22.5f, 0));
+            monkey.Scale(6.0f);
+            m_scene->GetRoot().AddChild(monkey);
+        }
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
@@ -391,7 +384,7 @@ public:
 
                 for (const auto &hit : results) {
                     // now ray test each result as triangle mesh to find exact hit point
-                    if (auto lookup_result = engine->registry.template Lookup<Entity>(Entity::ID { TypeID::ForType<Entity>(), hit.id })) {
+                    if (auto lookup_result = engine->GetObjectSystem().Lookup<Entity>(Entity::ID { TypeID::ForType<Entity>(), hit.id })) {
                         if (auto &mesh = lookup_result->GetMesh()) {
                             ray.TestTriangleList(
                                 mesh->GetVertices(),
@@ -407,7 +400,7 @@ public:
                 if (!triangle_mesh_results.Empty()) {
                     const auto &mesh_hit = triangle_mesh_results.Front();
 
-                    if (auto sphere = m_scene->GetRoot().Select("sphere")) {
+                    if (auto sphere = m_scene->GetRoot().Select("monkey")) {
                         sphere.SetLocalTranslation(mesh_hit.hitpoint);
                         sphere.SetLocalRotation(Quaternion::LookAt((m_scene->GetCamera()->GetTranslation() - mesh_hit.hitpoint).Normalized(), Vector3::UnitY()));
                     }
@@ -558,8 +551,6 @@ int main()
 
     auto *engine = new Engine(system, "My app");
 
-    engine->assets.SetBasePath(FileSystem::Join(HYP_ROOT_DIR, "..", "res"));
-
     auto *my_game = new MyGame;
 ;
     engine->Initialize();
@@ -572,13 +563,13 @@ int main()
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vegetation.vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vegetation.vert.spv")).Read(),
                         {.name = "vegetation vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
                     }
                 }
@@ -592,13 +583,13 @@ int main()
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/aabb.vert.spv")).Read(),
                         {.name = "aabb vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/aabb.frag.spv")).Read(),
                         {.name = "aabb frag"}
                     }
                 }
@@ -612,13 +603,13 @@ int main()
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read(),
                         {.name = "main vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
                     }
                 }
@@ -632,13 +623,13 @@ int main()
             std::vector<SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read(),
                         {.name = "main vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/Terrain.frag.spv")).Read(),
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/Terrain.frag.spv")).Read(),
                         {.name = "Terrain frag"}
                     }
                 }
@@ -654,8 +645,8 @@ int main()
     //     ShaderManager::Key::STENCIL_OUTLINE,
     //     Handle<Shader>(new Shader(
     //         std::vector<SubShader>{
-    //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
-    //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
+    //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/outline.vert.spv")).Read()}},
+    //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/outline.frag.spv")).Read()}}
     //         }
     //     ))
     // );
@@ -666,8 +657,8 @@ int main()
             ShaderManager::Key::BASIC_SKYBOX,
             engine->CreateHandle<Shader>(
                 std::vector<SubShader>{
-                    {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
-                    {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
+                    {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/skybox_vert.spv")).Read()}},
+                    {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/skybox_frag.spv")).Read()}}
                 }
             )
         );
@@ -679,13 +670,13 @@ int main()
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rgen.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rgen.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rmiss.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rmiss.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/test.rchit.spv")).Read()
+        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rchit.spv")).Read()
     });
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));

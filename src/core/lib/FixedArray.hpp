@@ -30,6 +30,13 @@ public:
     {
     }
 
+    constexpr FixedArray(const T *ary, SizeType count)
+    {
+        for (SizeType i = 0; i < MathUtil::Min(Sz, count); i++) {
+            m_values = ary[i];
+        }
+    }
+
     FixedArray(const FixedArray &other);
     FixedArray &operator=(const FixedArray &other);
     FixedArray(FixedArray &&other) noexcept;
