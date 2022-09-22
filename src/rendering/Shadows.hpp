@@ -2,7 +2,7 @@
 #define HYPERION_V2_SHADOWS_H
 
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <rendering/PostFX.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/Light.hpp>

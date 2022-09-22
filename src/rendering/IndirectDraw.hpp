@@ -1,10 +1,10 @@
 #ifndef HYPERION_V2_INDIRECT_DRAW_H
 #define HYPERION_V2_INDIRECT_DRAW_H
 
-#include "Base.hpp"
-#include "DrawProxy.hpp"
-#include "Compute.hpp"
-#include "CullData.hpp"
+#include <core/Base.hpp>
+#include <rendering/DrawProxy.hpp>
+#include <rendering/Compute.hpp>
+#include <rendering/CullData.hpp>
 
 #include <core/lib/Queue.hpp>
 #include <core/lib/FixedArray.hpp>

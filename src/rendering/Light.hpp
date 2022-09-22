@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_LIGHT_H
 #define HYPERION_V2_LIGHT_H
 
-#include "Base.hpp"
-#include "Shader.hpp"
+#include <core/Base.hpp>
+#include <rendering/Shader.hpp>
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
 #include <GameCounter.hpp>

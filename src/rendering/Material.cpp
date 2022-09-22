@@ -16,8 +16,7 @@ using renderer::SamplerDescriptor;
 using renderer::CommandBuffer;
 
 Material::Material(const String &name)
-    : EngineComponentBase(),
-      m_name(name),
+    : EngineComponentBase(name),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
     ResetParameters();

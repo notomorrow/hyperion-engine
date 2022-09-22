@@ -1,13 +1,12 @@
 #ifndef HYPERION_V2_ENV_PROBE_HPP
 #define HYPERION_V2_ENV_PROBE_HPP
 
-#include "Base.hpp"
-#include "Texture.hpp"
-#include "DrawProxy.hpp"
-#include <math/BoundingBox.hpp>
+#include <core/Base.hpp>
 #include <core/lib/Optional.hpp>
-
+#include <rendering/Texture.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
+#include <math/BoundingBox.hpp>
 
 namespace hyperion::v2 {
 

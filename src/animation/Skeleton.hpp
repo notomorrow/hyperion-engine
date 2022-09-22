@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_SKELETON_H
 #define HYPERION_V2_SKELETON_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <rendering/Shader.hpp>
 #include <core/lib/DynArray.hpp>
 #include "../animation/Animation.hpp"

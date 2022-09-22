@@ -1,14 +1,14 @@
 #ifndef HYPERION_V2_RENDER_COMPONENT_H
 #define HYPERION_V2_RENDER_COMPONENT_H
 
-#include "Base.hpp"
-#include "Buffers.hpp"
-#include "ShaderGlobals.hpp"
-#include <GameCounter.hpp>
+#include <core/Base.hpp>
 #include <core/lib/AtomicSemaphore.hpp>
-#include <rendering/backend/RendererFrame.hpp>
 #include <scene/Entity.hpp>
 #include <math/MathUtil.hpp>
+#include <rendering/Buffers.hpp>
+#include <rendering/ShaderGlobals.hpp>
+#include <rendering/backend/RendererFrame.hpp>
+#include <GameCounter.hpp>
 #include <Constants.hpp>
 #include <Threads.hpp>
 #include <Types.hpp>

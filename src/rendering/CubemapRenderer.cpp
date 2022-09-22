@@ -83,9 +83,9 @@ void CubemapRenderer::Init(Engine *engine)
     m_env_probe = engine->resources->env_probes.Add(new EnvProbe(
 
         // TEMP
-        // std::move(tex),
+        std::move(tex),
         
-        Handle<Texture>(m_cubemaps[0]), // TODO
+        // Handle<Texture>(m_cubemaps[0]), // TODO
         m_aabb
     ));
 

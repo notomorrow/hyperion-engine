@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_SPATIAL_H
 #define HYPERION_V2_SPATIAL_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <rendering/Material.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/Shader.hpp>

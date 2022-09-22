@@ -117,6 +117,20 @@ const Handle<Entity> &NodeProxy::GetEntity() const
         : Handle<Entity>::empty;
 }
 
+void NodeProxy::SetEntity(const Handle<Entity> &entity)
+{
+    if (auto *node = Get()) {
+        node->SetEntity(Handle<Entity>(entity));
+    }
+}
+
+void NodeProxy::SetEntity(Handle<Entity> &&entity)
+{
+    if (auto *node = Get()) {
+        node->SetEntity(std::move(entity));
+    }
+}
+
 NodeProxy NodeProxy::GetChild(SizeType index)
 {
     if (Get() && index < Get()->GetChildren().Size()) {

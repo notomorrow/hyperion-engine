@@ -74,8 +74,9 @@
 using namespace hyperion;
 using namespace hyperion::v2;
 
-#define HYPERION_VK_TEST_VCT 0
-#define HYPERION_VK_TEST_RAYTRACING 0
+// #define HYP_TEST_VCT
+// #define HYP_TEST_RT
+#define HYP_TEST_TERRAIN
 
 namespace hyperion::v2 {
     
@@ -107,7 +108,7 @@ public:
             ))
         );
 
-#if HYPERION_VK_TEST_VCT
+#ifdef HYP_TEST_VCT
         { // voxel cone tracing for indirect light and reflections
             m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
                 VoxelConeTracing::Params {
@@ -121,7 +122,7 @@ public:
 
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("models/living_room/living_room.obj"); //sponza/sponza.obj");
+        batch.Add<Node>("models/sponza/sponza.obj");
         batch.Add<Node>("models/cube.obj");
         batch.Add<Node>("models/material_sphere/material_sphere.obj");
         batch.Add<Node>("models/grass/grass.obj");
@@ -183,15 +184,6 @@ public:
         // auto ent = engine->resources->entities.Add(result.Release<Entity>());
         // m_scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
 #endif
-
-#if 0
-        { // paged procedural terrain
-            if (auto terrain_node = m_scene->GetRoot().AddChild()) {
-                terrain_node.Get()->SetEntity(engine->CreateHandle<Entity>());
-                terrain_node.Get()->GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
-            }
-        }
-#endif
         
         { // custom vegetation shader
             /*if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
@@ -242,7 +234,7 @@ public:
             // )));
         }
 
-        test_model.Scale(50.15f);
+        test_model.Scale(0.15f);
 
         auto tex = engine->GetAssetManager().Load<Texture>("textures/smoke.png");
         AssertThrow(tex);
@@ -282,6 +274,15 @@ public:
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         skybox_spatial->RebuildRenderableAttributes();
         m_scene->AddEntity(std::move(skybox_spatial));
+
+#ifdef HYP_TEST_TERRAIN
+        { // paged procedural terrain
+            if (auto terrain_node = m_scene->GetRoot().AddChild()) {
+                terrain_node.SetEntity(engine->CreateHandle<Entity>());
+                terrain_node.GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(35.0f, 32.0f, 35.0f), 2.0f);
+            }
+        }
+#endif
 
         /*auto water_quad = engine->CreateHandle<Entity>();
         water_quad->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Cube().release()));
@@ -667,7 +668,7 @@ int main()
 
     my_game->Init(engine, window);
 
-#if HYPERION_VK_TEST_RAYTRACING
+#ifdef HYP_TEST_RT
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
         FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rgen.spv")).Read()
@@ -727,7 +728,7 @@ int main()
 
     engine->Compile();
 
-#if HYPERION_VK_TEST_RAYTRACING
+#ifdef HYP_TEST_RT
     HYPERION_ASSERT_RESULT(rt->Create(engine->GetDevice(), &engine->GetInstance()->GetDescriptorPool()));
 #endif
 
@@ -761,7 +762,7 @@ int main()
             num_frames = 0;
         }
 
-#if HYPERION_VK_TEST_RAYTRACING // for testing RT stuff.
+#ifdef HYP_TEST_RT
         HYPERION_ASSERT_RESULT(engine->GetInstance()->GetFrameHandler()->PrepareFrame(
             engine->GetInstance()->GetDevice(),
             engine->GetInstance()->GetSwapchain()
@@ -832,7 +833,7 @@ int main()
 
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
     
-#if HYPERION_VK_TEST_RAYTRACING
+#ifdef HYP_TEST_RT
 
     rt_image_storage->Destroy(engine->GetDevice());
     rt_image_storage_view.Destroy(engine->GetDevice());

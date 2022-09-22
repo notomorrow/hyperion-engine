@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_CONTROLLER_H
 #define HYPERION_V2_CONTROLLER_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <math/Transform.hpp>
 #include "../GameCounter.hpp"
 

@@ -379,7 +379,7 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
         auto vertex_attributes = mesh->GetVertexAttributes();
 
         auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-        const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
+
         auto entity = engine->CreateHandle<Entity>(
             std::move(mesh),
             std::move(shader),
@@ -390,10 +390,11 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
                 },
                 MaterialAttributes {
                     .bucket = Bucket::BUCKET_OPAQUE
-                },
-                shader_id
+                }
             )
         );
+
+        entity->SetName(String(obj_mesh.tag.c_str()));
         
         auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
         node->SetEntity(std::move(entity));
