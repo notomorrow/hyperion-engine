@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_RENDER_PASS_H
 #define HYPERION_V2_RENDER_PASS_H
 
-#include "Base.hpp"
+#include <core/Base.hpp>
 #include <Types.hpp>
 
 #include <rendering/backend/RendererRenderPass.hpp>

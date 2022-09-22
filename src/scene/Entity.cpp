@@ -56,6 +56,8 @@ Entity::Entity(
 
         if (!m_local_aabb.Empty()) {
             m_world_aabb = m_local_aabb * m_transform;
+        } else {
+            m_world_aabb = BoundingBox::empty;
         }
     }
 }
@@ -75,10 +77,22 @@ void Entity::Init(Engine *engine)
 
     m_draw_proxy.entity_id = m_id;
 
-    engine->InitObject(m_mesh);
     engine->InitObject(m_shader);
     engine->InitObject(m_material);
     engine->InitObject(m_skeleton);
+
+    // set our aabb to be the mesh aabb now that it is init
+    if (engine->InitObject(m_mesh)) {
+        m_local_aabb = m_mesh->CalculateAABB();
+
+        if (!m_local_aabb.Empty()) {
+            m_world_aabb = m_local_aabb * m_transform;
+        } else {
+            m_world_aabb = BoundingBox::empty;
+        }
+
+        m_needs_octree_update = true;
+    }
 
     SetReady(true);
 
@@ -88,8 +102,8 @@ void Entity::Init(Engine *engine)
         DebugLog(
             LogType::Debug,
             "Destroy entity with id %u, with name %s\n",
-            m_id.value,
-            m_material ? m_material->GetName().Data() : "No material"
+            GetID().value,
+            GetName().Data()
         );
 
         SetReady(false);
@@ -251,12 +265,16 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
     if (m_mesh) {
         if (IsInitCalled()) {
             GetEngine()->InitObject(m_mesh);
-        }
 
-        m_local_aabb = m_mesh->CalculateAABB();
+            m_local_aabb = m_mesh->CalculateAABB();
 
-        if (!m_local_aabb.Empty()) {
-            m_world_aabb = m_local_aabb * m_transform;
+            if (!m_local_aabb.Empty()) {
+                m_world_aabb = m_local_aabb * m_transform;
+            } else {
+                m_world_aabb = BoundingBox::empty;
+            }
+
+            UpdateOctree();
         }
     }
 
@@ -449,6 +467,8 @@ void Entity::SetTransform(const Transform &transform)
 
     if (!m_local_aabb.Empty()) {
         m_world_aabb = m_local_aabb * transform;
+    } else {
+        m_world_aabb = BoundingBox::empty;
     }
 
     for (auto &it : m_controllers) {

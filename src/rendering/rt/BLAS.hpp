@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_BLAS_H
 #define HYPERION_V2_BLAS_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <rendering/Mesh.hpp>
 
 #include <math/Transform.hpp>

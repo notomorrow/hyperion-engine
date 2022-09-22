@@ -43,7 +43,7 @@ void Camera::Init(Engine *engine)
 
 void Camera::SetTranslation(const Vector3 &translation)
 {
-    m_translation      = translation;
+    m_translation = translation;
     m_next_translation = translation;
 
     UpdateViewMatrix();

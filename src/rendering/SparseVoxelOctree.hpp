@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_SVO_H
 #define HYPERION_V2_SVO_H
 
-#include "Base.hpp"
-#include "Voxelizer.hpp"
-#include "Compute.hpp"
+#include <core/Base.hpp>
+#include <rendering/Voxelizer.hpp>
+#include <rendering/Compute.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 

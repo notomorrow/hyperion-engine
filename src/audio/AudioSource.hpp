@@ -1,7 +1,7 @@
 #ifndef HYPERION_AUDIO_SOURCE_H
 #define HYPERION_AUDIO_SOURCE_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <math/Vector3.hpp>
 

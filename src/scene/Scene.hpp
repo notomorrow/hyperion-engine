@@ -5,7 +5,7 @@
 #include "NodeProxy.hpp"
 #include "Entity.hpp"
 #include "Octree.hpp"
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Light.hpp>

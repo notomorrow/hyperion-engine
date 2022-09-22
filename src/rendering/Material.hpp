@@ -330,12 +330,6 @@ public:
      */
     const Texture *GetTexture(TextureKey key) const;
 
-    /*! \brief Get assigned name of the material */
-    const String &GetName() const { return m_name; }
-
-    /*! \brief Set the assigned name of the material */
-    void SetName(const String &name) { m_name = name; }
-
     Bucket GetBucket() const
         { return m_render_attributes.bucket; }
 
@@ -413,8 +407,6 @@ private:
     void EnqueueTextureUpdate(TextureKey key);
     void EnqueueDescriptorSetCreate();
     void EnqueueDescriptorSetDestroy();
-
-    String m_name;
 
     ParameterTable m_parameters;
     TextureSet m_textures;

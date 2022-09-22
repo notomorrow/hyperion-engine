@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_DRAW_PROXY_H
 #define HYPERION_V2_DRAW_PROXY_H
 
-#include "Base.hpp"
-#include "RenderBucket.hpp"
-#include "Buffers.hpp"
+#include <core/Base.hpp>
+#include <rendering/RenderBucket.hpp>
+#include <rendering/Buffers.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
