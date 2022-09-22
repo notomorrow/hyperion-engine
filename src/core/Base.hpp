@@ -155,12 +155,23 @@ public:
     static constexpr ID empty_id = ID { };
 
     EngineComponentBase()
-        : EngineComponentBase(ComponentInitInfo {})
+        : EngineComponentBase(ComponentInitInfo { })
+    {
+    }
+
+    EngineComponentBase(const String &name)
+        : EngineComponentBase(name, ComponentInitInfo { })
     {
     }
 
     EngineComponentBase(const ComponentInitInfo &init_info)
+        : EngineComponentBase(String::empty, init_info)
+    {
+    }
+
+    EngineComponentBase(const String &name, const ComponentInitInfo &init_info)
         : CallbackTrackable(),
+          m_name(name),
           m_init_info(init_info),
           m_id(empty_id),
           m_init_called(false),
@@ -182,6 +193,12 @@ public:
     /* To be called from ObjectHolder<Type> */
     void SetID(const ID &id)
         { m_id = id; }
+
+    /*! \brief Get assigned name of the object */
+    const String &GetName() const { return m_name; }
+
+    /*! \brief Set the assigned name of the object */
+    void SetName(const String &name) { m_name = name; }
 
     bool IsInitCalled() const
         { return m_init_called.load(); }
@@ -263,6 +280,7 @@ protected:
     }
 
     ID m_id;
+    String m_name;
     std::atomic_bool m_init_called;
     std::atomic_bool m_is_ready;
     Engine *m_engine;

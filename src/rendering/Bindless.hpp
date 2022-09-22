@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_BINDLESS_H
 #define HYPERION_V2_BINDLESS_H
 
-#include "Base.hpp"
+#include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <Constants.hpp>

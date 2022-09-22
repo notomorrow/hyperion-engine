@@ -2,10 +2,10 @@
 #define HYPERION_V2_ENVIRONMENT_H
 
 #include <rendering/Shadows.hpp>
-#include "Base.hpp"
-#include "Light.hpp"
-#include "EnvProbe.hpp"
-#include "ParticleSystem.hpp"
+#include <core/Base.hpp>
+#include <rendering/Light.hpp>
+#include <rendering/EnvProbe.hpp>
+#include <rendering/ParticleSystem.hpp>
 
 #include <core/Containers.hpp>
 #include <core/lib/ComponentSet.hpp>

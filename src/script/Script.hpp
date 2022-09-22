@@ -10,7 +10,7 @@
 #include <script/vm/BytecodeStream.hpp>
 #include <script/vm/VM.hpp>
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>

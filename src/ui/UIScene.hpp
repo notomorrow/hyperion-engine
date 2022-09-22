@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_UI_SCENE_H
 #define HYPERION_V2_UI_SCENE_H
 
-#include <rendering/Base.hpp>
+#include <core/Base.hpp>
 #include <core/Containers.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>

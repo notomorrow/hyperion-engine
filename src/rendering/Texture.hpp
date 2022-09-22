@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_TEXTURE_H
 #define HYPERION_V2_TEXTURE_H
 
-#include "Base.hpp"
+#include <core/Base.hpp>
 
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>

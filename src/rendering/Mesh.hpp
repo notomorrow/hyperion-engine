@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_MESH_H
 #define HYPERION_V2_MESH_H
 
-#include "Base.hpp"
-#include "Shader.hpp"
+#include <core/Base.hpp>
+#include <rendering/Shader.hpp>
 #include "RenderableAttributes.hpp"
 
 #include <math/BoundingBox.hpp>

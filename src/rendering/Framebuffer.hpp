@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_FRAMEBUFFER_H
 #define HYPERION_V2_FRAMEBUFFER_H
 
-#include "Base.hpp"
-#include "RenderPass.hpp"
+#include <core/Base.hpp>
+#include <rendering/RenderPass.hpp>
 
 #include <rendering/backend/RendererFramebuffer.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>

@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_VOXELIZER_H
 #define HYPERION_V2_VOXELIZER_H
 
-#include "Base.hpp"
-#include "../scene/Scene.hpp"
+#include <core/Base.hpp>
+#include <scene/Scene.hpp>
 #include <core/Containers.hpp>
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
