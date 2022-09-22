@@ -68,8 +68,8 @@ public:
     BoundingBox GetAABB() const
     {
         return {
-            MathUtil::Round(m_origin - m_max_distance * 0.5f),
-            MathUtil::Round(m_origin + m_max_distance * 0.5f)
+            MathUtil::Round(m_origin - m_max_distance),
+            MathUtil::Round(m_origin + m_max_distance)
         };
     }
 
@@ -135,6 +135,7 @@ public:
 
     ShadowRenderer(Handle<Light> &&light);
     ShadowRenderer(Handle<Light> &&light, const Vector3 &origin, float max_distance);
+    ShadowRenderer(Handle<Light> &&light, const BoundingBox &aabb);
     ShadowRenderer(const ShadowRenderer &other) = delete;
     ShadowRenderer &operator=(const ShadowRenderer &other) = delete;
     virtual ~ShadowRenderer();

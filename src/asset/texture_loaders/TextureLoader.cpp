@@ -4,13 +4,13 @@
 
 namespace hyperion::v2 {
 
-using TextureLoader = LoaderObject<Texture, LoaderFormat::TEXTURE_2D>::Loader;
+using TextureData = TextureLoader::TextureData;
 
-static const stbi_io_callbacks callbacks{
+static const stbi_io_callbacks callbacks {
     .read = [](void *user, char *data, int size) -> int {
         auto *state = static_cast<LoaderState *>(user);
 
-        return int(state->stream.Read(data, static_cast<size_t>(size), [](void *ptr, const unsigned char *buffer, size_t chunk_size) {
+        return static_cast<int>(state->stream.Read(data, static_cast<size_t>(size), [](void *ptr, const unsigned char *buffer, size_t chunk_size) {
             Memory::Copy(ptr, buffer, chunk_size);
         }));
     },
@@ -26,60 +26,68 @@ static const stbi_io_callbacks callbacks{
     .eof = [](void *user) -> int {
         const auto *state = static_cast<LoaderState *>(user);
 
-        return int(state->stream.Eof());
+        return static_cast<int>(state->stream.Eof());
     }
 };
 
-LoaderResult TextureLoader::LoadFn(LoaderState *state, Object &object)
+LoadAssetResultPair TextureLoader::LoadAsset(LoaderState &state) const
 {
+    TextureData data;
+
     unsigned char *image_bytes = stbi_load_from_callbacks(
         &callbacks,
-        (void *)state,
-        &object.width,
-        &object.height,
-        &object.num_components,
+        (void *)&state,
+        &data.width,
+        &data.height,
+        &data.num_components,
         0
     );
 
-    switch (object.num_components) {
+    switch (data.num_components) {
     case STBI_rgb_alpha:
-        object.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8;
+        data.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8;
         break;
     case STBI_rgb:
-        object.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8;
+        data.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8;
         break;
     case STBI_grey_alpha:
-        object.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8;
+        data.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8;
         break;
     case STBI_grey:
-        object.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8;
+        data.format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8;
         break;
     default:
-        return {LoaderResult::Status::ERR, "Invalid format -- invalid number of components returned"};
+        return { { LoaderResult::Status::ERR, "Invalid format -- invalid number of components returned" }, UniquePtr<void>() };
     }
 
-    const size_t image_bytes_count = object.width * object.height * object.num_components;
+    const SizeType image_bytes_count = static_cast<SizeType>(data.width)
+        * static_cast<SizeType>(data.height)
+        * static_cast<SizeType>(data.num_components);
 
-    object.data.resize(image_bytes_count);
-    Memory::Copy(&object.data[0], image_bytes, image_bytes_count);
+    data.data.resize(image_bytes_count);
+    Memory::Copy(&data.data[0], image_bytes, image_bytes_count);
 
     stbi_image_free(image_bytes);
 
-    return {};
-}
-
-std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &object)
-{
-    return std::make_unique<Texture2D>(
+    UniquePtr<Texture> texture(new Texture2D(
         Extent2D {
-            static_cast<UInt>(object.width),
-            static_cast<UInt>(object.height)
+            static_cast<UInt>(data.width),
+            static_cast<UInt>(data.height)
         },
-        object.format,
+        data.format,
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_REPEAT,
-        &object.data[0]
-    );
+        &data.data[0]
+    ));
+
+    AssertThrow(texture.GetTypeID() == TypeID::ForType<Texture2D>());
+    AssertThrow(texture.Is<Texture>() == true);
+
+    auto vp = texture.Cast<void>();
+
+    AssertThrow(vp.Is<Texture>());
+
+    return { { LoaderResult::Status::OK }, std::move(vp) };
 }
 
 } // namespace hyperion::v2

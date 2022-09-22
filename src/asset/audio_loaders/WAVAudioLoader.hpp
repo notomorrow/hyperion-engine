@@ -1,55 +1,53 @@
 #ifndef HYPERION_V2_WAV_AUDIO_LOADER_H
 #define HYPERION_V2_WAV_AUDIO_LOADER_H
 
-#include <asset/LoaderObject.hpp>
-#include <asset/Loader.hpp>
+#include <asset/Assets.hpp>
 #include <audio/AudioSource.hpp>
+#include <core/Containers.hpp>
 
 namespace hyperion::v2 {
 
-template <>
-struct LoaderObject<AudioSource, LoaderFormat::WAV_AUDIO> {
-    class Loader : public LoaderBase<AudioSource, LoaderFormat::WAV_AUDIO> {
-        static LoaderResult LoadFn(LoaderState *state, Object &);
-        static std::unique_ptr<AudioSource> BuildFn(Engine *engine, const Object &);
+class WAVAudioLoader : public AssetLoader
+{
+public:
 
-    public:
-        Loader()
-            : LoaderBase({
-                .load_fn = LoadFn,
-                .build_fn = BuildFn
-            })
+    struct WAVAudio
+    {
+        struct RiffHeader
         {
-        }
+            UInt8 chunk_id[4];
+            UInt32 chunk_size;
+            UInt8 format[4];
+        } riff_header;
+
+        struct WaveFormat
+        {
+            UInt8 sub_chunk_id[4];
+            UInt32 sub_chunk_size;
+            UInt16 audio_format;
+            UInt16 num_channels;
+            UInt32 sample_rate;
+            UInt32 byte_rate;
+            UInt16 block_align;
+            UInt16 bits_per_sample;
+        } wave_format;
+
+        struct WaveData
+        {
+            UInt8 sub_chunk_id[4];
+            UInt32 sub_chunk_2_size;
+        } wave_data;
+
+        std::vector<UInt8> wave_bytes;
+        SizeType size;
+        SizeType frequency;
+
+        AudioSource::Format format;
     };
 
-    struct RiffHeader {
-        char chunk_id[4];
-        uint32_t chunk_size;
-        char format[4];
-    } riff_header;
+    virtual ~WAVAudioLoader() = default;
 
-    struct WaveFormat {
-        char sub_chunk_id[4];
-        uint32_t sub_chunk_size;
-        uint16_t audio_format;
-        uint16_t num_channels;
-        uint32_t sample_rate;
-        uint32_t byte_rate;
-        uint16_t block_align;
-        uint16_t bits_per_sample;
-    } wave_format;
-
-    struct WaveData {
-        char sub_chunk_id[4];
-        uint32_t sub_chunk_2_size;
-    } wave_data;
-
-    std::vector<uint8_t> wave_bytes;
-    size_t               size;
-    size_t               frequency;
-
-    AudioSource::Format format;
+    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override;
 };
 
 } // namespace hyperion::v2

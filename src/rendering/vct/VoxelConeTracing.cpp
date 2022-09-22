@@ -476,7 +476,7 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
     m_clear_voxels = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
             }
         )
     );
@@ -487,7 +487,7 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
         m_generate_mipmap = engine->CreateHandle<ComputePipeline>(
             engine->CreateHandle<Shader>(
                 std::vector<SubShader>{
-                    { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/GenerateMipmap.comp.spv")).Read()}}
+                    { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/GenerateMipmap.comp.spv")).Read()}}
                 }
             ),
             DynArray<const DescriptorSet *> { m_generate_mipmap_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
@@ -499,7 +499,7 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
     m_perform_temporal_blending = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/TemporalBlending.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/TemporalBlending.comp.spv")).Read()}}
             }
         )
     );
@@ -510,12 +510,12 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
 void VoxelConeTracing::CreateShader(Engine *engine)
 {
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/vct/voxelize.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/vct/voxelize.frag.spv")).Read()}}
     };
 
     if (engine->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
-        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.geom.spv")).Read()}});
+        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/vct/voxelize.geom.spv")).Read()}});
     } else {
         DebugLog(
             LogType::Debug,

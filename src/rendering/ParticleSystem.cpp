@@ -156,8 +156,8 @@ void ParticleSpawner::CreateShader()
 {
     // create particle shader
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(GetEngine()->assets.GetBasePath(), "/vkshaders/particles/Particle.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(GetEngine()->assets.GetBasePath(), "/vkshaders/particles/Particle.frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(GetEngine()->GetAssetManager().GetBasePath().Data(), "/vkshaders/particles/Particle.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(GetEngine()->GetAssetManager().GetBasePath().Data(), "/vkshaders/particles/Particle.frag.spv")).Read()}}
     };
 
     m_shader = GetEngine()->CreateHandle<Shader>(sub_shaders);
@@ -268,7 +268,7 @@ void ParticleSpawner::CreateComputePipelines()
     m_update_particles = GetEngine()->CreateHandle<ComputePipeline>(
         GetEngine()->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(GetEngine()->assets.GetBasePath(), "vkshaders/particles/UpdateParticles.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(GetEngine()->GetAssetManager().GetBasePath().Data(), "vkshaders/particles/UpdateParticles.comp.spv")).Read()}}
             }
         ),
         DynArray<const DescriptorSet *> { &m_descriptor_sets[0] }

@@ -27,8 +27,8 @@ void FinalPass::Create(Engine *engine)
 
     auto shader = engine->CreateHandle<Shader>(
         std::vector<SubShader> {
-            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
+            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/blit_vert.spv")).Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/blit_frag.spv")).Read()}}
         }
     );
 

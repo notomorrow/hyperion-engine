@@ -5,6 +5,8 @@
 #include <core/Handle.hpp>
 #include <scene/Node.hpp>
 
+#include <system/Debug.hpp>
+
 #include "Loader.hpp"
 #include "LoaderObject.hpp"
 
@@ -39,15 +41,25 @@ struct AssetLoaderWrapper
     {
     }
 
-    static inline ResultType EmptyResult()
-        { return ResultType(); }
+    static inline CastedType EmptyResult()
+        { return CastedType(); }
 
     template <class Engine>
-    HandleBase Load(AssetManager &asset_manager, Engine *engine, const String &path)
+    CastedType Load(AssetManager &asset_manager, Engine *engine, const String &path)
     {
         auto loader_result = loader.Load(asset_manager, path);
 
-        return engine->template CreateHandle<T>(loader_result.ptr.template Cast<T>().Release());
+        if (!loader_result.result) {
+            return CastedType();
+        }
+
+        auto casted_result = loader_result.ptr.template Cast<T>();
+        
+        if (casted_result) {
+            return engine->template CreateHandle<T>(casted_result.Release());
+        }
+
+        return CastedType();
     }
 };
 

@@ -427,7 +427,7 @@ private:
     FixedArray<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
 };
 
-class MaterialGroup
+class MaterialGroup : public EngineComponentBase<STUB_CLASS(MaterialGroup)>
 {
 public:
     MaterialGroup();
@@ -435,21 +435,9 @@ public:
     MaterialGroup &operator=(const MaterialGroup &other) = delete;
     ~MaterialGroup();
 
-    void Add(const std::string &name, Handle<Material> &&material)
-        { m_materials[name] = std::move(material); }
-
-    bool Remove(const std::string &name)
-    {
-        const auto it = m_materials.find(name);
-
-        if (it != m_materials.end()) {
-            m_materials.erase(it);
-
-            return true;
-        }
-
-        return false;
-    }
+    void Init(Engine *engine);
+    void Add(const std::string &name, Handle<Material> &&material);
+    bool Remove(const std::string &name);
 
     Handle<Material> &Get(const std::string &name)
         { return m_materials[name]; }

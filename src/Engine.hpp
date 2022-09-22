@@ -135,7 +135,8 @@ using RenderFunctor = Task<Result, CommandBuffer * /* command_buffer */, UInt /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
  */
-class Engine {
+class Engine
+{
 public:
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
@@ -159,6 +160,9 @@ public:
     
     ComponentSystem &GetObjectSystem() { return registry; }
     const ComponentSystem &GetObjectSystem() const { return registry; }
+
+    AssetManager &GetAssetManager() { return m_asset_manager; }
+    const AssetManager &GetAssetManager() const { return m_asset_manager; }
 
     World &GetWorld() { return m_world; }
     const World &GetWorld() const { return m_world; }
@@ -204,7 +208,6 @@ public:
 
     EngineCallbacks callbacks;
     Resources *resources;
-    Assets assets;
     ShaderManager shader_manager;
                              
     RenderState render_state;
@@ -307,6 +310,8 @@ public:
     ComponentSystem registry;
 
 private:
+    void RegisterDefaultAssetLoaders();
+
     void FinalizeStop();
 
     void ResetRenderState();
@@ -341,6 +346,8 @@ private:
     World m_world;
 
     Handle<Mesh> m_full_screen_quad;
+
+    AssetManager m_asset_manager;
 
     bool m_is_stopping { false };
     bool m_is_render_loop_active { false };

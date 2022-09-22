@@ -149,7 +149,7 @@ void ScreenspaceReflectionRenderer::CreateComputePipelines(Engine *engine)
     m_ssr_write_uvs = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_write_uvs.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_write_uvs.comp.spv")).Read()}}
             }
         )
     );
@@ -159,7 +159,7 @@ void ScreenspaceReflectionRenderer::CreateComputePipelines(Engine *engine)
     m_ssr_sample = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_sample.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_sample.comp.spv")).Read()}}
             }
         )
     );
@@ -169,7 +169,7 @@ void ScreenspaceReflectionRenderer::CreateComputePipelines(Engine *engine)
     m_ssr_blur_hor = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_blur_hor.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_blur_hor.comp.spv")).Read()}}
             }
         )
     );
@@ -179,7 +179,7 @@ void ScreenspaceReflectionRenderer::CreateComputePipelines(Engine *engine)
     m_ssr_blur_vert = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_blur_vert.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_blur_vert.comp.spv")).Read()}}
             }
         )
     );

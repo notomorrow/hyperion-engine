@@ -387,7 +387,7 @@ void IndirectRenderer::Create(Engine *engine)
     m_object_visibility = engine->CreateHandle<ComputePipeline>(
         engine->CreateHandle<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/cull/object_visibility.comp.spv")).Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/cull/object_visibility.comp.spv")).Read()}}
             }
         ),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }

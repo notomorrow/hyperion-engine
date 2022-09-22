@@ -6,7 +6,7 @@
 
 namespace hyperion::v2 {
 
-ScriptedController::ScriptedController(std::unique_ptr<Script> &&script)
+ScriptedController::ScriptedController(Handle<Script> &&script)
     : Controller("ScriptedController"),
       m_script(std::move(script))
 {
@@ -14,7 +14,7 @@ ScriptedController::ScriptedController(std::unique_ptr<Script> &&script)
 
 void ScriptedController::OnAdded()
 {
-    if (m_script == nullptr) {
+    if (!m_script) {
         return;
     }
 

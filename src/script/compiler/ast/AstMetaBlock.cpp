@@ -141,9 +141,9 @@ void AstMetaBlock::Visit(AstVisitor *visitor, Module *mod)
         CodeGenerator gen(build_params);
         gen.Visit(result.get());
 
-        std::vector<std::uint8_t> bytes = gen.GetInternalByteStream().Bake();
+        auto bytes = gen.GetInternalByteStream().Bake();
 
-        vm::BytecodeStream bs(reinterpret_cast<char*>(&bytes[0]), bytes.size());
+        vm::BytecodeStream bs(&bytes[0], bytes.size());
 
         vm.Execute(&bs);
     }

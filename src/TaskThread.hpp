@@ -29,6 +29,7 @@ public:
     TaskThread(const ThreadID &thread_id, UInt target_ticks_per_second = 0)
         : Thread(thread_id),
           m_is_running(false),
+          m_is_free(false),
           m_target_ticks_per_second(target_ticks_per_second)
     {
     }
@@ -41,10 +42,14 @@ public:
     HYP_FORCE_INLINE void Stop()
         { m_is_running.store(false, std::memory_order_relaxed); }
 
+    HYP_FORCE_INLINE bool IsFree() const
+        { return m_is_free.load(); }
+
 protected:
     virtual void operator()() override
     {
         m_is_running.store(true);
+        m_is_free.store(true);
 
         while (!IsRunning()) {
             HYP_WAIT_IDLE();
@@ -71,6 +76,8 @@ protected:
 
             bool active = false;
 
+            const bool was_free = m_task_queue.Empty();
+
             if (m_scheduler.NumEnqueued()) {
                 m_scheduler.AcceptAll(m_task_queue);
 
@@ -83,6 +90,12 @@ protected:
                 m_task_queue.Pop();
 
                 active = true;
+            }
+
+            const bool is_free = m_task_queue.Empty();
+            
+            if (is_free != was_free) {
+                m_is_free.store(is_free);
             }
 
             if (active) {
@@ -113,6 +126,7 @@ protected:
     }
 
     std::atomic_bool m_is_running;
+    std::atomic_bool m_is_free;
     UInt m_target_ticks_per_second;
 
     Queue<Scheduler::ScheduledTask> m_task_queue;

@@ -14,11 +14,12 @@ class AudioController : public PlaybackController
 {
 public:
     AudioController();
-    AudioController(std::unique_ptr<AudioSource> &&source);
+    AudioController(Handle<AudioSource> &&source);
     virtual ~AudioController() override = default;
 
-    AudioSource *GetSource() const { return m_source.get(); }
-    void SetSource(std::unique_ptr<AudioSource> &&source);
+    Handle<AudioSource> &GetSource() { return m_source; }
+    const Handle<AudioSource> &GetSource() const { return m_source; }
+    void SetSource(Handle<AudioSource> &&source);
 
     virtual void Play(float speed, LoopMode loop_mode = LoopMode::ONCE) override;
     virtual void Stop() override;
@@ -28,7 +29,7 @@ public:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
 
 protected:
-    std::unique_ptr<AudioSource> m_source;
+    Handle<AudioSource> m_source;
     Vector3 m_last_position;
     GameCounter::TickUnit m_timer;
 };

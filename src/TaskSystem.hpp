@@ -4,6 +4,7 @@
 #include <core/lib/FixedArray.hpp>
 #include <math/MathUtil.hpp>
 #include <util/Defines.hpp>
+#include <system/Debug.hpp>
 
 #include "Threads.hpp"
 #include "TaskThread.hpp"
@@ -159,27 +160,70 @@ public:
         AssertThrow(batch != nullptr);
         batch->num_completed.store(0u, std::memory_order_relaxed);
         batch->num_enqueued = 0u;
-
         batch->task_refs.Resize(batch->tasks.Size());
 
+        const auto &current_thread_id = Threads::CurrentThreadID();
+        const bool in_task_thread = Threads::IsThreadInMask(current_thread_id, THREAD_TASK);
+
         auto &pool = GetPool(batch->priority);
+        const UInt num_threads_in_pool = static_cast<UInt>(pool.threads.Size());
+
+        // AssertThrow(!in_task_thread || pool.threads.Contains());
 
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
 
-            const auto cycle = pool.cycle.load(std::memory_order_relaxed);
-            auto &task_thread = pool.threads[cycle];
-            
+            auto cycle = pool.cycle.load(std::memory_order_relaxed);
+
+            TaskThread *task_thread = nullptr;
+            UInt num_spins = 0;
+            bool was_busy = false;
+
+            // if we are currently on a task thread we need to move to the next task thread in the pool
+            // if we selected the current task thread. otherwise we will have a deadlock.
+            // this does require that there are > 1 task thread in the pool.
+            do {
+                if (num_spins >= num_threads_in_pool) {
+                    DebugLog(
+                        LogType::Warn,
+                        "On task thread %s: All other task threads busy while enqueing a batch from within another task thread! "
+                        "The task will instead be executed inline on the current task thread."
+                        "\n\tReduce usage of batching within batches?\n",
+                        current_thread_id.name.Data()
+                    );
+
+                    was_busy = true;
+
+                    break;
+                }
+
+                task_thread = pool.threads[cycle].Get();
+                cycle = (cycle + 1) % num_threads_in_pool;
+
+                ++num_spins;
+            } while (task_thread->GetID() == current_thread_id
+                || (in_task_thread && !task_thread->IsFree()));
+
+            // force execution now. not ideal,
+            // but if we are currently on a task thread, and all task threads are busy,
+            // we don't want to risk that another task thread is waiting on our current task thread,
+            // which would cause a deadlock.
+            if (was_busy) {
+                task.Execute();
+
+                continue;
+            }
+
             const auto task_id = task_thread->ScheduleTask(std::move(task), &batch->num_completed);
 
             ++batch->num_enqueued;
 
             batch->task_refs[i] = TaskRef {
-                task_thread.Get(),
+                task_thread,
                 task_id
             };
 
-            pool.cycle.store((cycle + 1) % pool.threads.Size(), std::memory_order_relaxed);
+            pool.cycle.store(cycle, std::memory_order_relaxed);
         }
 
         // all have been moved
