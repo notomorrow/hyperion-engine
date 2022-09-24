@@ -20,10 +20,10 @@ namespace detail {
 using namespace ::utf;
 
 template <class T, bool IsUtf8>
-class DynString : DynArray<T>
+class DynString : DynArray<T, 64u>
 {
 protected:
-    using Base = DynArray<T>;
+    using Base = DynArray<T, 64u>;
 
 public:
     using ValueType = typename Base::ValueType;
@@ -62,35 +62,35 @@ public:
     [[nodiscard]] const T operator[](SizeType index) const;
 
     /*! \brief Return the data size in characters. Note, utf-8 strings can have a shorter length than size. */
-    [[nodiscard]] typename Base::SizeType Size() const                 { return Base::Size() - 1; /* for NT char */ }
+    [[nodiscard]] typename Base::SizeType Size() const { return Base::Size() - 1; /* for NT char */ }
     /*! \brief Return the length of the string in characters. Note, utf-8 strings can have a shorter length than size. */
-    [[nodiscard]] typename Base::SizeType Length() const               { return m_length; }
+    [[nodiscard]] typename Base::SizeType Length() const { return m_length; }
 
-    [[nodiscard]] typename Base::ValueType *Data()                     { return Base::Data(); }
-    [[nodiscard]] const typename Base::ValueType *Data() const         { return Base::Data(); }
+    [[nodiscard]] typename Base::ValueType *Data() { return Base::Data(); }
+    [[nodiscard]] const typename Base::ValueType *Data() const { return Base::Data(); }
 
-    [[nodiscard]] typename Base::ValueType &Front()                    { return Base::Front(); }
-    [[nodiscard]] const typename Base::ValueType &Front() const        { return Base::Front(); }
+    [[nodiscard]] typename Base::ValueType &Front() { return Base::Front(); }
+    [[nodiscard]] const typename Base::ValueType &Front() const { return Base::Front(); }
 
-    [[nodiscard]] typename Base::ValueType &Back()                     { return Base::m_values[Base::m_size - 2]; /* for NT char */ }
-    [[nodiscard]] const typename Base::ValueType &Back() const         { return Base::m_values[Base::m_size - 2]; /* for NT char */ }
+    [[nodiscard]] typename Base::ValueType &Back() { return Base::GetBuffer()[Base::m_size - 2]; /* for NT char */ }
+    [[nodiscard]] const typename Base::ValueType &Back() const { return Base::GetBuffer()[Base::m_size - 2]; /* for NT char */ }
 
-    [[nodiscard]] bool Contains(const T &ch) const                     { return ch != T{0} && Base::Contains(ch); }
+    [[nodiscard]] bool Contains(const T &ch) const { return ch != T{0} && Base::Contains(ch); }
     [[nodiscard]] Int FindIndex(const DynString &str) const;
 
-    [[nodiscard]] bool Empty() const                                   { return Size() == 0; }
-    [[nodiscard]] bool Any() const                                     { return Size() != 0; }
+    [[nodiscard]] bool Empty() const { return Size() == 0; }
+    [[nodiscard]] bool Any() const { return Size() != 0; }
 
-    [[nodiscard]] bool HasMultiByteChars() const                       { return Size() > Length(); }
+    [[nodiscard]] bool HasMultiByteChars() const { return Size() > Length(); }
 
     /*! \brief Reserve space for the string. {capacity} + 1 is used, to make space for the null character. */
-    void Reserve(typename Base::SizeType capacity)                     { Base::Reserve(capacity + 1); }
+    void Reserve(typename Base::SizeType capacity) { Base::Reserve(capacity + 1); }
 
     // NOTE: no Resize(), because utf8 strings can have different length than size
     // /*! \brief Resizes to {new_size} + 1 to make space for the null character. */
     // void Resize(typename Base::SizeType new_size)                      { Base::Resize(new_size + 1); }
 
-    void Refit()                                                       { Base::Refit(); }
+    void Refit() { Base::Refit(); }
     void Append(const DynString &other);
     void Append(DynString &&other);
     void Append(T &&value);
@@ -136,8 +136,8 @@ public:
         { return Base::GetHashCode(); }
 
     HYP_DEF_STL_BEGIN_END(
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_start_offset]),
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_size])
+        Base::Begin(),
+        Base::End()
     )
 
     friend std::ostream &operator<<(std::ostream &os, const DynString &str)
@@ -167,16 +167,16 @@ const DynString<T, IsUtf8> DynString<T, IsUtf8>::empty = DynString();
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString()
-    : DynArray<T>(),
+    : Base(),
       m_length(0)
 {
     // null-terminated char
-    Base::PushBack(T{0});
+    Base::PushBack(T { 0 });
 }
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString(const T *str)
-    : DynArray<T>()
+    : Base()
 {
     int count;
     int len = utf::utf_strlen<T, IsUtf8>(str, &count);
@@ -201,22 +201,24 @@ DynString<T, IsUtf8>::DynString(const T *str)
     }
     
     // null-terminated char
-    Base::PushBack(T{0});
+    Base::PushBack(T { 0 });
 }
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString(const DynString &other)
-    : DynArray<T>(other),
+    : Base(other),
       m_length(other.m_length)
 {
+    DebugLog(LogType::Warn, "String( const String &other )   %s\n", other.Data());
 }
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString(DynString &&other) noexcept
-    : DynArray<T>(std::move(other)),
+    : Base(static_cast<Base &&>(std::move(other))),
       m_length(other.m_length)
 {
-    other.m_length = 0;
+    other.Clear();
+    DebugLog(LogType::Warn, "String( &&other )  %s    %s\n", Data(), other.Data());
 }
 
 template <class T, bool IsUtf8>
@@ -235,6 +237,7 @@ auto DynString<T, IsUtf8>::operator=(const T *str) -> DynString&
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator=(const DynString &other) -> DynString&
 {
+    DebugLog(LogType::Warn, "String= const String &other   %s   %s\n", Data(), other.Data());
     Base::operator=(other);
     m_length = other.m_length;
 
@@ -244,10 +247,11 @@ auto DynString<T, IsUtf8>::operator=(const DynString &other) -> DynString&
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator=(DynString &&other) noexcept -> DynString&
 {
+    DebugLog(LogType::Warn, "String= &&other   %s   %s\n", Data(), other.Data());
     const auto len = other.m_length;
     Base::operator=(std::move(other));
     m_length = len;
-    other.m_length = 0;
+    other.Clear();
 
     return *this;
 }
@@ -301,7 +305,7 @@ bool DynString<T, IsUtf8>::operator==(const DynString &other) const
         return true;
     }
 
-    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], &other.m_values[0]) == 0;
+    return utf::utf_strcmp<T, IsUtf8>(&Base::GetBuffer()[0], &other.GetBuffer()[0]) == 0;
 }
 
 template <class T, bool IsUtf8>
@@ -321,7 +325,7 @@ bool DynString<T, IsUtf8>::operator==(const T *str) const
         return true;
     }
 
-    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], str) == 0;
+    return utf::utf_strcmp<T, IsUtf8>(&Base::GetBuffer()[0], str) == 0;
 }
 
 template <class T, bool IsUtf8>
@@ -339,7 +343,7 @@ bool DynString<T, IsUtf8>::operator!=(const T *str) const
 template <class T, bool IsUtf8>
 bool DynString<T, IsUtf8>::operator<(const DynString &other) const
 {
-    return utf::utf_strcmp<T, IsUtf8>(&Base::m_values[0], &other.m_values[0]) < 0;
+    return utf::utf_strcmp<T, IsUtf8>(&Base::GetBuffer()[0], &other.GetBuffer()[0]) < 0;
 }
 
 template <class T, bool IsUtf8>
@@ -367,9 +371,11 @@ void DynString<T, IsUtf8>::Append(const DynString &other)
 
     Base::PopBack(); // current NT char
 
+    auto *buffer = Base::GetStorage();
+
     for (SizeType i = 0; i < other.Size(); i++) {
         // set item at index
-        new (&Base::m_buffer[Base::m_size++].data_buffer) T(other[i]);
+        new (&buffer[Base::m_size++].data_buffer) T(other[i]);
     }
 
     Base::PushBack(T { 0 });
@@ -390,10 +396,11 @@ void DynString<T, IsUtf8>::Append(DynString &&other)
 
     Base::PopBack(); // current NT char
 
+    auto *buffer = Base::GetStorage();
 
     for (SizeType i = 0; i < other.Size(); i++) {
         // set item at index
-        new (&Base::m_buffer[Base::m_size++].data_buffer) T(std::move(other[i]));
+        new (&buffer[Base::m_size++].data_buffer) T(std::move(other[i]));
     }
 
     Base::PushBack(T{0});
@@ -416,7 +423,7 @@ void DynString<T, IsUtf8>::Append(const T &value)
 
     Base::PopBack(); // current NT char
 
-    new (&Base::m_buffer[Base::m_size++].data_buffer) T(value);
+    new (&Base::GetStorage()[Base::m_size++].data_buffer) T(value);
     Base::PushBack(T { 0 });
 
     ++m_length;
@@ -435,7 +442,7 @@ void DynString<T, IsUtf8>::Append(T &&value)
 
     Base::PopBack(); // current NT char
 
-    new (&Base::m_buffer[Base::m_size++].data_buffer) T(std::forward<T>(value));
+    new (&Base::GetStorage()[Base::m_size++].data_buffer) T(std::forward<T>(value));
     Base::PushBack(T { 0 });
 
     ++m_length;

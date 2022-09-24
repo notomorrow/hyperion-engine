@@ -70,11 +70,11 @@ public:
     bool Erase(Iterator it);
     bool Erase(const Key &key);
 
-    [[nodiscard]] size_t Size() const                   { return m_vector.Size(); }
-    [[nodiscard]] KeyValuePair *Data()                  { return m_vector.Data(); }
-    [[nodiscard]] KeyValuePair * const Data() const     { return m_vector.Data(); }
-    [[nodiscard]] bool Any() const                      { return m_vector.Any(); }
-    [[nodiscard]] bool Empty() const                    { return m_vector.Empty(); }
+    [[nodiscard]] SizeType Size() const { return m_vector.Size(); }
+    [[nodiscard]] KeyValuePair *Data() { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePair * const Data() const { return m_vector.Data(); }
+    [[nodiscard]] bool Any() const { return m_vector.Any(); }
+    [[nodiscard]] bool Empty() const { return m_vector.Empty(); }
 
     void Clear()                                        { m_vector.Clear(); }
     
@@ -97,7 +97,7 @@ public:
             return it->second;
         }
 
-        return Insert(key, Value{}).first->second;
+        return Insert(key, Value { }).first->second;
     }
 
     HYP_DEF_STL_BEGIN_END(
@@ -178,10 +178,10 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
     if (lower_bound == End() || !(lower_bound->first == key)) {
         auto it = m_vector.Insert(lower_bound, KeyValuePair { key, value });
 
-        return {it, true};
+        return { it, true };
     }
 
-    return {lower_bound, false};
+    return { lower_bound, false };
 }
 
 template <class Key, class Value>
@@ -190,12 +190,12 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, std::forward<KeyValuePair>(KeyValuePair { key, std::forward<Value>(value) }));
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::move(value) });
 
-        return {it, true};
+        return { it, true };
     }
 
-    return {lower_bound, false};
+    return { lower_bound, false };
 }
 
 template <class Key, class Value>
@@ -206,10 +206,10 @@ auto FlatMap<Key, Value>::Insert(Pair<Key, Value> &&pair) -> InsertResult
     if (lower_bound == End() || !(lower_bound->first == pair.first)) {
         auto it = m_vector.Insert(lower_bound, std::move(pair));
 
-        return {it, true};
+        return { it, true };
     }
 
-    return {lower_bound, false};
+    return { lower_bound, false };
 }
 
 template <class Key, class Value>
@@ -234,14 +234,14 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, std::forward<KeyValuePair>(KeyValuePair { key, std::forward<Value>(value) }));
+        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::move(value) });
 
-        return {it, true};
+        return { it, true };
     }
 
     lower_bound->second = std::forward<Value>(value);
 
-    return InsertResult{lower_bound, true};
+    return InsertResult { lower_bound, true};
 }
 
 template <class Key, class Value>
@@ -250,10 +250,10 @@ auto FlatMap<Key, Value>::Set(Iterator iter, const Value &value) -> InsertResult
     if (iter != End()) {
         iter->second = value;
 
-        return InsertResult{iter, false};
+        return InsertResult { iter, false };
     }
 
-    return InsertResult{iter, true};
+    return InsertResult { iter, true };
 }
 
 template <class Key, class Value>
@@ -262,10 +262,10 @@ auto FlatMap<Key, Value>::Set(Iterator iter, Value &&value) -> InsertResult
     if (iter != End()) {
         iter->second = std::forward<Value>(value);
 
-        return InsertResult{iter, false};
+        return InsertResult { iter, false };
     }
 
-    return InsertResult{iter, true};
+    return InsertResult { iter, true };
 }
 
 template <class Key, class Value>

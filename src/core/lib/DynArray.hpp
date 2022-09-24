@@ -24,15 +24,15 @@ namespace hyperion {
     zero deallocations/shifting on PopFront().
 */
 
-template <class T>
-class DynArray : public ContainerBase<DynArray<T>, UInt>
+template <class T, SizeType NumInlineBytes = 512u>
+class DynArray : public ContainerBase<DynArray<T, NumInlineBytes>, UInt>
 {
 public:
-    using Base = ContainerBase<DynArray<T>, UInt>;
+    using Base = ContainerBase<DynArray<T, NumInlineBytes>, UInt>;
     using KeyType = typename Base::KeyType;
     using ValueType = T;
 
-    static constexpr SizeType num_inline_bytes = 512u;
+    static constexpr SizeType num_inline_bytes = NumInlineBytes;
     static constexpr SizeType num_inline_elements = MathUtil::Max(num_inline_bytes / sizeof(T), 1u);
 
 protected:
@@ -100,41 +100,20 @@ public:
 
     [[nodiscard]] SizeType Size() const { return m_size - m_start_offset; }
 
-    [[nodiscard]] ValueType *Data() { return &reinterpret_cast<T *>(m_buffer)[m_start_offset]; }
-    [[nodiscard]] const ValueType *Data() const { return &reinterpret_cast<const T *>(m_buffer)[m_start_offset]; }
+    [[nodiscard]] ValueType *Data() { return &GetBuffer()[m_start_offset]; }
+    [[nodiscard]] const ValueType *Data() const { return &GetBuffer()[m_start_offset]; }
 
-    [[nodiscard]] ValueType &Front() { return m_buffer[m_start_offset].Get(); }
-    [[nodiscard]] const ValueType &Front() const { return m_buffer[m_start_offset].Get(); }
+    [[nodiscard]] ValueType &Front() { return GetBuffer()[m_start_offset]; }
+    [[nodiscard]] const ValueType &Front() const { return GetBuffer()[m_start_offset]; }
 
-    [[nodiscard]] ValueType &Back() { return m_buffer[m_size - 1].Get(); }
-    [[nodiscard]] const ValueType &Back() const { return m_buffer[m_size - 1].Get(); }
+    [[nodiscard]] ValueType &Back() { return GetBuffer()[m_size - 1]; }
+    [[nodiscard]] const ValueType &Back() const { return GetBuffer()[m_size - 1]; }
 
     [[nodiscard]] bool Empty() const { return Size() == 0; }
     [[nodiscard]] bool Any() const { return Size() != 0; }
 
-    ValueType &operator[](KeyType index) { return m_buffer[m_start_offset + index].Get(); }
-    [[nodiscard]] const ValueType &operator[](KeyType index) const { return m_buffer[m_start_offset + index].Get(); }
-
-    // ValueType &Get(KeyType index)
-    // {
-    //     AssertThrow(index < static_cast<KeyType>(Size()));
-    //     return m_buffer[m_start_offset + index].Get();
-    // }
-
-    // const ValueType &Get(KeyType index) const
-    //     { return const_cast<const DynArray *>(this)->Get(index); }
-
-    // void Set(KeyType index, const ValueType &value)
-    // {
-    //     AssertThrow(index < static_cast<KeyType>(Size()));
-    //     m_buffer[m_start_offset + index].Get() = value;
-    // }
-
-    // void Set(KeyType index, ValueType &&value)
-    // {
-    //     AssertThrow(index < static_cast<KeyType>(Size()));
-    //     m_buffer[m_start_offset + index].Get() = std::forward<ValueType>(value);
-    // }
+    ValueType &operator[](KeyType index) { return GetBuffer()[m_start_offset + index]; }
+    [[nodiscard]] const ValueType &operator[](KeyType index) const { return GetBuffer()[m_start_offset + index]; }
 
     void Reserve(SizeType capacity);
     void Resize(SizeType new_size);
@@ -173,27 +152,13 @@ public:
     ValueType PopFront();
     ValueType PopBack();
     void Clear();
-
+    
     HYP_DEF_STL_BEGIN_END(
-        ToValueTypePtr(m_buffer[m_start_offset]),
-        ToValueTypePtr(m_buffer[m_size])
+        GetBuffer() + m_start_offset,
+        GetBuffer() + m_size
     )
 
 protected:
-    void ResetOffsets();
-    void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
-
-    Iterator RealBegin() const { return ToValueTypePtr(m_buffer[0]); }
-    Iterator RealEnd() const { return ToValueTypePtr(m_buffer[m_size]); }
-
-    static SizeType GetCapacity(SizeType size)
-    {
-        return 1ull << static_cast<SizeType>(std::ceil(std::log(size) / std::log(2.0)));
-    }
-
-    SizeType m_size;
-    SizeType m_capacity;
-    
     struct alignas(T) Storage
     {
         alignas(T) std::byte data_buffer[sizeof(T)];
@@ -208,6 +173,48 @@ protected:
             return *reinterpret_cast<const T *>(&data_buffer);
         }
     };
+
+    HYP_FORCE_INLINE T *GetBuffer()
+    {
+        Storage *buffers[] = { &m_inline_buffer[0], m_buffer };
+
+        return reinterpret_cast<T *>(buffers[static_cast<UInt>(m_is_dynamic)]);
+    }
+
+    HYP_FORCE_INLINE const T *GetBuffer() const
+    {
+        const Storage *buffers[] = { &m_inline_buffer[0], m_buffer };
+
+        return reinterpret_cast<const T *>(buffers[static_cast<UInt>(m_is_dynamic)]);
+    }
+
+    HYP_FORCE_INLINE Storage *GetStorage()
+    {
+        Storage *buffers[] = { &m_inline_buffer[0], m_buffer };
+
+        return buffers[static_cast<UInt>(m_is_dynamic)];
+    }
+
+    HYP_FORCE_INLINE const Storage *GetStorage() const
+    {
+        const Storage *buffers[] = { &m_inline_buffer[0], m_buffer };
+
+        return buffers[static_cast<UInt>(m_is_dynamic)];
+    }
+
+    void ResetOffsets();
+    void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
+
+    Iterator RealBegin() const { return ToValueTypePtr(GetStorage()[0]); }
+    Iterator RealEnd() const { return ToValueTypePtr(GetStorage()[m_size]); }
+
+    static SizeType GetCapacity(SizeType size)
+    {
+        return 1ull << static_cast<SizeType>(std::ceil(std::log(size) / std::log(2.0)));
+    }
+
+    SizeType m_size;
+    SizeType m_capacity;
 
     static_assert(sizeof(Storage) == sizeof(Storage::data_buffer), "Storage struct should not be padded");
     // static_assert(alignof(Storage) == alignof(Storage::data_buffer), "Storage struct should not be padded");
@@ -236,23 +243,22 @@ protected:
         return reinterpret_cast<const ValueType *>(&storage);
     }
 
+private:
     // dynamic memory
-    union {
-        Storage *m_buffer;
-        ValueType *m_values;
-    };
-
+    Storage *m_buffer;
     Storage m_inline_buffer[num_inline_elements];
+
+protected:
     bool m_is_dynamic;
 
     typename DynArray::Base::KeyType m_start_offset;
 };
 
-template <class T>
-DynArray<T>::DynArray()
+template <class T, SizeType NumInlineBytes>
+DynArray<T, NumInlineBytes>::DynArray()
     : m_size(0),
       m_capacity(num_inline_elements),
-      m_buffer(&m_inline_buffer[0]),
+      m_buffer(nullptr),
       m_is_dynamic(false),
       m_start_offset(0)
 {
@@ -261,8 +267,8 @@ DynArray<T>::DynArray()
 #endif
 }
 
-template <class T>
-DynArray<T>::DynArray(const DynArray &other)
+template <class T, SizeType NumInlineBytes>
+DynArray<T, NumInlineBytes>::DynArray(const DynArray &other)
     : m_size(other.m_size),
       m_capacity(other.m_capacity),
       m_buffer(nullptr),
@@ -271,47 +277,54 @@ DynArray<T>::DynArray(const DynArray &other)
 {
     if (m_is_dynamic) {
         m_buffer = static_cast<Storage *>(std::malloc(sizeof(Storage) * other.m_capacity));
-    } else {
-        m_buffer = &m_inline_buffer[0];
     }
+
+    auto *buffer = GetStorage();
 
     // copy all members
     for (SizeType i = m_start_offset; i < m_size; i++) {
-        Memory::Construct<T>(&m_buffer[i].data_buffer, other.m_buffer[i].Get());
+        Memory::Construct<T>(&buffer[i].data_buffer, other.GetStorage()[i].Get());
     }
 }
 
-template <class T>
-DynArray<T>::DynArray(DynArray &&other) noexcept
+template <class T, SizeType NumInlineBytes>
+DynArray<T, NumInlineBytes>::DynArray(DynArray &&other) noexcept
     : m_size(other.m_size),
       m_capacity(other.m_capacity),
       m_buffer(nullptr),
       m_is_dynamic(other.m_is_dynamic),
       m_start_offset(other.m_start_offset)
 {
+    DebugLog(LogType::Debug, "DynArray<%s> (DynArray &&other)\n", typeid(T).name());
     if (m_is_dynamic) {
         m_buffer = other.m_buffer;
     } else {
-        m_buffer = &m_inline_buffer[0];
+        auto *buffer = GetStorage();
 
         // move all members
         for (SizeType i = m_start_offset; i < m_size; i++) {
-            Memory::Construct<T>(&m_buffer[i].data_buffer, std::move(other.m_buffer[i].Get()));
+            Memory::Construct<T>(&buffer[i].data_buffer, std::move(other.GetStorage()[i].Get()));
         }
     }
 
     other.m_size = 0;
     other.m_capacity = num_inline_elements;
-    other.m_buffer = &other.m_inline_buffer[0];
+    other.m_buffer = nullptr;
     other.m_is_dynamic = false;
     other.m_start_offset = 0;
+
+#if HYP_DEBUG_MODE
+    Memory::Garble(&other.m_inline_buffer[0], num_inline_elements * sizeof(Storage));
+#endif
 }
 
-template <class T>
-DynArray<T>::~DynArray()
+template <class T, SizeType NumInlineBytes>
+DynArray<T, NumInlineBytes>::~DynArray()
 {
+    auto *buffer = GetStorage();
+
     for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
-        Memory::Destruct(m_buffer[i].Get());
+        Memory::Destruct(buffer[i].Get());
     }
     
     // only nullptr if it has been move()'d in which case size would be 0
@@ -321,16 +334,19 @@ DynArray<T>::~DynArray()
     }
 }
 
-template <class T>
-auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::operator=(const DynArray &other) -> DynArray&
 {
     if (this == std::addressof(other)) {
         return *this;
     }
 
+    auto *buffer = GetStorage();
+    auto *other_buffer = other.GetStorage();
+
     if (m_capacity < other.m_capacity) {
         for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
-            Memory::Destruct(m_buffer[i].Get());
+            Memory::Destruct(buffer[i].Get());
         }
 
         if (m_is_dynamic) {
@@ -342,34 +358,36 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
             m_buffer = static_cast<Storage *>(std::malloc(sizeof(Storage) * other.m_capacity));
             m_capacity = other.m_capacity;
         } else {
-            m_buffer = &m_inline_buffer[0];
+            m_buffer = nullptr;
             m_is_dynamic = false;
-            m_capacity= num_inline_elements;
+            m_capacity = num_inline_elements;
         }
 
         m_size = other.m_size;
         m_start_offset = other.m_start_offset;
 
+        buffer = GetStorage();
+
         // copy all objects
         for (SizeType i = m_start_offset; i < m_size; ++i) {
-            Memory::Construct<T>(&m_buffer[i].data_buffer, other.m_buffer[i].Get());
+            Memory::Construct<T>(&buffer[i].data_buffer, other_buffer[i].Get());
         }
     } else {
         // have to destroy excess items
         if (other.Size() < Size()) {
             for (auto i = other.Size(); i < Size(); ++i) {
-                Memory::Destruct(m_buffer[m_start_offset + i].Get());
+                Memory::Destruct(buffer[m_start_offset + i].Get());
             }
         }
 
         // capacity already fits, no need to reallocate memory.
         for (SizeType i = m_start_offset, j = other.m_start_offset; i < m_size; ++i, ++j) {
-            m_buffer[i].Get() = other.m_buffer[j].Get();
+            buffer[i].Get() = other_buffer[j].Get();
         }
 
         // have to construct new items.
         for (SizeType i = m_size, j = other.m_start_offset + Size(); j < other.m_size; ++i, ++j) {
-            Memory::Construct<T>(&m_buffer[i].data_buffer, other.m_buffer[j].Get());
+            Memory::Construct<T>(&buffer[i].data_buffer, other_buffer[j].Get());
         }
 
         m_size = other.Size() + m_start_offset;
@@ -379,15 +397,19 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
     return *this;
 }
 
-template <class T>
-auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::operator=(DynArray &&other) noexcept -> DynArray&
 {
-    for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
-        Memory::Destruct(m_buffer[i].Get());
-    }
+    {
+        auto *buffer = GetStorage();
 
-    if (m_is_dynamic) {
-        std::free(m_buffer);
+        for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
+            Memory::Destruct(buffer[i].Get());
+        }
+
+        if (m_is_dynamic) {
+            std::free(buffer);
+        }
     }
 
 
@@ -398,13 +420,13 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
         m_start_offset = other.m_start_offset;
         m_is_dynamic = true;
     } else {
-        m_buffer = &m_inline_buffer[0];
+        m_buffer = nullptr;
         m_capacity = num_inline_elements;
         m_is_dynamic = false;
 
         // move items individually
         for (SizeType i = 0; i < other.Size(); i++) {
-            Memory::Construct<T>(&m_buffer[i].data_buffer, std::move(other.m_buffer[other.m_start_offset + i].Get()));
+            Memory::Construct<T>(&m_inline_buffer[i].data_buffer, std::move(other.m_inline_buffer[other.m_start_offset + i].Get()));
         }
 
         m_size = other.Size();
@@ -412,47 +434,51 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
 
         // manually call destructors
         for (Int64 i = other.m_size - 1; i >= other.m_start_offset; --i) {
-            Memory::Destruct(other.m_buffer[i].Get());
+            Memory::Destruct(other.m_inline_buffer[i].Get());
         }
     }
 
     other.m_size = 0;
     other.m_capacity = num_inline_elements;
     other.m_is_dynamic = false;
-    other.m_buffer = &other.m_inline_buffer[0];
+    other.m_buffer = nullptr;
     other.m_start_offset = 0;
 
     return *this;
 }
 
-template <class T>
-void DynArray<T>::ResetOffsets()
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::ResetOffsets()
 {
     if (m_start_offset == 0) {
         return;
     }
+
+    auto *buffer = GetStorage();
 
     // shift all items to left
     for (SizeType index = m_start_offset; index < m_size; ++index) {
         const auto move_index = index - m_start_offset;
 
         if constexpr (std::is_move_constructible_v<T>) {
-            Memory::Construct<T>(&m_buffer[move_index].data_buffer, std::move(m_buffer[index].Get()));
+            Memory::Construct<T>(&buffer[move_index].data_buffer, std::move(buffer[index].Get()));
         } else {
-            Memory::Construct<T>(&m_buffer[move_index].data_buffer, m_buffer[index].Get());
+            Memory::Construct<T>(&buffer[move_index].data_buffer, buffer[index].Get());
         }
 
         // manual destructor call
-        Memory::Destruct(m_buffer[index].Get());
+        Memory::Destruct(buffer[index].Get());
     }
 
     m_size -= m_start_offset;
     m_start_offset = 0;
 }
 
-template <class T>
-void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::SetCapacity(SizeType capacity, SizeType copy_offset)
 {
+    auto *old_buffer = GetStorage();
+
     if (capacity > num_inline_elements) {
         // delete and copy all over again
         auto *new_buffer = static_cast<Storage *>(std::malloc(sizeof(Storage) * capacity));
@@ -461,20 +487,20 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
         
         for (SizeType i = copy_offset, j = m_start_offset; j < m_size; ++i, ++j) {
             if constexpr (std::is_move_constructible_v<T>) {
-                Memory::Construct<T>(&new_buffer[i].data_buffer, std::move(m_buffer[j].Get()));
+                Memory::Construct<T>(&new_buffer[i].data_buffer, std::move(old_buffer[j].Get()));
             } else {
-                Memory::Construct<T>(&new_buffer[i].data_buffer, m_buffer[j].Get());
+                Memory::Construct<T>(&new_buffer[i].data_buffer, old_buffer[j].Get());
             }
         }
 
         // manually call destructors of old buffer
         for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
-            Memory::Destruct(m_buffer[i].Get());
+            Memory::Destruct(old_buffer[i].Get());
         }
 
         if (m_is_dynamic) {
             // delete old buffer memory
-            std::free(m_buffer);
+            std::free(old_buffer);
         }
 
         // set internal buffer to the new one
@@ -497,7 +523,7 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
             std::free(m_buffer);
 
             m_is_dynamic = false;
-            m_buffer = &m_inline_buffer[0];
+            m_buffer = nullptr;
             m_capacity = num_inline_elements;
         } else if (m_start_offset != copy_offset) {
             if (m_start_offset > copy_offset) {
@@ -508,13 +534,13 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
                     const auto move_index = index - diff;
 
                     if constexpr (std::is_move_constructible_v<T>) {
-                        Memory::Construct<T>(&m_buffer[move_index].data_buffer, std::move(m_buffer[index].Get()));
+                        Memory::Construct<T>(&m_inline_buffer[move_index].data_buffer, std::move(m_inline_buffer[index].Get()));
                     } else {
-                        Memory::Construct<T>(&m_buffer[move_index].data_buffer, m_buffer[index].Get());
+                        Memory::Construct<T>(&m_inline_buffer[move_index].data_buffer, m_inline_buffer[index].Get());
                     }
 
                     // manual destructor call
-                    Memory::Destruct(m_buffer[index].Get());
+                    Memory::Destruct(m_inline_buffer[index].Get());
                 }
             } else {
                 // shift right
@@ -524,13 +550,13 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
                     const auto move_index = index + diff;
 
                     if constexpr (std::is_move_constructible_v<T>) {
-                        Memory::Construct<T>(&m_buffer[move_index].data_buffer, std::move(m_buffer[index].Get()));
+                        Memory::Construct<T>(&m_inline_buffer[move_index].data_buffer, std::move(m_inline_buffer[index].Get()));
                     } else {
-                        Memory::Construct<T>(&m_buffer[move_index].data_buffer, m_buffer[index].Get());
+                        Memory::Construct<T>(&m_inline_buffer[move_index].data_buffer, m_inline_buffer[index].Get());
                     }
 
                     // manual destructor call
-                    Memory::Destruct(m_buffer[index].Get());
+                    Memory::Destruct(m_inline_buffer[index].Get());
                 }
             }
         }
@@ -542,8 +568,8 @@ void DynArray<T>::SetCapacity(SizeType capacity, SizeType copy_offset)
     }
 }
 
-template <class T>
-void DynArray<T>::Reserve(SizeType capacity)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Reserve(SizeType capacity)
 {
     if (m_capacity >= capacity) {
         return;
@@ -552,8 +578,8 @@ void DynArray<T>::Reserve(SizeType capacity)
     SetCapacity(capacity);
 }
 
-template <class T>
-void DynArray<T>::Resize(SizeType new_size)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Resize(SizeType new_size)
 {
     if (new_size == Size()) {
         return;
@@ -570,9 +596,11 @@ void DynArray<T>::Resize(SizeType new_size)
             }
         }
 
+        auto *buffer = GetStorage();
+
         while (Size() < new_size) {
             // construct item at index
-            Memory::Construct<T>(&m_buffer[m_size++].data_buffer);
+            Memory::Construct<T>(&buffer[m_size++].data_buffer);
         }
     } else {
         while (new_size < Size()) {
@@ -581,8 +609,8 @@ void DynArray<T>::Resize(SizeType new_size)
     }
 }
 
-template <class T>
-void DynArray<T>::Refit()
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Refit()
 {
     if (m_capacity == Size()) {
         return;
@@ -591,8 +619,8 @@ void DynArray<T>::Refit()
     SetCapacity(Size());
 }
 
-template <class T>
-void DynArray<T>::PushBack(const ValueType &value)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::PushBack(const ValueType &value)
 {
     if (m_size + 1 >= m_capacity) {
         if (m_capacity >= Size() + 1) {
@@ -603,11 +631,11 @@ void DynArray<T>::PushBack(const ValueType &value)
     }
 
     // set item at index
-    Memory::Construct<T>(&m_buffer[m_size++].data_buffer, value);
+    Memory::Construct<T>(&GetStorage()[m_size++].data_buffer, value);
 }
 
-template <class T>
-void DynArray<T>::PushBack(ValueType &&value)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::PushBack(ValueType &&value)
 {
     if (m_size + 1 >= m_capacity) {
         if (m_capacity >= Size() + 1) {
@@ -620,11 +648,11 @@ void DynArray<T>::PushBack(ValueType &&value)
     AssertThrow(m_capacity >= m_size + 1);
 
     // set item at index
-    Memory::Construct<T>(&m_buffer[m_size++].data_buffer, std::forward<ValueType>(value));
+    Memory::Construct<T>(&GetStorage()[m_size++].data_buffer, std::forward<ValueType>(value));
 }
 
-template <class T>
-void DynArray<T>::PushFront(const ValueType &value)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::PushFront(const ValueType &value)
 {
     if (m_start_offset == 0) {
         // have to push everything else over by 1
@@ -634,18 +662,20 @@ void DynArray<T>::PushFront(const ValueType &value)
                 push_front_padding // copy_offset is 1 so we have a space for 1 at the start
             );
         } else {
+            auto *buffer = GetStorage();
+
             // shift over without realloc
             for (Int64 index = Size() - 1; index >= 0; --index) {
                 const auto move_index = index + push_front_padding;
 
                 if constexpr (std::is_move_constructible_v<T>) {
-                    Memory::Construct<T>(&m_buffer[move_index].data_buffer, std::move(m_buffer[index].Get()));
+                    Memory::Construct<T>(&buffer[move_index].data_buffer, std::move(buffer[index].Get()));
                 } else {
-                    Memory::Construct<T>(&m_buffer[move_index].data_buffer, m_buffer[index].Get());
+                    Memory::Construct<T>(&buffer[move_index].data_buffer, buffer[index].Get());
                 }
 
                 // manual destructor call
-                Memory::Destruct(m_buffer[index].Get());
+                Memory::Destruct(buffer[index].Get());
             }
 
             m_start_offset = push_front_padding;
@@ -656,11 +686,11 @@ void DynArray<T>::PushFront(const ValueType &value)
     // in-place
     --m_start_offset;
 
-    Memory::Construct<T>(&m_buffer[m_start_offset].data_buffer, value);
+    Memory::Construct<T>(&GetStorage()[m_start_offset].data_buffer, value);
 }
 
-template <class T>
-void DynArray<T>::PushFront(ValueType &&value)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::PushFront(ValueType &&value)
 {
     if (m_start_offset == 0) {
         // have to push everything else over by 1
@@ -670,18 +700,20 @@ void DynArray<T>::PushFront(ValueType &&value)
                 push_front_padding // copy_offset is 1 so we have a space for 1 at the start
             );
         } else {
+            auto *buffer = GetStorage();
+
             // shift over without realloc
             for (Int64 index = Size() - 1; index >= 0; --index) {
                 const auto move_index = index + push_front_padding;
 
                 if constexpr (std::is_move_constructible_v<T>) {
-                    Memory::Construct<T>(&m_buffer[move_index].data_buffer, std::move(m_buffer[index].Get()));
+                    Memory::Construct<T>(&buffer[move_index].data_buffer, std::move(buffer[index].Get()));
                 } else {
-                    Memory::Construct<T>(&m_buffer[move_index].data_buffer, m_buffer[index].Get());
+                    Memory::Construct<T>(&buffer[move_index].data_buffer, buffer[index].Get());
                 }
 
                 // manual destructor call
-                Memory::Destruct(m_buffer[index].Get());
+                Memory::Destruct(buffer[index].Get());
             }
 
             m_start_offset = push_front_padding;
@@ -692,11 +724,11 @@ void DynArray<T>::PushFront(ValueType &&value)
     // in-place
     --m_start_offset;
 
-    Memory::Construct<T>(&m_buffer[m_start_offset].data_buffer, std::move(value));
+    Memory::Construct<T>(&GetStorage()[m_start_offset].data_buffer, std::move(value));
 }
 
-template <class T>
-void DynArray<T>::Concat(const DynArray &other)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Concat(const DynArray &other)
 {
     if (m_size + other.Size() >= m_capacity) {
         if (m_capacity >= Size() + other.Size()) {
@@ -706,14 +738,16 @@ void DynArray<T>::Concat(const DynArray &other)
         }
     }
 
+    auto *buffer = GetStorage();
+
     for (SizeType i = 0; i < other.Size(); i++) {
         // set item at index
-        Memory::Construct<T>(&m_buffer[m_size++].data_buffer, other[i]);
+        Memory::Construct<T>(&buffer[m_size++].data_buffer, other[i]);
     }
 }
 
-template <class T>
-void DynArray<T>::Concat(DynArray &&other)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Concat(DynArray &&other)
 {
     if (m_size + other.Size() >= m_capacity) {
         if (m_capacity >= Size() + other.Size()) {
@@ -723,18 +757,22 @@ void DynArray<T>::Concat(DynArray &&other)
         }
     }
 
+    auto *buffer = GetStorage();
+
     for (SizeType i = 0; i < other.Size(); i++) {
         // set item at index
-        Memory::Construct<T>(&m_buffer[m_size++].data_buffer, std::move(other[i]));
+        Memory::Construct<T>(&buffer[m_size++].data_buffer, std::move(other[i]));
     }
 
     other.Clear();
 }
 
-template <class T>
-void DynArray<T>::Shift(SizeType count)
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Shift(SizeType count)
 {
     SizeType new_size = 0;
+
+    auto *buffer = GetStorage();
 
     for (SizeType index = m_start_offset; index < m_size; index++, new_size++) {
         if (index + count >= m_size) {
@@ -742,45 +780,47 @@ void DynArray<T>::Shift(SizeType count)
         }
 
         if constexpr (std::is_move_assignable_v<T>) {
-            m_buffer[index].Get() = std::move(m_buffer[index + count].Get());
+            buffer[index].Get() = std::move(buffer[index + count].Get());
         } else if constexpr (std::is_move_constructible_v<T>) {
-            Memory::Destruct(m_buffer[index].Get());
-            Memory::Construct<T>(&m_buffer[index].data_buffer, std::move(m_buffer[index + count].Get()));
+            Memory::Destruct(buffer[index].Get());
+            Memory::Construct<T>(&buffer[index].data_buffer, std::move(buffer[index + count].Get()));
         } else {
-            m_buffer[index].Get() = m_buffer[index + count].Get();
+            buffer[index].Get() = buffer[index + count].Get();
         }
 
         // manual destructor call
-        Memory::Destruct(m_buffer[index + count].Get());
+        Memory::Destruct(buffer[index + count].Get());
     }
 
     m_size = new_size;
 }
 
-template <class T>
-auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::Erase(ConstIterator iter) -> Iterator
 {
     const Int64 dist = iter - Begin();
 
+    auto *buffer = GetStorage();
+
     for (Int64 index = dist; index < Size() - 1; ++index) {
         if constexpr (std::is_move_assignable_v<T>) {
-            m_buffer[m_start_offset + index].Get() = std::move(m_buffer[m_start_offset + index + 1].Get());
+            buffer[m_start_offset + index].Get() = std::move(buffer[m_start_offset + index + 1].Get());
         } else if constexpr (std::is_move_constructible_v<T>) {
-            Memory::Destruct(m_buffer[m_start_offset + index].Get());
-            Memory::Construct<T>(&m_buffer[m_start_offset + index].data_buffer, std::move(m_buffer[m_start_offset + index + 1].Get()));
+            Memory::Destruct(buffer[m_start_offset + index].Get());
+            Memory::Construct<T>(&buffer[m_start_offset + index].data_buffer, std::move(buffer[m_start_offset + index + 1].Get()));
         } else {
-            m_buffer[m_start_offset + index].Get() = m_buffer[m_start_offset + index + 1].Get();
+            buffer[m_start_offset + index].Get() = buffer[m_start_offset + index + 1].Get();
         }
     }
 
-    Memory::Destruct(m_buffer[m_size - 1].Get());
+    Memory::Destruct(buffer[m_size - 1].Get());
     --m_size;
     
     return Begin() + dist;
 }
 
-template <class T>
-auto DynArray<T>::Erase(const T &value) -> Iterator
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::Erase(const T &value) -> Iterator
 {
     ConstIterator iter = Base::Find(value);
 
@@ -791,66 +831,21 @@ auto DynArray<T>::Erase(const T &value) -> Iterator
     return End();
 }
 
-template <class T>
-auto DynArray<T>::EraseAt(typename DynArray::Base::KeyType index) -> Iterator
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::EraseAt(typename DynArray::Base::KeyType index) -> Iterator
 {
     return Erase(Begin() + index);
 }
 
-template <class T>
-auto DynArray<T>::Insert(ConstIterator where, const ValueType &value) -> Iterator
-{
-    const Int64 dist = where - Begin();
-
-    if (where == End()) {
-        PushBack(value);
-
-        return &m_values[m_size - 1];
-    } else if (where == Begin() && dist <= m_start_offset) {
-        PushFront(value);
-
-        return Begin();
-    }
-
-    if (m_size + 1 >= m_capacity) {
-        if (m_capacity >= Size() + 1) {
-            ResetOffsets();
-        } else {
-            SetCapacity(GetCapacity(Size() + 1));
-        }
-    }
-
-    AssertThrow(m_capacity >= m_size + 1);
-
-    Int64 index;
-
-    for (index = Size(); index > dist; --index) {
-        if constexpr (std::is_move_constructible_v<T>) {
-            Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, std::move(m_buffer[index + m_start_offset - 1].Get()));
-        } else {
-            Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, m_buffer[index + m_start_offset - 1].Get());
-        }
-
-        Memory::Destruct(m_buffer[index + m_start_offset - 1].Get());
-    }
-
-    Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, value);
-
-    ++m_size;
-
-    return Begin() + index;
-}
-
-
-template <class T>
-auto DynArray<T>::Insert(ConstIterator where, ValueType &&value) -> Iterator
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &value) -> Iterator
 {
     const Int64 dist = where - Begin();
 
     if (where == End()) {
         PushBack(std::move(value));
         
-        return &m_values[m_size - 1];
+        return &GetBuffer()[m_size - 1];
     } else if (where == Begin() && dist <= m_start_offset) {
         PushFront(std::move(value));
 
@@ -869,57 +864,108 @@ auto DynArray<T>::Insert(ConstIterator where, ValueType &&value) -> Iterator
 
     Int64 index;
 
+    auto *buffer = GetStorage();
+
     for (index = Size(); index > dist; --index) {
         if constexpr (std::is_move_constructible_v<T>) {
-            Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, std::move(m_buffer[index + m_start_offset - 1].Get()));
+            Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, std::move(buffer[index + m_start_offset - 1].Get()));
         } else {
-            Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, m_buffer[index + m_start_offset - 1].Get());
+            Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, buffer[index + m_start_offset - 1].Get());
         }
 
-        Memory::Destruct(m_buffer[index + m_start_offset - 1].Get());
+        Memory::Destruct(buffer[index + m_start_offset - 1].Get());
     }
 
-    Memory::Construct<T>(&m_buffer[index + m_start_offset].data_buffer, std::move(value));
+    Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, value);
 
     ++m_size;
 
     return Begin() + index;
 }
 
-template <class T>
-auto DynArray<T>::PopFront() -> ValueType
+
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) -> Iterator
+{
+    const Int64 dist = where - Begin();
+
+    if (where == End()) {
+        PushBack(std::move(value));
+        
+        return &GetBuffer()[m_size - 1];
+    } else if (where == Begin() && dist <= m_start_offset) {
+        PushFront(std::move(value));
+
+        return Begin();
+    }
+
+    if (m_size + 1 >= m_capacity) {
+        if (m_capacity >= Size() + 1) {
+            ResetOffsets();
+        } else {
+            SetCapacity(GetCapacity(Size() + 1));
+        }
+    }
+
+    AssertThrow(m_capacity >= m_size + 1);
+
+    Int64 index;
+
+    auto *buffer = GetStorage();
+
+    for (index = Size(); index > dist; --index) {
+        if constexpr (std::is_move_constructible_v<T>) {
+            Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, std::move(buffer[index + m_start_offset - 1].Get()));
+        } else {
+            Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, buffer[index + m_start_offset - 1].Get());
+        }
+
+        Memory::Destruct(buffer[index + m_start_offset - 1].Get());
+    }
+
+    Memory::Construct<T>(&buffer[index + m_start_offset].data_buffer, std::move(value));
+
+    ++m_size;
+
+    return Begin() + index;
+}
+
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::PopFront() -> ValueType
 {
     AssertThrow(Size() != 0);
 
-    auto value = std::move(m_buffer[m_start_offset].Get());
+    auto value = std::move(GetStorage()[m_start_offset].Get());
 
-    Memory::Destruct(m_buffer[m_start_offset].Get());
+    Memory::Destruct(GetStorage()[m_start_offset].Get());
 
     ++m_start_offset;
 
     return value;
 }
 
-template <class T>
-auto DynArray<T>::PopBack() -> ValueType
+template <class T, SizeType NumInlineBytes>
+auto DynArray<T, NumInlineBytes>::PopBack() -> ValueType
 {
     AssertThrow(m_size != 0);
 
-    auto value = std::move(m_buffer[m_size - 1].Get());
+    auto value = std::move(GetStorage()[m_size - 1].Get());
 
-    Memory::Destruct(m_buffer[m_size - 1].Get());
+    Memory::Destruct(GetStorage()[m_size - 1].Get());
 
     --m_size;
 
     return value;
 }
 
-template <class T>
-void DynArray<T>::Clear()
+template <class T, SizeType NumInlineBytes>
+void DynArray<T, NumInlineBytes>::Clear()
 {
+    auto *buffer = GetStorage();
+
     while (m_size - m_start_offset) {
         // manual destructor call
-        Memory::Destruct(m_buffer[m_size - 1].Get());
+        Memory::Destruct(buffer[m_size - 1].Get());
         --m_size;
     }
 

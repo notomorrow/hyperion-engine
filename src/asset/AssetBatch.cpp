@@ -36,7 +36,7 @@ void AssetBatch::LoadAsync(UInt num_batches)
     asset_manager.m_engine->task_system.EnqueueBatch(this);
 }
 
-DynArray<EnqueuedAsset> AssetBatch::AwaitResults()
+AssetMap AssetBatch::AwaitResults()
 {
     AwaitCompletion();
 
@@ -48,7 +48,7 @@ DynArray<EnqueuedAsset> AssetBatch::AwaitResults()
     return results;
 }
 
-DynArray<EnqueuedAsset> AssetBatch::ForceLoad()
+AssetMap AssetBatch::ForceLoad()
 {
     for (auto &proc : procs) {
         proc();

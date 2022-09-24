@@ -122,7 +122,7 @@ public:
         AssetBatch batch = CreateBatch();
 
         for (const auto &path : paths_array) {
-            batch.Add<T>(path);
+            batch.Add<T>(path, path);
         }
 
         batch.LoadAsync();
@@ -130,8 +130,10 @@ public:
 
         AssertThrow(results.Size() == results_array.Size());
 
-        for (SizeType i = 0; i < results.Size(); i++) {
-            results_array[i] = results[i].Get<T>();
+        SizeType index = 0u;
+
+        for (auto &it : results) {
+            results_array[index++] = it.second.Get<T>();
         }
 
         return results_array;

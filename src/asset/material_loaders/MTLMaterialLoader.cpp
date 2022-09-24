@@ -243,16 +243,17 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
             for (auto &it : texture_names_to_path) {
                 all_filepaths.push_back(it.second);
-                textures_batch.Add<Texture>(String(it.second.c_str()));
+                textures_batch.Add<Texture>(
+                    String(it.first.c_str()),
+                    String(it.second.c_str())
+                );
             }
 
             textures_batch.LoadAsync();
             auto loaded_textures = textures_batch.AwaitResults();
 
-            for (SizeType i = 0; i < loaded_textures.Size(); i++) {
-                if (loaded_textures[i]) {
-                    texture_refs[all_filepaths[i]] = loaded_textures[i].Get<Texture>();
-                }
+            for (auto &it : loaded_textures) {
+                texture_refs[std::string(it.first.Data())] = it.second.Get<Texture>();
             }
         }
     }
