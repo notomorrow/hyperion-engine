@@ -1,7 +1,8 @@
 #ifndef HYPERION_V2_WORLD_H
 #define HYPERION_V2_WORLD_H
 
-#include "Scene.hpp"
+#include <scene/Scene.hpp>
+#include <physics/PhysicsWorld.hpp>
 
 namespace hyperion::v2 {
 
@@ -15,6 +16,9 @@ public:
 
     Octree &GetOctree() { return m_octree; }
     const Octree &GetOctree() const { return m_octree; }
+
+    PhysicsWorld &GetPhysicsWorld() { return m_physics_world; }
+    const PhysicsWorld &GetPhysicsWorld() const { return m_physics_world; }
 
     FlatMap<Scene::ID, Handle<Scene>> &GetScenes() { return m_scenes; }
     const FlatMap<Scene::ID, Handle<Scene>> &GetScenes() const { return m_scenes; }
@@ -30,6 +34,7 @@ public:
 
 private:
     Octree m_octree;
+    PhysicsWorld m_physics_world;
     FlatMap<Scene::ID, Handle<Scene>> m_scenes;
 };
 

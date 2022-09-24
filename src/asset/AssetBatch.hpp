@@ -42,9 +42,13 @@ struct EnqueuedAsset
     explicit operator bool() const { return value.IsValid(); }
 };
 
+using AssetMap = FlatMap<String, EnqueuedAsset>;
+
 struct AssetBatch : private TaskBatch
 {
 private:
+    AssetMap enqueued_assets;
+
     template <class T>
     struct LoadObjectWrapper
     {
@@ -52,20 +56,17 @@ private:
         HYP_FORCE_INLINE void operator()(
             AssetManager &asset_manager,
             AssetBatch &batch,
-            SizeType index
+            const String &key
         )
         {
-            AssertThrow(index < batch.enqueued_assets.Size());
+            auto &asset = batch.enqueued_assets[key];
 
-            batch.enqueued_assets[index].value
-                = static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(batch.enqueued_assets[index].path));
+            asset.value = static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(asset.path));
         }
     };
 
 public:
     using TaskBatch::IsCompleted;
-
-    DynArray<EnqueuedAsset> enqueued_assets;
 
     AssetBatch(AssetManager &asset_manager)
         : TaskBatch(),
@@ -82,30 +83,48 @@ public:
     /*! \brief Enqueue an asset of type T to be loaded in this batch.
         Only call this method before LoadAsync() is called. */
     template <class T>
-    void Add(const String &path)
+    void Add(const String &key, const String &path)
     {
         AssertThrowMsg(IsCompleted(),
             "Cannot add assets while loading!");
 
-        const auto asset_index = enqueued_assets.Size();
-
-        enqueued_assets.PushBack(EnqueuedAsset {
+        const auto result = enqueued_assets.Set(key, EnqueuedAsset {
             .path = path
         });
 
-        procs.PushBack([this, asset_index]() {
-            LoadObjectWrapper<T>()(asset_manager, *this, asset_index);
+        DebugLog(LogType::Debug, "Add key %s\n", key.Data());
+
+        struct Functor
+        {
+            AssetBatch *batch;
+            String key;
+
+            void operator()()
+            {
+                DebugLog(LogType::Debug, "Begin loading key %s\n", key.Data());
+                LoadObjectWrapper<T>()(batch->asset_manager, *batch, key);
+            }
+        };
+
+        procs.PushBack(Functor {
+            .batch = this,
+            .key = key
         });
+        // static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->key = key;
+
+        DebugLog(LogType::Debug, "Extracted batch: %p    this;  %p\n", static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->batch, this);
+        DebugLog(LogType::Debug, "Extracted key: %s\n", static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->key.Data());
     }
 
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
     void LoadAsync(UInt num_batches = UINT_MAX);
-    DynArray<EnqueuedAsset> AwaitResults();
-    DynArray<EnqueuedAsset> ForceLoad();
+    AssetMap AwaitResults();
+    AssetMap ForceLoad();
+
+    AssetManager &asset_manager;
 
 private:
-    AssetManager &asset_manager;
     DynArray<Proc<void>> procs;
 };
 

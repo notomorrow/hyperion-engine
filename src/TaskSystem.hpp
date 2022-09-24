@@ -165,6 +165,16 @@ public:
         const auto &current_thread_id = Threads::CurrentThreadID();
         const bool in_task_thread = Threads::IsThreadInMask(current_thread_id, THREAD_TASK);
 
+        if (in_task_thread) {
+            for (auto &task : batch->tasks) {
+                task.Execute();
+            }
+
+            // all have been moved
+            batch->tasks.Clear();
+            return batch;
+        }
+
         auto &pool = GetPool(batch->priority);
         const UInt num_threads_in_pool = static_cast<UInt>(pool.threads.Size());
 

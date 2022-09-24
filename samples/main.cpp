@@ -25,6 +25,7 @@
 #include <scene/controllers/FollowCameraController.hpp>
 #include <scene/controllers/paging/BasicPagingController.hpp>
 #include <scene/controllers/ScriptedController.hpp>
+#include <scene/controllers/physics/RigidBodyController.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/Pair.hpp>
@@ -76,7 +77,7 @@ using namespace hyperion::v2;
 
 // #define HYP_TEST_VCT
 // #define HYP_TEST_RT
-#define HYP_TEST_TERRAIN
+// #define HYP_TEST_TERRAIN
 
 namespace hyperion::v2 {
     
@@ -121,18 +122,18 @@ public:
         engine->GetWorld().AddScene(Handle<Scene>(m_scene));
 
         auto batch = engine->GetAssetManager().CreateBatch();
-        batch.Add<Node>("models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("models/sponza/sponza.obj");
-        batch.Add<Node>("models/cube.obj");
-        batch.Add<Node>("models/material_sphere/material_sphere.obj");
-        batch.Add<Node>("models/grass/grass.obj");
+        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+        batch.Add<Node>("test_model", "models/testbed/testbed.obj");//sponza/sponza.obj");
+        batch.Add<Node>("cube", "models/cube.obj");
+        batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
+        batch.Add<Node>("grass", "models/grass/grass.obj");
         batch.LoadAsync();
         auto obj_models = batch.AwaitResults();
 
-        auto zombie = obj_models[0].Get<Node>();
-        auto test_model = obj_models[1].Get<Node>();
-        auto cube_obj = obj_models[2].Get<Node>();
-        auto material_test_obj = obj_models[3].Get<Node>();
+        auto zombie = obj_models["zombie"].Get<Node>();
+        auto test_model = obj_models["test_model"].Get<Node>();
+        auto cube_obj = obj_models["cube"].Get<Node>();
+        auto material_test_obj = obj_models["material"].Get<Node>();
 
         for (int i = 0; i < 0; i++) {
             auto sphere = engine->GetAssetManager().Load<Node>("models/material_sphere/material_sphere.obj");
@@ -319,9 +320,14 @@ public:
                 engine->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
             );
             monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
-            monkey.Translate(Vector3(0, 22.5f, 0));
+            monkey.Translate(Vector3(0, 250.5f, 0));
             monkey.Scale(6.0f);
             m_scene->GetRoot().AddChild(monkey);
+
+            monkey[0].GetEntity()->AddController<RigidBodyController>(
+                UniquePtr<physics::BoxPhysicsShape>::Construct(BoundingBox(-1, 1)),
+                physics::PhysicsMaterial { .mass = 1.0f }
+            );
         }
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
@@ -357,7 +363,7 @@ public:
 
         HandleCameraMovement();
 
-        #if 1 // bad performance on large meshes. need bvh
+        #if 0 // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
             const auto &mouse_position = GetInputManager()->GetMousePosition();

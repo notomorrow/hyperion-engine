@@ -358,7 +358,7 @@ public:
     }
 
     template <class ...Args>
-    static UniquePtr Construct(Args &&... args)
+    [[nodiscard]] static UniquePtr Construct(Args &&... args)
     {
         return UniquePtr(new T(std::forward<Args>(args)...));
     }

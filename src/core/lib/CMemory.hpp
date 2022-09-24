@@ -45,7 +45,7 @@ public:
 
     static void Garble(void *dest, SizeType length)
     {
-        std::memset(dest, 0xDEADBEEF, length);
+        std::memset(dest, 0xEFEFEFE, length);
     }
 
     template <class T, class ...Args>
