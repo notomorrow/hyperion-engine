@@ -107,7 +107,7 @@ FlatSet<T>::~FlatSet() = default;
 template <class T>
 auto FlatSet<T>::Find(const T &value) -> Iterator
 {
-    const auto it = DynArray<T>::Base::LowerBound(value);
+    const auto it = Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -119,7 +119,7 @@ auto FlatSet<T>::Find(const T &value) -> Iterator
 template <class T>
 auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 {
-    const auto it = DynArray<T>::Base::LowerBound(value);
+    const auto it = Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -131,10 +131,10 @@ auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 template <class T>
 auto FlatSet<T>::Insert(const T &value) -> InsertResult
 {
-    Iterator it = DynArray<T>::Base::LowerBound(value);
+    Iterator it = Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
-        it = DynArray<T>::Insert(it, value);
+        it = Base::Base::Insert(it, value);
 
         return {it, true};
     }
@@ -145,10 +145,10 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Insert(T &&value) -> InsertResult
 {
-    Iterator it = DynArray<T>::Base::LowerBound(value);
+    Iterator it = Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
-        it = DynArray<T>::Insert(it, std::forward<T>(value));
+        it = Base::Base::Insert(it, std::forward<T>(value));
 
         return {it, true};
     }
@@ -159,7 +159,7 @@ auto FlatSet<T>::Insert(T &&value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Erase(ConstIterator it) -> Iterator
 {
-    return DynArray<T>::Erase(it);
+    return Base::Erase(it);
 }
 
 template <class T>
@@ -171,7 +171,7 @@ auto FlatSet<T>::Erase(const T &value) -> Iterator
         return End();
     }
 
-    return DynArray<T>::Erase(it);
+    return Base::Erase(it);
 }
 
 } // namespace hyperion

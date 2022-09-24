@@ -103,8 +103,7 @@ struct Invoker
     template <class Functor>
     static HYP_FORCE_INLINE ReturnType InvokeFn(void *ptr, Args &&... args)
     {
-        auto *functor_ptr = static_cast<Functor *>(ptr);
-        return (*functor_ptr)(std::forward<Args>(args)...);
+        return (*static_cast<Functor *>(ptr))(std::forward<Args>(args)...);
     }
 };
 
@@ -115,8 +114,7 @@ struct Invoker<void, Args...>
     template <class Functor>
     static HYP_FORCE_INLINE void InvokeFn(void *ptr, Args &&... args)
     {
-        auto *functor_ptr = static_cast<Functor *>(ptr);
-        (*functor_ptr)(std::forward<Args>(args)...);
+        (*static_cast<Functor *>(ptr))(std::forward<Args>(args)...);
     }
 };
 
@@ -156,7 +154,7 @@ struct Proc : detail::ProcBase
         functor.delete_fn = &Memory::Destruct<Functor>;
         
         // move-construct the functor object into inline storage
-        Memory::Construct<Functor>(&functor.memory.bytes[0], std::move(fn));
+        Memory::Construct<Functor>(functor.memory.GetPointer(), std::forward<Functor>(fn));
     }
 
     Proc(const Proc &other) = delete;

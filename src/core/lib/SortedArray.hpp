@@ -63,8 +63,8 @@ public:
     [[nodiscard]] const T &Back() const                   { return Base::Back(); }
 
     HYP_DEF_STL_BEGIN_END(
-        reinterpret_cast<typename Base::ValueType *>(&Base::m_buffer[Base::m_start_offset]),
-        reinterpret_cast<typename Base::ValueType *>(&Base::m_buffer[Base::m_size])
+        Base::Begin(),
+        Base::End()
     )
 };
 

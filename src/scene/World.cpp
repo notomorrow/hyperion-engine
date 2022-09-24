@@ -23,9 +23,13 @@ void World::Init(Engine *engine)
     
     EngineComponentBase::Init(engine);
 
+    m_physics_world.Init();
+
     SetReady(true);
 
     OnTeardown([this]() {
+        m_physics_world.Teardown();
+
         for (auto &it : m_scenes) {
             auto &scene = it.second;
 
@@ -58,6 +62,8 @@ void World::Update(
 
         m_octree.CalculateVisibility(scene.Get());
     }
+
+    m_physics_world.Tick(static_cast<GameCounter::TickUnitHighPrec>(delta));
 
     for (auto &it : m_scenes) {
         auto &scene = it.second;

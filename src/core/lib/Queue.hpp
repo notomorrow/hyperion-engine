@@ -10,14 +10,16 @@
 
 namespace hyperion {
 
-/*! Queue based on DynArray<T>. About 30% faster than std::queue in my tests. */
+/*! Queue based on Base. About 30% faster than std::queue in my tests. */
 
 template <class T>
 class Queue : DynArray<T>
 {
 public:
-    using Iterator = typename DynArray<T>::Iterator;
-    using ConstIterator = typename DynArray<T>::ConstIterator;
+    using Base = DynArray<T>;
+
+    using Iterator = typename Base::Iterator;
+    using ConstIterator = typename Base::ConstIterator;
 
     Queue();
     Queue(const Queue &other);
@@ -27,68 +29,68 @@ public:
     Queue &operator=(const Queue &other);
     Queue &operator=(Queue &&other) noexcept;
 
-    [[nodiscard]] typename DynArray<T>::SizeType Size() const
-        { return DynArray<T>::Size(); }
+    [[nodiscard]] typename Base::SizeType Size() const
+        { return Base::Size(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType *Data()
-        { return DynArray<T>::Data(); }
+    [[nodiscard]] typename Base::ValueType *Data()
+        { return Base::Data(); }
 
-    [[nodiscard]] const typename DynArray<T>::ValueType *Data() const
-        { return DynArray<T>::Data(); }
+    [[nodiscard]] const typename Base::ValueType *Data() const
+        { return Base::Data(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType &Front()
-        { return DynArray<T>::Front(); }
+    [[nodiscard]] typename Base::ValueType &Front()
+        { return Base::Front(); }
 
-    [[nodiscard]] const typename DynArray<T>::ValueType &Front() const
-        { return DynArray<T>::Front(); }
+    [[nodiscard]] const typename Base::ValueType &Front() const
+        { return Base::Front(); }
 
-    [[nodiscard]] typename DynArray<T>::ValueType &Back()
-        { return DynArray<T>::Back(); }
+    [[nodiscard]] typename Base::ValueType &Back()
+        { return Base::Back(); }
 
-    [[nodiscard]] const typename DynArray<T>::ValueType &Back() const
-        { return DynArray<T>::Back(); }
+    [[nodiscard]] const typename Base::ValueType &Back() const
+        { return Base::Back(); }
 
     [[nodiscard]] bool Empty() const
-        { return DynArray<T>::Empty(); }
+        { return Base::Empty(); }
 
     [[nodiscard]] bool Any() const
-        { return DynArray<T>::Any(); }
+        { return Base::Any(); }
 
     [[nodiscard]] bool Contains(const T &value) const
-        { return DynArray<T>::Contains(value); }
+        { return Base::Contains(value); }
 
-    void Reserve(typename DynArray<T>::SizeType capacity)
-        { DynArray<T>::Reserve(capacity); }
+    void Reserve(typename Base::SizeType capacity)
+        { Base::Reserve(capacity); }
 
     void Refit()
-        { DynArray<T>::Refit(); }
+        { Base::Refit(); }
 
-    void Push(const typename DynArray<T>::ValueType &value);
-    void Push(typename DynArray<T>::ValueType &&value);
-    typename DynArray<T>::ValueType Pop();
+    void Push(const typename Base::ValueType &value);
+    void Push(typename Base::ValueType &&value);
+    typename Base::ValueType Pop();
     void Clear();
 
     HYP_DEF_STL_BEGIN_END(
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_start_offset]),
-        reinterpret_cast<typename DynArray<T>::ValueType *>(&DynArray<T>::m_buffer[DynArray<T>::m_size])
+        Base::Begin(),
+        Base::End()
     )
 };
 
 template <class T>
 Queue<T>::Queue()
-    : DynArray<T>()
+    : Base()
 {
 }
 
 template <class T>
 Queue<T>::Queue(const Queue &other)
-    : DynArray<T>(other)
+    : Base(other)
 {
 }
 
 template <class T>
 Queue<T>::Queue(Queue &&other) noexcept
-    : DynArray<T>(std::move(other))
+    : Base(std::move(other))
 {
 }
 
@@ -100,7 +102,7 @@ Queue<T>::~Queue()
 template <class T>
 auto Queue<T>::operator=(const Queue &other) -> Queue&
 {
-    DynArray<T>::operator=(other);
+    Base::operator=(other);
 
     return *this;
 }
@@ -108,33 +110,33 @@ auto Queue<T>::operator=(const Queue &other) -> Queue&
 template <class T>
 auto Queue<T>::operator=(Queue &&other) noexcept -> Queue&
 {
-    DynArray<T>::operator=(std::move(other));
+    Base::operator=(std::move(other));
 
     return *this;
 }
 
 template <class T>
-void Queue<T>::Push(const typename DynArray<T>::ValueType &value)
+void Queue<T>::Push(const typename Base::ValueType &value)
 {
-    DynArray<T>::PushBack(value);
+    Base::PushBack(value);
 }
 
 template <class T>
-void Queue<T>::Push(typename DynArray<T>::ValueType &&value)
+void Queue<T>::Push(typename Base::ValueType &&value)
 {
-    DynArray<T>::PushBack(std::move(value));
+    Base::PushBack(std::move(value));
 }
 
 template <class T>
-auto Queue<T>::Pop() -> typename DynArray<T>::ValueType
+auto Queue<T>::Pop() -> typename Base::ValueType
 {
-    return DynArray<T>::PopFront();
+    return Base::PopFront();
 }
 
 template <class T>
 void Queue<T>::Clear()
 {
-    DynArray<T>::Clear();
+    Base::Clear();
 }
 
 } // namespace hyperion
