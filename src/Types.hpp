@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <cstdint>
+#include <memory>
 
 namespace hyperion {
 

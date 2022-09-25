@@ -265,13 +265,15 @@ public:
     void ParallelForEach(TaskPriority priority, UInt num_batches, Container &&items, Lambda &&lambda)
     {
         const auto num_items = static_cast<UInt>(items.Size());
+        if (num_items == 0) {
+            return;
+        }
 
         num_batches = MathUtil::Max(num_batches, 1u);
         num_batches = MathUtil::Min(num_batches, num_items);
 
         TaskBatch batch;
         batch.priority = priority;
-
         const auto items_per_batch = num_items / num_batches;
 
         for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {

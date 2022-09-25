@@ -21,7 +21,7 @@
 #include <rendering/post_fx/Tonemap.hpp>
 #include <scene/controllers/AudioController.hpp>
 #include <scene/controllers/AnimationController.hpp>
-#include <scene/controllers/AABBDebugController.hpp>
+#include <scene/controllers/AabbDebugController.hpp>
 #include <scene/controllers/FollowCameraController.hpp>
 #include <scene/controllers/paging/BasicPagingController.hpp>
 #include <scene/controllers/ScriptedController.hpp>
