@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <array>
+#include <string.h>
 
 namespace hyperion {
 class Matrix3 {
@@ -36,7 +37,7 @@ public:
     Matrix3 &operator*=(float scalar);
 
     bool operator==(const Matrix3 &other) const
-    {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
+    {  return &values[0] == &other.values[0] || !memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
 
     bool operator!=(const Matrix3 &other) const { return !operator==(other); }
 
