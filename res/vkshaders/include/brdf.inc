@@ -1,3 +1,5 @@
+#ifndef HYP_BRDF_GLSL
+#define HYP_BRDF_GLSL
 
 #define PI 3.14159265359
 
@@ -222,3 +224,5 @@ vec3 GTAOMultiBounce(float visibility, const vec3 albedo) {
 
     return max(vec3(visibility), ((visibility * a + b) * visibility + c) * visibility);
 }
+
+#endif

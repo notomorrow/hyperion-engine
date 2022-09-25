@@ -152,6 +152,14 @@ public:
     ValueType PopFront();
     ValueType PopBack();
     void Clear();
+
+    template <class Lambda>
+    [[nodiscard]] bool Any(Lambda &&lambda) const
+        { return Base::Any(std::forward<Lambda>(lambda)); }
+
+    template <class Lambda>
+    [[nodiscard]] bool Every(Lambda &&lambda) const
+        { return Base::Every(std::forward<Lambda>(lambda)); }
     
     HYP_DEF_STL_BEGIN_END(
         GetBuffer() + m_start_offset,

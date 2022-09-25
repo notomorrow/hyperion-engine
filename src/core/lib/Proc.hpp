@@ -118,9 +118,7 @@ struct Invoker<void, Args...>
     }
 };
 
-struct ProcBase
-{
-};
+struct ProcBase { };
 
 } // namespace detail
 

@@ -10,7 +10,7 @@ PlaybackController::PlaybackController(const char *name)
 
 void PlaybackController::Play(float speed, LoopMode loop_mode)
 {
-    m_state.speed     = speed;
+    m_state.speed = speed;
     m_state.loop_mode = loop_mode;
 
     SetPlaybackState(PlaybackState::PLAYING);

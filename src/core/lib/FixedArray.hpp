@@ -17,6 +17,8 @@ class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt>
     T m_values[MathUtil::Max(Sz, 1)];
 
 public:
+    using Base = ContainerBase<FixedArray<T, Sz>, UInt>;
+
     using Iterator = T *;
     using ConstIterator = const T *;
 
@@ -75,6 +77,14 @@ public:
     [[nodiscard]] HYP_FORCE_INLINE
     bool Any() const
         { return Sz != 0; }
+
+    template <class Lambda>
+    [[nodiscard]] bool Any(Lambda &&lambda) const
+        { return Base::Any(std::forward<Lambda>(lambda)); }
+
+    template <class Lambda>
+    [[nodiscard]] bool Every(Lambda &&lambda) const
+        { return Base::Every(std::forward<Lambda>(lambda)); }
 
     [[nodiscard]] HYP_FORCE_INLINE
     T *Data()

@@ -184,17 +184,29 @@ public:
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
 
+    /* All controller operations should only be used from the GAME thread */
+
     template <class ControllerClass>
-    void AddController(std::unique_ptr<ControllerClass> &&controller)
+    void AddController(UniquePtr<ControllerClass> &&controller)
     {
         static_assert(std::is_base_of_v<Controller, ControllerClass>, "Object must be a derived class of Controller");
 
         if (controller->m_owner != nullptr) {
-            controller->OnRemoved();
+            // Controller already has a parent. Remove it from the current parent.
+            controller->m_owner->template RemoveController<ControllerClass>();
         }
 
         controller->m_owner = this;
         controller->OnAdded();
+
+        if (m_node != nullptr) {
+            controller->OnAttachedToNode(m_node);
+        }
+
+        if (m_scene != nullptr) {
+            controller->OnAttachedToScene(m_scene);
+        }
+
         controller->OnTransformUpdate(m_transform);
 
         m_controllers.Set(std::move(controller));
@@ -202,18 +214,35 @@ public:
 
     template <class ControllerClass, class ...Args>
     void AddController(Args &&... args)
-        { AddController<ControllerClass>(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
+        { AddController<ControllerClass>(UniquePtr<ControllerClass>::Construct(std::forward<Args>(args)...)); }
+
+    template <class ControllerClass>
+    bool RemoveController()
+    {
+        if (auto *controller = m_controllers.Get<ControllerClass>()) {
+            if (m_node != nullptr) {
+                controller->OnDetachedFromNode(m_node);
+            }
+
+            if (m_scene != nullptr) {
+                controller->OnDetachedFromScene(m_scene);
+            }
+
+            controller->OnRemoved();
+
+            return m_controllers.Remove<ControllerClass>();
+        } else {
+            return false;
+        }
+    }
 
     template <class ControllerType>
-    ControllerType *GetController()             { return m_controllers.Get<ControllerType>(); }
+    ControllerType *GetController() { return m_controllers.Get<ControllerType>(); }
 
     template <class ControllerType>
-    bool HasController() const                  { return m_controllers.Has<ControllerType>(); }
-
-    template <class ControllerType>
-    bool RemoveController()                     { return m_controllers.Remove<ControllerType>(); }
+    bool HasController() const { return m_controllers.Has<ControllerType>(); }
     
-    ControllerSet &GetControllers()             { return m_controllers; }
+    ControllerSet &GetControllers() { return m_controllers; }
     const ControllerSet &GetControllers() const { return m_controllers; }
 
 public:

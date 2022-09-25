@@ -121,8 +121,11 @@ public:
         FixedArray<String, sizeof...(paths) + 1> paths_array { first_path, paths... };
         AssetBatch batch = CreateBatch();
 
+        UInt path_index = 0;
+
         for (const auto &path : paths_array) {
-            batch.Add<T>(path, path);
+            // temp:
+            batch.Add<T>(String::ToString(path_index++), path);
         }
 
         batch.LoadAsync();

@@ -30,8 +30,8 @@ public:
     virtual void OnRemoved() override;
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
 
-    virtual void OnAddedToNode(Node *node) override;
-    virtual void OnRemovedFromNode(Node *node) override;
+    virtual void OnAttachedToNode(Node *node) override;
+    virtual void OnDetachedFromNode(Node *node) override;
 
     // virtual void OnDescendentAdded(Node *) override {} /* TODO: check for bones, add them */
     // virtual void OnDescendentRemoved(Node *node) override {} /* TODO: remove any bones */

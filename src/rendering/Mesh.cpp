@@ -368,7 +368,7 @@ void Mesh::CalculateNormals(bool weighted)
 
     // weighted (smooth) normals
 
-    for (size_t i = 0; i < m_indices.size(); i += 3) {
+    for (SizeType i = 0; i < m_indices.size(); i += 3) {
         const Index i0 = m_indices[i];
         const Index i1 = m_indices[i + 1];
         const Index i2 = m_indices[i + 2];

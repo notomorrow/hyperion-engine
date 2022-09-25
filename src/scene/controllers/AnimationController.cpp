@@ -39,12 +39,12 @@ void AnimationController::OnUpdate(GameCounter::TickUnit delta)
     }
 }
 
-void AnimationController::OnAddedToNode(Node *node)
+void AnimationController::OnAttachedToNode(Node *node)
 {
     FindSkeleton(node);
 }
 
-void AnimationController::OnRemovedFromNode(Node *node)
+void AnimationController::OnDetachedFromNode(Node *node)
 {
     m_skeleton.Reset();
 

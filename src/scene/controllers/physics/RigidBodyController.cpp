@@ -21,14 +21,19 @@ void RigidBodyController::OnAdded()
 
     GetEngine()->InitObject(m_rigid_body);
 
-    m_rigid_body->SetTransform(GetOwner()->GetTransform());
+    m_rigid_body->SetTransform(GetOwner()->GetTransform());    
+}
 
+void RigidBodyController::OnRemoved() { }
+
+void RigidBodyController::OnAttachedToScene(Scene *scene)
+{
     GetEngine()->GetWorld().GetPhysicsWorld().AddRigidBody(Handle<physics::RigidBody>(m_rigid_body));
 }
 
-void RigidBodyController::OnRemoved()
+void RigidBodyController::OnDetachedFromScene(Scene *scene)
 {
-    // GetEngine()->GetWorld().GetPhysicsWorld().RemoveRigidBody(m_rigid_body);
+    GetEngine()->GetWorld().GetPhysicsWorld().RemoveRigidBody(m_rigid_body);
 }
 
 void RigidBodyController::OnUpdate(GameCounter::TickUnit delta)
