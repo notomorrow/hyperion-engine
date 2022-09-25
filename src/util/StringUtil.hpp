@@ -249,15 +249,18 @@ public:
         return filename.substr(0, pos);
     }
 
-    static inline std::string GetExtension(const std::string &filename)
+    static inline std::string GetExtension(const std::string &path)
     {
-        auto pos = filename.find_last_of(".");
+        std::vector<std::string> split_path = SplitPath(path);
+        const std::string &filename = split_path.back();
+
+        auto pos = filename.find_last_of('.');
 
         if (pos == std::string::npos) {
             return "";
         }
 
-        return filename.substr(pos + 1);
+        return path.substr(pos + 1);
     }
     
     static inline bool Parse(const std::string &str, int *out_value)

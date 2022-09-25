@@ -8,6 +8,7 @@
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
+#include <math.h>
 #include <cstdlib>
 #include <cstddef>
 #include <cmath>
@@ -261,20 +262,20 @@ public:
     template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Round(const T &a) { return T::Round(a); }
 
-    static Float Sin(Float x) { return std::sinf(x); }
-    static Double Sin(Double x) { return std::sin(x); }
-    static Float Arcsin(Float x) { return std::asinf(x); }
-    static Double Arcsin(Double x) { return std::asin(x); }
+    static Float Sin(Float x) { return sinf(x); }
+    static Double Sin(Double x) { return sin(x); }
+    static Float Arcsin(Float x) { return asinf(x); }
+    static Double Arcsin(Double x) { return asin(x); }
 
-    static Float Cos(Float x) { return std::cosf(x); }
-    static Double Cos(Double x) { return std::cos(x); }
-    static Float Arccos(Float x) { return std::acosf(x); }
-    static Double Arccos(Double x) { return std::acos(x); }
+    static Float Cos(Float x) { return cosf(x); }
+    static Double Cos(Double x) { return cos(x); }
+    static Float Arccos(Float x) { return acosf(x); }
+    static Double Arccos(Double x) { return acos(x); }
 
-    static Float Tan(Float x) { return std::tanf(x); }
-    static Double Tan(Double x) { return std::tan(x); }
-    static Float Arctan(Float x) { return std::atanf(x); }
-    static Double Arctan(Double x) { return std::atan(x); }
+    static Float Tan(Float x) { return tanf(x); }
+    static Double Tan(Double x) { return tan(x); }
+    static Float Arctan(Float x) { return atanf(x); }
+    static Double Arctan(Double x) { return atan(x); }
 
     template <class T, class U = T, class V = U>
     static constexpr bool InRange(T value, const std::pair<U, V> &range)
@@ -284,11 +285,11 @@ public:
     static constexpr U Sqrt(T value)
     {
         if constexpr (std::is_same_v<U, double>) {
-            return std::sqrt(static_cast<double>(value));
+            return sqrt(static_cast<double>(value));
         } else if constexpr (std::is_same_v<U, float>) {
-            return std::sqrtf(static_cast<float>(value));
+            return sqrtf(static_cast<float>(value));
         } else {
-            return static_cast<U>(std::sqrtf(static_cast<float>(value)));
+            return static_cast<U>(sqrtf(static_cast<float>(value)));
         }
     }
 

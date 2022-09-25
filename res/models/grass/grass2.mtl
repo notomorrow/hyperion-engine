@@ -10,7 +10,6 @@ illum 1
 map_Kd BackyardGrass_1.png
 map_d BackyardGrass_1.png
 map_bump BackyardGrass_1_Normal.png
-bump BackyardGrass_1_Normal.png -bm 1
 
 
 newmtl BackyardGrass_2
@@ -22,6 +21,5 @@ illum 1
 map_Kd BackyardGrass_2.png
 map_d BackyardGrass_2.png
 map_bump BackyardGrass_2_Normal.png
-bump BackyardGrass_2_Normal.png -bm 1
 
 

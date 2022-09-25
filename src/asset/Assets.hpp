@@ -98,7 +98,7 @@ public:
         }
 
         AssertThrowMsg(loader != nullptr,
-            "No loader for type!");
+            "No loader for type! Path: [%s]", extension.Data());
 
         return AssetLoaderWrapper<NormalizedType<T>>(*loader)
             .Load(*this, m_engine, path);
