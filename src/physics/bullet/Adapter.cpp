@@ -41,6 +41,11 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape *physic
         return UniquePtr<btBoxShape>::Construct(ToBtVector(static_cast<BoxPhysicsShape *>(physics_shape)->GetAABB().GetExtent()));
     case PhysicsShapeType::SPHERE:
         return UniquePtr<btSphereShape>::Construct(static_cast<SpherePhysicsShape *>(physics_shape)->GetSphere().GetRadius());
+    case PhysicsShapeType::PLANE:
+        return UniquePtr<btStaticPlaneShape>::Construct(
+            ToBtVector(Vector3(static_cast<PlanePhysicsShape *>(physics_shape)->GetPlane())),
+            static_cast<PlanePhysicsShape *>(physics_shape)->GetPlane().w
+        );
     // others...
     default:
         AssertThrowMsg(false, "Unknown PhysicsShapeType!");
@@ -81,8 +86,6 @@ void BulletPhysicsAdapter::Tick(PhysicsWorldBase *world, GameCounter::TickUnitHi
     m_dynamics_world->stepSimulation(delta);
 
     for (auto &rigid_body : world->GetRigidBodies()) {
-        std::cout << "Update rigidbody " << rigid_body->GetID().value << "\n";
-
         auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
 
         btTransform bt_transform;
@@ -135,9 +138,16 @@ void BulletPhysicsAdapter::OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
     rigid_body->SetHandle(std::move(internal_data));
 }
 
-void BulletPhysicsAdapter::OnRigidBodyRemoved(Handle<RigidBody> &rigid_body)
+void BulletPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody> &rigid_body)
 {
-    
+    if (!rigid_body) {
+        return;
+    }
+
+    auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
+    AssertThrow(internal_data != nullptr);
+
+    m_dynamics_world->removeRigidBody(internal_data->rigid_body.Get());
 }
 
 } // namespace hyperion::v2::physics

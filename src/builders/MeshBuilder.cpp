@@ -67,9 +67,9 @@ const std::vector<Vertex> MeshBuilder::cube_vertices = {
     Vertex{{-1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, -1.0f, 0.0f}}
 };
 
-std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
+UniquePtr<Mesh> MeshBuilder::Quad(Topology topology)
 {
-    std::unique_ptr<Mesh> mesh;
+    UniquePtr<Mesh> mesh;
 
     const VertexAttributeSet vertex_attributes = renderer::static_mesh_vertex_attributes;
 
@@ -78,23 +78,23 @@ std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
     case Topology::TRIANGLE_FAN: {
         auto [new_vertices, new_indices] = Mesh::CalculateIndices(quad_vertices);
 
-        mesh = std::make_unique<Mesh>(
+        mesh.Reset(new Mesh(
             new_vertices,
             new_indices,
             topology,
             vertex_attributes
-        );
+        ));
 
         break;
     }
     default:
 #endif
-        mesh = std::make_unique<Mesh>(
+        mesh.Reset(new Mesh(
             quad_vertices,
             quad_indices,
             topology,
             vertex_attributes
-        );
+        ));
 
 #ifndef HYP_APPLE
         break;
@@ -106,94 +106,27 @@ std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
     return std::move(mesh);
 }
 
-std::unique_ptr<Mesh> MeshBuilder::Cube()
+UniquePtr<Mesh> MeshBuilder::Cube()
 {
-    std::unique_ptr<Mesh> mesh;
+    UniquePtr<Mesh> mesh;
 
     const VertexAttributeSet vertex_attributes = renderer::static_mesh_vertex_attributes;
 
     auto mesh_data = Mesh::CalculateIndices(cube_vertices);
 
-    mesh = std::make_unique<Mesh>(
+    mesh.Reset(new Mesh(
         mesh_data.first,
         mesh_data.second,
         Topology::TRIANGLES,
         vertex_attributes
-    );
+    ));
 
     mesh->CalculateTangents();
 
     return std::move(mesh);
 }
 
-std::unique_ptr<Mesh> MeshBuilder::DividedQuad(UInt num_divisions)
-{
-    NoiseCombinator noise_combinator(123);
-    noise_combinator
-        .Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, 1.0f, 0.0f, Vector(1.0f, 1.0f, 0.0f, 0.0f));
-
-    num_divisions = MathUtil::Max(num_divisions, 1);
-
-    Vector3 start(0.0f);
-
-    if (num_divisions == 1) {
-        return Quad();
-    }
-
-    const UInt num_divisions_total = num_divisions * num_divisions;
-
-    std::vector<Vertex> vertices;
-    vertices.reserve(quad_vertices.size() * num_divisions_total);
-
-    std::vector<Mesh::Index> indices;
-    indices.reserve(quad_indices.size() * num_divisions_total);
-
-    const Vector3 quad_scale = Vector3(1.0f / static_cast<Float>(num_divisions * 2.0f));
-
-    for (UInt x = 0; x < num_divisions; x++) {
-        for (UInt y = 0; y < num_divisions; y++) {
-            const auto vertices_size = vertices.size();
-
-            for (auto &vert : quad_vertices) {
-                auto vert_transformed = Transform(
-                    Vector3(
-                        static_cast<Float>(x) / static_cast<Float>(num_divisions),
-                        static_cast<Float>(y) / static_cast<Float>(num_divisions),
-                        0.0f
-                    ),
-                    quad_scale
-                    // Quaternion(Vector3(1.0f), )
-                ) * vert;
-
-                vert_transformed.SetPosition(vert_transformed.GetPosition() + vert_transformed.GetNormal() * noise_combinator.GetNoise(Vector2(vert_transformed.GetPosition())));
-
-                vertices.push_back(vert_transformed);
-            }
-
-            for (auto idx : quad_indices) {
-                indices.push_back(idx + vertices_size);
-            }
-        }
-    }
-
-    auto mesh = std::make_unique<Mesh>(
-        vertices,
-        indices,
-        Topology::TRIANGLES,
-        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-    );
-
-    mesh->CalculateNormals();
-    return ApplyTransform(mesh.get(), Transform(Vector3(), Vector3::One(), Quaternion(
-        Quaternion(Vector3(
-            90.0f,
-            0.0f,
-            0.0f
-        ))
-    )));
-}
-
-std::unique_ptr<Mesh> MeshBuilder::NormalizedCubeSphere(UInt num_divisions)
+UniquePtr<Mesh> MeshBuilder::NormalizedCubeSphere(UInt num_divisions)
 {
     const Float step = 1.0f / static_cast<Float>(num_divisions);
 
@@ -281,7 +214,7 @@ std::unique_ptr<Mesh> MeshBuilder::NormalizedCubeSphere(UInt num_divisions)
         }
     }
 
-    auto mesh = std::make_unique<Mesh>(
+    auto mesh = UniquePtr<Mesh>::Construct(
         vertices,
         indices,
         Topology::TRIANGLES,
@@ -294,7 +227,7 @@ std::unique_ptr<Mesh> MeshBuilder::NormalizedCubeSphere(UInt num_divisions)
     return mesh;
 }
 
-std::unique_ptr<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transform &transform)
+UniquePtr<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transform &transform)
 {
     AssertThrow(mesh != nullptr);
 
@@ -309,7 +242,7 @@ std::unique_ptr<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transf
         vertex.SetBitangent(normal_matrix * vertex.GetBitangent());
     }
 
-    return std::make_unique<Mesh>(
+    return UniquePtr<Mesh>::Construct(
         new_vertices,
         mesh->GetIndices(),
         mesh->GetTopology(),
@@ -318,12 +251,15 @@ std::unique_ptr<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transf
     );
 }
 
-std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Transform &a_transform, const Transform &b_transform)
+UniquePtr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Transform &a_transform, const Transform &b_transform)
 {
     AssertThrow(a != nullptr);
     AssertThrow(b != nullptr);
 
-    std::unique_ptr<Mesh> transformed_meshes[2] = { ApplyTransform(a, a_transform), ApplyTransform(b, b_transform) };
+    UniquePtr<Mesh> transformed_meshes[] = {
+        ApplyTransform(a, a_transform),
+        ApplyTransform(b, b_transform)
+    };
     
     const auto merged_vertex_attributes = a->GetVertexAttributes() | b->GetVertexAttributes();
 
@@ -331,7 +267,7 @@ std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Tra
     std::vector<Mesh::Index> all_indices(transformed_meshes[0]->GetIndices().size() + transformed_meshes[1]->GetIndices().size());
 
     SizeType vertex_offset = 0,
-             index_offset = 0;
+        index_offset = 0;
 
     for (SizeType mesh_index = 0; mesh_index < 2; mesh_index++) {
         for (SizeType i = 0; i < transformed_meshes[mesh_index]->GetVertices().size(); i++) {
@@ -343,7 +279,7 @@ std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Tra
         }
     }
 
-    return std::make_unique<Mesh>(
+    return UniquePtr<Mesh>::Construct(
         all_vertices,
         all_indices,
         a->GetTopology(),
@@ -352,7 +288,7 @@ std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Tra
     );
 }
 
-std::unique_ptr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b)
+UniquePtr<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b)
 {
     return Merge(a, b, Transform(), Transform());
 }

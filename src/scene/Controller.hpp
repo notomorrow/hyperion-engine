@@ -5,8 +5,7 @@
 #include <math/Transform.hpp>
 #include "../GameCounter.hpp"
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/String.hpp>
+#include <core/Containers.hpp>
 
 #include <Types.hpp>
 
@@ -20,6 +19,7 @@ using ControllerID = UInt;
 
 class Node;
 class Entity;
+class Scene;
 class Engine;
 
 class Controller
@@ -42,8 +42,11 @@ protected:
     virtual void OnUpdate(GameCounter::TickUnit delta) {};
     virtual void OnTransformUpdate(const Transform &transform) {}
 
-    virtual void OnRemovedFromNode(Node *node) {}
-    virtual void OnAddedToNode(Node *node) {}
+    virtual void OnDetachedFromNode(Node *node) {}
+    virtual void OnAttachedToNode(Node *node) {}
+
+    virtual void OnDetachedFromScene(Scene *scene) {}
+    virtual void OnAttachedToScene(Scene *scene) {}
 
     Engine *GetEngine() const;
 
@@ -53,8 +56,9 @@ private:
     bool m_receives_update;
 };
 
-class ControllerSet {
-    using Map = FlatMap<ControllerID, std::unique_ptr<Controller>>;
+class ControllerSet
+{
+    using Map = FlatMap<ControllerID, UniquePtr<Controller>>;
 
     static std::atomic<ControllerID> controller_id_counter;
 
@@ -69,7 +73,7 @@ class ControllerSet {
     }
 
 public:
-    using Iterator      = typename Map::Iterator;
+    using Iterator = typename Map::Iterator;
     using ConstIterator = typename Map::ConstIterator;
 
     ControllerSet() = default;
@@ -91,7 +95,7 @@ public:
     ~ControllerSet() = default;
     
     template <class T>
-    void Set(std::unique_ptr<T> &&controller)
+    void Set(UniquePtr<T> &&controller)
     {
         AssertThrow(controller != nullptr);
 
@@ -111,7 +115,7 @@ public:
             return nullptr;
         }
 
-        return static_cast<T *>(it->second.get());
+        return static_cast<T *>(it->second.Get());
     }
 
     template <class T>
@@ -136,6 +140,11 @@ public:
         m_map.Erase(it);
 
         return true;
+    }
+
+    void Clear()
+    {
+        m_map.Clear();
     }
 
     HYP_DEF_STL_BEGIN_END(m_map.begin(), m_map.end());

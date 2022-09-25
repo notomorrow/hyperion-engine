@@ -37,7 +37,7 @@ void AABBDebugController::OnAdded()
     const auto shader_id = shader != nullptr ? shader->GetID() : Shader::empty_id;
 
     m_aabb_entity = GetEngine()->CreateHandle<Entity>(
-        GetEngine()->CreateHandle<Mesh>(mesh.release()),
+        GetEngine()->CreateHandle<Mesh>(std::move(mesh)),
         std::move(shader),
         std::move(material),
         RenderableAttributeSet(

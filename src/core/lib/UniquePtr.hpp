@@ -220,6 +220,11 @@ public:
     {
     }
 
+    UniquePtr(std::nullptr_t)
+        : Base()
+    {
+    }
+
     /*! \brief Takes ownership of ptr.
     
         Ty may be a derived class of T, and the type ID of Ty will be stored, allowing

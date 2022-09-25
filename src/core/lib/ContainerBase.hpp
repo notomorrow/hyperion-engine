@@ -139,6 +139,36 @@ public:
             != static_cast<const Container *>(this)->End();
     }
 
+    template <class Lambda>
+    [[nodiscard]] bool Any(Lambda &&lambda) const
+    {
+        const auto _begin = static_cast<const Container *>(this)->Begin();
+        const auto _end = static_cast<const Container *>(this)->End();
+
+        for (auto it = _begin; it != _end; ++it) {
+            if (lambda(*it)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template <class Lambda>
+    [[nodiscard]] bool Every(Lambda &&lambda) const
+    {
+        const auto _begin = static_cast<const Container *>(this)->Begin();
+        const auto _end = static_cast<const Container *>(this)->End();
+
+        for (auto it = _begin; it != _end; ++it) {
+            if (!lambda(*it)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     [[nodiscard]] auto Sum() const
     {
         using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container *>(this)->Begin())>>;

@@ -297,7 +297,7 @@ void ParticleSystem::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    m_quad_mesh = engine->CreateHandle<Mesh>(MeshBuilder::Quad().release());
+    m_quad_mesh = engine->CreateHandle<Mesh>(MeshBuilder::Quad());
     engine->InitObject(m_quad_mesh);
 
     CreateBuffers();
