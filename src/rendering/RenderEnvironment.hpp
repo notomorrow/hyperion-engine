@@ -8,7 +8,6 @@
 #include <rendering/ParticleSystem.hpp>
 
 #include <core/Containers.hpp>
-#include <core/lib/ComponentSet.hpp>
 #include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
 #include <core/lib/Pair.hpp>
@@ -29,12 +28,13 @@ class Scene;
 
 using RenderEnvironmentUpdates = UInt8;
 
-enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates {
-    RENDER_ENVIRONMENT_UPDATES_NONE              = 0x0,
+enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
+{
+    RENDER_ENVIRONMENT_UPDATES_NONE = 0x0,
     RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS = 0x1,
-    RENDER_ENVIRONMENT_UPDATES_LIGHTS            = 0x2,
-    RENDER_ENVIRONMENT_UPDATES_ENTITIES          = 0x4,
-    RENDER_ENVIRONMENT_UPDATES_ENV_PROBES        = 0x8
+    RENDER_ENVIRONMENT_UPDATES_LIGHTS = 0x2,
+    RENDER_ENVIRONMENT_UPDATES_ENTITIES = 0x4,
+    RENDER_ENVIRONMENT_UPDATES_ENV_PROBES = 0x8
 };
 
 class RenderEnvironment
@@ -46,12 +46,15 @@ public:
     RenderEnvironment &operator=(const RenderEnvironment &other) = delete;
     ~RenderEnvironment();
 
-    Scene *GetScene() const { return m_scene; }
+    Scene *GetScene() const
+        { return m_scene; }
 
     void AddLight(Handle<Light> &&light);
     void RemoveLight(Handle<Light> &&light);
+
     // Call from render thread only!
-    SizeType NumLights() const { return m_lights.Size(); }
+    SizeType NumLights() const
+        { return m_lights.Size(); }
 
     void AddEnvProbe(Ref<EnvProbe> &&env_probe);
     void RemoveEnvProbe(Ref<EnvProbe> &&env_probe);

@@ -108,6 +108,27 @@ void Entity::Init(Engine *engine)
 
         SetReady(false);
 
+        // remove all controllers
+        for (auto &it : m_controllers) {
+            auto &controller = it.second;
+
+            if (!controller) {
+                continue;
+            }
+
+            if (m_node != nullptr) {
+                controller->OnDetachedFromNode(m_node);
+            }
+
+            if (m_scene != nullptr) {
+                controller->OnDetachedFromScene(m_scene);
+            }
+
+            controller->OnRemoved();
+        }
+
+        m_controllers.Clear();
+
         m_material.Reset();
 
         HYP_FLUSH_RENDER_QUEUE(engine);
@@ -360,7 +381,7 @@ void Entity::SetParent(Node *node)
         for (auto &controller : m_controllers) {
             AssertThrow(controller.second != nullptr);
 
-            controller.second->OnRemovedFromNode(m_node);
+            controller.second->OnDetachedFromNode(m_node);
         }
     }
 
@@ -368,14 +389,28 @@ void Entity::SetParent(Node *node)
 
     if (m_node != nullptr) {
         for (auto &controller : m_controllers) {
-            controller.second->OnAddedToNode(m_node);
+            controller.second->OnAttachedToNode(m_node);
         }
     }
 }
 
 void Entity::SetScene(Scene *scene)
 {
+    if (m_scene != nullptr) {
+        for (auto &controller : m_controllers) {
+            AssertThrow(controller.second != nullptr);
+
+            controller.second->OnDetachedFromScene(m_scene);
+        }
+    }
+
     m_scene = scene;
+
+    if (m_scene != nullptr) {
+        for (auto &controller : m_controllers) {
+            controller.second->OnAttachedToScene(m_scene);
+        }
+    }
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }

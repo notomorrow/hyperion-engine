@@ -85,7 +85,7 @@ class MyGame : public Game
 {
 
 public:
-    Handle<Light> m_point_light;
+    Handle<Light> m_sun;
 
     MyGame()
         : Game()
@@ -123,7 +123,7 @@ public:
 
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/testbed/testbed.obj");//sponza/sponza.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -220,19 +220,19 @@ public:
         }
         
         { // adding lights to scene
-            m_point_light = engine->CreateHandle<Light>(new DirectionalLight(
+            m_sun = engine->CreateHandle<Light>(new DirectionalLight(
                 Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
                 Vector4::One(),
                 110000.0f
             ));
-            m_scene->GetEnvironment()->AddLight(Handle<Light>(m_point_light));
+            m_scene->GetEnvironment()->AddLight(Handle<Light>(m_sun));
 
-            // m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
-            //     Vector3(0.0f, 6.0f, 0.0f),
-            //     Vector4(1.0f, 0.0f, 0.0f, 1.0f),
-            //     1000.0f,
-            //     4.0f
-            // )));
+            m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+                Vector3(0.0f, 12.0f, 4.0f),
+                Vector4(0.0f, 0.5f, 1.0f, 1.0f),
+                10000.0f,
+                60.0f
+            )));
         }
 
         test_model.Scale(0.15f);
@@ -286,7 +286,7 @@ public:
 #endif
 
         /*auto water_quad = engine->CreateHandle<Entity>();
-        water_quad->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Cube().release()));
+        water_quad->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Cube()));
         water_quad->SetMaterial(engine->CreateHandle<Material>());
         water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.5f, 1.0f, 0.35f));
         water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
@@ -308,7 +308,7 @@ public:
 
         { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-                Handle<Light>(m_point_light),
+                Handle<Light>(m_sun),
                 test_model.GetWorldAABB()
             );
         }
@@ -319,7 +319,12 @@ public:
             monkey[0].GetEntity()->AddController<ScriptedController>(
                 engine->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
             );
-            monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.175f);
+            monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.25f);
+            monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            monkey[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.3f));
+            monkey[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            monkey[0].GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
+            monkey[0].GetEntity()->RebuildRenderableAttributes();
             monkey.Translate(Vector3(0, 250.5f, 0));
             monkey.Scale(6.0f);
             m_scene->GetRoot().AddChild(monkey);
@@ -329,6 +334,16 @@ public:
                 physics::PhysicsMaterial { .mass = 1.0f }
             );
         }
+
+        // add a plane physics shape
+        auto plane = engine->CreateHandle<Entity>();
+        plane->SetName("Plane entity");
+        GetScene()->AddEntity(Handle<Entity>(plane));
+        plane->AddController<RigidBodyController>(
+            UniquePtr<physics::PlanePhysicsShape>::Construct(Vector4(0, 1, 0, 1)),
+            physics::PhysicsMaterial { .mass = 0.0f }
+        );
+        plane->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
 
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
@@ -689,7 +704,7 @@ int main()
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
 
-    auto cube_obj = engine->CreateHandle<Mesh>(MeshBuilder::Cube().release());
+    auto cube_obj = engine->CreateHandle<Mesh>(MeshBuilder::Cube());
 
     ProbeGrid probe_system({
         .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}

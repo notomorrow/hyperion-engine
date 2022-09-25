@@ -75,7 +75,7 @@ void FullScreenPass::SetShader(Handle<Shader> &&shader)
 
 void FullScreenPass::CreateQuad(Engine *engine)
 {
-    m_full_screen_quad = engine->CreateHandle<Mesh>(MeshBuilder::Quad().release());
+    m_full_screen_quad = engine->CreateHandle<Mesh>(MeshBuilder::Quad());
     engine->InitObject(m_full_screen_quad);
 }
 

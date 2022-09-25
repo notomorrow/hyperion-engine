@@ -22,7 +22,7 @@ FinalPass::~FinalPass()
 
 void FinalPass::Create(Engine *engine)
 {
-    m_full_screen_quad = engine->CreateHandle<Mesh>(MeshBuilder::Quad().release());
+    m_full_screen_quad = engine->CreateHandle<Mesh>(MeshBuilder::Quad());
     engine->InitObject(m_full_screen_quad);
 
     auto shader = engine->CreateHandle<Shader>(

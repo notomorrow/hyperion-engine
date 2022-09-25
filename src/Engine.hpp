@@ -231,7 +231,8 @@ public:
     template <class T, class First>
     typename std::enable_if_t<
         (!std::is_pointer_v<std::remove_reference_t<First>> || !std::is_convertible_v<std::remove_reference_t<First>, std::add_pointer_t<T>>)
-            && !std::is_base_of_v<AtomicRefCountedPtr<T>, std::remove_reference_t<First>>,
+            && !std::is_base_of_v<AtomicRefCountedPtr<T>, std::remove_reference_t<First>>
+            && !std::is_base_of_v<UniquePtr<T>, std::remove_reference_t<First>>,
         Handle<T>
     >
     CreateHandle(First &&first)
@@ -250,6 +251,19 @@ public:
     CreateHandle(Ptr &&ptr)
     {
         Handle<T> handle(static_cast<T *>(ptr));
+        registry.template Attach<T>(handle);
+
+        return handle;
+    }
+
+    template <class T, class Ptr>
+    typename std::enable_if_t<
+        std::is_base_of_v<UniquePtr<T>, std::remove_reference_t<Ptr>>,
+        Handle<T>
+    >
+    CreateHandle(Ptr &&ptr)
+    {
+        Handle<T> handle(ptr.template MakeRefCounted<std::atomic<UInt>>());
         registry.template Attach<T>(handle);
 
         return handle;

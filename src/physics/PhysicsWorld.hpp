@@ -68,6 +68,16 @@ public:
         m_rigid_bodies.PushBack(std::move(rigid_body));
     }
 
+    void RemoveRigidBody(const Handle<RigidBody> &rigid_body)
+    {
+        if (!rigid_body) {
+            return;
+        }
+
+        m_adapter.OnRigidBodyRemoved(rigid_body);
+        m_rigid_bodies.Erase(rigid_body);
+    }
+
     void Init()
         { m_adapter.Init(this); }
 

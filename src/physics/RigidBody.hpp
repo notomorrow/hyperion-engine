@@ -22,7 +22,8 @@ enum class PhysicsShapeType
 {
     NONE,
     BOX,
-    SPHERE
+    SPHERE,
+    PLANE
 };
 
 class PhysicsShape
@@ -61,7 +62,8 @@ class BoxPhysicsShape : public PhysicsShape
 {
 public:
     BoxPhysicsShape(const BoundingBox &aabb)
-        : PhysicsShape(PhysicsShapeType::BOX)
+        : PhysicsShape(PhysicsShapeType::BOX),
+          m_aabb(aabb)
     {
     }
 
@@ -78,7 +80,8 @@ class SpherePhysicsShape : public PhysicsShape
 {
 public:
     SpherePhysicsShape(const BoundingSphere &sphere)
-        : PhysicsShape(PhysicsShapeType::SPHERE)
+        : PhysicsShape(PhysicsShapeType::SPHERE),
+          m_sphere(sphere)
     {
     }
 
@@ -91,19 +94,37 @@ protected:
     BoundingSphere m_sphere;
 };
 
+class PlanePhysicsShape : public PhysicsShape
+{
+public:
+    PlanePhysicsShape(const Vector4 &plane)
+        : PhysicsShape(PhysicsShapeType::PLANE),
+          m_plane(plane)
+    {
+    }
+
+    ~PlanePhysicsShape() = default;
+
+    const Vector4 &GetPlane() const
+        { return m_plane; }
+
+protected:
+    Vector4 m_plane;
+};
+
 class RigidBody : public EngineComponentBase<STUB_CLASS(RigidBody)>
 {
 public:
     RigidBody(const PhysicsMaterial &physics_material)
-        : EngineComponentBase(),
-          m_physics_material(physics_material)
+        : RigidBody(nullptr, physics_material)
     {
     }
 
     RigidBody(UniquePtr<PhysicsShape> &&shape, const PhysicsMaterial &physics_material)
         : EngineComponentBase(),
           m_shape(std::move(shape)),
-          m_physics_material(physics_material)
+          m_physics_material(physics_material),
+          m_is_kinematic(true)
     {
     }
 

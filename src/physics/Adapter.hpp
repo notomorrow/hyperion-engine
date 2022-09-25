@@ -32,6 +32,9 @@ public:
 
     void OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
         { GetDerivedAdapter()->DerivedAdapter::OnRigidBodyAdded(rigid_body); }
+
+    void OnRigidBodyRemoved(const Handle<RigidBody> &rigid_body)
+        { GetDerivedAdapter()->DerivedAdapter::OnRigidBodRemoved(rigid_body); }
 };
 
 } // namespace hyperion::v2::physics

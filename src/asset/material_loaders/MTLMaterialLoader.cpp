@@ -185,6 +185,13 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
             const auto illum_model = StringUtil::Parse<Int>(tokens[1]);
 
+            if (IsTransparencyModel(static_cast<IlluminationModel>(illum_model))) {
+                LastMaterial(library).parameters[Material::MATERIAL_KEY_TRANSMISSION] = ParameterDef {
+                    .values = FixedArray<Float, 4> { 0.95f, 0.0f, 0.0f, 0.0f }
+                };
+                // TODO: Bucket, alpha blend
+            }
+
             LastMaterial(library).parameters[Material::MATERIAL_KEY_METALNESS] = ParameterDef {
                 .values = { float(illum_model) / 9.0f } /* rough approx */
             };
@@ -234,6 +241,8 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
     std::unordered_map<std::string, Handle<Texture>> texture_refs;
     
+    AssetMap loaded_textures;
+
     {
         std::vector<std::string> all_filepaths;
         // DynArray<Handle<Texture>> loaded_textures;
@@ -250,11 +259,7 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
             }
 
             textures_batch.LoadAsync();
-            auto loaded_textures = textures_batch.AwaitResults();
-
-            for (auto &it : loaded_textures) {
-                texture_refs[std::string(it.first.Data())] = it.second.Get<Texture>();
-            }
+            loaded_textures = textures_batch.AwaitResults();
         }
     }
 
@@ -266,10 +271,16 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
                 it.second.values.Data(),
                 it.second.values.Size()
             ));
+
+            if (it.first == Material::MATERIAL_KEY_TRANSMISSION
+                && it.second.values.Any([](float value) { return value > 0.0f; })) {
+                material->SetIsAlphaBlended(true);
+                material->SetBucket(BUCKET_TRANSLUCENT);
+            }
         }
 
         for (auto &it : item.textures) {
-            auto &texture = texture_refs[texture_names_to_path[it.name]];
+            auto texture = loaded_textures[String(it.name.c_str())].Get<Texture>();
 
             if (!texture) {
                 DebugLog(
@@ -283,7 +294,7 @@ LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
             texture->GetImage().SetIsSRGB(it.mapping.srgb);
 
-            material->SetTexture(it.mapping.key, Handle<Texture>(texture));
+            material->SetTexture(it.mapping.key, std::move(texture));
         }
 
         material_group->Add(item.tag, std::move(material));

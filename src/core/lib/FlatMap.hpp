@@ -23,10 +23,12 @@ private:
     DynArray<KeyValuePair> m_vector;
 
 public:
+    using Base = ContainerBase<FlatMap<Key, Value>, Key>;
+
     using KeyType = Key;
     using ValueType = Value;
 
-    using Iterator= typename decltype(m_vector)::Iterator;
+    using Iterator = typename decltype(m_vector)::Iterator;
     using ConstIterator = typename decltype(m_vector)::ConstIterator;
     using InsertResult = std::pair<Iterator, bool>; // iterator, was inserted
 
@@ -88,6 +90,14 @@ public:
 
     [[nodiscard]] Value &At(const Key &key)             { return Find(key)->second; }
     [[nodiscard]] const Value &At(const Key &key) const { return Find(key)->second; }
+
+    template <class Lambda>
+    [[nodiscard]] bool Any(Lambda &&lambda) const
+        { return Base::Any(std::forward<Lambda>(lambda)); }
+
+    template <class Lambda>
+    [[nodiscard]] bool Every(Lambda &&lambda) const
+        { return Base::Every(std::forward<Lambda>(lambda)); }
 
     [[nodiscard]] Value &operator[](const Key &key)
     {

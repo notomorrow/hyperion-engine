@@ -2,6 +2,7 @@
 #define HYP_DEFERRED_LIGHTING_GLSL
 
 #include "../include/shared.inc"
+#include "../include/brdf.inc"
 
 struct Refraction
 {
@@ -12,6 +13,77 @@ struct Refraction
 float ApplyIORToRoughness(float ior, float roughness)
 {
     return roughness * clamp(ior * 2.0 - 2.0, 0.0, 1.0);
+}
+
+vec3 CalculateDiffuseColor(vec3 albedo, float metalness)
+{
+    return albedo * (1.0 - metalness);
+}
+
+vec4 CalculateDiffuseColor(vec4 albedo, float metalness)
+{
+    return vec4(CalculateDiffuseColor(albedo.rgb, metalness), albedo.a);
+}
+
+vec3 CalculateF0(vec3 albedo, float metalness)
+{
+    const float material_reflectance = 0.5;
+    const float reflectance = 0.16 * material_reflectance * material_reflectance;
+    return albedo * metalness + (reflectance * (1.0 - metalness));
+}
+
+vec3 CalculateFresnelTerm(vec3 F0, float roughness, float NdotV)
+{
+    return SchlickFresnelRoughness(F0, roughness, NdotV);
+}
+
+vec4 CalculateFresnelTerm(vec4 F0, float roughness, float NdotV)
+{
+    return SchlickFresnelRoughness(F0, roughness, NdotV);
+}
+
+float CalculateGeometryTerm(float NdotL, float NdotV, float HdotV, float NdotH)
+{
+    return CookTorranceG(NdotL, NdotV, HdotV, NdotH);
+}
+
+float CalculateDistributionTerm(float roughness, float NdotH)
+{
+    return Trowbridge(NdotH, roughness);
+}
+
+vec3 CalculateDFG(vec3 F, float perceptual_roughness, float NdotV)
+{
+    const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
+
+    return F * AB.x + AB.y;
+}
+
+vec4 CalculateDFG(vec4 F, float perceptual_roughness, float NdotV)
+{
+    const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
+
+    return F * AB.x + AB.y;
+}
+
+vec3 CalculateE(vec3 F0, vec3 dfg)
+{
+    return mix(dfg.xxx, dfg.yyy, F0);
+}
+
+vec4 CalculateE(vec4 F0, vec4 dfg)
+{
+    return mix(dfg.xxxx, dfg.yyyy, F0);
+}
+
+vec3 CalculateEnergyCompensation(vec3 F0, vec3 dfg)
+{
+    return 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
+}
+
+vec4 CalculateEnergyCompensation(vec4 F0, vec4 dfg)
+{
+    return 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
 }
 
 void RefractionSolidSphere(
@@ -32,6 +104,8 @@ void RefractionSolidSphere(
 
     out_refraction = refraction;
 }
+
+#ifndef HYP_DEFERRED_NO_REFRACTION
 
 vec3 CalculateRefraction(
     vec3 P, vec3 N, vec3 V, vec2 texcoord,
@@ -76,5 +150,7 @@ vec3 CalculateRefraction(
 
     return Ft;
 }
+
+#endif
 
 #endif

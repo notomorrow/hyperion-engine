@@ -22,8 +22,11 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 #include "include/tonemap.inc"
 
 #include "include/scene.inc"
-#include "include/brdf.inc"
 #include "include/PhysicalCamera.inc"
+
+#define HYP_DEFERRED_NO_REFRACTION
+#include "./deferred/DeferredLighting.glsl"
+#undef HYP_DEFERRED_NO_REFRACTION
 
 vec2 texcoord = v_texcoord0;
 
@@ -135,27 +138,17 @@ void main()
         
         float NdotV = max(0.0001, dot(N, V));
 
-        const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
-
-        // Index of refraction for common dielectrics. Corresponds to f0 4%
-        const float IOR = 1.5;
-        const float material_reflectance = 0.5;
-        // dialetric f0
-        const float reflectance = 0.16 * material_reflectance * material_reflectance;
-        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness)); //vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        // vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
-        // F0 = mix(F0, vec3(0.04), metalness);
+        const vec3 diffuse_color = CalculateDiffuseColor(albedo_linear, metalness);
+        const vec3 F0 = CalculateF0(albedo_linear, metalness);
         vec3 F90 = vec3(clamp(dot(F0.rgb, vec3(50.0 * 0.33)), 0.0, 1.0));
 
-        F = SchlickFresnelRoughness(F0, roughness, NdotV);
-        // F = SchlickFresnel(F0, F90, NdotV);
+        F = CalculateFresnelTerm(F0, roughness, NdotV);
 
         const float perceptual_roughness = sqrt(roughness);
-        const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
-        const vec3 dfg = F * AB.x + AB.y;
-        const vec3 E = mix(dfg.xxx, dfg.yyy, F0);
+        const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+        const vec3 E = CalculateE(F0, dfg);
         
-        const vec3 energy_compensation = 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
+        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
 #if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
@@ -227,7 +220,6 @@ void main()
             }
         }
 #endif
-        const vec3 kD = (1.0 - F) * (1.0 - metalness);
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));

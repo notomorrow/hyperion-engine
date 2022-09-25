@@ -15,7 +15,10 @@ layout(location=0) out vec4 output_color;
 #include "include/material.inc"
 #include "include/PostFXSample.inc"
 #include "include/scene.inc"
-#include "include/brdf.inc"
+
+#define HYP_DEFERRED_NO_REFRACTION
+#include "./deferred/DeferredLighting.glsl"
+#undef HYP_DEFERRED_NO_REFRACTION
 
 vec2 texcoord = v_texcoord0;
 
@@ -78,37 +81,40 @@ void main()
 
         vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
-        vec3 F90 = vec3(clamp(dot(F0.rgb, vec3(50.0 * 0.33)), 0.0, 1.0));
-        const float D = Trowbridge(NdotH, roughness);//DistributionGGX(N, H, roughness);
-        const float G = CookTorranceG(NdotL, NdotV, HdotV, NdotH);//V_SmithGGXCorrelated(roughness, NdotV, NdotL);
-        const vec4 F = vec4(SchlickFresnel(F0.rgb, F90, LdotH), 1.0);
-        // const vec4 F = vec4(SchlickFresnelRoughness(F0.rgb, roughness, LdotH), 1.0);
+        vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
+        const float D = CalculateDistributionTerm(roughness, NdotH);
+        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+        // const vec4 F = SchlickFresnel(F0, F90, LdotH);
+        const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
         const float perceptual_roughness = sqrt(roughness);
-        const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
-        const vec4 dfg = F * AB.x + AB.y;
-        const vec4 E = vec4(mix(dfg.xxx, dfg.yyy, F0.rgb), 1.0);
-        const vec4 energy_compensation = vec4(1.0 + F0.rgb * (1.0 / dfg.y - 1.0), 1.0);
+        const vec4 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+        const vec4 E = CalculateE(F0, dfg);
+        const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);
 
-        const vec4 diffuse_color = vec4(albedo.rgb * (1.0 - metalness), albedo.a);
+        const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
         const vec4 specular_lobe = D * G * F;
 
         float dist = max(length(light.position.xyz - position.xyz), light.radius);
+        // float d = max(dist - light.radius, 0.0);
+        // float denom = d / light.radius + 1.0;
+    
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-            (light.intensity / max(dist * dist, 0.0001)) : 1.0;
-        
-        const vec4 kD = vec4((1.0 - F.rgb) * (1.0 - metalness), 1.0);
+            (1.0 / max(dist * dist, 0.0001)) : 1.0;
+        attenuation = Saturate(attenuation);
+        // float attenuation = 1.0;//mix(1.0, 1.0 - min(length(light.position.xyz - position.xyz) / max(light.radius, 0.0001), 1.0), float(light.type == HYP_LIGHT_TYPE_POINT));
 
         vec4 specular = specular_lobe;
 
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
         vec4 diffuse = diffuse_lobe;
 
-        vec4 direct_component = diffuse + specular * energy_compensation;
+        vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
         
-        direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
+        // direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
+        direct_component.a *= attenuation;
         direct_component.rgb *= (exposure * light.intensity);
-        result += direct_component * (light_color * ao * NdotL * shadow * attenuation);
+        result += direct_component * (light_color * ao * NdotL * shadow);
     } else {
         result = albedo;
     }

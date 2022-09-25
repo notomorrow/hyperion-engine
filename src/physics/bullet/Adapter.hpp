@@ -19,7 +19,7 @@ public:
     void Tick(PhysicsWorldBase *world, GameCounter::TickUnitHighPrec delta);
 
     void OnRigidBodyAdded(Handle<RigidBody> &rigid_body);
-    void OnRigidBodyRemoved(Handle<RigidBody> &rigid_body);
+    void OnRigidBodyRemoved(const Handle<RigidBody> &rigid_body);
 
 private:
     btDbvtBroadphase *m_broadphase;

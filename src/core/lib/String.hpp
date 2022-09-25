@@ -102,6 +102,8 @@ public:
     bool StartsWith(const DynString &other) const;
     bool EndsWith(const DynString &other) const;
 
+    DynArray<DynString> Split(T separator) const;
+
     template <class Integral>
     static typename std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>, DynString>
     ToString(Integral &&value)
@@ -491,6 +493,37 @@ bool DynString<T, IsUtf8>::EndsWith(const DynString &other) const
     }
     
     return std::equal(Begin() + Size() - other.Size(), End(), other.Begin());
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::Split(T separator) const -> DynArray<DynString>
+{
+    const auto *data = Base::Data();
+    const auto size = Size();
+
+    DynArray<DynString> tokens;
+
+    DynString working_string;
+    working_string.Reserve(size);
+
+    for (SizeType i = 0; i < size; i++) {
+        const auto ch = data[i];
+
+        if (ch == separator) {
+            tokens.PushBack(std::move(working_string));
+            // working_string now cleared
+            continue;
+        }
+
+        working_string.Append(ch);
+    }
+
+    // finalize by pushing back remaining string
+    if (working_string.Any()) {
+        tokens.PushBack(std::move(working_string));
+    }
+
+    return tokens;
 }
 
 template <class T, bool IsUtf8>
