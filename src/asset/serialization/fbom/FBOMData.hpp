@@ -2,6 +2,7 @@
 #define HYPERION_V2_FBOM_DATA_HPP
 
 #include <core/lib/String.hpp>
+#include <core/lib/ByteBuffer.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <math/MathUtil.hpp>
@@ -18,13 +19,13 @@
 
 namespace hyperion::v2::fbom {
 
-using FBOMRawData_t = unsigned char *;
-
-struct FBOMData {
+struct FBOMData
+{
     static const FBOMData UNSET;
 
     FBOMData();
     FBOMData(const FBOMType &type);
+    FBOMData(const FBOMType &type, ByteBuffer &&byte_buffer);
     FBOMData(const FBOMData &other);
     FBOMData &operator=(const FBOMData &other);
     FBOMData(FBOMData &&other) noexcept;
@@ -32,14 +33,13 @@ struct FBOMData {
     ~FBOMData();
 
     operator bool() const
-    {
-        return data_size != 0 && raw_data != nullptr;
-    }
+        { return bytes.Any(); }
 
     const FBOMType &GetType() const { return type; }
-    SizeType TotalSize() const { return data_size; }
+    SizeType TotalSize() const { return bytes.Size(); }
 
-    void ReadBytes(SizeType n, void *out) const;
+    /*! @returns The number of bytes read */
+    SizeType ReadBytes(SizeType n, void *out) const;
     void SetBytes(SizeType n, const void *data);
 
 #define FBOM_TYPE_FUNCTIONS(type_name, c_type) \
@@ -68,7 +68,6 @@ struct FBOMData {
     FBOM_TYPE_FUNCTIONS(Float, Float32)
     FBOM_TYPE_FUNCTIONS(Bool, bool)
     FBOM_TYPE_FUNCTIONS(Byte, UByte)
-    //FBOM_TYPE_FUNCTIONS(String, const char*)
 
 #undef FBOM_TYPE_FUNCTIONS
 
@@ -180,11 +179,11 @@ struct FBOMData {
         std::stringstream stream;
         stream << "FBOM[";
         stream << "type: " << type.name << ", ";
-        stream << "size: " << std::to_string(data_size) << ", ";
+        stream << "size: " << std::to_string(bytes.Size()) << ", ";
         stream << "data: { ";
 
-        for (SizeType i = 0; i < data_size; i++) {
-            stream << std::hex << int(raw_data[i]) << " ";
+        for (SizeType i = 0; i < bytes.Size(); i++) {
+            stream << std::hex << int(bytes[i]) << " ";
         }
 
         stream << " } ";
@@ -198,28 +197,23 @@ struct FBOMData {
         return stream.str();
     }
 
+    UniqueID GetUniqueID() const
+        { return UniqueID(GetHashCode()); }
+
     HashCode GetHashCode() const
     {
         HashCode hc;
 
-        hc.Add(data_size);
-        hc.Add(type.GetHashCode());
-
-        for (SizeType i = 0; i < data_size; i++) {
-            hc.Add(raw_data[i]);
-        }
-
-        //if (next != nullptr) {
-        //    hc.Add(next->GetHashCode());
-        //}
+        hc.Add(bytes.Size());
+        hc.Add(type);
+        hc.Add(bytes);
 
         return hc;
     }
 
 private:
-    SizeType data_size;
-    FBOMRawData_t raw_data;
-    //FBOMData *next;
+    UniqueID m_unique_id;
+    ByteBuffer bytes;
     FBOMType type;
 };
 

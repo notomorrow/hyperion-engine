@@ -2,6 +2,7 @@
 #define HYPERION_V2_FBOM_TYPE_HPP
 
 #include <core/lib/String.hpp>
+#include <core/lib/UniqueID.hpp>
 #include <HashCode.hpp>
 #include <Types.hpp>
 
@@ -56,6 +57,31 @@ struct FBOMType
         if (other.extends != nullptr) {
             extends = new FBOMType(*other.extends);
         }
+
+        return *this;
+    }
+
+    FBOMType(FBOMType &&other) noexcept
+        : name(std::move(other.name)),
+          size(other.size),
+          extends(other.extends)
+    {
+        other.size = 0;
+        other.extends = nullptr;
+    }
+
+    FBOMType &operator=(FBOMType &&other) noexcept
+    {
+        if (extends != nullptr) {
+            delete extends;
+        }
+
+        name = std::move(other.name);
+        size = other.size;
+        extends = other.extends;
+
+        other.size = 0;
+        other.extends = nullptr;
 
         return *this;
     }
@@ -129,6 +155,9 @@ struct FBOMType
 
         return str;
     }
+
+    UniqueID GetUniqueID() const
+        { return UniqueID(GetHashCode()); }
 
     HashCode GetHashCode() const
     {

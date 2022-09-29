@@ -73,6 +73,7 @@ public:
     {
     }
 
+protected:
     RefCountedPtrBase(const RefCountedPtrBase &other)
         : m_ref(other.m_ref)
     {
@@ -109,6 +110,8 @@ public:
 
         return *this;
     }
+
+public:
 
     ~RefCountedPtrBase()
     {
@@ -149,6 +152,9 @@ public:
         if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
             return CastUnsafe<T>();
         }
+
+        std::cout << "Try cast " << typeid(T).name() << " (id: " << TypeID::ForType<T>().value << ") " << "  but current id is  " << GetTypeID().value << std::endl;
+        
 
         return RefCountedPtr<T, CountType>();
     }

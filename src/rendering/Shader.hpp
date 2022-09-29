@@ -32,6 +32,16 @@ struct SubShader
 {
     ShaderModule::Type type;
     ShaderObject spirv;
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(type);
+        hc.Add(spirv);
+
+        return hc;
+    }
 };
 
 class Shader

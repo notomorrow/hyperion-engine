@@ -161,7 +161,7 @@ void BuildVertices(OgreXMLModel &model)
     model.vertices = std::move(vertices);
 }
 
-LoadAssetResultPair OgreXMLModelLoader::LoadAsset(LoaderState &state) const
+LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
     auto *engine = state.asset_manager->GetEngine();
@@ -247,7 +247,7 @@ LoadAssetResultPair OgreXMLModelLoader::LoadAsset(LoaderState &state) const
         top->AddChild(NodeProxy(node.release()));
     }
 
-    return LoadAssetResultPair { { LoaderResult::Status::OK }, std::move(top) };
+    return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }
 
 } // namespace hyperion::v2

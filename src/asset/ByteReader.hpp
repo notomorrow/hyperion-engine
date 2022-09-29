@@ -8,7 +8,8 @@
 #include <core/Core.hpp>
 
 namespace hyperion {
-class ByteReader {
+class ByteReader
+{
 public:
     using Bytes = std::vector<UByte>;
 
@@ -63,7 +64,8 @@ protected:
     virtual void ReadBytes(char *ptr, size_t size) = 0;
 };
 
-class MemoryByteReader : public ByteReader {
+class MemoryByteReader : public ByteReader
+{
 public:
     MemoryByteReader(size_t size, const char *data)
         : m_data(data),
@@ -113,7 +115,8 @@ private:
     }
 };
 
-class FileByteReader : public ByteReader {
+class FileByteReader : public ByteReader
+{
 public:
     FileByteReader(const std::string &filepath, std::streampos begin = 0)
         : filepath(filepath)

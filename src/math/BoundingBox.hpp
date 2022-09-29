@@ -13,7 +13,8 @@
 
 namespace hyperion {
 
-class BoundingBox {
+class BoundingBox
+{
     friend std::ostream &operator<<(std::ostream &out, const BoundingBox &bb);
 public:
     static const BoundingBox empty;

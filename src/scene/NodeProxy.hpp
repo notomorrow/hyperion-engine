@@ -244,6 +244,8 @@ public:
      */
     const BoundingBox &GetWorldAABB() const;
 
+    HashCode GetHashCode() const;
+
 private:
     // void ReleaseNode();
 

@@ -18,7 +18,7 @@ public:
 
     virtual FBOMType GetObjectType() const override
     {
-        return FBOMObjectType("Entity");
+        return FBOMObjectType(Entity::GetClass().GetName());
     }
 
     virtual FBOMResult Serialize(const Entity &in_object, FBOMObject &out) const override
@@ -54,9 +54,9 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, Entity *&out_object) const override
+    virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, UniquePtr<Entity> &out_object) const override
     {
-        out_object = new Entity();
+        out_object.Reset(new Entity());
 
         { // transform
             Transform transform = Transform::identity;
@@ -94,29 +94,18 @@ public:
             out_object->SetWorldAABB(world_aabb);
         }
 
-        RenderableAttributeSet renderable_attributes;
-
-        // in.GetProperty("renderable_attributes.bucket").ReadUnsignedInt(&renderable_attributes.bucket);
-        // in.GetProperty("renderable_attributes.vertex_attributes").ReadStruct(&renderable_attributes.vertex_attributes);
-        // in.GetProperty("renderable_attributes.topology").ReadUnsignedInt(&renderable_attributes.topology);
-        // in.GetProperty("renderable_attributes.fill_mode").ReadUnsignedInt(&renderable_attributes.fill_mode);
-        // in.GetProperty("renderable_attributes.cull_faces").ReadUnsignedInt(&renderable_attributes.cull_faces);
-        // in.GetProperty("renderable_attributes.alpha_blending").ReadBool(&renderable_attributes.alpha_blending);
-        // in.GetProperty("renderable_attributes.depth_write").ReadBool(&renderable_attributes.depth_write);
-        // in.GetProperty("renderable_attributes.depth_test").ReadBool(&renderable_attributes.depth_test);
-
-        out_object->SetRenderableAttributes(renderable_attributes);
-
         for (auto &node : *in.nodes) {
-            // TODO needs to attach to engine to get ID
             if (node.GetType().IsOrExtends("Mesh")) {
-                out_object->SetMesh(engine->CreateHandle<Mesh>(node.deserialized.Cast<Mesh>()));
+                out_object->SetMesh(node.deserialized.Get<Mesh>());
             } else if (node.GetType().IsOrExtends("Shader")) {
-                out_object->SetShader(engine->CreateHandle<Shader>(node.deserialized.Cast<Shader>()));
+                out_object->SetShader(node.deserialized.Get<Shader>());
             } else if (node.GetType().IsOrExtends("Material")) {
-                out_object->SetMaterial(engine->CreateHandle<Material>(node.deserialized.Cast<Material>()));
+                out_object->SetMaterial(node.deserialized.Get<Material>());
             }
         }
+
+        // TEMP!
+        out_object->RebuildRenderableAttributes();
 
         return { FBOMResult::FBOM_OK };
     }

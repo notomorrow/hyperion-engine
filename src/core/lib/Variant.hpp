@@ -4,13 +4,19 @@
 #include "CMemory.hpp"
 #include "TypeID.hpp"
 #include <Constants.hpp>
+#include <core/lib/Traits.hpp>
 
 #include <math/MathUtil.hpp>
 
 #include <system/Debug.hpp>
 #include <Types.hpp>
 
+#include <type_traits>
+
 namespace hyperion {
+
+namespace containers {
+namespace detail {
 
 template <class ... Ts>
 struct VariantHelper;
@@ -18,12 +24,19 @@ struct VariantHelper;
 template <class T, class ... Ts>
 struct VariantHelper<T, Ts...>
 {
-    static inline void CopyAssign(TypeID type_id, void *dst, const void *src)
+    static constexpr bool copy_constructible = (std::is_copy_constructible_v<T> && (std::is_copy_constructible_v<Ts> && ...));
+    static constexpr bool copy_assignable = (std::is_copy_assignable_v<T> && (std::is_copy_assignable_v<Ts> && ...));
+    static constexpr bool move_constructible = (std::is_move_constructible_v<T> && (std::is_move_constructible_v<Ts> && ...));
+    static constexpr bool move_assignable = (std::is_move_assignable_v<T> && (std::is_move_assignable_v<Ts> && ...));
+
+    static inline bool CopyAssign(TypeID type_id, void *dst, const void *src)
     {
         if (type_id == TypeID::ForType<NormalizedType<T>>()) {
             *static_cast<NormalizedType<T> *>(dst) = *static_cast<const NormalizedType<T> *>(src);
+
+            return true;
         } else {
-            VariantHelper<Ts...>::CopyAssign(type_id, dst, src);
+            return VariantHelper<Ts...>::CopyAssign(type_id, dst, src);
         }
     }
 
@@ -89,7 +102,7 @@ struct VariantHelper<T, Ts...>
 template <>
 struct VariantHelper<>
 {
-    static inline void CopyAssign(TypeID type_id, void *dst, const void *src) {}
+    static inline bool CopyAssign(TypeID type_id, void *dst, const void *src) { return false; }
     static inline bool CopyConstruct(TypeID type_id, void *dst, const void *src) { return false; }
     static inline void MoveAssign(TypeID type_id, void *dst, void *src) {}
     static inline bool MoveConstruct(TypeID type_id, void *dst, void *src) { return false; }
@@ -101,57 +114,42 @@ struct VariantHelper<>
     static inline HashCode GetHashCode(TypeID type_id, const void *data) { return {}; }
 };
 
-template <class ... Types>
-class Variant
+template <class ...Types>
+class VariantBase
 {
+protected:
     using Helper = VariantHelper<Types...>;
 
     static const inline TypeID invalid_type_id = TypeID::ForType<void>();
 
 public:
-    Variant()
+    VariantBase()
         : m_current_type_id(invalid_type_id)
     {
-        Memory::Garble(m_storage.GetPointer(), sizeof(Storage));
+#if HYP_DEBUG_MODE
+        Memory::Garble(m_storage.GetPointer(), sizeof(m_storage));
+#endif
     }
 
-    Variant(const Variant &other)
-        : m_current_type_id(invalid_type_id)
+    VariantBase(const VariantBase &other) = default;
+    VariantBase &operator=(const VariantBase &other) = default;
+
+    VariantBase(VariantBase &&other) noexcept
+        : VariantBase()
     {
-        Helper::CopyConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
-
-        m_current_type_id = other.m_current_type_id;
-    }
-
-    Variant &operator=(const Variant &other)
-    {
-        if (IsValid()) {
-            if (other.m_current_type_id == m_current_type_id) {
-                Helper::CopyAssign(m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
-            } else {
-                Helper::Destruct(m_current_type_id, m_storage.GetPointer());
-
-                m_current_type_id = invalid_type_id;
-
-                if (other.IsValid()) {
-                    Helper::CopyConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
-
-                    m_current_type_id = other.m_current_type_id;
-                }
+        if (other.IsValid()) {
+            if (Helper::MoveConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer())) {
+                m_current_type_id = other.m_current_type_id;
             }
-        } else {
-            Helper::CopyConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
+        }
+    }
 
-            m_current_type_id = other.m_current_type_id;
+    VariantBase &operator=(VariantBase &&other) noexcept
+    {
+        if (std::addressof(other) == this) {
+            return *this;
         }
 
-        AssertThrow(m_current_type_id == other.m_current_type_id);
-
-        return *this;
-    }
-
-    Variant &operator=(Variant &&other) noexcept
-    {
         if (IsValid()) {
             if (other.m_current_type_id == m_current_type_id) {
                 Helper::MoveAssign(m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
@@ -161,79 +159,65 @@ public:
                 m_current_type_id = invalid_type_id;
 
                 if (other.IsValid()) {
-                    Helper::MoveConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
-
-                    m_current_type_id = other.m_current_type_id;
+                    if (Helper::MoveConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer())) {
+                        m_current_type_id = other.m_current_type_id;
+                    }
                 }
             }
-        } else {
-            Helper::MoveConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer());
-
-            m_current_type_id = other.m_current_type_id;
+        } else if (other.IsValid()) {
+            if (Helper::MoveConstruct(other.m_current_type_id, m_storage.GetPointer(), other.m_storage.GetPointer())) {
+                m_current_type_id = other.m_current_type_id;
+            }
         }
 
         AssertThrow(m_current_type_id == other.m_current_type_id);
 
         other.m_current_type_id = invalid_type_id;
+
+#if HYP_DEBUG_MODE
         Memory::Garble(other.m_storage.GetPointer(), sizeof(other.m_storage));
+#endif
 
         return *this;
     }
 
-    template <class T>
-    explicit Variant(const T &value)
+    template <class T, typename = typename std::enable_if_t<!std::is_base_of_v<VariantBase, T>>>
+    explicit VariantBase(const T &value)
         : m_current_type_id(invalid_type_id)
     {
         const auto type_id = TypeID::ForType<NormalizedType<T>>();
 
-        if (Helper::CopyConstruct(type_id, m_storage.GetPointer(), &value)) {
-            m_current_type_id = type_id;
-        }
+        AssertThrow(Helper::CopyConstruct(type_id, m_storage.GetPointer(), &value));
+        m_current_type_id = type_id;
     }
 
-    template <class T>
-    explicit Variant(T &&value) noexcept
+    template <class T, typename = typename std::enable_if_t<!std::is_base_of_v<VariantBase, T>>>
+    explicit VariantBase(T &&value) noexcept
         : m_current_type_id(invalid_type_id)
     {
         const auto type_id = TypeID::ForType<NormalizedType<T>>();
 
-        if (Helper::MoveConstruct(type_id, m_storage.GetPointer(), &value)) {
-            m_current_type_id = type_id;
-        }
+        AssertThrow(Helper::MoveConstruct(type_id, m_storage.GetPointer(), &value));
+        m_current_type_id = type_id;
     }
 
-    template <class T>
-    Variant &operator=(const T &value)
-    {
-        Set(value);
-
-        return *this;
-    }
-
-    template <class T>
-    Variant &operator=(T &&value) noexcept
-    {
-        Set(std::forward<T>(value));
-
-        return *this;
-    }
-
-    ~Variant()
+    ~VariantBase()
     {
         if (IsValid()) {
             Helper::Destruct(m_current_type_id, m_storage.GetPointer());
         }
     }
 
-    const TypeID &GetTypeID() const { return m_current_type_id; }
+    const TypeID &GetTypeID() const
+        { return m_current_type_id; }
 
-    bool operator==(const Variant &other) const
+    bool operator==(const VariantBase &other) const
     {
         if (m_current_type_id != other.m_current_type_id) {
             return false;
         }
 
-        if (!IsValid() && !IsValid()) {
+        if (!IsValid() && !other.IsValid()) {
             return true;
         }
 
@@ -241,8 +225,11 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE bool Is() const { return m_current_type_id == TypeID::ForType<NormalizedType<T>>(); }
-    HYP_FORCE_INLINE bool IsValid() const { return m_current_type_id != invalid_type_id; }
+    HYP_FORCE_INLINE bool Is() const
+        { return m_current_type_id == TypeID::ForType<NormalizedType<T>>(); }
+
+    HYP_FORCE_INLINE bool IsValid() const
+        { return m_current_type_id != invalid_type_id; }
 
     template <class T, class ReturnType = NormalizedType<T>>
     bool Get(const ReturnType *out_value) const
@@ -327,18 +314,223 @@ public:
         return Helper::GetHashCode(m_current_type_id, m_storage.GetPointer());
     }
 
-private:
+protected:
     static constexpr SizeType max_size = MathUtil::Max(sizeof(Types)...);
     static constexpr SizeType max_align = MathUtil::Max(alignof(Types)...);
 
     TypeID m_current_type_id;
 
-    struct alignas(max_align) Storage {
+    struct alignas(max_align) Storage
+    {
         alignas(max_align) std::byte data_buffer[max_size];
 
         void *GetPointer() { return static_cast<void *>(&data_buffer[0]); }
         const void *GetPointer() const { return static_cast<const void *>(&data_buffer[0]); }
     } m_storage;
+};
+
+template <bool IsCopyable, class ...Types>
+struct Variant : public VariantBase<Types...> { };
+
+template <class ...Types>
+struct Variant<true, Types...> : public VariantBase<Types...>
+{
+private:
+    using Base = VariantBase<Types...>;
+
+public:
+    Variant() = default;
+    Variant(Variant &&other) noexcept
+        : Base(std::move(other))
+    {
+    }
+
+    Variant &operator=(Variant &&other) noexcept
+    {
+        Base::operator=(std::move(other));
+
+        return *this;
+    }
+
+    Variant(const Variant &other)
+        : Base()
+    {
+        if (other.IsValid()) {
+            AssertThrowMsg(Base::Helper::CopyConstruct(other.m_current_type_id, Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
+                "Variant types not compatible");
+
+            Base::m_current_type_id = other.m_current_type_id;
+        }
+    }
+
+    Variant &operator=(const Variant &other)
+    {
+        if (std::addressof(other) == this) {
+            return *this;
+        }
+
+        if (Base::IsValid()) {
+            if (other.m_current_type_id == Base::m_current_type_id) {
+                AssertThrowMsg(Base::Helper::CopyAssign(Base::m_current_type_id, Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
+                    "Variant types not compatible");
+            } else {
+                Base::Helper::Destruct(Base::m_current_type_id, Base::m_storage.GetPointer());
+
+                Base::m_current_type_id = Base::invalid_type_id;
+
+                if (other.IsValid()) {
+                    AssertThrowMsg(Base::Helper::CopyConstruct(other.m_current_type_id, Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
+                        "Variant types not compatible");
+
+                    Base::m_current_type_id = other.m_current_type_id;
+                }
+            }
+        } else if (other.IsValid()) {
+            AssertThrowMsg(Base::Helper::CopyConstruct(other.m_current_type_id, Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
+                "Variant types not compatible");
+
+            Base::m_current_type_id = other.m_current_type_id;
+        }
+
+        AssertThrow(Base::m_current_type_id == other.m_current_type_id);
+
+        return *this;
+    }
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(const T &value)
+        : Base(value)
+    {
+    }
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(T &&value) noexcept
+        : Base(std::forward<T>(value))
+    {
+    }
+
+    ~Variant() = default;
+};
+
+template <class ...Types>
+struct Variant<false, Types...> : public VariantBase<Types...>
+{
+private:
+    using Base = VariantBase<Types...>;
+
+public:
+    Variant() = default;
+    Variant(Variant &&other) noexcept
+        : Base(std::move(other))
+    {
+    }
+
+    Variant &operator=(Variant &&other) noexcept
+    {
+        Base::operator=(std::move(other));
+
+        return *this;
+    }
+
+    Variant(const Variant &other) = delete;
+    Variant &operator=(const Variant &other) = delete;
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(const T &value)
+        : Base(value)
+    {
+    }
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(T &&value) noexcept
+        : Base(std::forward<T>(value))
+    {
+    }
+
+    ~Variant() = default;
+};
+
+} // namespace detail
+} // namespace containers
+
+template <class ...Types>
+struct Variant
+    : private ConstructAssignmentTraits<
+        containers::detail::VariantHelper<Types...>::copy_constructible,
+        containers::detail::VariantHelper<Types...>::move_constructible,
+        Variant<Types...>
+      >
+{
+    // template <class ...Args>
+    // Variant(Args &&... args)
+    //     : m_holder(std::forward<Args>(args)...)
+    // {
+    // }
+
+    Variant() = default;
+    Variant(const Variant &other) = default;
+    Variant &operator=(const Variant &other) = default;
+    Variant(Variant &&other) noexcept = default;
+    Variant &operator=(Variant &&other) noexcept = default;
+    ~Variant() = default;
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(const T &value)
+        : m_holder(value)
+    {
+    }
+
+    template <class T, typename = typename std::enable_if_t<!std::is_same_v<T, Variant>>>
+    explicit Variant(T &&value) noexcept
+        : m_holder(std::forward<T>(value))
+    {
+    }
+
+    const TypeID &GetTypeID() const
+        { return m_holder.GetTypeID(); }
+
+    bool operator==(const Variant &other) const
+        { return m_holder == other.m_holder; }
+
+    template <class T>
+    HYP_FORCE_INLINE bool Is() const
+        { return m_holder.template Is<T>(); }
+
+    HYP_FORCE_INLINE bool IsValid() const
+        { return m_holder.IsValid(); }
+
+    template <class T, class ReturnType = NormalizedType<T>>
+    bool Get(const ReturnType *out_value) const
+        { return m_holder.template Get<T, ReturnType>(out_value); }
+
+    template <class T>
+    T &Get()
+        { return m_holder.template Get<T>(); }
+
+    template <class T>
+    const T &Get() const
+        { return m_holder.template Get<T>(); }
+
+    template <class T>
+    T *TryGet() const
+        { return m_holder.template TryGet<T>(); }
+
+    template <class T>
+    void Set(const T &value)
+        { m_holder.template Set<T>(value); }
+
+    template <class T>
+    void Set(T &&value)
+        { return m_holder.template Set<T>(std::forward<T>(value)); }
+
+    HashCode GetHashCode() const
+        { return m_holder.GetHashCode(); }
+
+private:
+    containers::detail::Variant<
+        containers::detail::VariantHelper<Types...>::copy_constructible,
+        Types...
+    > m_holder;
 };
 
 } // namespace hyperion

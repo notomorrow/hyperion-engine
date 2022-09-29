@@ -6,6 +6,7 @@
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/Optional.hpp>
+#include <core/lib/UniqueID.hpp>
 
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
@@ -25,19 +26,28 @@ namespace hyperion::v2::fbom {
 
 class FBOMNodeHolder;
 
-struct FBOMExternalObjectInfo {
+struct FBOMExternalObjectInfo
+{
     String key;
 
     explicit operator bool() const { return key.Any(); }
+
+    UniqueID GetUniqueID() const
+        { return UniqueID(key); }
+
+    HashCode GetHashCode() const
+        { return key.GetHashCode(); }
 };
 
-class FBOMObject {
+class FBOMObject
+{
 public:
     FBOMType m_object_type;
     FBOMNodeHolder *nodes;
     FlatMap<String, FBOMData> properties;
     FBOMDeserializedObject deserialized;
     Optional<FBOMExternalObjectInfo> m_external_info;
+    UniqueID m_unique_id;
 
     FBOMObject();
     FBOMObject(const FBOMType &loader_type);
@@ -69,22 +79,22 @@ public:
         { return m_object_type; }
 
     const FBOMData &GetProperty(const String &key) const;
+
     void SetProperty(const String &key, const FBOMData &data);
+    void SetProperty(const String &key, FBOMData &&data);
     void SetProperty(const String &key, const FBOMType &type, SizeType size, const void *bytes);
     void SetProperty(const String &key, const FBOMType &type, const void *bytes);
 
-    template <class T>
-    typename std::enable_if_t<!std::is_pointer_v<T>>
-    SetProperty(const String &key, const FBOMType &type, const T &value)
+    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>>>
+    void SetProperty(const String &key, const FBOMType &type, const T &value)
     {
-        SetProperty(key, type, &value);
+        SetProperty(key, type, sizeof(std::remove_reference_t<T>), &value);
     }
 
-    template <class T>
-    typename std::enable_if_t<!std::is_pointer_v<T>>
-    SetProperty(const String &key, const FBOMType &type, T &&value)
+    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>>>
+    void SetProperty(const String &key, const FBOMType &type, T &&value)
     {
-        SetProperty(key, type, &value);
+        SetProperty(key, type, sizeof(std::remove_reference_t<T>), &value);
     }
 
     /*! \brief Add a child object to this object node.
@@ -96,14 +106,21 @@ public:
     AddChild(const T &object, bool external = false)
     {
         static_assert(implementation_exists<Marshaler>,
-            "Marshaler class does not exist");
+            "Marshal class does not exist");
 
         static_assert(std::is_base_of_v<FBOMMarshalerBase, Marshaler>,
-            "Marshaler class must be a derived class of FBOMMarshalBase");
+            "Marshal class must be a derived class of FBOMMarshalBase");
 
         Marshaler marshal;
 
         FBOMObject out_object(marshal.GetObjectType());
+        // Set the ID of the object so we can reuse it.
+        // TODO: clean this up a bit.
+        if constexpr (std::is_base_of_v<EngineComponentBaseBase, NormalizedType<T>>) {
+            out_object.m_unique_id = UniqueID(object.GetID());
+        } else {
+            out_object.m_unique_id = UniqueID(object);
+        }
 
         auto result = marshal.Serialize(object, out_object);
 
@@ -111,8 +128,11 @@ public:
             String external_object_key;
 
             if (external) {
-                external_object_key = String::ToString(out_object.GetHashCode().Value()) + ".fbom";
+                external_object_key = String::ToString(UInt64(out_object.GetUniqueID())) + ".fbom";
             }
+
+            // TODO: Check if external object already exists.
+            // if it does, do not build the file again.
 
             AddChild(std::move(out_object), external_object_key);
         }
@@ -120,10 +140,14 @@ public:
         return result;
     }
     
-    void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
+    UniqueID GetUniqueID() const
+        { return UniqueID(GetHashCode());  }
 
     HashCode GetHashCode() const;
     std::string ToString() const;
+
+private:
+    void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
 };
 
 // class FBOMNodeHolder {

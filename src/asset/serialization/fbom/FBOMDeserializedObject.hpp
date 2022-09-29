@@ -5,8 +5,12 @@
 #include <core/lib/String.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/Variant.hpp>
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/UniquePtr.hpp>
+#include <core/Handle.hpp>
 
+#include <asset/AssetBatch.hpp>
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
 #include <asset/serialization/fbom/FBOMData.hpp>
@@ -16,77 +20,76 @@
 
 #include <vector>
 #include <string>
+#include <type_traits>
 #include <map>
 
 namespace hyperion::v2::fbom {
 
-class FBOMDeserializedObject : public AtomicRefCountedPtr<void>
+class FBOMDeserializedObject
 {
-protected:
-    using Base = AtomicRefCountedPtr<void>;
-
 public:
+    AssetValue m_value;
+
+
     FBOMDeserializedObject()
-        : Base()
     {
     }
 
     FBOMDeserializedObject(const FBOMDeserializedObject &other)
-        : Base(other)
+        : m_value(other.m_value)
     {
     }
 
     FBOMDeserializedObject &operator=(const FBOMDeserializedObject &other)
     {
-        Base::operator=(other);
+        m_value = other.m_value;
+        AssertThrow(m_value.GetTypeID() == other.m_value.GetTypeID());
 
         return *this;
     }
 
     FBOMDeserializedObject(FBOMDeserializedObject &&other) noexcept
-        : Base(std::forward<FBOMDeserializedObject>(other))
+        : m_value(std::move(other.m_value))
     {
     }
 
     FBOMDeserializedObject &operator=(FBOMDeserializedObject &&other) noexcept
     {
-        Base::operator=(std::forward<FBOMDeserializedObject>(other));
+        auto type_value = other.m_value.GetTypeID();
+        m_value = std::move(other.m_value);
+        AssertThrow(m_value.GetTypeID() == type_value);
 
         return *this;
     }
 
     ~FBOMDeserializedObject() = default;
 
-    /*! \brief Extracts the value held inside the Any */
+    /*! \brief Extracts the value held inside */
     template <class T>
-    auto Get() -> NormalizedType<T>&
+    auto Get() -> typename AssetLoaderWrapper<T>::CastedType
     {
-        AssertThrow(Base::Get() != nullptr);
-        AssertThrow(Base::GetTypeID() == TypeID::ForType<NormalizedType<T>>());
+        using Wrapper = AssetLoaderWrapper<T>;
 
-        return *Base::Cast<NormalizedType<T>>();
+        if constexpr (std::is_same_v<typename Wrapper::CastedType, typename Wrapper::ResultType>) {
+            return m_value.Get<typename Wrapper::ResultType>();
+        } else {
+            return m_value.Get<typename Wrapper::ResultType>().template Cast<T>();
+        }
+
+        return typename Wrapper::CastedType();
     }
 
     /*! \brief Extracts the value held inside the Any */
     template <class T>
-    auto Get() const -> const NormalizedType<T>&
+    auto Get() const -> const typename AssetLoaderWrapper<T>::CastedType
     {
         return const_cast<FBOMDeserializedObject *>(this)->template Get<T>();
     }
 
     template <class T>
-    void Set(T &&value)
+    void Set(typename AssetLoaderWrapper<T>::ResultType &&value)
     {
-        Base::template Set<NormalizedType<T>>(std::move(value));
-    }
-
-    /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
-        if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
-        automatically by the Any. */
-    template <class T>
-    void Reset(T *ptr)
-    {
-        Base::template Reset<NormalizedType<T>>(ptr); // take ownership
+        m_value.Set(std::move(value));
     }
 
     /*! \brief Drops ownership of the object held.

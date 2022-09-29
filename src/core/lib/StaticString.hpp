@@ -37,12 +37,16 @@ struct StaticString
 };
 
 template <auto StaticString>
-struct IntegerSequenceFromString {
+struct IntegerSequenceFromString
+{
 private:
     constexpr static auto value = make_seq([] { return std::string_view { StaticString.data }; });
 
 public:
     using Type = decltype(value);
+
+    static constexpr const char *Data()
+        { return &StaticString.data[0]; }
 };
 
 template <auto StaticString>
