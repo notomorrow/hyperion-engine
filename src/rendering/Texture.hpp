@@ -7,6 +7,8 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 
+#include <Types.hpp>
+
 #include <memory>
 #include <map>
 
@@ -32,7 +34,7 @@ public:
         Image::Type type,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes
+        const UByte *bytes
     );
 
     Texture(
@@ -83,7 +85,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes
+        const UByte *bytes
     ) : Texture(
         Extent3D(extent),
         format,
@@ -104,7 +106,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes
+        const UByte *bytes
     ) : Texture(
         extent,
         format,
@@ -125,7 +127,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes
+        const UByte *bytes
     ) : Texture(
             Extent3D(extent),
             format,

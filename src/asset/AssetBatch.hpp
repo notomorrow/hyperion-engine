@@ -16,7 +16,7 @@ class AssetManager;
 struct EnqueuedAsset
 {
     String path;
-    Variant<NodeProxy, HandleBase> value;
+    AssetValue value;
 
     /*! \brief Retrieve the value of the loaded asset. If the requested type does not match
         the type of the value, if any, held within the variant, no error should occur and an 
@@ -61,7 +61,7 @@ private:
         {
             auto &asset = batch.enqueued_assets[key];
 
-            asset.value = static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(asset.path));
+            asset.value.Set(static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(asset.path)));
         }
     };
 

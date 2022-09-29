@@ -139,13 +139,13 @@ Node::~Node()
 void Node::SetScene(Scene *scene)
 {
     if (m_scene != nullptr && m_entity != nullptr) {
-        m_scene->RemoveEntity(m_entity);
+        m_scene->RemoveEntityInternal(m_entity);
     }
 
     m_scene = scene;
 
     if (m_scene != nullptr && m_entity != nullptr) {
-        m_scene->AddEntity(Handle<Entity>(m_entity));
+        m_scene->AddEntityInternal(Handle<Entity>(m_entity));
     }
 
     for (auto &child : m_child_nodes) {
@@ -397,7 +397,7 @@ void Node::SetEntity(Handle<Entity> &&entity)
 
     if (m_entity != nullptr) {
         if (m_scene != nullptr) {
-            m_scene->RemoveEntity(m_entity);
+            m_scene->RemoveEntityInternal(m_entity);
         }
 
         m_entity->SetParent(nullptr);
@@ -407,7 +407,7 @@ void Node::SetEntity(Handle<Entity> &&entity)
         m_entity = std::move(entity);
 
         if (m_scene != nullptr) {
-            m_scene->AddEntity(Handle<Entity>(m_entity));
+            m_scene->AddEntityInternal(Handle<Entity>(m_entity));
         }
 
         m_entity->SetParent(this);

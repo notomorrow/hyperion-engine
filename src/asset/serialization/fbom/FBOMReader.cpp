@@ -3,8 +3,9 @@
 
 namespace hyperion::v2::fbom {
 
-FBOMLoader::FBOMLoader(Engine *engine)
+FBOMReader::FBOMReader(Engine *engine, const FBOMConfig &config)
     : m_engine(engine),
+      m_config(config),
       m_in_static_data(false)
 {
     m_registered_types = {
@@ -21,9 +22,9 @@ FBOMLoader::FBOMLoader(Engine *engine)
     };
 }
 
-FBOMLoader::~FBOMLoader() = default;
+FBOMReader::~FBOMReader() = default;
 
-FBOMCommand FBOMLoader::NextCommand(ByteReader *reader)
+FBOMCommand FBOMReader::NextCommand(ByteReader *reader)
 {
     AssertThrow(!reader->Eof());
 
@@ -33,7 +34,7 @@ FBOMCommand FBOMLoader::NextCommand(ByteReader *reader)
     return FBOMCommand(ins);
 }
 
-FBOMCommand FBOMLoader::PeekCommand(ByteReader *reader)
+FBOMCommand FBOMReader::PeekCommand(ByteReader *reader)
 {
     AssertThrow(!reader->Eof());
 
@@ -43,7 +44,7 @@ FBOMCommand FBOMLoader::PeekCommand(ByteReader *reader)
     return FBOMCommand(ins);
 }
 
-FBOMResult FBOMLoader::Eat(ByteReader *reader, FBOMCommand command, bool read)
+FBOMResult FBOMReader::Eat(ByteReader *reader, FBOMCommand command, bool read)
 {
     FBOMCommand received;
 
@@ -60,7 +61,7 @@ FBOMResult FBOMLoader::Eat(ByteReader *reader, FBOMCommand command, bool read)
     return FBOMResult::FBOM_OK;
 }
 
-String FBOMLoader::ReadString(ByteReader *reader)
+String FBOMReader::ReadString(ByteReader *reader)
 {
     // read 4 bytes of string length
     UInt32 len;
@@ -78,7 +79,7 @@ String FBOMLoader::ReadString(ByteReader *reader)
     return str;
 }
 
-FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
+FBOMType FBOMReader::ReadObjectType(ByteReader *reader)
 {
     FBOMType result = FBOMUnset();
 
@@ -128,7 +129,7 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
     return result;
 }
 
-FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
+FBOMResult FBOMReader::ReadData(ByteReader *reader, FBOMData &data)
 {
     // read data location
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
@@ -161,7 +162,7 @@ FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
 }
 
 
-FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMObject *parent)
+FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMObject *root)
 {
     if (auto err = Eat(reader, FBOM_OBJECT_START)) {
         return err;
@@ -201,7 +202,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
             {
                 FBOMObject child;
 
-                if (auto err = ReadObject(reader, child, &object)) {
+                if (auto err = ReadObject(reader, child, root)) {
                     return err;
                 }
 
@@ -230,7 +231,7 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
                     return err;
                 }
 
-                object.SetProperty(property_name, data);
+                object.SetProperty(property_name, std::move(data));
 
                 break;
             }
@@ -266,16 +267,33 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
 
         String base_path;
 
-        if (parent != nullptr && parent->GetType().IsOrExtends("ROOT")) {
-            if (auto err = parent->GetProperty("base_path").ReadString(base_path)) {
+        if (root != nullptr && root->GetType().IsOrExtends("ROOT")) {
+            if (auto err = root->GetProperty("base_path").ReadString(base_path)) {
                 return err;
             }
         }
 
-        const String ref_path(FileSystem::Join(std::string(base_path.Data()), std::string(ref_name.Data())).data());
+        const String ref_path(FileSystem::Join(FileSystem::CurrentPath(), std::string(base_path.Data()), std::string(ref_name.Data())).data());
+        const String relative_path(FileSystem::RelativePath(std::string(ref_path.Data()), FileSystem::CurrentPath()).data());
 
-        if (auto err = FBOMLoader(m_engine).LoadFromFile(ref_path, object)) {
-            return err;
+        { // check in cache
+            const auto it = m_config.external_data_cache.Find(Pair { relative_path, object_index });
+
+            if (it != m_config.external_data_cache.End()) {
+                object = it->second;
+
+                break;
+            }
+        }
+
+        if (auto err = FBOMReader(m_engine, m_config).LoadFromFile(ref_path, object)) {
+            if (!m_config.continue_on_external_load_error) {
+                return err;
+            }
+        } else {
+            // cache it
+
+            m_config.external_data_cache.Set(Pair { relative_path, object_index }, object);
         }
 
         break;
@@ -287,20 +305,20 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObject *parent)
+FBOMResult FBOMReader::Handle(ByteReader *reader, FBOMCommand command, FBOMObject *root)
 {
-    AssertThrow(parent != nullptr);
+    AssertThrow(root != nullptr);
 
     switch (command) {
     case FBOM_OBJECT_START:
     {
         FBOMObject child;
 
-        if (auto err = ReadObject(reader, child, parent)) {
+        if (auto err = ReadObject(reader, child, root)) {
             return err;
         }
 
-        parent->nodes->PushBack(std::move(child));
+        root->nodes->PushBack(child);
 
         break;
     }
@@ -350,7 +368,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
             {
                 FBOMObject object;
 
-                if (auto err = ReadObject(reader, object, parent)) {
+                if (auto err = ReadObject(reader, object, root)) {
                     return err;
                 }
 

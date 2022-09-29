@@ -86,7 +86,7 @@ static bool IsTransparencyModel(IlluminationModel illum_model)
         || illum_model == ILLUM_TRANSPARENT_REFLECTIVE_GLASS;
 }
 
-LoadAssetResultPair MTLMaterialLoader::LoadAsset(LoaderState &state) const
+LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
     auto *engine = state.asset_manager->GetEngine();

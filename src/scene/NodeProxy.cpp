@@ -265,4 +265,15 @@ const BoundingBox &NodeProxy::GetWorldAABB() const
     return BoundingBox::empty;
 }
 
+HashCode NodeProxy::GetHashCode() const
+{
+    HashCode hc;
+
+    if (Get()) {
+        hc.Add(Get()->GetHashCode());
+    }
+
+    return hc;
+}
+
 } // namespace hyperion::v2

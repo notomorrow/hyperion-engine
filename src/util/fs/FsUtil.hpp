@@ -89,6 +89,11 @@ public:
     bool Exists() const;
     bool IsDirectory() const;
 
+    String Basename() const
+    {
+        return String(StringUtil::Basename(Data()).c_str());
+    }
+
     BufferedReader<2048> Open() const;
 
     static inline FilePath Current()

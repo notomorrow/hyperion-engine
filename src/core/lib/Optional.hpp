@@ -3,11 +3,13 @@
 
 #include <system/Debug.hpp>
 #include <Types.hpp>
+#include <HashCode.hpp>
 
 namespace hyperion {
 
 template <class T>
-class Optional {
+class Optional
+{
 public:
     Optional()
         : m_has_value(false)
@@ -173,6 +175,15 @@ public:
     bool HasValue() const { return m_has_value; }
     bool Any() const { return m_has_value; }
     bool Empty() const { return !m_has_value; }
+
+    HashCode GetHashCode() const
+    {
+        if (m_has_value) {
+            return HashCode::GetHashCode(Get());
+        }
+
+        return HashCode();
+    }
 
 private:
     struct Storage {

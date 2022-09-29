@@ -4,11 +4,13 @@
 #include <core/lib/Optional.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/HashMap.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/Any.hpp>
 #include <core/lib/Variant.hpp>
+#include <core/lib/ByteBuffer.hpp>
+#include <core/lib/UniqueID.hpp>
 #include <core/Class.hpp>
-#include <HashCode.hpp>
 #include <math/MathUtil.hpp>
 #include <Constants.hpp>
 #include <asset/ByteWriter.hpp>
@@ -17,6 +19,7 @@
 
 #include <Constants.hpp>
 #include <Types.hpp>
+#include <HashCode.hpp>
 
 #include <vector>
 #include <string>
@@ -49,11 +52,12 @@ namespace fbom {
 class FBOMObjectType;
 
 class FBOMObject;
-class FBOMLoader;
+class FBOMReader;
 class FBOMWriter;
 
 
-enum FBOMCommand : UInt8 {
+enum FBOMCommand : UInt8
+{
     FBOM_NONE = 0,
     FBOM_OBJECT_START,
     FBOM_OBJECT_END,
@@ -62,14 +66,16 @@ enum FBOMCommand : UInt8 {
     FBOM_DEFINE_PROPERTY,
 };
 
-enum FBOMDataLocation {
+enum FBOMDataLocation
+{
     FBOM_DATA_LOCATION_NONE = 0x00,
     FBOM_DATA_LOCATION_STATIC = 0x01,
     FBOM_DATA_LOCATION_INPLACE = 0x02,
     FBOM_DATA_LOCATION_EXT_REF = 0x04
 };
 
-struct FBOMStaticData {
+struct FBOMStaticData
+{
     enum {
         FBOM_STATIC_DATA_NONE = 0x00,
         FBOM_STATIC_DATA_OBJECT = 0x01,
@@ -77,18 +83,17 @@ struct FBOMStaticData {
         FBOM_STATIC_DATA_DATA = 0x04
     } type;
 
-    int64_t offset;
 
-    // Variant<void *, FBOMObject, FBOMType, FBOMData> data;
-    // void *raw_data;
+    Int64 offset;
+
     FBOMObject object_data;
     FBOMType type_data;
     Optional<FBOMData> data_data;
+
     bool written;
 
     FBOMStaticData()
         : type(FBOM_STATIC_DATA_NONE),
-        //   raw_data(nullptr),
           offset(-1),
           written(false)
     {
@@ -97,19 +102,16 @@ struct FBOMStaticData {
     explicit FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_OBJECT),
           object_data(object_data),
-        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     explicit FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
-        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     explicit FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
-        //   raw_data(nullptr),
           offset(offset),
           written(false) {}
     FBOMStaticData(const FBOMStaticData &other)
@@ -117,11 +119,8 @@ struct FBOMStaticData {
           object_data(other.object_data),
           type_data(other.type_data),
           data_data(other.data_data),
-        //   raw_data(other.raw_data),
           offset(other.offset),
           written(other.written) {}
-
-    // FBOMStaticData(const FBOMStaticData &other) = delete;
 
     FBOMStaticData &operator=(const FBOMStaticData &other)
     {
@@ -129,14 +128,11 @@ struct FBOMStaticData {
         object_data = other.object_data;
         type_data = other.type_data;
         data_data = other.data_data;
-        // raw_data = other.raw_data;
         offset = other.offset;
         written = other.written;
 
         return *this;
     }
-
-    // FBOMStaticData &operator=(const FBOMStaticData &other) = delete;
 
     FBOMStaticData(FBOMStaticData &&other) noexcept
         : type(other.type),
@@ -197,6 +193,20 @@ struct FBOMStaticData {
         return offset < other.offset;
     }
 
+    UniqueID GetUniqueID() const
+    {
+        switch (type) {
+        case FBOM_STATIC_DATA_OBJECT:
+            return object_data.GetUniqueID();
+        case FBOM_STATIC_DATA_TYPE:
+            return type_data.GetUniqueID();
+        case FBOM_STATIC_DATA_DATA:
+            return data_data.Get().GetUniqueID();
+        default:
+            return UniqueID();
+        }
+    }
+
     HashCode GetHashCode() const
     {
         switch (type) {
@@ -209,6 +219,8 @@ struct FBOMStaticData {
         default:
             return HashCode();
         }
+
+        // return hash_code;
     }
 
     std::string ToString() const
@@ -266,10 +278,19 @@ public:
     }
 };
 
-class FBOMLoader {
+struct FBOMConfig
+{
+    bool continue_on_external_load_error = true;
+
+    String base_path;
+    FlatMap<Pair<String, UInt32>, FBOMObject> external_data_cache;
+};
+
+class FBOMReader
+{
 public:
-    FBOMLoader(Engine *engine);
-    ~FBOMLoader();
+    FBOMReader(Engine *engine, const FBOMConfig &config);
+    ~FBOMReader();
 
     FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out_object)
     {
@@ -285,14 +306,22 @@ public:
 
     FBOMResult LoadFromFile(const String &path, FBOMObject &out)
     {
-        const auto base_path = StringUtil::BasePath(path.Data());
-
         FBOMObject root(FBOMObjectType("ROOT"));
+
+        // if (m_config.base_path.Empty()) {
+
+            // Include our root dir as part of the path
+        const auto current_dir = FileSystem::CurrentPath();
+        const auto base_path = StringUtil::BasePath(path.Data());
         root.SetProperty("base_path", FBOMString(), base_path.size(), base_path.data());
 
-        // Include our root dir as part of the path
-        std::string root_dir = FileSystem::CurrentPath();
-        FileByteReader reader(FileSystem::Join(root_dir, std::string(path.Data())));
+        DebugLog(
+            LogType::Debug,
+            "base_path = %s\n",
+            base_path.data()
+        );
+
+        FileByteReader reader(FileSystem::Join(base_path, std::string(FilePath(path).Basename().Data())));
 
         if (reader.Eof()) {
             return { FBOMResult::FBOM_ERR, "File not open" };
@@ -346,11 +375,12 @@ private:
     String ReadString(ByteReader *);
     FBOMType ReadObjectType(ByteReader *);
     FBOMResult ReadData(ByteReader *, FBOMData &data);
-    FBOMResult ReadObject(ByteReader *, FBOMObject &object, FBOMObject *parent);
+    FBOMResult ReadObject(ByteReader *, FBOMObject &object, FBOMObject *root);
 
-    FBOMResult Handle(ByteReader *, FBOMCommand, FBOMObject *parent);
+    FBOMResult Handle(ByteReader *, FBOMCommand, FBOMObject *root);
 
     Engine *m_engine;
+    FBOMConfig m_config;
 
     std::vector<FBOMType> m_registered_types;
 
@@ -358,11 +388,13 @@ private:
     std::vector<FBOMStaticData> m_static_data_pool;
 };
 
-struct FBOMExternalData {
-    FlatMap<HashCode::ValueType, FBOMObject> objects;
+struct FBOMExternalData
+{
+    FlatMap<UniqueID, FBOMObject> objects;
 };
 
-class FBOMWriter {
+class FBOMWriter
+{
 public:
     FBOMWriter();
     ~FBOMWriter();
@@ -378,6 +410,14 @@ public:
         Marshaler marshal;
 
         FBOMObject base(marshal.GetObjectType());
+
+        // Set the ID of the object so we can reuse it.
+        // TODO: clean this up a bit.
+        if constexpr (std::is_base_of_v<EngineComponentBaseBase, T>) {
+            base.m_unique_id = UniqueID(object.GetID());
+        } else {
+            base.m_unique_id = UniqueID(object);
+        }
 
         if (auto err = marshal.Serialize(object, base)) {
             m_write_stream.m_last_result = err;
@@ -407,16 +447,17 @@ private:
     void AddStaticData(const FBOMObject &);
     void AddStaticData(const FBOMData &);
 
-    struct WriteStream {
+    struct WriteStream
+    {
         FlatMap<String, FBOMExternalData> m_external_objects; // map filepath -> external object
-        std::map<HashCode::ValueType, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
-        std::unordered_map<HashCode::ValueType, int> m_hash_use_count_map;
+        std::unordered_map<UniqueID, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
+        FlatMap<UniqueID, int> m_hash_use_count_map;
         std::vector<FBOMObject> m_object_data; // TODO: make multiple objects be supported by the loader.
-        size_t m_static_data_offset = 0;
+        SizeType m_static_data_offset = 0;
         FBOMResult m_last_result = FBOMResult::FBOM_OK;
 
-        FBOMDataLocation GetDataLocation(HashCode::ValueType, FBOMStaticData &out) const;
-        void MarkStaticDataWritten(HashCode::ValueType);
+        FBOMDataLocation GetDataLocation(const UniqueID &unique_id, FBOMStaticData &out) const;
+        void MarkStaticDataWritten(const UniqueID &unique_id);
     } m_write_stream;
 };
 

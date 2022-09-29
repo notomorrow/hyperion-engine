@@ -12,7 +12,8 @@
 
 namespace hyperion {
 
-class StringUtil {
+class StringUtil
+{
 public:
     static inline std::string ToLower(const std::string &str)
     {
@@ -173,6 +174,15 @@ public:
             start_pos += to.length();
         }
         return result;
+    }
+
+    static inline std::string Basename(const std::string &filepath)
+    {
+        if (!Contains(filepath, "/") && !Contains(filepath, "\\")) {
+            return filepath;
+        }
+
+        return filepath.substr(filepath.find_last_of("\\/"));
     }
 
     static inline std::string BasePath(const std::string &filepath)

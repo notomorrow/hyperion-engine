@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_LIB_STRING_H
 #define HYPERION_V2_LIB_STRING_H
 
+#include <math/MathUtil.hpp>
 #include <util/UTF8.hpp>
 
 #include "DynArray.hpp"
@@ -103,6 +104,8 @@ public:
     bool EndsWith(const DynString &other) const;
 
     DynArray<DynString> Split(T separator) const;
+
+    DynString Substr(SizeType first, SizeType last = MathUtil::MaxSafeValue<SizeType>()) const;
 
     template <class Integral>
     static typename std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>, DynString>
@@ -211,7 +214,6 @@ DynString<T, IsUtf8>::DynString(const DynString &other)
     : Base(other),
       m_length(other.m_length)
 {
-    DebugLog(LogType::Warn, "String( const String &other )   %s\n", other.Data());
 }
 
 template <class T, bool IsUtf8>
@@ -220,7 +222,6 @@ DynString<T, IsUtf8>::DynString(DynString &&other) noexcept
       m_length(other.m_length)
 {
     other.Clear();
-    DebugLog(LogType::Warn, "String( &&other )  %s    %s\n", Data(), other.Data());
 }
 
 template <class T, bool IsUtf8>
@@ -239,7 +240,6 @@ auto DynString<T, IsUtf8>::operator=(const T *str) -> DynString&
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator=(const DynString &other) -> DynString&
 {
-    DebugLog(LogType::Warn, "String= const String &other   %s   %s\n", Data(), other.Data());
     Base::operator=(other);
     m_length = other.m_length;
 
@@ -249,7 +249,6 @@ auto DynString<T, IsUtf8>::operator=(const DynString &other) -> DynString&
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator=(DynString &&other) noexcept -> DynString&
 {
-    DebugLog(LogType::Warn, "String= &&other   %s   %s\n", Data(), other.Data());
     const auto len = other.m_length;
     Base::operator=(std::move(other));
     m_length = len;
@@ -524,6 +523,87 @@ auto DynString<T, IsUtf8>::Split(T separator) const -> DynArray<DynString>
     }
 
     return tokens;
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::Substr(SizeType first, SizeType last) const -> DynString
+{
+    last = MathUtil::Max(last, first);
+
+    const auto size = Size();
+
+    if constexpr (IsUtf8) {
+        DynString result;
+
+        for (SizeType i = 0; i < size;) {
+            auto c = Base::operator[](i);
+
+            if (i >= last) {
+                break;
+            }
+
+            if (i >= first) {
+                if (c >= 0 && c <= 127) {
+                    result.Append(Base::operator[](i++));
+                } else if ((c & 0xE0) == 0xC0) {
+                    if (i + 1 > size) {
+                        break;
+                    }
+
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                } else if ((c & 0xF0) == 0xE0) {
+                    if (i + 2 > size) {
+                        break;
+                    }
+
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                } else if ((c & 0xF8) == 0xF0) {
+                    if (i + 3 > size) {
+                        break;
+                    }
+
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                    result.Append(Base::operator[](i++));
+                }
+            } else {
+                if (c >= 0 && c <= 127) {
+                    i++;
+                } else if ((c & 0xE0) == 0xC0) {
+                    i += 2;
+                } else if ((c & 0xF0) == 0xE0) {
+                    i += 3;
+                } else if ((c & 0xF8) == 0xF0) {
+                    i += 4;
+                }
+            }
+        }
+
+        return result;
+    } else {
+        if (first >= size) {
+            return DynString::empty;
+        }
+
+        DynString result;
+        result.Reserve(MathUtil::Min(size, last) - first);
+
+        for (SizeType i = first; i < size; i++) {
+            auto c = Base::operator[](i);
+
+            if (i >= last) {
+                break;
+            }
+
+            result.Append(c);
+        }
+
+        return result;
+    }
 }
 
 template <class T, bool IsUtf8>

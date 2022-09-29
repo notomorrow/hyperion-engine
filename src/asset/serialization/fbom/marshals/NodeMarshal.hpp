@@ -47,7 +47,9 @@ public:
         }
 
         if (const auto &entity = in_object.GetEntity()) {
-            out.AddChild(*entity, false);
+            if (auto err = out.AddChild(*entity, false)) {
+                return err;
+            }
         }
 
         for (const auto &child : in_object.GetChildren()) {
@@ -55,13 +57,15 @@ public:
                 continue;
             }
 
-            out.AddChild(*child.Get());
+            if (auto err = out.AddChild(*child.Get())) {
+                return err;
+            }
         }
 
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, Node *&out_object) const override
+    virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, UniquePtr<Node> &out_object) const override
     {
         Node::Type node_type = Node::Type::NODE;
 
@@ -71,10 +75,10 @@ public:
 
         switch (node_type) {
         case Node::Type::NODE:
-            out_object = new Node();
+            out_object.Reset(new Node());
             break;
         case Node::Type::BONE:
-            out_object = new Bone();
+            out_object.Reset(new Bone());
             break;
         default:
             return { FBOMResult::FBOM_ERR, "Unsupported node type" }; 
@@ -137,9 +141,9 @@ public:
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Node")) {
-                out_object->AddChild(NodeProxy(node.deserialized.Cast<Node>()));
+                out_object->AddChild(node.deserialized.Get<Node>());
             } else if (node.GetType().IsOrExtends("Entity")) {
-                out_object->SetEntity(engine->CreateHandle<Entity>(node.deserialized.Cast<Entity>()));
+                out_object->SetEntity(node.deserialized.Get<Entity>());
             }
         }
 

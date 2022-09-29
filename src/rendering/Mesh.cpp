@@ -303,13 +303,13 @@ std::vector<PackedVertex> Mesh::BuildPackedVertices() const
     for (size_t i = 0; i < m_vertices.size(); i++) {
         const auto &vertex = m_vertices[i];
 
-        packed_vertices[i] = PackedVertex{
-            .position_x  = vertex.GetPosition().x,
-            .position_y  = vertex.GetPosition().y,
-            .position_z  = vertex.GetPosition().z,
-            .normal_x    = vertex.GetNormal().x,
-            .normal_y    = vertex.GetNormal().y,
-            .normal_z    = vertex.GetNormal().z,
+        packed_vertices[i] = PackedVertex {
+            .position_x = vertex.GetPosition().x,
+            .position_y = vertex.GetPosition().y,
+            .position_z = vertex.GetPosition().z,
+            .normal_x = vertex.GetNormal().x,
+            .normal_y = vertex.GetNormal().y,
+            .normal_z = vertex.GetNormal().z,
             .texcoord0_x = vertex.GetTexCoord0().x,
             .texcoord0_y = vertex.GetTexCoord0().y
         };

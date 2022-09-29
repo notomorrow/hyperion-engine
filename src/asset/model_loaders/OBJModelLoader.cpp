@@ -261,7 +261,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
     return model;
 }
 
-LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
+LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 {
     AssertThrow(state.asset_manager != nullptr);
     auto *engine = state.asset_manager->GetEngine();
@@ -402,7 +402,7 @@ LoadAssetResultPair OBJModelLoader::BuildModel(LoaderState &state, OBJModel &mod
         top->AddChild(NodeProxy(node.release()));
     }
 
-    return LoadAssetResultPair { { LoaderResult::Status::OK }, std::move(top) };
+    return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }
 
 } // namespace hyperion::v2

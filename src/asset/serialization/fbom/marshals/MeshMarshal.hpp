@@ -15,7 +15,7 @@ public:
 
     virtual FBOMType GetObjectType() const override
     {
-        return FBOMObjectType("Mesh");
+        return FBOMObjectType(Mesh::GetClass().GetName());
     }
 
     virtual FBOMResult Serialize(const Mesh &in_object, FBOMObject &out) const override
@@ -52,7 +52,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, Mesh *&out_object) const override
+    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, UniquePtr<Mesh> &out_object) const override
     {
         Topology topology = Topology::TRIANGLES;
 
@@ -66,9 +66,9 @@ public:
             return err;
         }
 
-        VertexAttributeSet attributes;
+        VertexAttributeSet vertex_attributes;
 
-        if (auto err = in.GetProperty("attributes").ReadStruct(&attributes)) {
+        if (auto err = in.GetProperty("attributes").ReadStruct(&vertex_attributes)) {
             return err;
         }
 
@@ -100,13 +100,13 @@ public:
             }
         }
 
-        out_object = new Mesh(
+        out_object.Reset(new Mesh(
             vertices,
             indices,
             topology,
-            attributes,
+            vertex_attributes,
             flags
-        );
+        ));
 
         return { FBOMResult::FBOM_OK };
     }

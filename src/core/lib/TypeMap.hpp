@@ -15,7 +15,8 @@
 namespace hyperion {
 
 template <class Value>
-class TypeMap : public ContainerBase<TypeMap<Value>, TypeID> {
+class TypeMap : public ContainerBase<TypeMap<Value>, TypeID>
+{
 protected:
     using Map = FlatMap<TypeID, Value>;
 

@@ -78,6 +78,15 @@ struct HandleID : IDBase
 
     HYP_FORCE_INLINE bool operator<(const HandleID &other) const
         { return IDBase::operator<(other) || (!IDBase::operator<(other) && type_id < other.type_id); }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(type_id.GetHashCode());
+        hc.Add(IDBase::GetHashCode());
+
+        return hc;
+    }
 };
 
 template <class T>

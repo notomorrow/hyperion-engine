@@ -43,7 +43,7 @@ public:
 
     virtual ~OBJModelLoader() = default;
 
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override
+    virtual LoadedAsset LoadAsset(LoaderState &state) const override
     {
         OBJModel model = LoadModel(state);
 
@@ -51,7 +51,7 @@ public:
     }
     
     static OBJModel LoadModel(LoaderState &state);
-    static LoadAssetResultPair BuildModel(LoaderState &state, OBJModel &model);
+    static LoadedAsset BuildModel(LoaderState &state, OBJModel &model);
 };
 
 using OBJIndex = OBJModelLoader::OBJModel::OBJIndex;

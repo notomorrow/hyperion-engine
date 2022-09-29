@@ -16,7 +16,7 @@ public:
 
     virtual FBOMType GetObjectType() const override
     {
-        return FBOMObjectType("Shader");
+        return FBOMObjectType(Shader::GetClass().GetName());
     }
 
     virtual FBOMResult Serialize(const Shader &in_object, FBOMObject &out) const override
@@ -28,17 +28,20 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, Shader *&out_object) const override
+    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, UniquePtr<Shader> &out_object) const override
     {
         std::vector<SubShader> sub_shaders;
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("SubShader")) {
-                sub_shaders.push_back(node.deserialized.Get<SubShader>());
+                auto sub_shader = node.deserialized.Get<SubShader>();
+                AssertThrow(sub_shader != nullptr);
+
+                sub_shaders.push_back(*sub_shader);
             }
         }
 
-        out_object = new Shader(sub_shaders);
+        out_object.Reset(new Shader(sub_shaders));
 
         return { FBOMResult::FBOM_OK };
     }

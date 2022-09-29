@@ -45,9 +45,9 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, SubShader *&out_object) const override
+    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, UniquePtr<SubShader> &out_object) const override
     {
-        out_object = new SubShader();
+        out_object.Reset(new SubShader());
 
         if (auto err = in.GetProperty("type").ReadUnsignedInt(&out_object->type)) {
             return err;
