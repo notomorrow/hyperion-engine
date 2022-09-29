@@ -141,6 +141,62 @@ bool Scene::AddEntity(Handle<Entity> &&entity)
     Threads::AssertOnThread(THREAD_GAME);
 
     AssertReady();
+
+    if (!entity) {
+        return false;
+    }
+
+    auto node = m_root_node_proxy.AddChild(NodeProxy(
+        new Node(entity->GetName(), entity->GetTransform())
+    ));
+
+    // node will now be in charge of the transform
+    entity->SetTransform(Transform::identity);
+
+    node.SetEntity(std::move(entity));
+
+    return true;
+}
+
+bool Scene::RemoveEntity(const Handle<Entity> &entity)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+
+    if (!entity) {
+        return false;
+    }
+
+    Queue<NodeProxy *> queue;
+    queue.Push(&m_root_node_proxy);
+
+    while (queue.Any()) {
+        NodeProxy *parent = queue.Pop();
+
+        for (auto &child : parent->GetChildren()) {
+            if (!child) {
+                continue;
+            }
+
+            if (child.GetEntity() == entity) {
+                parent->Get()->RemoveChild(&child);
+
+                return true;
+            }
+
+            queue.Push(&child);
+        }
+    }
+
+    return false;
+}
+
+bool Scene::AddEntityInternal(Handle<Entity> &&entity)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
     AssertThrow(entity != nullptr);
 
     if (m_entities.Contains(entity->GetID())) {
@@ -174,7 +230,7 @@ bool Scene::HasEntity(Entity::ID id) const
     return m_entities.Find(id) != m_entities.End();
 }
 
-bool Scene::RemoveEntity(const Handle<Entity> &entity)
+bool Scene::RemoveEntityInternal(const Handle<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -332,10 +388,6 @@ void Scene::Update(
 
     EnqueueRenderUpdates();
 
-    // if (m_world != nullptr && update_octree_visibility) {
-    //     m_world->GetOctree().CalculateVisibility(this);
-    // }
-
     if (!IsVirtualScene()) {
         m_environment->Update(engine, delta);
 
@@ -354,35 +406,37 @@ void Scene::Update(
 
 void Scene::RequestRendererInstanceUpdate(Handle<Entity> &entity)
 {
+    Threads::AssertOnThread(THREAD_GAME);
+
     AssertThrow(entity != nullptr);
     AssertThrow(entity->GetScene() == this);
 
     if (entity->GetPrimaryRendererInstance() != nullptr) {
         RemoveFromRendererInstance(entity, entity->m_primary_renderer_instance.renderer_instance);
     }
-    
-    if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetShader(), entity->GetRenderableAttributes())) {
-        renderer_instance->AddEntity(Handle<Entity>(entity));
 
-        entity->m_primary_renderer_instance = {
-            .renderer_instance = renderer_instance.Get(),
-            .changed = false
-        };
-    } else {
-        // don't continue requesting if we couldn't find or create a RendererInstance
-        entity->m_primary_renderer_instance.changed = false;
+    if (entity->IsRenderable()) {
+        if (auto renderer_instance = GetEngine()->FindOrCreateRendererInstance(entity->GetShader(), entity->GetRenderableAttributes())) {
+            renderer_instance->AddEntity(Handle<Entity>(entity));
 
-        DebugLog(
-            LogType::Error,
-            "Could not find or create optimal RendererInstance for Entity #%lu!\n",
-            entity->GetID().value
-        );
+            entity->m_primary_renderer_instance.renderer_instance = renderer_instance.Get();
+        } else {
+            DebugLog(
+                LogType::Error,
+                "Could not find or create optimal RendererInstance for Entity #%lu!\n",
+                entity->GetID().value
+            );
+        }
     }
+
+    // don't continue requesting, even if we couldn't find or create a RendererInstance
+    entity->m_primary_renderer_instance.changed = false;
 }
 
 void Scene::RemoveFromRendererInstance(Handle<Entity> &entity, RendererInstance *renderer_instance)
 {
     renderer_instance->RemoveEntity(Handle<Entity>(entity));
+    entity->m_primary_renderer_instance.renderer_instance = nullptr;
 }
 
 void Scene::RemoveFromRendererInstances(Handle<Entity> &entity)
@@ -405,7 +459,7 @@ void Scene::EnqueueRenderUpdates()
         BoundingBox aabb;
         Float global_timer;
     } params = {
-        .aabb = m_aabb,
+        .aabb = m_root_node_proxy.GetWorldAABB(),
         .global_timer = m_environment->GetGlobalTimer()
     };
 

@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 using WAVAudio = WAVAudioLoader::WAVAudio;
 
-LoadAssetResultPair WAVAudioLoader::LoadAsset(LoaderState &state) const
+LoadedAsset WAVAudioLoader::LoadAsset(LoaderState &state) const
 {
     WAVAudio object;
 

@@ -39,6 +39,11 @@ struct HashCode
     {
     }
 
+    HashCode(ValueType value)
+        : hash(value)
+    {
+    }
+
     constexpr bool operator==(const HashCode &other) const { return hash == other.hash; }
     constexpr bool operator!=(const HashCode &other) const { return hash != other.hash; }
 

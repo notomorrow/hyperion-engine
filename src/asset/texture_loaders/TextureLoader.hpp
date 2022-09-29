@@ -15,7 +15,7 @@ class TextureLoader : public AssetLoader
 public:
     virtual ~TextureLoader() = default;
 
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override;
+    virtual LoadedAsset LoadAsset(LoaderState &state) const override;
 
     struct TextureData
     {

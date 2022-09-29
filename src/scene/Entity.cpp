@@ -428,7 +428,7 @@ void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_at
 void Entity::RebuildRenderableAttributes()
 {
     RenderableAttributeSet new_renderable_attributes(
-        m_mesh ? m_mesh->GetRenderAttributes() : MeshAttributes { },
+        m_mesh ? m_mesh->GetRenderAttributes() : MeshAttributes { .vertex_attributes = VertexAttributeSet(0u) },
         m_material ? m_material->GetRenderAttributes() : MaterialAttributes { }
     );
 
@@ -437,7 +437,7 @@ void Entity::RebuildRenderableAttributes()
             new_renderable_attributes.mesh_attributes.vertex_attributes | renderer::skeleton_vertex_attributes;
     }
 
-    new_renderable_attributes.shader_id = m_shader != nullptr
+    new_renderable_attributes.shader_id = m_shader
         ? m_shader->GetID()
         : Shader::empty_id;
 

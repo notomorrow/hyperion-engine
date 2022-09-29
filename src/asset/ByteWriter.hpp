@@ -39,12 +39,8 @@ public:
     {
         const auto len = Memory::StringLength(str);
 
-        char *tmp = new char[len + 1];
-        tmp[len] = '\0';
-        Memory::Copy(tmp, str, len);
         WriteBytes(reinterpret_cast<const char *>(&len), sizeof(uint32_t));
-        WriteBytes(tmp, len);
-        delete[] tmp;
+        WriteBytes(str, len);
     }
 
     virtual std::streampos Position() const = 0;

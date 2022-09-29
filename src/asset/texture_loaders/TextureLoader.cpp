@@ -30,7 +30,7 @@ static const stbi_io_callbacks callbacks {
     }
 };
 
-LoadAssetResultPair TextureLoader::LoadAsset(LoaderState &state) const
+LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
 {
     TextureData data;
 
@@ -80,14 +80,7 @@ LoadAssetResultPair TextureLoader::LoadAsset(LoaderState &state) const
         &data.data[0]
     ));
 
-    AssertThrow(texture.GetTypeID() == TypeID::ForType<Texture2D>());
-    AssertThrow(texture.Is<Texture>() == true);
-
-    auto vp = texture.Cast<void>();
-
-    AssertThrow(vp.Is<Texture>());
-
-    return { { LoaderResult::Status::OK }, std::move(vp) };
+    return { { LoaderResult::Status::OK }, texture.Cast<void>() };
 }
 
 } // namespace hyperion::v2

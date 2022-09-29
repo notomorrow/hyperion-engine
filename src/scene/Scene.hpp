@@ -38,11 +38,16 @@ public:
     const Handle<Camera> &GetCamera() const { return m_camera; }
     void SetCamera(Handle<Camera> &&camera) { m_camera = std::move(camera); }
 
-    /*! \brief Add an Entity to the queue. On Update(), it will be added to the scene. */
+    /*! \brief Add the Entity to a new Node attached to the root. */
     bool AddEntity(Handle<Entity> &&entity);
+    /*! \brief Remove a Node from the Scene with the given Entity */
+    bool RemoveEntity(const Handle<Entity> &entity);
+
+    /*! \brief Add an Entity to the queue. On Update(), it will be added to the scene. */
+    bool AddEntityInternal(Handle<Entity> &&entity);
     bool HasEntity(Entity::ID id) const;
     /*! \brief Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
-    bool RemoveEntity(const Handle<Entity> &entity);
+    bool RemoveEntityInternal(const Handle<Entity> &entity);
 
     /* ONLY CALL FROM GAME THREAD!!! */
     auto &GetEntities() { return m_entities; }
@@ -50,6 +55,20 @@ public:
 
     NodeProxy &GetRoot() { return m_root_node_proxy; }
     const NodeProxy &GetRoot() const { return m_root_node_proxy; }
+
+    /*! \brief Used for deserialization only */
+    void SetRoot(NodeProxy &&root)
+    {
+        if (m_root_node_proxy) {
+            m_root_node_proxy.Get()->SetScene(nullptr);
+        }
+
+        m_root_node_proxy = std::move(root);
+
+        if (m_root_node_proxy) {
+            m_root_node_proxy.Get()->SetScene(this);
+        }
+    }
 
     RenderEnvironment *GetEnvironment() const { return m_environment; }
 
@@ -68,8 +87,6 @@ public:
     void Init(Engine *engine);
 
     void ForceUpdate();
-
-    BoundingBox m_aabb;
 
 private:
     // World only calls

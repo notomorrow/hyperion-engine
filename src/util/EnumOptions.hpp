@@ -71,7 +71,7 @@ public:
         { return std::make_pair(EnumOption_t(OrdinalToEnum(index)), m_values[index]); }
 
     constexpr EnumType KeyAt(size_t index) const
-        { return OrdinalToEnum(index); }
+        { return EnumOption_t(OrdinalToEnum(index)); }
 
     constexpr ValueType &ValueAt(size_t index)
         { return m_values[index]; }

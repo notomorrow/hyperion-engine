@@ -5,6 +5,8 @@
 #include <asset/serialization/fbom/FBOMType.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
 
+#include <core/lib/UniquePtr.hpp>
+
 #include <Constants.hpp>
 
 namespace hyperion::v2 {
@@ -15,8 +17,9 @@ namespace hyperion::v2::fbom {
 
 class FBOMObject;
 
-class FBOMMarshalerBase {
-    friend class FBOMLoader;
+class FBOMMarshalerBase
+{
+    friend class FBOMReader;
 
 public:
     virtual ~FBOMMarshalerBase() = default;
@@ -29,34 +32,37 @@ protected:
 };
 
 template <class T>
-class FBOMObjectMarshalerBase : public FBOMMarshalerBase {
+class FBOMObjectMarshalerBase : public FBOMMarshalerBase
+{
 public:
     virtual ~FBOMObjectMarshalerBase() = default;
 
     virtual FBOMType GetObjectType() const override = 0;
 
     virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, T *&out_object) const = 0;
+    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, UniquePtr<T> &out_object) const = 0;
 
 private:
     virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
     {
-        return Serialize(in.Get<T>(), out);
+        auto extracted_value = in.Get<T>();
+
+        return Serialize(*extracted_value.Get(), out);
     }
 
     virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, FBOMDeserializedObject &out) const override
     {
-        T *ptr = nullptr;
+        UniquePtr<T> ptr;
 
         auto result = Deserialize(engine, in, ptr);
 
-        if (result.value != FBOMResult::FBOM_ERR) {
-            out.Reset(ptr); // takes ownership of ptr
-        } else {
-            // we are responsible for managing the memory,
-            // and we can't add the resulting ptr to the Any
-            // if an error has occured, so just delete it.
-            delete ptr;
+        if (result.value == FBOMResult::FBOM_OK) {
+            AssertThrow(ptr != nullptr);
+
+            auto result_value = AssetLoaderWrapper<T>::MakeResultType(engine, std::move(ptr));
+            AssertThrow(result_value.Get() != nullptr);
+
+            out.Set<T>(std::move(result_value));
         }
 
         return result;
@@ -64,7 +70,8 @@ private:
 };
 
 template <class T>
-class FBOMMarshaler : public FBOMObjectMarshalerBase<T> {
+class FBOMMarshaler : public FBOMObjectMarshalerBase<T>
+{
     static_assert(resolution_failure<T>, "No marshal class defined");
 };
 

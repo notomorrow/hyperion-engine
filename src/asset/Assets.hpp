@@ -24,8 +24,6 @@ namespace hyperion::v2 {
 
 class Engine;
 
-using LoadAssetResultPair = Pair<LoaderResult, UniquePtr<void>>;
-
 class AssetManager
 {
     friend struct AssetBatch;
@@ -174,6 +172,9 @@ protected:
 public:
     virtual ~AssetLoader() = default;
 
+    virtual bool IsSerializedObjectLoader() const
+        { return false; }
+
     virtual LoadedAsset Load(AssetManager &asset_manager, const String &path) const override final
     {
         LoadedAsset asset;
@@ -204,13 +205,10 @@ public:
                 continue;
             }
 
-            auto [result, ptr] = LoadAsset(state);
-            asset.result = result;
+            asset = LoadAsset(state);
 
-            if (result) {
-                asset.ptr = std::move(ptr);
-
-                return asset;
+            if (asset.result) {
+                break; // stop searching when value result is found
             }
         }
 
@@ -218,7 +216,7 @@ public:
     }
 
 protected:
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const = 0;
+    virtual LoadedAsset LoadAsset(LoaderState &state) const = 0;
 
     FilePath GetRebasedFilepath(AssetManager &asset_manager, String filepath) const
     {

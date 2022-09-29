@@ -6,6 +6,7 @@
 #include <GameCounter.hpp>
 #include "Entity.hpp"
 #include "NodeProxy.hpp"
+#include <HashCode.hpp>
 
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
@@ -297,6 +298,28 @@ public:
     void UpdateWorldTransform();
 
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(m_type);
+        hc.Add(m_name);
+        hc.Add(m_local_transform);
+        hc.Add(m_world_transform);
+        hc.Add(m_local_aabb);
+        hc.Add(m_world_aabb);
+
+        if (m_entity) {
+            hc.Add(m_entity->GetID());
+        }
+
+        for (auto &child : m_child_nodes) {
+            hc.Add(child);
+        }
+
+        return hc;
+    }
 
 protected:
     Node(

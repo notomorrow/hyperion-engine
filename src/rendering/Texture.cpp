@@ -9,7 +9,7 @@ Texture::Texture(
     Image::Type type,
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode,
-    const unsigned char *bytes
+    const UByte *bytes
 ) : Texture(
         TextureImage(
             extent,

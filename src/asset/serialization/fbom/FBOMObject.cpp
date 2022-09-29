@@ -19,7 +19,8 @@ FBOMObject::FBOMObject(const FBOMObject &other)
       nodes(nullptr),
       properties(other.properties),
       deserialized(other.deserialized),
-      m_external_info(other.m_external_info)
+      m_external_info(other.m_external_info),
+      m_unique_id(other.m_unique_id)
 {
     if (other.nodes) {
         nodes = new FBOMNodeHolder(*other.nodes);
@@ -30,16 +31,21 @@ FBOMObject::FBOMObject(const FBOMObject &other)
 
 auto FBOMObject::operator=(const FBOMObject &other) -> FBOMObject&
 {
-    if (other.nodes) {
-        *nodes = *other.nodes;
+    if (nodes) {
+        if (other.nodes) {
+            *nodes = *other.nodes;
+        } else {
+            nodes->Clear();
+        }
     } else {
-        nodes->Clear();
+        nodes = new FBOMNodeHolder(*other.nodes);
     }
 
     m_object_type = other.m_object_type;
     properties = other.properties;
     deserialized = other.deserialized;
     m_external_info = other.m_external_info;
+    m_unique_id = other.m_unique_id;
 
     return *this;
 }
@@ -49,14 +55,17 @@ FBOMObject::FBOMObject(FBOMObject &&other) noexcept
       nodes(other.nodes),
       properties(std::move(other.properties)),
       deserialized(std::move(other.deserialized)),
-      m_external_info(std::move(other.m_external_info))
+      m_external_info(std::move(other.m_external_info)),
+      m_unique_id(std::move(other.m_unique_id))
 {
     other.nodes = nullptr;
 }
 
 auto FBOMObject::operator=(FBOMObject &&other) noexcept -> FBOMObject&
 {
-    nodes->Clear();
+    if (nodes) {
+        nodes->Clear();
+    }
 
     std::swap(nodes, other.nodes);
 
@@ -64,6 +73,7 @@ auto FBOMObject::operator=(FBOMObject &&other) noexcept -> FBOMObject&
     properties = std::move(other.properties);
     deserialized = std::move(other.deserialized);
     m_external_info = std::move(other.m_external_info);
+    m_unique_id = std::move(other.m_unique_id);
 
     return *this;
 }
@@ -91,10 +101,15 @@ void FBOMObject::SetProperty(const String &key, const FBOMData &data)
     properties.Set(key, data);
 }
 
-void FBOMObject::SetProperty(const String &key, const FBOMType &type, size_t size, const void *bytes)
+void FBOMObject::SetProperty(const String &key, FBOMData &&data)
+{
+    properties.Set(key, std::move(data));
+}
+
+void FBOMObject::SetProperty(const String &key, const FBOMType &type, SizeType size, const void *bytes)
 {
     FBOMData data(type);
-    data.SetBytes(size, reinterpret_cast<const unsigned char *>(bytes));
+    data.SetBytes(size, bytes);
 
     SetProperty(key, data);
 }
@@ -108,27 +123,30 @@ void FBOMObject::SetProperty(const String &key, const FBOMType &type, const void
 
 void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)
 {
-    FBOMObject _object(std::move(object));
-    _object.SetExternalObjectInfo(FBOMExternalObjectInfo {
+    object.SetExternalObjectInfo(FBOMExternalObjectInfo {
         .key = external_object_key
     });
 
-    nodes->PushBack(std::move(_object));
+    nodes->PushBack(std::move(object));
 }
 
 HashCode FBOMObject::GetHashCode() const
 {
     HashCode hc;
 
-    hc.Add(m_object_type.GetHashCode());
+    if (IsExternal()) {
+        hc.Add(m_external_info.GetHashCode());
+    } else {
+        hc.Add(m_object_type.GetHashCode());
 
-    for (const auto &it : *nodes) {
-        hc.Add(it.GetHashCode());
-    }
+        for (const auto &it : properties) {
+            hc.Add(it.first.GetHashCode());
+            hc.Add(it.second.GetHashCode());
+        }
 
-    for (const auto &it : properties) {
-        hc.Add(it.first.GetHashCode());
-        hc.Add(it.second.GetHashCode());
+        for (const auto &it : *nodes) {
+            hc.Add(it.GetHashCode());
+        }
     }
 
     return hc;

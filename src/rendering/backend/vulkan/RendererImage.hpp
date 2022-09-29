@@ -132,7 +132,8 @@ public:
     static VkFilter ToVkFilter(FilterMode);
     static VkSamplerAddressMode ToVkSamplerAddressMode(WrapMode);
 
-    struct InternalInfo {
+    struct InternalInfo
+    {
         VkImageTiling tiling;
         VkImageUsageFlags usage_flags;
     };

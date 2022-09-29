@@ -35,6 +35,7 @@
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
+#include <asset/serialization/fbom/marshals/SceneMarshal.hpp>
 
 #include <terrain/controllers/TerrainPagingController.hpp>
 
@@ -123,7 +124,7 @@ public:
 
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"../data/dump2/sponza.fbom");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -131,7 +132,7 @@ public:
         auto obj_models = batch.AwaitResults();
 
         auto zombie = obj_models["zombie"].Get<Node>();
-        auto test_model = obj_models["test_model"].Get<Node>();
+        auto test_model = obj_models["test_model"].Get<Node>();//engine->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
 
@@ -155,15 +156,17 @@ public:
             // sphere[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             sphere[0].GetEntity()->RebuildRenderableAttributes();
             sphere.SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
-            m_scene->GetRoot().AddChild(sphere);
+            //m_scene->GetRoot().AddChild(sphere);
         }
+
+        // test_model.Scale(0.15f);
 
 #if 0// serialize/deseriale test
 
-#if 1
-        FileByteWriter bw("data/dump/sponza.fbom");
+#if 0
+        FileByteWriter bw("data/dump2/sponza.fbom");
         fbom::FBOMWriter fw;
-        fw.Append(*test_model);
+        fw.Append(*test_model.Get());
         auto err = fw.Emit(&bw);
 
         AssertThrowMsg(err.value != fbom::FBOMResult::FBOM_ERR, "%s\n", err.message);
@@ -172,15 +175,14 @@ public:
 
 #endif
 
-
-        fbom::FBOMLoader fr(engine->resources);
+        fbom::FBOMReader fr(engine, fbom::FBOMConfig { });
         fbom::FBOMDeserializedObject result;
-        if (auto err = fr.LoadFromFile("data/dump/sponza.fbom", result)) {
+        if (auto err = fr.LoadFromFile("data/dump2/sponza.fbom", result)) {
             AssertThrowMsg(false, "%s\n", err.message);
         }
 
-        auto *_node = result.Release<Node>();
-        m_scene->GetRoot().AddChild(NodeProxy(_node));
+        auto loaded_node = result.Get<Node>();
+        m_scene->GetRoot().AddChild(loaded_node);
         
         // auto ent = engine->resources->entities.Add(result.Release<Entity>());
         // m_scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
@@ -216,7 +218,7 @@ public:
             zombie[0].GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.0f);
             zombie[0].GetEntity()->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
             zombie[0].GetEntity()->RebuildRenderableAttributes();
-            //m_scene->GetRoot().AddChild(zombie);
+            m_scene->GetRoot().AddChild(zombie);
         }
         
         { // adding lights to scene
@@ -234,8 +236,6 @@ public:
                 60.0f
             )));
         }
-
-        test_model.Scale(0.15f);
 
         auto tex = engine->GetAssetManager().Load<Texture>("textures/smoke.png");
         AssertThrow(tex);
@@ -348,6 +348,13 @@ public:
         for (auto &x : m_scene->GetRoot().GetChildren()) {
             DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
         }
+
+        // FileByteWriter bw("data/dump/sponza.fbom");
+        // fbom::FBOMWriter fw;
+        // fw.Append(*test_model.Get());
+        // auto err = fw.Emit(&bw);
+        // AssertThrowMsg(err.value != fbom::FBOMResult::FBOM_ERR, "%s\n", err.message);
+        // bw.Close();
     }
 
     virtual void Teardown(Engine *engine) override
@@ -493,15 +500,14 @@ public:
 } // namespace hyperion::v2
 
 
-template <class T>
-using RC = RefCountedPtr<T>;
-template <class T>
-using Weak = WeakRefCountedPtr<T>;
-
 int main()
 {
     using namespace hyperion::renderer;
 
+    // Variant<UniquePtr<void>, int> x(UniquePtr<int>(new int(4)).Cast<void>());
+    // auto x_val = x.Get<UniquePtr<void>>().Cast<int>();
+    // std::cout << *x_val << std::endl;
+    // HYP_BREAKPOINT;
 
 #if 0
 

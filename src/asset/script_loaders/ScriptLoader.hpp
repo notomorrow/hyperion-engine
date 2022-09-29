@@ -15,7 +15,7 @@ class ScriptLoader : public AssetLoader
 public:
     virtual ~ScriptLoader() = default;
 
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override;
+    virtual LoadedAsset LoadAsset(LoaderState &state) const override;
 
     SourceFile source_file;
 };

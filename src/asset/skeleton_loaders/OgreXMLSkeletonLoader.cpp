@@ -178,7 +178,7 @@ private:
     std::stack<float> m_keyframe_angles;
 };
 
-LoadAssetResultPair OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
+LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
 {
     OgreXMLSkeleton object;
 

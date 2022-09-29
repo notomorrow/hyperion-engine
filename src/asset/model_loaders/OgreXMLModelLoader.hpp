@@ -42,7 +42,7 @@ public:
 
     virtual ~OgreXMLModelLoader() = default;
 
-    virtual LoadAssetResultPair LoadAsset(LoaderState &state) const override;
+    virtual LoadedAsset LoadAsset(LoaderState &state) const override;
 };
 
 } // namespace hyperion::v2

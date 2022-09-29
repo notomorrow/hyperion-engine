@@ -4,11 +4,11 @@
 namespace hyperion::v2 {
 
 const FixedArray<DeferredSystem::GBufferFormat, num_gbuffer_textures> DeferredSystem::gbuffer_texture_formats = {
-    GBufferFormat { TEXTURE_FORMAT_DEFAULT_COLOR },   // color
-    GBufferFormat { TEXTURE_FORMAT_DEFAULT_NORMALS }, // normal
-    GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // material
-    GBufferFormat { TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT }, // tangent
-    GBufferFormat { TEXTURE_FORMAT_DEFAULT_DEPTH }    // depth
+    GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR),   // color
+    GBufferFormat(TEXTURE_FORMAT_DEFAULT_NORMALS), // normal
+    GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT), // material
+    GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT), // tangent
+    GBufferFormat(TEXTURE_FORMAT_DEFAULT_DEPTH)    // depth
 };
 
 DeferredSystem::DeferredSystem()

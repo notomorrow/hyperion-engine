@@ -195,7 +195,7 @@ void CubemapRenderer::InitGame(Engine *engine)
     for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
 
-        if (entity == nullptr) {
+        if (!entity) {
             continue;
         }
 

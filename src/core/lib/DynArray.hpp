@@ -160,6 +160,34 @@ public:
     template <class Lambda>
     [[nodiscard]] bool Every(Lambda &&lambda) const
         { return Base::Every(std::forward<Lambda>(lambda)); }
+
+    template <SizeType OtherNumInlineBytes>
+    [[nodiscard]] bool operator==(const DynArray<T, OtherNumInlineBytes> &other) const
+    {
+        if (std::addressof(other) == this) {
+            return true;
+        }
+
+        if (Size() != other.Size()) {
+            return false;
+        }
+
+        auto it = Begin();
+        auto other_it = other.Begin();
+        const auto _end = End();
+
+        for (; it != _end; ++it, ++other_it) {
+            if (!(*it == *other_it)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template <SizeType OtherNumInlineBytes>
+    [[nodiscard]] bool operator!=(const DynArray<T, OtherNumInlineBytes> &other) const
+        { return !operator==(other); }
     
     HYP_DEF_STL_BEGIN_END(
         GetBuffer() + m_start_offset,
@@ -303,7 +331,6 @@ DynArray<T, NumInlineBytes>::DynArray(DynArray &&other) noexcept
       m_is_dynamic(other.m_is_dynamic),
       m_start_offset(other.m_start_offset)
 {
-    DebugLog(LogType::Debug, "DynArray<%s> (DynArray &&other)\n", typeid(T).name());
     if (m_is_dynamic) {
         m_buffer = other.m_buffer;
     } else {

@@ -40,13 +40,13 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
         attachment_image_views.push_back(attachment_ref->GetImageView()->GetImageView());
     }
 
-    VkFramebufferCreateInfo framebuffer_create_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
-    framebuffer_create_info.renderPass      = render_pass->GetHandle();
+    VkFramebufferCreateInfo framebuffer_create_info { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+    framebuffer_create_info.renderPass = render_pass->GetHandle();
     framebuffer_create_info.attachmentCount = static_cast<UInt32>(attachment_image_views.size());
-    framebuffer_create_info.pAttachments    = attachment_image_views.data();
-    framebuffer_create_info.width           = m_extent.width;
-    framebuffer_create_info.height          = m_extent.height;
-    framebuffer_create_info.layers          = num_layers;
+    framebuffer_create_info.pAttachments = attachment_image_views.data();
+    framebuffer_create_info.width = m_extent.width;
+    framebuffer_create_info.height = m_extent.height;
+    framebuffer_create_info.layers = num_layers;
 
     HYPERION_VK_CHECK(vkCreateFramebuffer(device->GetDevice(), &framebuffer_create_info, nullptr, &m_handle));
 
@@ -58,7 +58,7 @@ Result FramebufferObject::Destroy(Device *device)
     auto result = Result::OK;
 
     vkDestroyFramebuffer(device->GetDevice(), m_handle, nullptr);
-    m_handle = nullptr;
+    m_handle = VK_NULL_HANDLE;
     
     for (auto *attachment_ref : m_attachment_refs) {
         attachment_ref->DecRef(HYP_ATTACHMENT_REF_INSTANCE);

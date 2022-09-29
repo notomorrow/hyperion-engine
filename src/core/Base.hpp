@@ -206,8 +206,7 @@ public:
     bool IsReady() const
         { return m_is_ready.load(); }
 
-    auto &GetClass() { return Type::GetInstance(); }
-    const auto &GetClass() const { return Type::GetInstance(); }
+    static inline const auto &GetClass() { return Type::GetInstance(); }
 
     /*! \brief Just a function to store that Init() has been called from a derived class
      * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.

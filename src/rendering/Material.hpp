@@ -376,9 +376,10 @@ public:
         { return m_render_attributes.cull_faces; }
 
     void SetFaceCullMode(FaceCullMode cull_mode)
-    {
-        m_render_attributes.cull_faces = cull_mode;
-    }
+        { m_render_attributes.cull_faces = cull_mode; }
+
+    MaterialAttributes &GetRenderAttributes()
+        { return m_render_attributes; }
 
     const MaterialAttributes &GetRenderAttributes() const
         { return m_render_attributes; }

@@ -8,6 +8,7 @@
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/HeapArray.hpp>
+#include <core/lib/ByteBuffer.hpp>
 #include <core/lib/FixedString.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/Queue.hpp>
