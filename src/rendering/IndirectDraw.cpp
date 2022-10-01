@@ -141,7 +141,7 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
 
     m_max_entity_id = MathUtil::Max(m_max_entity_id, static_cast<UInt32>(draw_proxy.entity_id.value));
 
-    const auto draw_command_index = draw_proxy.entity_id.value - 1;//static_cast<UInt>(m_draw_proxies.Size());
+    const auto draw_command_index = draw_proxy.entity_id.ToIndex();
     
     UInt32 packed_data;
     // first byte = bucket. we currently use only 7, with

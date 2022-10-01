@@ -71,12 +71,6 @@ public:
     DeferredSystem &operator=(const DeferredSystem &other) = delete;
     ~DeferredSystem() = default;
 
-    auto &GetBuckets()
-        { return m_buckets; }
-
-    const auto &GetBuckets() const
-        { return m_buckets; }
-
     RendererInstanceHolder &Get(Bucket bucket)
         { return m_buckets[static_cast<UInt>(bucket)]; }
 

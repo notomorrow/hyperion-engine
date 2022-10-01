@@ -10,11 +10,11 @@ enum Bucket
     BUCKET_SWAPCHAIN = 0, /* Main swapchain */
     BUCKET_INTERNAL,      /* Pre-pass / buffer items */
     BUCKET_SHADOW,
-    BUCKET_VOXELIZER,
     /* === Scene objects === */
     BUCKET_OPAQUE,        /* Opaque items */
     BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
     BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
+    BUCKET_UI,
     BUCKET_MAX
 };
 

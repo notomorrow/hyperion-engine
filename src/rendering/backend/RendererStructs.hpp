@@ -50,12 +50,13 @@ struct alignas(4) ShaderVec2
 static_assert(sizeof(ShaderVec2<Float>) == 8);
 static_assert(sizeof(ShaderVec2<UInt32>) == 8);
 
+// shader vec3 is same size as vec4
 template <class T>
 struct alignas(4) ShaderVec3
 {
     union {
-        struct { T x, y, z; };
-        T values[3];
+        struct { T x, y, z, _w; };
+        T values[4];
     };
 
     ShaderVec3() = default;
@@ -80,8 +81,8 @@ struct alignas(4) ShaderVec3
     operator Vector3() const { return Vector3(x, y, z); }
 };
 
-static_assert(sizeof(ShaderVec3<float>)  == 12);
-static_assert(sizeof(ShaderVec3<UInt32>) == 12);
+static_assert(sizeof(ShaderVec3<Float>)  == 16);
+static_assert(sizeof(ShaderVec3<UInt32>) == 16);
 
 template <class T>
 struct alignas(4) ShaderVec4

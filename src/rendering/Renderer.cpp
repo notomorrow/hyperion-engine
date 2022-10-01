@@ -572,7 +572,6 @@ void RendererInstance::PerformRenderingIndirect(Engine *engine, Frame *frame)
     );
 }
 
-
 void RendererInstance::Render(Engine *engine, Frame *frame)
 {
     // perform all ops in one batch

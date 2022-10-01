@@ -70,6 +70,7 @@ enum class ShaderKey
     BASIC_FORWARD,
     BASIC_VEGETATION,
     BASIC_SKYBOX,
+    BASIC_UI,
     STENCIL_OUTLINE,
     DEBUG_AABB,
     TERRAIN,
