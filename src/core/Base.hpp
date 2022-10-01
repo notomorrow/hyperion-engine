@@ -117,6 +117,11 @@ struct StubbedClass : public Class<ClassName>
 
     StubbedClass() = default;
     ~StubbedClass() = default;
+
+    /*! \brief Create a new UniquePtr instance of the type. */
+    template <class ...Args>
+    static UniquePtr<T> Construct(Args &&... args)
+        { return UniquePtr<T>::Construct(std::forward<Args>(args)...); }
 };
 
 template <auto X>
@@ -209,7 +214,13 @@ public:
     bool IsReady() const
         { return m_is_ready.load(); }
 
-    static inline const auto &GetClass() { return Type::GetInstance(); }
+    static inline const auto &GetClass()
+        { return Type::GetInstance(); }
+
+    /*! \brief Create a new UniquePtr instance of the type. */
+    template <class ...Args>
+    static inline auto Construct(Args &&... args) -> UniquePtr<InnerType>
+        { return Type::Construct(std::forward<Args>(args)...); }
 
     /*! \brief Just a function to store that Init() has been called from a derived class
      * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.

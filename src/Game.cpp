@@ -54,6 +54,8 @@ void Game::InitRender(Engine *engine)
 void Game::InitGame(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_GAME);
+
+    m_ui.Init(engine);
 }
 
 void Game::Teardown(Engine *engine)

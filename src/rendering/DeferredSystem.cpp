@@ -181,12 +181,23 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         mode
     );
 
-    if (BucketIsRenderable(bucket)) { // add gbuffer attachments
-        // color attachment is unique for all buckets
-        const auto color_format = gbuffer_texture_formats[0].Is<Image::InternalFormat>()
-            ? gbuffer_texture_formats[0].Get<Image::InternalFormat>()
-            : engine->GetDefaultFormat(gbuffer_texture_formats[0].Get<TextureFormatDefault>());
+    const auto color_format = gbuffer_texture_formats[0].Is<Image::InternalFormat>()
+        ? gbuffer_texture_formats[0].Get<Image::InternalFormat>()
+        : engine->GetDefaultFormat(gbuffer_texture_formats[0].Get<TextureFormatDefault>());
 
+    // if (bucket == BUCKET_UI) {
+    //     // ui only has this attachment.
+    //     AddOwnedAttachment(
+    //         engine,
+    //         color_format,
+    //         render_pass,
+    //         attachments
+    //     );
+    // } else
+    
+    if (BucketIsRenderable(bucket) || bucket == BUCKET_UI) {
+        // add gbuffer attachments
+        // color attachment is unique for all buckets
         AddOwnedAttachment(
             engine,
             color_format,

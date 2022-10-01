@@ -4,6 +4,7 @@
 #include "GameCounter.hpp"
 #include <input/InputManager.hpp>
 #include <scene/Scene.hpp>
+#include <ui/UIScene.hpp>
 
 namespace hyperion {
 
@@ -54,11 +55,19 @@ protected:
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
+    UIScene &GetUI()
+        { return m_ui; }
+
+    const UIScene &GetUI() const
+        { return m_ui; }
+
     InputManager *GetInputManager() const
         { return m_input_manager; }
 
     InputManager *m_input_manager;
     Handle<Scene> m_scene;
+
+    UIScene m_ui;
 
 private:
     bool m_is_init;

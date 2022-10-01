@@ -610,6 +610,9 @@ void DeferredRenderer::Render(
             RenderParticles(engine, frame, environment);
         }
 
+        // temporary.. this should be moved to its own framebuffer after everything.
+        RenderUI(engine, frame);
+
         m_translucent_fbos[frame_index]->EndCapture(primary);
     }
 
@@ -726,7 +729,6 @@ void DeferredRenderer::CollectDrawCalls(Engine *engine, Frame *frame)
     }
 }
 
-
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 {
     if constexpr (use_draw_indirect) {
@@ -758,6 +760,13 @@ void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
         for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_TRANSLUCENT).GetRendererInstances()) {
             renderer_instance->PerformRendering(engine, frame);
         }
+    }
+}
+
+void DeferredRenderer::RenderUI(Engine *engine, Frame *frame)
+{
+    for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_UI).GetRendererInstances()) {
+        renderer_instance->Render(engine, frame);
     }
 }
 

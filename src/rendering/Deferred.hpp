@@ -93,6 +93,7 @@ private:
     void CollectDrawCalls(Engine *engine, Frame *frame);
     void RenderOpaqueObjects(Engine *engine, Frame *frame);
     void RenderTranslucentObjects(Engine *engine, Frame *frame);
+    void RenderUI(Engine *engine, Frame *frame);
 
     void GenerateMipChain(Engine *engine, Frame *frame, Image *image);
 
