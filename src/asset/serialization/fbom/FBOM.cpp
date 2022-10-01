@@ -11,6 +11,7 @@
 #include <asset/serialization/fbom/marshals/TextureMarshal.hpp>
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
 #include <asset/serialization/fbom/marshals/SceneMarshal.hpp>
+#include <asset/serialization/fbom/marshals/CameraMarshal.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -25,6 +26,7 @@ FBOM::FBOM()
     RegisterLoader<Texture>();
     RegisterLoader<Node>();
     RegisterLoader<Scene>();
+    RegisterLoader<Camera>();
 }
 
 FBOM::~FBOM() = default;

@@ -187,8 +187,10 @@ FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
 
     out->Write<UInt8>(FBOM_OBJECT_START);
 
-    FBOMStaticData static_data;
     const auto unique_id = object.GetUniqueID();
+    out->Write<UInt64>(unique_id);
+
+    FBOMStaticData static_data;
     const auto data_location = m_write_stream.GetDataLocation(unique_id, static_data);
     out->Write<UInt8>(static_cast<UInt8>(data_location));
 

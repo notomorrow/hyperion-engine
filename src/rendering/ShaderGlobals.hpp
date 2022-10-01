@@ -3,6 +3,7 @@
 
 #include "Buffers.hpp"
 #include "Bindless.hpp"
+#include "DrawProxy.hpp"
 
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
@@ -44,7 +45,7 @@ struct ShaderGlobals
     void Destroy(Engine *engine);
 
     ShaderData<StorageBuffer, SceneShaderData, max_scenes> scenes;
-    ShaderData<StorageBuffer, LightShaderData, max_lights> lights;
+    ShaderData<StorageBuffer, LightDrawProxy, max_lights> lights;
     ShaderData<StorageBuffer, ObjectShaderData, max_objects> objects;
     ShaderData<StorageBuffer, MaterialShaderData, max_materials> materials;
     ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons> skeletons;

@@ -17,6 +17,9 @@ public:
     Frustum(const Frustum &other);
     Frustum(const Matrix4 &view_proj);
 
+    FixedArray<Vector4, 6> &GetPlanes() { return m_planes; }
+    const FixedArray<Vector4, 6> &GetPlanes() const { return m_planes; }
+
     Vector4 &GetPlane(UInt index) { return m_planes[index]; }
     const Vector4 &GetPlane(UInt index) const { return m_planes[index]; }
 

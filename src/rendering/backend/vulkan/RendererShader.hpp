@@ -1,6 +1,7 @@
 #ifndef HYPERION_RENDERER_SHADER_H
 #define HYPERION_RENDERER_SHADER_H
 
+#include <core/lib/ByteBuffer.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 
 #include <asset/ByteReader.hpp>
@@ -13,7 +14,7 @@ namespace renderer {
 
 struct ShaderObject
 {
-    std::vector<UByte> bytes;
+    ByteBuffer bytes;
 
     struct Metadata
     {
@@ -25,10 +26,7 @@ struct ShaderObject
     {
         HashCode hc;
 
-        for (SizeType i = 0; i < bytes.size(); i++) {
-            hc.Add(bytes[i]);
-        }
-
+        hc.Add(bytes);
         hc.Add(metadata.name);
         hc.Add(metadata.path);
 
@@ -142,7 +140,7 @@ public:
         HashCode hc;
 
         for (const auto &shader_module : m_shader_modules) {
-            hc.Add(int(shader_module.type));
+            hc.Add(static_cast<Int32>(shader_module.type));
             hc.Add(shader_module.spirv.GetHashCode());
         }
 

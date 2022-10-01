@@ -30,9 +30,10 @@ struct Scene
 
 struct Light
 {
+    uint id;
+    uint type;
     vec4 position; // or direction for directional lights
     uint color_encoded;
-    uint type;
     float intensity;
     float radius;
     uint shadow_map_index; // ~0 == no shadow map

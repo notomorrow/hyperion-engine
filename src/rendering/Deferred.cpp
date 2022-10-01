@@ -144,7 +144,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
     }
 
     // no lights bound, do not render direct shading at all
-    if (engine->render_state.light_ids.Empty()) {
+    if (engine->render_state.light_bindings.Empty()) {
         return;
     }
 
@@ -185,7 +185,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
 #endif
 
             // render with each light
-            for (const auto &light_id : engine->render_state.light_ids) {
+            for (const auto &light : engine->render_state.light_bindings) {
                 cmd->BindDescriptorSet(
                     engine->GetInstance()->GetDescriptorPool(),
                     m_renderer_instance->GetPipeline(),
@@ -193,7 +193,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
                     DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
                     FixedArray {
                         UInt32(sizeof(SceneShaderData) * scene_index),
-                        UInt32(sizeof(LightShaderData) * (light_id.value - 1))
+                        HYP_RENDER_OBJECT_OFFSET(Light, light.id.value - 1)
                     }
                 );
 
@@ -531,10 +531,12 @@ void DeferredRenderer::Render(
     const auto scene_index = scene_binding
         ? scene_binding.id.value - 1
         : 0u;
+
+    const bool do_particles = environment && environment->IsReady();
     
     CollectDrawCalls(engine, frame);
 
-    if (environment) {
+    if (do_particles) {
         UpdateParticles(engine, frame, environment);
     }
 
@@ -547,7 +549,6 @@ void DeferredRenderer::Render(
             m_ssr.Render(engine, frame);
         }
     }
-
 
     { // indirect lighting
         DebugMarker marker(primary, "Record deferred indirect lighting pass");
@@ -591,7 +592,7 @@ void DeferredRenderer::Render(
 
         m_indirect_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary);
 
-        if (engine->render_state.light_ids.Any()) {
+        if (engine->render_state.light_bindings.Any()) {
             m_direct_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary);
         }
 
@@ -606,7 +607,7 @@ void DeferredRenderer::Render(
         // begin translucent with forward rendering
         RenderTranslucentObjects(engine, frame);
 
-        if (environment) {
+        if (do_particles) {
             RenderParticles(engine, frame, environment);
         }
 
@@ -763,15 +764,11 @@ void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
 
 void DeferredRenderer::UpdateParticles(Engine *engine, Frame *frame, RenderEnvironment *environment)
 {
-    AssertThrow(environment != nullptr);
-
     environment->GetParticleSystem()->UpdateParticles(engine, frame);
 }
 
 void DeferredRenderer::RenderParticles(Engine *engine, Frame *frame, RenderEnvironment *environment)
 {
-    AssertThrow(environment != nullptr);
-
     environment->GetParticleSystem()->Render(engine, frame);
 }
 

@@ -227,7 +227,7 @@ void ProbeGrid::RenderProbes(Engine *engine, Frame *frame)
         DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
         FixedArray {
             UInt32(sizeof(SceneShaderData) * scene_index),
-            UInt32(sizeof(LightShaderData) * 0)
+            HYP_RENDER_OBJECT_OFFSET(Light, 0)
         }
     );*/
 

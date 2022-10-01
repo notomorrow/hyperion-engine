@@ -9,6 +9,8 @@
 #include <util/Defines.hpp>
 #include <util/StringUtil.hpp>
 #include <core/Core.hpp>
+#include <core/lib/String.hpp>
+#include <core/lib/ByteBuffer.hpp>
 
 #include <array>
 #include <fstream>
@@ -141,24 +143,59 @@ public:
         pos = max_pos; // eof
     }
 
-    /*! \brief Reads the entirety of the remaining bytes in file and returns a vector of
-     * unsigned bytes. Note that using this method to read the whole file in one call bypasses
-     * the intention of having a buffered reader. */
-    std::vector<Byte> ReadBytes()
+    /*! \brief Reads the next \ref{count} bytes from the file and returns a ByteBuffer.
+        If position + count is greater than the number of remaining bytes, the ByteBuffer is truncated. */
+    ByteBuffer ReadBytes(SizeType count)
     {
         if (Eof()) {
             return {};
         }
 
         const SizeType remaining = max_pos - pos;
-        
-        std::vector<Byte> bytes;
-        bytes.resize(remaining);
+        const SizeType to_read = MathUtil::Min(remaining, count);
 
-        file->read(reinterpret_cast<char *>(&bytes[0]), bytes.size());
-        pos += bytes.size();
+        ByteBuffer byte_buffer(to_read);
+        file->read(reinterpret_cast<char *>(byte_buffer.Data()), to_read);
+        pos += to_read;
 
-        return bytes;
+        return byte_buffer;
+    }
+
+    /*! \brief Reads the entirety of the remaining bytes in file and returns ByteBuffer.
+     * Note that using this method to read the whole file in one call bypasses
+     * the intention of having a buffered reader! */
+    ByteBuffer ReadBytes()
+    {
+        if (Eof()) {
+            return {};
+        }
+
+        const SizeType remaining = max_pos - pos;
+
+        ByteBuffer byte_buffer(remaining);
+        file->read(reinterpret_cast<char *>(byte_buffer.Data()), remaining);
+        pos += remaining;
+
+        return byte_buffer;
+    }
+
+    /*! \brief Attempts to read \ref{count} bytes from the file into
+        \ref{ptr}. If size is greater than the number of remaining bytes,
+        it is capped to (num remaining bytes).
+        @returns The number of bytes read */
+    SizeType ReadBytes(Byte *ptr, SizeType count)
+    {
+        if (Eof()) {
+            return 0;
+        }
+
+        const SizeType remaining = max_pos - pos;
+        const SizeType to_read = MathUtil::Min(remaining, count);
+
+        file->read(reinterpret_cast<char *>(ptr), to_read);
+        pos += to_read;
+
+        return to_read;
     }
 
     /*! \brief Reads the entirety of the remaining bytes in file PER LINE and returns a vector of
@@ -226,76 +263,27 @@ public:
         return Read(static_cast<void *>(ptr), sizeof(T));
     }
 
-    template <class Functor, class ...Args>
-    auto ReadLinesParallel(int num_threads, Args &&... args)
-    {
-        constexpr int use_threading_threshold = 8; // num lines has to be x*num_threads to qualify
-
-        std::vector<std::string> all_lines;
-
-        ReadLines([&all_lines](const std::string &line) {
-            all_lines.push_back(line);
-        }, false);
-
-        if (num_threads * use_threading_threshold > all_lines.size()) {
-            num_threads = 1; // do not use threading
-        }
-
-        const SizeType num_lines_per_thread = all_lines.size() / num_threads;
-
-        SizeType lines_remaining = all_lines.size();
-        SizeType offset = 0;
-
-        std::vector<std::thread> threads;
-        std::mutex mutex;
-
-        std::vector<Functor> functors(num_threads);
-
-        for (int i = 0; i < num_threads; i++) {
-            const SizeType num_lines_this_thread = i == num_threads - 1
-                ? lines_remaining
-                : num_lines_per_thread;
-
-            threads.emplace_back([i, offset, num_lines_this_thread, &all_lines, &functors, &mutex, &args...]() mutable { // perfect capture, c++20 feature
-                functors[i] = Functor{};
-
-                for (SizeType j = offset; j < offset + num_lines_this_thread; j++) {
-                    functors[i].HandleLine(all_lines[j], mutex, args...);
-                }
-            });
-            
-            offset += num_lines_this_thread;
-            lines_remaining -= num_lines_this_thread;
-        }
-
-        for (auto &th : threads) {
-            th.join();
-        }
-
-        return functors;
-    }
-
     template <class LambdaFunction>
     void ReadLines(LambdaFunction func, bool buffered = true)
     {
-        if (!buffered) {
+        if (!buffered) { // not buffered, do it in one pass
             auto all_bytes = ReadBytes();
 
-            std::string accum;
-            accum.reserve(BufferSize);
+            String accum;
+            accum.Reserve(BufferSize);
             
-            for (SizeType i = 0; i < all_bytes.size(); i++) {
+            for (SizeType i = 0; i < all_bytes.Size(); i++) {
                 if (all_bytes[i] == '\n') {
                     func(accum);
-                    accum.clear();
+                    accum.Clear();
                     
                     continue;
                 }
 
-                accum += all_bytes[i];
+                accum.Append(static_cast<char>(all_bytes[i]));
             }
 
-            if (accum.length() != 0) {
+            if (accum.Any()) {
                 func(accum);
             }
 
@@ -309,23 +297,25 @@ public:
         // call func for each line in the buffer,
         // holding onto the last one (assuming no newline at the end)
         // keep that last line and continue accumulating until a newline is found
-        std::string accum;
-        accum.reserve(BufferSize);
+        String accum;
+        accum.Reserve(BufferSize);
 
-        while (SizeType count = Read()) {
-            for (SizeType i = 0; i < count; i++) {
-                if (buffer[i] == '\n') {
+        ByteBuffer byte_buffer;
+
+        while ((byte_buffer = ReadBytes(BufferSize)).Any()) {
+            for (SizeType i = 0; i < byte_buffer.Size(); i++) {
+                if (byte_buffer[i] == '\n') {
                     func(accum);
-                    accum.clear();
+                    accum.Clear();
                     
                     continue;
                 }
 
-                accum += buffer[i];
+                accum.Append(static_cast<char>(byte_buffer[i]));
             }
         }
 
-        if (accum.length() != 0) {
+        if (accum.Any()) {
             func(accum);
         }
     }
@@ -378,12 +368,6 @@ private:
         pos += count;
 
         return count;
-    }
-
-    void ReadBytes(Byte *ptr, unsigned size)
-    {
-        file->read(reinterpret_cast<char *>(ptr), size);
-        pos += size;
     }
 };
 

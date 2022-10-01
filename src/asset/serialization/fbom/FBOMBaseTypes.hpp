@@ -44,6 +44,9 @@ struct FBOMVec2ui : FBOMArray { FBOMVec2ui() : FBOMArray(FBOMUnsignedInt(), 2) {
 struct FBOMVec3ui : FBOMArray { FBOMVec3ui() : FBOMArray(FBOMUnsignedInt(), 3) {} };
 struct FBOMVec4ui : FBOMArray { FBOMVec4ui() : FBOMArray(FBOMUnsignedInt(), 4) {} };
 
+struct FBOMMat3 : FBOMArray { FBOMMat3() : FBOMArray(FBOMFloat(), 9) {} };
+struct FBOMMat4 : FBOMArray { FBOMMat4() : FBOMArray(FBOMFloat(), 16) {} };
+
 struct FBOMQuaternion : FBOMVec4f { FBOMQuaternion() : FBOMVec4f() {} };
 
 struct FBOMString : FBOMType {

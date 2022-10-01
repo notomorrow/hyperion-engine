@@ -15,7 +15,7 @@ FXAAEffect::~FXAAEffect() = default;
 Handle<Shader> FXAAEffect::CreateShader(Engine *engine)
 {
     return engine->CreateHandle<Shader>(
-        std::vector<SubShader>{
+        std::vector<SubShader> {
             SubShader{ShaderModule::Type::VERTEX, {
                 Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
             }},

@@ -30,15 +30,6 @@ public:
         out.SetProperty("local_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetLocalAABB());
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
-        // out.SetProperty("renderable_attributes.bucket", FBOMUnsignedInt(), in_object.GetRenderableAttributes().bucket);
-        // out.SetProperty("renderable_attributes.vertex_attributes", FBOMStruct(sizeof(VertexAttributeSet)), &in_object.GetRenderableAttributes().vertex_attributes);
-        // out.SetProperty("renderable_attributes.topology", FBOMUnsignedInt(), in_object.GetRenderableAttributes().topology);
-        // out.SetProperty("renderable_attributes.fill_mode", FBOMUnsignedInt(), in_object.GetRenderableAttributes().fill_mode);
-        // out.SetProperty("renderable_attributes.cull_faces", FBOMUnsignedInt(), in_object.GetRenderableAttributes().cull_faces);
-        // out.SetProperty("renderable_attributes.alpha_blending", FBOMBool(), in_object.GetRenderableAttributes().alpha_blending);
-        // out.SetProperty("renderable_attributes.depth_write", FBOMBool(), in_object.GetRenderableAttributes().depth_write);
-        // out.SetProperty("renderable_attributes.depth_test", FBOMBool(), in_object.GetRenderableAttributes().depth_test);
-
         if (const auto &mesh = in_object.GetMesh()) {
             out.AddChild(*mesh, false);
         }
@@ -104,7 +95,6 @@ public:
             }
         }
 
-        // TEMP!
         out_object->RebuildRenderableAttributes();
 
         return { FBOMResult::FBOM_OK };

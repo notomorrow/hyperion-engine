@@ -25,9 +25,6 @@ void AstSyntaxDefinition::Visit(AstVisitor *visitor, Module *mod)
 {
     AssertThrow(m_syntax_string != nullptr);
     AssertThrow(m_transform_string != nullptr);
-
-    std::cout << "syntax string: " << m_syntax_string->GetValue() << "\n"
-      << "transform string: " << m_transform_string->GetValue() << "\n";
 }
 
 std::unique_ptr<Buildable> AstSyntaxDefinition::Build(AstVisitor *visitor, Module *mod)

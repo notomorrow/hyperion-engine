@@ -5,6 +5,8 @@
 #include <system/Debug.hpp>
 #include <Types.hpp>
 
+#include <util/Defines.hpp>
+
 #include <type_traits>
 
 namespace hyperion {
@@ -129,24 +131,24 @@ public:
         }
     }
 
-    void *GetPointer() const
+    HYP_FORCE_INLINE void *GetPointer() const
         { return m_ptr; }
 
-    bool HasValue() const
+    HYP_FORCE_INLINE bool HasValue() const
         { return m_ptr != nullptr; }
 
-    const TypeID &GetTypeID() const
+    HYP_FORCE_INLINE const TypeID &GetTypeID() const
         { return m_type_id; }
 
     template <class T>
-    bool Is() const
+    HYP_FORCE_INLINE bool Is() const
         { return m_type_id == TypeID::ForType<T>(); }
 
-    bool Is(const TypeID &type_id) const
+    HYP_FORCE_INLINE bool Is(const TypeID &type_id) const
         { return m_type_id == type_id; }
 
     template <class T>
-    T &Get()
+    HYP_FORCE_INLINE T &Get()
     {
         const auto requested_type_id = TypeID::ForType<T>();
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
@@ -155,7 +157,7 @@ public:
     }
 
     template <class T>
-    const T &Get() const
+    HYP_FORCE_INLINE const T &Get() const
     {
         const auto requested_type_id = TypeID::ForType<T>();
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");

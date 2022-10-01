@@ -3,6 +3,7 @@
 
 #include <core/Base.hpp>
 #include <rendering/Shader.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
 #include <GameCounter.hpp>
@@ -12,13 +13,9 @@ namespace hyperion::v2 {
 
 class Engine;
 
-enum class LightType {
-    DIRECTIONAL,
-    POINT,
-    SPOT
-};
-
-class Light : public EngineComponentBase<STUB_CLASS(Light)>
+class Light
+    : public EngineComponentBase<STUB_CLASS(Light)>,
+      public HasDrawProxy<STUB_CLASS(Light)>
 {
 public:
     Light(
@@ -33,9 +30,11 @@ public:
     Light &operator=(const Light &other) = delete;
     ~Light();
 
-    LightType GetType() const { return m_type; }
+    LightType GetType() const
+        { return m_type; }
 
-    const Vector3 &GetPosition() const { return m_position; }
+    const Vector3 &GetPosition() const
+        { return m_position; }
 
     void SetPosition(const Vector3 &position)
     {
@@ -43,7 +42,8 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    const Vector4 &GetColor() const    { return m_color; }
+    const Vector4 &GetColor() const
+        { return m_color; }
 
     void SetColor(const Vector4 &color)
     {
@@ -51,7 +51,8 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    float GetIntensity() const         { return m_intensity; }
+    float GetIntensity() const
+        { return m_intensity; }
 
     void SetIntensity(float intensity)
     {
@@ -59,7 +60,8 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    UInt GetShadowMapIndex() const     { return m_shadow_map_index; }
+    UInt GetShadowMapIndex() const
+        { return m_shadow_map_index; }
 
     void SetShadowMapIndex(UInt shadow_map_index)
     {
@@ -68,25 +70,28 @@ public:
     }
 
     void Init(Engine *engine);
-    void Update(Engine *engine, GameCounter::TickUnit delta);
+    void EnqueueBind(Engine *engine) const;
+    void EnqueueUnbind(Engine *engine) const;
+    void Update(Engine *engine);
 
 protected:
     LightType m_type;
-    Vector3   m_position;
-    Vector4   m_color;
-    float     m_intensity;
+    Vector3 m_position;
+    Vector4 m_color;
+    float m_intensity;
     /* Point, spot lights */
-    float     m_radius;
+    float m_radius;
 
-    UInt      m_shadow_map_index;
+    UInt m_shadow_map_index;
 
 private:
-    void EnqueueRenderUpdates() const;
+    void EnqueueRenderUpdates();
 
     mutable ShaderDataState m_shader_data_state;
 };
 
-class DirectionalLight : public Light {
+class DirectionalLight : public Light
+{
 public:
     static constexpr float default_intensity = 100000.0f;
     static constexpr float default_radius = 0.0f;
@@ -110,7 +115,8 @@ public:
     void SetDirection(const Vector3 &direction) { SetPosition(direction); }
 };
 
-class PointLight : public Light {
+class PointLight : public Light
+{
 public:
     static constexpr float default_intensity = 25.0f;
     static constexpr float default_radius    = 0.5f;
@@ -129,8 +135,6 @@ public:
     )
     {
     }
-
-
 };
 
 } // namespace hyperion::v2

@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_BUFFERS_H
 #define HYPERION_V2_BUFFERS_H
 
+#include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <math/Rect.hpp>
@@ -209,12 +210,6 @@ struct alignas(16) ShadowShaderData
 
 //static_assert(sizeof(ShadowShaderData) == 128);
 
-enum EnvProbeFlags : UInt32
-{
-    ENV_PROBE_NONE = 0x0,
-    ENV_PROBE_PARALLAX_CORRECTED = 0x1
-};
-
 struct alignas(16) EnvProbeShaderData
 {
     ShaderVec4<Float> aabb_max;
@@ -248,8 +243,8 @@ constexpr SizeType max_objects_bytes = max_materials * sizeof(ObjectShaderData);
 constexpr SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
 constexpr SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 /* max number of lights, based on size in kb */
-constexpr SizeType max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
-constexpr SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
+constexpr SizeType max_lights = (16ull * 1024ull) / sizeof(LightDrawProxy);
+constexpr SizeType max_lights_bytes = max_lights * sizeof(LightDrawProxy);
 /* max number of shadow maps, based on size in kb */
 constexpr SizeType max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
 constexpr SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
