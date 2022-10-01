@@ -23,6 +23,8 @@ public:
     virtual FBOMResult Serialize(const Node &in_object, FBOMObject &out) const override
     {
         out.SetProperty("type", FBOMUnsignedInt(), in_object.GetType());
+
+        out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
     
         out.SetProperty("local_transform.translation", FBOMVec3f(), &in_object.GetLocalTransform().GetTranslation());
         out.SetProperty("local_transform.rotation", FBOMQuaternion(), &in_object.GetLocalTransform().GetRotation());
@@ -83,6 +85,10 @@ public:
         default:
             return { FBOMResult::FBOM_ERR, "Unsupported node type" }; 
         }
+
+        String name;
+        in.GetProperty("name").ReadString(name);
+        out_object->SetName(std::move(name));
 
         { // local transform
             Transform transform = Transform::identity;

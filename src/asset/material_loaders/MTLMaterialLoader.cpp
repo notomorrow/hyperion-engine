@@ -115,10 +115,10 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
         }
     };
 
-    state.stream.ReadLines([&](const std::string &line) {
+    state.stream.ReadLines([&](const String &line) {
         tokens.clear();
 
-        const auto trimmed = StringUtil::Trim(line);
+        const auto trimmed = StringUtil::Trim(std::string(line.Data()));
 
         if (trimmed.empty() || trimmed.front() == '#') {
             return;

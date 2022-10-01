@@ -2,6 +2,6 @@
 
 namespace hyperion::v2 {
 
-const RenderState::SceneBinding RenderState::SceneBinding::empty = { };
+const RenderBinding<Scene> RenderBinding<Scene>::empty = RenderBinding { };
 
 } // namespace hyperion::v2

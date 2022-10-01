@@ -124,7 +124,7 @@ public:
 
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"../data/dump2/sponza.fbom");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -136,66 +136,8 @@ public:
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
 
-        for (int i = 0; i < 0; i++) {
-            auto sphere = engine->GetAssetManager().Load<Node>("models/material_sphere/material_sphere.obj");
-            sphere.Scale(5.0f);
-            sphere.SetName("sphere");
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, Handle<Texture>());
-            sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, MathUtil::Clamp(float(i + 1) / 10.0f + 0.01f, 0.05f, 0.95f));
-            sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);//MathUtil::Clamp(float(i + 1) / 10.0f, 0.0f, 1.0f));
-            // sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            // sphere[0].GetEntity()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            sphere[0].GetEntity()->GetInitInfo().flags &= ~Entity::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
-
-            // sphere[0].GetEntity()->GetMaterial()->SetIsAlphaBlended(true);
-            // sphere[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            sphere[0].GetEntity()->RebuildRenderableAttributes();
-            sphere.SetLocalTranslation(Vector3(2.0f + (i * 6.0f), 14.0f, -5.0f));
-            //m_scene->GetRoot().AddChild(sphere);
-        }
-
-        // test_model.Scale(0.15f);
-
-#if 0// serialize/deseriale test
-
-#if 0
-        FileByteWriter bw("data/dump2/sponza.fbom");
-        fbom::FBOMWriter fw;
-        fw.Append(*test_model.Get());
-        auto err = fw.Emit(&bw);
-
-        AssertThrowMsg(err.value != fbom::FBOMResult::FBOM_ERR, "%s\n", err.message);
-
-        bw.Close();
-
-#endif
-
-        fbom::FBOMReader fr(engine, fbom::FBOMConfig { });
-        fbom::FBOMDeserializedObject result;
-        if (auto err = fr.LoadFromFile("data/dump2/sponza.fbom", result)) {
-            AssertThrowMsg(false, "%s\n", err.message);
-        }
-
-        auto loaded_node = result.Get<Node>();
-        m_scene->GetRoot().AddChild(loaded_node);
-        
-        // auto ent = engine->resources->entities.Add(result.Release<Entity>());
-        // m_scene->GetRoot().AddChild().Get()->SetEntity(std::move(ent));
-#endif
-        
-        { // custom vegetation shader
-            /*if (auto grass = m_scene->GetRoot().AddChild(NodeProxy(loaded_assets[4].release()))) {
-                grass[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-                grass[0].GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION)));
-                grass.Scale(1.0f);
-                grass.Translate({0, 1, 0});
-            }*/
-        }
+        // add sponza model
+        m_scene->GetRoot().AddChild(test_model);
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
             engine->GetAssetManager().Load<Texture>(
@@ -224,14 +166,14 @@ public:
         { // adding lights to scene
             m_sun = engine->CreateHandle<Light>(new DirectionalLight(
                 Vector3(-0.1f, 1.0f, 0.0f).Normalize(),
-                Vector4::One(),
+                Color(1.0f, 1.0f, 1.0f),
                 110000.0f
             ));
-            m_scene->GetEnvironment()->AddLight(Handle<Light>(m_sun));
+            m_scene->AddLight(m_sun);
 
-            m_scene->GetEnvironment()->AddLight(engine->CreateHandle<Light>(new PointLight(
+            m_scene->AddLight(engine->CreateHandle<Light>(new PointLight(
                 Vector3(0.0f, 12.0f, 4.0f),
-                Vector4(0.0f, 0.5f, 1.0f, 1.0f),
+                Color(0.0f, 0.5f, 1.0f),
                 10000.0f,
                 60.0f
             )));
@@ -285,27 +227,6 @@ public:
         }
 #endif
 
-        /*auto water_quad = engine->CreateHandle<Entity>();
-        water_quad->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Cube()));
-        water_quad->SetMaterial(engine->CreateHandle<Material>());
-        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.5f, 1.0f, 0.35f));
-        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
-        water_quad->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-        water_quad->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->GetAssetManager().Load<Texture>("textures/water.jpg"));
-        water_quad->GetMaterial()->SetIsAlphaBlended(true);
-        water_quad->GetMaterial()->SetBucket(BUCKET_TRANSLUCENT);
-        water_quad->SetScale(Vector3(18.0f));
-        water_quad->SetShader(Handle(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
-        water_quad->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-        water_quad->RebuildRenderableAttributes();
-        GetScene()->AddEntity(std::move(water_quad));*/
-
-
-        // add test model
-        if (auto test = m_scene->GetRoot().AddChild(test_model)) {
-        }
-
-
         { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
                 Handle<Light>(m_sun),
@@ -344,17 +265,6 @@ public:
             physics::PhysicsMaterial { .mass = 0.0f }
         );
         plane->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
-
-        for (auto &x : m_scene->GetRoot().GetChildren()) {
-            DebugLog(LogType::Debug, "%s\n", x.GetName().Data());
-        }
-
-        // FileByteWriter bw("data/dump/sponza.fbom");
-        // fbom::FBOMWriter fw;
-        // fw.Append(*test_model.Get());
-        // auto err = fw.Emit(&bw);
-        // AssertThrowMsg(err.value != fbom::FBOMResult::FBOM_ERR, "%s\n", err.message);
-        // bw.Close();
     }
 
     virtual void Teardown(Engine *engine) override
@@ -369,8 +279,6 @@ public:
 
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
-        m_scene->GetEnvironment()->RenderComponents(engine, frame);
-
         engine->render_state.BindScene(m_scene.Get());
     }
 
@@ -806,6 +714,12 @@ int main()
 
         my_game->OnFrameBegin(engine, frame);
 
+        if (auto *environment = engine->GetRenderState().GetScene().render_environment) {
+            if (environment->IsReady()) {
+                environment->RenderComponents(engine, frame);
+            }
+        }
+
         rt->Bind(frame->GetCommandBuffer());
     
         const auto scene_binding = engine->render_state.GetScene().id;
@@ -817,7 +731,7 @@ int main()
             DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
             FixedArray {
                 UInt32(sizeof(v2::SceneShaderData) * scene_index),
-                UInt32(sizeof(v2::LightShaderData) * 0)
+                UInt32(sizeof(v2::LightDrawProxy) * 0)
             }
         );
 

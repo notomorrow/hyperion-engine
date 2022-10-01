@@ -68,6 +68,9 @@ public:
     bool operator==(const UniqueID &other) const
         { return value == other.value; }
 
+    bool operator!=(const UniqueID &other) const
+        { return value != other.value; }
+
     bool operator<(const UniqueID &other) const
         { return value < other.value; }
 

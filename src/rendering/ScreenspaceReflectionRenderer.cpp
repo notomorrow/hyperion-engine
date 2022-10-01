@@ -242,7 +242,7 @@ void ScreenspaceReflectionRenderer::Render(
             {
                 .offsets = {
                     UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0)
                 }
             }
         }
@@ -282,7 +282,7 @@ void ScreenspaceReflectionRenderer::Render(
             {
                 .offsets = {
                     UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0)
                 }
             }
         }
@@ -322,7 +322,7 @@ void ScreenspaceReflectionRenderer::Render(
             {
                 .offsets = {
                     UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0)
                 }
             }
         }
@@ -360,7 +360,7 @@ void ScreenspaceReflectionRenderer::Render(
             {
                 .offsets = {
                     UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0)
                 }
             }
         }

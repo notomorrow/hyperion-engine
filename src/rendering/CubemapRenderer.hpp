@@ -53,8 +53,8 @@ public:
     Handle<Texture> &GetCubemap(UInt frame_index) { return m_cubemaps[frame_index]; }
     const Handle<Texture> &GetCubemap(UInt frame_index) const { return m_cubemaps[frame_index]; }
 
-    Ref<EnvProbe> &GetEnvProbe() { return m_env_probe; }
-    const Ref<EnvProbe> &GetEnvProbe() const { return m_env_probe; }
+    Handle<EnvProbe> &GetEnvProbe() { return m_env_probe; }
+    const Handle<EnvProbe> &GetEnvProbe() const { return m_env_probe; }
 
     void Init(Engine *engine);
     void InitGame(Engine *engine); // init on game thread
@@ -97,7 +97,7 @@ private:
     Handle<RendererInstance> m_renderer_instance;
     std::vector<std::unique_ptr<Attachment>> m_attachments;
     FixedArray<Handle<Texture>, max_frames_in_flight> m_cubemaps;
-    Ref<EnvProbe> m_env_probe;
+    Handle<EnvProbe> m_env_probe;
     FixedArray<std::unique_ptr<UniformBuffer>, max_frames_in_flight> m_cubemap_render_uniform_buffers;
 };
 

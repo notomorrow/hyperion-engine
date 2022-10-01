@@ -9,6 +9,7 @@
 #include <rendering/Texture.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Light.hpp>
+#include <rendering/EnvProbe.hpp>
 #include <core/Scheduler.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -36,7 +37,7 @@ public:
 
     Handle<Camera> &GetCamera() { return m_camera; }
     const Handle<Camera> &GetCamera() const { return m_camera; }
-    void SetCamera(Handle<Camera> &&camera) { m_camera = std::move(camera); }
+    void SetCamera(Handle<Camera> &&camera);
 
     /*! \brief Add the Entity to a new Node attached to the root. */
     bool AddEntity(Handle<Entity> &&entity);
@@ -48,6 +49,14 @@ public:
     bool HasEntity(Entity::ID id) const;
     /*! \brief Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
     bool RemoveEntityInternal(const Handle<Entity> &entity);
+
+    bool AddLight(Handle<Light> &&light);
+    bool AddLight(const Handle<Light> &light);
+    bool RemoveLight(Light::ID id);
+
+    bool AddEnvProbe(Handle<EnvProbe> &&env_probe);
+    bool AddEnvProbe(const Handle<EnvProbe> &env_probe);
+    bool RemoveEnvProbe(EnvProbe::ID id);
 
     /* ONLY CALL FROM GAME THREAD!!! */
     auto &GetEntities() { return m_entities; }
@@ -110,8 +119,10 @@ private:
     RenderEnvironment *m_environment;
     World *m_world;
 
-    // entities live in GAME thread
+    // entities, lights etc. live in GAME thread
     FlatMap<IDBase, Handle<Entity>> m_entities;
+    FlatMap<Light::ID, Handle<Light>> m_lights;
+    FlatMap<EnvProbe::ID, Handle<EnvProbe>> m_env_probes;
 
     // NOTE: not for thread safety, it's to defer updates so we don't
     // remove in the update loop.

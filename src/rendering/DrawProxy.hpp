@@ -3,10 +3,10 @@
 
 #include <core/Base.hpp>
 #include <rendering/RenderBucket.hpp>
-#include <rendering/Buffers.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
+#include <math/Color.hpp>
 #include <math/Frustum.hpp>
 
 #include <rendering/backend/RendererBuffer.hpp>
@@ -18,8 +18,12 @@
 
 #include <memory>
 
+// using the template param like DrawProxy<cls> doesn't work
+#define HYP_RENDER_OBJECT_OFFSET(cls, index) \
+    (UInt32((index) * sizeof(cls ## DrawProxy)))
+
 namespace hyperion::v2 {
-    
+
 using renderer::IndirectDrawCommand;
 using renderer::IndirectBuffer;
 using renderer::StorageBuffer;
@@ -36,9 +40,21 @@ class Engine;
 class Entity;
 class Camera;
 class EnvProbe;
+class Light;
+
+enum class LightType : UInt32
+{
+    DIRECTIONAL,
+    POINT,
+    SPOT
+};
 
 template <class T>
-struct DrawProxy {};
+struct DrawProxy
+{
+private:
+    DrawProxy(); // break intentionally; needs specialization
+};
 
 template <>
 struct DrawProxy<STUB_CLASS(Entity)>
@@ -84,17 +100,37 @@ struct DrawProxy<STUB_CLASS(Camera)>
 
 using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
 
+enum EnvProbeFlags : UInt32
+{
+    ENV_PROBE_NONE = 0x0,
+    ENV_PROBE_PARALLAX_CORRECTED = 0x1
+};
+
 template <>
 struct DrawProxy<STUB_CLASS(EnvProbe)>
 {
     IDBase id;
     BoundingBox aabb;
     Vector3 world_position;
-    UInt texture_index;
+    UInt32 texture_index;
     EnvProbeFlags flags;
 };
 
 using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
+
+template <>
+struct alignas(64) DrawProxy<STUB_CLASS(Light)>
+{
+    alignas(4) IDBase id;
+    alignas(4) LightType type;
+    alignas(16) Vector4 position;
+    alignas(4) Color color;
+    alignas(4) Float32 intensity;
+    alignas(4) Float32 radius;
+    alignas(4) UInt32 shadow_map_index;
+};
+
+using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;
 
 template <class T>
 class HasDrawProxy
@@ -156,7 +192,7 @@ protected:
     template <class EngineImpl>
     void EnqueueDrawProxyUpdate(EngineImpl *engine, DrawProxy<T> &&draw_proxy)
     {
-        engine->render_scheduler.Enqueue([this, _drawable = std::move(draw_proxy)](...) mutable {
+        engine->GetRenderScheduler().Enqueue([this, _drawable = std::move(draw_proxy)](...) mutable {
             // just update draw_proxy object on render thread
             HasDrawProxy::m_draw_proxy = _drawable;
 

@@ -153,6 +153,9 @@ public:
     auto &GetRenderScheduler() { return render_scheduler; }
     const auto &GetRenderScheduler() const { return render_scheduler; }
 
+    RenderState &GetRenderState() { return render_state; }
+    const RenderState &GetRenderState() const { return render_state; }
+
     ShaderGlobals *GetRenderData() const { return shader_globals; }
     
     PlaceholderData &GetPlaceholderData() { return m_placeholder_data; }
@@ -328,7 +331,7 @@ private:
 
     void FinalizeStop();
 
-    void ResetRenderState();
+    void ResetRenderState(RenderStateMask mask);
     void UpdateBuffersAndDescriptors(UInt frame_index);
 
     void PrepareFinalPass();

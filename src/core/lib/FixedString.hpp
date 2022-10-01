@@ -53,7 +53,7 @@ public:
         : m_str(other.m_str),
           m_length(other.m_length)
     {
-        other.m_str    = nullptr;
+        other.m_str = nullptr;
         other.m_length = 0;
     }
 
@@ -62,7 +62,7 @@ public:
         if (m_str != nullptr) {
             delete[] m_str;
 
-            m_str    = nullptr;
+            m_str = nullptr;
             m_length = 0;
         }
 
@@ -81,24 +81,22 @@ public:
 
     operator const char *() const { return m_str; }
 
-    char &operator[](size_t index) { return m_str[index]; }
-    char operator[](size_t index) const { return m_str[index]; }
+    char operator[](SizeType index) const { return m_str[index]; }
 
     bool operator<(const FixedString &other) const
         { return m_str == nullptr ? true : bool(std::strcmp(m_str, other.m_str) < 0); }
 
-    size_t Length() const { return m_length; }
+    SizeType Length() const { return m_length; }
     const char *Data() const { return m_str; }
-    const char *CString() const { return m_str; }
 
     char *begin() { return m_str; }
-    char *end()   { return m_str + m_length; }
+    char *end() { return m_str + m_length; }
     char *cbegin() const { return m_str; }
-    char *cend() const   { return m_str + m_length; }
+    char *cend() const { return m_str + m_length; }
 
 private:
     char *m_str;
-    size_t m_length;
+    SizeType m_length;
 };
 
 } // namespace hyperion::v2

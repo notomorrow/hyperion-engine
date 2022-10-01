@@ -5,6 +5,7 @@
 #include <core/Containers.hpp>
 #include <core/Handle.hpp>
 #include <scene/Node.hpp>
+#include <math/MathUtil.hpp>
 #include <TaskSystem.hpp>
 
 #include <type_traits>
@@ -61,7 +62,9 @@ private:
         {
             auto &asset = batch.enqueued_assets[key];
 
-            asset.value.Set(static_cast<typename AssetLoaderWrapper<T>::ResultType>(asset_manager.template Load<T>(asset.path)));
+            asset.value.Set(static_cast<typename AssetLoaderWrapper<T>::ResultType>(
+                asset_manager.template Load<T>(asset.path)
+            ));
         }
     };
 
@@ -92,8 +95,6 @@ public:
             .path = path
         });
 
-        DebugLog(LogType::Debug, "Add key %s\n", key.Data());
-
         struct Functor
         {
             AssetBatch *batch;
@@ -101,7 +102,7 @@ public:
 
             void operator()()
             {
-                DebugLog(LogType::Debug, "Begin loading key %s\n", key.Data());
+                DebugLog(LogType::Info, "Begin loading key \"%s\"\n", key.Data());
                 LoadObjectWrapper<T>()(batch->asset_manager, *batch, key);
             }
         };
@@ -110,15 +111,11 @@ public:
             .batch = this,
             .key = key
         });
-        // static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->key = key;
-
-        DebugLog(LogType::Debug, "Extracted batch: %p    this;  %p\n", static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->batch, this);
-        DebugLog(LogType::Debug, "Extracted key: %s\n", static_cast<Functor *>(procs.Back().functor.memory.GetPointer())->key.Data());
     }
 
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
-    void LoadAsync(UInt num_batches = UINT_MAX);
+    void LoadAsync(UInt num_batches = MathUtil::MaxSafeValue<UInt>());
     AssetMap AwaitResults();
     AssetMap ForceLoad();
 

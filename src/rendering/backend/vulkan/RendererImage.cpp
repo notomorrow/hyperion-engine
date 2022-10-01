@@ -543,8 +543,8 @@ Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceStat
             HYPERION_IGNORE_ERRORS(staging_buffer.Destroy(device));
         }
 
-        delete[] m_bytes;
-        m_bytes = nullptr;
+        // delete[] m_bytes;
+        // m_bytes = nullptr;
     }
 
     return result;
@@ -559,6 +559,11 @@ Result Image::Destroy(Device *device)
 
         delete m_image;
         m_image = nullptr;
+    }
+
+    if (m_bytes) {
+        delete[] m_bytes;
+        m_bytes = nullptr;
     }
 
     return result;

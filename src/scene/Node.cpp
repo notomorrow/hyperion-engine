@@ -138,13 +138,13 @@ Node::~Node()
 
 void Node::SetScene(Scene *scene)
 {
-    if (m_scene != nullptr && m_entity != nullptr) {
+    if (m_scene && m_entity) {
         m_scene->RemoveEntityInternal(m_entity);
     }
 
     m_scene = scene;
 
-    if (m_scene != nullptr && m_entity != nullptr) {
+    if (m_scene && m_entity) {
         m_scene->AddEntityInternal(Handle<Entity>(m_entity));
     }
 
@@ -186,23 +186,28 @@ NodeProxy Node::AddChild()
 
 NodeProxy Node::AddChild(const NodeProxy &node)
 {
-    AssertThrow(node.Get() != nullptr);
+    if (!node) {
+        // could not be added... return empty.
+        return NodeProxy::empty;
+    }
+
     AssertThrow(node.Get()->m_parent_node == nullptr);
 
-    m_child_nodes.PushBack(node);
+    m_child_nodes.PushBack(std::move(node));
 
-    m_child_nodes.Back().Get()->m_parent_node = this;
-    m_child_nodes.Back().Get()->SetScene(m_scene);
+    auto &_node = m_child_nodes.Back();
+    _node.Get()->m_parent_node = this;
+    _node.Get()->SetScene(m_scene);
 
-    OnNestedNodeAdded(m_child_nodes.Back());
+    OnNestedNodeAdded(_node);
 
-    for (auto &nested : m_child_nodes.Back().Get()->GetDescendents()) {
+    for (auto &nested : _node.Get()->GetDescendents()) {
         OnNestedNodeAdded(nested);
     }
 
-    m_child_nodes.Back().Get()->UpdateWorldTransform();
+    _node.Get()->UpdateWorldTransform();
 
-    return m_child_nodes.Back();
+    return _node;
 }
 
 bool Node::RemoveChild(NodeList::Iterator iter)
