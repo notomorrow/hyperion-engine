@@ -101,6 +101,8 @@ public:
 
     virtual void InitGame(Engine *engine) override
     {
+        Game::InitGame(engine);
+
         m_scene = engine->CreateHandle<Scene>(
             engine->CreateHandle<Camera>(new FirstPersonCamera(//FollowCamera(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
@@ -135,6 +137,16 @@ public:
         auto test_model = obj_models["test_model"].Get<Node>();//engine->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
+
+        // {
+        //     if (auto grass = obj_models["grass"].Get<Node>()) {
+        //         grass[0].GetEntity()->GetMaterial()->SetBucket(Bucket::BUCKET_UI);
+        //         grass[0].GetEntity()->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_UI)));
+        //         grass.Scale(1.0f);
+        //         grass.Translate({0, 0, 0});
+        //         GetUI().GetScene()->GetRoot().AddChild(grass);
+        //     }
+        // }
 
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
@@ -290,6 +302,8 @@ public:
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
     {
         timer += delta;
+
+        m_ui.Update(engine, delta);
 
         HandleCameraMovement();
 
@@ -507,6 +521,26 @@ int main()
                     ShaderModule::Type::FRAGMENT, {
                         FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
+                    }
+                }
+            }
+        )
+    );
+
+    engine->shader_manager.SetShader(
+        ShaderKey::BASIC_UI,
+        engine->CreateHandle<Shader>(
+            std::vector<SubShader>{
+                {
+                    ShaderModule::Type::VERTEX, {
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ui/UIObject.vert.spv")).Read(),
+                        {.name = "ui vert"}
+                    }
+                },
+                {
+                    ShaderModule::Type::FRAGMENT, {
+                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ui/UIObject.frag.spv")).Read(),
+                        {.name = "ui frag"}
                     }
                 }
             }

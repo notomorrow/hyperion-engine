@@ -6,40 +6,58 @@
 
 #include <rendering/backend/RendererStructs.hpp>
 
+#include <scene/Scene.hpp>
+
+#include <core/Containers.hpp>
+#include <GameCounter.hpp>
+
 #include <vector>
 
 namespace hyperion::v2 {
 
 using renderer::Extent2D;
 
-class UIObject : public EngineComponentBase<STUB_CLASS(UIObject)> {
+class UIObject : public EngineComponentBase<STUB_CLASS(UIObject)>
+{
 public:
-    UIObject() : m_position{}, m_dimensions{} {}
+    UIObject() : m_position { }, m_dimensions { } {}
     virtual ~UIObject() = default;
 
-    const Extent2D &GetPosition() const   { return m_position; }
-    const Extent2D &GetExtent() const { return m_dimensions; }
+    const Extent2D &GetPosition() const
+        { return m_position; }
+
+    const Extent2D &GetExtent() const
+        { return m_dimensions; }
 
 protected:
     Extent2D m_position,
-             m_dimensions;
+        m_dimensions;
 };
 
-class UIScene {
+class UIScene : public EngineComponentBase<STUB_CLASS(UIScene)>
+{
 public:
+    UIScene();
+    UIScene(const UIScene &other) = delete;
+    UIScene &operator=(const UIScene &other) = delete;
+    ~UIScene();
 
-    template <class T, class ...Args>
-    UIObject *Add(Args &&...args)
-    {
-        static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
+    Handle<Scene> &GetScene()
+        { return m_scene; }
 
-        return AddUIObject(std::make_unique<T>(std::forward<Args>(args)...));    
-    }
+    const Handle<Scene> &GetScene() const
+        { return m_scene; }
+
+    void Init(Engine *engine);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
+
+    // bool Add(Handle<UIObject> &&ui_object);
+    // bool Add(const Handle<UIObject> &ui_object);
+    // bool Remove(const UIObject::ID &id);
 
 private:
-    UIObject *AddUIObject(std::unique_ptr<UIObject> &&ui_object);
-
-    std::vector<Ref<UIObject>> m_ui_objects;
+    Handle<Scene> m_scene;
+    // FlatMap<UIObject::ID, Handle<UIObject>> m_ui_objects;
 };
 
 } // namespace hyperion::v2

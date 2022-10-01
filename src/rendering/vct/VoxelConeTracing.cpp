@@ -456,7 +456,7 @@ void VoxelConeTracing::CreateRendererInstance(Engine *engine)
                 .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
             },
             MaterialAttributes {
-                .bucket = BUCKET_VOXELIZER,
+                .bucket = BUCKET_INTERNAL,
                 .cull_faces = FaceCullMode::NONE,
                 .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
             }

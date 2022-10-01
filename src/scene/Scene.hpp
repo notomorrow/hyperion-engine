@@ -27,6 +27,8 @@ class Scene : public EngineComponentBase<STUB_CLASS(Scene)>
 {
     friend class Entity;
     friend class World;
+    friend class UIScene;
+
 public:
     static constexpr UInt32 max_environment_textures = SceneShaderData::max_environment_textures;
 
