@@ -137,7 +137,7 @@ struct ComponentInitInfo
     ComponentFlagBits flags = 0x0;
 };
 
-class RenderResource {};
+class RenderResource { };
 
 class EngineComponentBaseBase { };
 
@@ -149,7 +149,7 @@ class EngineComponentBase
     using InnerType = typename Type::InnerType;
 
 public:
-    using ID = typename Handle<InnerType>::ID;//ComponentID<Type>;
+    using ID = typename Handle<InnerType>::ID;
     using ComponentInitInfo = ComponentInitInfo<Type>;
 
     static constexpr ID empty_id = ID { };
@@ -200,6 +200,9 @@ public:
     /*! \brief Set the assigned name of the object */
     void SetName(const String &name) { m_name = name; }
 
+    /*! \brief Set the assigned name of the object */
+    void SetName(String &&name) { m_name = std::move(name); }
+
     bool IsInitCalled() const
         { return m_init_called.load(); }
 
@@ -218,7 +221,7 @@ public:
             "Engine was nullptr!"
         );
 
-        m_init_called = true;
+        m_init_called.store(true);
         m_engine = engine;
 
         m_attachment_map.InitializeAll(static_cast<InnerType *>(this));
@@ -261,7 +264,7 @@ protected:
 
     void Destroy()
     {
-        m_init_called = false;
+        m_init_called.store(false);
         m_engine = nullptr;
     }
     
@@ -271,7 +274,7 @@ protected:
     HYP_FORCE_INLINE void AssertReady() const
     {
         AssertThrowMsg(
-            m_is_ready,
+            IsReady(),
             "Component is not in ready state; maybe Init() has not been called on it, "
             "or the component requires an event to be sent from the Engine instance to determine that "
             "it is ready to be constructed, and this event has not yet been sent.\n"

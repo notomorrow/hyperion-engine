@@ -5,6 +5,7 @@
 
 #include <rendering/PostFX.hpp>
 #include <rendering/Compute.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/vct/VoxelConeTracing.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -279,7 +280,7 @@ void Engine::PrepareFinalPass()
 
 void Engine::Initialize()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_MAIN);
 
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -308,7 +309,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
             .buffer = shader_globals->lights.GetBuffers()[0].get(),
-            .range  = static_cast<UInt>(sizeof(LightShaderData))
+            .range  = static_cast<UInt>(sizeof(LightDrawProxy))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
@@ -352,7 +353,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
             .buffer = shader_globals->lights.GetBuffers()[1].get(),
-            .range = static_cast<UInt>(sizeof(LightShaderData))
+            .range = static_cast<UInt>(sizeof(LightDrawProxy))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
@@ -565,7 +566,7 @@ void Engine::Initialize()
 
 void Engine::Compile()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_MAIN);
 
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
     
@@ -622,7 +623,7 @@ void Engine::RequestStop()
 
 void Engine::FinalizeStop()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_MAIN);
 
     SafeReleaseHandle<Mesh>(std::move(m_full_screen_quad));
 
@@ -685,6 +686,12 @@ void Engine::RenderNextFrame(Game *game)
     render_state.visibility_cursor = m_world.GetOctree().LoadPreviousVisibilityCursor();
 
     game->OnFrameBegin(this, frame);
+
+    if (auto *environment = render_state.GetScene().render_environment) {
+        if (environment->IsReady()) {
+            environment->RenderComponents(this, frame);
+        }
+    }
 
     RenderDeferred(frame);
     RenderFinalPass(frame);
@@ -769,12 +776,14 @@ void Engine::PreFrameUpdate(Frame *frame)
     }
 
     UpdateBuffersAndDescriptors(frame->GetFrameIndex());
-    ResetRenderState();
+    ResetRenderState(
+        RENDER_STATE_VISIBILITY | RENDER_STATE_SCENE
+    );
 }
 
-void Engine::ResetRenderState()
+void Engine::ResetRenderState(RenderStateMask mask)
 {
-    render_state.Reset();
+    render_state.Reset(mask);
 }
 
 void Engine::UpdateBuffersAndDescriptors(UInt frame_index)

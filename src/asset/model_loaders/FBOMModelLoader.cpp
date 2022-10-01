@@ -20,10 +20,11 @@ LoadedAsset FBOMModelLoader::LoadAsset(LoaderState &state) const
     fbom::FBOMReader reader(engine, fbom::FBOMConfig { });
     fbom::FBOMDeserializedObject object;
 
+    DebugLog(LogType::Info, "Begin loading serialized object at %s\n", state.filepath.c_str());
+
     if (auto err = reader.LoadFromFile(String(state.filepath.c_str()), object)) {
         return { { LoaderResult::Status::ERR, err.message } };
     }
-
     return { { LoaderResult::Status::OK }, std::move(object.m_value) };
 }
 

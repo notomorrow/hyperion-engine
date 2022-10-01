@@ -17,8 +17,8 @@ ShaderProgram::~ShaderProgram()
 Result ShaderProgram::AttachShader(Device *device, ShaderModule::Type type, const ShaderObject &spirv)
 {
     VkShaderModuleCreateInfo create_info{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    create_info.codeSize = spirv.bytes.size();
-    create_info.pCode    = reinterpret_cast<const uint32_t *>(spirv.bytes.data());
+    create_info.codeSize = spirv.bytes.Size();
+    create_info.pCode = reinterpret_cast<const UInt32 *>(spirv.bytes.Data());
 
     VkShaderModule shader_module;
 

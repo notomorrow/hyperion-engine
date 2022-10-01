@@ -141,13 +141,10 @@ FBOMResult FBOMReader::ReadData(ByteReader *reader, FBOMData &data)
         UInt32 sz;
         reader->Read(&sz);
 
-        unsigned char *bytes = new unsigned char[sz];
-        reader->Read(bytes, sz);
+        ByteBuffer byte_buffer;
+        AssertThrow(reader->Read(sz, byte_buffer) == sz);
 
-        data = FBOMData(object_type);
-        data.SetBytes(sz, bytes);
-
-        delete[] bytes;
+        data = FBOMData(object_type, std::move(byte_buffer));
     } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
         // read offset as u32
         UInt32 offset;
@@ -169,6 +166,10 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
     }
 
     FBOMCommand command = FBOM_NONE;
+
+    // read unique ID
+    UInt64 unique_id;
+    reader->Read(&unique_id);
 
     // read data location
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
@@ -193,6 +194,7 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
         const FBOMType object_type = ReadObjectType(reader);
 
         object = FBOMObject(object_type);
+        // object.m_unique_id = unique_id;
 
         do {
             command = PeekCommand(reader);
@@ -290,17 +292,25 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
             if (!m_config.continue_on_external_load_error) {
                 return err;
             }
-        } else {
-            // cache it
-
-            m_config.external_data_cache.Set(Pair { relative_path, object_index }, object);
         }
+
+        // cache it
+        m_config.external_data_cache.Set(Pair { relative_path, object_index }, object);
 
         break;
     }
     default:
-        return FBOMResult(FBOMResult::FBOM_ERR, "Unknown object location type");
+        return FBOMResult(FBOMResult::FBOM_ERR, "Unknown object location type!");
     }
+
+    // if (unique_id != UInt64(object.m_unique_id)) {
+    //     DebugLog(
+    //         LogType::Warn,
+    //         "unique id header for object does not match unique id stored in external object (%llu != %llu)\n",
+    //         unique_id,
+    //         UInt64(object.m_unique_id)
+    //     );
+    // }
 
     return FBOMResult::FBOM_OK;
 }

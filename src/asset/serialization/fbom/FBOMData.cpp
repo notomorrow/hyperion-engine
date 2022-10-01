@@ -1,4 +1,5 @@
 #include <asset/serialization/fbom/FBOMData.hpp>
+#include <core/lib/CMemory.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -65,7 +66,7 @@ SizeType FBOMData::ReadBytes(SizeType n, void *out) const
     }
 
     SizeType to_read = MathUtil::Min(n, bytes.Size());
-    std::memcpy(out, bytes.Data(), to_read);
+    Memory::Copy(out, bytes.Data(), to_read);
     return to_read;
 }
 

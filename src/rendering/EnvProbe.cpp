@@ -50,6 +50,30 @@ void EnvProbe::Init(Engine *engine)
     });
 }
 
+void EnvProbe::EnqueueBind(Engine *engine) const
+{
+    Threads::AssertOnThread(~THREAD_RENDER);
+    AssertReady();
+
+    GetEngine()->GetRenderScheduler().Enqueue([engine, id = m_id](...) {
+        engine->render_state.BindEnvProbe(id);
+
+        HYPERION_RETURN_OK;
+    });
+}
+
+void EnvProbe::EnqueueUnbind(Engine *engine) const
+{
+    Threads::AssertOnThread(~THREAD_RENDER);
+    AssertReady();
+
+    GetEngine()->GetRenderScheduler().Enqueue([engine, id = m_id](...) {
+        engine->render_state.UnbindEnvProbe(id);
+
+        HYPERION_RETURN_OK;
+    });
+}
+
 void EnvProbe::Update(Engine *engine)
 {
     AssertReady();

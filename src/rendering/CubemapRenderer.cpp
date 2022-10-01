@@ -80,14 +80,15 @@ void CubemapRenderer::Init(Engine *engine)
     ));
     tex->GetImage().SetIsSRGB(true);
 
-    m_env_probe = engine->resources->env_probes.Add(new EnvProbe(
+    m_env_probe = engine->CreateHandle<EnvProbe>(
 
         // TEMP
         std::move(tex),
         
         // Handle<Texture>(m_cubemaps[0]), // TODO
         m_aabb
-    ));
+    );
+    engine->InitObject(m_env_probe);
 
     HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -188,9 +189,9 @@ void CubemapRenderer::InitGame(Engine *engine)
 
     // add all entities from environment scene
     AssertThrow(GetParent()->GetScene() != nullptr);
-    AssertThrow(m_env_probe != nullptr);
 
-    GetParent()->AddEnvProbe(m_env_probe.IncRef());
+    AssertThrow(m_env_probe.IsValid());
+    GetParent()->GetScene()->AddEnvProbe(m_env_probe);
 
     for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
@@ -212,9 +213,9 @@ void CubemapRenderer::OnRemoved()
     AssertReady();
 
     AssertThrow(GetParent()->GetScene() != nullptr);
-    AssertThrow(m_env_probe != nullptr);
+    AssertThrow(m_env_probe.IsValid());
 
-    GetParent()->RemoveEnvProbe(m_env_probe.IncRef());
+    GetParent()->GetScene()->RemoveEnvProbe(m_env_probe->GetID());
 }
 
 void CubemapRenderer::OnEntityAdded(Handle<Entity> &entity)
@@ -254,7 +255,7 @@ void CubemapRenderer::OnEntityRenderableAttributesChanged(Handle<Entity> &entity
 
 void CubemapRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
 {
-    m_env_probe->Update(engine);
+    //m_env_probe->Update(engine);
 }
 
 void CubemapRenderer::OnRender(Engine *engine, Frame *frame)

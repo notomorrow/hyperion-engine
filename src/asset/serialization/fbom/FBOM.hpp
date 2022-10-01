@@ -63,7 +63,7 @@ enum FBOMCommand : UInt8
     FBOM_OBJECT_END,
     FBOM_STATIC_DATA_START,
     FBOM_STATIC_DATA_END,
-    FBOM_DEFINE_PROPERTY,
+    FBOM_DEFINE_PROPERTY
 };
 
 enum FBOMDataLocation
@@ -314,12 +314,6 @@ public:
         const auto current_dir = FileSystem::CurrentPath();
         const auto base_path = StringUtil::BasePath(path.Data());
         root.SetProperty("base_path", FBOMString(), base_path.size(), base_path.data());
-
-        DebugLog(
-            LogType::Debug,
-            "base_path = %s\n",
-            base_path.data()
-        );
 
         FileByteReader reader(FileSystem::Join(base_path, std::string(FilePath(path).Basename().Data())));
 

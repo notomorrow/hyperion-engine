@@ -1,9 +1,10 @@
 #ifndef HYPERION_V2_MATERIAL_H
 #define HYPERION_V2_MATERIAL_H
 
-#include "Texture.hpp"
-#include "Shader.hpp"
-#include "RenderableAttributes.hpp"
+#include <rendering/Texture.hpp>
+#include <rendering/Buffers.hpp>
+#include <rendering/ShaderDataState.hpp>
+#include <rendering/RenderableAttributes.hpp>
 
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/String.hpp>

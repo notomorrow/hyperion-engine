@@ -38,8 +38,8 @@ public:
 
         out.SetProperty(
             "bytes",
-            FBOMArray(FBOMByte(), in_object.spirv.bytes.size()),
-            in_object.spirv.bytes.data()
+            FBOMArray(FBOMByte(), in_object.spirv.bytes.Size()),
+            in_object.spirv.bytes.Data()
         );
 
         return { FBOMResult::FBOM_OK };
@@ -57,9 +57,7 @@ public:
             const auto num_bytes = bytes_property.NumArrayElements(FBOMByte());
 
             if (num_bytes != 0) {
-                out_object->spirv.bytes.resize(num_bytes);
-
-                if (auto err = bytes_property.ReadArrayElements(FBOMByte(), num_bytes, out_object->spirv.bytes.data())) {
+                if (auto err = bytes_property.ReadBytes(num_bytes, out_object->spirv.bytes)) {
                     return err;
                 }
             }

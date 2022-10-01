@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_BUFFERS_H
 #define HYPERION_V2_BUFFERS_H
 
+#include <rendering/DrawProxy.hpp>
+#include <rendering/Light.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <math/Rect.hpp>
@@ -39,51 +41,6 @@ using renderer::ShaderVec2;
 using renderer::ShaderVec3;
 using renderer::ShaderVec4;
 using renderer::ShaderMat4;
-
-struct ShaderDataState
-{
-    enum State
-    {
-        CLEAN,
-        DIRTY
-    };
-
-    ShaderDataState(State value = CLEAN) : state(value) {}
-    ShaderDataState(const ShaderDataState &other) = default;
-    ShaderDataState &operator=(const ShaderDataState &other) = default;
-
-    ShaderDataState &operator=(State value)
-    {
-        state = value;
-
-        return *this;
-    }
-
-    operator bool() const { return state == CLEAN; }
-
-    bool operator==(const ShaderDataState &other) const { return state == other.state; }
-    bool operator!=(const ShaderDataState &other) const { return state != other.state; }
-
-    ShaderDataState &operator|=(State value)
-    {
-        state |= UInt32(value);
-
-        return *this;
-    }
-
-    ShaderDataState &operator&=(State value)
-    {
-        state &= UInt32(value);
-
-        return *this;
-    }
-
-    bool IsClean() const { return state == CLEAN; }
-    bool IsDirty() const { return state == DIRTY; }
-
-private:
-    UInt32 state;
-};
 
 struct alignas(256) CubemapUniforms
 {
@@ -188,18 +145,6 @@ struct alignas(256) SceneShaderData
 
 static_assert(sizeof(SceneShaderData) == 256);
 
-struct alignas(256) LightShaderData
-{
-    Vector4 position; //direction for directional lights
-    UInt32 color;
-    UInt32 light_type;
-    float intensity;
-    float radius;
-    UInt32 shadow_map_index; // ~0 == no shadow map
-};
-
-static_assert(sizeof(LightShaderData) == 256);
-
 struct alignas(16) ShadowShaderData
 {
     Matrix4 projection;
@@ -208,12 +153,6 @@ struct alignas(16) ShadowShaderData
 };
 
 //static_assert(sizeof(ShadowShaderData) == 128);
-
-enum EnvProbeFlags : UInt32
-{
-    ENV_PROBE_NONE = 0x0,
-    ENV_PROBE_PARALLAX_CORRECTED = 0x1
-};
 
 struct alignas(16) EnvProbeShaderData
 {
@@ -236,26 +175,26 @@ struct alignas(16) ObjectInstance
 };
 
 /* max number of skeletons, based on size in mb */
-constexpr SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
-constexpr SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
+static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
+static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
 /* max number of materials, based on size in mb */
-constexpr SizeType max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
-constexpr SizeType max_materials_bytes = max_materials * sizeof(MaterialShaderData);
+static const SizeType max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
+static const SizeType max_materials_bytes = max_materials * sizeof(MaterialShaderData);
 /* max number of objects, based on size in mb */
-constexpr SizeType max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
-constexpr SizeType max_objects_bytes = max_materials * sizeof(ObjectShaderData);
+static const SizeType max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+static const SizeType max_objects_bytes = max_materials * sizeof(ObjectShaderData);
 /* max number of scenes (cameras, essentially), based on size in kb */
-constexpr SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
-constexpr SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
+static const SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
+static const SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 /* max number of lights, based on size in kb */
-constexpr SizeType max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
-constexpr SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
+static const SizeType max_lights = (16ull * 1024ull) / sizeof(LightDrawProxy);
+static const SizeType max_lights_bytes = max_lights * sizeof(LightDrawProxy);
 /* max number of shadow maps, based on size in kb */
-constexpr SizeType max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
-constexpr SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
+static const SizeType max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
+static const SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 /* max number of env probes, based on size in kb */
-constexpr SizeType max_env_probes = (16ull * 1024ull) / sizeof(EnvProbeShaderData);
-constexpr SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
+static const SizeType max_env_probes = (16ull * 1024ull) / sizeof(EnvProbeShaderData);
+static const SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
 
 template <class Buffer, class StructType, SizeType Size>
 class ShaderData

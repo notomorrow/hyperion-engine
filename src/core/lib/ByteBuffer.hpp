@@ -93,6 +93,11 @@ public:
     const InternalArray &GetInternalArray() const
         { return const_cast<ByteBuffer *>(this)->GetInternalArray(); }
 
+    /*! \brief Be aware that modifying the ByteBuffer's data could have unintentional consequences if
+        it is sharing memory with other ByteBuffers. */
+    UByte *Data()
+        { return GetInternalArray().Data(); }
+
     const UByte *Data() const
         { return GetInternalArray().Data(); }
 

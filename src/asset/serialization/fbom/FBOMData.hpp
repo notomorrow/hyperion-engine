@@ -145,6 +145,15 @@ struct FBOMData
         return TotalSize() / held_type_size;
     }
 
+    FBOMResult ReadBytes(SizeType count, ByteBuffer &out) const
+    {
+        FBOM_ASSERT(count <= bytes.Size(), "Attempt to read past max size of object");
+
+        out = ByteBuffer(count, bytes.Data());
+
+        FBOM_RETURN_OK;
+    }
+
     // count is number of ELEMENTS
     FBOMResult ReadArrayElements(const FBOMType &held_type, SizeType num_items, void *out) const
     {

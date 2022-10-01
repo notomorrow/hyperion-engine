@@ -32,8 +32,8 @@ void Threads::AssertOnThread(ThreadMask mask)
         (mask & current.value),
         "Expected current thread to be in mask %u, but got %u (%s)",
         mask,
-        current.name.CString(),
-        current.value
+        current.value,
+        current.name.Data()
     );
 
 #else
@@ -53,9 +53,9 @@ void Threads::AssertOnThread(const ThreadID &thread_id)
         thread_id == current,
         "Expected current thread to be %u (%s), but got %u (%s)",
         thread_id.value,
-        thread_id.name.CString(),
+        thread_id.name.Data(),
         current.value,
-        current.name.CString()
+        current.name.Data()
     );
 #else
     DebugLog(

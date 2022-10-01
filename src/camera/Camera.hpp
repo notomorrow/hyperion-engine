@@ -20,13 +20,15 @@ namespace v2 {
 
 class Engine;
 
-enum class CameraType {
+enum class CameraType
+{
+    NONE,
     PERSPECTIVE,
-    ORTHOGRAPHIC,
-    OTHER
+    ORTHOGRAPHIC
 };
 
-struct CameraCommand {
+struct CameraCommand
+{
     enum {
         CAMERA_COMMAND_NONE,
         CAMERA_COMMAND_MAG,
@@ -34,7 +36,8 @@ struct CameraCommand {
         CAMERA_COMMAND_MOVEMENT
     } command;
 
-    enum MovementType {
+    enum MovementType
+    {
         CAMERA_MOVEMENT_NONE,
         CAMERA_MOVEMENT_LEFT,
         CAMERA_MOVEMENT_RIGHT,
@@ -64,7 +67,8 @@ struct CameraCommand {
 
 class Camera :
     public EngineComponentBase<STUB_CLASS(Camera)>,
-    public HasDrawProxy<STUB_CLASS(Camera)> {
+    public HasDrawProxy<STUB_CLASS(Camera)>
+{
 public:
     Camera(CameraType camera_type, int width, int height, float _near, float _far);
     virtual ~Camera();
@@ -81,32 +85,36 @@ public:
     void SetFar(float _far) { m_far = _far; }
     float GetFov() const { return m_fov; }
 
-    const Vector3 &GetTranslation() const             { return m_translation; }
+    const Vector3 &GetTranslation() const { return m_translation; }
     virtual void SetTranslation(const Vector3 &translation);
     virtual void SetNextTranslation(const Vector3 &translation);
 
-    const Vector3 &GetDirection() const               { return m_direction; }
+    const Vector3 &GetDirection() const { return m_direction; }
     virtual void SetDirection(const Vector3 &direction);
 
-    const Vector3 &GetUpVector() const                { return m_up; }
+    const Vector3 &GetUpVector() const { return m_up; }
     virtual void SetUpVector(const Vector3 &up);
 
-    Vector3 GetSideVector() const                     { return m_up.Cross(m_direction); }
+    Vector3 GetSideVector() const { return m_up.Cross(m_direction); }
 
-    Vector3 GetTarget() const                         { return m_translation + m_direction; }
-    void SetTarget(const Vector3 &target)             { SetDirection(target - m_translation); }
+    Vector3 GetTarget() const { return m_translation + m_direction; }
+    void SetTarget(const Vector3 &target) { SetDirection(target - m_translation); }
 
     void Rotate(const Vector3 &axis, float radians);
 
-    const Frustum &GetFrustum() const                 { return m_frustum; }
+    Frustum &GetFrustum() { return m_frustum; }
+    const Frustum &GetFrustum() const { return m_frustum; }
 
-    const Matrix4 &GetViewMatrix() const              { return m_view_mat; }
+    Matrix4 &GetViewMatrix() { return m_view_mat; }
+    const Matrix4 &GetViewMatrix() const { return m_view_mat; }
     void SetViewMatrix(const Matrix4 &view_mat);
 
-    const Matrix4 &GetProjectionMatrix() const        { return m_proj_mat; }
+    Matrix4 &GetProjectionMatrix() { return m_proj_mat; }
+    const Matrix4 &GetProjectionMatrix() const { return m_proj_mat; }
     void SetProjectionMatrix(const Matrix4 &proj_mat);
 
-    const Matrix4 &GetViewProjectionMatrix() const    { return m_view_proj_mat; }
+    Matrix4 &GetViewProjectionMatrix() { return m_view_proj_mat; }
+    const Matrix4 &GetViewProjectionMatrix() const { return m_view_proj_mat; }
     void SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat);
 
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into ndc coordinates */

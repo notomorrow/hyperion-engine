@@ -35,6 +35,13 @@ struct IDBase
     HYP_FORCE_INLINE constexpr bool operator<(const IDBase &other) const
         { return value < other.value; }
 
+    /*! \brief If the value is non-zero, returns the ID minus one,
+        to be used as a storage index. If the value is zero (invalid state),
+        zero is returned. Ideally a validation check would be performed before you use this,
+        unless you are totally sure that 0 is a valid index. */
+    UInt ToIndex() const
+        { return value ? value - 1 : 0; }
+
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -200,7 +207,7 @@ public:
     HYP_FORCE_INLINE void *Get() const
         { return Base::Get(); }
 
-    HYP_FORCE_INLINE bool HasValue() const
+    HYP_FORCE_INLINE bool IsValid() const
         { return Base::operator bool(); }
 
     HYP_FORCE_INLINE operator bool() const
