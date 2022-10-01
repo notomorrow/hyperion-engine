@@ -55,7 +55,7 @@ void Shader::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     for (const auto &sub_shader : m_sub_shaders) {
-        AssertThrowMsg(!sub_shader.spirv.bytes.empty(), "Shader data missing");
+        AssertThrowMsg(sub_shader.spirv.bytes.Any(), "Shader data missing");
     }
 
     engine->GetRenderScheduler().Enqueue([this, engine](...) {

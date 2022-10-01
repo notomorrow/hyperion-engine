@@ -160,13 +160,13 @@ NodeProxy NodeProxy::AddChild()
 
 NodeProxy NodeProxy::AddChild(const NodeProxy &node)
 {
-    AssertThrow(node != *this);
-
-    if (Get()) {
-        return Get()->AddChild(node);
+    if (!Get()) {
+        return NodeProxy();
     }
 
-    return NodeProxy();
+    AssertThrow(node.Get() != Get());
+
+    return Get()->AddChild(node);
 }
 
 const Transform &NodeProxy::GetLocalTransform() const

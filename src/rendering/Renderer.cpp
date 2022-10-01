@@ -438,7 +438,7 @@ RenderAll(
                         FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
                         FixedArray {
                             UInt32((scene_id.value - 1) * sizeof(SceneShaderData)),
-                            UInt32(0 * sizeof(LightShaderData))
+                            HYP_RENDER_OBJECT_OFFSET(Light, 0)
                         }
                     );
 

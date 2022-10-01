@@ -2,9 +2,9 @@
 #define HYPERION_V2_SKELETON_H
 
 #include <core/Base.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderDataState.hpp>
 #include <core/lib/DynArray.hpp>
-#include "../animation/Animation.hpp"
+#include <animation/Animation.hpp>
 
 #include <Types.hpp>
 

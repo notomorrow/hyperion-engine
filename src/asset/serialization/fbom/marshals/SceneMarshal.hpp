@@ -4,6 +4,7 @@
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/EntityMarshal.hpp>
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
+#include <asset/serialization/fbom/marshals/CameraMarshal.hpp>
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
@@ -24,13 +25,17 @@ public:
     {
         out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
 
-        out.AddChild(*in_object.GetRoot().Get());
-
-        // if (auto *camera = in_object.GetCamera().Get()) {
-        //     out.AddChild(*camera);
+        // for (auto &node : in_object.GetRoot().GetChildren()) {
+        //     out.AddChild(*node.Get());
         // }
 
-        // do not write out entities... nodes will hold entities
+        if (in_object.GetRoot()) {
+            out.AddChild(*in_object.GetRoot().Get());
+        }
+
+        if (auto *camera = in_object.GetCamera().Get()) {
+            out.AddChild(*camera);
+        }
 
         return { FBOMResult::FBOM_OK };
     }
@@ -41,11 +46,14 @@ public:
 
         String name;
         in.GetProperty("name").ReadString(name);
-        out_object->SetName(name);
+        out_object->SetName(std::move(name));
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Node")) {
-                out_object->SetRoot(node.deserialized.Get<Node>());
+                out_object->GetRoot().AddChild(node.deserialized.Get<Node>());
+                // out_object->SetRoot(node.deserialized.Get<Node>());
+            } else if (node.GetType().IsOrExtends(Camera::GetClass().GetName())) {
+                out_object->SetCamera(node.deserialized.Get<Camera>());
             }
         }
 

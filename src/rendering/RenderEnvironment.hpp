@@ -16,9 +16,7 @@
 #include <vector>
 
 namespace hyperion::renderer {
-
 class Frame;
-
 } // namespace hyperion::renderer
 
 namespace hyperion::v2 {
@@ -32,9 +30,7 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 {
     RENDER_ENVIRONMENT_UPDATES_NONE = 0x0,
     RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS = 0x1,
-    RENDER_ENVIRONMENT_UPDATES_LIGHTS = 0x2,
-    RENDER_ENVIRONMENT_UPDATES_ENTITIES = 0x4,
-    RENDER_ENVIRONMENT_UPDATES_ENV_PROBES = 0x8
+    RENDER_ENVIRONMENT_UPDATES_ENTITIES = 0x2
 };
 
 class RenderEnvironment
@@ -48,18 +44,6 @@ public:
 
     Scene *GetScene() const
         { return m_scene; }
-
-    void AddLight(Handle<Light> &&light);
-    void RemoveLight(Handle<Light> &&light);
-
-    // Call from render thread only!
-    SizeType NumLights() const
-        { return m_lights.Size(); }
-
-    void AddEnvProbe(Ref<EnvProbe> &&env_probe);
-    void RemoveEnvProbe(Ref<EnvProbe> &&env_probe);
-    // Call from render thread only!
-    SizeType NumEnvProbes() const { return m_env_probes.Size(); }
 
     Handle<ParticleSystem> &GetParticleSystem()
         { return m_particle_system; }
@@ -168,16 +152,6 @@ private:
     FlatSet<RenderComponentPendingRemovalEntry> m_render_components_pending_removal;
     UInt32 m_current_enabled_render_components_mask;
     UInt32 m_next_enabled_render_components_mask;
-
-    FlatMap<Light::ID, Handle<Light>> m_lights;
-    Queue<Handle<Light>> m_lights_pending_addition;
-    Queue<Handle<Light>> m_lights_pending_removal;
-    BinarySemaphore m_light_update_sp;
-
-    FlatMap<EnvProbe::ID, Ref<EnvProbe>> m_env_probes;
-    Queue<Ref<EnvProbe>> m_env_probes_pending_addition;
-    Queue<Ref<EnvProbe>> m_env_probes_pending_removal;
-    BinarySemaphore m_env_probes_update_sp;
 
     Handle<ParticleSystem> m_particle_system;
 

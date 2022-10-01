@@ -2,6 +2,7 @@
 #define HYPERION_V2_INDIRECT_DRAW_H
 
 #include <core/Base.hpp>
+#include <rendering/Buffers.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/Compute.hpp>
 #include <rendering/CullData.hpp>

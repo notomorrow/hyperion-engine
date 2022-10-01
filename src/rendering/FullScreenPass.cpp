@@ -255,7 +255,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
                 DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
                 FixedArray {
                     static_cast<UInt32>(sizeof(SceneShaderData) * scene_index),
-                    static_cast<UInt32>(sizeof(LightShaderData) * 0)
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0)
                 }
             );
             

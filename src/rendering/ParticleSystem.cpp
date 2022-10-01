@@ -4,10 +4,10 @@
 #include <camera/OrthoCamera.hpp>
 #include <builders/MeshBuilder.hpp>
 #include <math/MathUtil.hpp>
+#include <math/Color.hpp>
 #include <util/NoiseFactory.hpp>
 
 #include <rendering/Buffers.hpp>
-
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -24,7 +24,7 @@ struct alignas(16) ParticleShaderData
     ShaderVec4<Float32> position;
     ShaderVec4<Float32> velocity;
     Float32 lifetime;
-    UInt32 color_packed;
+    Color color;
 };
 
 ParticleSpawner::ParticleSpawner()

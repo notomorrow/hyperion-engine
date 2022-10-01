@@ -161,15 +161,15 @@ public:
     }
 
     template <class T>
-    static constexpr T RadToDeg(const T &rad)
+    static constexpr T RadToDeg(T rad)
         { return rad * T(180) / pi<T>; }
 
     template <class T>
-    static constexpr T DegToRad(const T &deg)
+    static constexpr T DegToRad(T deg)
         { return deg * pi<T> / T(180); }
 
     template <class T>
-    static constexpr T Clamp(const T &val, const T &min, const T &max)
+    static constexpr T Clamp(T val, T min, T max)
     {
         if (val > max) {
             return max;

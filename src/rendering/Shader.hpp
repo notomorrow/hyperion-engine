@@ -3,7 +3,6 @@
 
 #include <core/Base.hpp>
 #include <rendering/Bindless.hpp>
-#include <rendering/ShaderGlobals.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>

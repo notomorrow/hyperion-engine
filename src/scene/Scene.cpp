@@ -34,9 +34,7 @@ void Scene::Init(Engine *engine)
 
     for (auto &it : m_entities) {
         auto &entity = it.second;
-        AssertThrow(entity);
-
-        engine->InitObject(entity);
+        AssertThrow(engine->InitObject(entity));
     }
 
     m_environment->Init(engine);
@@ -53,6 +51,52 @@ void Scene::Init(Engine *engine)
         }
 
         AddPendingEntities();
+    }
+
+    if (m_lights.Any()) {
+        // enqueue bind for all in bulk
+        Light::ID *light_ids = new Light::ID[m_lights.Size()];
+        SizeType index = 0;
+
+        for (auto &it : m_lights) {
+            auto &light = it.second;
+            AssertThrow(engine->InitObject(light));
+
+            light_ids[index++] = it.first;
+        }
+
+        engine->GetRenderScheduler().Enqueue([engine, light_ids, num_lights = index](...) mutable {
+            for (SizeType i = 0; i < num_lights; i++) {
+                engine->GetRenderState().BindLight(light_ids[i]);
+            }
+
+            delete[] light_ids;
+
+            HYPERION_RETURN_OK;
+        });
+    }
+
+    if (m_env_probes.Any()) {
+        // enqueue bind for all in bulk
+        EnvProbe::ID *env_probe_ids = new EnvProbe::ID[m_env_probes.Size()];
+        SizeType index = 0;
+
+        for (auto &it : m_env_probes) {
+            auto &env_probe = it.second;
+            AssertThrow(engine->InitObject(env_probe));
+
+            env_probe_ids[index++] = it.first;
+        }
+
+        engine->GetRenderScheduler().Enqueue([engine, env_probe_ids, num_env_probes = index](...) mutable {
+            for (SizeType i = 0; i < num_env_probes; i++) {
+                engine->GetRenderState().BindEnvProbe(env_probe_ids[i]);
+            }
+
+            delete[] env_probe_ids;
+
+            HYPERION_RETURN_OK;
+        });
     }
 
     SetReady(true);
@@ -84,6 +128,15 @@ void Scene::Init(Engine *engine)
 
         SetReady(false);
     });
+}
+
+void Scene::SetCamera(Handle<Camera> &&camera)
+{
+    m_camera = std::move(camera);
+
+    if (IsInitCalled()) {
+        GetEngine()->InitObject(m_camera);
+    }
 }
 
 void Scene::SetWorld(World *world)
@@ -139,7 +192,6 @@ void Scene::SetWorld(World *world)
 bool Scene::AddEntity(Handle<Entity> &&entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
-
     AssertReady();
 
     if (!entity) {
@@ -161,13 +213,13 @@ bool Scene::AddEntity(Handle<Entity> &&entity)
 bool Scene::RemoveEntity(const Handle<Entity> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
-
     AssertReady();
 
     if (!entity) {
         return false;
     }
 
+    // breadth-first search
     Queue<NodeProxy *> queue;
     queue.Push(&m_root_node_proxy);
 
@@ -194,10 +246,12 @@ bool Scene::RemoveEntity(const Handle<Entity> &entity)
 
 bool Scene::AddEntityInternal(Handle<Entity> &&entity)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    // Threads::AssertOnThread(THREAD_GAME);
+    // AssertReady();
 
-    AssertReady();
-    AssertThrow(entity != nullptr);
+    if (!entity) {
+        return false;
+    }
 
     if (m_entities.Contains(entity->GetID())) {
         DebugLog(
@@ -216,26 +270,19 @@ bool Scene::AddEntityInternal(Handle<Entity> &&entity)
 
     entity->SetScene(this);
 
-    m_environment->OnEntityAdded(entity);
-
     m_entities_pending_addition.Insert(std::move(entity));
 
     return true;
 }
 
-bool Scene::HasEntity(Entity::ID id) const
-{
-    Threads::AssertOnThread(THREAD_GAME);
-
-    return m_entities.Find(id) != m_entities.End();
-}
-
 bool Scene::RemoveEntityInternal(const Handle<Entity> &entity)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    // Threads::AssertOnThread(THREAD_GAME);
+    // AssertReady();
 
-    AssertReady();
-    AssertThrow(entity != nullptr);
+    if (!entity) {
+        return false;
+    }
 
     const auto it = m_entities.Find(entity->GetID());
 
@@ -261,10 +308,16 @@ bool Scene::RemoveEntityInternal(const Handle<Entity> &entity)
         return false;
     }
 
-    m_environment->OnEntityRemoved(it->second);
     m_entities_pending_removal.Insert(entity->GetID());
 
     return true;
+}
+
+bool Scene::HasEntity(Entity::ID id) const
+{
+    // Threads::AssertOnThread(THREAD_GAME);
+
+    return m_entities.Find(id) != m_entities.End();
 }
 
 void Scene::AddPendingEntities()
@@ -310,6 +363,7 @@ void Scene::AddPendingEntities()
             }
         }
 
+        m_environment->OnEntityAdded(entity);
         m_entities.Insert(static_cast<IDBase>(id), std::move(entity));
     }
 
@@ -350,10 +404,141 @@ void Scene::RemovePendingEntities()
             m_id.value
         );
 
+        m_environment->OnEntityRemoved(it->second);
         m_entities.Erase(it);
     }
 
     m_entities_pending_removal.Clear();
+}
+
+bool Scene::AddLight(Handle<Light> &&light)
+{
+    if (!light) {
+        return false;
+    }
+
+    auto insert_result = m_lights.Insert(light->GetID(), std::move(light));
+    
+    auto it = insert_result.first;
+    const bool was_inserted = insert_result.second;
+
+    if (!was_inserted) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (GetEngine()->InitObject(it->second)) {
+            it->second->EnqueueBind(GetEngine());
+        }
+    }
+
+    return true;
+}
+
+bool Scene::AddLight(const Handle<Light> &light)
+{
+    if (!light) {
+        return false;
+    }
+
+    auto insert_result = m_lights.Insert(light->GetID(), light);
+    
+    auto it = insert_result.first;
+    const bool was_inserted = insert_result.second;
+
+    if (!was_inserted) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (GetEngine()->InitObject(it->second)) {
+            it->second->EnqueueBind(GetEngine());
+        }
+    }
+
+    return true;
+}
+
+bool Scene::RemoveLight(Light::ID id)
+{
+    auto it = m_lights.Find(id);
+
+    if (it == m_lights.End()) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (it->second) {
+            it->second->EnqueueUnbind(GetEngine());
+        }
+    }
+
+    return m_lights.Erase(it);
+}
+
+bool Scene::AddEnvProbe(Handle<EnvProbe> &&env_probe)
+{
+    if (!env_probe) {
+        return false;
+    }
+
+    auto insert_result = m_env_probes.Insert(env_probe->GetID(), std::move(env_probe));
+    
+    auto it = insert_result.first;
+    const bool was_inserted = insert_result.second;
+
+    if (!was_inserted) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (GetEngine()->InitObject(it->second)) {
+            it->second->EnqueueBind(GetEngine());
+        }
+    }
+
+    return true;
+}
+
+bool Scene::AddEnvProbe(const Handle<EnvProbe> &env_probe)
+{
+    if (!env_probe) {
+        return false;
+    }
+
+    auto insert_result = m_env_probes.Insert(env_probe->GetID(), env_probe);
+    
+    auto it = insert_result.first;
+    const bool was_inserted = insert_result.second;
+
+    if (!was_inserted) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (GetEngine()->InitObject(it->second)) {
+            it->second->EnqueueBind(GetEngine());
+        }
+    }
+
+    return true;
+}
+
+bool Scene::RemoveEnvProbe(EnvProbe::ID id)
+{
+    auto it = m_env_probes.Find(id);
+
+    if (it == m_env_probes.End()) {
+        return false;
+    }
+
+    if (IsInitCalled()) {
+        if (it->second) {
+            it->second->EnqueueUnbind(GetEngine());
+        }
+    }
+
+    return m_env_probes.Erase(it);
 }
 
 void Scene::ForceUpdate()
@@ -389,11 +574,26 @@ void Scene::Update(
     EnqueueRenderUpdates();
 
     if (!IsVirtualScene()) {
+        // update render environment
         m_environment->Update(engine, delta);
 
+        // update each light
+        for (auto &it : m_lights) {
+            auto &light = it.second;
+
+            light->Update(engine);
+        }
+
+        // update each environment probe
+        for (auto &it : m_env_probes) {
+            auto &env_probe = it.second;
+
+            env_probe->Update(engine);
+        }
+
+        // update each entity
         for (auto &it : m_entities) {
             auto &entity = it.second;
-            AssertThrow(entity != nullptr);
 
             entity->Update(engine, delta);
 
@@ -458,20 +658,21 @@ void Scene::EnqueueRenderUpdates()
     struct {
         BoundingBox aabb;
         Float global_timer;
+        UInt32 num_lights;
     } params = {
         .aabb = m_root_node_proxy.GetWorldAABB(),
-        .global_timer = m_environment->GetGlobalTimer()
+        .global_timer = m_environment->GetGlobalTimer(),
+        .num_lights = static_cast<UInt32>(m_lights.Size())
     };
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
-        SceneShaderData shader_data
-        {
+        SceneShaderData shader_data {
             .enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask(),
             .aabb_max = params.aabb.max.ToVector4(),
             .aabb_min = params.aabb.min.ToVector4(),
             .global_timer = params.global_timer,
             .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
-            .num_lights = static_cast<UInt32>(m_environment->NumLights())
+            .num_lights = params.num_lights
         };
 
         if (m_camera != nullptr) {

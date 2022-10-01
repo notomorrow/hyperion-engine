@@ -3,6 +3,7 @@
 
 #include <util/Defines.hpp>
 #include <core/lib/TypeID.hpp>
+#include <core/lib/CMemory.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>
 
@@ -152,9 +153,6 @@ public:
         if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
             return CastUnsafe<T>();
         }
-
-        std::cout << "Try cast " << typeid(T).name() << " (id: " << TypeID::ForType<T>().value << ") " << "  but current id is  " << GetTypeID().value << std::endl;
-        
 
         return RefCountedPtr<T, CountType>();
     }
