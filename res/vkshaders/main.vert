@@ -31,7 +31,6 @@ struct Skeleton
     mat4 bones[128];
 };
 
-
 layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer
 {
     Skeleton skeleton;

@@ -78,7 +78,10 @@ void main()
     const vec2 texcoord = vec2(index) / vec2(image_dimensions - 1);
 
     vec4 indirect_lighting = Texture2D(sampler_nearest, deferred_indirect_lighting, texcoord);
+    indirect_lighting.a = 1.0;
+
     vec4 direct_lighting = Texture2D(sampler_nearest, deferred_direct_lighting, texcoord);
+
     vec4 forward_result = Texture2D(sampler_nearest, gbuffer_albedo_texture_translucent, texcoord);
 
     vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
@@ -92,7 +95,10 @@ void main()
     const vec3 P = position.xyz;
     const vec3 V = normalize(scene.camera_position.xyz - position.xyz);
 
-    vec4 result = indirect_lighting + direct_lighting;
+    vec4 result = vec4(
+        (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
+        1.0
+    );
 
     if (transmission > 0.0) {
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
@@ -116,12 +122,12 @@ void main()
 
         result.rgb = Ft + Fd;
     } else {
-        result += forward_result;
+        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
     }
 
     result.a = 1.0;
 
     // TODO: Do post FX combine here instead of in blit.frag
-
+    
     imageStore(combined_result, ivec2(index), result);
 }
