@@ -50,49 +50,7 @@ void main()
     vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
     out_color = deferred_result;
 
-#if 0
-    vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture_translucent, v_texcoord0);
-    const float roughness = material.r;
-    const float metalness = material.g;
-    const float transmission = material.b;
-
-    vec4 translucent_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, v_texcoord0);
-    if (transmission > 0.0) {
-
-        const float IOR = 1.5;
-        const float material_reflectance = 0.5;
-        // dialetric f0
-        const float reflectance = 0.16 * material_reflectance * material_reflectance;
-        const vec3 F0 = translucent_result.rgb * metalness + (reflectance * (1.0 - metalness));
-
-        const float sqrt_F0 = sqrt(F0.y);
-        const float material_ior = (1.0 + sqrt_F0) / (1.0 - sqrt_F0);
-        const float air_ior = 1.0;
-        const float eta_ir = air_ior / material_ior;
-        const float eta_ri = material_ior / air_ior;
-
-        float perceptual_roughness = sqrt(roughness);
-        perceptual_roughness = mix(perceptual_roughness, 0.0, Saturate(eta_ir * 3.0 - 2.0));
-
-        const float inv_log2_sqrt5 = 0.8614;
-        const float lod = max(0.0, (2.0 * log2(perceptual_roughness)) * inv_log2_sqrt5);
-
-        vec3 Ft = vec3(1.0);//deferred_result.rgb * (lod);//Texture2DLod(HYP_SAMPLER_LINEAR, gbuffer_mip_chain, v_texcoord0, lod).rgb;
-
-        Ft *= translucent_result.rgb;
-        // Ft *= 1.0 - E
-        // Ft *= absorption;
-        Ft *= transmission;
-
-        // out_color = vec4(Ft + (translucent_result.rgb * (1.0 - transmission)), 1.0);
-        out_color = vec4(translucent_result.rgb, 1.0);
-    } else {
-        out_color = deferred_result;
-    }
-#endif
-
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
-
     // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
 }
