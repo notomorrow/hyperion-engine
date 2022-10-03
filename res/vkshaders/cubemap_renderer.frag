@@ -41,7 +41,7 @@ void main()
         output_color *= albedo_texture;
     }
 
-    vec3 L = light.position.xyz;
+    vec3 L = light.position_intensity.xyz;
     L -= v_position.xyz * float(min(light.type, 1));
     L = normalize(L);
 
