@@ -12,7 +12,7 @@ layout(location=0) out vec4 color_output;
 #include "include/scene.inc"
 #include "include/PostFXInstance.inc"
 
-#define HYP_FFXA_IMPL 1
+#define HYP_FFXA_IMPL 2
 
 #if (HYP_FFXA_IMPL == 2)
 void main()
@@ -23,11 +23,11 @@ void main()
 
     vec2 resolution = vec2(scene.resolution_x, scene.resolution_y);
 
-    vec3 rgbNW=texture(gbuffer_deferred_result,v_texcoord0+(vec2(-1.0,-1.0)/resolution)).xyz;
-    vec3 rgbNE=texture(gbuffer_deferred_result,v_texcoord0+(vec2(1.0,-1.0)/resolution)).xyz;
-    vec3 rgbSW=texture(gbuffer_deferred_result,v_texcoord0+(vec2(-1.0,1.0)/resolution)).xyz;
-    vec3 rgbSE=texture(gbuffer_deferred_result,v_texcoord0+(vec2(1.0,1.0)/resolution)).xyz;
-    vec3 rgbM=texture(gbuffer_deferred_result,v_texcoord0).xyz;
+    vec3 rgbNW=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(-1.0,-1.0)/resolution)).xyz;
+    vec3 rgbNE=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(1.0,-1.0)/resolution)).xyz;
+    vec3 rgbSW=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(-1.0,1.0)/resolution)).xyz;
+    vec3 rgbSE=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(1.0,1.0)/resolution)).xyz;
+    vec3 rgbM=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0).xyz;
 
     vec3 luma=vec3(0.299, 0.587, 0.114);
     float lumaNW = dot(rgbNW, luma);
@@ -144,8 +144,8 @@ FXAA_SUBPIX_CAP - Insures fine detail is not completely removed.
     #define FXAA_EDGE_THRESHOLD_MIN  (1.0/16.0)
     #define FXAA_SEARCH_STEPS        48
     #define FXAA_SEARCH_THRESHOLD    (1.0/4.0)
-    #define FXAA_SUBPIX_CAP          (7.0/8.0)
-    #define FXAA_SUBPIX_TRIM         (1.0/8.0)
+    #define FXAA_SUBPIX_CAP          (1.0)
+    #define FXAA_SUBPIX_TRIM         (0.0)
 #endif
 
 #define FXAA_SUBPIX_TRIM_SCALE (1.0/(1.0 - FXAA_SUBPIX_TRIM))

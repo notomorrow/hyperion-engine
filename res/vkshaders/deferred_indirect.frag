@@ -30,7 +30,7 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_ENABLED 1
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
-#define HYP_ENV_PROBE_ENABLED 1
+#define HYP_ENV_PROBE_ENABLED 0
 #define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
@@ -41,8 +41,8 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 100000.0
-#define IRRADIANCE_MULTIPLIER 4.0
+#define IBL_INTENSITY 50000.0
+#define IRRADIANCE_MULTIPLIER 8.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -125,7 +125,7 @@ void main()
     vec4 reflections = vec4(0.0);
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
-    
+    #if 0
     if (perform_lighting) {
         const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
         ao = ssao_data.a * material.a;
@@ -261,6 +261,7 @@ void main()
 
 #if SSAO_DEBUG
     result = vec3(ao);
+#endif
 #endif
     output_color = vec4(result, 1.0);
 
