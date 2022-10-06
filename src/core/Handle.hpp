@@ -19,12 +19,12 @@ class Engine;
 
 struct IDBase
 {
-    using ValueType = UInt;
+    using ValueType = UInt32;
     
     HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }
-    HYP_FORCE_INLINE constexpr ValueType Value() const             { return value; }
+    HYP_FORCE_INLINE constexpr ValueType Value() const { return value; }
     
-    HYP_FORCE_INLINE explicit constexpr operator bool() const      { return bool(value); }
+    HYP_FORCE_INLINE explicit constexpr operator bool() const { return bool(value); }
 
     HYP_FORCE_INLINE constexpr bool operator==(const IDBase &other) const
         { return value == other.value; }

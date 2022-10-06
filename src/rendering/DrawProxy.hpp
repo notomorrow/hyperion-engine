@@ -17,6 +17,7 @@
 #include <Types.hpp>
 
 #include <memory>
+#include <atomic>
 
 // using the template param like DrawProxy<cls> doesn't work
 #define HYP_RENDER_OBJECT_OFFSET(cls, index) \
@@ -42,6 +43,8 @@ class Entity;
 class Camera;
 class EnvProbe;
 class Light;
+
+void WaitForRenderUpdatesToComplete(Engine *engine);
 
 enum class LightType : UInt32
 {
@@ -122,15 +125,19 @@ using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
 template <>
 struct DrawProxy<STUB_CLASS(Light)>
 {
-    ShaderValue<IDBase, UInt32> id;
-    ShaderValue<LightType, UInt32> type;
-    ShaderValue<Color, UInt32> color;
-    ShaderValue<Float32> radius;
-    ShaderVec4<Float32> position_intensity;
-    ShaderValue<UInt32> shadow_map_index;
+    IDBase id;
+    LightType type;
+    Color color;
+    Float radius;
+    UInt32 shadow_map_index;
+
+    HYP_PAD_STRUCT_HERE(UInt32, 7);
+
+    Vector4 position_intensity;
 };
 
 using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;
+static_assert(sizeof(LightDrawProxy) == 64);
 
 template <class T>
 class HasDrawProxy
@@ -185,6 +192,20 @@ public:
     const DrawProxy<T> &GetDrawProxy() const { return m_draw_proxy; }
 
 protected:
+    bool HasPendingRenderUpdates() const
+        { return m_has_render_updates.load(std::memory_order_acquire); }
+
+    void WaitForRenderUpdatesToComplete()
+    {
+        if (!HasPendingRenderUpdates()) {
+            return;
+        }
+
+        auto *self = static_cast<typename T::InnerType *>(this);
+
+        hyperion::v2::WaitForRenderUpdatesToComplete(self->GetEngine());
+    }
+
     /*! Enqueue an update /for/ the render thread to update the draw proxy.
         Cannot set it directly in a thread-safe manner if not on the render thread,
         so use this.
@@ -200,10 +221,30 @@ protected:
         });
     }
 
+    template <class Lambda>
+    void EnqueueRenderUpdate(Lambda &&lambda)
+    {
+        m_has_render_updates.store(true, std::memory_order_release);
+
+        auto *self = static_cast<typename T::InnerType *>(this);
+
+        self->GetEngine()->GetRenderScheduler().Enqueue([this, lambda = std::forward<Lambda>(lambda)](...) mutable {
+            lambda();
+
+            m_has_render_updates.store(false, std::memory_order_release);
+
+            HYPERION_RETURN_OK;
+        });
+    }
+
     // Only touch from render thread.
     // Update this when updates are enqueued, so just update
     // the shader data state to dirty to refresh this.
     DrawProxy<T> m_draw_proxy;
+
+private:
+
+    std::atomic<bool> m_has_render_updates;
 };
 
 } // namespace hyperion::v2

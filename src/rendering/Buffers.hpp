@@ -163,15 +163,16 @@ struct alignas(16) EnvProbeShaderData
     UInt32 flags;
 };
 
-struct alignas(16) ObjectInstance
+struct ObjectInstance
 {
     UInt32 entity_id;
     UInt32 draw_command_index;
     UInt32 batch_index;
     UInt32 num_indices;
+
     ShaderVec4<Float> aabb_max;
     ShaderVec4<Float> aabb_min;
-    UInt32 packed_data;
+    ShaderVec4<UInt32> packed_data;
 };
 
 /* max number of skeletons, based on size in mb */

@@ -140,13 +140,12 @@ public:
 
         test_model.Scale(0.25f);
 
-        // {
-        //     auto btn = engine->CreateHandle<UIObject>();
-        //     btn->SetTransform(Transform(Vector3(0.4f, 3.7f, 0.0f)));
+        {
+            auto btn = engine->CreateHandle<UIObject>();
+            btn->SetTransform(Transform(Vector3(0.4f, 3.7f, 0.0f)));
 
-        //     GetUI().Add(std::move(btn));
-        // }
-
+            GetUI().Add(std::move(btn));
+        }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
             engine->GetAssetManager().Load<Texture>(
@@ -210,8 +209,6 @@ public:
                 renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
             );
         }
-        // add sponza model
-        m_scene->GetRoot().AddChild(test_model);
 
         cube_obj.Scale(50.0f);
 
@@ -228,6 +225,9 @@ public:
         skybox_spatial->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         skybox_spatial->RebuildRenderableAttributes();
         m_scene->AddEntity(std::move(skybox_spatial));
+
+        // add sponza model
+        m_scene->GetRoot().AddChild(test_model);
 
 #ifdef HYP_TEST_TERRAIN
         { // paged procedural terrain
