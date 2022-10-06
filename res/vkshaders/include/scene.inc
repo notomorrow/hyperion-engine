@@ -35,6 +35,9 @@ struct Light
     float intensity;
     float radius;
     uint shadow_map_index; // ~0 == no shadow map
+
+    uint _pad0, _pad1, _pad2,
+        _pad3, _pad4, _pad5, _pad6;
 };
 
 struct ShadowMap {
@@ -49,7 +52,7 @@ layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
     Scene scene;
 };
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
 {
     Light light;
 };

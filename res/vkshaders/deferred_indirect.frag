@@ -125,7 +125,7 @@ void main()
     vec4 reflections = vec4(0.0);
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
-    #if 0
+    
     if (perform_lighting) {
         const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
         ao = ssao_data.a * material.a;
@@ -262,7 +262,7 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-#endif
+
     output_color = vec4(result, 1.0);
 
 
