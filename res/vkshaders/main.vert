@@ -84,10 +84,5 @@ void main() {
     ndc /= ndc.w;
     v_ndc_position = ndc.xyz;
 
-    // v_fragment_position = (scene.projection * scene.view * position).xyz;
-    // v_fragment_position.xy *= vec2(0.5);
-    // v_fragment_position.xy += vec2(0.5);
-
     gl_Position = scene.projection * scene.view * position;
-
 } 

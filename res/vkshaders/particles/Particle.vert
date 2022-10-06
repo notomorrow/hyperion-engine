@@ -29,6 +29,7 @@ layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
 
 void main()
 {
+    #if 0
     const int instance_id = gl_InstanceIndex;
 
     vec4 position;
@@ -66,4 +67,5 @@ void main()
     v_color = unpackUnorm4x8(instance.color_packed);
 
     gl_Position = scene.projection * scene.view * position;
+    #endif
 } 

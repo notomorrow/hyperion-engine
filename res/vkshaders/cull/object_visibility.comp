@@ -29,7 +29,7 @@ struct IndirectDrawCommand
     int vertex_offset;
     uint first_instance;
 
-    HYP_PAD_STRUCT_HERE(float, 7);
+    HYP_PAD_STRUCT_HERE(float, 59);
 };
 
 struct ObjectInstance
@@ -43,9 +43,7 @@ struct ObjectInstance
 
     uint packed_data;
 
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
+    HYP_PAD_STRUCT_HERE(float, 51);
 };
 
 layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer
@@ -53,7 +51,7 @@ layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer
     ObjectInstance instances[];
 };
 
-layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer
+layout(std140, set = 0, binding = 4) buffer IndirectDrawCommandsBuffer
 {
     IndirectDrawCommand indirect_draw_commands[];
 };

@@ -15,31 +15,10 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
-
-struct SkeletonRef {
-    uint index;
-    uint used;
-};
-
-struct Object {
-    mat4 model_matrix;
-    SkeletonRef skeleton;
-    
-    uint _padding1;
-    uint _padding2;
-};
-
-layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer {
-    Object object;
-};
-
-//push constants block
-layout( push_constant ) uniform constants
-{
-	vec4 data;
-} PushConstants;
+#include "include/object.inc"
 
 void main() {
+    #if 0
     vec4 position = vec4((a_position * 10.0) + scene.camera_position.xyz, 1.0);
     // vec4 position = object.model_matrix * vec4(a_position, 1.0);
     mat4 normal_matrix = transpose(inverse(object.model_matrix));
@@ -49,4 +28,5 @@ void main() {
     v_texcoord0 = a_texcoord0;
 
     gl_Position = scene.projection * scene.view * position;
+    #endif
 } 
