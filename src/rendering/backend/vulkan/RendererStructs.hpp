@@ -676,16 +676,14 @@ protected:
     std::vector<FrameDataWrapper> m_data;
 };
 
-struct alignas(4) IndirectDrawCommand
+struct IndirectDrawCommand
 {
     // native vk object
     VkDrawIndexedIndirectCommand command;
-
-    HYP_PAD_STRUCT_HERE(Float32, 7);
 };
 
 static_assert(std::is_standard_layout_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");
-static_assert(sizeof(IndirectDrawCommand) % 4 == 0, "IndirectDrawCommand must have a sizeof multiple of 4");
+static_assert(sizeof(IndirectDrawCommand) == 20, "Verify size of struct in shader");
 
 } // namespace renderer
 } // namespace hyperion

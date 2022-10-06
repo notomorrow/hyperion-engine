@@ -85,8 +85,8 @@ void Light::EnqueueRenderUpdates()
         .type = m_type,
         .color = m_color,
         .radius = m_radius,
-        .position_intensity = Vector4(m_position, m_intensity),
-        .shadow_map_index = m_shadow_map_index
+        .shadow_map_index = m_shadow_map_index,
+        .position_intensity = Vector4(m_position, m_intensity)
     };
 
     GetEngine()->GetRenderScheduler().Enqueue([this, draw_proxy = std::move(draw_proxy)](...) mutable {

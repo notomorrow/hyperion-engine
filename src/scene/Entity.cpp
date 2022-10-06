@@ -136,7 +136,7 @@ void Entity::Init(Engine *engine)
 
         m_material.Reset();
 
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        WaitForRenderUpdatesToComplete();
         
         engine->SafeReleaseHandle<Skeleton>(std::move(m_skeleton));
         engine->SafeReleaseHandle<Mesh>(std::move(m_mesh));
@@ -229,7 +229,7 @@ void Entity::EnqueueRenderUpdates()
         .bucket       = m_renderable_attributes.material_attributes.bucket
     };
 
-    GetEngine()->render_scheduler.Enqueue([this, transform_matrix = m_transform.GetMatrix(), draw_proxy](...) {
+    EnqueueRenderUpdate([this, transform_matrix = m_transform.GetMatrix(), draw_proxy](...) {
         // update m_draw_proxy on render thread.
         m_draw_proxy = draw_proxy;
 
@@ -252,6 +252,30 @@ void Entity::EnqueueRenderUpdates()
 
         HYPERION_RETURN_OK;
     });
+
+    // GetEngine()->render_scheduler.Enqueue([this, transform_matrix = m_transform.GetMatrix(), draw_proxy](...) {
+    //     // update m_draw_proxy on render thread.
+    //     m_draw_proxy = draw_proxy;
+
+    //     GetEngine()->GetRenderData()->objects.Set(
+    //         m_id.value - 1,
+    //         ObjectShaderData {
+    //             .model_matrix = transform_matrix,
+    //             .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
+    //             .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
+    //             .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
+    //             .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
+    //             .entity_id = draw_proxy.entity_id.value,
+    //             .scene_id = draw_proxy.scene_id.value,
+    //             .mesh_id = draw_proxy.mesh_id.value,
+    //             .material_id = draw_proxy.material_id.value,
+    //             .skeleton_id = draw_proxy.skeleton_id.value,
+    //             .bucket = static_cast<UInt32>(draw_proxy.bucket)
+    //         }
+    //     );
+
+    //     HYPERION_RETURN_OK;
+    // });
 
     m_shader_data_state = ShaderDataState::CLEAN;
 }

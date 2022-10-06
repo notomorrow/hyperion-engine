@@ -6,6 +6,7 @@
 #include <core/lib/CMemory.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>
+#include <system/Debug.hpp>
 
 #include <atomic>
 #include <cstdlib>
@@ -20,7 +21,7 @@ struct RefCountData
     TypeID type_id;
     CountType strong_count;
     CountType weak_count;
-    void(*dtor)(void *);
+    void (*dtor)(void *);
 
     template <class T, class ...Args>
     void Construct(Args &&... args)
@@ -44,6 +45,7 @@ struct RefCountData
 
     void Destruct()
     {
+        AssertThrow(value != nullptr);
         dtor(value);
         type_id = TypeID::ForType<void>();
         value = nullptr;

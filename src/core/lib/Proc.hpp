@@ -150,6 +150,9 @@ struct Proc : detail::ProcBase
 
         functor.invoke_fn = &detail::Invoker<ReturnType, Args...>::template InvokeFn<Functor>;
         functor.delete_fn = &Memory::Destruct<Functor>;
+
+        // static_assert(alignof(Functor) == alignof(decltype(functor.memory)),
+        //     "Alignment not valid to be used as functor!");
         
         // move-construct the functor object into inline storage
         Memory::Construct<Functor>(functor.memory.GetPointer(), std::forward<Functor>(fn));

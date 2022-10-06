@@ -24,7 +24,10 @@ void RigidBodyController::OnAdded()
     m_rigid_body->SetTransform(GetOwner()->GetTransform());    
 }
 
-void RigidBodyController::OnRemoved() { }
+void RigidBodyController::OnRemoved()
+{
+    m_rigid_body.Reset();
+}
 
 void RigidBodyController::OnAttachedToScene(Scene *scene)
 {

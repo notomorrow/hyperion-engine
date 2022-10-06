@@ -7,6 +7,8 @@
 namespace hyperion::v2 {
 
 using renderer::ShaderVec2;
+using renderer::ShaderVec3;
+using renderer::ShaderVec4;
 
 IndirectDrawState::IndirectDrawState()
 {
@@ -138,11 +140,13 @@ void IndirectDrawState::PushDrawProxy(const EntityDrawProxy &draw_proxy)
 
     const auto draw_command_index = draw_proxy.entity_id.ToIndex();
     
-    UInt32 packed_data;
+    ShaderVec4<UInt32> packed_data;
+    std::memset(&packed_data, 0, sizeof(packed_data));
+
     // first byte = bucket. we currently use only 7, with
     // some having the potential to be combined, so it shouldn't be
     // an issue.
-    packed_data = (1u << static_cast<UInt32>(draw_proxy.bucket)) & 0xFF;
+    packed_data[0] = (1u << static_cast<UInt32>(draw_proxy.bucket)) & 0xFF;
 
     m_object_instances.PushBack(ObjectInstance {
         .entity_id = static_cast<UInt32>(draw_proxy.entity_id.value),

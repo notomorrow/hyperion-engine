@@ -20,7 +20,7 @@ namespace hyperion {
 namespace renderer {
 
 template <class T>
-struct alignas(4) ShaderVec2
+struct alignas(8) ShaderVec2
 {
     union {
         struct { T x, y; };
@@ -52,7 +52,7 @@ static_assert(sizeof(ShaderVec2<UInt32>) == 8);
 
 // shader vec3 is same size as vec4
 template <class T>
-struct alignas(4) ShaderVec3
+struct alignas(16) ShaderVec3
 {
     union {
         struct { T x, y, z, _w; };
@@ -85,7 +85,7 @@ static_assert(sizeof(ShaderVec3<Float>)  == 16);
 static_assert(sizeof(ShaderVec3<UInt32>) == 16);
 
 template <class T>
-struct alignas(4) ShaderVec4
+struct alignas(16) ShaderVec4
 {
     union {
         struct { T x, y, z, w; };
@@ -112,18 +112,17 @@ struct alignas(4) ShaderVec4
 static_assert(sizeof(ShaderVec4<Float>)  == 16);
 static_assert(sizeof(ShaderVec4<UInt32>) == 16);
 
-struct alignas(4) ShaderMat4
+struct alignas(16) ShaderMat4
 {
     union {
         struct {
             Float m00, m01, m02, m03,
-                  m10, m11, m12, m13,
-                  m20, m21, m22, m23,
-                  m30, m31, m32, m33;
+                m10, m11, m12, m13,
+                m20, m21, m22, m23,
+                m30, m31, m32, m33;
         };
 
         Float values[16];
-
         ShaderVec4<Float> rows[4];
     };
 
@@ -147,52 +146,77 @@ static_assert(sizeof(ShaderMat4) == 64);
 
 struct alignas(8) Rect
 {
-    uint32_t x0, y0,
-             x1, y1;
+    UInt32 x0, y0,
+        x1, y1;
 };
 
 static_assert(sizeof(Rect) == 16);
 
-template <class T, class StoreAs = T>
-struct alignas(StoreAs) ShaderValue
-{
-    static_assert(sizeof(T) <= sizeof(StoreAs),
-        "T does not fit into the given storage type");
 
-    alignas(StoreAs) UInt8 bytes[sizeof(StoreAs)];
+template <SizeType N, class T>
+struct PaddedStructValue
+{
+    alignas(T) UByte bytes[sizeof(T) + N];
+};
+
+template <class T, SizeType Size>
+struct ShaderValue : public PaddedStructValue<Size - sizeof(T), T>
+{
+    static_assert(sizeof(T) <= Size, "T does not fit into required size!");
 
     ShaderValue()
     {
-        new (bytes) T();
+        new (this->bytes) T();
     }
 
     ShaderValue(const ShaderValue &other)
     {
-        new (bytes) T(other.Get());
+        new (this->bytes) T(other.Get());
     }
 
     ShaderValue &operator=(const ShaderValue &other)
     {
         Get().~T();
-        new (bytes) T(other.Get());
+        new (this->bytes) T(other.Get());
 
         return *this;
     }
 
     ShaderValue(const T &value)
     {
-        new (bytes) T(value);
+        new (this->bytes) T(value);
+    }
+
+    ShaderValue &operator=(const T &value)
+    {
+        Get().~T();
+        new (this->bytes) T(value);
+
+        return *this;
     }
 
     ShaderValue(ShaderValue &&other) noexcept
     {
-        new (bytes) T(std::move(other.Get()));
+        new (this->bytes) T(std::move(other.Get()));
     }
 
     ShaderValue &operator=(ShaderValue &&other) noexcept
     {
         Get().~T();
-        new (bytes) T(std::move(other.Get()));
+        new (this->bytes) T(std::move(other.Get()));
+
+        return *this;
+    }
+
+    ShaderValue(T &&value) noexcept
+    {
+        new (this->bytes) T(std::move(value));
+    }
+
+    ShaderValue &operator=(T &&value) noexcept
+    {
+        Get().~T();
+        new (this->bytes) T(std::move(value));
 
         return *this;
     }
@@ -204,12 +228,12 @@ struct alignas(StoreAs) ShaderValue
 
     T &Get()
     {
-        return *reinterpret_cast<T *>(bytes);
+        return *reinterpret_cast<T *>(this->bytes);
     }
 
     const T &Get() const
     {
-        return *reinterpret_cast<const T *>(bytes);
+        return *reinterpret_cast<const T *>(this->bytes);
     }
 };
 

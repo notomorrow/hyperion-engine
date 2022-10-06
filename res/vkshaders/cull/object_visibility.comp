@@ -28,8 +28,6 @@ struct IndirectDrawCommand
     uint first_index;
     int vertex_offset;
     uint first_instance;
-
-    HYP_PAD_STRUCT_HERE(float, 7);
 };
 
 struct ObjectInstance
@@ -42,10 +40,7 @@ struct ObjectInstance
     vec4 aabb_min;
 
     uint packed_data;
-
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
+    uint _pad0, _pad1, _pad2;
 };
 
 layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer
