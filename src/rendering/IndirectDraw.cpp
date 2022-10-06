@@ -10,13 +10,6 @@ using renderer::ShaderVec2;
 
 IndirectDrawState::IndirectDrawState()
 {
-    for (auto &buffer : m_indirect_buffers) {
-        buffer.Reset(new IndirectBuffer());
-    }
-
-    for (auto &buffer : m_instance_buffers) {
-        buffer.Reset(new StorageBuffer());
-    }
 }
 
 IndirectDrawState::~IndirectDrawState()
@@ -25,23 +18,25 @@ IndirectDrawState::~IndirectDrawState()
 
 Result IndirectDrawState::Create(Engine *engine)
 {
-    auto result = renderer::Result::OK;
-    
-    for (auto &buffer : m_indirect_buffers) {
-        HYPERION_PASS_ERRORS(
-            buffer->Create(engine->GetDevice(), initial_count * sizeof(IndirectDrawCommand)),
-            result
-        );
-    }
-    
-    for (auto &buffer : m_instance_buffers) {
-        HYPERION_PASS_ERRORS(
-            buffer->Create(engine->GetDevice(), initial_count * sizeof(ObjectInstance)),
-            result
-        );
-    }
+    auto single_time_commands = engine->GetInstance()->GetSingleTimeCommands();
 
-    return result;
+    single_time_commands.Push([this, engine](CommandBuffer *command_buffer) -> Result {
+        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            auto frame = Frame::TemporaryFrame(command_buffer, frame_index);
+
+            if (!ResizeIndirectDrawCommandsBuffer(engine, &frame, initial_count)) {
+                return { Result::RENDERER_ERR, "Failed to create indirect draw commands buffer!" };
+            }
+
+            if (!ResizeInstancesBuffer(engine, &frame, initial_count)) {
+                return { Result::RENDERER_ERR, "Failed to create instances buffer!" };
+            }
+        }
+
+        HYPERION_RETURN_OK;
+    });
+
+    return single_time_commands.Execute(engine->GetDevice());
 }
 
 Result IndirectDrawState::Destroy(Engine *engine)
@@ -195,7 +190,7 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
     m_staging_buffers[frame->GetFrameIndex()]->Memset(
         engine->GetDevice(),
         m_staging_buffers[frame->GetFrameIndex()]->size,
-        0 // fill buffer with zeros
+        0x00 // fill buffer with zeros
     );
 
     m_indirect_buffers[frame->GetFrameIndex()]->CopyFrom(
@@ -209,22 +204,22 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Engine *engine, Frame *
 
 bool IndirectDrawState::ResizeInstancesBuffer(Engine *engine, Frame *frame, SizeType count)
 {
-    const bool was_resized = ResizeBuffer<StorageBuffer>(
+    const bool was_created_or_resized = ResizeBuffer<StorageBuffer>(
         engine,
         frame,
         m_instance_buffers,
         count * sizeof(ObjectInstance)
     );
 
-    if (was_resized) {
+    if (was_created_or_resized) {
         m_instance_buffers[frame->GetFrameIndex()]->Memset(
             engine->GetDevice(),
             m_instance_buffers[frame->GetFrameIndex()]->size,
-            0
+            0x00
         );
     }
 
-    return was_resized;
+    return was_created_or_resized;
 }
 
 bool IndirectDrawState::ResizeIfNeeded(Engine *engine, Frame *frame, SizeType count)
@@ -306,17 +301,17 @@ IndirectRenderer::~IndirectRenderer() = default;
 
 void IndirectRenderer::Create(Engine *engine)
 {
-    HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
-
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         m_descriptor_sets[frame_index] = UniquePtr<DescriptorSet>::Construct();
     }
 
     engine->render_scheduler.Enqueue([this, engine](...) {
+        HYPERION_BUBBLE_ERRORS(m_indirect_draw_state.Create(engine));
+
         const IndirectParams initial_params { };
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_ASSERT_RESULT(m_indirect_params_buffers[frame_index].Create(
+            HYPERION_BUBBLE_ERRORS(m_indirect_params_buffers[frame_index].Create(
                 engine->GetDevice(),
                 sizeof(IndirectParams)
             ));
@@ -373,7 +368,7 @@ void IndirectRenderer::Create(Engine *engine)
                     .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
                 });
 
-            HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
+            HYPERION_BUBBLE_ERRORS(m_descriptor_sets[frame_index]->Create(
                 engine->GetDevice(),
                 &engine->GetInstance()->GetDescriptorPool()
             ));

@@ -39,7 +39,7 @@ void main()
 #endif
 
 #if HYP_VCT_LIGHTING
-    vec3 L = light.position.xyz;
+    vec3 L = light.position_intensity.xyz;
     L -= g_position.xyz * float(min(light.type, 1));
     L = normalize(L);
     frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, Saturate(dot(g_normal, L))));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));

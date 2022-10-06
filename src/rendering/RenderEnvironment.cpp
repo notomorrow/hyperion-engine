@@ -32,6 +32,15 @@ void RenderEnvironment::Init(Engine *engine)
     
     const auto update_marker_value = m_update_marker.load();
 
+    if (m_render_components_pending_addition.Any()) {
+        std::lock_guard guard(m_render_component_mutex);
+
+        for (auto &it : m_render_components_pending_addition) {
+            AssertThrow(it.second != nullptr);
+            it.second->ComponentInit(engine);
+        }
+    }
+
     SetReady(true);
 
     OnTeardown([this]() {
@@ -60,12 +69,10 @@ void RenderEnvironment::Init(Engine *engine)
         });
 
         if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
-            m_render_component_sp.Wait();
+            std::lock_guard guard(m_render_component_mutex);
 
             m_render_components_pending_addition.Clear();
             m_render_components_pending_removal.Clear();
-
-            m_render_component_sp.Signal();
         }
 
         if (update_marker_value) {
@@ -86,7 +93,7 @@ void RenderEnvironment::Update(Engine *engine, GameCounter::TickUnit delta)
 
     m_global_timer += delta;
 
-    HYP_USED AtomicWaiter waiter(m_updating_render_components);
+    std::lock_guard guard(m_render_component_mutex);
 
     for (const auto &component : m_render_components) {
         component.second->ComponentUpdate(engine, delta);
@@ -176,16 +183,9 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
     // initialization tasks before we call ComponentRender() on the newly added RenderComponents
 
     if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
-        AtomicLocker locker(m_updating_render_components);
-
-        m_render_component_sp.Wait();
+        std::lock_guard guard(m_render_component_mutex);
 
         for (auto &it : m_render_components_pending_addition) {
-            AssertThrow(it.second != nullptr);
-
-            it.second->SetComponentIndex(0); // just using zero for now, when multiple of same components are supported, we will extend this
-            it.second->ComponentInit(engine);
-
             m_render_components.Set(it.first, std::move(it.second));
         }
 
@@ -197,8 +197,6 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
         }
 
         m_render_components_pending_removal.Clear();
-
-        m_render_component_sp.Signal();
     }
 
     if (update_marker_value != RENDER_ENVIRONMENT_UPDATES_NONE) {

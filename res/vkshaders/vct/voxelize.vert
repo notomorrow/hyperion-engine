@@ -31,7 +31,7 @@ void main()
     v_texcoord0 = a_texcoord0;
 
     /* basic n•l */
-    vec3 L = light.position.xyz;
+    vec3 L = light.position_intensity.xyz;
     L -= v_position.xyz * float(min(light.type, 1));
     L = normalize(L);
     vec3 N = normalize(v_normal);

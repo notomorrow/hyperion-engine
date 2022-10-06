@@ -7,7 +7,6 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/DeferredSystem.hpp>
 #include <rendering/Shadows.hpp>
-#include <rendering/Resources.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/DefaultFormats.hpp>
@@ -210,7 +209,6 @@ public:
     ShaderGlobals *shader_globals;
 
     EngineCallbacks callbacks;
-    Resources *resources;
     ShaderManager shader_manager;
                              
     RenderState render_state;

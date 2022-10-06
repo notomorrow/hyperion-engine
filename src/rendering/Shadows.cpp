@@ -394,8 +394,6 @@ ShadowRenderer::~ShadowRenderer()
 // called from render thread
 void ShadowRenderer::Init(Engine *engine)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
-
     if (IsInitCalled()) {
         return;
     }

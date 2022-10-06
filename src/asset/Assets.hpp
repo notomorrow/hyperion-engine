@@ -189,9 +189,9 @@ public:
 
         for (const auto &path : paths) {
             LoaderState state {
+                .asset_manager = &asset_manager,
                 .filepath = path.Data(),
-                .stream = path.Open(),
-                .asset_manager = &asset_manager
+                .stream = path.Open()
             };
 
             if (!state.stream.IsOpen()) {
