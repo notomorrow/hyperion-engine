@@ -33,6 +33,7 @@ using renderer::Result;
 using renderer::Extent2D;
 using renderer::ShaderVec2;
 using renderer::ShaderVec4;
+using renderer::ShaderValue;
 
 class Mesh;
 class Material;
@@ -119,15 +120,14 @@ struct DrawProxy<STUB_CLASS(EnvProbe)>
 using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
 
 template <>
-struct alignas(64) DrawProxy<STUB_CLASS(Light)>
+struct DrawProxy<STUB_CLASS(Light)>
 {
-    alignas(4) IDBase id;
-    alignas(4) LightType type;
-    alignas(16) Vector4 position;
-    alignas(4) Color color;
-    alignas(4) Float32 intensity;
-    alignas(4) Float32 radius;
-    alignas(4) UInt32 shadow_map_index;
+    ShaderValue<IDBase, UInt32> id;
+    ShaderValue<LightType, UInt32> type;
+    ShaderValue<Color, UInt32> color;
+    ShaderValue<Float32> radius;
+    ShaderVec4<Float32> position_intensity;
+    ShaderValue<UInt32> shadow_map_index;
 };
 
 using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;

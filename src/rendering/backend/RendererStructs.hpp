@@ -153,6 +153,66 @@ struct alignas(8) Rect
 
 static_assert(sizeof(Rect) == 16);
 
+template <class T, class StoreAs = T>
+struct alignas(StoreAs) ShaderValue
+{
+    static_assert(sizeof(T) <= sizeof(StoreAs),
+        "T does not fit into the given storage type");
+
+    alignas(StoreAs) UInt8 bytes[sizeof(StoreAs)];
+
+    ShaderValue()
+    {
+        new (bytes) T();
+    }
+
+    ShaderValue(const ShaderValue &other)
+    {
+        new (bytes) T(other.Get());
+    }
+
+    ShaderValue &operator=(const ShaderValue &other)
+    {
+        Get().~T();
+        new (bytes) T(other.Get());
+
+        return *this;
+    }
+
+    ShaderValue(const T &value)
+    {
+        new (bytes) T(value);
+    }
+
+    ShaderValue(ShaderValue &&other) noexcept
+    {
+        new (bytes) T(std::move(other.Get()));
+    }
+
+    ShaderValue &operator=(ShaderValue &&other) noexcept
+    {
+        Get().~T();
+        new (bytes) T(std::move(other.Get()));
+
+        return *this;
+    }
+
+    ~ShaderValue()
+    {
+        Get().~T();
+    }
+
+    T &Get()
+    {
+        return *reinterpret_cast<T *>(bytes);
+    }
+
+    const T &Get() const
+    {
+        return *reinterpret_cast<const T *>(bytes);
+    }
+};
+
 } // namespace renderer
 } // namespace hyperion
 

@@ -32,10 +32,9 @@ struct Light
 {
     uint id;
     uint type;
-    vec4 position; // or direction for directional lights
     uint color_encoded;
-    float intensity;
     float radius;
+    vec4 position_intensity; // or direction for directional lights
     uint shadow_map_index; // ~0 == no shadow map
 };
 

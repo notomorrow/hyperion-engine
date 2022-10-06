@@ -59,12 +59,16 @@ public:
 
         AssertThrow(component != nullptr);
 
-        m_render_component_sp.Wait();
-
         component->SetParent(this);
-        m_render_components_pending_addition.Set<T>(std::move(component));
+        component->SetComponentIndex(0);
 
-        m_render_component_sp.Signal();
+        std::lock_guard guard(m_render_component_mutex);
+
+        if (IsInitCalled()) {
+            component->ComponentInit(GetEngine());
+        }
+
+        m_render_components_pending_addition.Set<T>(std::move(component));
         
         m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
@@ -106,16 +110,12 @@ public:
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
 
-        // std::lock_guard guard(m_render_component_mutex);
-
-        m_render_component_sp.Wait();
+        std::lock_guard guard(m_render_component_mutex);
 
         m_render_components_pending_removal.Insert(RenderComponentPendingRemovalEntry {
             TypeID::ForType<T>(),
             T::ComponentName
         });
-
-        m_render_component_sp.Signal();
 
         m_update_marker |= RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS;
     }
@@ -148,17 +148,16 @@ private:
     BinarySemaphore m_entity_update_sp;
 
     TypeMap<UniquePtr<RenderComponentBase>> m_render_components; // only touch from render thread
+    TypeMap<UniquePtr<RenderComponentBase>> m_render_components_pending_init;
     TypeMap<UniquePtr<RenderComponentBase>> m_render_components_pending_addition;
     FlatSet<RenderComponentPendingRemovalEntry> m_render_components_pending_removal;
+    std::mutex m_render_component_mutex;
     UInt32 m_current_enabled_render_components_mask;
     UInt32 m_next_enabled_render_components_mask;
 
     Handle<ParticleSystem> m_particle_system;
 
     float m_global_timer;
-
-    BinarySemaphore m_render_component_sp;
-    AtomicLock m_updating_render_components;
 };
 
 } // namespace hyperion::v2

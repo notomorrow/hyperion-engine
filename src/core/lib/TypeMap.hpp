@@ -148,6 +148,12 @@ public:
         m_map.Clear();
     }
 
+    bool Any() const
+        { return m_map.Any(); }
+
+    bool Empty() const
+        { return m_map.Empty(); }
+
     HYP_DEF_STL_BEGIN_END(m_map.Begin(), m_map.End())
 
 protected:

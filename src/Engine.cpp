@@ -37,7 +37,6 @@ using renderer::FillMode;
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      resources(new Resources(this)),
       m_asset_manager(this)
 {
     RegisterDefaultAssetLoaders();
@@ -651,10 +650,6 @@ void Engine::FinalizeStop()
     HYP_FLUSH_RENDER_QUEUE(this);
 
     m_renderer_instance_mapping.Clear();
-
-    resources->Destroy(this);
-    delete resources;
-    resources = nullptr;
 
     HYP_FLUSH_RENDER_QUEUE(this);
 

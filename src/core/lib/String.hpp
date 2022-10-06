@@ -109,7 +109,7 @@ public:
 
     template <class Integral>
     static typename std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>, DynString>
-    ToString(Integral &&value)
+    ToString(Integral value)
     {
         SizeType result_size;
         utf::utf_to_str(value, result_size, nullptr);
@@ -127,7 +127,7 @@ public:
             char *data = new char[result_size];
             utf::utf_to_str(value, result_size, data);
 
-            for (SizeType i = 0; i < result_size; i++) {
+            for (SizeType i = 0; i < result_size - 1; i++) {
                 result.Append(static_cast<T>(data[i]));
             }
 

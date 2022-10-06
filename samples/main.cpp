@@ -147,8 +147,6 @@ public:
         //     GetUI().Add(std::move(btn));
         // }
 
-        // add sponza model
-        m_scene->GetRoot().AddChild(test_model);
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
             engine->GetAssetManager().Load<Texture>(
@@ -212,6 +210,8 @@ public:
                 renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
             );
         }
+        // add sponza model
+        m_scene->GetRoot().AddChild(test_model);
 
         cube_obj.Scale(50.0f);
 
