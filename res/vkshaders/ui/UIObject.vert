@@ -5,7 +5,8 @@
 #extension GL_EXT_scalar_block_layout : enable
 
 layout (location = 0) out vec3 v_position;
-layout (location = 1) out vec2 v_texcoord0;
+layout (location = 1) out vec3 v_screen_space_position;
+layout (location = 2) out vec2 v_texcoord0;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -20,11 +21,12 @@ layout (location = 5) in vec3 a_bitangent;
 void main()
 {
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
+    vec4 ndc_position = scene.projection * scene.view * position;
 
     v_position = position.xyz;
+    v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
     v_texcoord0 = a_texcoord0;
 
-    position.xyz *= 0.1;
+    gl_Position = ndc_position;
 
-    gl_Position = /*scene.projection * scene.view **/ position;
 } 
