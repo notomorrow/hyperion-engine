@@ -28,6 +28,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_py
 // layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D irradiance_depth_image;
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_texture;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
@@ -60,12 +61,15 @@ void main()
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
-    // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
 
-    
-    // ivec2 size = imageSize(irradiance_image);
-    // out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x - 1)), int(v_texcoord0.y * float(size.y - 1))));
-    
-    // out_color.rgb = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0, 0.0).rgb;
+    // blend in UI.
+    vec4 ui_color = Texture2D(HYP_SAMPLER_NEAREST, ui_texture, v_texcoord0);
+
+    out_color = vec4(
+        (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
+        1.0
+    );
+
+    // out_color = Texture2D(HYP_SAMPLER_NEAREST, ssr_blur_vert, v_texcoord0);
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 }
