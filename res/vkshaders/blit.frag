@@ -21,6 +21,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D ui_texture;
+
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba16f)  uniform image2D rt_image;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D irradiance_image;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
@@ -52,5 +54,15 @@ void main()
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
-    // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
+
+    // blend in UI.
+    vec4 ui_color = Texture2D(HYP_SAMPLER_NEAREST, ui_texture, v_texcoord0);
+
+    out_color = vec4(
+        (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
+        1.0
+    );
+
+    // out_color = Texture2D(HYP_SAMPLER_NEAREST, ssr_blur_vert, v_texcoord0);
+    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 }
