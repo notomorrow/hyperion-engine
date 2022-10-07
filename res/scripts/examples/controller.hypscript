@@ -50,13 +50,13 @@ let num_ticks: UInt = 0;
 let test_vector = new Vector3();
 
 export function OnAdded(node: any) {
-    Print("Added controller to node: %s\n", node);
+    //Print("Added controller to node: %s\n", node);
 
     controller_node = node;
 
-    Print("controller_node now = %\n", controller_node);
+    //Print("controller_node now = %\n", controller_node);
 
-    mandelbrot::MandlebrotLine();
+    //mandelbrot::MandlebrotLine();
 };
 
 export function OnRemoved(node: any) {
@@ -65,6 +65,8 @@ export function OnRemoved(node: any) {
 };
 
 export function OnTick(node: any, delta: Float) {
+    return;
+
     global_time += delta;
     num_ticks += 1;
 
