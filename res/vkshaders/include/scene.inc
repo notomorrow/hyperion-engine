@@ -12,7 +12,7 @@ struct Scene
     float camera_near;
     float camera_far;
     float camera_fov;
-    uint enabled_render_components_mask;
+    float _pad0;
     
     uint environment_texture_index;
     uint environment_texture_usage;
@@ -23,9 +23,9 @@ struct Scene
     vec4 aabb_min;
 
     float global_timer;
-    uint frame_counter;
     uint num_environment_shadow_maps;
     uint num_lights;
+    uint enabled_render_components_mask;
 };
 
 struct Light
