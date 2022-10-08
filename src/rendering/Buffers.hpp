@@ -42,20 +42,24 @@ using renderer::ShaderVec3;
 using renderer::ShaderVec4;
 using renderer::ShaderMat4;
 
-struct alignas(256) CubemapUniforms
+struct CubemapUniforms
 {
     Matrix4 projection_matrices[6];
     Matrix4 view_matrices[6];
 };
 
-struct alignas(256) SkeletonShaderData
+static_assert(sizeof(CubemapUniforms) % 256 == 0);
+
+struct SkeletonShaderData
 {
     static constexpr SizeType max_bones = 128;
 
     Matrix4 bones[max_bones];
 };
 
-struct alignas(256) ObjectShaderData
+static_assert(sizeof(SkeletonShaderData) % 256 == 0);
+
+struct ObjectShaderData
 {
     // 0
     Matrix4 model_matrix;
@@ -74,9 +78,13 @@ struct alignas(256) ObjectShaderData
     UInt32 scene_id;
     UInt32 mesh_id;
     UInt32 material_id;
+
     UInt32 skeleton_id;
 
     UInt32 bucket;
+    UInt32 _pad0, _pad1, _pad2;
+
+    HYP_PAD_STRUCT_HERE(UByte, 256 - 168);
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
@@ -105,7 +113,7 @@ struct MaterialShaderData
 
 static_assert(sizeof(MaterialShaderData) == 128);
 
-struct alignas(256) SceneShaderData
+struct SceneShaderData
 {
     static constexpr UInt32 max_environment_textures = 1;
 
@@ -116,11 +124,10 @@ struct alignas(256) SceneShaderData
     ShaderVec4<Float32> camera_direction;
     ShaderVec4<Float32> camera_up;
 
-    Float32 camera_near;
-    Float32 camera_far;
-    Float32 camera_fov;
-
-    UInt32 enabled_render_components_mask;
+    float camera_near;
+    float camera_far;
+    float camera_fov;
+    float _pad0;
 
     UInt32 environment_texture_index;
     UInt32 environment_texture_usage;
@@ -134,6 +141,7 @@ struct alignas(256) SceneShaderData
     UInt32 frame_counter;
     UInt32 num_environment_shadow_maps;
     UInt32 num_lights;
+    UInt32 enabled_render_components_mask;
 };
 
 static_assert(sizeof(SceneShaderData) == 256);
