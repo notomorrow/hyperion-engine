@@ -29,7 +29,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler gbuffer_sam
 #define gbuffer_tangents_texture HYP_GBUFFER_TEXTURE(3)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
 
-
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 5) uniform texture2D gbuffer_deferred_result;
 

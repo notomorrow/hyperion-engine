@@ -249,5 +249,5 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    output_color = vec4(result, 1.0);
+    output_color = vec4(0.0);//vec4(result, 1.0);
 }
