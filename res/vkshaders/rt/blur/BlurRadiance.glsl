@@ -39,9 +39,7 @@ void main(void)
     const ivec2 depth_coord = ivec2(texcoord * vec2(imageSize(rt_depth_image) - ivec2(1)));
     const float depth_value = imageLoad(rt_depth_image, depth_coord).r;
 
-    mat4 inv_view_proj = inverse(scene.projection * scene.view);
-
-    const vec4 world_position = ReconstructWorldSpacePositionFromDepth(inv_view_proj, texcoord, depth_value);
+    const vec4 world_position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth_value);
 
     vec3 normal = UnpackNormalVec2(data_value.xy);
     float roughness = data_value.z;
