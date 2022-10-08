@@ -37,7 +37,7 @@ void main()
 
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
-    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;
@@ -116,6 +116,8 @@ void main()
         direct_component.a *= attenuation;
         direct_component.rgb *= (exposure * light.position_intensity.w);
         result += direct_component * (light_color * ao * NdotL * shadow);
+
+        // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {
         result = albedo;
     }

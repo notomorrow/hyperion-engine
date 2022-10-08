@@ -78,12 +78,12 @@ vec4 CalculateE(vec4 F0, vec4 dfg)
 
 vec3 CalculateEnergyCompensation(vec3 F0, vec3 dfg)
 {
-    return 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
+    return 1.0 + F0 * ((1.0 / max(dfg.y, 0.0001)) - 1.0);
 }
 
 vec4 CalculateEnergyCompensation(vec4 F0, vec4 dfg)
 {
-    return 1.0 + F0 * ((1.0 / dfg.y) - 1.0);
+    return 1.0 + F0 * ((1.0 / max(dfg.y, 0.0001)) - 1.0);
 }
 
 void RefractionSolidSphere(

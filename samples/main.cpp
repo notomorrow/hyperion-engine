@@ -26,6 +26,7 @@
 #include <scene/controllers/paging/BasicPagingController.hpp>
 #include <scene/controllers/ScriptedController.hpp>
 #include <scene/controllers/physics/RigidBodyController.hpp>
+#include <ui/controllers/UIButtonController.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/Pair.hpp>
@@ -35,6 +36,8 @@
 
 #include <rendering/rt/BlurRadiance.hpp>
 #include <rendering/rt/RTRadianceRenderer.hpp>
+
+#include <ui/UIText.hpp>
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
@@ -169,10 +172,10 @@ public:
         test_model.Scale(0.35f);
 
         if (false) {
-            auto btn = engine->CreateHandle<UIObject>();
-            btn->SetTransform(Transform(Vector3(0.0f, 0.0f, -1.0f), Vector3(0.2f)));
-            // btn->SetTransform(Transform(Vector3(0.0, 0.2f), Vector3(1.0f / 1024.0f * 50.0f, 10.0f / 1024.0f * 1.0f, 8.0f)));
-            GetUI().Add(std::move(btn));
+            auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
+            btn_node.SetEntity(engine->CreateHandle<Entity>());
+            btn_node.GetEntity()->AddController<UIButtonController>();
+            btn_node.Scale(0.01f);
         }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
@@ -189,6 +192,9 @@ public:
         engine->InitObject(cubemap);
 
         { // hardware skinning
+
+
+
             zombie.Scale(1.25f);
             zombie.Translate(Vector3(0, 0, -9));
             auto zombie_entity = zombie[0].GetEntity();
@@ -347,6 +353,7 @@ public:
 
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
+        engine->GetWorld().GetOctree().NextVisibilityState();
         engine->render_state.BindScene(m_scene.Get());
     }
 
