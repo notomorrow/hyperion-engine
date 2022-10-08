@@ -37,7 +37,7 @@ void main()
 
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
-    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;
@@ -100,7 +100,7 @@ void main()
         // float denom = d / light.radius + 1.0;
     
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-            (1.0 - (dist / max(light.radius, HYP_FMATH_EPSILON))) : 1.0;
+            (10.0 / max(dist, 0.0001)) : 1.0;
         attenuation *= attenuation;
         attenuation = Saturate(attenuation);
         // float attenuation = 1.0;//mix(1.0, 1.0 - min(length(light.position_intensity.xyz - position.xyz) / max(light.radius, 0.0001), 1.0), float(light.type == HYP_LIGHT_TYPE_POINT));
@@ -110,12 +110,14 @@ void main()
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
         vec4 diffuse = diffuse_lobe;
 
-        vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
+        vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
         
         // direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
         direct_component.a *= attenuation;
         direct_component.rgb *= (exposure * light.position_intensity.w);
         result += direct_component * (light_color * ao * NdotL * shadow);
+
+        // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {
         result = albedo;
     }
