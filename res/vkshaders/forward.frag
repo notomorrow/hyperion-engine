@@ -56,9 +56,9 @@ void main()
     gbuffer_albedo = material.albedo;
     
     float ao = 1.0;
-    float metalness = material.metalness;
-    float roughness = material.roughness;
-    float transmission = 0.0;//GET_MATERIAL_PARAM(MATERIAL_PARAM_TRANSMISSION);
+    float metalness = GET_MATERIAL_PARAM(MATERIAL_PARAM_METALNESS);
+    float roughness = GET_MATERIAL_PARAM(MATERIAL_PARAM_ROUGHNESS);
+    float transmission = GET_MATERIAL_PARAM(MATERIAL_PARAM_TRANSMISSION);
 
     // float perceptual_roughness = sqrt(roughness);
     
