@@ -30,13 +30,13 @@ layout(location=2) out vec4 gbuffer_material;
 void main()
 {
     vec3 normal = normalize(v_normal);
-    float metalness = material.metalness;
-    float roughness = material.roughness;
+    //float metalness = material.metalness;
+    //float roughness = material.roughness;
     
     vec2 texcoord = v_texcoord0;
 
     
     gbuffer_albedo = vec4(1.0);
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(roughness, metalness, 0.0, 1.0);
+    gbuffer_material = vec4(0.0);
 }

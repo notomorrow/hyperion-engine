@@ -35,8 +35,8 @@ struct PackedVertex
 
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
-layout(buffer_reference, scalar) buffer IndexBuffer { uint indices[]; };
+layout(buffer_reference, std140, scalar, buffer_reference_align = 16) buffer PackedVertexBuffer { PackedVertex vertices[]; };
+layout(buffer_reference, std140, scalar, buffer_reference_align = 4) buffer IndexBuffer { uint indices[]; };
 
 layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDescriptions
 {
@@ -106,14 +106,16 @@ void main()
     
     vec4 material_color = material.albedo;
 
+#if 1
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
         material_color *= albedo_texture;
     }
+#endif
 
     payload.color = material_color.rgb;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
-    payload.roughness = material.roughness;
+    payload.roughness = GET_MATERIAL_PARAM(MATERIAL_PARAM_ROUGHNESS);
 }

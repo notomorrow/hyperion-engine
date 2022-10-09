@@ -49,7 +49,6 @@ void main()
     
     // out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
     // out_color = imageLoad(rt_normals_roughness_weight_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
-    out_color = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0);
     // out_color = imageLoad(rt_depth_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
     
     // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
@@ -63,4 +62,8 @@ void main()
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
     // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
+
+    
+    out_color = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0);
+    out_color.rgb = pow(out_color.rgb, vec3(2.2));
 }

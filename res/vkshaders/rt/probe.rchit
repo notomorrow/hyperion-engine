@@ -13,7 +13,8 @@
 layout(location = 0) rayPayloadInEXT RayProbePayload payload;
 hitAttributeEXT vec2 attribs;
 
-struct PackedVertex {
+struct PackedVertex
+{
     float position_x;
     float position_y;
     float position_z;
