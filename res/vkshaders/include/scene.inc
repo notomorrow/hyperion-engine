@@ -34,8 +34,12 @@ struct Light
     uint type;
     uint color_encoded;
     float radius;
-    vec4 position_intensity; // or direction for directional lights
     uint shadow_map_index; // ~0 == no shadow map
+
+    uint _pad0, _pad1, _pad2, _pad3,
+        _pad4, _pad5, _pad6;
+
+    vec4 position_intensity; // or direction for directional lights
 };
 
 struct ShadowMap {
@@ -50,7 +54,7 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
     Scene scene;
 };
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
 {
     Light light;
 };
