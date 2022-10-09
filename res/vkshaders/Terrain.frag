@@ -54,8 +54,8 @@ void main()
     gbuffer_albedo = material.albedo;
     
     float ao  = 1.0;
-    float metalness = material.metalness;
-    float roughness = material.roughness;
+    float metalness = GET_MATERIAL_PARAM(MATERIAL_PARAM_METALNESS);
+    float roughness = GET_MATERIAL_PARAM(MATERIAL_PARAM_ROUGHNESS);
     
     vec2 texcoord = v_texcoord0 * material.uv_scale;
     

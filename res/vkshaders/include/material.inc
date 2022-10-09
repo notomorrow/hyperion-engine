@@ -8,9 +8,7 @@ struct Material
 {
     vec4 albedo;
     
-    float metalness;
-    float roughness;
-    uvec2 packed_params;
+    uvec4 packed_params;
 
     U32 uv_flip_s;
     U32 uv_flip_t;
@@ -26,7 +24,9 @@ struct Material
 };
 
 // enum for packed params
-#define MATERIAL_PARAM_TRANSMISSION 0
+#define MATERIAL_PARAM_ROUGHNESS 0
+#define MATERIAL_PARAM_METALNESS 1
+#define MATERIAL_PARAM_TRANSMISSION 2
 
 #define GET_MATERIAL_PARAM(index) \
     unpackUnorm4x8(material.packed_params[(index) / 4])[(index) % 4]

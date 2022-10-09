@@ -55,54 +55,6 @@ void main(void)
     
     vec4 output_color = vec4(0.0);
 
-#ifdef HYP_RADIANCE_USE_GAUSSIAN_BLUR
-
-
-#if 0
-    float divisor = gauss_table[0];
-    output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord) * divisor;
-    GaussianBlur(
-        blur_input_texture, blur_input_sampler,
-        texcoord,
-#ifdef HYP_RADIANCE_BLUR_HORIZONTAL
-        vec2(1.0, 0.0),
-#else
-        vec2(0.0, 1.0),
-#endif
-        radius * divisor,
-        output_color,
-        divisor
-    );
-
-    GaussianBlur(
-        blur_input_texture, blur_input_sampler,
-        texcoord,
-#ifdef HYP_RADIANCE_BLUR_HORIZONTAL
-        vec2(-1.0, 0.0),
-#else
-        vec2(0.0, -1.0),
-#endif
-        radius * divisor,
-        output_color,
-        divisor
-    );
-    output_color /= max(divisor, HYP_FMATH_EPSILON);
-
-#else
-    output_color = GaussianBlur9(
-        blur_input_texture, blur_input_sampler,
-        texcoord,
-#ifdef HYP_RADIANCE_BLUR_HORIZONTAL
-        vec2(1.0, 0.0),
-#else
-        vec2(0.0, 1.0),
-#endif
-        radius
-    );
-#endif
-
-#else
-
     float num_samples = 0.0;
 
     for (int i = -3; i <= 3; i++) {
@@ -123,7 +75,12 @@ void main(void)
 
     output_color /= max(num_samples, 1.0);
 
+#ifdef HYP_RADIANCE_BLUR_VERTICAL
+    output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 #endif
 
-    imageStore(blur_output_image, coord, vec4(output_color));//output_color);
+    // temp
+    output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
+
+    imageStore(blur_output_image, coord, vec4(output_color));
 }

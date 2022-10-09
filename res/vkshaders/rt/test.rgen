@@ -86,7 +86,7 @@ void main()
         direction.xyz = reflect(direction.xyz, ray_dir);
 
         /*if (payload.distance < 0.0) {
-            color += hit_color;
+            color += hit.payload.color;
             break;
         } else if (payload.roughness < 1.0) {
             const vec4 hit_position = origin + direction * payload.distance;
@@ -111,18 +111,21 @@ void main()
 
             direction.xyz = reflect(direction.xyz, ray_dir);
         } else {
-            color += hit_color;
+            color += hit.payload.color;
             break;
         }*/
     }
 
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));
+    const ivec2 resolution = imageSize(image);
+    const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
+
+    imageStore(image, storage_coord, vec4(color, 1.0));
 
     const vec4 first_hit_ndc_position = scene.projection * scene.view * vec4(FIRST_HIT.position, 1.0);
     const float first_hit_depth = FIRST_HIT.payload.distance >= 0.0
         ? first_hit_ndc_position.z / first_hit_ndc_position.w
         : 1.0;
-    imageStore(depth_image, ivec2(gl_LaunchIDEXT.xy), vec4(first_hit_depth));
+    imageStore(depth_image, storage_coord, vec4(first_hit_depth));
 
     // calculate blur radius
     const float cone_angle = RoughnessToConeAngle(FIRST_HIT.payload.roughness);
@@ -134,5 +137,5 @@ void main()
     normals_roughness_weight.z = payload.roughness;
     normals_roughness_weight.a = radius / 255.0;//FIRST_HIT.payload.roughness;//radius;
 
-    imageStore(normals_roughness_weight_image, ivec2(gl_LaunchIDEXT.xy), normals_roughness_weight);
+    imageStore(normals_roughness_weight_image, storage_coord, normals_roughness_weight);
 }
