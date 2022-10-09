@@ -80,7 +80,7 @@ void main(void)
 #endif
 
     // temp
-    output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
+    output_color = Texture2D(blur_input_sampler, blur_input_texture, offset_texcoord);
 
     imageStore(blur_output_image, coord, vec4(output_color));
 }
