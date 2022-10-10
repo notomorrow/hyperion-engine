@@ -60,6 +60,8 @@ layout(push_constant) uniform DeferredParams
     uint flags;
 } deferred_params;
 
+#include "include/DDGI.inc"
+
 #if 0
 
 vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
@@ -87,7 +89,7 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
         /* Backface test */
         
         vec3 true_direction_to_probe = normalize(probe_position - P);
-        weight *= SQR(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
+        weight *= HYP_FMATH_SQR(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
         
         /* Visibility test */
         /* TODO */
@@ -229,6 +231,8 @@ void main()
             vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, /*lod*/ 0.0);
             reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
         }
+
+        irradiance = DDGISampleIrradiance(position.xyz, N, V).rgb;
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 

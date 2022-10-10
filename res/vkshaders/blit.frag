@@ -54,8 +54,6 @@ void main()
     // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 
-   // ivec2 size = imageSize(irradiance_image);
-   // out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
     vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
     out_color = deferred_result;
 
@@ -63,6 +61,9 @@ void main()
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
     // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
 
+    
+    // ivec2 size = imageSize(irradiance_image);
+    // out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x - 1)), int(v_texcoord0.y * float(size.y - 1))));
     
     // out_color.rgb = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0, 0.0).rgb;
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));

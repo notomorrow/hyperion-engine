@@ -25,8 +25,8 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D d
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 2
-#define RAY_OFFSET 0.1
-#define NUM_SAMPLES 2
+#define RAY_OFFSET 1.0
+#define NUM_SAMPLES 1
 
 void main() 
 {

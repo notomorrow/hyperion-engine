@@ -1,0 +1,71 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+#define HYP_NO_CUBEMAP
+
+#include "../../include/defines.inc"
+#include "../../include/noise.inc"
+#include "../../include/packing.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT tlas;
+// radiance image
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8) uniform image2D image;
+// normals packed (first 2 components), b is roughness, a will be weight
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 2, rgba8) uniform image2D normals_roughness_weight_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D depth_image;
+
+#include "../../include/scene.inc"
+#include "../../include/shared.inc"
+#include "../../include/noise.inc"
+
+#undef HYP_NO_CUBEMAP
+
+#include "../../include/rt/payload.inc"
+#include "../../include/rt/probe/shared.inc"
+
+
+// TODO: move computation into compute shader
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D output_irradiance;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D output_depth;
+
+layout(location = 0) rayPayloadEXT RayPayload payload;
+#define MAX_RECURSION 2
+#define RAY_OFFSET 1.0
+#define NUM_SAMPLES 1
+
+layout(push_constant) uniform constants
+{
+    mat4 rotation;
+    uint time;
+} push_constants;
+
+void main() 
+{
+    const uvec2 coord = uvec2(gl_LaunchIDEXT.xy);
+    
+    const uint probe_index = coord.x;
+    const uint ray_index = coord.y;
+    
+    vec3 origin = ProbeIndexToWorldPosition(probe_index);
+    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));
+    
+    uint flags = gl_RayFlagsOpaqueEXT;
+    uint mask = 0xff;
+    float tmin = 0.001;
+    float tmax = 10000.0;
+    
+    payload.color = vec3(0.0);
+    
+    traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+
+    
+    ProbeRayData ray_data;
+    ray_data.color = vec4(payload.color, 1.0);
+    ray_data.origin = vec4(origin, 1.0);
+    ray_data.normal = vec4(payload.normal, 0.0);
+    ray_data.direction_depth = vec4(direction, payload.distance);
+
+    //imageStore(output_irradiance, ivec2(coord), vec4(payload.color, 1.0));
+    SetProbeRayData(coord, ray_data);
+}
