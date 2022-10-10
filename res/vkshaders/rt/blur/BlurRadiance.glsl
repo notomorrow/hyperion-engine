@@ -43,7 +43,7 @@ void main(void)
 
     vec3 normal = UnpackNormalVec2(data_value.xy);
     float roughness = data_value.z;
-    float weight = data_value.a * 255.0;
+    float weight = 3.0;//data_value.a * 255.0;
 
     const vec2 blur_input_texture_size = vec2(imageSize(rt_radiance_image));
     const float blur_input_texture_size_max = max(blur_input_texture_size.x, blur_input_texture_size.y);
@@ -80,7 +80,7 @@ void main(void)
 #endif
 
     // temp
-    output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
+    // output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
 
     imageStore(blur_output_image, coord, vec4(output_color));
 }
