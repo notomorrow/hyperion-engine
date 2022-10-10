@@ -8,10 +8,10 @@ struct Scene
     vec4 camera_position;
     vec4 camera_direction;
     vec4 camera_up;
+
     float camera_near;
     float camera_far;
     float camera_fov;
-
     uint enabled_render_components_mask;
     
     uint environment_texture_index;
@@ -23,7 +23,7 @@ struct Scene
     vec4 aabb_min;
 
     float global_timer;
-
+    uint frame_counter;
     uint num_environment_shadow_maps;
     uint num_lights;
 };

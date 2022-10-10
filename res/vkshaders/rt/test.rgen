@@ -25,102 +25,71 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D d
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 2
-#define RAY_OFFSET 10.3
-
-void compute_default_basis(const vec3 normal, out vec3 x, out vec3 y, out vec3 z)
-{
-  // ZAP's default coordinate system for compatibility
-  z = normal;
-  const float yz = -z.y * z.z;
-  y = normalize(((abs(z.z) > 0.99999f) ? vec3(-z.x * z.y, 1.0f - z.y * z.y, yz) : vec3(-z.x * z.z, yz, 1.0f - z.z * z.z)));
-
-  x = cross(y, z);
-}
+#define RAY_OFFSET 0.1
+#define NUM_SAMPLES 2
 
 void main() 
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-    const vec2 uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
-    vec2 d = uv * 2.0 - 1.0;
-    
-    mat4 view_inverse = inverse(scene.view);
-    mat4 projection_inverse = inverse(scene.projection);
+    const mat4 view_inverse = inverse(scene.view);
+    const mat4 projection_inverse = inverse(scene.projection);
 
-    vec4 target = projection_inverse * vec4(d.x, d.y, 1, 1) ;
-    vec4 direction = view_inverse * vec4(normalize(target.xyz / target.w), 0);
-    vec4 origin = view_inverse * vec4(0, 0, 0, 1);
-    float weight = 0.0;
+    const uint flags = gl_RayFlagsOpaqueEXT;
+    const uint mask = 0xff;
+    const float tmin = 0.001;
+    const float tmax = 10000.0;
 
-    uint flags = gl_RayFlagsOpaqueEXT;
-    uint mask = 0xff;
-    float tmin = 0.001;
-    float tmax = 10000.0;
-
-    vec3 color = vec3(0.0);
-
-    uint seed = floatBitsToUint(rand(d));//tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchID.x, frame_number);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter);
 
 #define HIT_CACHE_SIZE MAX_RECURSION
 #define FIRST_HIT hits[0]
 
     RayHit hits[HIT_CACHE_SIZE];
 
-    for (int i = 0; i < MAX_RECURSION; i++) {
-        traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+    vec3 color = vec3(0.0);
 
-        vec4 pos = origin + direction * payload.distance;
-        pos /= pos.w;
+    uint pixel_seed = 0xabcdef;
 
-        RayHit hit;
-        hit.payload = payload;
-        hit.position = pos.xyz;
-        hits[i] = hit;
+    for (int sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
+        const vec2 pixel_center = vec2(gl_LaunchIDEXT.x + RandomFloat(pixel_seed), gl_LaunchIDEXT.y + RandomFloat(pixel_seed));
+        const vec2 uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
+        const vec2 d = uv * 2.0 - 1.0;
+        
+        vec4 target = projection_inverse * vec4(d.x, d.y, 1, 1) ;
+        vec4 direction = view_inverse * vec4(normalize(target.xyz / target.w), 0);
+        vec4 origin = view_inverse * vec4(0, 0, 0, 1);
 
+        for (int ray_index = 0; ray_index < MAX_RECURSION; ray_index++) {
+            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
 
-        weight += 1.0;
+            vec4 pos = origin + direction * payload.distance;
+            pos /= pos.w;
 
-        #if 0
-        if (payload.distance < 0.0 || i == MAX_RECURSION - 1) {
-            color += hit.payload.color;
-            break;
-        }
+            RayHit hit;
+            hit.payload = payload;
+            hit.position = pos.xyz;
+            hits[ray_index] = hit;
 
-        origin.xyz = hit.position + hit.payload.normal * RAY_OFFSET;
-        vec3 ray_dir = hit.payload.normal;
-        direction.xyz = reflect(direction.xyz, ray_dir);
-        #endif
+            if (payload.distance < 0.0) {
+                // color += hit.payload.color;
+                break;
+            } else if (ray_index < MAX_RECURSION - 1) {
+                const vec4 hit_position = origin + direction * payload.distance;
+                origin.xyz = hit_position.xyz + payload.normal * RAY_OFFSET;
 
-        if (payload.distance < 0.0) {
-            // color += hit.payload.color;
-            break;
-        } else if (i < MAX_RECURSION - 1) {
-            const vec4 hit_position = origin + direction * payload.distance;
-            origin.xyz = hit_position.xyz + payload.normal * RAY_OFFSET;
+                vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
+                vec3 scattered_direction = RandomInHemisphere(rnd, payload.normal);
 
-            vec3 ray_dir = payload.normal;
+                vec3 ray_dir = normalize(payload.normal + scattered_direction * payload.roughness);
 
-
-
-
-            // float r1 = radinv2(seed);
-            // float r2 = radinv_fl(seed, 3);
-            // float sq = sqrt(1.0 - r2);
-
-            // vec3 x, y, z;
-            // compute_default_basis(payload.normal.xyz, x, y, z);
-
-            // ray_dir = vec3(cos(2 * HYP_FMATH_PI * r1) * sq, sin(2 * HYP_FMATH_PI * r1) * sq, sqrt(r2));
-            // ray_dir = ray_dir.x * x + ray_dir.y * y + ray_dir.z * z;
-            // seed++;
-
-            // color += hit_color;
-
-            direction.xyz = normalize(reflect(direction.xyz, ray_dir));
-        } else {
-            color += hit.payload.color;
-            break;
+                direction.xyz = normalize(reflect(direction.xyz, ray_dir));
+            } else {
+                color += hit.payload.color;
+                break;
+            }
         }
     }
+
+    color /= float(NUM_SAMPLES);
 
     const ivec2 resolution = imageSize(image);
     const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
