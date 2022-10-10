@@ -76,11 +76,11 @@ void main(void)
     output_color /= max(num_samples, 1.0);
 
 #ifdef HYP_RADIANCE_BLUR_VERTICAL
-    output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
+    // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 #endif
 
     // temp
-    output_color = Texture2D(blur_input_sampler, blur_input_texture, offset_texcoord);
+    output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
 
     imageStore(blur_output_image, coord, vec4(output_color));
 }

@@ -15,6 +15,8 @@ layout(location=2) out vec4 output_positions;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
+
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
@@ -220,6 +222,14 @@ void main()
             }
         }
 #endif
+
+        { // RT Radiance
+            const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
+            const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
+            vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, /*lod*/ 0.0);
+            reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
+        }
+
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
@@ -249,5 +259,5 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    output_color = vec4(result, 1.0);
+    output_color = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, /*lod*/ 0.0);// vec4(result, 1.0);
 }
