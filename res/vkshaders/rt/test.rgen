@@ -17,6 +17,7 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D d
 
 #include "../include/scene.inc"
 #include "../include/shared.inc"
+#include "../include/noise.inc"
 
 #undef HYP_NO_CUBEMAP
 
@@ -57,7 +58,7 @@ void main()
 
     vec3 color = vec3(0.0);
 
-    uint seed = 0u;//tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchID.x, frame_number);
+    uint seed = floatBitsToUint(rand(d));//tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchID.x, frame_number);
 
 #define HIT_CACHE_SIZE MAX_RECURSION
 #define FIRST_HIT hits[0]
@@ -98,6 +99,9 @@ void main()
 
             vec3 ray_dir = payload.normal;
 
+
+
+
             // float r1 = radinv2(seed);
             // float r2 = radinv_fl(seed, 3);
             // float sq = sqrt(1.0 - r2);
@@ -105,15 +109,13 @@ void main()
             // vec3 x, y, z;
             // compute_default_basis(payload.normal.xyz, x, y, z);
 
-            // vec3 ray_dir = vec3(cos(2 * HYP_FMATH_PI * r1) * sq, sin(2 * HYP_FMATH_PI * r1) * sq, sqrt(r2));
+            // ray_dir = vec3(cos(2 * HYP_FMATH_PI * r1) * sq, sin(2 * HYP_FMATH_PI * r1) * sq, sqrt(r2));
             // ray_dir = ray_dir.x * x + ray_dir.y * y + ray_dir.z * z;
             // seed++;
 
-            // direction.xyz = ray_dir;
-
             // color += hit_color;
 
-            direction.xyz = reflect(direction.xyz, ray_dir);
+            direction.xyz = normalize(reflect(direction.xyz, ray_dir));
         } else {
             color += hit.payload.color;
             break;

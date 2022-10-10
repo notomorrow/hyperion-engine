@@ -259,5 +259,5 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-    output_color = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, /*lod*/ 0.0);// vec4(result, 1.0);
+    output_color = vec4(result, 1.0);
 }
