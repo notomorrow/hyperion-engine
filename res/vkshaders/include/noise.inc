@@ -32,5 +32,51 @@ float InterleavedGradientNoise(vec2 position_screen)
     return fract(magic.z * fract(dot(position_screen, magic.xy)));
 }
 
+// Get as random uint, modifies seed parameter
+uint RandomUint(inout uint seed)
+{
+    return (seed = 1664525 * seed + 1013904223);
+}
+
+float RandomFloat(inout uint seed)
+{
+    return (float(RandomUint(seed) & 0x00FFFFFF) / float(0x01000000));
+}
+
+vec3 RandomInSphere(vec3 rand)
+{
+    float ang1 = (rand.x + 1.0) * HYP_FMATH_PI;
+    float u = rand.y;
+    float u2 = u * u;
+    float sqrt1MinusU2 = sqrt(1.0 - u2);
+    float x = sqrt1MinusU2 * cos(ang1);
+    float y = sqrt1MinusU2 * sin(ang1);
+    float z = u;
+    return vec3(x, y, z);
+}
+
+vec3 RandomInHemisphere(vec3 rand, vec3 n)
+{
+    vec3 v = RandomInSphere(rand);
+    return v * sign(dot(v, n));
+}
+
+// Generates a seed for a random number generator from 2 inputs plus a backoff
+// https://github.com/nvpro-samples/optix_prime_baking/blob/332a886f1ac46c0b3eea9e89a59593470c755a0e/random.h
+// https://github.com/nvpro-samples/vk_raytracing_tutorial_KHR/tree/master/ray_tracing_jitter_cam
+// https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm
+uint InitRandomSeed(uint val0, uint val1)
+{
+    uint v0 = val0, v1 = val1, s0 = 0;
+
+    for (uint n = 0; n < 16; n++) {
+        s0 += 0x9e3779b9;
+        v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
+        v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
+    }
+
+    return v0;
+}
+
 
 #endif
