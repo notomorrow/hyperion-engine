@@ -11,6 +11,7 @@
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/material.inc"
+#include "../include/object.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../include/rt/mesh.inc"
@@ -46,6 +47,11 @@ layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDesc
 layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 5) readonly buffer MaterialBuffer
 {
     Material materials[];
+};
+
+layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 6) readonly buffer EntityBuffer
+{
+    Object entities[];
 };
 
 // for RT, all textures are bindless
@@ -152,9 +158,13 @@ void main()
     // payload.color = vec3(v0.position);
     // return;
 
+    v0.position = (gl_ObjectToWorldEXT * vec4(v0.position, 1.0)).xyz;
+    v1.position = (gl_ObjectToWorldEXT * vec4(v1.position, 1.0)).xyz;
+    v2.position = (gl_ObjectToWorldEXT * vec4(v2.position, 1.0)).xyz;
+
     // Interpolate normal
     const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
-    const vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
+    const vec3 normal = normalize((gl_ObjectToWorldEXT * vec4(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z, 0.0)).xyz);
     const vec2 texcoord = v0.texcoord0 * barycentric_coords.x + v1.texcoord0 * barycentric_coords.y + v2.texcoord0 * barycentric_coords.z;
 
     // Basic lighting
@@ -165,6 +175,9 @@ void main()
 
     const uint32_t material_index = mesh_description.material_index;
     const Material material = materials[material_index];
+
+    const uint32_t entity_index = mesh_description.entity_index;
+    const Object entity = entities[entity_index];
     
     material_color = material.albedo;
 
