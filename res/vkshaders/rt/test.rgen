@@ -24,6 +24,7 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D d
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 2
+#define RAY_OFFSET 10.3
 
 void compute_default_basis(const vec3 normal, out vec3 x, out vec3 y, out vec3 z)
 {
@@ -44,9 +45,9 @@ void main()
     mat4 view_inverse = inverse(scene.view);
     mat4 projection_inverse = inverse(scene.projection);
 
-    vec4 origin = view_inverse * vec4(0, 0, 0, 1);
     vec4 target = projection_inverse * vec4(d.x, d.y, 1, 1) ;
     vec4 direction = view_inverse * vec4(normalize(target.xyz / target.w), 0);
+    vec4 origin = view_inverse * vec4(0, 0, 0, 1);
     float weight = 0.0;
 
     uint flags = gl_RayFlagsOpaqueEXT;
@@ -74,23 +75,26 @@ void main()
         hit.position = pos.xyz;
         hits[i] = hit;
 
+
         weight += 1.0;
 
+        #if 0
         if (payload.distance < 0.0 || i == MAX_RECURSION - 1) {
             color += hit.payload.color;
             break;
         }
 
-        origin.xyz = hit.position + hit.payload.normal * 0.01;
+        origin.xyz = hit.position + hit.payload.normal * RAY_OFFSET;
         vec3 ray_dir = hit.payload.normal;
         direction.xyz = reflect(direction.xyz, ray_dir);
+        #endif
 
-        /*if (payload.distance < 0.0) {
-            color += hit.payload.color;
+        if (payload.distance < 0.0) {
+            // color += hit.payload.color;
             break;
-        } else if (payload.roughness < 1.0) {
+        } else if (i < MAX_RECURSION - 1) {
             const vec4 hit_position = origin + direction * payload.distance;
-            origin.xyz = hit_position.xyz + payload.normal * 0.001;
+            origin.xyz = hit_position.xyz + payload.normal * RAY_OFFSET;
 
             vec3 ray_dir = payload.normal;
 
@@ -113,7 +117,7 @@ void main()
         } else {
             color += hit.payload.color;
             break;
-        }*/
+        }
     }
 
     const ivec2 resolution = imageSize(image);

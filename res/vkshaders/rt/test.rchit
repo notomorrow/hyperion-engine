@@ -2,7 +2,7 @@
 #extension GL_EXT_ray_tracing          : require
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout  : require
-#extension GL_EXT_buffer_reference2    : require
+#extension GL_EXT_buffer_reference     : require
 
 #define HYP_NO_CUBEMAP
 
@@ -35,8 +35,8 @@ struct PackedVertex
 
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(buffer_reference, std140, scalar, buffer_reference_align = 16) buffer PackedVertexBuffer { PackedVertex vertices[]; };
-layout(buffer_reference, std140, scalar, buffer_reference_align = 4) buffer IndexBuffer { uint indices[]; };
+layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
+layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
 layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDescriptions
 {
@@ -51,46 +51,106 @@ layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 5) readonly buffer
 // for RT, all textures are bindless
 layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[];
 
-Vertex UnpackVertex(PackedVertex packed_vertex)
-{
-    Vertex vertex;
+// Vertex UnpackVertex(uint index)
+// {
+//     Vertex vertex;
     
-    vertex.position = vec3(
-        packed_vertex.position_x,
-        packed_vertex.position_y,
-        packed_vertex.position_z
-    );
+//     vertex.position = vec3(
+//         vertices[index],
+//         vertices[index + 1],
+//         vertices[index + 2]
+//     );
     
-    vertex.normal = vec3(
-        packed_vertex.normal_x,
-        packed_vertex.normal_y,
-        packed_vertex.normal_z
-    );
+//     vertex.normal = vec3(
+//         vertices[index + 3],
+//         vertices[index + 4],
+//         vertices[index + 5]
+//     );
     
-    vertex.texcoord0 = vec2(
-        packed_vertex.texcoord_s,
-        packed_vertex.texcoord_t
-    );
+//     vertex.texcoord0 = vec2(
+//         vertices[index + 6],
+//         vertices[index + 7]
+//     );
     
-    return vertex;
-}
+//     return vertex;
+// }
 
 void main()
 {
+
     MeshDescription mesh_description = mesh_descriptions[gl_InstanceCustomIndexEXT];
-    
     PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh_description.vertex_buffer_address);
     IndexBuffer index_buffer = IndexBuffer(mesh_description.index_buffer_address);
-    
-    ivec3 index = ivec3(
-        index_buffer.indices[3 * gl_PrimitiveID],
-        index_buffer.indices[3 * gl_PrimitiveID + 1],
-        index_buffer.indices[3 * gl_PrimitiveID + 2]
-    );
 
-    Vertex v0 = UnpackVertex(vertex_buffer.vertices[index.x]);
-    Vertex v1 = UnpackVertex(vertex_buffer.vertices[index.y]);
-    Vertex v2 = UnpackVertex(vertex_buffer.vertices[index.z]);
+    uvec3 index = uvec3(
+        index_buffer.indices[gl_PrimitiveID]
+    );
+    // payload.color = vec3(greaterThan(index, ivec3(mesh_description.num_vertices)));
+    // return;
+    
+    Vertex v0;
+    {
+        const uint offset = 8 * index[0];
+        v0.position = vec3(
+            vertex_buffer.vertices[offset],
+            vertex_buffer.vertices[offset + 1],
+            vertex_buffer.vertices[offset + 2]
+        );
+        
+        v0.normal = vec3(
+            vertex_buffer.vertices[offset + 3],
+            vertex_buffer.vertices[offset + 4],
+            vertex_buffer.vertices[offset + 5]
+        );
+        
+        v0.texcoord0 = vec2(
+            vertex_buffer.vertices[offset + 6],
+            vertex_buffer.vertices[offset + 7]
+        );
+    }
+
+    Vertex v1;
+    {
+        const uint offset = 8 * index[1];
+        v1.position = vec3(
+            vertex_buffer.vertices[offset],
+            vertex_buffer.vertices[offset + 1],
+            vertex_buffer.vertices[offset + 2]
+        );
+        
+        v1.normal = vec3(
+            vertex_buffer.vertices[offset + 3],
+            vertex_buffer.vertices[offset + 4],
+            vertex_buffer.vertices[offset + 5]
+        );
+        
+        v1.texcoord0 = vec2(
+            vertex_buffer.vertices[offset + 6],
+            vertex_buffer.vertices[offset + 7]
+        );
+    }
+    Vertex v2;
+    {
+        const uint offset = 8 * index[2];
+        v2.position = vec3(
+            vertex_buffer.vertices[offset],
+            vertex_buffer.vertices[offset + 1],
+            vertex_buffer.vertices[offset + 2]
+        );
+        
+        v2.normal = vec3(
+            vertex_buffer.vertices[offset + 3],
+            vertex_buffer.vertices[offset + 4],
+            vertex_buffer.vertices[offset + 5]
+        );
+        
+        v2.texcoord0 = vec2(
+            vertex_buffer.vertices[offset + 6],
+            vertex_buffer.vertices[offset + 7]
+        );
+    }
+    // payload.color = vec3(v0.position);
+    // return;
 
     // Interpolate normal
     const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
@@ -101,18 +161,18 @@ void main()
     vec3 lightVector = normalize(vec3(-0.5));
     float dot_product = max(dot(lightVector, normal), 0.6);
 
+    vec4 material_color = vec4(1.0);
+
     const uint32_t material_index = mesh_description.material_index;
     const Material material = materials[material_index];
     
-    vec4 material_color = material.albedo;
+    material_color = material.albedo;
 
-#if 1
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
         material_color *= albedo_texture;
     }
-#endif
 
     payload.color = material_color.rgb;
     payload.distance = gl_HitTEXT;

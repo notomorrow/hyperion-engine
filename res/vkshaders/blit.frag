@@ -64,6 +64,6 @@ void main()
     // out_color = SampleGBuffer(gbuffer_material_texture, v_texcoord0);
 
     
-    out_color = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0);
-    out_color.rgb = pow(out_color.rgb, vec3(2.2));
+    // out_color.rgb = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, v_texcoord0, 0.0).rgb;
+    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 }
