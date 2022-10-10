@@ -1,7 +1,7 @@
 # 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
 # File Created: 17.08.2013 00:45:40
 
-mtllib street.mtl environment_V01.mtl
+mtllib street.mtl
 
 #
 # object City_building_004

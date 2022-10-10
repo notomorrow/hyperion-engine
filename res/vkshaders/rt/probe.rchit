@@ -86,5 +86,5 @@ void main()
     
     payload.diffuse = vec3(1.0, 0.0, 0.0) * dot_product; /* TODO material albedo */
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
-    payload.normal  = normal;
+    payload.normal = normal;
 }

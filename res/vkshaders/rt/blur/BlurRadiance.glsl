@@ -43,12 +43,12 @@ void main(void)
 
     vec3 normal = UnpackNormalVec2(data_value.xy);
     float roughness = data_value.z;
-    float weight = 3.0;//data_value.a * 255.0;
+    float weight = 1.0;//data_value.a * 255.0;
 
     const vec2 blur_input_texture_size = vec2(imageSize(rt_radiance_image));
     const float blur_input_texture_size_max = max(blur_input_texture_size.x, blur_input_texture_size.y);
     const float texel_size = 1.0 / max(blur_input_texture_size_max, HYP_FMATH_EPSILON);
-    const float radius = texel_size  / max(depth_value, HYP_FMATH_EPSILON) * weight;
+    const float radius = texel_size / max(depth_value, HYP_FMATH_EPSILON) * weight;
 
     // const ivec2 input_image_dimensions = imageSize(blur_input_image);
     // const ivec2 input_coord = ivec2(texcoord * vec2(input_image_dimensions - 1));
