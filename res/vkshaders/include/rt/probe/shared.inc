@@ -10,47 +10,49 @@
 #define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
 #define PROBE_NORMAL_BIAS (0.01)
 
-#define PROBE_SIDE_LENGTH_DEPTH      16
+#define PROBE_SIDE_LENGTH_DEPTH 16
 #define PROBE_SIDE_LENGTH_IRRADIANCE 8
+#define PROBE_BORDER_SIZE 2
 
-uvec3 ProbeIndexToGridPosition(uint index)
+ivec3 ProbeIndexToGridPosition(uint index)
 {
-    const uint probe_count_xy = probe_system.probe_counts.x * probe_system.probe_counts.y;
+    const int probe_count_xy = int(probe_system.probe_counts.x) * int(probe_system.probe_counts.y);
     
-    return uvec3(
-        index % probe_system.probe_counts.x,
-        (index % probe_count_xy) / probe_system.probe_counts.x,
+    return ivec3(
+        index % int(probe_system.probe_counts.x),
+        (index % probe_count_xy) / int(probe_system.probe_counts.x),
         index / probe_count_xy
     );
 }
 
-vec3 GridPositionToWorldPosition(uvec3 pos)
+vec3 GridPositionToWorldPosition(ivec3 pos)
 {
     vec3 half_border = vec3(probe_system.probe_border) * 0.5;
     
-    //return (vec3(pos) - half_border) * probe_system.probe_distance;
+    // return (vec3(pos) - half_border) * probe_system.probe_distance;
     
-    return vec3(probe_system.probe_distance) * (vec3(pos) - half_border) + probe_system.aabb_min.xyz;
+    //return vec3(probe_system.probe_distance) * (vec3(pos) - half_border) + probe_system.aabb_min.xyz;
+    return vec3(probe_system.probe_distance) * vec3(pos) + probe_system.aabb_min.xyz;
 }
 
-uint GridPositionToProbeIndex(uvec3 pos)
+int GridPositionToProbeIndex(ivec3 pos)
 {
     return pos.x
-        + probe_system.probe_counts.x * pos.y
-        + probe_system.probe_counts.x * probe_system.probe_counts.y * pos.z;
+        + int(probe_system.probe_counts.x) * pos.y
+        + int(probe_system.probe_counts.x) * int(probe_system.probe_counts.y) * pos.z;
 }
 
 
-vec3 ProbeIndexToWorldPosition(uint index)
+vec3 ProbeIndexToWorldPosition(int index)
 {
     return GridPositionToWorldPosition(ProbeIndexToGridPosition(index));
 }
 
-uvec3 BaseGridCoord(vec3 P)
+ivec3 BaseGridCoord(vec3 P)
 {   
     return PROBE_TOTAL_COUNT == 0
-        ? uvec3(0)
-        : clamp(uvec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), uvec3(0), probe_system.probe_counts.xyz - uvec3(1));
+        ? ivec3(0)
+        : clamp(ivec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), ivec3(0), ivec3(probe_system.probe_counts.xyz) - ivec3(1));
 }
 
 vec2 EncodeOctahedralCoord(in vec3 v)
@@ -80,8 +82,41 @@ vec3 DecodeOctahedralCoord(vec2 coord)
     return normalize(vec);
 }
 
+uvec2 DDGIGetProbeTexelCoords(uint probeIndex)
+{
+    // Find the probe's plane index
+    uint probesPerPlane = (probe_system.probe_counts.x * probe_system.probe_counts.z);
+    uint planeIndex = probeIndex / probesPerPlane;
+
+    uint gridSpaceX = (probeIndex % probe_system.probe_counts.x);
+    uint gridSpaceY = (probeIndex / probe_system.probe_counts.x);
+
+    uint x = gridSpaceX + (planeIndex * probe_system.probe_counts.x);
+    uint y = gridSpaceY % probe_system.probe_counts.z;
+
+    return uvec2(x, y);
+}
+
 vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, uint probe_side_length)
 {
+#if 1
+    vec2 octant_coordinates = EncodeOctahedralCoord(dir);
+
+    // Get the probe's texel coordinates, assuming one texel per probe
+    uvec2 coords = DDGIGetProbeTexelCoords(probe_index);
+
+    // Adjust for the number of interior and border texels
+    float probeInteriorTexels = float(probe_side_length);
+    float probeTexels = (probeInteriorTexels + 2.0);
+
+    float textureWidth = probeTexels * (probe_system.probe_counts.x * probe_system.probe_counts.y);
+    float textureHeight = probeTexels * probe_system.probe_counts.z;
+
+    vec2 uv = vec2(coords.x * probeTexels, coords.y * probeTexels) + (probeTexels * 0.5);
+    uv += octant_coordinates.xy * (probeInteriorTexels * 0.5);
+    uv /= vec2(textureWidth, textureHeight);
+    return uv;
+#else
     vec2 normalizedOctCoord = EncodeOctahedralCoord(normalize(dir));
     vec2 normalizedOctCoordZeroOne = (normalizedOctCoord + vec2(1.0f)) * 0.5f;
 
@@ -100,6 +135,7 @@ vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimension
     vec2 normalizedProbeTopLeftPosition = vec2(probeTopLeftPosition) / vec2(image_dimensions);
 
     return vec2(normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions);
+#endif
 }
 
 vec3 SphericalFibonacci(uint index, uint n)

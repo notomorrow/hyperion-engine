@@ -21,10 +21,10 @@ layout(push_constant) uniform constants {
 
 void main() 
 {
-    const uvec2 coord = uvec2(gl_LaunchIDEXT.xy);
+    const ivec2 coord = ivec2(gl_LaunchIDEXT.xy);
     
-    const uint probe_index = coord.x;
-    const uint ray_index   = coord.y;
+    const int probe_index = coord.x;
+    const int ray_index   = coord.y;
     
     vec3 origin    = ProbeIndexToWorldPosition(probe_index);
     vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));

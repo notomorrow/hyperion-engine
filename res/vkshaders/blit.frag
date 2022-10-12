@@ -23,6 +23,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_py
 
 //layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba16f)  uniform image2D rt_image;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D irradiance_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D depth_image;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
@@ -43,7 +44,7 @@ void main()
     //out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     
-//    ivec2 size = imageSize(irradiance_image);
-//    out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
+    ivec2 size = imageSize(irradiance_image);
+    out_color = imageLoad(irradiance_image, clamp(ivec2(int(v_texcoord0.x * float(size.x - 1)), int(v_texcoord0.y * float(size.y - 1))), ivec2(0), ivec2(size - ivec2(1))));
     
 }

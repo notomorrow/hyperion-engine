@@ -7,7 +7,7 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 14) uniform texture2D prob
 
 vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
 {
-    const uvec3 base_grid_coord    = BaseGridCoord(P);
+    const ivec3 base_grid_coord    = BaseGridCoord(P);
     const vec3 base_probe_position = GridPositionToWorldPosition(base_grid_coord);
     
     vec3 total_irradiance = vec3(0.0);
@@ -15,14 +15,16 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
     
     vec3 alpha = clamp((P - base_probe_position) / PROBE_GRID_STEP, vec3(0.0), vec3(1.0));
     
-    for (uint i = 0; i < 8; i++) {
-        uvec3 offset = uvec3(i, i >> 1, i >> 2) & uvec3(1);
-        uvec3 probe_grid_coord = clamp(base_grid_coord + offset, uvec3(0.0), probe_system.probe_counts.xyz - uvec3(1));
+    for (int i = 0; i < 8; i++) {
+        ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
+        ivec3 probe_grid_coord = clamp(base_grid_coord + offset, ivec3(0), ivec3(probe_system.probe_counts.xyz) - ivec3(1));
         
         uint probe_index    = GridPositionToProbeIndex(probe_grid_coord);
         vec3 probe_position = GridPositionToWorldPosition(probe_grid_coord);
         vec3 probe_to_point = P - probe_position + (N + 3.0 * V) * PROBE_NORMAL_BIAS;
         vec3 dir            = normalize(-probe_to_point);
+
+        //return vec4(vec3(probe_grid_coord) / vec3(ivec3(probe_system.probe_counts.xyz) - ivec3(1)), 1.0);
         
         vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
         float weight   = 1.0;
@@ -35,8 +37,11 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         /* Visibility test */
         vec2 depth_texcoord = TextureCoordFromDirection(-dir, probe_index, probe_system.depth_image_dimensions, PROBE_SIDE_LENGTH_DEPTH);
         float distance_to_probe = length(probe_to_point);
+        //return vec4(vec3(probe_grid_coord) / float(probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z), 1.0);
 
-        vec2 depth_sample = Texture2DLod(gbuffer_depth_sampler, probe_depth, depth_texcoord, 0.0).rg;
+        vec2 depth_sample = Texture2DLod(gbuffer_sampler, probe_depth, depth_texcoord, 0.0).rg;
+        // return vec4(depth_sample, 0.0, 1.0);
+        
         float mean = depth_sample.x;
         float variance = abs(HYP_FMATH_SQR(mean) - depth_sample.y);
 
@@ -48,8 +53,8 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
 
         vec3 irradiance_dir = N;
         vec2 irradiance_texcoord = TextureCoordFromDirection(normalize(irradiance_dir), probe_index, probe_system.irradiance_image_dimensions, PROBE_SIDE_LENGTH_IRRADIANCE);
-        vec3 irradiance = Texture2DLod(gbuffer_depth_sampler, probe_irradiance, irradiance_texcoord, 0.0).rgb;
-
+        vec3 irradiance = Texture2DLod(gbuffer_sampler, probe_irradiance, irradiance_texcoord, 0.0).rgb;
+    
         const float crush_threshold = 0.2;
         if (weight < crush_threshold) {
             weight *= weight * weight * (1.0 / HYP_FMATH_SQR(crush_threshold));
@@ -58,11 +63,14 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         // trilinear
         weight *= trilinear.x * trilinear.y * trilinear.z;
 
+        //irradiance = sqrt(irradiance);
+
         total_irradiance += irradiance * weight;
         total_weight += weight;
     }
 
     vec3 net_irradiance = total_irradiance / total_weight;
+    //net_irradiance = HYP_FMATH_SQR(net_irradiance);
 
     return vec4(net_irradiance, 1.0);
 }

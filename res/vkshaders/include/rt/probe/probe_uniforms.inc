@@ -15,7 +15,8 @@ layout(std430, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 9) uniform ProbeSy
     uint  num_rays_per_probe;
 } probe_system;
 
-struct ProbeRayData {
+struct ProbeRayData
+{
     vec4 direction_depth;
     vec4 origin;
     vec4 normal;
