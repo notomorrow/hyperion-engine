@@ -166,11 +166,7 @@ void main()
     const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
     const vec3 normal = normalize((gl_ObjectToWorldEXT * vec4(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z, 0.0)).xyz);
     const vec2 texcoord = v0.texcoord0 * barycentric_coords.x + v1.texcoord0 * barycentric_coords.y + v2.texcoord0 * barycentric_coords.z;
-
-    // Basic lighting
-    vec3 lightVector = normalize(vec3(-0.5));
-    float dot_product = max(dot(lightVector, normal), 0.6);
-
+    
     vec4 material_color = vec4(1.0);
 
     const uint32_t material_index = mesh_description.material_index;
@@ -188,7 +184,7 @@ void main()
     }
 
     payload.color = material_color.rgb;
-    payload.distance = gl_HitTEXT;
+    payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(MATERIAL_PARAM_ROUGHNESS);
 }

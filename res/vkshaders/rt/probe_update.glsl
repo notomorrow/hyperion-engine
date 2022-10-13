@@ -4,7 +4,6 @@
 #define EPS 0.00001
 #define ENERGY_CONSERVATION 0.95
 #define MAX_DISTANCE (probe_system.probe_distance * 1.5)
-#define SQR(x) (x * x)
 
 #include "../include/rt/probe/shared.inc"
 
@@ -55,21 +54,20 @@ void GatherRays(ivec2 coord, uint num_rays, inout vec3 result, inout float total
     ProbeRayData ray;
     
     for (uint i = 0; i < num_rays; i++) {
-        ray                = ray_cache[i];
+        ray = ray_cache[i];
         vec3 ray_direction = ray.direction_depth.xyz;
-        vec3 ray_origin    = ray.origin.xyz;
-        float ray_depth    = ray.direction_depth.w;
-        vec4 radiance;
+        vec3 ray_origin = ray.origin.xyz;
+        float ray_depth = ray.direction_depth.w;
         
 #if DEPTH
         float dist = min(MAX_DISTANCE, ray_depth - 0.01);
         
-        if (dist == -1.0) {
+        if (dist <= -0.9999) {
             dist = MAX_DISTANCE;
         }
 #else
-        radiance = ray.color;
-        radiance.rgb *= ENERGY_CONSERVATION;
+        vec4 radiance = ray.color;
+        // radiance.rgb *= ENERGY_CONSERVATION;
 #endif
 
 
@@ -83,7 +81,7 @@ void GatherRays(ivec2 coord, uint num_rays, inout vec3 result, inout float total
 
         if (weight >= EPS) {
 #if DEPTH
-            result += vec3(dist * weight, SQR(dist) * weight, 0.0);
+            result += vec3(dist * weight, HYP_FMATH_SQR(dist) * weight, 0.0);
 #else
             result += vec3(radiance.rgb * weight);
 #endif
@@ -121,10 +119,15 @@ void main()
     if (total_weight > EPS) {
         result /= total_weight;
     }
+
+    // TEMP
+    float hysteresis = 0.99;
+
+    float alpha = 1.0 - hysteresis;
     
     imageStore(
         OUTPUT_IMAGE,
         coord,
-        vec4(result.rgb, 1.0)
+        vec4(result.rgb, alpha)
     );
 }
