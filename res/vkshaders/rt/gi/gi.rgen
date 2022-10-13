@@ -52,14 +52,14 @@ void main()
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;
-    float tmin = 0.001;
+    float tmin = 0.01;
     float tmax = 10000.0;
     
     payload.color = vec3(0.0);
+    payload.distance = -1.0;
     
     traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
-    
     ProbeRayData ray_data;
     ray_data.color = vec4(payload.color, 1.0);
     ray_data.origin = vec4(origin, 1.0);

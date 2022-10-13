@@ -10,17 +10,17 @@ struct Material
     
     uvec4 packed_params;
 
-    U32 uv_flip_s;
-    U32 uv_flip_t;
+    uint uv_flip_s;
+    uint uv_flip_t;
     float uv_scale;
     float parallax_height;
     
     uvec4 texture_indices[4]; // moltenvk is compiling uint32_t texture_index[16] -> uint4 texture_index[16]
     
-    U32 texture_usage;
-    U32 _pad0;
-    U32 _pad1;
-    U32 _pad2;
+    uint texture_usage;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
 };
 
 // enum for packed params
