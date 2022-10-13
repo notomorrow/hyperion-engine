@@ -48,7 +48,7 @@ void main(void)
     const vec2 blur_input_texture_size = vec2(imageSize(rt_radiance_image));
     const float blur_input_texture_size_max = max(blur_input_texture_size.x, blur_input_texture_size.y);
     const float texel_size = 1.0 / max(blur_input_texture_size_max, HYP_FMATH_EPSILON);
-    const float radius = texel_size / max(depth_value, HYP_FMATH_EPSILON) * weight;
+    const float radius = texel_size * weight;
 
     // const ivec2 input_image_dimensions = imageSize(blur_input_image);
     // const ivec2 input_coord = ivec2(texcoord * vec2(input_image_dimensions - 1));
@@ -57,7 +57,7 @@ void main(void)
 
     float num_samples = 0.0;
 
-    for (int i = -3; i <= 3; i++) {
+    for (int i = -1; i <= 1; i++) {
 #ifdef HYP_RADIANCE_BLUR_HORIZONTAL
         ivec2 offset = ivec2(0, i);
 #else

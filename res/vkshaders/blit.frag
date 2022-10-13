@@ -25,6 +25,7 @@ layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8)  uniform image2D
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 2, rgba8)  uniform image2D rt_normals_roughness_weight_image;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f)  uniform image2D rt_depth_image;
 layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D irradiance_image;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D irradiance_depth_image;
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
