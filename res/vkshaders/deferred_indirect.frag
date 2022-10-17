@@ -225,14 +225,16 @@ void main()
         }
 #endif
 
+#if 1
         { // RT Radiance
             const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
             const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
             vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, 0.0);
             reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
         }
+#endif
 
-        irradiance = DDGISampleIrradiance(position.xyz, N, V).rgb;
+        //irradiance = DDGISampleIrradiance(position.xyz, N, V).rgb;
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
