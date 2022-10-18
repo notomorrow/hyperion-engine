@@ -57,33 +57,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 6) readonly buffer
 // for RT, all textures are bindless
 layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[];
 
-// Vertex UnpackVertex(uint index)
-// {
-//     Vertex vertex;
-    
-//     vertex.position = vec3(
-//         vertices[index],
-//         vertices[index + 1],
-//         vertices[index + 2]
-//     );
-    
-//     vertex.normal = vec3(
-//         vertices[index + 3],
-//         vertices[index + 4],
-//         vertices[index + 5]
-//     );
-    
-//     vertex.texcoord0 = vec2(
-//         vertices[index + 6],
-//         vertices[index + 7]
-//     );
-    
-//     return vertex;
-// }
-
 void main()
 {
-
     MeshDescription mesh_description = mesh_descriptions[gl_InstanceCustomIndexEXT];
     PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh_description.vertex_buffer_address);
     IndexBuffer index_buffer = IndexBuffer(mesh_description.index_buffer_address);
@@ -93,7 +68,6 @@ void main()
     );
     // payload.color = vec3(greaterThan(index, ivec3(mesh_description.num_vertices)));
     // return;
-    
     Vertex v0;
     {
         const uint offset = 8 * index[0];
