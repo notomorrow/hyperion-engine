@@ -4,6 +4,26 @@
 
 #include "PostFXCommon.inc"
 
+bool HasEffectPre(uint index)
+{
+    index = clamp(index, 0, HYP_MAX_EFFECTS_PER_SLOT);
+
+    const uint flag = 1 << index;
+    const uint bitmask = post_processing.masks[HYP_STAGE_PRE] & flag;
+
+    return bitmask != 0;
+}
+
+bool HasEffectPost(uint index)
+{
+    index = clamp(index, 0, HYP_MAX_EFFECTS_PER_SLOT);
+
+    const uint flag = 1 << index;
+    const uint bitmask = post_processing.masks[HYP_STAGE_POST] & flag;
+
+    return bitmask != 0;
+}
+
 vec4 SampleEffectPre(uint index, vec2 texcoord, in vec4 default_value)
 {
     index = clamp(index, 0, HYP_MAX_EFFECTS_PER_SLOT);
