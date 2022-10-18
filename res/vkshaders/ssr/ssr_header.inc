@@ -24,12 +24,6 @@ layout(push_constant) uniform PushConstant
 	float screen_edge_fade_end;
 } ssr_params;
 
-vec2 GetProjectedPosition(vec3 pos)
-{
-	vec4 samplePosition = scene.projection * vec4(pos, 1.f);
-	samplePosition.xy = (samplePosition.xy / samplePosition.w) * 0.5 + 0.5;
-	return samplePosition.xy;
-}
 float isoscelesTriangleOpposite(float adjacentLength, float coneTheta)
 {
     // simple trig and algebra - soh, cah, toa - tan(theta) = opp/adj, opp = tan(theta) * adj, then multiply * 2.0f for isosceles triangle base

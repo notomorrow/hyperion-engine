@@ -157,6 +157,12 @@ vec4 ReconstructViewSpacePositionFromDepth(mat4 inverse_projection, vec2 coord, 
     return inversed;
 }
 
+vec2 GetProjectedPosition(in mat4 projection, in vec3 view_space_position)
+{
+	vec4 sample_position = projection * vec4(view_space_position, 1.0);
+	return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
+}
+
 float Saturate(float val)
 {
     return min(max(val, 0.0), 1.0);
