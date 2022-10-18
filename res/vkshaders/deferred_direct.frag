@@ -60,10 +60,10 @@ void main()
     
     float ao = 1.0;
     float shadow = 1.0;
-    
-    if (perform_lighting) {
-        ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).r * material.a;
 
+    ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).a * material.a;
+
+    if (perform_lighting) {
         vec3 L = light.position_intensity.xyz;
         L -= position.xyz * float(min(light.type, 1));
         L = normalize(L);
