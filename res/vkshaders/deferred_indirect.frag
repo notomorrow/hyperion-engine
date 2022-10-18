@@ -159,8 +159,6 @@ void main()
         }
 #endif
 
-        vec3 light_color = vec3(1.0);
-
         // TEMP; will be under a compiler conditional.
         // quick and dirty hack to get not-so accurate indirect light for the scene --
         // sample lowest mipmap of cubemap, if we have it.
@@ -193,6 +191,11 @@ void main()
 
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 
+
+        // TODO: a define for this or parameter
+        // GTAO stores indirect light in RGB
+        irradiance += ssao_data.rgb;
+
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
@@ -222,5 +225,8 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
+
+    // result = irradiance.rgb;
+
     output_color = vec4(result, 1.0);
 }

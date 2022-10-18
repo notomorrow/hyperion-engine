@@ -9,11 +9,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba8) uniform writeonly i
 #define SSR_EYE_FADE_END 0.995
 #define SSR_JITTER_OFFSET 0.0
 
-float FetchDepth(vec2 uv)
-{
-    return SampleGBuffer(gbuffer_depth_texture, uv).r;
-}
-
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
 bool TraceRays(
@@ -40,7 +35,7 @@ bool TraceRays(
 	for (; i < ssr_params.num_iterations; i++) {
         marching_position += step;
 
-        hit_pixel = GetProjectedPosition(marching_position);
+        hit_pixel = GetProjectedPosition(scene.projection, marching_position);
 
         float depth = FetchDepth(hit_pixel);
 
@@ -61,7 +56,7 @@ bool TraceRays(
             step *= 0.5;
             marching_position = marching_position - step * sign(step_delta);
 
-            hit_pixel = GetProjectedPosition(marching_position);
+            hit_pixel = GetProjectedPosition(scene.projection, marching_position);
             depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, FetchDepth(hit_pixel)).z);
             step_delta = abs(marching_position.z) - depth_from_screen;
 
