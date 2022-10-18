@@ -36,7 +36,7 @@ vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
     return vec2(noise_x, noise_y) * SSAO_NOISE_AMOUNT;
 }
 
-// #define HYP_USE_GTAO
+#define HYP_USE_GTAO
 
 #ifndef HYP_USE_GTAO
 
@@ -169,11 +169,11 @@ void main()
 
 #else
 
-#define HYP_GTAO_NUM_CIRCLES 2
-#define HYP_GTAO_NUM_SLICES  2
+#define HYP_GTAO_NUM_CIRCLES 4
+#define HYP_GTAO_NUM_SLICES  8
 #define HYP_GTAO_RADIUS      8.0
-#define HYP_GTAO_THICKNESS   1.0
-#define HYP_GTAO_POWER       1.0
+#define HYP_GTAO_THICKNESS   0.9
+#define HYP_GTAO_POWER       0.5
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
