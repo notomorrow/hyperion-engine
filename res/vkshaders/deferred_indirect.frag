@@ -128,11 +128,11 @@ void main()
     vec4 reflections = vec4(0.0);
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
+
+    const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
+    ao = ssao_data.a * material.a;
     
     if (perform_lighting) {
-        const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
-        ao = ssao_data.a * material.a;
-
         const float roughness = material.r;
         const float metalness = material.g;
         
@@ -198,8 +198,6 @@ void main()
         }
 #endif
 
-        vec3 light_color = vec3(1.0);
-
         // TEMP; will be under a compiler conditional.
         // quick and dirty hack to get not-so accurate indirect light for the scene --
         // sample lowest mipmap of cubemap, if we have it.
@@ -220,6 +218,11 @@ void main()
             }
         }
 #endif
+
+        // TODO: a define for this or parameter
+        // GTAO stores indirect light in RGB
+        irradiance += ssao_data.rgb;
+
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
@@ -249,5 +252,8 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
+
+    // result = irradiance.rgb;
+
     output_color = vec4(result, 1.0);
 }

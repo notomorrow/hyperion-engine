@@ -36,6 +36,11 @@ vec4 SampleGBuffer(texture2D tex, vec2 texcoord)
 {
     return Texture2D(gbuffer_depth_sampler, tex, texcoord);
 }
+
+float FetchDepth(vec2 uv)
+{
+    return SampleGBuffer(gbuffer_depth_texture, uv).r;
+}
 #endif
 
 #endif

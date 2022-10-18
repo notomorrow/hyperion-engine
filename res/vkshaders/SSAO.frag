@@ -36,7 +36,7 @@ vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
     return vec2(noise_x, noise_y) * SSAO_NOISE_AMOUNT;
 }
 
-// #define HYP_USE_GTAO
+#define HYP_USE_GTAO
 
 #ifndef HYP_USE_GTAO
 
@@ -162,18 +162,20 @@ void main()
     ao = mix(ao, 1.0, CalculateMist());
 #endif
     
-    
     color_output = vec4(ao);
 }
 
 
 #else
 
-#define HYP_GTAO_NUM_CIRCLES 2
-#define HYP_GTAO_NUM_SLICES  2
-#define HYP_GTAO_RADIUS      8.0
-#define HYP_GTAO_THICKNESS   1.0
-#define HYP_GTAO_POWER       1.0
+#define HYP_GTAO_NUM_CIRCLES 4
+#define HYP_GTAO_NUM_SLICES 8
+#define HYP_GTAO_RADIUS 6.0
+#define HYP_GTAO_THICKNESS 0.95
+#define HYP_GTAO_POWER 0.65
+
+#define HYP_GTAO_IRRADIANCE 0
+#define HYP_GTAO_IRRADIANCE_NUM_SAMPLES 64
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
@@ -310,19 +312,105 @@ vec4 GTAOGetDetails(vec2 uv)
     return vec4(bent_normal, occlusion);
 }
 
+#if HYP_GTAO_IRRADIANCE
+
+vec3 SampleIrradiance(
+    vec3 ray_origin,
+    vec3 ray_direction
+)
+{
+    bool intersect = false;
+
+    float num_iterations = 0.0;
+
+    vec3 ray_step = 3.0 * normalize(ray_direction);
+    vec3 marching_position = ray_origin;
+    float depth_from_screen;
+    float step_delta;
+
+    vec2 hit_pixel;
+
+    const mat4 inverse_proj = inverse(scene.projection);
+
+	int i = 0;
+
+    // hit_pixel = GetProjectedPosition(scene.projection, marching_position);
+    // return Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, hit_pixel).rgb;
+
+	for (; i < HYP_GTAO_IRRADIANCE_NUM_SAMPLES; i++) {
+        marching_position += ray_step;
+
+        hit_pixel = GetProjectedPosition(scene.projection, marching_position);
+
+        float depth = FetchDepth(hit_pixel);
+
+        depth_from_screen = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, depth).z;
+        step_delta = marching_position.z - depth_from_screen;
+
+        intersect = step_delta > 0.0;
+
+        // if (step_delta > 0.95) {
+        //     return vec3(0.0);
+        // }
+
+        num_iterations += 1.0;
+
+        if (intersect) {
+            break;
+        }
+    }
+
+	if (intersect) {
+		// binary search
+		for (; i < HYP_GTAO_IRRADIANCE_NUM_SAMPLES; i++) {
+            ray_step *= 0.5;
+            marching_position = marching_position - ray_step * sign(step_delta);
+
+            hit_pixel = GetProjectedPosition(scene.projection, marching_position);
+            depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, FetchDepth(hit_pixel)).z);
+            step_delta = abs(marching_position.z) - depth_from_screen;
+
+            if (abs(step_delta) < 0.9) {
+                #if 0
+                float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
+                roughness = clamp(roughness, 0.001, 0.999);
+
+                const float cone_angle = RoughnessToConeAngle(roughness);
+
+                const float current_radius = length((hit_pixel - texcoord) * vec2(scene.resolution_x, scene.resolution_y)) * cone_angle;
+                const float max_mip_level = 4.0;
+                float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
+                return Texture2DLod(HYP_SAMPLER_LINEAR, gbuffer_mip_chain, hit_pixel, mip_level).rgb;
+                #else
+                return Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, hit_pixel).rgb;
+                #endif
+
+            }
+        }
+    }
+
+    return vec3(0.0);
+}
+
+#endif
+
 void main()
 {
     // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
-    vec4 data = GTAOGetDetails(texcoord);
-    data.xyz = EncodeNormal(data.xyz).xyz;
+    const vec4 data = GTAOGetDetails(texcoord);
+    const vec3 bent_normal_view_space = data.xyz;
+    const float ao = data.w;
 
-    // Fade ray hits that approach the screen edge
-    // vec2 texcoord_ndc = texcoord * 2.0 - 1.0;
-    // float max_dimension = min(1.0, max(abs(texcoord_ndc.x), abs(texcoord_ndc.y)));
-    // data.a = mix(1.0, data.a, 1.0 - max(0.0, max_dimension - 0.75) / (1.0 - 0.9));
+    color_output = vec4(0.0, 0.0, 0.0, ao);
 
 
-    color_output = data;
+#if HYP_GTAO_IRRADIANCE
+    const mat4 inverse_proj = inverse(scene.projection);
+    vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, FetchDepth(texcoord)).xyz;
+    vec3 ray_direction = bent_normal_view_space;
+
+    color_output.xyz = SampleIrradiance(ray_origin, ray_direction);
+#endif
 }
 
 #endif
