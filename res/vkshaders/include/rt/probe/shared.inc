@@ -3,10 +3,8 @@
 
 #define M_PI 3.14159265359
 
-#include "probe_uniforms.inc"
-
 #define PROBE_GRID_ORIGIN (probe_system.aabb_min.xyz)
-#define PROBE_GRID_STEP   (vec3(probe_system.probe_distance))
+#define PROBE_GRID_STEP   (vec3(probe_system.params[PARAM_PROBE_DISTANCE]))
 #define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
 #define PROBE_NORMAL_BIAS (0.01)
 
@@ -27,12 +25,8 @@ ivec3 ProbeIndexToGridPosition(uint index)
 
 vec3 GridPositionToWorldPosition(ivec3 pos)
 {
-    vec3 half_border = vec3(probe_system.probe_border) * 0.5;
-    
-    // return (vec3(pos) - half_border) * probe_system.probe_distance;
-    
-    //return vec3(probe_system.probe_distance) * (vec3(pos) - half_border) + probe_system.aabb_min.xyz;
-    return vec3(probe_system.probe_distance) * vec3(pos) + probe_system.aabb_min.xyz;
+    //vec3 half_border = vec3(probe_system.probe_border) * 0.5;
+    return PROBE_GRID_STEP * vec3(pos) + probe_system.aabb_min.xyz;
 }
 
 int GridPositionToProbeIndex(ivec3 pos)
@@ -99,24 +93,6 @@ uvec2 DDGIGetProbeTexelCoords(uint probeIndex)
 
 vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, uint probe_side_length)
 {
-#if 0
-    vec2 octant_coordinates = EncodeOctahedralCoord(dir);
-
-    // Get the probe's texel coordinates, assuming one texel per probe
-    uvec2 coords = DDGIGetProbeTexelCoords(probe_index);
-
-    // Adjust for the number of interior and border texels
-    float probeInteriorTexels = float(probe_side_length);
-    float probeTexels = (probeInteriorTexels + 2.0);
-
-    float textureWidth = probeTexels * (probe_system.probe_counts.x * probe_system.probe_counts.y);
-    float textureHeight = probeTexels * probe_system.probe_counts.z;
-
-    vec2 uv = vec2(coords.x * probeTexels, coords.y * probeTexels) + (probeTexels * 0.5);
-    uv += octant_coordinates.xy * (probeInteriorTexels * 0.5);
-    uv /= vec2(textureWidth, textureHeight);
-    return uv;
-#else
     vec2 normalizedOctCoord = EncodeOctahedralCoord(normalize(dir));
     vec2 normalizedOctCoordZeroOne = (normalizedOctCoord + vec2(1.0f)) * 0.5f;
 
@@ -135,7 +111,6 @@ vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimension
     vec2 normalizedProbeTopLeftPosition = vec2(probeTopLeftPosition) / vec2(image_dimensions);
 
     return vec2(normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions);
-#endif
 }
 
 vec3 SphericalFibonacci(uint index, uint n)

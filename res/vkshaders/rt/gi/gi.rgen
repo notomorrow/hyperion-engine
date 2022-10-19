@@ -8,28 +8,40 @@
 #include "../../include/noise.inc"
 #include "../../include/packing.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT tlas;
-// radiance image
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8) uniform image2D image;
-// normals packed (first 2 components), b is roughness, a will be weight
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 2, rgba8) uniform image2D normals_roughness_weight_image;
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3, r32f) uniform image2D depth_image;
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../../include/scene.inc"
 #include "../../include/shared.inc"
 #include "../../include/noise.inc"
 
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #undef HYP_NO_CUBEMAP
 
 #include "../../include/rt/payload.inc"
+#include "../../include/rt/probe/probe_uniforms.inc"
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
+
+layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+    ProbeSystemUniforms probe_system;
+};
+
+layout(std430, set = 0, binding = 10) buffer ProbeRayDataBuffer {
+    ProbeRayData probe_rays[];
+};
+
 #include "../../include/rt/probe/shared.inc"
 
+layout(set = 0, binding = 11, rgba16f) uniform image2D output_irradiance;
+layout(set = 0, binding = 12, rg16f) uniform image2D output_depth;
 
-// TODO: move computation into compute shader
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D output_irradiance;
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D output_depth;
+layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
+{
+    Scene scene;
+};
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
+
 #define MAX_RECURSION 2
 #define RAY_OFFSET 1.0
 #define NUM_SAMPLES 1
@@ -40,6 +52,11 @@ layout(push_constant) uniform constants
     uint time;
 } push_constants;
 
+void SetProbeRayData(uvec2 coord, ProbeRayData ray_data)
+{
+    probe_rays[PROBE_RAY_DATA_INDEX(coord)] = ray_data;
+}
+
 void main() 
 {
     const uvec2 coord = uvec2(gl_LaunchIDEXT.xy);
@@ -48,7 +65,7 @@ void main()
     const uint ray_index = coord.y;
     
     vec3 origin = ProbeIndexToWorldPosition(probe_index);
-    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));
+    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, uint(probe_system.params[PARAM_NUM_RAYS_PER_PROBE])));
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;

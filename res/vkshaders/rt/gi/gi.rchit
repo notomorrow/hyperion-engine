@@ -34,52 +34,28 @@ struct PackedVertex
     float texcoord_t;
 };
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
+layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDescriptions
+layout(std140, set = 0, binding = 4) buffer MeshDescriptions
 {
     MeshDescription mesh_descriptions[];
 };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 5) readonly buffer MaterialBuffer
+layout(std140, set = 0, binding = 5) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 6) readonly buffer EntityBuffer
+layout(std140, set = 0, binding = 6) readonly buffer EntityBuffer
 {
     Object entities[];
 };
 
 // for RT, all textures are bindless
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[];
-
-// Vertex UnpackVertex(uint index)
-// {
-//     Vertex vertex;
-    
-//     vertex.position = vec3(
-//         vertices[index],
-//         vertices[index + 1],
-//         vertices[index + 2]
-//     );
-    
-//     vertex.normal = vec3(
-//         vertices[index + 3],
-//         vertices[index + 4],
-//         vertices[index + 5]
-//     );
-    
-//     vertex.texcoord0 = vec2(
-//         vertices[index + 6],
-//         vertices[index + 7]
-//     );
-    
-//     return vertex;
-// }
+layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 void main()
 {

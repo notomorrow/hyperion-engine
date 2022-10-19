@@ -16,8 +16,7 @@ layout(location=0) out vec4 color_output;
 #include "include/noise.inc"
 #include "include/shared.inc"
 
-
-vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+vec2 texcoord = v_texcoord0;
 
 #define SSAO_NOISE_AMOUNT 0.0002
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
@@ -230,13 +229,10 @@ vec2 GTAORotateDirection(vec2 uv, vec2 cos_sin)
 
 vec4 GTAOGetDetails(vec2 uv)
 {
-    
     const float projected_scale = float(scene.resolution_y) / (tan_half_fov * 2.0) * 0.5;
 
-    /*! TODO! global counter variable for temporal stuff */
-    const float temporal_offset = spatial_offsets[0];
-    // const float temporal_noise = InterleavedGradientNoise(uv * vec2(scene.resolution_x, scene.resolution_y)); // TODO!
-    const float temporal_rotation = temporal_rotations[0]; // TODO!
+    const float temporal_offset = spatial_offsets[(scene.frame_counter / 6) % 4];
+    const float temporal_rotation = temporal_rotations[scene.frame_counter % 6];
 
     const float noise_offset = GTAOOffsets(vec2(uv.x, 1.0 - uv.y));
     const float noise_direction = InterleavedGradientNoise(vec2(uv.x, 1.0 - uv.y) * vec2(scene.resolution_x, scene.resolution_y));
@@ -293,7 +289,6 @@ vec4 GTAOGetDetails(vec2 uv)
             );
         }
 
-
         horizons = acos(clamp(horizons, vec2(-1.0), vec2(1.0)));
         horizons.x = n + max(-horizons.x - n, -HYP_FMATH_PI_HALF);
         horizons.y = n + min(horizons.y - n, HYP_FMATH_PI_HALF);
@@ -312,17 +307,16 @@ vec4 GTAOGetDetails(vec2 uv)
 
 void main()
 {
-    // color_output = vec4((inverse(scene.view) * (vec4(GTAOGetDetails(texcoord).xyz, 0.0))).xyz * 0.5 + 0.5, 1.0);
-    vec4 data = GTAOGetDetails(texcoord);
-    data.xyz = EncodeNormal(data.xyz).xyz;
+    const vec4 data = GTAOGetDetails(texcoord);
+    const vec3 bent_normal_view_space = data.xyz;
+    const float ao = data.w;
+
+    color_output = data;//vec4(0.0, 0.0, 0.0, ao);
 
     // Fade ray hits that approach the screen edge
-    // vec2 texcoord_ndc = texcoord * 2.0 - 1.0;
-    // float max_dimension = min(1.0, max(abs(texcoord_ndc.x), abs(texcoord_ndc.y)));
-    // data.a = mix(1.0, data.a, 1.0 - max(0.0, max_dimension - 0.75) / (1.0 - 0.9));
-
-
-    color_output = data;
+    /*vec2 hit_pixel_ndc = texcoord * 2.0 - 1.0;
+    float max_dimension = min(1.0, max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
+    color_output.a = mix(1.0, color_output.a, 1.0 - max(0.0, max_dimension - 0.9) / (1.0 - 0.98));*/
 }
 
 #endif
