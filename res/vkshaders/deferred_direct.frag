@@ -61,7 +61,7 @@ void main()
     float ao = 1.0;
     float shadow = 1.0;
 
-    ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).a * material.a;
+    //ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).a * material.a;
 
     if (perform_lighting) {
         vec3 L = light.position_intensity.xyz;
