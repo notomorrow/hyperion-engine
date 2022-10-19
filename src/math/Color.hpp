@@ -30,13 +30,13 @@ public:
     Color(const Vector4 &vec);
 
     Float GetRed() const { return Float(bytes[0]) / 255.0f; }
-    Color &SetRed(Float red) { bytes[0] = red; return *this; }
+    Color &SetRed(Float red) { bytes[0] = static_cast<UByte>(red * 255.0f); return *this; }
     Float GetGreen() const { return Float(bytes[1]) / 255.0f; }
-    Color &SetGreen(Float green) { bytes[1] = green; return *this; }
+    Color &SetGreen(Float green) { bytes[1] = static_cast<UByte>(green * 255.0f); return *this; }
     Float GetBlue() const { return Float(bytes[0]) / 255.0f; }
-    Color &SetBlue(Float blue) { bytes[2] = blue; return *this; }
+    Color &SetBlue(Float blue) { bytes[2] = static_cast<UByte>(blue * 255.0f); return *this; }
     Float GetAlpha() const { return Float(bytes[0]) / 255.0f; }
-    Color &SetAlpha(Float alpha) { bytes[3] = alpha; return *this; }
+    Color &SetAlpha(Float alpha) { bytes[3] = static_cast<UByte>(alpha * 255.0f); return *this; }
     
     constexpr Float operator[](UInt index) const
         { return Float(bytes[index]) / 255.0f; }
@@ -54,7 +54,7 @@ public:
     bool operator!=(const Color &other) const;
 
     bool operator<(const Color &other) const
-        { return std::tie(bytes[0], bytes[1], bytes[2], bytes[3]) < std::tie(other.bytes[0], other.bytes[1], other.bytes[2], other.bytes[3]); }
+        { return value < other.value; }
 
     Color &Lerp(const Color &to, Float amt);
 
