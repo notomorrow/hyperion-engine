@@ -1,13 +1,20 @@
 #ifndef HYP_DDGI_GLSL
 #define HYP_DDGI_GLSL
 
+#include "rt/probe/probe_uniforms.inc"
+
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 46) uniform ProbeSystem {
+    ProbeSystemUniforms probe_system;
+};
+
 #include "rt/probe/shared.inc"
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 13) uniform texture2D probe_irradiance;
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 14) uniform texture2D probe_depth;
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 47) uniform texture2D probe_irradiance;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 48) uniform texture2D probe_depth;
 
 vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
 {
-    const ivec3 base_grid_coord    = BaseGridCoord(P);
+    const ivec3 base_grid_coord = BaseGridCoord(P);
     const vec3 base_probe_position = GridPositionToWorldPosition(base_grid_coord);
     
     vec3 total_irradiance = vec3(0.0);
@@ -33,7 +40,7 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         weight *= HYP_FMATH_SQR(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
         
         /* Visibility test */
-        vec2 depth_texcoord = TextureCoordFromDirection(-dir, probe_index, probe_system.depth_image_dimensions, PROBE_SIDE_LENGTH_DEPTH);
+        vec2 depth_texcoord = TextureCoordFromDirection(-dir, probe_index, probe_system.image_dimensions.zw, PROBE_SIDE_LENGTH_DEPTH);
         float distance_to_probe = length(probe_to_point);
 
         vec2 depth_sample = Texture2DLod(gbuffer_sampler, probe_depth, depth_texcoord, 0.0).rg;
@@ -47,7 +54,7 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         weight = max(0.0001, weight);
 
         vec3 irradiance_dir = N;
-        vec2 irradiance_texcoord = TextureCoordFromDirection(normalize(irradiance_dir), probe_index, probe_system.irradiance_image_dimensions, PROBE_SIDE_LENGTH_IRRADIANCE);
+        vec2 irradiance_texcoord = TextureCoordFromDirection(normalize(irradiance_dir), probe_index, probe_system.image_dimensions.xy, PROBE_SIDE_LENGTH_IRRADIANCE);
         vec3 irradiance = Texture2DLod(gbuffer_sampler, probe_irradiance, irradiance_texcoord, 0.0).rgb;
     
         const float crush_threshold = 0.2;

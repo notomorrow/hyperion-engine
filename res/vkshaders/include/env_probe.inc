@@ -35,8 +35,8 @@ vec3 EnvProbeCoordParallaxCorrected(
     vec3 world, vec3 R
 )
 {
-    vec3 rbmax    = (env_probe.aabb_max.xyz - world) / R;
-    vec3 rbmin    = (env_probe.aabb_min.xyz - world) / R;
+    vec3 rbmax = (env_probe.aabb_max.xyz - world) / R;
+    vec3 rbmin = (env_probe.aabb_min.xyz - world) / R;
     vec3 rbminmax = max(rbmax, rbmin);
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
@@ -51,8 +51,8 @@ vec4 EnvProbeSampleParallaxCorrected(
     vec3 world, vec3 R, float lod
 )
 {
-    vec3 rbmax    = (env_probe.aabb_max.xyz - world) / R;
-    vec3 rbmin    = (env_probe.aabb_min.xyz - world) / R;
+    vec3 rbmax = (env_probe.aabb_max.xyz - world) / R;
+    vec3 rbmin = (env_probe.aabb_min.xyz - world) / R;
     vec3 rbminmax = max(rbmax, rbmin);
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
@@ -69,8 +69,8 @@ vec4 EnvProbeSampleParallaxCorrected(
     vec3 world, vec3 R, float lod
 )
 {
-    vec3 rbmax    = (env_probe.aabb_max.xyz - world) / R;
-    vec3 rbmin    = (env_probe.aabb_min.xyz - world) / R;
+    vec3 rbmax = (env_probe.aabb_max.xyz - world) / R;
+    vec3 rbmin = (env_probe.aabb_min.xyz - world) / R;
     vec3 rbminmax = max(rbmax, rbmin);
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);

@@ -8,22 +8,32 @@
 
 layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
 
-#include "../include/rt/probe/shared.inc"
+#include "../include/rt/probe/probe_uniforms.inc"
 
 #if DEPTH
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_DEPTH
     #define OUTPUT_IMAGE output_depth
-    #define OUTPUT_IMAGE_DIMENSIONS probe_system.depth_image_dimensions
+    #define OUTPUT_IMAGE_DIMENSIONS probe_system.image_dimensions.zw
 #else
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_IRRADIANCE
     #define OUTPUT_IMAGE output_irradiance
-    #define OUTPUT_IMAGE_DIMENSIONS probe_system.irradiance_image_dimensions
+    #define OUTPUT_IMAGE_DIMENSIONS probe_system.image_dimensions.xy
 #endif
 
 #define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + probe_system.probe_border.x)
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D output_irradiance;
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f) uniform image2D output_depth;
+layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+    ProbeSystemUniforms probe_system;
+};
+
+layout(std140, set = 0, binding = 10) buffer ProbeRayDataBuffer {
+    ProbeRayData probe_rays[];
+};
+
+#include "../include/rt/probe/shared.inc"
+
+layout(set = 0, binding = 11, rgba16f) uniform image2D output_irradiance;
+layout(set = 0, binding = 12, rg16f) uniform image2D output_depth;
 
 #if DEPTH
 const ivec4 g_offsets[68] = ivec4[](

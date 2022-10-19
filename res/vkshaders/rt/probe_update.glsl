@@ -1,37 +1,53 @@
 #extension GL_EXT_scalar_block_layout : require
 
+#include "../include/rt/probe/probe_uniforms.inc"
+
 #define CACHE_SIZE 64
 #define EPS 0.00001
 #define ENERGY_CONSERVATION 0.95
-#define MAX_DISTANCE (probe_system.probe_distance * 1.5)
-
-#include "../include/rt/probe/shared.inc"
+#define MAX_DISTANCE (probe_system.params[PARAM_PROBE_DISTANCE] * 1.5)
 
 #if DEPTH
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_DEPTH
     #define OUTPUT_IMAGE output_depth
+    #define OUTPUT_IMAGE_DIMENSIONS (probe_system.image_dimensions.zw)
 #else
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_IRRADIANCE
     #define OUTPUT_IMAGE output_irradiance
+    #define OUTPUT_IMAGE_DIMENSIONS (probe_system.image_dimensions.xy)
 #endif
 
 #define GROUP_SIZE PROBE_SIDE_LENGTH
-
-layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
-
 
 #define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + probe_system.probe_border.x)
 
 shared ProbeRayData ray_cache[CACHE_SIZE];
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D output_irradiance;
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f)   uniform image2D output_depth;
+layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+    ProbeSystemUniforms probe_system;
+};
+
+layout(std140, set = 0, binding = 10) buffer ProbeRayDataBuffer {
+    ProbeRayData probe_rays[];
+};
+
+#include "../include/rt/probe/shared.inc"
+
+layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
+
+layout(set = 0, binding = 11, rgba16f) uniform image2D output_irradiance;
+layout(set = 0, binding = 12, rg16f)   uniform image2D output_depth;
 
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {
     ivec2 oct_frag_coord = ivec2((int(coord.x) - 2) % PROBE_SIDE_LENGTH_BORDER, (int(coord.y) - 2) % PROBE_SIDE_LENGTH_BORDER);
     
     return (vec2(oct_frag_coord) + vec2(0.5)) * (2.0 / float(PROBE_SIDE_LENGTH)) - vec2(1.0);
+}
+
+ProbeRayData GetProbeRayData(uvec2 coord)
+{
+    return probe_rays[PROBE_RAY_DATA_INDEX(coord)];
 }
 
 void UpdateRayCache(ivec2 coord, uint offset, uint num_rays)
@@ -42,8 +58,7 @@ void UpdateRayCache(ivec2 coord, uint offset, uint num_rays)
         return;
     }
     
-    
-    int probes_per_side = int((probe_system.irradiance_image_dimensions.x - 2) / PROBE_SIDE_LENGTH_BORDER);
+    int probes_per_side = int((OUTPUT_IMAGE_DIMENSIONS.x - 2) / PROBE_SIDE_LENGTH_BORDER);
     int probe_index = int(coord.x / PROBE_SIDE_LENGTH_BORDER) + probes_per_side * int(coord.y / PROBE_SIDE_LENGTH_BORDER);
     
     ray_cache[index] = GetProbeRayData(uvec2(probe_index, offset + index));
@@ -98,7 +113,7 @@ void main()
     vec3 result = vec3(0.0);
     float total_weight = 0.0;
 
-    uint remaining_rays = probe_system.num_rays_per_probe;
+    uint remaining_rays = uint(probe_system.params[PARAM_NUM_RAYS_PER_PROBE]);
     uint offset = 0;
 
     while (remaining_rays != 0) {

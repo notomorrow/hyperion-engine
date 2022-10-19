@@ -25,12 +25,12 @@ struct PackedVertex
     float texcoord_t;
 };
 
-layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
+layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
 layout(buffer_reference, scalar) buffer IndexBuffer { uint indices[]; };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 4) buffer MeshDescriptions
+layout(std140, set = 0, binding = 4) buffer MeshDescriptions
 {
     MeshDescription mesh_descriptions[];
 };

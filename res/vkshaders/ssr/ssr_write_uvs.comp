@@ -82,17 +82,18 @@ float CalculateAlpha(
     float alpha = 1.0;
     // Fade ray hits that approach the maximum iterations
     alpha *= 1.0 - (num_iterations / ssr_params.num_iterations);
+
     // Fade ray hits that approach the screen edge
-    vec2 hit_pixelNDC = hit_pixel * 2.0 - 1.0;
-    float maxDimension = min(1.0, max(abs(hit_pixelNDC.x), abs(hit_pixelNDC.y)));
-    alpha *= 1.0 - max(0.0, maxDimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
+    vec2 hit_pixel_ndc = hit_pixel * 2.0 - 1.0;
+    float max_dimension = min(1.0, max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
+    alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
     // Fade ray hits base on how much they face the camera
     float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
     alpha *= 1.0 - (eye_direction - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start);
 
     // Fade ray hits based on distance from ray origin
-    alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
+    //alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
 
     return alpha;
 }
