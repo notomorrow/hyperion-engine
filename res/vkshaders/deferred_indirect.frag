@@ -175,7 +175,7 @@ void main()
 
                 vec4 env_probe_irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
 
-                irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
+                // irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
             }
         }
 #endif
