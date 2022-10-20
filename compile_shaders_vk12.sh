@@ -24,6 +24,8 @@ glslc --target-env=$VULKAN_TARGET PostEffect.vert -o PostEffect.vert.spv
 glslc --target-env=$VULKAN_TARGET fxaa.frag -o fxaa.frag.spv
 glslc --target-env=$VULKAN_TARGET tonemap.frag -o tonemap.frag.spv
 
+glslc --target-env=$VULKAN_TARGET hbao/HBAO.comp -o hbao/HBAO.comp.spv
+
 glslc --target-env=$VULKAN_TARGET ssr/ssr_write_uvs.comp -o ssr/ssr_write_uvs.comp.spv
 glslc --target-env=$VULKAN_TARGET ssr/ssr_sample.comp -o ssr/ssr_sample.comp.spv
 glslc --target-env=$VULKAN_TARGET ssr/ssr_blur_hor.comp -o ssr/ssr_blur_hor.comp.spv

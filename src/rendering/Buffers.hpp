@@ -42,7 +42,7 @@ using renderer::ShaderVec3;
 using renderer::ShaderVec4;
 using renderer::ShaderMat4;
 
-struct CubemapUniforms
+struct alignas(256) CubemapUniforms
 {
     Matrix4 projection_matrices[6];
     Matrix4 view_matrices[6];
@@ -59,7 +59,7 @@ struct SkeletonShaderData
 
 static_assert(sizeof(SkeletonShaderData) % 256 == 0);
 
-struct ObjectShaderData
+struct alignas(256) ObjectShaderData
 {
     // 0
     Matrix4 model_matrix;
@@ -78,13 +78,9 @@ struct ObjectShaderData
     UInt32 scene_id;
     UInt32 mesh_id;
     UInt32 material_id;
-
     UInt32 skeleton_id;
 
     UInt32 bucket;
-    UInt32 _pad0, _pad1, _pad2;
-
-    HYP_PAD_STRUCT_HERE(UByte, 256 - 168);
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
@@ -113,7 +109,7 @@ struct MaterialShaderData
 
 static_assert(sizeof(MaterialShaderData) == 128);
 
-struct SceneShaderData
+struct alignas(256) SceneShaderData
 {
     static constexpr UInt32 max_environment_textures = 1;
 
@@ -139,7 +135,6 @@ struct SceneShaderData
 
     Float32 global_timer;
     UInt32 frame_counter;
-    UInt32 num_environment_shadow_maps;
     UInt32 num_lights;
     UInt32 enabled_render_components_mask;
 };

@@ -98,6 +98,8 @@ private:
     std::vector<std::unique_ptr<Attachment>> m_attachments;
     FixedArray<Handle<Texture>, max_frames_in_flight> m_cubemaps;
     Handle<EnvProbe> m_env_probe;
+
+    CubemapUniforms m_cubemap_uniforms;
     FixedArray<std::unique_ptr<UniformBuffer>, max_frames_in_flight> m_cubemap_render_uniform_buffers;
 };
 

@@ -23,7 +23,7 @@ struct Scene
     vec4 aabb_min;
 
     float global_timer;
-    uint num_environment_shadow_maps;
+    uint frame_counter;
     uint num_lights;
     uint enabled_render_components_mask;
 };

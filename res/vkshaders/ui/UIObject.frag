@@ -1,4 +1,7 @@
 #version 450
+#extension GL_ARB_separate_shader_objects : require
+#extension GL_EXT_nonuniform_qualifier    : require
+#extension GL_EXT_scalar_block_layout     : require
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_screen_space_position;
@@ -19,7 +22,7 @@ void main()
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
-        vec4 albedo_texture = Texture2D(HYP_SAMPLER_NEAREST, GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), v_texcoord0);
+        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
         if (albedo_texture.a < MATERIAL_ALPHA_DISCARD
             || /* font map: */ albedo_texture.r < MATERIAL_ALPHA_DISCARD) {

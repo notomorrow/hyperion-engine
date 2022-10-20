@@ -70,9 +70,7 @@ void main()
         1.0
     );
 
-    // out_color = vec4(Tonemap(out_color.rgb), 1.0);
-
-    // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color));
+    out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color));
     
     // out_color = Texture2D(HYP_SAMPLER_NEAREST, ssr_blur_vert, v_texcoord0);
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));
