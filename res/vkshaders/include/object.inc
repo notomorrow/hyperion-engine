@@ -22,9 +22,6 @@ struct Object
     uint skeleton_id;
 
     uint bucket;
-    uint _pad0, _pad1, _pad2;
-
-    HYP_PAD_STRUCT_HERE(float, (256 - 168) / 4);
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS

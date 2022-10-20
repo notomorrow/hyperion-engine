@@ -37,7 +37,7 @@ bool TraceRays(
 
         hit_pixel = GetProjectedPosition(scene.projection, marching_position);
 
-        float depth = FetchDepth(hit_pixel);
+        float depth = SampleDepth(hit_pixel);
 
         depth_from_screen = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, depth).z;
         step_delta = marching_position.z - depth_from_screen;
@@ -57,7 +57,7 @@ bool TraceRays(
             marching_position = marching_position - step * sign(step_delta);
 
             hit_pixel = GetProjectedPosition(scene.projection, marching_position);
-            depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, FetchDepth(hit_pixel)).z);
+            depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel)).z);
             step_delta = abs(marching_position.z) - depth_from_screen;
 
             if (abs(step_delta) < ssr_params.distance_bias) {
@@ -104,7 +104,7 @@ void main(void)
 	vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
     vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 
-    vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, FetchDepth(texcoord)).xyz;
+    vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, SampleDepth(texcoord)).xyz;
     vec3 ray_direction = normalize(reflect(normalize(ray_origin), view_space_normal));
 
 	vec2 hit_pixel;

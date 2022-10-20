@@ -283,7 +283,7 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
             UInt element_index = 0u;
 
             // not including depth texture here
-            for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
+            for (UInt attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
                 gbuffer_textures->SetSubDescriptor({
                     .element_index = element_index,
                     .image_view = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
@@ -302,7 +302,7 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
         }
 
         // depth attachment goes into separate slot
-        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
+        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[GBUFFER_RESOURCE_MAX - 1];
 
         /* Depth texture */
         descriptor_set_globals
@@ -420,7 +420,7 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
             UInt element_index = 0u;
 
             // not including depth texture here
-            for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
+            for (UInt attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
                 gbuffer_textures->SetSubDescriptor({
                     .element_index = element_index,
                     .image_view = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
@@ -439,7 +439,7 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
         }
 
         // add depth texture
-        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[DeferredSystem::gbuffer_texture_formats.Size() - 1];
+        auto *depth_attachment_ref = m_opaque_fbos[frame_index]->GetFramebuffer().GetAttachmentRefs()[GBUFFER_RESOURCE_MAX - 1];
 
         /* Depth texture */
         descriptor_set

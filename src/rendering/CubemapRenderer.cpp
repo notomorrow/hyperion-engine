@@ -312,17 +312,15 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 {
     const auto origin = m_aabb.GetCenter();
 
-    CubemapUniforms cubemap_uniforms { };
-
     {
         for (UInt i = 0; i < 6; i++) {
-            cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
+            m_cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
                 90.0f,
                 m_cubemap_dimensions.width, m_cubemap_dimensions.height,
                 0.015f, m_aabb.GetExtent().Max()
             );
 
-            cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(
+            m_cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(
                 origin,
                 origin + cubemap_directions[i].first,
                 cubemap_directions[i].second
@@ -334,9 +332,9 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 
             m_cubemaps[frame_index] = engine->CreateHandle<Texture>(new TextureCube(
                 m_cubemap_dimensions,
-                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
+                InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
                 m_filter_mode,
-                Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+                WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
                 nullptr
             ));
 
@@ -345,11 +343,11 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
     }
 
     // perform actual gpu creation on render thread
-    engine->GetRenderScheduler().Enqueue([this, engine, &cubemap_uniforms](...) {
+    engine->GetRenderScheduler().Enqueue([this, engine](...) {
         // create uniform buffers and their descriptors
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_ASSERT_RESULT(m_cubemap_render_uniform_buffers[frame_index]->Create(engine->GetDevice(), sizeof(CubemapUniforms)));
-            m_cubemap_render_uniform_buffers[frame_index]->Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
+            m_cubemap_render_uniform_buffers[frame_index]->Copy(engine->GetDevice(), sizeof(CubemapUniforms), &m_cubemap_uniforms);
 
             auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
