@@ -682,8 +682,7 @@ Result GPUBuffer::Create(Device *device, SizeType size, SizeType alignment)
                 &allocation,
                 nullptr
             ),
-            "Failed to create gpu buffer with alignment %llu!",
-            alignment
+            "Failed to create aligned gpu buffer!"
         );
     } else {
         HYPERION_VK_CHECK_MSG(
