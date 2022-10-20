@@ -172,6 +172,7 @@ void main()
 #define HYP_GTAO_RADIUS 8.0
 #define HYP_GTAO_THICKNESS 1.0
 #define HYP_GTAO_POWER 1.0
+#define HYP_HBIL_POWER 1.0
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
@@ -196,12 +197,9 @@ mat4 inv_proj = inverse(scene.projection);
 vec3 GTAOGetPosition(vec2 uv, float depth)
 {
     const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far); //LinearDepth(scene.projection, depth);//
-
     return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
 
-    // vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), uv, depth);
-    // position = scene.view * position;
-    // position /= position.w;
+    // vec4 position = ReconstructViewSpacePositionFromDepth(inverse(scene.projection), uv, depth);
     // return position.xyz;
 }
 
@@ -250,8 +248,6 @@ float CalculateImpact(float theta0, float theta1, vec2 n)
     return Saturate(n.x * integral_x + n.y * integral_y);
 }
 
-
-
 void GTAOGetDetails(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
     const float projected_scale = float(scene.resolution_y) / (tan_half_fov * 2.0) * 0.5;
@@ -270,12 +266,15 @@ void GTAOGetDetails(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4
 
     const vec2 texel_size = vec2(1.0) / vec2(scene.resolution_x, scene.resolution_y);
 
-    const float camera_distance = length(V);
+    const float camera_distance = P.z;
 
-    const float step_radius = (projected_scale * 2.0 * HYP_GTAO_RADIUS) / max(camera_distance, 0.00001); //max(min((HYP_GTAO_RADIUS * projected_scale) / P.z, 512.0), float(HYP_GTAO_NUM_SLICES)) / float(HYP_GTAO_NUM_SLICES + 1);
+    const float step_radius = (projected_scale * 2.0 * HYP_GTAO_RADIUS) / max(camera_distance, 0.00001); //
+    // const float step_radius = max(min((HYP_GTAO_RADIUS * projected_scale) / P.z, 512.0), float(HYP_GTAO_NUM_SLICES)) / float(HYP_GTAO_NUM_SLICES + 1);
 
-    
-    const float rotate_offset = rand(uv);
+    uvec2 resolution = uvec2(scene.resolution_x, scene.resolution_y);
+    uvec2 pixel_coord = { uint(uv.x * float(scene.resolution_x - 1)), uint(uv.y * float(scene.resolution_y - 1)) };
+    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter);
+    const float rotate_offset = RandomFloat(seed);
 
     bent_normal = vec3(0.0);
     occlusion = 0.0;
@@ -286,38 +285,27 @@ void GTAOGetDetails(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4
         // const float angle = (float(i) + noise_direction + (temporal_rotation / 360.0)) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES));
     
         vec2 ss_ray = { sin(angle), cos(angle) };
-        const vec3 ray = normalize(vec3(ss_ray.xy * V.z, -dot(V.xy, ss_ray.xy)));
+        const vec3 ray = normalize(vec3(ss_ray * V.z, -dot(V.xy, ss_ray)));
         ss_ray *= vec2(1.0, -1.0);
 
-        const vec2 n = { dot(ray, N.xyz), -dot(N.xyz, V) };
+        const vec2 n = { dot(ray, N), -dot(N, V) };
         
         float cos_max_theta = -n.x * inversesqrt(HYP_FMATH_SQR(n.x) + max(n.y, 0.0) * n.y);
         float max_theta = acos(cos_max_theta);
         cos_max_theta = cos(max_theta);
 
-        const vec2 rotated_position = {
-            cos(float(i) + 1.0) * uv.x - sin(float(i) + 1.0) * uv.y,
-            sin(float(i) + 1.0) * uv.x + cos(float(i) + 1.0) * uv.y
-        };
-
-        const float jitter_offset = rand(rotated_position);
-
         float slice_ao = 0.0;
 
         for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
-            const float step_base_noise = float(i + j * HYP_GTAO_NUM_SLICES) * 0.6180339887498948482;
-            const float step_noise = fract(noise_direction + step_base_noise);
+            const float step_noise = RandomFloat(seed);
         
-            const vec2 uv_offset = (ss_ray * texel_size * (step_radius * step_noise /** ray_step*/));
-            // const vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));// * vec2(1.0, -1.0);
+            const vec2 uv_offset = (ss_ray * texel_size * (step_radius * step_noise));
             const vec2 new_uv = uv_offset + uv;
-            // const vec2 new_uv = uv + (ss_ray * step_noise);
 
-            const float new_depth = SampleGBuffer(gbuffer_depth_texture, new_uv).r;
-
-            if (!all(equal(new_uv, uv)) && all(equal(new_uv, Saturate(new_uv)))) {
+            if (uvec2(new_uv * vec2(resolution - uvec2(1))) != pixel_coord && all(equal(new_uv, Saturate(new_uv)))) {
+                const float new_depth = SampleGBuffer(gbuffer_depth_texture, new_uv).r;
                 const vec3 new_pos = GTAOGetPosition(new_uv, new_depth);
-                const vec3 new_color = Texture2DLod(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, new_uv.xy, 0.0).rgb;
+                const vec3 new_color = Texture2DLod(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, new_uv.xy, 0.0).rgb;
                 const vec3 new_normal = GTAOGetNormal(new_uv);
 
                 vec3 diff = new_pos - P;
@@ -325,21 +313,23 @@ void GTAOGetDetails(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4
                 const float ss_len = length(ss_diff);
                 const float len = length(diff);
                 const float dist = ss_len / HYP_GTAO_RADIUS;
-
                 const float cos_theta = ss_diff.x / ss_len;
                 diff /= len;
 
-                if ((cos_theta >= cos_max_theta)) {// && dist < 1.0) {
+                if ((cos_theta >= cos_max_theta) && dist < 1.0) {
                     const float theta = acos(cos_theta);
-                    const float falloff = (1.0 - dist * dist) * (ss_len / len);
+
+                    float falloff = (1.0 / max(len, HYP_FMATH_EPSILON));
+                    falloff *= falloff;
+                    falloff = Saturate(falloff);
 
                     const float impact = CalculateImpact(min(max_theta, theta + (HYP_FMATH_PI / 9.0)), theta, n);
-                    light_color += vec4(new_color, 1.0) * impact;// * falloff;
+                    light_color += vec4(new_color * impact /* * falloff */, 1.0);
 
                     max_theta += (theta - max_theta) * falloff;
                     cos_max_theta = cos(max_theta);
 
-                    slice_ao += (1.0 - dist * dist) * (dot(diff, N.rgb) - slice_ao);
+                    slice_ao += (1.0 - dist * dist) * (dot(diff, N) - slice_ao);
                 }
             }
         }
@@ -348,8 +338,9 @@ void GTAOGetDetails(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4
     }
 
     // bent_normal = normalize(normalize(bent_normal) - (V * 0.5));
-    occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_GTAO_NUM_CIRCLES), HYP_GTAO_POWER));
+    occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_GTAO_NUM_CIRCLES), 1.0 / HYP_GTAO_POWER));
     light_color /= max(light_color.a, HYP_FMATH_EPSILON);
+    light_color.rgb = pow(light_color.rgb, vec3(1.0 / HYP_HBIL_POWER));
 }
 
 void main()

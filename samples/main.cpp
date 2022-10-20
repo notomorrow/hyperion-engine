@@ -218,19 +218,19 @@ public:
             ));
             m_scene->AddLight(m_sun);
 
-            m_scene->AddLight(engine->CreateHandle<Light>(new PointLight(
-                 Vector3(0.0f, 4.0f, 0.0f),
-                 Color(1.0f, 0.0f, 0.0f),
-                 100000.0f,
-                 30.0f
-            )));
+            // m_scene->AddLight(engine->CreateHandle<Light>(new PointLight(
+            //      Vector3(0.0f, 4.0f, 0.0f),
+            //      Color(1.0f, 0.0f, 0.0f),
+            //      100000.0f,
+            //      30.0f
+            // )));
 
-            m_scene->AddLight(engine->CreateHandle<Light>(new PointLight(
-                 Vector3(5.0f, 4.0f, 12.0f),
-                 Color(0.0f, 0.0f, 1.0f),
-                 50000.0f,
-                 30.0f
-            )));
+            // m_scene->AddLight(engine->CreateHandle<Light>(new PointLight(
+            //      Vector3(5.0f, 4.0f, 12.0f),
+            //      Color(0.0f, 0.0f, 1.0f),
+            //      50000.0f,
+            //      30.0f
+            // )));
         }
 
         //auto tex = engine->GetAssetManager().Load<Texture>("textures/smoke.png");

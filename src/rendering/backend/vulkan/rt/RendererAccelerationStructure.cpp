@@ -932,14 +932,16 @@ Result BottomLevelAccelerationStructure::Create(Device *device, Instance *instan
             return { Result::RENDERER_ERR, "Invalid triangle mesh!" };
         }
 
-        HYPERION_BUBBLE_ERRORS(geometry->Create(device, instance), result);
+        HYPERION_PASS_ERRORS(geometry->Create(device, instance), result);
 
-        geometries[i] = geometry->m_geometry;
-        primitive_counts[i] = static_cast<UInt32>(geometry->GetPackedIndices().size() / 3);
+		if (result) {
+			geometries[i] = geometry->m_geometry;
+			primitive_counts[i] = static_cast<UInt32>(geometry->GetPackedIndices().size() / 3);
 
-        if (primitive_counts[i] == 0) {
-            return { Result::RENDERER_ERR, "Cannot create BLAS -- geometry has zero indices" };
-        }
+			if (primitive_counts[i] == 0) {
+				return { Result::RENDERER_ERR, "Cannot create BLAS -- geometry has zero indices" };
+			}
+		}
     }
 
 	RTUpdateStateFlags update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;

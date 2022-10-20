@@ -47,7 +47,7 @@ vec2 texcoord = v_texcoord0;
 /* Begin main shader program */
 
 #define IBL_INTENSITY 40000.0
-#define IRRADIANCE_MULTIPLIER 1.0
+#define IRRADIANCE_MULTIPLIER 4.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -180,7 +180,7 @@ void main()
         }
 #endif
 
-#if 1
+#if 0
         { // RT Radiance
             const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
             const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
@@ -189,7 +189,7 @@ void main()
         }
 #endif
 
-        irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
+        // irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 
 
         // TODO: a define for this or parameter

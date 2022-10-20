@@ -9,6 +9,7 @@
 
 #include <system/Debug.hpp>
 #include <system/vma/VmaUsage.hpp>
+#include <util/Defines.hpp>
 
 #include <Types.hpp>
 
@@ -72,7 +73,7 @@ ExtensionMap Instance::GetExtensionMap()
         { VK_KHR_SPIRV_1_4_EXTENSION_NAME, false },
         { VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME, false },
         { VK_KHR_SWAPCHAIN_EXTENSION_NAME, true },
-        { VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME, true }
+        { VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME, false }
     };
 }
 

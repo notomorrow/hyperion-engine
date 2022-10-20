@@ -29,7 +29,6 @@ add_definitions(-DHYP_ROOT_DIR="${CMAKE_CURRENT_LIST_DIR}")
 add_definitions(-DSDL_MAIN_HANDLED=1)
 add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
-add_definitions(-DHYP_AFTERMATH=1)
 add_definitions(-DHYP_BULLET=1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")
@@ -58,9 +57,14 @@ set(COMMON_LIBRARIES
     ${BULLET_LIBRARIES}
     glfw
     ${SDL2_LIBRARIES}
-
-    windows/64/GFSDK_Aftermath_Lib.x64
 )
+
+
+if(WIN32)
+    set(COMMON_LIBRARIES ${COMMON_LIBRARIES} windows/64/GFSDK_Aftermath_Lib.x64)
+    add_definitions(-DHYP_AFTERMATH=1)
+endif()
+
 
 target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
 

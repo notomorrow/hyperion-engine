@@ -253,7 +253,7 @@ Result Device::CheckDeviceSuitable(const ExtensionMap &unsupported_extensions)
         }
 
         if (any_required) {
-            return {Result::RENDERER_ERR, "Device does not support required extensions"};
+            return { Result::RENDERER_ERR, "Device does not support required extensions" };
         }
     }
 

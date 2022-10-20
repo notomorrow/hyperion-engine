@@ -96,24 +96,20 @@ public:
 
         Option operator~() const
         {
-            if (auto *ptr = TryGet<Int>()) {
-                return Option(~*ptr);
-            } else if (auto *ptr = TryGet<Float>()) {
-                return Option(~static_cast<Int>(*ptr));
-            } else if (auto *ptr = TryGet<bool>()) {
-                return Option(~*ptr);
-            } else {
-                return Option(1);
+            if (auto *ptr = TryGet<bool>()) {
+                return Option(!*ptr);
             }
+
+            return Option(~GetInt());
         }
+
+        Option operator!() const
+            { return Option(!GetBool()); }
 
         ~Option() = default;
 
         operator bool() const
             { return GetBool(); }
-
-        bool operator!() const
-            { return !GetBool(); }
 
         bool operator==(const Option &other) const
             { return Base::operator==(other); }
