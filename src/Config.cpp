@@ -16,8 +16,8 @@ void Configuration::SetToDefaultConfiguration(Engine *engine)
     m_variables[CONFIG_RT_REFLECTIONS] = engine->GetDevice()->GetFeatures().IsRaytracingEnabled();
     m_variables[CONFIG_RT_GI] = engine->GetDevice()->GetFeatures().IsRaytracingEnabled();
     
-    m_variables[CONFIG_SSR] &= ~m_variables[CONFIG_RT_REFLECTIONS];
-    m_variables[CONFIG_VOXEL_GI] &= ~m_variables[CONFIG_RT_GI];
+    m_variables[CONFIG_SSR] = !m_variables[CONFIG_RT_REFLECTIONS];
+    m_variables[CONFIG_VOXEL_GI] = !m_variables[CONFIG_RT_GI];
 }
 
 } // namespace hyperion::v2

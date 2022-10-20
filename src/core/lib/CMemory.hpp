@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <cstring>
 #include <cstdlib>
-#include <malloc.h>
 
 namespace hyperion
 {
