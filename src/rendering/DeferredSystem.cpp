@@ -3,12 +3,12 @@
 
 namespace hyperion::v2 {
 
-const FixedArray<DeferredSystem::GBufferFormat, num_gbuffer_textures> DeferredSystem::gbuffer_texture_formats = {
-    GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR),   // color
-    GBufferFormat(TEXTURE_FORMAT_DEFAULT_NORMALS), // normal
-    GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT), // material
-    GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT), // tangent
-    GBufferFormat(TEXTURE_FORMAT_DEFAULT_DEPTH)    // depth
+const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_resources = {
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR) },   // color
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_NORMALS) }, // normal
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT) }, // material
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT) }, // tangent
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_DEPTH) }   // depth
 };
 
 DeferredSystem::DeferredSystem()
@@ -181,9 +181,9 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         mode
     );
 
-    const auto color_format = gbuffer_texture_formats[0].Is<InternalFormat>()
-        ? gbuffer_texture_formats[0].Get<InternalFormat>()
-        : engine->GetDefaultFormat(gbuffer_texture_formats[0].Get<TextureFormatDefault>());
+    const auto color_format = gbuffer_resources[GBUFFER_RESOURCE_ALBEDO].format.Is<InternalFormat>()
+        ? gbuffer_resources[GBUFFER_RESOURCE_ALBEDO].format.Get<InternalFormat>()
+        : engine->GetDefaultFormat(gbuffer_resources[GBUFFER_RESOURCE_ALBEDO].format.Get<TextureFormatDefault>());
 
     if (bucket == BUCKET_UI) {
         // ui only has this attachment.
@@ -206,10 +206,10 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         // opaque creates the main non-color gbuffer attachments,
         // which will be shared with other renderable buckets
         if (bucket == BUCKET_OPAQUE) {
-            for (UInt i = 1; i < static_cast<UInt>(gbuffer_texture_formats.Size()); i++) {
-                const auto format = gbuffer_texture_formats[i].Is<InternalFormat>()
-                    ? gbuffer_texture_formats[i].Get<InternalFormat>()
-                    : engine->GetDefaultFormat(gbuffer_texture_formats[i].Get<TextureFormatDefault>());
+            for (UInt i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
+                const auto format = gbuffer_resources[i].format.Is<InternalFormat>()
+                    ? gbuffer_resources[i].format.Get<InternalFormat>()
+                    : engine->GetDefaultFormat(gbuffer_resources[i].format.Get<TextureFormatDefault>());
 
                 AddOwnedAttachment(
                     engine,
@@ -220,7 +220,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
             }
         } else {
             // add the attachments shared with opaque bucket
-            for (UInt i = 1; i < static_cast<UInt>(gbuffer_texture_formats.Size()); i++) {
+            for (UInt i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
                 AddSharedAttachment(
                     engine,
                     i,
@@ -231,7 +231,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         }
     }
 
-    for (auto &attachment : attachments) {
+    for (const auto &attachment : attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
     
@@ -240,9 +240,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
 
 void DeferredSystem::RendererInstanceHolder::CreateFramebuffers(Engine *engine)
 {
-    AssertThrow(framebuffers.Empty());
-    
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto framebuffer = engine->CreateHandle<Framebuffer>(
             engine->GetInstance()->swapchain->extent,
             Handle<RenderPass>(render_pass)
@@ -253,7 +251,7 @@ void DeferredSystem::RendererInstanceHolder::CreateFramebuffers(Engine *engine)
         }
 
         engine->InitObject(framebuffer);
-        framebuffers.PushBack(framebuffer);
+        framebuffers[frame_index] = std::move(framebuffer);
     }
 }
 
@@ -267,7 +265,7 @@ void DeferredSystem::RendererInstanceHolder::Destroy(Engine *engine)
     renderer_instances_pending_addition.Clear();
     renderer_instances_mutex.unlock();
 
-    framebuffers.Clear();
+    framebuffers = { };
 
     for (const auto &attachment : attachments) {
         HYPERION_PASS_ERRORS(

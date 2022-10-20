@@ -29,9 +29,7 @@ BlurRadiance::BlurRadiance(
 {
 }
 
-BlurRadiance::~BlurRadiance()
-{
-}
+BlurRadiance::~BlurRadiance() = default;
 
 void BlurRadiance::Create(Engine *engine)
 {

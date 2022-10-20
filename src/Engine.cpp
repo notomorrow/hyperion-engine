@@ -130,10 +130,10 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
+            std::array{ InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F,
+                        InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
+                        InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
@@ -448,6 +448,14 @@ void Engine::Initialize()
                 .buffer = GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(GetDevice(), sizeof(EnvProbeShaderData))
             });
 
+        // ui placeholder image
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::UI_TEXTURE)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
+            });
+
         // placeholder rt radiance image
         descriptor_set
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::RT_RADIANCE_RESULT)
@@ -591,7 +599,7 @@ void Engine::Initialize()
             UInt element_index = 0u;
 
             // not including depth texture here
-            for (UInt attachment_index = 0; attachment_index < DeferredSystem::gbuffer_texture_formats.Size() - 1; attachment_index++) {
+            for (UInt attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
                 gbuffer_textures->SetSubDescriptor({
                     .element_index = element_index,
                     .image_view = &GetPlaceholderData().GetImageView2D1x1R8()

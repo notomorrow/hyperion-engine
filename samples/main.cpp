@@ -355,7 +355,6 @@ public:
 
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
-        engine->GetWorld().GetOctree().NextVisibilityState();
         engine->render_state.BindScene(m_scene.Get());
     }
 

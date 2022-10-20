@@ -20,13 +20,30 @@ namespace hyperion::v2 {
 class Engine;
 
 using renderer::Image;
+using renderer::AttachmentRef;
+
+using GBufferFormat = Variant<TextureFormatDefault, InternalFormat>;
+
+enum GBufferResourceName : UInt
+{
+    GBUFFER_RESOURCE_ALBEDO = 0,
+    GBUFFER_RESOURCE_NORMALS = 1,
+    GBUFFER_RESOURCE_MATERIAL = 2,
+    GBUFFER_RESOURCE_TANGENTS = 3,
+    GBUFFER_RESOURCE_DEPTH = 4,
+
+    GBUFFER_RESOURCE_MAX
+};
+
+struct GBufferResource
+{
+    GBufferFormat format;
+};
 
 class DeferredSystem
 {
 public:
-    using GBufferFormat = Variant<TextureFormatDefault, InternalFormat>;
-
-    static const FixedArray<GBufferFormat, num_gbuffer_textures> gbuffer_texture_formats;
+    static const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> gbuffer_resources;
     
     class RendererInstanceHolder
     {
@@ -34,7 +51,7 @@ public:
 
         Bucket bucket { BUCKET_OPAQUE };
         Handle<RenderPass> render_pass;
-        DynArray<Handle<Framebuffer>> framebuffers;
+        FixedArray<Handle<Framebuffer>, max_frames_in_flight> framebuffers;
         DynArray<std::unique_ptr<Attachment>> attachments;
         DynArray<Handle<RendererInstance>> renderer_instances;
         DynArray<Handle<RendererInstance>> renderer_instances_pending_addition;
@@ -51,11 +68,19 @@ public:
         Handle<RenderPass> &GetRenderPass() { return render_pass; }
         const Handle<RenderPass> &GetRenderPass() const { return render_pass; }
         
-        DynArray<Handle<Framebuffer>> &GetFramebuffers() { return framebuffers; }
-        const DynArray<Handle<Framebuffer>> &GetFramebuffers() const { return framebuffers; }
+        FixedArray<Handle<Framebuffer>, max_frames_in_flight> &GetFramebuffers() { return framebuffers; }
+        const FixedArray<Handle<Framebuffer>, max_frames_in_flight> &GetFramebuffers() const { return framebuffers; }
 
         DynArray<Handle<RendererInstance>> &GetRendererInstances() { return renderer_instances; }
         const DynArray<Handle<RendererInstance>> &GetRendererInstances() const { return renderer_instances; }
+
+        AttachmentRef *GetGBufferAttachment(GBufferResourceName resource_name) const
+        {
+            AssertThrow(render_pass.IsValid());
+            AssertThrow(static_cast<UInt>(resource_name) < static_cast<UInt>(GBUFFER_RESOURCE_MAX));
+
+            return render_pass->GetRenderPass().GetAttachmentRefs()[static_cast<UInt>(resource_name)];
+        }
 
         void AddRendererInstance(Handle<RendererInstance> &renderer_instance);
         void AddPendingRendererInstances(Engine *engine);
