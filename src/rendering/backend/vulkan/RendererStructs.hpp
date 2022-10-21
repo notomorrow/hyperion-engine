@@ -88,13 +88,13 @@ struct Extent2D
         UInt32 v[2];
     };
 
-    Extent2D()
+    constexpr Extent2D()
         : width(0),
           height(0)
     {
     }
 
-    Extent2D(UInt32 width, UInt32 height)
+    constexpr Extent2D(UInt32 width, UInt32 height)
         : width(width),
           height(height)
     {
@@ -204,24 +204,27 @@ struct Extent3D
         UInt32 v[4];
     };
 
-    Extent3D() // NOLINT(cppcoreguidelines-pro-type-member-init)
+    constexpr Extent3D() // NOLINT(cppcoreguidelines-pro-type-member-init)
         : width(0),
           height(0),
-          depth(0)
+          depth(0),
+          _pad(0)
     {
     }
 
-    explicit Extent3D(UInt32 extent)  // NOLINT(cppcoreguidelines-pro-type-member-init)
+    explicit constexpr Extent3D(UInt32 extent)  // NOLINT(cppcoreguidelines-pro-type-member-init)
         : width(extent),
           height(extent),
-          depth(extent)
+          depth(extent),
+          _pad(0)
     {
     }
 
-    Extent3D(UInt32 width, UInt32 height, UInt32 depth) // NOLINT(cppcoreguidelines-pro-type-member-init)
+    constexpr Extent3D(UInt32 width, UInt32 height, UInt32 depth) // NOLINT(cppcoreguidelines-pro-type-member-init)
         : width(width),
           height(height),
-          depth(depth)
+          depth(depth),
+          _pad(0)
     {
     }
 

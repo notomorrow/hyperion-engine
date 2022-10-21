@@ -59,13 +59,13 @@ static_assert(sizeof(ProbeRayData) == 64);
 
 struct ProbeGridInfo
 {
-    static constexpr UInt num_rays_per_probe = 128;
     static constexpr UInt irradiance_octahedron_size = 8;
     static constexpr UInt depth_octahedron_size = 16;
+    static constexpr Extent3D probe_border = Extent3D(2, 0, 2);
 
     BoundingBox aabb;
-    Extent3D probe_border = { 2, 0, 2 };
-    float probe_distance = 60.0f;
+    float probe_distance = 40.0f;
+    UInt num_rays_per_probe = 128;
 
     const Vector3 &GetOrigin() const
         { return aabb.min; }
@@ -86,7 +86,7 @@ struct ProbeGridInfo
 
     Extent2D GetImageDimensions() const
     {
-        return Extent2D(MathUtil::NextPowerOf2(NumProbes()), num_rays_per_probe);
+        return { static_cast<UInt32>(MathUtil::NextPowerOf2(NumProbes())), num_rays_per_probe };
     }
 };
 
@@ -128,9 +128,14 @@ public:
 
     void ApplyTLASUpdates(Engine *engine, RTUpdateStateFlags flags);
 
-    StorageBuffer *GetRadianceBuffer() const { return m_radiance_buffer.get(); }
-    StorageImage *GetIrradianceImage() const { return m_irradiance_image.get(); }
-    ImageView *GetIrradianceImageView() const { return m_irradiance_image_view.get(); }
+    StorageBuffer *GetRadianceBuffer() const
+        { return m_radiance_buffer.Get(); }
+
+    StorageImage *GetIrradianceImage() const
+        { return m_irradiance_image.Get(); }
+
+    ImageView *GetIrradianceImageView() const
+        { return m_irradiance_image_view.Get(); }
 
     void Init(Engine *engine);
     void Destroy(Engine *engine);
@@ -147,25 +152,22 @@ private:
     void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
 
     ProbeGridInfo m_grid_info;
-    std::vector<Probe> m_probes;
+    DynArray<Probe> m_probes;
 
     Handle<ComputePipeline> m_update_irradiance,
         m_update_depth,
         m_copy_border_texels_irradiance,
         m_copy_border_texels_depth;
 
-    std::unique_ptr<RaytracingPipeline> m_pipeline;
-    std::unique_ptr<UniformBuffer> m_uniform_buffer;
-
-    std::unique_ptr<StorageBuffer> m_radiance_buffer;
-
-    std::unique_ptr<StorageImage> m_irradiance_image;
-    std::unique_ptr<ImageView> m_irradiance_image_view;
-
-    std::unique_ptr<StorageImage> m_depth_image;
-    std::unique_ptr<ImageView> m_depth_image_view;
-
+    UniquePtr<RaytracingPipeline> m_pipeline;
+    UniquePtr<UniformBuffer> m_uniform_buffer;
+    UniquePtr<StorageBuffer> m_radiance_buffer;
+    UniquePtr<StorageImage> m_irradiance_image;
+    UniquePtr<ImageView> m_irradiance_image_view;
+    UniquePtr<StorageImage> m_depth_image;
+    UniquePtr<ImageView> m_depth_image_view;
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+
     Handle<TLAS> m_tlas;
     FixedArray<bool, max_frames_in_flight> m_has_tlas_updates;
 

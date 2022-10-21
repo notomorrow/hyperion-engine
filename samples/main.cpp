@@ -16,7 +16,6 @@
 #include <animation/Bone.hpp>
 #include <rendering/rt/AccelerationStructureBuilder.hpp>
 #include <rendering/ProbeSystem.hpp>
-#include <rendering/post_fx/SSAO.hpp>
 #include <rendering/post_fx/FXAA.hpp>
 #include <rendering/post_fx/Tonemap.hpp>
 #include <scene/controllers/AudioController.hpp>
@@ -85,8 +84,7 @@
 using namespace hyperion;
 using namespace hyperion::v2;
 
-// #define HYP_TEST_VCT
-#define HYP_TEST_RT
+//#define HYP_TEST_VCT
 // #define HYP_TEST_TERRAIN
 
 namespace hyperion::v2 {
@@ -104,7 +102,6 @@ public:
 
     virtual void InitRender(Engine *engine) override
     {
-        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
         engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
@@ -135,7 +132,7 @@ public:
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj"); //"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -147,6 +144,7 @@ public:
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
 
+#if 0
         if (auto house = GetScene()->GetRoot().AddChild(obj_models["house"].Get<Node>())) {
             house.Scale(10.0f);
             house.SetName("house");
@@ -170,6 +168,7 @@ public:
                 }
             }
         }
+#endif
 
         test_model.Scale(0.35f);
 

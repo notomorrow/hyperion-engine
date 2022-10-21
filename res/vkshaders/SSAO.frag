@@ -169,9 +169,9 @@ void main()
 
 #define HYP_GTAO_NUM_CIRCLES 4
 #define HYP_GTAO_NUM_SLICES 8
-#define HYP_GTAO_RADIUS 8.0
+#define HYP_GTAO_RADIUS 16.0
 #define HYP_GTAO_THICKNESS 1.0
-#define HYP_GTAO_POWER 1.0
+#define HYP_GTAO_POWER 1.5
 #define HYP_HBIL_POWER 1.0
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };

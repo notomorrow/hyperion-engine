@@ -1,5 +1,6 @@
 #include <rendering/backend/RendererPipeline.hpp>
 #include <core/lib/FlatSet.hpp>
+#include <core/lib/CMemory.hpp>
 
 #include <system/Debug.hpp>
 
@@ -80,6 +81,14 @@ std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *dev
     }
 
     return used_layouts;
+}
+
+
+void Pipeline::SetPushConstants(const void *data, SizeType size)
+{
+    AssertThrow(size <= sizeof(push_constants));
+
+    Memory::Copy(&push_constants, data, size);
 }
 
 } // namespace renderer

@@ -29,6 +29,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_py
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_texture;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
@@ -70,6 +71,8 @@ void main()
         1.0
     );
 
-    // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color).rgb, 1.0);
-    // out_color.rgb += pow(Texture2D(HYP_SAMPLER_NEAREST, ssr_blur_vert, v_texcoord0).rgb, vec3(2.2));
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
+
+    // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color).aaa, 1.0);
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, rt_radiance_final, v_texcoord0).rgb;//, vec3(2.2));
 }

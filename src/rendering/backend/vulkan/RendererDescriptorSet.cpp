@@ -54,6 +54,10 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
 
             // sparse voxel octree buffer
             {DescriptorKey::SVO_BUFFER,            40},
+
+            // combined result of AO (alpha channel) and SS GI (if applicable, in rgb)
+            {DescriptorKey::SSAO_GI_RESULT,        41},
+
             // final UI image
             {DescriptorKey::UI_TEXTURE,            42},
 

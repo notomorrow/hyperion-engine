@@ -26,7 +26,9 @@ public:
 
     void Bind(CommandBuffer *command_buffer) const;
     void Bind(CommandBuffer *command_buffer, const PushConstantData &push_constant_data);
+
     void SubmitPushConstants(CommandBuffer *cmd) const;
+
     void Dispatch(CommandBuffer *command_buffer, Extent3D group_size) const;
     void DispatchIndirect(
         CommandBuffer *command_buffer,

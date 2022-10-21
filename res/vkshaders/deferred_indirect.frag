@@ -15,6 +15,7 @@ layout(location=2) out vec4 output_positions;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 
 #include "include/env_probe.inc"
@@ -90,8 +91,13 @@ void main()
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
 
-    const vec4 ssao_data = SampleEffectPre(0, v_texcoord0, vec4(1.0));
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);//SampleEffectPre(0, v_texcoord0, vec4(1.0));
     ao = ssao_data.a * material.a;
+    
+#if HYP_VCT_ENABLED
+    vec4 vct_specular = vec4(0.0);
+    vec4 vct_diffuse = vec4(0.0);
+#endif
 
     if (perform_lighting) {
         const float roughness = material.r;
@@ -134,9 +140,6 @@ void main()
 #endif
 
 #if HYP_VCT_ENABLED
-        vec4 vct_specular;
-        vec4 vct_diffuse;
-
         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
             vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
             vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
@@ -180,7 +183,7 @@ void main()
         }
 #endif
 
-#if 0
+#if 1
         { // RT Radiance
             const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
             const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
@@ -189,7 +192,7 @@ void main()
         }
 #endif
 
-        // irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
+        irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 
 
         // TODO: a define for this or parameter
