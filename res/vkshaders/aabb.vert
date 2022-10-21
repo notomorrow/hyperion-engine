@@ -1,5 +1,6 @@
 #version 450
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
