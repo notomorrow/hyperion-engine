@@ -163,6 +163,8 @@ public:
 
     void SetPushConstants(const PushConstantData &push_constants)
         { this->push_constants = push_constants; }
+    
+    void SetPushConstants(const void *data, SizeType size);
 
     VkPipelineLayout layout;
 

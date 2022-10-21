@@ -14,7 +14,7 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
       m_next_enabled_render_components_mask(0),
       m_rt_radiance(Extent2D { 1024, 1024 }),
       m_probe_system({
-          .aabb = {{-200.0f, -10.0f, -200.0f}, {200.0f, 100.0f, 200.0f}}
+          .aabb = {{-300.0f, -10.0f, -300.0f}, {300.0f, 400.0f, 300.0f}}
       }),
       m_has_rt_radiance(false)
 {

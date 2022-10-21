@@ -196,6 +196,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 
 DeferredRenderer::DeferredRenderer()
     : m_ssr(Extent2D { 512, 512 }),
+      m_hbao(Extent2D { 512, 512 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -225,6 +226,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_dpr.Create(engine, depth_attachment_ref);
     m_ssr.Create(engine);
+    m_hbao.Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_results[i] = engine->CreateHandle<Texture>(
@@ -481,6 +483,8 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_ssr.Destroy(engine);
     m_dpr.Destroy(engine);
 
+    m_hbao.Destroy(engine);
+
     //if (engine->GetConfig().Get(CONFIG_RT_SUPPORTED)) {
     //    m_rt_radiance.Destroy(engine);
     //}
@@ -547,6 +551,8 @@ void DeferredRenderer::Render(
         //m_rt_radiance.Render(engine, frame);
     }
 
+    m_hbao.Render(engine, frame);
+
     { // indirect lighting
         DebugMarker marker(primary, "Record deferred indirect lighting pass");
 
@@ -565,9 +571,6 @@ void DeferredRenderer::Render(
         m_direct_pass.m_push_constant_data = m_indirect_pass.m_push_constant_data;
         m_direct_pass.Record(engine, frame_index);
     }
-
-
-    auto &render_list = engine->GetDeferredSystem();
 
     { // opaque objects
         DebugMarker marker(primary, "Render opaque objects");
