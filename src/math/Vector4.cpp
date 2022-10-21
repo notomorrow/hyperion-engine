@@ -4,31 +4,35 @@
 #include "Vector2.hpp"
 #include "Matrix4.hpp"
 
+#if !defined(HYP_FEATURES_INTRINSICS)
+
 namespace hyperion {
 
 const Vector4 Vector4::zero = Vector4(0.0f);
 const Vector4 Vector4::one = Vector4(1.0f);
 
+using namespace intrinsics;
+
 Vector4::Vector4()
-    : x(0.0f), 
-      y(0.0f), 
-      z(0.0f), 
+    : x(0.0f),
+      y(0.0f),
+      z(0.0f),
       w(0.0f)
 {
 }
 
 Vector4::Vector4(float x, float y, float z, float w)
-    : x(x), 
+    : x(x),
       y(y),
-      z(z), 
+      z(z),
       w(w)
 {
 }
 
 Vector4::Vector4(float xyzw)
-    : x(xyzw), 
-      y(xyzw), 
-      z(xyzw), 
+    : x(xyzw),
+      y(xyzw),
+      z(xyzw),
       w(xyzw)
 {
 }
@@ -58,10 +62,14 @@ Vector4::Vector4(const Vector3 &xyz, float w)
 }
 
 Vector4::Vector4(const Vector4 &other)
-    : x(other.x), 
-      y(other.y), 
-      z(other.z), 
+    : x(other.x),
+      y(other.y),
+      z(other.z),
       w(other.w)
+{
+}
+
+Vector4::Vector4(Float128 vec)
 {
 }
 
@@ -148,9 +156,9 @@ Vector4 &Vector4::operator/=(const Vector4 &other)
 bool Vector4::operator==(const Vector4 &other) const
 {
     return MathUtil::ApproxEqual(x, other.x)
-        && MathUtil::ApproxEqual(y, other.y)
-        && MathUtil::ApproxEqual(z, other.z)
-        && MathUtil::ApproxEqual(w, other.w);
+           && MathUtil::ApproxEqual(y, other.y)
+           && MathUtil::ApproxEqual(z, other.z)
+           && MathUtil::ApproxEqual(w, other.w);
 
     // return x == other.x && y == other.y && z == other.z && w == other.w;
 }
@@ -241,17 +249,17 @@ Vector4 Vector4::Clamp(const Vector4 &vec, float min_value, float max_value)
 Vector4 Vector4::Min(const Vector4 &a, const Vector4 &b)
 {
     return Vector4(MathUtil::Min(a.x, b.x),
-        MathUtil::Min(a.y, b.y),
-        MathUtil::Min(a.z, b.z),
-        MathUtil::Min(a.w, b.w));
+                   MathUtil::Min(a.y, b.y),
+                   MathUtil::Min(a.z, b.z),
+                   MathUtil::Min(a.w, b.w));
 }
 
 Vector4 Vector4::Max(const Vector4 &a, const Vector4 &b)
 {
     return Vector4(MathUtil::Max(a.x, b.x),
-        MathUtil::Max(a.y, b.y),
-        MathUtil::Max(a.z, b.z),
-        MathUtil::Max(a.w, b.w));
+                   MathUtil::Max(a.y, b.y),
+                   MathUtil::Max(a.z, b.z),
+                   MathUtil::Max(a.w, b.w));
 }
 
 Vector4 Vector4::Zero()
@@ -291,3 +299,4 @@ std::ostream &operator<<(std::ostream &out, const Vector4 &vec) // output
 }
 
 } // namespace hyperion
+#endif

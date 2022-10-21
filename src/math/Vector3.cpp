@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+#if !defined(HYP_FEATURES_INTRINSICS)
+
 namespace hyperion {
 
 const Vector3 Vector3::zero = Vector3(0.0f);
@@ -327,3 +329,4 @@ std::ostream &operator<<(std::ostream &out, const Vector3 &vec) // output
 }
 
 } // namespace hyperion
+#endif

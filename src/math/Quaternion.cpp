@@ -2,6 +2,8 @@
 
 #include <float.h>
 
+#if !defined(HYP_FEATURES_INTRINSICS) || 1
+
 namespace hyperion {
 
 const Quaternion Quaternion::identity = Quaternion::Identity();
@@ -335,3 +337,5 @@ std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output
     return out;
 }
 } // namespace hyperion
+
+#endif

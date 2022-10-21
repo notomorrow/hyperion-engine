@@ -1,0 +1,338 @@
+#include "../Quaternion.hpp"
+#include "Intrinsics.hpp"
+
+#include <float.h>
+
+namespace hyperion {
+
+const Quaternion Quaternion::identity = Quaternion::Identity();
+
+Quaternion::Quaternion()
+    : x(0.0), y(0.0), z(0.0), w(1.0)
+{
+}
+
+Quaternion::Quaternion(float x, float y, float z, float w)
+    : x(x), y(y), z(z), w(w)
+{
+}
+
+Quaternion::Quaternion(const Matrix4 &m)
+{
+    Vector3 m0 = Vector3(m[0]),//m.GetColumn(0)),
+        m1 = Vector3(m[1]),//.GetColumn(1)),
+        m2 = Vector3(m[2]);//.GetColumn(2));
+
+    float length_sqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
+
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[0] *= length_sqr;
+        m1[0] *= length_sqr;
+        m2[0] *= length_sqr;
+    }
+
+    length_sqr = m0[1] * m0[1] + m1[1] * m1[1] + m2[1] * m2[1];
+
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[1] *= length_sqr;
+        m1[1] *= length_sqr;
+        m2[1] *= length_sqr;
+    }
+
+    length_sqr = m0[2] * m0[2] + m1[2] * m1[2] + m2[2] * m2[2];
+
+    if (length_sqr != 1.0f && length_sqr != 0.0f) {
+        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
+        m0[2] *= length_sqr;
+        m1[2] *= length_sqr;
+        m2[2] *= length_sqr;
+    }
+
+    const float tr = m0[0] + m1[1] + m2[2];
+
+    if (tr > 0.0f) { 
+        float S = sqrt(tr + 1.0f) * 2.0f; // S=4*qw 
+        x = (m2[1] - m1[2]) / S;
+        y = (m0[2] - m2[0]) / S; 
+        z = (m1[0] - m0[1]) / S; 
+        w = 0.25f * S;
+    } else if ((m0[0] > m1[1]) && (m0[0] > m2[2])) { 
+        float S = sqrt(1.0f + m0[0] - m1[1] - m2[2]) * 2.0f; // S=4*qx 
+        x = 0.25f * S;
+        y = (m0[1] + m1[0]) / S; 
+        z = (m0[2] + m2[0]) / S; 
+        w = (m2[1] - m1[2]) / S;
+    } else if (m1[1] > m2[2]) { 
+        float S = sqrt(1.0f + m1[1] - m0[0] - m2[2]) * 2.0f; // S=4*qy
+        x = (m0[1] + m1[0]) / S; 
+        y = 0.25f * S;
+        z = (m1[2] + m2[1]) / S; 
+        w = (m0[2] - m2[0]) / S;
+    } else { 
+        float S = sqrt(1.0f + m2[2] - m0[0] - m1[1]) * 2.0f; // S=4*qz
+        x = (m0[2] + m2[0]) / S;
+        y = (m1[2] + m2[1]) / S;
+        z = 0.25f * S;
+        w = (m1[0] - m0[1]) / S;
+    }
+
+    /*if (tr >= 0.0) {
+        s = sqrt(tr + mat[W][W]);
+        qu.w = s*0.5;
+        s = 0.5 / s;
+        qu.x = (mat[Z][Y] - mat[Y][Z]) * s;
+        qu.y = (mat[X][Z] - mat[Z][X]) * s;
+        qu.z = (mat[Y][X] - mat[X][Y]) * s;
+    } else {
+        int h = X;
+        if (mat[Y][Y] > mat[X][X]) h = Y;
+        if (mat[Z][Z] > mat[h][h]) h = Z;
+        switch (h) {
+    #define caseMacro(i,j,k,I,J,K) \
+        case I:\
+            s = sqrt( (mat[I][I] - (mat[J][J]+mat[K][K])) + mat[W][W] );\
+            qu.i = s*0.5;\
+            s = 0.5 / s;\
+            qu.j = (mat[I][J] + mat[J][I]) * s;\
+            qu.k = (mat[K][I] + mat[I][K]) * s;\
+            qu.w = (mat[K][J] - mat[J][K]) * s;\
+            break
+        caseMacro(x,y,z,X,Y,Z);
+        caseMacro(y,z,x,Y,Z,X);
+        caseMacro(z,x,y,Z,X,Y);
+    #undef caseMacro
+        }
+    }
+    if (mat[W][W] != 1.0) {
+    s = 1.0/sqrt(mat[W][W]);
+    qu.w *= s; qu.x *= s; qu.y *= s; qu.z *= s; }*/
+}
+
+Quaternion::Quaternion(const Vector3 &euler)
+{
+    float c1 = cos(euler[2] * 0.5f);
+    float c2 = cos(euler[1] * 0.5f);
+    float c3 = cos(euler[0] * 0.5f);
+    float s1 = sin(euler[2] * 0.5f);
+    float s2 = sin(euler[1] * 0.5f);
+    float s3 = sin(euler[0] * 0.5f);
+
+    x = c1 * c2 * s3 - s1 * s2 * c3;
+    y = c1 * s2 * c3 + s1 * c2 * s3;
+    z = s1 * c2 * c3 - c1 * s2 * s3;
+    w = c1 * c2 * c3 + s1 * s2 * s3;
+}
+
+Quaternion::Quaternion(const Vector3 &axis, float radians)
+{
+    Vector3 tmp(axis);
+
+    if (tmp.Length() != 1) {
+        tmp.Normalize();
+    }
+
+    if (tmp != Vector3::Zero()) {
+        float half_angle = radians * 0.5f;
+        float sin_half_angle = sin(half_angle);
+
+        x = sin_half_angle * tmp.x;
+        y = sin_half_angle * tmp.y;
+        z = sin_half_angle * tmp.z;
+        w = cos(half_angle);
+    } else {
+        (*this) = Quaternion::Identity();
+    }
+}
+
+Quaternion::Quaternion(const Quaternion &other)
+    : x(other.x), y(other.y), z(other.z), w(other.w)
+{
+}
+
+Quaternion &Quaternion::operator=(const Quaternion &other)
+{
+    x = other.x;
+    y = other.y;
+    z = other.z;
+    w = other.w;
+    return *this;
+}
+
+Quaternion Quaternion::operator*(const Quaternion &other) const
+{
+    float x1 = x * other.w + y * other.z - z * other.y + w * other.x;
+    float y1 = -x * other.z + y * other.w + z * other.x + w * other.y;
+    float z1 = x * other.y - y * other.x + z * other.w + w * other.z;
+    float w1 = -x * other.x - y * other.y - z * other.z + w * other.w;
+    return Quaternion(x1, y1, z1, w1);
+}
+
+Quaternion &Quaternion::operator*=(const Quaternion &other)
+{
+    float x1 = x * other.w + y * other.z - z * other.y + w * other.x;
+    float y1 = -x * other.z + y * other.w + z * other.x + w * other.y;
+    float z1 = x * other.y - y * other.x + z * other.w + w * other.z;
+    float w1 = -x * other.x - y * other.y - z * other.z + w * other.w;
+    x = x1;
+    y = y1;
+    z = z1;
+    w = w1;
+    return *this;
+}
+
+Quaternion &Quaternion::operator+=(const Vector3 &vec)
+{
+    Quaternion q(vec.x, vec.y, vec.z, 0.0);
+    q *= *this;
+    x += q.x * 0.5f;
+    y += q.y * 0.5f;
+    z += q.z * 0.5f;
+    w += q.w * 0.5f;
+    return *this;
+}
+
+Vector3 Quaternion::operator*(const Vector3 &vec) const
+{
+    Vector3 result;
+    result.x = w * w * vec.x + 2 * y * w * vec.z - 2 * z * w * vec.y + x * x * vec.x
+        + 2 * y * x * vec.y + 2 * z * x * vec.z - z * z * vec.x - y * y * vec.x;
+    result.y = 2 * x * y * vec.x + y * y * vec.y + 2 * z * y * vec.z + 2 * w * z
+        * vec.x - z * z * vec.y + w * w * vec.y - 2 * x * w * vec.z - x * x
+        * vec.y;
+
+    result.z = 2 * x * z * vec.x + 2 * y * z * vec.y + z * z * vec.z - 2 * w * y * vec.x
+        - y * y * vec.z + 2 * w * x * vec.y - x * x * vec.z + w * w * vec.z;
+    return result;
+}
+
+float Quaternion::Length() const
+{
+    return sqrt(LengthSquared());
+}
+
+float Quaternion::LengthSquared() const
+{
+    return w * w + x * x + y * y + z * z;
+}
+
+Quaternion &Quaternion::Normalize()
+{
+    float d = LengthSquared();
+    if (d < FLT_EPSILON) {
+        w = 1.0;
+        return *this;
+    }
+    d = 1.0f / sqrt(d);
+    w *= d;
+    x *= d;
+    y *= d;
+    z *= d;
+
+    return *this;
+}
+
+Quaternion &Quaternion::Invert()
+{
+    float len2 = LengthSquared();
+    if (len2 > 0.0) {
+        float inv_len2 = 1.0f / len2;
+        w = w * inv_len2;
+        x = -x * inv_len2;
+        y = -y * inv_len2;
+        z = -z * inv_len2;
+    }
+    return *this;
+}
+
+Quaternion &Quaternion::Slerp(const Quaternion &to, float amt)
+{
+    float cos_half_theta = w * to.w + x * to.x + y * to.y + z * to.z;
+
+    if (abs(cos_half_theta) >= 1.0f) {
+        return *this;
+    }
+
+    float half_theta = acos(cos_half_theta);
+    float sin_half_theta = sqrt(1.0f - cos_half_theta * cos_half_theta);
+
+    if (abs(sin_half_theta) < 0.001f) {
+        w = w * 0.5f + to.w * 0.5f;
+        x = x * 0.5f + to.x * 0.5f;
+        y = y * 0.5f + to.y * 0.5f;
+        z = z * 0.5f + to.z * 0.5f;
+        return *this;
+    }
+
+    float ratio_a = sin((1.0f - amt) * half_theta) / sin_half_theta;
+    float ratio_b = sin(amt * half_theta) / sin_half_theta;
+
+    w = w * ratio_a + to.w * ratio_b;
+    x = x * ratio_a + to.x * ratio_b;
+    y = y * ratio_a + to.y * ratio_b;
+    z = z * ratio_a + to.z * ratio_b;
+    return *this;
+}
+
+int Quaternion::GimbalPole() const
+{
+    const float amt = y * x + z * w;
+
+    return amt > 0.499f ? 1 : (amt < -0.499f ? -1 : 0);
+}
+
+float Quaternion::Roll() const
+{
+    const int pole = GimbalPole();
+
+    return pole == 0 ? atan2(2.0f * (w * z + y * x), 1.0f - 2.0f * (x * x + z * z)) : pole * 2.0f * atan2(y, w);
+}
+
+float Quaternion::Pitch() const
+{
+    const int pole = GimbalPole();
+
+    return pole == 0 ?
+        std::asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) :
+        pole * MathUtil::pi<float> * 0.5f;
+}
+
+float Quaternion::Yaw() const
+{
+    int pole = GimbalPole();
+    return pole == 0 ? atan2(2.0f * (y * w + x * z), 1.0f - 2.0f * (y * y + x * x)) : 0.0f;
+}
+
+Quaternion Quaternion::Identity()
+{
+    return Quaternion(0.0, 0.0, 0.0, 1.0);
+}
+
+Quaternion Quaternion::LookAt(const Vector3 &direction, const Vector3 &up)
+{
+    const Vector3 z = direction.Normalized();
+    const Vector3 x = up.Cross(direction).Normalized();
+    const Vector3 y = direction.Cross(x).Normalized();
+
+    Vector4 rows[] = {
+        Vector4(x, 0.0f),
+        Vector4(y, 0.0f),
+        Vector4(z, 0.0f),
+        Vector4::UnitW()
+    };
+
+    return Quaternion(Matrix4(rows));
+}
+
+Quaternion Quaternion::AxisAngles(const Vector3 &axis, float radians)
+{
+    return Quaternion(axis, radians);
+}
+
+std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output
+{
+    out << "[" << rot.x << ", " << rot.y << ", " << rot.z << ", " << rot.w << "]";
+    return out;
+}
+} // namespace hyperion
