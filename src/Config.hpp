@@ -20,6 +20,8 @@ enum OptionName
 
     CONFIG_SSR,
 
+    CONFIG_HBAO,
+
     CONFIG_VOXEL_GI,
 
     CONFIG_MAX

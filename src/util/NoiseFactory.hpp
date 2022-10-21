@@ -11,11 +11,13 @@
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/SortedArray.hpp>
+#include <core/lib/Range.hpp>
 
 #include <Types.hpp>
 
 #include <map>
 #include <utility>
+#include <random>
 
 namespace hyperion {
 
@@ -25,6 +27,7 @@ using Seed = UInt32;
 
 enum NoiseGenerationType
 {
+    BASIC_NOISE,
     SIMPLEX_NOISE,
     WORLEY_NOISE
 };
@@ -39,10 +42,14 @@ public:
     Seed GetSeed() const { return m_seed; }
 
     virtual double GetNoise(double x, double z) const = 0;
-    virtual double GetNoise(double x, double y, double z) const { return GetNoise(x, y); }
+    virtual double GetNoise(double x, double y, double z) const
+        { return GetNoise(x, y); }
 
-    double GetNoise(const Vector2 &xy) const { return GetNoise(xy.x, xy.y); }
-    double GetNoise(const Vector3 &xyz) const { return GetNoise(xyz.x, xyz.y, xyz.z); }
+    double GetNoise(const Vector2 &xy) const
+        { return GetNoise(xy.x, xy.y); }
+
+    double GetNoise(const Vector3 &xyz) const
+        { return GetNoise(xyz.x, xyz.y, xyz.z); }
 
     Bitmap<1> CreateBitmap(UInt width, UInt height, Float scale = 1.0f);
 
@@ -51,6 +58,33 @@ protected:
 
 private:
     NoiseGenerationType m_type;
+};
+
+template <class T>
+class BasicNoiseGenerator
+{
+public:
+    BasicNoiseGenerator(Seed seed, const Range<T> &range)
+        : m_seed(seed),
+          m_range(range),
+          m_mt { m_random_device() },
+          m_distribution { range.GetStart(), range.GetEnd() }
+    {
+    }
+
+    virtual ~BasicNoiseGenerator() = default;
+
+    virtual T Next() const
+        { return m_distribution(); }
+
+protected:
+    Seed m_seed;
+
+    Range<T> m_range;
+
+    std::random_device m_random_device;
+    std::mt19937 m_mt;
+    std::uniform_real_distribution<T> m_distribution;
 };
 
 class SimplexNoiseGenerator : public NoiseGenerator

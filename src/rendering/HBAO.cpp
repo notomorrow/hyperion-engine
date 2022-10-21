@@ -9,6 +9,31 @@ using renderer::StorageImageDescriptor;
 using renderer::SamplerDescriptor;
 using renderer::DynamicStorageBufferDescriptor;
 
+Result HBAO::ImageOutput::Create(Device *device)
+{
+    HYPERION_BUBBLE_ERRORS(image.Create(device));
+    HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
+
+    HYPERION_RETURN_OK;
+}
+
+Result HBAO::ImageOutput::Destroy(Device *device)
+{
+    auto result = Result::OK;
+
+    HYPERION_PASS_ERRORS(
+        image.Destroy(device),
+        result
+    );
+
+    HYPERION_PASS_ERRORS(
+        image_view.Destroy(device),
+        result
+    );
+
+    return result;
+}
+
 HBAO::HBAO(const Extent2D &extent)
     : m_image_outputs {
           ImageOutput(StorageImage(
@@ -50,6 +75,17 @@ void HBAO::Destroy(Engine *engine)
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             m_image_outputs[frame_index].Destroy(engine->GetDevice());
+
+            // unset final result from the global descriptor set
+            auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
+                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
+                ->SetSubDescriptor({
+                    .element_index = 0u,
+                    .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                });
         }
 
         return result;
@@ -77,21 +113,21 @@ void HBAO::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(0)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_TRANSLUCENT)
+                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_ALBEDO)->GetImageView()
             });
 
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(1)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_TRANSLUCENT)
+                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView()
             });
 
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(2)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_TRANSLUCENT)
+                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
 
@@ -116,7 +152,7 @@ void HBAO::CreateDescriptorSets(Engine *engine)
             });
 
         // prev image
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(6)
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(6)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
@@ -134,6 +170,17 @@ void HBAO::CreateDescriptorSets(Engine *engine)
                 engine->GetDevice(),
                 &engine->GetInstance()->GetDescriptorPool()
             ));
+
+            // Add the final result to the global descriptor set
+            auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
+                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
+                ->SetSubDescriptor({
+                    .element_index = 0u,
+                    .image_view = &m_image_outputs[frame_index].image_view
+                });
         }
 
         HYPERION_RETURN_OK;
@@ -162,9 +209,18 @@ void HBAO::Render(
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_image_outputs[(frame->GetFrameIndex() + 1) % max_frames_in_flight].image.GetGPUImage()
-        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    //m_image_outputs[(frame->GetFrameIndex() + 1) % max_frames_in_flight].image.GetGPUImage()
+    //    ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
+    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
+
+    struct alignas(128) {
+        ShaderVec2<UInt32> dimension = { };
+    } push_constants;
+
+    push_constants.dimension = Extent2D(extent);
+
+    m_compute_hbao->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
     m_compute_hbao->GetPipeline()->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
@@ -175,19 +231,17 @@ void HBAO::Render(
         FixedArray { static_cast<UInt32>(engine->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
     );
 
-    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
-
     m_compute_hbao->GetPipeline()->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             (extent.width + 7) / 8,
             (extent.height + 7) / 8,
-            (extent.depth + 7) / 8
+            1
         }
     );
     
-    //m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
-    //    ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
+        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 }
 
 } // namespace hyperion::v2

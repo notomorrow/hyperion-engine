@@ -37,13 +37,20 @@ public:
     Result Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd);
     Result Destroy(Device *device);
 
-    HYP_FORCE_INLINE UInt GetFrameIndex() const { return m_frame_index; }
+    HYP_FORCE_INLINE UInt GetFrameIndex() const
+        { return m_frame_index; }
 
-    CommandBuffer *GetCommandBuffer() { return command_buffer.get(); }
-    const CommandBuffer *GetCommandBuffer() const { return command_buffer.get(); }
+    CommandBuffer *GetCommandBuffer()
+        { return command_buffer.get(); }
 
-    SemaphoreChain &GetPresentSemaphores() { return m_present_semaphores; }
-    const SemaphoreChain &GetPresentSemaphores() const { return m_present_semaphores; }
+    const CommandBuffer *GetCommandBuffer() const
+        { return command_buffer.get(); }
+
+    SemaphoreChain &GetPresentSemaphores()
+        { return m_present_semaphores; }
+
+    const SemaphoreChain &GetPresentSemaphores() const
+        { return m_present_semaphores; }
 
     /* Start recording into the command buffer */
     Result BeginCapture(Device *device);

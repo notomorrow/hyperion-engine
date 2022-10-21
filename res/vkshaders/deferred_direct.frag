@@ -25,6 +25,8 @@ vec2 texcoord = v_texcoord0;
 #include "include/shadows.inc"
 #include "include/PhysicalCamera.inc"
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
+
 void main()
 {
     vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
@@ -61,10 +63,10 @@ void main()
     float ao = 1.0;
     float shadow = 1.0;
 
-    //ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).a * material.a;
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
+    ao = ssao_data.a * material.a;
 
     if (perform_lighting) {
-        ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).a * material.a;
 
         vec3 L = light.position_intensity.xyz;
         L -= position.xyz * float(min(light.type, 1));
@@ -124,5 +126,5 @@ void main()
         result = albedo;
     }
 
-    output_color = result;
+    output_color = vec4(result);
 }

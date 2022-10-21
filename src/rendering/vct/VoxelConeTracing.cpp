@@ -201,7 +201,9 @@ void VoxelConeTracing::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
 
 void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
 {
-    // Threads::AssertOnThread(THREAD_RENDER);
+    if (!engine->GetConfig().Get(CONFIG_VOXEL_GI)) {
+        return;
+    }
 
     auto *command_buffer = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
@@ -594,7 +596,7 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
 
                 mip_descriptor_set
                     ->GetOrAddDescriptor<renderer::ImageDescriptor>(3)
-                    ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_temporal_blending_image->GetImageView() });
+                    ->SetSubDescriptor({ .element_index = 0u, .image_view = &m_voxel_image->GetImageView() });
 
                 m_generate_mipmap_descriptor_sets[i].PushBack(std::move(mip_descriptor_set));
             }
