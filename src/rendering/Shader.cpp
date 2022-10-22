@@ -41,6 +41,28 @@ Shader::Shader(const std::vector<SubShader> &sub_shaders)
 {
 }
 
+Shader::Shader(const CompiledShader &compiled_shader)
+    : EngineComponentBase(),
+      m_shader_program(std::make_unique<ShaderProgram>())
+{
+    if (compiled_shader.IsValid()) {
+        for (SizeType index = 0; index < compiled_shader.modules.Size(); index++) {
+            const auto &byte_buffer = compiled_shader.modules[index];
+
+            if (byte_buffer.Empty()) {
+                continue;
+            }
+
+            m_sub_shaders.push_back(SubShader {
+                .type = static_cast<ShaderModule::Type>(index),
+                .spirv = {
+                    .bytes = byte_buffer
+                }
+            });
+        }
+    }
+}
+
 Shader::~Shader()
 {
     Teardown();

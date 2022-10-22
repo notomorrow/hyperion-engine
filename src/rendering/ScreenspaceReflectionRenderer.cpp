@@ -162,41 +162,25 @@ void ScreenspaceReflectionRenderer::CreateDescriptors(Engine *engine)
 void ScreenspaceReflectionRenderer::CreateComputePipelines(Engine *engine)
 {
     m_write_uvs = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_write_uvs.comp.spv")).Read()}}
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("SSRWriteUVs"))
     );
 
     engine->InitObject(m_write_uvs);
 
     m_sample = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_sample.comp.spv")).Read()}}
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("SSRSample"))
     );
 
     engine->InitObject(m_sample);
 
     m_blur_hor = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_blur_hor.comp.spv")).Read()}}
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("SSRBlurHor"))
     );
 
     engine->InitObject(m_blur_hor);
 
     m_blur_vert = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ssr/ssr_blur_vert.comp.spv")).Read()}}
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("SSRBlurVert"))
     );
 
     engine->InitObject(m_blur_vert);

@@ -1,11 +1,11 @@
 #include "Deferred.hpp"
 #include <Engine.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/backend/vulkan/RendererFeatures.hpp>
 
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
-#include <rendering/backend/vulkan/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
 
@@ -27,34 +27,21 @@ DeferredPass::~DeferredPass() = default;
 
 void DeferredPass::CreateShader(Engine *engine)
 {
+    CompiledShader compiled_shader;
+
     if (m_is_indirect_pass) {
-        m_shader = engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                SubShader{ShaderModule::Type::VERTEX, {
-                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred.vert.spv")).Read(),
-                    {.name = "deferred indirect vert"}
-                }},
-                SubShader{ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred_indirect.frag.spv")).Read(),
-                    {.name = "deferred indirect frag"}
-                }}
-            }
+        compiled_shader = engine->GetShaderCompiler().GetCompiledShader(
+            "DeferredIndirect",
+            ShaderProps { }
         );
     } else {
-        m_shader = engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                SubShader{ShaderModule::Type::VERTEX, {
-                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred.vert.spv")).Read(),
-                    {.name = "deferred direct vert"}
-                }},
-                SubShader{ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred_direct.frag.spv")).Read(),
-                    {.name = "deferred direct frag"}
-                }}
-            }
+        compiled_shader = engine->GetShaderCompiler().GetCompiledShader(
+            "DeferredDirect",
+            ShaderProps { }
         );
     }
 
+    m_shader = engine->CreateHandle<Shader>(compiled_shader);
     engine->InitObject(m_shader);
 }
 
@@ -463,11 +450,7 @@ void DeferredRenderer::CreateDescriptorSets(Engine *engine)
 void DeferredRenderer::CreateComputePipelines(Engine *engine)
 {
     m_combine = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/deferred/DeferredCombine.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("DeferredCombine")),
         DynArray<const DescriptorSet *> { m_combine_descriptor_sets[0].Get() }
     );
 

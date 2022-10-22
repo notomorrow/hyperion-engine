@@ -107,6 +107,10 @@ public:
     bool EndsWith(const DynString &other) const;
 
     DynArray<DynString> Split(T separator) const;
+    
+    DynString Trimmed() const;
+    DynString TrimmedLeft() const;
+    DynString TrimmedRight() const;
 
     DynString Substr(SizeType first, SizeType last = MathUtil::MaxSafeValue<SizeType>()) const;
 
@@ -530,6 +534,54 @@ auto DynString<T, IsUtf8>::Split(T separator) const -> DynArray<DynString>
     }
 
     return tokens;
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::Trimmed() const -> DynString
+{
+    return TrimmedLeft().TrimmedRight();
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::TrimmedLeft() const -> DynString
+{
+    DynString res;
+    res.Reserve(Size());
+
+    SizeType start_index;
+
+    for (start_index = 0; start_index < Size(); ++start_index) {
+        if (!std::isspace(Data()[start_index])) {
+            break;
+        }
+    }
+
+    for (SizeType index = start_index; index < Size(); ++index) {
+        res.Append(Data()[index]);
+    }
+
+    return res;
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::TrimmedRight() const -> DynString
+{
+    DynString res;
+    res.Reserve(Size());
+
+    SizeType start_index;
+
+    for (start_index = Size(); start_index > 0; --start_index) {
+        if (!std::isspace(Data()[start_index - 1])) {
+            break;
+        }
+    }
+
+    for (SizeType index = 0; index < start_index; ++index) {
+        res.Append(Data()[index]);
+    }
+
+    return res;
 }
 
 template <class T, bool IsUtf8>

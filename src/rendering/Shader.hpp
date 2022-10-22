@@ -7,6 +7,8 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
+#include <builders/shader_compiler/ShaderCompiler.hpp>
+
 #include <math/Transform.hpp>
 
 #include <HashCode.hpp>
@@ -49,6 +51,7 @@ class Shader
 {
 public:
     Shader(const std::vector<SubShader> &sub_shaders);
+    Shader(const CompiledShader &compiled_shader);
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
     ~Shader();
