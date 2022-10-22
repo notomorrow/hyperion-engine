@@ -215,7 +215,7 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
             case FBOM_OBJECT_END:
                 // call deserializer function, writing into object.deserialized
                 if (auto err = Deserialize(object, object.deserialized)) {
-                    return FBOMResult(FBOMResult::FBOM_ERR, "Could not deserialize object");
+                    return err;
                 }
 
                 break;

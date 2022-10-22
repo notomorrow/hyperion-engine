@@ -54,6 +54,21 @@ bool FilePath::Exists() const
     return stat(Data(), &st) == 0;
 }
 
+UInt64 FilePath::LastModifiedTimestamp() const
+{
+    struct stat st;
+    
+    if (stat(Data(), &st) != 0) {
+        return 0;
+    }
+
+#if HYP_MACOS
+    return st.st_mtimespec.tv_sec;
+#else
+    return st.st_mtime;
+#endif
+}
+
 BufferedReader<2048> FilePath::Open() const
 {
     return BufferedReader<2048>(Data());

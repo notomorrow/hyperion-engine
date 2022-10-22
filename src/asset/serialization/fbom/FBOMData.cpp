@@ -70,6 +70,22 @@ SizeType FBOMData::ReadBytes(SizeType n, void *out) const
     return to_read;
 }
 
+ByteBuffer FBOMData::ReadBytes() const
+{
+    return bytes;
+}
+
+ByteBuffer FBOMData::ReadBytes(SizeType n) const
+{
+    if (!type.IsUnbouned()) {
+        AssertThrowMsg(n <= bytes.Size(), "Attempt to read past max size of object");
+    }
+
+    SizeType to_read = MathUtil::Min(n, bytes.Size());
+
+    return ByteBuffer(to_read, bytes.Data());
+}
+
 void FBOMData::SetBytes(SizeType n, const void *data)
 {
     if (!type.IsUnbouned()) {

@@ -121,6 +121,11 @@ void FBOMObject::SetProperty(const String &key, const FBOMType &type, const void
     SetProperty(key, type, type.size, bytes);
 }
 
+void FBOMObject::SetProperty(const String &key, const ByteBuffer &bytes)
+{
+    SetProperty(key, FBOMByteBuffer(bytes.Size()), bytes.Data());
+}
+
 void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)
 {
     object.SetExternalObjectInfo(FBOMExternalObjectInfo {

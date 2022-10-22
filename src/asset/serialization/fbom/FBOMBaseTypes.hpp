@@ -17,14 +17,16 @@ struct FBOMFloat : FBOMType { FBOMFloat() : FBOMType("f32", 4) {} };
 struct FBOMBool : FBOMType { FBOMBool() : FBOMType("bool", 1) {} };
 struct FBOMByte : FBOMType { FBOMByte() : FBOMType("byte", 1) {} };
 
-struct FBOMStruct : FBOMType {
+struct FBOMStruct : FBOMType
+{
     FBOMStruct(SizeType sz)
         : FBOMType("struct", sz)
     {
     }
 };
 
-struct FBOMArray : FBOMType {
+struct FBOMArray : FBOMType
+{
     FBOMArray() : FBOMType("array", 0) {}
 
     FBOMArray(const FBOMType &held_type, SizeType count)
@@ -32,6 +34,12 @@ struct FBOMArray : FBOMType {
     {
         AssertThrowMsg(!held_type.IsUnbouned(), "Cannot create array of unbounded type");
     }
+};
+
+struct FBOMByteBuffer : FBOMType
+{
+    FBOMByteBuffer() : FBOMType("bytebuffer", 0) {}
+    FBOMByteBuffer(SizeType count) : FBOMType("bytebuffer", count) {}
 };
 
 struct FBOMVec2f : FBOMArray { FBOMVec2f() : FBOMArray(FBOMFloat(), 2) {} };
