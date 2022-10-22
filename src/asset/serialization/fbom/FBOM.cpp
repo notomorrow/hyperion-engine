@@ -12,6 +12,7 @@
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
 #include <asset/serialization/fbom/marshals/SceneMarshal.hpp>
 #include <asset/serialization/fbom/marshals/CameraMarshal.hpp>
+#include <asset/serialization/fbom/marshals/ShaderBundleMarshal.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -27,6 +28,8 @@ FBOM::FBOM()
     RegisterLoader<Node>();
     RegisterLoader<Scene>();
     RegisterLoader<Camera>();
+    RegisterLoader<CompiledShader>();
+    RegisterLoader<CompiledShaderBatch>();
 }
 
 FBOM::~FBOM() = default;

@@ -5,10 +5,12 @@
 #include <util/UTF8.hpp>
 
 #include "DynArray.hpp"
-#include <util/Defines.hpp>
+#include "ByteBuffer.hpp"
+#include "CMemory.hpp"
 #include <Types.hpp>
 #include <Constants.hpp>
 #include <HashCode.hpp>
+#include <util/Defines.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -41,6 +43,7 @@ public:
     DynString();
     DynString(const T *str);
     DynString(const DynString &other);
+    explicit DynString(const ByteBuffer &byte_buffer);
     DynString(DynString &&other) noexcept;
     ~DynString();
 
@@ -140,11 +143,6 @@ public:
     [[nodiscard]] HashCode GetHashCode() const
         { return Base::GetHashCode(); }
 
-    HYP_DEF_STL_BEGIN_END(
-        Base::Begin(),
-        Base::End()
-    )
-
     friend std::ostream &operator<<(std::ostream &os, const DynString &str)
     {
         os << str.Data();
@@ -222,6 +220,15 @@ DynString<T, IsUtf8>::DynString(DynString &&other) noexcept
       m_length(other.m_length)
 {
     other.Clear();
+}
+
+template <class T, bool IsUtf8>
+DynString<T, IsUtf8>::DynString(const ByteBuffer &byte_buffer)
+    : Base()
+{
+    Base::Resize(byte_buffer.Size() + 1);
+    Memory::Copy(Data(), byte_buffer.Data(), byte_buffer.Size());
+    Data()[Base::m_size - 1] = 0;
 }
 
 template <class T, bool IsUtf8>
@@ -481,7 +488,7 @@ bool DynString<T, IsUtf8>::StartsWith(const DynString &other) const
         return false;
     }
     
-    return std::equal(Begin(), Begin() + other.Size(), other.Begin());
+    return std::equal(Base::Begin(), Base::Begin() + other.Size(), other.Base::Begin());
 }
 
 template <class T, bool IsUtf8>
@@ -491,7 +498,7 @@ bool DynString<T, IsUtf8>::EndsWith(const DynString &other) const
         return false;
     }
     
-    return std::equal(Begin() + Size() - other.Size(), End(), other.Begin());
+    return std::equal(Base::Begin() + Size() - other.Size(), Base::End(), other.Base::Begin());
 }
 
 template <class T, bool IsUtf8>

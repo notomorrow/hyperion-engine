@@ -32,7 +32,7 @@ struct FBOMData
     FBOMData &operator=(FBOMData &&other) noexcept;
     ~FBOMData();
 
-    operator bool() const
+    explicit operator bool() const
         { return bytes.Any(); }
 
     const FBOMType &GetType() const { return type; }
@@ -40,6 +40,9 @@ struct FBOMData
 
     /*! @returns The number of bytes read */
     SizeType ReadBytes(SizeType n, void *out) const;
+    ByteBuffer ReadBytes() const;
+    ByteBuffer ReadBytes(SizeType n) const;
+
     void SetBytes(SizeType n, const void *data);
 
 #define FBOM_TYPE_FUNCTIONS(type_name, c_type) \
@@ -72,6 +75,7 @@ struct FBOMData
 #undef FBOM_TYPE_FUNCTIONS
 
     bool IsString() const { return type.IsOrExtends(FBOMString()); }
+    bool IsByteBuffer() const { return type.IsOrExtends(FBOMByteBuffer()); }
 
     FBOMResult ReadString(String &str) const
     {
@@ -80,12 +84,21 @@ struct FBOMData
         const auto total_size = TotalSize();
         char *ch = new char[total_size + 1];
 
-        ReadBytes(total_size, (unsigned char*)ch);
+        ReadBytes(total_size, (unsigned char *)ch);
         ch[total_size] = '\0';
 
         str = ch;
 
         delete[] ch;
+
+        FBOM_RETURN_OK;
+    }
+
+    FBOMResult ReadByteBuffer(ByteBuffer &byte_buffer) const
+    {
+        FBOM_ASSERT(IsByteBuffer(), "Type mismatch (expected ByteBuffer)");
+
+        byte_buffer = bytes;
 
         FBOM_RETURN_OK;
     }

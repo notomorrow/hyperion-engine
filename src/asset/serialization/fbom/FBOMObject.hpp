@@ -84,6 +84,7 @@ public:
     void SetProperty(const String &key, FBOMData &&data);
     void SetProperty(const String &key, const FBOMType &type, SizeType size, const void *bytes);
     void SetProperty(const String &key, const FBOMType &type, const void *bytes);
+    void SetProperty(const String &key, const ByteBuffer &bytes);
 
     template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>>>
     void SetProperty(const String &key, const FBOMType &type, const T &value)

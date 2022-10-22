@@ -2,6 +2,7 @@
 #define HYPERION_V2_SHADER_COMPILER_H
 
 #include <core/Containers.hpp>
+#include <rendering/backend/RendererShader.hpp>
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
 
@@ -11,11 +12,40 @@
 
 namespace hyperion::v2 {
 
+class Engine;
+
+using renderer::ShaderModule;
+
+struct CompiledShader
+{
+    UInt64 props_hash;
+    FixedArray<ByteBuffer, ShaderModule::Type::MAX> modules;
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(props_hash);
+        hc.Add(modules.GetHashCode());
+
+        return hc;
+    }
+};
+
+struct CompiledShaderBatch
+{
+    DynArray<CompiledShader> compiled_shaders;
+
+    HashCode GetHashCode() const
+    {
+        return compiled_shaders.GetHashCode();
+    }
+};
+
 class ShaderProps
 {
 public:
-    using Iterator = FlatSet<String>::Iterator;
-    using ConstIterator = FlatSet<String>::ConstIterator;
+    using Iterator = DynArray<String>::Iterator;
+    using ConstIterator = DynArray<String>::ConstIterator;
 
     bool Get(const String &key) const
     {
@@ -33,7 +63,10 @@ public:
         if (!value) {
             m_props.Erase(key);
         } else {
-            m_props.Insert(key);
+            if (!m_props.Contains(key)) {
+                m_props.PushBack(key);
+            }
+            //m_props.Insert(key);
         }
 
         return *this;
@@ -59,7 +92,8 @@ public:
     )
 
 private:
-    FlatSet<String> m_props;
+    DynArray<String> m_props;
+    // FlatSet<String> m_props;
 };
 
 class ShaderCompiler
@@ -81,7 +115,8 @@ public:
 
     struct Bundle // combination of shader files, .frag, .vert etc.
     {
-        DynArray<SourceFile> files;
+        String name;
+        FlatMap<ShaderModule::Type, SourceFile> sources;
         ShaderProps props; // permutations
     };
 
@@ -91,6 +126,13 @@ public:
     }
 
     void CompileBundles();
+
+    bool GetCompiledShader(
+        Engine *engine,
+        const String &name,
+        const ShaderProps &props,
+        CompiledShader &out
+    );
 
 private:
     bool CompileBundle(Bundle &bundle);

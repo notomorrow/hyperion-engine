@@ -10,7 +10,8 @@
 #include <string>
 
 namespace hyperion {
-class ByteWriter {
+class ByteWriter
+{
 public:
     virtual ~ByteWriter() {}
 
@@ -51,7 +52,8 @@ protected:
 };
 
 // TEMP
-class MemoryByteWriter : public ByteWriter {
+class MemoryByteWriter : public ByteWriter
+{
 public:
     MemoryByteWriter()
         : m_pos(0)
@@ -87,7 +89,8 @@ private:
     }
 };
 
-class FileByteWriter : public ByteWriter {
+class FileByteWriter : public ByteWriter
+{
 public:
     FileByteWriter(const std::string &filepath, std::streampos begin = 0)
     {

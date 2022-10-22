@@ -16,6 +16,10 @@
 #include <limits>
 #include <type_traits>
 
+#if HYP_WINDOWS
+#include <intrin.h>
+#endif
+
 namespace hyperion {
 
 static inline Vector2 Vector(float x, float y)
@@ -276,6 +280,33 @@ public:
     static Double Tan(Double x) { return tan(x); }
     static Float Arctan(Float x) { return atanf(x); }
     static Double Arctan(Double x) { return atan(x); }
+
+    template <class T>
+    static constexpr T Factorial(T value)
+    {
+        T f = value;
+
+        if (f > 1) {
+            for (T i = value - 1; i >= 1; --i) {
+                f *= i;
+            }
+        }
+        
+        return f;
+    }
+
+    static Int BitCount(UInt64 value)
+    {
+#if HYP_WINDOWS
+        return static_cast<Int>(__popcnt64(value));
+#else
+        // https://graphics.stanford.edu/~seander/bithacks.html
+        value = value - ((value >> 1) & (UInt64)~(UInt64)0/3); 
+        value = (value & (UInt64)~(UInt64)0/15*3) + ((value >> 2) & (UInt64)~(UInt64)0/15*3);
+        value = (value + (value >> 4)) & (UInt64)~(UInt64)0/255*15;
+        return Int((UInt64)(value * ((UInt64)~(UInt64)0/255)) >> (sizeof(UInt64) - 1) * CHAR_BIT);
+#endif
+    }
 
     template <class T, class U = T, class V = U>
     static constexpr bool InRange(T value, const std::pair<U, V> &range)
