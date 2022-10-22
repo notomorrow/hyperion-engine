@@ -578,164 +578,37 @@ int main()
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_VEGETATION,
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {
-                    ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vegetation.vert.spv")).Read(),
-                        {.name = "vegetation vert"}
-                    }
-                },
-                {
-                    ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/forward_frag.spv")).Read(),
-                        {.name = "forward frag"}
-                    }
-                }
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Vegetation", ShaderProps { }))
     );
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_UI,
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {
-                    ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ui/UIObject.vert.spv")).Read(),
-                        {.name = "ui vert"}
-                    }
-                },
-                {
-                    ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/ui/UIObject.frag.spv")).Read(),
-                        {.name = "ui frag"}
-                    }
-                }
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("UIObject", ShaderProps { }))
     );
 
     engine->shader_manager.SetShader(
         ShaderKey::DEBUG_AABB,
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {
-                    ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/aabb.vert.spv")).Read(),
-                        {.name = "aabb vert"}
-                    }
-                },
-                {
-                    ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/aabb.frag.spv")).Read(),
-                        {.name = "aabb frag"}
-                    }
-                }
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("DebugAABB", ShaderProps { }))
     );
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_FORWARD,
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {
-                    ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read(),
-                        {.name = "main vert"}
-                    }
-                },
-                {
-                    ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/forward_frag.spv")).Read(),
-                        {.name = "forward frag"}
-                    }
-                }
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Forward", ShaderProps { }))
     );
 
     engine->shader_manager.SetShader(
         ShaderKey::TERRAIN,
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {
-                    ShaderModule::Type::VERTEX, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read(),
-                        {.name = "main vert"}
-                    }
-                },
-                {
-                    ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/Terrain.frag.spv")).Read(),
-                        {.name = "Terrain frag"}
-                    }
-                }
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Terrain", ShaderProps { }))
     );
-    
-
-    // TODO: move elsewhere once RT stuff is established.
-
-    
-    // engine->shader_manager.SetShader(
-    //     ShaderManager::Key::STENCIL_OUTLINE,
-    //     Handle<Shader>(new Shader(
-    //         std::vector<SubShader>{
-    //             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/outline.vert.spv")).Read()}},
-    //             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/outline.frag.spv")).Read()}}
-    //         }
-    //     ))
-    // );
-
 
     {
         engine->shader_manager.SetShader(
             ShaderManager::Key::BASIC_SKYBOX,
-            engine->CreateHandle<Shader>(
-                std::vector<SubShader>{
-                    {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/skybox_vert.spv")).Read()}},
-                    {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/skybox_frag.spv")).Read()}}
-                }
-            )
+            engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Skybox", ShaderProps { }))
         );
     }
 
     my_game->Init(engine, window);
-
-
-
-    ShaderProps props;
-    props.Set("FOOO", true);
-    props.Set("BALLS", true);
-    props.Set("BAR", true);
-
-    ShaderCompiler sc;
-    sc.AddBundle({
-        .name = "deferred_indirect",
-        .sources = { 
-            { ShaderModule::Type::FRAGMENT, ShaderCompiler::SourceFile { String("res/vkshaders/deferred_indirect.frag") } },
-            { ShaderModule::Type::VERTEX, ShaderCompiler::SourceFile { String("res/vkshaders/deferred.vert") }  }
-        },
-        .props = props
-    });
-    sc.CompileBundles();
-
-    CompiledShader compiled_shader;
-    auto compiled_result = sc.GetCompiledShader(
-        engine,
-        "deferred_indirect",
-        props,
-        compiled_shader
-    );
-
-    AssertThrow(compiled_result);
-
-    HYP_BREAKPOINT;
-    
-    
 
     engine->Compile();
     

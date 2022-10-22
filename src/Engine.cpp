@@ -37,7 +37,8 @@ using renderer::FillMode;
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_asset_manager(this)
+      m_asset_manager(this),
+      m_shader_compiler(this)
 {
     RegisterDefaultAssetLoaders();
 }
@@ -173,12 +174,7 @@ void Engine::PrepareFinalPass()
     m_full_screen_quad = CreateHandle<Mesh>(MeshBuilder::Quad());
     AssertThrow(InitObject(m_full_screen_quad));
 
-    auto shader = CreateHandle<Shader>(
-        std::vector<SubShader> {
-            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(GetAssetManager().GetBasePath().Data(), "vkshaders/blit_vert.spv")).Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(GetAssetManager().GetBasePath().Data(), "vkshaders/blit_frag.spv")).Read()}}
-        }
-    );
+    auto shader = CreateHandle<Shader>(m_shader_compiler.GetCompiledShader("FinalOutput", ShaderProps { }));
 
     AssertThrow(InitObject(shader));
 
@@ -289,6 +285,8 @@ void Engine::Initialize()
 #endif
 
     HYPERION_ASSERT_RESULT(m_instance->Initialize(use_debug_layers));
+
+    m_shader_compiler.LoadShaderDefinitions();
 
     FindTextureFormatDefaults();
 

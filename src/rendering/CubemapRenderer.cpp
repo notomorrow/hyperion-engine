@@ -396,12 +396,7 @@ void CubemapRenderer::CreateRendererInstance(Engine *engine)
 
 void CubemapRenderer::CreateShader(Engine *engine)
 {
-    std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/cubemap_renderer.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
-    };
-
-    m_shader = engine->CreateHandle<Shader>(sub_shaders);
+    m_shader = engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("CubemapRenderer"));
     engine->InitObject(m_shader);
 }
 

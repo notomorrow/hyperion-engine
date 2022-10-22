@@ -178,6 +178,9 @@ public:
     Configuration &GetConfig() { return m_configuration; }
     const Configuration &GetConfig() const { return m_configuration; }
 
+    ShaderCompiler &GetShaderCompiler() { return m_shader_compiler; }
+    const ShaderCompiler &GetShaderCompiler() const { return m_shader_compiler; }
+
     InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
@@ -218,7 +221,9 @@ public:
     ShaderGlobals *shader_globals;
 
     EngineCallbacks callbacks;
+
     ShaderManager shader_manager;
+    ShaderCompiler m_shader_compiler;
                              
     RenderState render_state;
     

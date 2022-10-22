@@ -226,7 +226,10 @@ public:
     template <class TaskSystem, class Lambda>
     void ParallelForEach(TaskSystem &task_system, Lambda &&lambda)
     {
-        task_system.ParallelForEach(*this, std::forward<Lambda>(lambda));
+        task_system.ParallelForEach(
+            *static_cast<Container *>(this),
+            std::forward<Lambda>(lambda)
+        );
     }
     
     [[nodiscard]] HashCode GetHashCode() const

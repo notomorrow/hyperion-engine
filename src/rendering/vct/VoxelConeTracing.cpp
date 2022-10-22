@@ -476,22 +476,14 @@ void VoxelConeTracing::CreateRendererInstance(Engine *engine)
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)
 {
     m_clear_voxels = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
-            }
-        )
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("VCTClearVoxels"))
     );
 
     engine->InitObject(m_clear_voxels);
 
     if constexpr (manual_mipmap_generation) {
         m_generate_mipmap = engine->CreateHandle<ComputePipeline>(
-            engine->CreateHandle<Shader>(
-                std::vector<SubShader>{
-                    { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/GenerateMipmap.comp.spv")).Read()}}
-                }
-            ),
+            engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("VCTGenerateMipmap")),
             DynArray<const DescriptorSet *> { m_generate_mipmap_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
         );
 

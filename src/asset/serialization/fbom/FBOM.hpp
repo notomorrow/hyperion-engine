@@ -298,7 +298,7 @@ public:
         const auto *loader = FBOM::GetInstance().GetLoader(object_type_name);
 
         if (!loader) {
-            return FBOMResult(FBOMResult::FBOM_ERR, "Loader not registered for type");
+            return { FBOMResult::FBOM_ERR, "Loader not registered for type" };
         }
 
         return loader->Deserialize(m_engine, in, out_object);

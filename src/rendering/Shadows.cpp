@@ -29,13 +29,7 @@ ShadowPass::~ShadowPass() = default;
 
 void ShadowPass::CreateShader(Engine *engine)
 {
-    m_shader = engine->CreateHandle<Shader>(
-        std::vector<SubShader> {
-            SubShader { ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/vert.spv")).Read()} },
-            SubShader { ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/shadow_frag.spv")).Read()} }
-        }
-    );
-
+    m_shader = engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Shadows"));
     engine->InitObject(m_shader);
 }
 
@@ -211,11 +205,7 @@ void ShadowPass::CreateComputePipelines(Engine *engine)
     });
 
     m_blur_shadow_map = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/shadow/BlurShadowMap.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("BlurShadowMap")),
         DynArray<const DescriptorSet *> { &m_blur_descriptor_sets[0] }
     );
 
