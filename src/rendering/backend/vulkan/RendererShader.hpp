@@ -36,7 +36,7 @@ struct ShaderObject
 
 struct ShaderModule
 {
-    enum class Type : UInt
+    enum Type : UInt
     {
         UNSET = 0,
         VERTEX,
@@ -55,6 +55,8 @@ struct ShaderModule
         RAY_ANY_HIT,
         RAY_CLOSEST_HIT,
         RAY_MISS,
+
+        MAX
     } type;
 
     ShaderObject spirv;
@@ -140,7 +142,7 @@ public:
         HashCode hc;
 
         for (const auto &shader_module : m_shader_modules) {
-            hc.Add(static_cast<Int32>(shader_module.type));
+            hc.Add(static_cast<Int>(shader_module.type));
             hc.Add(shader_module.spirv.GetHashCode());
         }
 
@@ -153,8 +155,8 @@ private:
 
     std::vector<ShaderModule> m_shader_modules;
 
-    std::vector<VkPipelineShaderStageCreateInfo>      m_shader_stages;
-    std::vector<ShaderGroup>                          m_shader_groups;
+    std::vector<VkPipelineShaderStageCreateInfo> m_shader_stages;
+    std::vector<ShaderGroup> m_shader_groups;
 };
 
 } // namespace renderer

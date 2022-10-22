@@ -68,10 +68,10 @@ public:
 
     ~Path() = default;
 
-    HYP_DEF_STL_BEGIN_END(
-        Base::Begin(),
-        Base::End()
-    )
+    // HYP_DEF_STL_BEGIN_END(
+    //     Base::Begin(),
+    //     Base::End()
+    // )
 };
 
 } // namespace detail

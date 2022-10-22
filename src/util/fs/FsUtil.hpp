@@ -59,7 +59,7 @@ public:
     FilePath(const FilePath &other) : String(other) { }
     FilePath(const String &str) : String(str) { }
     FilePath(FilePath &&other) noexcept : String(std::move(other)) { }
-    FilePath(String &str) noexcept : String(std::move(str)) { }
+    FilePath(String &&str) noexcept : String(std::move(str)) { }
     ~FilePath() = default;
 
     FilePath &operator=(const FilePath &other)
@@ -78,16 +78,68 @@ public:
 
     FilePath operator+(const FilePath &other)
     {
-        return Join(Data(), other.Data());
+        return FilePath(Base::operator+(other));
+    }
+
+    FilePath operator+(const String &other)
+    {
+        return FilePath(Base::operator+(other));
+    }
+
+    FilePath operator+(const char *str)
+    {
+        return FilePath(Base::operator+(str));
     }
 
     FilePath &operator+=(const FilePath &other)
     {
+        return *this = Base::operator+=(other);
+    }
+
+    FilePath &operator+=(const String &other)
+    {
+        return *this = Base::operator+=(other);
+    }
+
+    FilePath &operator+=(const char *str)
+    {
+        return *this = Base::operator+=(str);
+    }
+
+    FilePath operator/(const FilePath &other)
+    {
+        return Join(Data(), other.Data());
+    }
+
+    FilePath operator/(const String &other)
+    {
+        return Join(Data(), other.Data());
+    }
+
+    FilePath operator/(const char *str)
+    {
+        return Join(Data(), str);
+    }
+
+    FilePath &operator/=(const FilePath &other)
+    {
         return *this = Join(Data(), other.Data());
+    }
+
+    FilePath &operator/=(const String &other)
+    {
+        return *this = Join(Data(), other.Data());
+    }
+
+    FilePath &operator/=(const char *str)
+    {
+        return *this = Join(Data(), str);
     }
 
     bool Exists() const;
     bool IsDirectory() const;
+
+    UInt64 LastModifiedTimestamp() const;
 
     String Basename() const
     {

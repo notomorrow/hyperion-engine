@@ -493,10 +493,6 @@ int main()
 {
     using namespace hyperion::renderer;
 
-    ShaderCompiler sc;
-    sc.AddBundle({ .files = { ShaderCompiler::SourceFile { String("foo.frag") }, ShaderCompiler::SourceFile { String("vert.frag") } } });
-    // sc.CompileBundles();
-
     // HYP_BREAKPOINT;
 
     // Variant<UniquePtr<void>, int> x(UniquePtr<int>(new int(4)).Cast<void>());
@@ -708,6 +704,37 @@ int main()
     }
 
     my_game->Init(engine, window);
+
+
+
+    ShaderProps props;
+    props.Set("FOOO", true);
+    props.Set("BALLS", true);
+    props.Set("BAR", true);
+
+    ShaderCompiler sc;
+    sc.AddBundle({
+        .name = "deferred_indirect",
+        .sources = { 
+            { ShaderModule::Type::FRAGMENT, ShaderCompiler::SourceFile { String("res/vkshaders/deferred_indirect.frag") } },
+            { ShaderModule::Type::VERTEX, ShaderCompiler::SourceFile { String("res/vkshaders/deferred.vert") }  }
+        },
+        .props = props
+    });
+    sc.CompileBundles();
+
+    CompiledShader compiled_shader;
+    auto compiled_result = sc.GetCompiledShader(
+        engine,
+        "deferred_indirect",
+        props,
+        compiled_shader
+    );
+
+    AssertThrow(compiled_result);
+
+    HYP_BREAKPOINT;
+    
     
 
     engine->Compile();
