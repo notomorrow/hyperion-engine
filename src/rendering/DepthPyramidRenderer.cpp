@@ -117,11 +117,7 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
     }
     // create compute pipeline for rendering depth image
     m_generate_depth_pyramid = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/cull/generate_depth_pyramid.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("GenerateDepthPyramid")),
         DynArray<const DescriptorSet *> { m_depth_pyramid_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
     );
 

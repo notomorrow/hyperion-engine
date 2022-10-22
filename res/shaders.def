@@ -1,0 +1,119 @@
+[DeferredIndirect]
+permute = VCT_ENABLED, ENV_PROBE_ENABLED, SSR_ENABLED, RT_ENABLED
+frag = deferred_indirect.frag
+vert = deferred.vert
+
+[DeferredDirect]
+permute = VCT_ENABLED, ENV_PROBE_ENABLED, SSR_ENABLED, RT_ENABLED
+frag = deferred_direct.frag
+vert = deferred.vert
+
+[DeferredCombine]
+comp = deferred/DeferredCombine.comp
+
+[ObjectVisibility]
+comp = cull/object_visibility.comp
+
+[GenerateDepthPyramid]
+comp = cull/generate_depth_pyramid.comp
+
+[FinalOutput]
+frag = blit.frag
+vert = blit.vert
+
+[CubemapRenderer]
+frag = cubemap_renderer.frag
+vert = cubemap_renderer.vert
+
+[Forward]
+permute = SKINNING
+frag = forward.frag
+vert = main.vert
+
+[Vegetation]
+frag = forward.frag
+vert = vegetation.vert
+
+[Skybox]
+frag = skybox.frag
+vert = skybox.vert
+
+[Terrain]
+frag = Terrain.frag
+vert = main.vert
+
+[HBAO]
+comp = hbao/HBAO.comp
+
+[Particle]
+frag = particles/Particle.frag
+vert = particles/Particle.vert
+
+[UpdateParticles]
+comp = particles/UpdateParticles.comp
+
+[Shadows]
+frag = shadow.frag
+vert = main.vert
+
+[BlurShadowMap]
+comp = shadow/BlurShadowMap.comp
+
+[SSRWriteUVs]
+comp = ssr/ssr_write_uvs.comp
+
+[SSRSample]
+comp = ssr/ssr_sample.comp
+
+# [SSRBlur]
+# permute = HORIZONTAL
+# comp = ssr/ssr_blur.comp
+
+[SSRBlurHor]
+comp = ssr/ssr_blur_hor.comp
+
+[SSRBlurVert]
+comp = ssr/ssr_blur_vert.comp
+
+[UIObject]
+frag = ui/UIObject.frag
+vert = ui/UIObject.vert
+
+[DebugAABB]
+frag = aabb.frag
+vert = aabb.vert
+
+# SVO-based VCT
+
+[SVOTagNodes]
+comp = voxel/octree_tag_nodes.comp
+
+[SVOAllocNodes]
+comp = voxel/octree_alloc_nodes.comp
+
+[SVOInitNodes]
+comp = voxel/octree_init_nodes.comp
+
+[SVOModifyArgs]
+comp = voxel/octree_modify_args.comp
+
+[SVOWriteMipmaps]
+comp = voxel/octree_write_mipmaps.comp
+
+[SVOVoxelize]
+frag = voxel/voxelize.frag
+geom = voxel/voxelize.geom
+vert = voxel/voxelize.vert
+
+# Texture-based VCT
+
+[VCTGenerateMipmap]
+comp = vct/GenerateMipmap.comp
+
+[VCTClearVoxels]
+comp = vct/clear_voxels.comp
+
+[VCTVoxelize]
+frag = voxel/voxelize.frag
+geom = voxel/voxelize.geom
+vert = voxel/voxelize.vert

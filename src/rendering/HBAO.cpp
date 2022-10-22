@@ -190,11 +190,7 @@ void HBAO::CreateDescriptorSets(Engine *engine)
 void HBAO::CreateComputePipelines(Engine *engine)
 {
     m_compute_hbao = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/hbao/HBAO.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("HBAO")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

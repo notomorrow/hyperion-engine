@@ -9,6 +9,7 @@
 #include <util/Defines.hpp>
 #include <util/StringUtil.hpp>
 #include <core/Core.hpp>
+#include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/ByteBuffer.hpp>
 
@@ -201,16 +202,16 @@ public:
     /*! \brief Reads the entirety of the remaining bytes in file PER LINE and returns a vector of
      * string. Note that using this method to read the whole file in one call bypasses
      * the intention of having a buffered reader. */
-    std::vector<std::string> ReadAllLines()
+    DynArray<String> ReadAllLines()
     {
         if (Eof()) {
-            return {};
+            return { };
         }
         
-        std::vector<std::string> lines;
+        DynArray<String> lines;
 
-        ReadLines([&lines](const std::string &line) {
-            lines.push_back(line);
+        ReadLines([&lines](const String &line) {
+            lines.PushBack(line);
         });
 
         return lines;
@@ -264,7 +265,7 @@ public:
     }
 
     template <class LambdaFunction>
-    void ReadLines(LambdaFunction func, bool buffered = true)
+    void ReadLines(LambdaFunction &&func, bool buffered = true)
     {
         if (!buffered) { // not buffered, do it in one pass
             auto all_bytes = ReadBytes();
