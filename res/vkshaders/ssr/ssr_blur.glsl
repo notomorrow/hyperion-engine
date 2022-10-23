@@ -1,3 +1,6 @@
+
+#extension GL_GOOGLE_include_directive : require
+
 #include "ssr_header.inc"
 #include "../include/noise.inc"
 #include "../include/shared.inc"

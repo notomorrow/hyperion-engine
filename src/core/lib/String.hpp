@@ -232,7 +232,7 @@ DynString<T, IsUtf8>::DynString(const ByteBuffer &byte_buffer)
 {
     Base::Resize(byte_buffer.Size() + 1);
     Memory::Copy(Data(), byte_buffer.Data(), byte_buffer.Size());
-    Data()[Base::m_size - 1] = 0;
+    // Data()[Base::m_size - 1] = 0;
 }
 
 template <class T, bool IsUtf8>

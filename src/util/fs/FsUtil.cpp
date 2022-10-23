@@ -1,21 +1,60 @@
 #include "FsUtil.hpp"
 #include <util/Defines.hpp>
+#include <system/Debug.hpp>
 
 #include <filesystem>
 #include <fstream>
 
 #include <sys/stat.h>
 
-#if HYP_WINDOWS
+#if defined(HYP_WINDOWS)
     #include <direct.h>
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN 1
     #endif
     #include <windows.h>
     #undef WIN32_LEAN_AND_MEAN
+#elif defined(HYP_UNIX)
+    #include <unistd.h>
 #endif
 
 namespace hyperion::v2 {
+
+std::mutex FileSystem::mtx = std::mutex();
+DynArray<FilePath> FileSystem::filepaths = { };
+
+
+void FileSystem::PushDirectory(const FilePath &path)
+{
+    std::lock_guard guard(mtx);
+
+    filepaths.PushBack(FilePath::Current());
+
+#if defined(HYP_WINDOWS)
+    _chdir(path.Data());
+#elif defined(HYP_UNIX)
+    chdir(path.Data());
+#endif
+}
+
+FilePath FileSystem::PopDirectory()
+{
+    std::lock_guard guard(mtx);
+
+    AssertThrow(filepaths.Any());
+
+    auto current = FilePath::Current();
+
+#if defined(HYP_WINDOWS)
+    _chdir(filepaths.Back().Data());
+#elif defined(HYP_UNIX)
+    chdir(filepaths.Back().Data());
+#endif
+
+    filepaths.PopBack();
+
+    return current;
+}
 
 bool FileSystem::DirExists(const std::string &path)
 {
