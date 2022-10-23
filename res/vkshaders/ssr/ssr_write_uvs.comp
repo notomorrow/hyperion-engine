@@ -1,9 +1,9 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
 #include "ssr_header.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba8) uniform writeonly image2D ssr_uvs;
-
 
 #define SSR_EYE_FADE_START 0.8
 #define SSR_EYE_FADE_END 0.995

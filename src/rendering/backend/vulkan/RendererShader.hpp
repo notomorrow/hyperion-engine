@@ -83,6 +83,9 @@ struct ShaderModule
         { return type < other.type; }
 
     bool IsRaytracing() const
+        { return IsRaytracingType(type); }
+
+    static bool IsRaytracingType(Type type)
     {
         return type == Type::RAY_GEN
             || type == Type::RAY_INTERSECT

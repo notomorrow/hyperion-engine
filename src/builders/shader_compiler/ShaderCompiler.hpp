@@ -205,12 +205,14 @@ public:
     ShaderCompiler &operator=(const ShaderCompiler &other) = delete;
     ~ShaderCompiler();
 
+    bool CanCompileShaders() const;
+
     void AddBundle(Bundle &&bundle)
     {
         m_bundles.PushBack(std::move(bundle));
     }
-    bool CompileBundle(const Bundle &bundle);
 
+    bool CompileBundle(const Bundle &bundle);
     bool ReloadCompiledShaderBatch(const String &name);
     void LoadShaderDefinitions();
 

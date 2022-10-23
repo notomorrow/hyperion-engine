@@ -13,6 +13,9 @@ namespace hyperion {
 class ByteWriter
 {
 public:
+    ByteWriter() = default;
+    ByteWriter(const ByteWriter &other) = delete;
+    ByteWriter &operator=(const ByteWriter &other) = delete;
     virtual ~ByteWriter() {}
 
     void Write(const void *ptr, SizeType size)
@@ -94,8 +97,11 @@ class FileByteWriter : public ByteWriter
 public:
     FileByteWriter(const std::string &filepath, std::streampos begin = 0)
     {
-        file = new std::ofstream(filepath, std::ifstream::out | std::ifstream::binary);
+        file = new std::ofstream(filepath, std::ofstream::out | std::ofstream::binary);
     }
+
+    FileByteWriter(const FileByteWriter &other) = delete;
+    FileByteWriter &operator=(const FileByteWriter &other) = delete;
 
     ~FileByteWriter()
     {
@@ -111,6 +117,9 @@ public:
     {
         file->close();
     }
+
+    bool IsOpen() const
+        { return file->is_open(); }
 
 private:
     std::ofstream *file;

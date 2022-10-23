@@ -9,12 +9,21 @@
 #include <string>
 #include <cstring>
 #include <array>
+#include <mutex>
 
 namespace hyperion::v2 {
 
+class FilePath;
+
 class FileSystem
 {
+    static std::mutex mtx;
+    static DynArray<FilePath> filepaths;
+
 public:
+    static void PushDirectory(const FilePath &path);
+    static FilePath PopDirectory();
+
     static bool DirExists(const std::string &path);
     static int Mkdir(const std::string &path);
     static std::string CurrentPath();
@@ -23,7 +32,7 @@ public:
     template <class ...String>
     static inline std::string Join(String &&... args)
     {
-        std::array<std::string, sizeof...(args)> args_array = {args...};
+        std::array<std::string, sizeof...(args)> args_array = { args... };
 
         enum {
             SEPARATOR_MODE_WINDOWS,
@@ -144,6 +153,11 @@ public:
     String Basename() const
     {
         return String(StringUtil::Basename(Data()).c_str());
+    }
+
+    FilePath BasePath() const
+    {
+        return FilePath(StringUtil::BasePath(Data()).c_str());
     }
 
     BufferedReader<2048> Open() const;
