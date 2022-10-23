@@ -279,14 +279,15 @@ void Engine::Initialize()
 
     m_crash_handler.Initialize();
 
+    task_system.Start();
+    m_shader_compiler.LoadShaderDefinitions();
+
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
     //SetThreadAffinityMask(GetCurrentThread(), (1 << 8));
 #endif
 
     HYPERION_ASSERT_RESULT(m_instance->Initialize(use_debug_layers));
-
-    m_shader_compiler.LoadShaderDefinitions();
 
     FindTextureFormatDefaults();
 
@@ -843,8 +844,6 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
-
-    task_system.Start();
 
     m_is_render_loop_active = true;
 }

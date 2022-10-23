@@ -10,6 +10,8 @@
 
 namespace hyperion {
 
+using ByteArray = DynArray<UByte>;
+
 /*! \brief An immutable array of bytes, which for large buffers, shares the memory with any copied objects */
 class ByteBuffer
 {
@@ -92,6 +94,18 @@ public:
 
     const InternalArray &GetInternalArray() const
         { return const_cast<ByteBuffer *>(this)->GetInternalArray(); }
+
+    ByteArray ToByteArray() const
+    {
+        const auto size = GetInternalArray().Size();
+        const auto *data = GetInternalArray().Data();
+
+        ByteArray byte_array;
+        byte_array.Resize(size);
+        Memory::Copy(byte_array.Data(), data, size);
+
+        return byte_array;
+    }
 
     /*! \brief Be aware that modifying the ByteBuffer's data could have unintentional consequences if
         it is sharing memory with other ByteBuffers. */

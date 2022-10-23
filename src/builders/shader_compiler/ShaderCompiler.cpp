@@ -5,8 +5,286 @@
 #include <math/MathUtil.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
 #include <util/fs/FsUtil.hpp>
+#include <util/Defines.hpp>
 
+#ifdef HYP_GLSLANG
+
+#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Include/ResourceLimits.h>
+#include <glslang/Public/ShaderLang.h>
+
+#endif
 namespace hyperion::v2 {
+
+#if defined(HYP_VULKAN) && defined(HYP_GLSLANG)
+
+static TBuiltInResource DefaultResources()
+{
+    return {
+        /* .MaxLights = */ 32,
+        /* .MaxClipPlanes = */ 6,
+        /* .MaxTextureUnits = */ 32,
+        /* .MaxTextureCoords = */ 32,
+        /* .MaxVertexAttribs = */ 64,
+        /* .MaxVertexUniformComponents = */ 4096,
+        /* .MaxVaryingFloats = */ 64,
+        /* .MaxVertexTextureImageUnits = */ 32,
+        /* .MaxCombinedTextureImageUnits = */ 80,
+        /* .MaxTextureImageUnits = */ 32,
+        /* .MaxFragmentUniformComponents = */ 4096,
+        /* .MaxDrawBuffers = */ 32,
+        /* .MaxVertexUniformVectors = */ 128,
+        /* .MaxVaryingVectors = */ 8,
+        /* .MaxFragmentUniformVectors = */ 16,
+        /* .MaxVertexOutputVectors = */ 16,
+        /* .MaxFragmentInputVectors = */ 15,
+        /* .MinProgramTexelOffset = */ -8,
+        /* .MaxProgramTexelOffset = */ 7,
+        /* .MaxClipDistances = */ 8,
+        /* .MaxComputeWorkGroupCountX = */ 65535,
+        /* .MaxComputeWorkGroupCountY = */ 65535,
+        /* .MaxComputeWorkGroupCountZ = */ 65535,
+        /* .MaxComputeWorkGroupSizeX = */ 1024,
+        /* .MaxComputeWorkGroupSizeY = */ 1024,
+        /* .MaxComputeWorkGroupSizeZ = */ 64,
+        /* .MaxComputeUniformComponents = */ 1024,
+        /* .MaxComputeTextureImageUnits = */ 16,
+        /* .MaxComputeImageUniforms = */ 8,
+        /* .MaxComputeAtomicCounters = */ 8,
+        /* .MaxComputeAtomicCounterBuffers = */ 1,
+        /* .MaxVaryingComponents = */ 60,
+        /* .MaxVertexOutputComponents = */ 64,
+        /* .MaxGeometryInputComponents = */ 64,
+        /* .MaxGeometryOutputComponents = */ 128,
+        /* .MaxFragmentInputComponents = */ 128,
+        /* .MaxImageUnits = */ 8,
+        /* .MaxCombinedImageUnitsAndFragmentOutputs = */ 8,
+        /* .MaxCombinedShaderOutputResources = */ 8,
+        /* .MaxImageSamples = */ 0,
+        /* .MaxVertexImageUniforms = */ 0,
+        /* .MaxTessControlImageUniforms = */ 0,
+        /* .MaxTessEvaluationImageUniforms = */ 0,
+        /* .MaxGeometryImageUniforms = */ 0,
+        /* .MaxFragmentImageUniforms = */ 8,
+        /* .MaxCombinedImageUniforms = */ 8,
+        /* .MaxGeometryTextureImageUnits = */ 16,
+        /* .MaxGeometryOutputVertices = */ 256,
+        /* .MaxGeometryTotalOutputComponents = */ 1024,
+        /* .MaxGeometryUniformComponents = */ 1024,
+        /* .MaxGeometryVaryingComponents = */ 64,
+        /* .MaxTessControlInputComponents = */ 128,
+        /* .MaxTessControlOutputComponents = */ 128,
+        /* .MaxTessControlTextureImageUnits = */ 16,
+        /* .MaxTessControlUniformComponents = */ 1024,
+        /* .MaxTessControlTotalOutputComponents = */ 4096,
+        /* .MaxTessEvaluationInputComponents = */ 128,
+        /* .MaxTessEvaluationOutputComponents = */ 128,
+        /* .MaxTessEvaluationTextureImageUnits = */ 16,
+        /* .MaxTessEvaluationUniformComponents = */ 1024,
+        /* .MaxTessPatchComponents = */ 120,
+        /* .MaxPatchVertices = */ 32,
+        /* .MaxTessGenLevel = */ 64,
+        /* .MaxViewports = */ 16,
+        /* .MaxVertexAtomicCounters = */ 0,
+        /* .MaxTessControlAtomicCounters = */ 0,
+        /* .MaxTessEvaluationAtomicCounters = */ 0,
+        /* .MaxGeometryAtomicCounters = */ 0,
+        /* .MaxFragmentAtomicCounters = */ 8,
+        /* .MaxCombinedAtomicCounters = */ 8,
+        /* .MaxAtomicCounterBindings = */ 1,
+        /* .MaxVertexAtomicCounterBuffers = */ 0,
+        /* .MaxTessControlAtomicCounterBuffers = */ 0,
+        /* .MaxTessEvaluationAtomicCounterBuffers = */ 0,
+        /* .MaxGeometryAtomicCounterBuffers = */ 0,
+        /* .MaxFragmentAtomicCounterBuffers = */ 1,
+        /* .MaxCombinedAtomicCounterBuffers = */ 1,
+        /* .MaxAtomicCounterBufferSize = */ 16384,
+        /* .MaxTransformFeedbackBuffers = */ 4,
+        /* .MaxTransformFeedbackInterleavedComponents = */ 64,
+        /* .MaxCullDistances = */ 8,
+        /* .MaxCombinedClipAndCullDistances = */ 8,
+        /* .MaxSamples = */ 4,
+        /* .maxMeshOutputVerticesNV = */ 256,
+        /* .maxMeshOutputPrimitivesNV = */ 512,
+        /* .maxMeshWorkGroupSizeX_NV = */ 32,
+        /* .maxMeshWorkGroupSizeY_NV = */ 1,
+        /* .maxMeshWorkGroupSizeZ_NV = */ 1,
+        /* .maxTaskWorkGroupSizeX_NV = */ 32,
+        /* .maxTaskWorkGroupSizeY_NV = */ 1,
+        /* .maxTaskWorkGroupSizeZ_NV = */ 1,
+        /* .maxMeshViewCountNV = */ 4,
+        /* .maxMeshOutputVerticesEXT = */ 256,
+        /* .maxMeshOutputPrimitivesEXT = */ 256,
+        /* .maxMeshWorkGroupSizeX_EXT = */ 128,
+        /* .maxMeshWorkGroupSizeY_EXT = */ 128,
+        /* .maxMeshWorkGroupSizeZ_EXT = */ 128,
+        /* .maxTaskWorkGroupSizeX_EXT = */ 128,
+        /* .maxTaskWorkGroupSizeY_EXT = */ 128,
+        /* .maxTaskWorkGroupSizeZ_EXT = */ 128,
+        /* .maxMeshViewCountEXT = */ 4,
+        /* .maxDualSourceDrawBuffersEXT = */ 1,
+
+        /* .limits = */ {
+            /* .nonInductiveForLoops = */ 1,
+            /* .whileLoops = */ 1,
+            /* .doWhileLoops = */ 1,
+            /* .generalUniformIndexing = */ 1,
+            /* .generalAttributeMatrixVectorIndexing = */ 1,
+            /* .generalVaryingIndexing = */ 1,
+            /* .generalSamplerIndexing = */ 1,
+            /* .generalVariableIndexing = */ 1,
+            /* .generalConstantMatrixVectorIndexing = */ 1,
+        }
+    };
+}
+
+static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, const char *filename)
+{
+    auto default_resources = DefaultResources();
+
+    glslang_stage_t stage;
+
+    switch (type) {
+    case ShaderModule::Type::VERTEX:
+        stage = GLSLANG_STAGE_VERTEX;
+        break;
+    case ShaderModule::Type::FRAGMENT:
+        stage = GLSLANG_STAGE_FRAGMENT;
+        break;
+    case ShaderModule::Type::GEOMETRY:
+        stage = GLSLANG_STAGE_GEOMETRY;
+        break;
+    case ShaderModule::Type::COMPUTE:
+        stage = GLSLANG_STAGE_COMPUTE;
+        break;
+    case ShaderModule::Type::TASK:
+        stage = GLSLANG_STAGE_TASK_NV;
+        break;
+    case ShaderModule::Type::MESH:
+        stage = GLSLANG_STAGE_MESH_NV;
+        break;
+    case ShaderModule::Type::TESS_CONTROL:
+        stage = GLSLANG_STAGE_TESSCONTROL;
+        break;
+    case ShaderModule::Type::TESS_EVAL:
+        stage = GLSLANG_STAGE_TESSEVALUATION;
+        break;
+    case ShaderModule::Type::RAY_GEN:
+        stage = GLSLANG_STAGE_RAYGEN_NV;
+        break;
+    case ShaderModule::Type::RAY_INTERSECT:
+        stage = GLSLANG_STAGE_INTERSECT_NV;
+        break;
+    case ShaderModule::Type::RAY_ANY_HIT:
+        stage = GLSLANG_STAGE_ANYHIT_NV;
+        break;
+    case ShaderModule::Type::RAY_CLOSEST_HIT:
+        stage = GLSLANG_STAGE_CLOSESTHIT_NV;
+        break;
+    case ShaderModule::Type::RAY_MISS:
+        stage = GLSLANG_STAGE_MISS_NV;
+        break;
+    default:
+        HYP_THROW("Invalid shader type");
+        break;
+    }
+
+    UInt vulkan_api_version = MathUtil::Min(HYP_VULKAN_API_VERSION, VK_API_VERSION_1_1);
+
+    // Maybe remove... Some platforms giving crash
+    // when loading vk1.2 shaders. But we need it for raytracing.
+    if (ShaderModule::IsRaytracingType(type)) {
+        vulkan_api_version = MathUtil::Max(vulkan_api_version, VK_API_VERSION_1_2);
+    }
+
+    const glslang_input_t input {
+        .language = GLSLANG_SOURCE_GLSL,
+        .stage = stage,
+        .client = GLSLANG_CLIENT_VULKAN,
+        .client_version = static_cast<glslang_target_client_version_t>(vulkan_api_version),
+        .target_language = GLSLANG_TARGET_SPV,
+        .target_language_version = GLSLANG_TARGET_SPV_1_3,
+        .code = source,
+        .default_version = 450,
+        .default_profile = GLSLANG_CORE_PROFILE,
+        .force_default_version_and_profile = false,
+        .forward_compatible = false,
+        .messages = GLSLANG_MSG_DEFAULT_BIT,
+        .resource = reinterpret_cast<const glslang_resource_t *>(&default_resources),
+    };
+
+    glslang_shader_t *shader = glslang_shader_create(&input);
+
+    // glslang_shader_set_preamble(
+    //     shader,
+    //     "\n"
+    // );
+
+    if (!glslang_shader_preprocess(shader, &input))	{
+        DebugLog(LogType::Error, "GLSL preprocessing failed %s\n", filename);
+        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
+        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
+        DebugLog(LogType::Error, "%s\n", input.code);
+        glslang_shader_delete(shader);
+
+        return ByteBuffer();
+    }
+
+    if (!glslang_shader_parse(shader, &input)) {
+        DebugLog(LogType::Error, "GLSL parsing failed %s\n", filename);
+        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
+        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
+        DebugLog(LogType::Error, "%s\n", glslang_shader_get_preprocessed_code(shader));
+        glslang_shader_delete(shader);
+
+        return ByteBuffer();
+    }
+
+    glslang_program_t *program = glslang_program_create();
+    glslang_program_add_shader(program, shader);
+
+    if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT)) {
+        DebugLog(LogType::Error, "GLSL linking failed %s %s\n", filename, source);
+
+        DebugLog(LogType::Error, "%s\n", glslang_program_get_info_log(program));
+        DebugLog(LogType::Error, "%s\n", glslang_program_get_info_debug_log(program));
+        glslang_program_delete(program);
+        glslang_shader_delete(shader);
+
+        return ByteBuffer();
+    }
+
+    glslang_program_SPIRV_generate(program, stage);
+
+    ByteBuffer shader_module(glslang_program_SPIRV_get_size(program) * sizeof(UInt32));
+    glslang_program_SPIRV_get(program, reinterpret_cast<UInt32 *>(shader_module.Data()));
+
+    const char *spirv_messages = glslang_program_SPIRV_get_messages(program);
+
+    if (spirv_messages) {
+        DebugLog(LogType::Error, "(%s) %s\b", filename, spirv_messages);
+    }
+
+    glslang_program_delete(program);
+    glslang_shader_delete(shader);
+
+    return shader_module;
+}
+
+#else
+
+
+// static ByteBuffer CompileToSPIRV(ShaderModule::Type, const ByteArray &, const char *)
+// {
+//     DebugLog(
+//         LogType::Error,
+//         "Not linked with GLSL compiler!\n"
+//     );
+
+//     return ByteBuffer();
+// }
+
+#endif
 
 static const FlatMap<String, ShaderModule::Type> shader_type_names = {
     { "vert", ShaderModule::Type::VERTEX },
@@ -48,10 +326,17 @@ ShaderCompiler::ShaderCompiler(Engine *engine)
     : m_engine(engine),
       m_definitions(nullptr)
 {
+#if HYP_GLSLANG
+    ShInitialize();
+#endif
 }
 
 ShaderCompiler::~ShaderCompiler()
 {
+#if HYP_GLSLANG
+    ShFinalize();
+#endif
+
     if (m_definitions) {
         delete m_definitions;
     }
@@ -59,6 +344,10 @@ ShaderCompiler::~ShaderCompiler()
 
 bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
 {
+    if (!CanCompileShaders()) {
+        return false;
+    }
+
     if (!m_definitions || !m_definitions->IsValid()) {
         // load for first time if no definitions loaded
         LoadShaderDefinitions();
@@ -70,6 +359,12 @@ bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
 
     if (!m_definitions->HasSection(name)) {
         // not in definitions file
+        DebugLog(
+            LogType::Error,
+            "Section %s not found in shader definitions file\n",
+            name.Data()
+        );
+
         return false;
     }
 
@@ -164,12 +459,16 @@ void ShaderCompiler::LoadShaderDefinitions()
     DynArray<bool> results;
     results.Resize(bundles.Size());
 
-    bundles.ParallelForEach(
-        m_engine->task_system,
-        [this, &results](const Bundle &bundle, UInt index, UInt) {
-            results[index] = CompileBundle(bundle);
-        }
-    );
+    for (SizeType index = 0; index < bundles.Size(); index++) {
+        results[index] = CompileBundle(bundles[index]);
+    }
+
+    // bundles.ParallelForEach(
+    //     m_engine->task_system,
+    //     [this, &results](const Bundle &bundle, UInt index, UInt) {
+    //         results[index] = CompileBundle(bundle);
+    //     }
+    // );
 }
 
 struct LoadedSourceFile
@@ -181,8 +480,8 @@ struct LoadedSourceFile
 
     FilePath GetOutputFilepath(HashCode props_hash_code) const
     {
-        return FilePath("data/compiled_shaders/tmp/") + FilePath(file.path).Basename()
-            + "_" + String::ToString(props_hash_code.Value()) + ".shc";
+        return FilePath::Current() / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
+            + "_" + String::ToString(props_hash_code.Value()) + ".shc");
     }
 
     HashCode GetHashCode() const
@@ -197,6 +496,15 @@ struct LoadedSourceFile
     }
 };
 
+bool ShaderCompiler::CanCompileShaders() const
+{
+#ifdef HYP_GLSLANG
+    return true;
+#else
+    return false;
+#endif
+}
+
 bool ShaderCompiler::CompileBundle(const Bundle &bundle)
 {
     // run with spirv-cross
@@ -206,21 +514,33 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
     loaded_source_files.Reserve(bundle.sources.Size());
 
     for (auto &it : bundle.sources) {
-        const auto filepath = FilePath(it.second.path);
+        const auto filepath = FilePath::Join(FilePath::Current().Data(), it.second.path.Data());
         auto source_stream = filepath.Open();
 
         if (!source_stream.IsOpen()) {
             // could not open file!
+            DebugLog(
+                LogType::Error,
+                "Failed to open shader source file at %s\n",
+                filepath.Data()
+            );
+
             return false;
         }
+
+        DebugLog(
+            LogType::Debug,
+            "Path : %s\n",
+            filepath.Data()
+        );
 
         ByteBuffer byte_buffer = source_stream.ReadBytes();
 
         loaded_source_files.PushBack(LoadedSourceFile {
-            it.first,
-            it.second,
-            filepath.LastModifiedTimestamp(),
-            String(byte_buffer)
+            .type = it.first,
+            .file = it.second,
+            .last_modified_timestamp = filepath.LastModifiedTimestamp(),
+            .original_source = String(byte_buffer)
         });
     }
 
@@ -274,13 +594,13 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
             if (output_filepath.Exists()) {
                 // file exists and is older than the original source file; no need to build
                 if (output_filepath.LastModifiedTimestamp() >= item.last_modified_timestamp) {
-                    // DebugLog(
-                    //     LogType::Info,
-                    //     "File %s exists and was modified later than the source file, not rebuilding...\n",
-                    //     output_filepath.Data()
-                    // );
-
                     if (auto stream = output_filepath.Open()) {
+                        DebugLog(
+                            LogType::Info,
+                            "Reusing shader binary at path: %s\n",
+                            output_filepath.Data()
+                        );
+
                         compiled_shader.modules[item.type] = stream.ReadBytes();
 
                         continue;
@@ -311,10 +631,39 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
                 permutation_string.Data()
             );
 
-            if (system((String("glslc --target-env=vulkan1.1 ") + item.file.path + " -o " + output_filepath).Data())) {
-                DebugLog(LogType::Error, "Failed to compile file %s with props hash %u!\n!", item.file.path.Data(), props_hash_code.Value());
+            {
+                // set directory to the directory of the shader
+                FileSystem::PushDirectory(FilePath(item.file.path).BasePath());
+                DebugLog(LogType::Debug, "Source :  %llu  %s\n", item.original_source.Size(), item.original_source.Data());
+                ByteBuffer spirv_bytes = CompileToSPIRV(item.type, item.original_source.Data(), item.file.path.Data());
+                FileSystem::PopDirectory();
 
-                return;
+                if (spirv_bytes.Empty()) {
+                    DebugLog(
+                        LogType::Error,
+                        "Failed to compile file %s with props hash %u!\n!",
+                        item.file.path.Data(),
+                        props_hash_code.Value()
+                    );
+
+                    return;
+                }
+
+                // write the spirv to the output file
+                FileByteWriter spirv_writer(output_filepath.Data());
+
+                if (!spirv_writer.IsOpen()) {
+                    DebugLog(
+                        LogType::Error,
+                        "Could not open file %s for writing!\n",
+                        output_filepath.Data()
+                    );
+
+                    return;
+                }
+
+                spirv_writer.Write(spirv_bytes.Data(), spirv_bytes.Size());
+                spirv_writer.Close();
             }
 
             any_files_compiled = true;
@@ -376,7 +725,7 @@ CompiledShader ShaderCompiler::GetCompiledShader(
 {
     CompiledShader result;
 
-    if (m_definitions && m_definitions->IsValid()) {
+    if (CanCompileShaders()) {
         if (!ReloadCompiledShaderBatch(name)) {
             DebugLog(
                 LogType::Error,
@@ -388,7 +737,9 @@ CompiledShader ShaderCompiler::GetCompiledShader(
     } else {
         DebugLog(
             LogType::Warn,
-            "Shader definitions file not loaded! Cannot compare timestamps, shaders may be or become out of date...\n"
+            "Not compiled with GLSL compiler support... Shaders may become out of date.\n"
+            "If any .hypshader files are missing, you may need to recompile the engine with glslang linked, "
+            "so that they can be generated.\n"
         );
     }
 

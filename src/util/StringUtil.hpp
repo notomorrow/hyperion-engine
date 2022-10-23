@@ -148,7 +148,7 @@ public:
         std::stringstream ss;
         size_t i = 0;
 
-        for (auto &str :args) {
+        for (auto &str : args) {
             ss << str;
 
             if (i != count - 1 && !EndsWith(str, join_by)) {
@@ -182,7 +182,7 @@ public:
             return filepath;
         }
 
-        return filepath.substr(filepath.find_last_of("\\/"));
+        return filepath.substr(filepath.find_last_of("\\/") + 1);
     }
 
     static inline std::string BasePath(const std::string &filepath)

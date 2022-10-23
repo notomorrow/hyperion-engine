@@ -1,8 +1,9 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
-#extension GL_EXT_multiview : enable
+#extension GL_GOOGLE_include_directive : require
+#extension GL_ARB_separate_shader_objects : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_multiview : require
 
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
@@ -61,7 +62,8 @@ mat4 CreateSkinningMatrix()
     return skinning;
 }
 
-void main() {
+void main() 
+{
     vec4 position;
     mat4 normal_matrix;
 
