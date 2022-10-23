@@ -138,8 +138,20 @@ static TBuiltInResource DefaultResources()
     };
 }
 
-static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, const char *filename)
+static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, const char *filename, DynArray<String> &error_messages)
 {
+#define GLSL_ERROR(log_type, error_message, ...) \
+    { \
+        DebugLog(log_type, error_message, __VA_ARGS__); \
+        CharArray char_array; \
+        int n = std::snprintf(nullptr, 0, error_message, __VA_ARGS__); \
+        if (n > 0) { \
+            char_array.Resize(static_cast<SizeType>(n) + 1); \
+            std::sprintf(char_array.Data(), error_message, __VA_ARGS__); \
+        } \
+        error_messages.PushBack(String(char_array)); \
+    }
+
     auto default_resources = DefaultResources();
 
     glslang_stage_t stage;
@@ -215,26 +227,21 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
 
     glslang_shader_t *shader = glslang_shader_create(&input);
 
-    // glslang_shader_set_preamble(
-    //     shader,
-    //     "\n"
-    // );
-
     if (!glslang_shader_preprocess(shader, &input))	{
-        DebugLog(LogType::Error, "GLSL preprocessing failed %s\n", filename);
-        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
-        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
-        DebugLog(LogType::Error, "%s\n", input.code);
+        GLSL_ERROR(LogType::Error, "GLSL preprocessing failed %s\n", filename);
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
+        GLSL_ERROR(LogType::Error, "%s\n", input.code);
         glslang_shader_delete(shader);
 
         return ByteBuffer();
     }
 
     if (!glslang_shader_parse(shader, &input)) {
-        DebugLog(LogType::Error, "GLSL parsing failed %s\n", filename);
-        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
-        DebugLog(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
-        DebugLog(LogType::Error, "%s\n", glslang_shader_get_preprocessed_code(shader));
+        GLSL_ERROR(LogType::Error, "GLSL parsing failed %s\n", filename);
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_preprocessed_code(shader));
         glslang_shader_delete(shader);
 
         return ByteBuffer();
@@ -244,10 +251,9 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
     glslang_program_add_shader(program, shader);
 
     if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT)) {
-        DebugLog(LogType::Error, "GLSL linking failed %s %s\n", filename, source);
-
-        DebugLog(LogType::Error, "%s\n", glslang_program_get_info_log(program));
-        DebugLog(LogType::Error, "%s\n", glslang_program_get_info_debug_log(program));
+        GLSL_ERROR(LogType::Error, "GLSL linking failed %s %s\n", filename, source);
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_program_get_info_log(program));
+        GLSL_ERROR(LogType::Error, "%s\n", glslang_program_get_info_debug_log(program));
         glslang_program_delete(program);
         glslang_shader_delete(shader);
 
@@ -262,11 +268,13 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
     const char *spirv_messages = glslang_program_SPIRV_get_messages(program);
 
     if (spirv_messages) {
-        DebugLog(LogType::Error, "(%s) %s\b", filename, spirv_messages);
+        GLSL_ERROR(LogType::Error, "(%s) %s\b", filename, spirv_messages);
     }
 
     glslang_program_delete(program);
     glslang_shader_delete(shader);
+
+#undef GLSL_ERROR
 
     return shader_module;
 }
@@ -350,7 +358,9 @@ bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
 
     if (!m_definitions || !m_definitions->IsValid()) {
         // load for first time if no definitions loaded
-        LoadShaderDefinitions();
+        if (!LoadShaderDefinitions()) {
+            return false;
+        }
 
         CompiledShaderBatch tmp;
 
@@ -396,7 +406,7 @@ bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
     return CompileBundle(bundle);
 }
 
-void ShaderCompiler::LoadShaderDefinitions()
+bool ShaderCompiler::LoadShaderDefinitions()
 {
     if (m_definitions) {
         delete m_definitions;
@@ -413,7 +423,7 @@ void ShaderCompiler::LoadShaderDefinitions()
         delete m_definitions;
         m_definitions = nullptr;
 
-        return;
+        return false;
     }
 
     DynArray<Bundle> bundles;
@@ -446,22 +456,40 @@ void ShaderCompiler::LoadShaderDefinitions()
             }
         }
 
-        if (GetCompiledShader(bundle.name, bundle.props)) {
-            // compiled shader already exists with props, no need to recompile.
-            // will be set in cache.
-            
-            continue;
-        }
-
         bundles.PushBack(std::move(bundle));
     }
+
+    const bool supports_rt_shaders = m_engine->GetConfig().Get(CONFIG_RT_SUPPORTED);
 
     DynArray<bool> results;
     results.Resize(bundles.Size());
 
     for (SizeType index = 0; index < bundles.Size(); index++) {
-        results[index] = CompileBundle(bundles[index]);
+        auto &bundle = bundles[index];
+
+        if (bundle.HasRTShaders() && !supports_rt_shaders) {
+            DebugLog(
+                LogType::Warn,
+                "Not compiling shader bundle %s because it contains raytracing shaders and raytracing is not supported on this device.\n",
+                bundle.name.Data()
+            );
+
+            results[index] = true;
+
+            continue;
+        }
+
+        if (GetCompiledShader(bundle.name, bundle.props)) {
+            // compiled shader already exists with props, no need to recompile.
+            // will be set in cache.
+            
+            results[index] = true;
+        }
     }
+
+    return results.Every([](bool value) {
+        return value;
+    });
 
     // bundles.ParallelForEach(
     //     m_engine->task_system,
@@ -527,12 +555,6 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
 
             return false;
         }
-
-        DebugLog(
-            LogType::Debug,
-            "Path : %s\n",
-            filepath.Data()
-        );
 
         ByteBuffer byte_buffer = source_stream.ReadBytes();
 
@@ -632,10 +654,11 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
             );
 
             {
+                DynArray<String> error_messages;
+
                 // set directory to the directory of the shader
                 FileSystem::PushDirectory(FilePath(item.file.path).BasePath());
-                DebugLog(LogType::Debug, "Source :  %llu  %s\n", item.original_source.Size(), item.original_source.Data());
-                ByteBuffer spirv_bytes = CompileToSPIRV(item.type, item.original_source.Data(), item.file.path.Data());
+                ByteBuffer spirv_bytes = CompileToSPIRV(item.type, item.original_source.Data(), item.file.path.Data(), error_messages);
                 FileSystem::PopDirectory();
 
                 if (spirv_bytes.Empty()) {
@@ -645,6 +668,8 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
                         item.file.path.Data(),
                         props_hash_code.Value()
                     );
+
+                    compiled_shader_batch.error_messages.Concat(std::move(error_messages));
 
                     return;
                 }

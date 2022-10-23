@@ -49,7 +49,7 @@ vec2 texcoord = v_texcoord0;
 /* Begin main shader program */
 
 #define IBL_INTENSITY 40000.0
-#define IRRADIANCE_MULTIPLIER 4.0
+#define IRRADIANCE_MULTIPLIER 1.5
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
@@ -92,7 +92,7 @@ void main()
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);//SampleEffectPre(0, v_texcoord0, vec4(1.0));
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);//SampleEffectPre(0, v_texcoord0, vec4(1.0));
     ao = ssao_data.a * material.a;
     
 #if HYP_VCT_ENABLED

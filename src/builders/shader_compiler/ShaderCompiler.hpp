@@ -42,9 +42,14 @@ struct CompiledShader
     }
 };
 
+
 struct CompiledShaderBatch
 {
     DynArray<CompiledShader> compiled_shaders;
+    DynArray<String> error_messages;
+
+    bool HasErrors() const
+        { return error_messages.Any(); }
 
     HashCode GetHashCode() const
     {
@@ -198,6 +203,13 @@ public:
         String name;
         FlatMap<ShaderModule::Type, SourceFile> sources;
         ShaderProps props; // permutations
+
+        bool HasRTShaders() const
+        {
+            return sources.Any([](const KeyValuePair<ShaderModule::Type, SourceFile> &item) {
+                return ShaderModule::IsRaytracingType(item.first);
+            });
+        }
     };
 
     ShaderCompiler(Engine *engine);
@@ -214,7 +226,7 @@ public:
 
     bool CompileBundle(const Bundle &bundle);
     bool ReloadCompiledShaderBatch(const String &name);
-    void LoadShaderDefinitions();
+    bool LoadShaderDefinitions();
 
     CompiledShader GetCompiledShader(
         const String &name

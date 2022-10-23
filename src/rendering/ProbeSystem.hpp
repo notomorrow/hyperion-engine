@@ -159,6 +159,8 @@ private:
         m_copy_border_texels_irradiance,
         m_copy_border_texels_depth;
 
+    Handle<Shader> m_shader;
+
     UniquePtr<RaytracingPipeline> m_pipeline;
     UniquePtr<UniformBuffer> m_uniform_buffer;
     UniquePtr<StorageBuffer> m_radiance_buffer;

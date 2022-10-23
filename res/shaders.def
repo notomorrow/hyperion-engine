@@ -117,3 +117,33 @@ comp = vct/clear_voxels.comp
 frag = voxel/voxelize.frag
 geom = voxel/voxelize.geom
 vert = voxel/voxelize.vert
+
+# RT
+
+[RTRadiance]
+rgen = rt/test.rgen
+rchit = rt/test.rchit
+rmiss = rt/test.rmiss
+
+[RTProbe]
+rgen = rt/gi/gi.rgen
+rchit = rt/gi/gi.rchit
+rmiss = rt/gi/gi.rmiss
+
+[RTCopyBorderTexelsIrradiance]
+comp = rt/copy_border_texels_irradiance.comp
+
+[RTCopyBorderTexelsDepth]
+comp = rt/copy_border_texels_depth.comp
+
+[RTProbeUpdateIrradiance]
+comp = rt/probe_update_irradiance.comp
+
+[RTProbeUpdateDepth]
+comp = rt/probe_update_depth.comp
+
+[BlurRadianceHor]
+comp = rt/blur/BlurRadianceHor.comp
+
+[BlurRadianceVert]
+comp = rt/blur/BlurRadianceVert.comp

@@ -118,10 +118,6 @@ public:
         FixedArray<typename AssetLoaderWrapper<NormalizedType<T>>::CastedType, sizeof...(paths) + 1> results_array;
         std::vector<String> paths_array { first_path, std::forward<Paths>(paths)... };
         AssetBatch batch = CreateBatch();
-        
-        DebugLog(LogType::Error, "Size of results array: %llu\n", sizeof(results_array));
-        // AssertThrow(results_array.Size() == paths_array.size());
-        DebugLog(LogType::Error, "HEREEEEE %llu\n", sizeof(AssetBatch));
 
         UInt path_index = 0;
 
@@ -132,18 +128,13 @@ public:
         }
 
         batch.LoadAsync();
-        // DebugLog(LogType::Error, "LOAD SYNC\n");
-        auto results = batch.AwaitResults();
-        // DebugLog(LogType::Error, "results %llu\n", results.Size());
 
-        // AssertThrow(results.Size() == results_array.Size());
+        auto results = batch.AwaitResults();
 
         SizeType index = 0u;
         AssertThrow(results.Size() == results_array.Size());
 
         for (auto &it : results) {
-            // DebugLog(LogType::Error, "index = %llu\n", index);
-            // DebugLog(LogType::Error, "it = %u\n", it.second.value.GetTypeID().value);
             results_array[index++] = it.second.Get<T>();
         }
 
