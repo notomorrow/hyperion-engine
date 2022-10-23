@@ -4,6 +4,7 @@
 #include <Constants.hpp>
 #include <core/Containers.hpp>
 
+#include <rendering/rt/BlurRadiance.hpp>
 #include <rendering/Compute.hpp>
 
 namespace hyperion::v2 {
@@ -34,6 +35,7 @@ private:
     void CreateImages(Engine *engine);
     void CreateDescriptorSets(Engine *engine);
     void CreateComputePipelines(Engine *engine);
+    void CreateBlurrer(Engine *engine);
     
     struct ImageOutput
     {
@@ -63,7 +65,7 @@ private:
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
 
     Handle<ComputePipeline> m_compute_hbao;
-    Handle<ComputePipeline> m_denoiser;
+    BlurRadiance m_blurrer;
 };
 
 } // namespace hyperion::v2

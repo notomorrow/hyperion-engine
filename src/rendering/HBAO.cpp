@@ -1,4 +1,5 @@
 #include <rendering/HBAO.hpp>
+#include <rendering/RenderEnvironment.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -37,18 +38,22 @@ Result HBAO::ImageOutput::Destroy(Device *device)
 HBAO::HBAO(const Extent2D &extent)
     : m_image_outputs {
           ImageOutput(StorageImage(
-              Extent3D(extent),
+              Extent3D(extent.width / 2, extent.height / 2, 1), // downscale
               InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
               ImageType::TEXTURE_TYPE_2D
           )),
           ImageOutput(StorageImage(
-              Extent3D(extent),
+              Extent3D(extent.width / 2, extent.height / 2, 1), // downscale
               InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
               ImageType::TEXTURE_TYPE_2D
           ))
-      }
+      },
+      m_blurrer(
+          extent,
+          FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
+          FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
+      )
 {
-    
 }
 
 HBAO::~HBAO() = default;
@@ -58,12 +63,14 @@ void HBAO::Create(Engine *engine)
     CreateImages(engine);
     CreateDescriptorSets(engine);
     CreateComputePipelines(engine);
+    CreateBlurrer(engine);
 }
 
 void HBAO::Destroy(Engine *engine)
 {
+    m_blurrer.Destroy(engine);
+
     m_compute_hbao.Reset();
-    m_denoiser.Reset();
 
     // release our owned descriptor sets
     for (auto &descriptor_set : m_descriptor_sets) {
@@ -131,13 +138,21 @@ void HBAO::CreateDescriptorSets(Engine *engine)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
 
+        // nearest sampler
         descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(3)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
             });
 
-        descriptor_set->GetOrAddDescriptor<DynamicStorageBufferDescriptor>(4)
+        // linear sampler
+        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(4)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
+            });
+
+        descriptor_set->GetOrAddDescriptor<DynamicStorageBufferDescriptor>(5)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
@@ -145,14 +160,14 @@ void HBAO::CreateDescriptorSets(Engine *engine)
             });
 
         // output image
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(5)
+        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(6)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[frame_index].image_view
             });
 
         // prev image
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(6)
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(7)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
@@ -179,7 +194,7 @@ void HBAO::CreateDescriptorSets(Engine *engine)
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
                 ->SetSubDescriptor({
                     .element_index = 0u,
-                    .image_view = &m_image_outputs[frame_index].image_view
+                    .image_view = &m_blurrer.GetImageOutput(frame_index).image_view //&m_image_outputs[frame_index].image_view//
                 });
         }
 
@@ -197,24 +212,34 @@ void HBAO::CreateComputePipelines(Engine *engine)
     engine->InitObject(m_compute_hbao);
 }
 
+void HBAO::CreateBlurrer(Engine *engine)
+{
+    m_blurrer.Create(engine);
+}
+
 void HBAO::Render(
     Engine *engine,
     Frame *frame
 )
 {
+    auto &prev_image = m_image_outputs[(frame->GetFrameIndex() + 1) % max_frames_in_flight].image;
+    
+    if (prev_image.GetGPUImage()->GetResourceState() != renderer::ResourceState::SHADER_RESOURCE) {
+        prev_image.GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    }
+
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    //m_image_outputs[(frame->GetFrameIndex() + 1) % max_frames_in_flight].image.GetGPUImage()
-    //    ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
     const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
 
     struct alignas(128) {
-        ShaderVec2<UInt32> dimension = { };
+        ShaderVec2<UInt32> dimension;
+        Float32 temporal_blending_factor;
     } push_constants;
 
     push_constants.dimension = Extent2D(extent);
+    push_constants.temporal_blending_factor = 0.25f;
 
     m_compute_hbao->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
     m_compute_hbao->GetPipeline()->Bind(frame->GetCommandBuffer());
@@ -238,6 +263,8 @@ void HBAO::Render(
     
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+
+    m_blurrer.Render(engine, frame);
 }
 
 } // namespace hyperion::v2

@@ -418,7 +418,7 @@ auto DynArray<T, NumInlineBytes>::operator=(const DynArray &other) -> DynArray&
         }
 
         // capacity already fits, no need to reallocate memory.
-        for (SizeType i = m_start_offset, j = other.m_start_offset; i < m_size; ++i, ++j) {
+        for (SizeType i = m_start_offset, j = other.m_start_offset; i < m_size && j < other.m_size; ++i, ++j) {
             buffer[i].Get() = other_buffer[j].Get();
         }
 

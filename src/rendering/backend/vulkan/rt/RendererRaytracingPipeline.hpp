@@ -3,6 +3,8 @@
 
 #include <core/lib/DynArray.hpp>
 
+#include <Types.hpp>
+
 #include "../RendererPipeline.hpp"
 #include "../RendererDevice.hpp"
 #include "../RendererBuffer.hpp"
@@ -17,16 +19,19 @@ namespace renderer {
 class RaytracingPipeline : public Pipeline
 {
 public:
-    RaytracingPipeline(std::unique_ptr<ShaderProgram> &&shader_program);
+    RaytracingPipeline();
     RaytracingPipeline(
-        std::unique_ptr<ShaderProgram> &&shader_program,
         const DynArray<const DescriptorSet *> &used_descriptor_sets
     );
     RaytracingPipeline(const RaytracingPipeline &other) = delete;
     RaytracingPipeline &operator=(const RaytracingPipeline &other) = delete;
     ~RaytracingPipeline();
 
-    Result Create(Device *device, DescriptorPool *pool);
+    Result Create(
+        Device *device,
+        ShaderProgram *shader_program,
+        DescriptorPool *pool
+    );
     Result Destroy(Device *device);
 
     void Bind(CommandBuffer *command_buffer);
@@ -52,13 +57,14 @@ private:
 
     using ShaderBindingTableMap = std::unordered_map<ShaderModule::Type, ShaderBindingTableEntry>;
 
-    Result CreateShaderBindingTables(Device *device);
+    Result CreateShaderBindingTables(Device *device, ShaderProgram *shader_program);
 
-    Result CreateShaderBindingTableEntry(Device *device,
-        uint32_t num_shaders,
-        ShaderBindingTableEntry &out);
+    Result CreateShaderBindingTableEntry(
+        Device *device,
+        UInt32 num_shaders,
+        ShaderBindingTableEntry &out
+    );
 
-    std::unique_ptr<ShaderProgram> m_shader_program;
     ShaderBindingTableMap m_shader_binding_table_buffers;
 };
 

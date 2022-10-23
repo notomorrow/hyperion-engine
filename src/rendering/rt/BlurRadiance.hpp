@@ -54,11 +54,11 @@ public:
 
     BlurRadiance(
         const Extent2D &extent,
-        Image *radiance_image,
-        ImageView *radiance_image_view,
-        ImageView *data_image_view,
-        ImageView *depth_image_view
+        const FixedArray<Image *, max_frames_in_flight> &input_images,
+        const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
     );
+    BlurRadiance(const BlurRadiance &other) = delete;
+    BlurRadiance &operator=(const BlurRadiance &other) = delete;
     ~BlurRadiance();
 
     ImageOutput &GetImageOutput(UInt frame_index)
@@ -81,18 +81,15 @@ private:
     void CreateComputePipelines(Engine *engine);
 
     Extent2D m_extent;
-    Image *m_radiance_image;
-    ImageView *m_radiance_image_view;
-    ImageView *m_data_image_view;
-    ImageView *m_depth_image_view;
+
+    FixedArray<Image *, max_frames_in_flight> m_input_images;
+    FixedArray<ImageView *, max_frames_in_flight> m_input_image_views;
+
+    Handle<ComputePipeline> m_blur_hor;
+    Handle<ComputePipeline> m_blur_vert;
 
     FixedArray<FixedArray<UniquePtr<DescriptorSet>, 2>, max_frames_in_flight> m_descriptor_sets;
     FixedArray<FixedArray<ImageOutput, generate_mipmap ? 1 : 2>, max_frames_in_flight> m_image_outputs;
-
-    Handle<ComputePipeline> m_write_uvs;
-    Handle<ComputePipeline> m_sample;
-    Handle<ComputePipeline> m_blur_hor;
-    Handle<ComputePipeline> m_blur_vert;
 };
 
 } // namespace hyperion::v2

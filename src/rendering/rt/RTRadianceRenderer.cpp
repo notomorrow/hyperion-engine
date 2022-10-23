@@ -56,10 +56,8 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
       },
       m_blur_radiance(
           extent,
-          &m_image_outputs[0].image,
-          &m_image_outputs[0].image_view,
-          &m_image_outputs[1].image_view,
-          &m_image_outputs[2].image_view
+          FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
+          FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
       ),
       m_has_tlas_updates { false, false }
 {
@@ -85,6 +83,8 @@ void RTRadianceRenderer::Create(Engine *engine)
 void RTRadianceRenderer::Destroy(Engine *engine)
 {
     m_blur_radiance.Destroy(engine);
+
+    engine->SafeReleaseHandle(std::move(m_shader));
 
     engine->SafeRelease(std::move(m_raytracing_pipeline));
 
@@ -305,22 +305,10 @@ void RTRadianceRenderer::CreateDescriptorSets(Engine *engine)
 
 void RTRadianceRenderer::CreateRaytracingPipeline(Engine *engine)
 {
-    auto shader = std::make_unique<ShaderProgram>();
-
-    shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rgen.spv")).Read()
-    });
-
-    shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rmiss.spv")).Read()
-    });
-
-    shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/test.rchit.spv")).Read()
-    });
+    m_shader = engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTRadiance"));
+    engine->InitObject(m_shader);
 
     m_raytracing_pipeline.Reset(new RaytracingPipeline(
-        std::move(shader),
         DynArray<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
             engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
@@ -332,6 +320,7 @@ void RTRadianceRenderer::CreateRaytracingPipeline(Engine *engine)
         engine->GetRenderScheduler().Enqueue([this, engine](...) {
             return m_raytracing_pipeline->Create(
                 engine->GetDevice(),
+                m_shader->GetShaderProgram(),
                 &engine->GetInstance()->GetDescriptorPool()
             );
         });

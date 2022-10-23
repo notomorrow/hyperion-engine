@@ -8,7 +8,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ShaderProgram;
 using renderer::StorageImageDescriptor;
 using renderer::StorageBufferDescriptor;
 using renderer::UniformBufferDescriptor;
@@ -71,6 +70,8 @@ void ProbeGrid::Init(Engine *engine)
 
 void ProbeGrid::Destroy(Engine *engine)
 {
+    engine->SafeReleaseHandle(std::move(m_shader));
+
     // release our owned descriptor sets
     for (auto &descriptor_set : m_descriptor_sets) {
         engine->SafeRelease(std::move(descriptor_set));
@@ -117,20 +118,10 @@ void ProbeGrid::Destroy(Engine *engine)
 
 void ProbeGrid::CreatePipeline(Engine *engine)
 {
-    auto rt_shader = std::make_unique<ShaderProgram>();
-
-    rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/gi/gi.rgen.spv")).Read()
-    });
-    rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/gi/gi.rmiss.spv")).Read()
-    });
-    rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/rt/gi/gi.rchit.spv")).Read()
-    });
+    m_shader = engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTProbe"));
+    engine->InitObject(m_shader);
 
     m_pipeline.Reset(new RaytracingPipeline(
-        std::move(rt_shader),
         DynArray<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
             engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
@@ -139,7 +130,11 @@ void ProbeGrid::CreatePipeline(Engine *engine)
     ));
 
     engine->GetRenderScheduler().Enqueue([this, engine](...) {
-        return m_pipeline->Create(engine->GetDevice(), &engine->GetInstance()->GetDescriptorPool());
+        return m_pipeline->Create(
+            engine->GetDevice(),
+            m_shader->GetShaderProgram(),
+            &engine->GetInstance()->GetDescriptorPool()
+        );
     });
 }
 

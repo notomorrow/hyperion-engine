@@ -2,6 +2,8 @@
 
 pushd res/vkshaders
 
+# deprecated due to new ShaderCompiler
+
 VULKAN_TARGET="vulkan1.2"
 glslc --target-env=$VULKAN_TARGET deferred_direct.frag -o deferred_direct.frag.spv
 glslc --target-env=$VULKAN_TARGET deferred_indirect.frag -o deferred_indirect.frag.spv
