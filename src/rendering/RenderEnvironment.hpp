@@ -2,18 +2,20 @@
 #define HYPERION_V2_ENVIRONMENT_H
 
 #include <rendering/Shadows.hpp>
-#include <core/Base.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ParticleSystem.hpp>
-
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/ProbeSystem.hpp>
 
+#include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
 #include <core/lib/Pair.hpp>
+
+#include <math/MathUtil.hpp>
+#include <Constants.hpp>
 #include <Types.hpp>
 
 #include <vector>
@@ -135,15 +137,19 @@ public:
     }
 
     // only touch from render thread!
-    UInt32 GetEnabledRenderComponentsMask() const { return m_current_enabled_render_components_mask; }
+    UInt32 GetEnabledRenderComponentsMask() const
+        { return m_current_enabled_render_components_mask; }
 
     void OnEntityAdded(Handle<Entity> &entity);
     void OnEntityRemoved(Handle<Entity> &entity);
     // only called when meaningful attributes have changed
     void OnEntityRenderableAttributesChanged(Handle<Entity> &entity);
 
-    Float GetGlobalTimer() const { return m_global_timer; }
-    UInt32 GetFrameCounter() const { return m_frame_counter; }
+    Float GetGlobalTimer() const
+        { return m_global_timer; }
+
+    UInt32 GetFrameCounter() const
+        { return m_frame_counter; }
 
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);

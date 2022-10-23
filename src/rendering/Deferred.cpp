@@ -183,7 +183,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 
 DeferredRenderer::DeferredRenderer()
     : m_ssr(Extent2D { 512, 512 }),
-      m_hbao(Extent2D { 512, 512 }),
+      m_hbao(Extent2D { 1024, 1024 }), // image is downscaled
       m_indirect_pass(true),
       m_direct_pass(false)
 {

@@ -17,17 +17,14 @@ static constexpr VkShaderStageFlags push_constant_stage_flags = VK_SHADER_STAGE_
     | VK_SHADER_STAGE_MISS_BIT_KHR
     | VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
 
-RaytracingPipeline::RaytracingPipeline(std::unique_ptr<ShaderProgram> &&shader_program)
-    : Pipeline(),
-      m_shader_program(std::move(shader_program))
+RaytracingPipeline::RaytracingPipeline()
+    : Pipeline()
 {
 }
 
 RaytracingPipeline::RaytracingPipeline(
-    std::unique_ptr<ShaderProgram> &&shader_program,
     const DynArray<const DescriptorSet *> &used_descriptor_sets
-) : Pipeline(used_descriptor_sets),
-    m_shader_program(std::move(shader_program))
+) : Pipeline(used_descriptor_sets)
 {
 }
 
@@ -35,6 +32,7 @@ RaytracingPipeline::~RaytracingPipeline() = default;
 
 Result RaytracingPipeline::Create(
     Device *device,
+    ShaderProgram *shader_program,
     DescriptorPool *descriptor_pool
 )
 {
@@ -42,8 +40,7 @@ Result RaytracingPipeline::Create(
         return {Result::RENDERER_ERR, "Raytracing is not supported on this device"};
     }
 
-    AssertThrow(m_shader_program != nullptr);
-    HYPERION_BUBBLE_ERRORS(m_shader_program->Create(device));
+    AssertThrow(shader_program != nullptr);
 
     auto result = Result::OK;
 
@@ -70,7 +67,7 @@ Result RaytracingPipeline::Create(
         return Result{Result::RENDERER_ERR, "Device max bound descriptor sets exceeded"};
     }
 
-    layout_info.setLayoutCount = static_cast<uint32_t>(used_layouts.size());
+    layout_info.setLayoutCount = static_cast<UInt32>(used_layouts.size());
     layout_info.pSetLayouts = used_layouts.data();
     
     /* Push constants */
@@ -98,8 +95,8 @@ Result RaytracingPipeline::Create(
 
     VkRayTracingPipelineCreateInfoKHR pipeline_info{VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
 
-    const auto &stages = m_shader_program->GetShaderStages();
-    const auto &shader_groups = m_shader_program->GetShaderGroups();
+    const auto &stages = shader_program->GetShaderStages();
+    const auto &shader_groups = shader_program->GetShaderGroups();
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> shader_group_create_infos;
     shader_group_create_infos.resize(shader_groups.size());
@@ -135,7 +132,7 @@ Result RaytracingPipeline::Create(
         return result;
     }
 
-    HYPERION_PASS_ERRORS(CreateShaderBindingTables(device), result);
+    HYPERION_PASS_ERRORS(CreateShaderBindingTables(device, shader_program), result);
     
     if (!result) {
         HYPERION_IGNORE_ERRORS(Destroy(device));
@@ -154,10 +151,6 @@ Result RaytracingPipeline::Destroy(Device *device)
 
     for (auto &it : m_shader_binding_table_buffers) {
         HYPERION_PASS_ERRORS(it.second.buffer->Destroy(device), result);
-    }
-
-    if (m_shader_program != nullptr) {
-        HYPERION_PASS_ERRORS(m_shader_program->Destroy(device), result);
     }
 
     if (pipeline != VK_NULL_HANDLE) {
@@ -210,9 +203,9 @@ void RaytracingPipeline::TraceRays(
     );
 }
 
-Result RaytracingPipeline::CreateShaderBindingTables(Device *device)
+Result RaytracingPipeline::CreateShaderBindingTables(Device *device, ShaderProgram *shader_program)
 {
-    const auto &shader_groups = m_shader_program->GetShaderGroups();
+    const auto &shader_groups = shader_program->GetShaderGroups();
 
     const auto &features = device->GetFeatures();
     const auto &properties = features.GetRaytracingPipelineProperties();
@@ -303,8 +296,9 @@ Result RaytracingPipeline::CreateShaderBindingTables(Device *device)
 }
 
 Result RaytracingPipeline::CreateShaderBindingTableEntry(Device *device,
-    uint32_t num_shaders,
-    ShaderBindingTableEntry &out)
+    UInt32 num_shaders,
+    ShaderBindingTableEntry &out
+)
 {
     const auto &properties = device->GetFeatures().GetRaytracingPipelineProperties();
 

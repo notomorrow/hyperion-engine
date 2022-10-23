@@ -17,15 +17,11 @@ using renderer::Rect;
 
 BlurRadiance::BlurRadiance(
     const Extent2D &extent,
-    Image *radiance_image,
-    ImageView *radiance_image_view,
-    ImageView *data_image_view,
-    ImageView *depth_image_view
+    const FixedArray<Image *, max_frames_in_flight> &input_images,
+    const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
 ) : m_extent(extent),
-    m_radiance_image(radiance_image),
-    m_radiance_image_view(radiance_image_view),
-    m_data_image_view(data_image_view),
-    m_depth_image_view(depth_image_view)
+    m_input_images(input_images),
+    m_input_image_views(input_image_views)
 {
 }
 
@@ -108,53 +104,32 @@ void BlurRadiance::CreateDescriptorSets(Engine *engine)
         for (UInt i = 0; i < m_descriptor_sets[frame_index].Size(); i++) {
             auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
 
-            // radiance image
-            descriptor_set
-                ->AddDescriptor<StorageImageDescriptor>(0)
-                ->SetSubDescriptor({
-                    .image_view = m_radiance_image_view
-                });
-
-            // data image
-            descriptor_set
-                ->AddDescriptor<StorageImageDescriptor>(1)
-                ->SetSubDescriptor({
-                    .image_view = m_data_image_view
-                });
-
-            // depth image
-            descriptor_set
-                ->AddDescriptor<StorageImageDescriptor>(2)
-                ->SetSubDescriptor({
-                    .image_view = m_depth_image_view
-                });
-
             // input image (first pass just radiance image, second pass is prev image)
             descriptor_set
-                ->AddDescriptor<ImageDescriptor>(3)
+                ->AddDescriptor<ImageDescriptor>(0)
                 ->SetSubDescriptor({
                     .image_view = i == 0
-                        ? m_radiance_image_view
+                        ? m_input_image_views[frame_index]
                         : &m_image_outputs[frame_index][i - 1].image_view
                 });
 
             // sampler to use
             descriptor_set
-                ->AddDescriptor<SamplerDescriptor>(4)
+                ->AddDescriptor<SamplerDescriptor>(1)
                 ->SetSubDescriptor({
                     .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
                 });
 
             // blurred output
             descriptor_set
-                ->AddDescriptor<StorageImageDescriptor>(5)
+                ->AddDescriptor<StorageImageDescriptor>(2)
                 ->SetSubDescriptor({
                     .image_view = &m_image_outputs[frame_index][i].image_view
                 });
 
             // scene buffer - so we can reconstruct world positions
             descriptor_set
-                ->AddDescriptor<DynamicStorageBufferDescriptor>(10)
+                ->AddDescriptor<DynamicStorageBufferDescriptor>(3)
                 ->SetSubDescriptor({
                     .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
                     .range = static_cast<UInt>(sizeof(SceneShaderData))
@@ -187,22 +162,14 @@ void BlurRadiance::CreateComputePipelines(Engine *engine)
     }
 
     m_blur_hor = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/blur/BlurRadianceHor.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("BlurRadianceHor")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0][0].Get() }
     );
 
     engine->InitObject(m_blur_hor);
 
     m_blur_vert = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/blur/BlurRadianceVert.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("BlurRadianceVert")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0][0].Get() }
     );
 
@@ -216,7 +183,7 @@ void BlurRadiance::Render(
 {
     if constexpr (generate_mipmap) {
         // assume render thread
-        auto *src_image = m_radiance_image;
+        auto *src_image = m_input_images[frame->GetFrameIndex()];
         auto &dst_image = m_image_outputs[frame->GetFrameIndex()][0].image;
 
         // generate mips

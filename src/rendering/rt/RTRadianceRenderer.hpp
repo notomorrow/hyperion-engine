@@ -6,6 +6,7 @@
 #include <core/Containers.hpp>
 
 #include <rendering/Compute.hpp>
+#include <rendering/Shader.hpp>
 #include <rendering/rt/BlurRadiance.hpp>
 #include <rendering/rt/TLAS.hpp>
 
@@ -88,6 +89,8 @@ private:
 
     Extent2D m_extent;
     Handle<TLAS> m_tlas;
+
+    Handle<Shader> m_shader;
 
     FixedArray<ImageOutput, 3> m_image_outputs;
     BlurRadiance m_blur_radiance;

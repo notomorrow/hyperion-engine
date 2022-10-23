@@ -1,3 +1,4 @@
+#extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_scalar_block_layout : require
 
 #include "../include/rt/probe/probe_uniforms.inc"

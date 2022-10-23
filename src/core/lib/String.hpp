@@ -22,6 +22,9 @@ namespace detail {
 /*! UTF-8 supporting dynamic string class */
 using namespace ::utf;
 
+template <class T>
+using CharArray = DynArray<T, 64u>;
+
 template <class T, bool IsUtf8>
 class DynString : DynArray<T, 64u>
 {
@@ -41,8 +44,9 @@ public:
     static constexpr bool is_ansi = !is_utf8 && (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>);
 
     DynString();
-    DynString(const T *str);
     DynString(const DynString &other);
+    DynString(const T *str);
+    explicit DynString(const CharArray<T> &char_array);
     explicit DynString(const ByteBuffer &byte_buffer);
     DynString(DynString &&other) noexcept;
     ~DynString();
@@ -226,13 +230,26 @@ DynString<T, IsUtf8>::DynString(DynString &&other) noexcept
     other.Clear();
 }
 
+
+template <class T, bool IsUtf8>
+DynString<T, IsUtf8>::DynString(const CharArray<T> &char_array)
+    : Base()
+{
+    Base::Resize(char_array.Size());
+    Memory::Copy(Data(), char_array.Data(), char_array.Size());
+    
+    // add null terminator char if it does not exist yet.
+    if (char_array.Empty() || char_array.Back() != 0) {
+        Base::PushBack(0);
+    }
+}
+
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString(const ByteBuffer &byte_buffer)
     : Base()
 {
     Base::Resize(byte_buffer.Size() + 1);
     Memory::Copy(Data(), byte_buffer.Data(), byte_buffer.Size());
-    // Data()[Base::m_size - 1] = 0;
 }
 
 template <class T, bool IsUtf8>
@@ -711,6 +728,8 @@ Int DynString<T, IsUtf8>::FindIndex(const DynString &other) const
 } // namespace containers
 
 using String = containers::detail::DynString<char, true>;
+using CharArray = containers::detail::CharArray<char>;
+
 using ANSIString = containers::detail::DynString<char, false>;
 using WideString = containers::detail::DynString<wchar_t, false>;
 

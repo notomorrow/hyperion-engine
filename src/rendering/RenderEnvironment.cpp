@@ -216,7 +216,6 @@ void RenderEnvironment::RenderComponents(Engine *engine, Frame *frame)
 
     const auto update_marker_value = m_update_marker.load();
     UInt8 inverse_mask = 0;
-    
 
     if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
         inverse_mask |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;

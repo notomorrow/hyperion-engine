@@ -265,7 +265,11 @@ public:
     {
         auto it = marshalers.Find(type_name);
 
-        AssertThrowMsg(it != marshalers.End(), "Not a registered type!");
+        AssertThrowMsg(
+            it != marshalers.End(),
+            "%s is not a registered type!",
+            type_name.Data()
+        );
 
         return it->second.get();
     }

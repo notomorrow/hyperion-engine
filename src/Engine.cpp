@@ -280,7 +280,6 @@ void Engine::Initialize()
     m_crash_handler.Initialize();
 
     task_system.Start();
-    m_shader_compiler.LoadShaderDefinitions();
 
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -292,6 +291,10 @@ void Engine::Initialize()
     FindTextureFormatDefaults();
 
     m_configuration.SetToDefaultConfiguration(this);
+
+    if (!m_shader_compiler.LoadShaderDefinitions()) {
+        HYP_BREAKPOINT;
+    }
 
     shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
     shader_globals->Create(this);

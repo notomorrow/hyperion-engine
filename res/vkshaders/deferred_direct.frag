@@ -64,7 +64,7 @@ void main()
     float ao = 1.0;
     float shadow = 1.0;
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, texcoord);
     ao = ssao_data.a * material.a;
 
     if (perform_lighting) {
