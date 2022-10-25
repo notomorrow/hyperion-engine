@@ -15,7 +15,6 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-
 layout(set = 0, binding = 0) uniform texture2D gbuffer_albedo_texture;
 layout(set = 0, binding = 1) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 2) uniform texture2D gbuffer_depth_texture;
@@ -40,7 +39,7 @@ layout(push_constant) uniform PushConstant
 #define HYP_GTAO_NUM_SLICES 8
 #define HYP_GTAO_RADIUS 16.0
 #define HYP_GTAO_THICKNESS 1.0
-#define HYP_GTAO_POWER 1.25
+#define HYP_GTAO_POWER 0.75
 #define HYP_HBIL_POWER 1.0
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
@@ -94,6 +93,13 @@ float CalculateImpact(float theta0, float theta1, vec2 n)
     return Saturate(dot(n, i));
 }
 
+void InitializeRay(vec3 V, float angle, inout vec2 ss_ray, inout vec3 ws_ray)
+{
+    ss_ray = vec2(sin(angle), cos(angle));
+    ws_ray = normalize(vec3(ss_ray * V.z, -dot(V.xy, ss_ray)));
+    ss_ray.y *= -1.0;
+}
+
 void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
     uvec2 pixel_coord = clamp(uvec2(uv * vec2(dimension - 1)), uvec2(0), dimension);
@@ -123,11 +129,10 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
     light_color = vec4(0.0);
 
     for (int i = 0; i < HYP_GTAO_NUM_CIRCLES; i++) {
-        const float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES)) * 2.0;
+        float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_GTAO_NUM_CIRCLES)) * 2.0;
     
-        vec2 ss_ray = { sin(angle), cos(angle) };
-        const vec3 ray = normalize(vec3(ss_ray * V.z, -dot(V.xy, ss_ray)));
-        ss_ray *= vec2(1.0, -1.0);
+        vec2 ss_ray; vec3 ray;
+        InitializeRay(V, angle, ss_ray, ray);
 
         const vec2 n = { dot(ray, N), -dot(N, V) };
         
@@ -138,26 +143,28 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
         float slice_ao = 0.0;
 
         for (int j = 0; j < HYP_GTAO_NUM_SLICES; j++) {
-            const vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
+            vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
+            uv_offset *= mix(-1.0, 1.0, float(j % 2 == 0));
+
             const vec2 new_uv = uv_offset + uv;
 
             if (uvec2(new_uv * vec2(dimension - 1)) != pixel_coord && new_uv == Saturate(new_uv)) {
                 const float new_depth = GTAOGetDepth(new_uv);
                 const vec3 new_pos = GTAOGetPosition(new_uv, new_depth);
-                const vec3 new_color = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0).rgb;
+                const vec3 new_color = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv, 0.0).rgb;
                 const vec3 new_normal = GTAOGetNormal(new_uv);
 
-                vec3 diff = new_pos - P;
-                vec2 ss_diff = { -dot(diff, V), dot(diff, ray) };
-                const float ss_len = length(ss_diff);
-                const float len = length(diff);
+                vec3 delta = new_pos - P;
+                vec2 ss_delta = { -dot(delta, V), dot(delta, ray) };
+
+                const float ss_len = length(ss_delta);
+                const float len = length(delta);
+                delta /= len;
+
                 const float dist = ss_len / HYP_GTAO_RADIUS;
-                const float cos_theta = ss_diff.x / ss_len;
-                diff /= len;
+                const float theta = acos(ss_delta.x / ss_len);
 
-                if ((cos_theta >= cos_max_theta) && dist < 1.0) {
-                    const float theta = acos(cos_theta);
-
+                if ((cos(theta) >= cos(max_theta)) && dist < 1.0) {
                     float falloff = (1.0 / max(len, HYP_FMATH_EPSILON));
                     falloff *= falloff;
                     falloff = Saturate(falloff);
@@ -165,9 +172,9 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
                     light_color += vec4(new_color, 1.0);
 
                     max_theta += (theta - max_theta) * falloff;
-                    cos_max_theta = cos(max_theta);
+                    // cos_max_theta = cos(max_theta);
 
-                    slice_ao += (1.0 - dist * dist) * (dot(diff, N) - slice_ao);
+                    slice_ao += (1.0 - HYP_FMATH_SQR(dist)) * (dot(delta, N) - slice_ao);
                 }
             }
         }
@@ -200,7 +207,7 @@ void main()
     vec4 previous_values = Texture2D(sampler_linear, prev_image, uv);
 
     vec4 next_values = vec4(light_color.rgb, occlusion);
-    next_values = mix(previous_values, next_values, scene.frame_counter == 0 ? 1.0 : 0.455);
+    next_values.rgb = mix(next_values.rgb, previous_values.rgb, scene.frame_counter == 0 ? 0.0 : 0.9);
 
     imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimension - 1)), next_values);
 }
