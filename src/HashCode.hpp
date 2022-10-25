@@ -51,9 +51,27 @@ struct HashCode
     typename std::enable_if_t<std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>>
     Add(const T &hash_code) { HashCombine(hash_code.Value()); }
 
+    //template<class T, class DecayedType = std::decay_t<T>>
+   // typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value && implementation_exists<std::hash<DecayedType>>>
+    //Add(const T &value) { HashCombine(std::hash<DecayedType>()(value)); }
+
     template<class T, class DecayedType = std::decay_t<T>>
-    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value && implementation_exists<std::hash<DecayedType>>>
-    Add(const T &value) { HashCombine(std::hash<DecayedType>()(value)); }
+    typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value &&
+        (std::is_fundamental_v<DecayedType> || std::is_pointer_v<DecayedType> || std::is_enum_v<DecayedType>)>
+    Add(const T &value)
+    {
+        static_assert(sizeof(T) <= sizeof(uintmax_t));
+
+        uintmax_t value_raw;
+
+        if constexpr (sizeof(uintmax_t) > sizeof(T)) {
+            std::memset(&value_raw, 0, sizeof(uintmax_t));
+        }
+
+        std::memcpy(&value_raw, &value, sizeof(T));
+
+        HashCombine(value_raw);
+    }
 
     template<class T, class DecayedType = std::decay_t<T>>
     typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && HasGetHashCode<DecayedType, HashCode>::value>
@@ -61,7 +79,7 @@ struct HashCode
 
     template<class T, class DecayedType = std::decay_t<T>>
     typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HasGetHashCode<DecayedType, HashCode>::value && !implementation_exists<std::hash<DecayedType>>>
-    Add(const T &value) { static_assert(resolution_failure<T>, "No GetHashCode() method or std::hash<T> implementation"); }
+    Add(const T &value) { static_assert(resolution_failure<T>, "No GetHashCode() method"); }
 
     constexpr ValueType Value() const { return hash; }
 

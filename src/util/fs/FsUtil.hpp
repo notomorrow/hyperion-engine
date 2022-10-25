@@ -85,17 +85,17 @@ public:
         return *this;
     }
 
-    FilePath operator+(const FilePath &other)
+    FilePath operator+(const FilePath &other) const
     {
         return FilePath(Base::operator+(other));
     }
 
-    FilePath operator+(const String &other)
+    FilePath operator+(const String &other) const
     {
         return FilePath(Base::operator+(other));
     }
 
-    FilePath operator+(const char *str)
+    FilePath operator+(const char *str) const
     {
         return FilePath(Base::operator+(str));
     }
@@ -115,17 +115,17 @@ public:
         return *this = Base::operator+=(str);
     }
 
-    FilePath operator/(const FilePath &other)
+    FilePath operator/(const FilePath &other) const
     {
         return Join(Data(), other.Data());
     }
 
-    FilePath operator/(const String &other)
+    FilePath operator/(const String &other) const
     {
         return Join(Data(), other.Data());
     }
 
-    FilePath operator/(const char *str)
+    FilePath operator/(const char *str) const
     {
         return Join(Data(), str);
     }

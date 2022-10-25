@@ -15,12 +15,12 @@ namespace hyperion {
 namespace renderer {
 
 class Features;
-
 class Instance;
 
 using ExtensionMap = std::unordered_map<std::string, bool>;
 
-class Device {
+class Device
+{
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
 public:
@@ -60,12 +60,12 @@ public:
     std::vector<VkExtensionProperties> GetSupportedExtensions();
 
 private:
-    VkDevice           device;
-    VkPhysicalDevice   physical;
-    VkSurfaceKHR       surface;
-    VmaAllocator       allocator;
+    VkDevice device;
+    VkPhysicalDevice physical;
+    VkSurfaceKHR surface;
+    VmaAllocator allocator;
 
-    Features           *features;
+    Features *features;
     QueueFamilyIndices queue_family_indices;
 
     ExtensionMap required_extensions;

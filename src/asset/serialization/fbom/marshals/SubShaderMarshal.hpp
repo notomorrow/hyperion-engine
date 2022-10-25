@@ -21,20 +21,6 @@ public:
     virtual FBOMResult Serialize(const SubShader &in_object, FBOMObject &out) const override
     {
         out.SetProperty("type", FBOMUnsignedInt(), static_cast<UInt32>(in_object.type));
-    
-        out.SetProperty(
-            "metadata.name",
-            FBOMString(),
-            in_object.spirv.metadata.name.size(),
-            in_object.spirv.metadata.name.data()
-        );
-    
-        out.SetProperty(
-            "metadata.path",
-            FBOMString(),
-            in_object.spirv.metadata.path.size(),
-            in_object.spirv.metadata.path.data()
-        );
 
         out.SetProperty(
             "bytes",

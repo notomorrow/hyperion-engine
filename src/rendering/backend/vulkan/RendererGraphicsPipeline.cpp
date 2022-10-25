@@ -148,33 +148,13 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 
 Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
 {
-    DebugLog(LogType::Debug, "Initializing graphics pipeline with shader:\n");
-
-    if (m_construction_info.shader != nullptr) {
-        for (const auto &shader_module : m_construction_info.shader->GetShaderModules()) {
-            DebugLog(
-                LogType::Debug,
-                "\tType: %d\tName: %s\tPath: %s\n",
-                int(shader_module.type),
-                shader_module.spirv.metadata.name.empty()
-                    ? "<not set>"
-                    : shader_module.spirv.metadata.name.c_str(),
-                shader_module.spirv.metadata.path.empty()
-                    ? "<not set>"
-                    : shader_module.spirv.metadata.path.c_str()
-            );
-        }
-    } else {
-        DebugLog(LogType::Debug, "\tNULL\n");
-    }
-
     BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-    vertex_input_info.vertexBindingDescriptionCount   = static_cast<uint32_t>(vertex_binding_descriptions.size());
-    vertex_input_info.pVertexBindingDescriptions      = vertex_binding_descriptions.data();
-    vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attributes.size());
-    vertex_input_info.pVertexAttributeDescriptions    = vertex_attributes.data();
+    vertex_input_info.vertexBindingDescriptionCount = static_cast<UInt32>(vertex_binding_descriptions.size());
+    vertex_input_info.pVertexBindingDescriptions = vertex_binding_descriptions.data();
+    vertex_input_info.vertexAttributeDescriptionCount = static_cast<UInt32>(vertex_attributes.size());
+    vertex_input_info.pVertexAttributeDescriptions = vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     input_asm_info.primitiveRestartEnable = VK_FALSE;
@@ -202,16 +182,16 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         break;
     }
 
-    VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    VkViewport viewports[] = {viewport};
+    VkPipelineViewportStateCreateInfo viewport_state { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    VkViewport viewports[] = { viewport };
     viewport_state.viewportCount = 1;
     viewport_state.pViewports = viewports;
 
-    VkRect2D scissors[] = {scissor};
+    VkRect2D scissors[] = { scissor };
     viewport_state.scissorCount = 1;
     viewport_state.pScissors = scissors;
 
-    VkPipelineRasterizationStateCreateInfo rasterizer{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+    VkPipelineRasterizationStateCreateInfo rasterizer { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;

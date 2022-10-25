@@ -3,39 +3,37 @@
 
 #include <core/Containers.hpp>
 #include <rendering/backend/RendererShader.hpp>
-#include <HashCode.hpp>
+#include <util/definitions/DefinitionsFile.hpp>
 #include <util/Defines.hpp>
+#include <HashCode.hpp>
 
 #include <set>
-#include <string>
-#include <vector>
 #include <mutex>
 
 namespace hyperion::v2 {
 
 class Engine;
-class DefinitionsFile;
 
 using renderer::ShaderModule;
 
 struct CompiledShader
 {
-    UInt64 props_hash = ~0u;
-    FixedArray<ByteBuffer, ShaderModule::Type::MAX> modules;
+    UInt64 version_hash = ~0u;
+    HeapArray<ByteBuffer, ShaderModule::Type::MAX> modules;
 
     explicit operator bool() const
         { return IsValid(); }
 
     bool IsValid() const
     {
-        return props_hash != ~0u
+        return version_hash != ~0u
             && modules.Any([](const ByteBuffer &buffer) { return buffer.Size() != 0; });
     }
 
     HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(props_hash);
+        hc.Add(version_hash);
         hc.Add(modules.GetHashCode());
 
         return hc;
@@ -63,6 +61,29 @@ public:
     using Iterator = DynArray<String>::Iterator;
     using ConstIterator = DynArray<String>::ConstIterator;
 
+    ShaderProps() = default;
+    ShaderProps(const FlatSet<String> &props)
+        : m_props(props)
+    {
+    }
+
+    ShaderProps(FlatSet<String> &&props)
+        : m_props(std::move(props))
+    {
+    }
+
+    ShaderProps(const ShaderProps &other) = default;
+    ShaderProps &operator=(const ShaderProps &other) = default;
+    ShaderProps(ShaderProps &&other) noexcept = default;
+    ShaderProps &operator=(ShaderProps &&other) = default;
+    ~ShaderProps() = default;
+
+    bool Any() const
+        { return m_props.Any(); }
+
+    bool Empty() const
+        { return m_props.Empty(); }
+
     bool Get(const String &key) const
     {
         const auto it = m_props.Find(key);
@@ -74,7 +95,7 @@ public:
         return true;
     }
 
-    ShaderProps &Set(const String &key, bool value)
+    ShaderProps &Set(const String &key, bool value = true)
     {
         if (!value) {
             m_props.Erase(key);
@@ -133,7 +154,7 @@ public:
         return true;
     }
 
-    bool GetShaderInstance(const String &key, UInt64 props_hash, CompiledShader &out) const
+    bool GetShaderInstance(const String &key, UInt64 version_hash, CompiledShader &out) const
     {
         std::lock_guard guard(m_mutex);
 
@@ -143,15 +164,15 @@ public:
             return false;
         }
 
-        const auto props_it = it->second.compiled_shaders.FindIf([props_hash](const CompiledShader &item) {
-            return item.props_hash == props_hash;
+        const auto version_it = it->second.compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
+            return item.version_hash == version_hash;
         });
 
-        if (props_it == it->second.compiled_shaders.End()) {
+        if (version_it == it->second.compiled_shaders.End()) {
             return false;
         }
 
-        out = *props_it;
+        out = *version_it;
 
         return true;
     }
@@ -202,7 +223,7 @@ public:
     {
         String name;
         FlatMap<ShaderModule::Type, SourceFile> sources;
-        ShaderProps props; // permutations
+        ShaderProps versions; // permutations
 
         bool HasRTShaders() const
         {
@@ -219,13 +240,6 @@ public:
 
     bool CanCompileShaders() const;
 
-    void AddBundle(Bundle &&bundle)
-    {
-        m_bundles.PushBack(std::move(bundle));
-    }
-
-    bool CompileBundle(const Bundle &bundle);
-    bool ReloadCompiledShaderBatch(const String &name);
     bool LoadShaderDefinitions();
 
     CompiledShader GetCompiledShader(
@@ -234,10 +248,34 @@ public:
 
     CompiledShader GetCompiledShader(
         const String &name,
-        const ShaderProps &props
+        const ShaderProps &versions
+    );
+
+    bool GetCompiledShader(
+        const String &name,
+        const ShaderProps &versions,
+        CompiledShader &out
     );
 
 private:
+    void GetDefaultVersions(ShaderProps &) const;
+
+    void ParseDefinitionSection(
+        const DefinitionsFile::Section &section,
+        Bundle &bundle
+    );
+
+    bool CompileBundle(
+        const Bundle &bundle,
+        CompiledShaderBatch &out
+    );
+
+    bool LoadOrCreateCompiledShaderBatch(
+        const String &name,
+        const ShaderProps &additional_versions,
+        CompiledShaderBatch &out
+    );
+
     Engine *m_engine;
     DefinitionsFile *m_definitions;
     ShaderCache m_cache;
