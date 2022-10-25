@@ -230,7 +230,9 @@ void main()
     result = vec3(ao);
 #endif
 
-    // result = irradiance.rgb;
+#ifdef HYP_VULKAN
+    result = irradiance.rgb;
+#endif
 
     output_color = vec4(result, 1.0);
 }

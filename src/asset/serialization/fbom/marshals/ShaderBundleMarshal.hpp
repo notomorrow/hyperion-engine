@@ -20,7 +20,7 @@ public:
 
     virtual FBOMResult Serialize(const CompiledShader &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("props_hash", FBOMUnsignedLong(), in_object.props_hash);
+        out.SetProperty("version", FBOMUnsignedLong(), in_object.version_hash);
 
         for (SizeType index = 0; index < in_object.modules.Size(); index++) {
             const auto &byte_buffer = in_object.modules[index];
@@ -40,7 +40,7 @@ public:
     {
         out_object.Reset(new CompiledShader);
 
-        if (auto err = in.GetProperty("props_hash").ReadUnsignedLong(&out_object->props_hash)) {
+        if (auto err = in.GetProperty("version").ReadUnsignedLong(&out_object->version_hash)) {
             return err;
         }
 
@@ -75,6 +75,15 @@ public:
             out.AddChild(compiled_shader);
         }
 
+        for (auto &compiled_shader : in_object.compiled_shaders) {
+            std::cout << "compiled_shader : " << compiled_shader.version_hash << "\n";
+            std::cout << "compiled_shader : " << compiled_shader.modules.Size() << "\n";
+            for (auto &mod : compiled_shader.modules) {
+                std::cout << "size : " << mod.Size() << "\n";
+            }
+            std::cout << "\n";
+        }
+
         return { FBOMResult::FBOM_OK };
     }
 
@@ -89,6 +98,15 @@ public:
 
                 out_object->compiled_shaders.PushBack(*compiled_shader);
             }
+        }
+
+        for (auto &compiled_shader : out_object->compiled_shaders) {
+            std::cout << "compiled_shader : " << compiled_shader.version_hash << "\n";
+            std::cout << "compiled_shader : " << compiled_shader.modules.Size() << "\n";
+            for (auto &mod : compiled_shader.modules) {
+                std::cout << "size : " << mod.Size() << "\n";
+            }
+            std::cout << "\n";
         }
 
         return { FBOMResult::FBOM_OK };
