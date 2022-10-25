@@ -466,6 +466,14 @@ void Engine::Initialize()
                 .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
             });
 
+        // motion vectors result image
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::MOTION_VECTORS_RESULT)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
+            });
+
         // placeholder rt radiance image
         descriptor_set
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::RT_RADIANCE_RESULT)

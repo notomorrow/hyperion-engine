@@ -147,3 +147,6 @@ comp = rt/blur/BlurRadianceHor.comp
 
 [BlurRadianceVert]
 comp = rt/blur/BlurRadianceVert.comp
+
+[CalculateMotionVectors]
+comp = CalculateMotionVectors.comp

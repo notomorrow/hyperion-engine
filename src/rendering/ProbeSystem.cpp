@@ -141,44 +141,28 @@ void ProbeGrid::CreatePipeline(Engine *engine)
 void ProbeGrid::CreateComputePipelines(Engine *engine)
 {
     m_update_irradiance = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/probe_update_irradiance.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTProbeUpdateIrradiance")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     engine->InitObject(m_update_irradiance);
 
     m_update_depth = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/probe_update_depth.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTProbeUpdateDepth")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     engine->InitObject(m_update_depth);
 
     m_copy_border_texels_irradiance = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/copy_border_texels_irradiance.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsIrradiance")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     engine->InitObject(m_copy_border_texels_irradiance);
 
     m_copy_border_texels_depth = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(
-            std::vector<SubShader>{
-                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "vkshaders/rt/copy_border_texels_depth.comp.spv")).Read()}}
-            }
-        ),
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsDepth")),
         DynArray<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

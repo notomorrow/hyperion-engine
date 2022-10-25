@@ -30,7 +30,7 @@ void main(void)
     }
 
 	const vec2 texcoord = vec2(coord) / vec2(output_dimensions);
-    float weight = 1.0;
+    float weight = 0.25;
 
     // const vec2 blur_input_texture_size = vec2(imageSize(input_image));
     const float output_dimension_max = float(max(output_dimensions.x, output_dimensions.y));

@@ -57,9 +57,10 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
 
             // combined result of AO (alpha channel) and SS GI (if applicable, in rgb)
             {DescriptorKey::SSAO_GI_RESULT,        41},
-
             // final UI image
             {DescriptorKey::UI_TEXTURE,            42},
+            // motion vectors result
+            {DescriptorKey::MOTION_VECTORS_RESULT, 43},
 
             // result from rt radiance image
             {DescriptorKey::RT_RADIANCE_RESULT,    45},
