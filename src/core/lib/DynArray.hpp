@@ -24,7 +24,7 @@ namespace hyperion {
     zero deallocations/shifting on PopFront().
 */
 
-template <class T, SizeType NumInlineBytes = 512u>
+template <class T, SizeType NumInlineBytes = 256u>
 class DynArray : public ContainerBase<DynArray<T, NumInlineBytes>, UInt>
 {
 public:

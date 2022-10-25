@@ -43,6 +43,9 @@ public:
     bool IsValid() const
         { return m_is_valid; }
 
+    const FilePath &GetFilePath() const
+        { return m_path; }
+
     const FlatMap<String, Section> &GetSections() const
         { return m_sections; }
 

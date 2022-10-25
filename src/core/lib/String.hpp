@@ -28,6 +28,11 @@ using CharArray = DynArray<T, 64u>;
 template <class T, bool IsUtf8>
 class DynString : DynArray<T, 64u>
 {
+#if 0
+public:
+    friend DynString operator+(const T *str, const DynString &other);
+#endif
+
 protected:
     using Base = DynArray<T, 64u>;
 
@@ -724,10 +729,24 @@ Int DynString<T, IsUtf8>::FindIndex(const DynString &other) const
     return -1;
 }
 
+#if 0
+template <class T, bool IsUtf8>
+DynString<T, IsUtf8> operator+(const T *str, const DynString<T, IsUtf8> &other)
+{
+    return DynString<T, IsUtf8>(str) + other;
+}
+#endif
+
 } // namespace detail
 } // namespace containers
 
 using String = containers::detail::DynString<char, true>;
+
+inline String operator+(const char *str, const String &other)
+{
+    return String(str) + other;
+}
+
 using CharArray = containers::detail::CharArray<char>;
 
 using ANSIString = containers::detail::DynString<char, false>;

@@ -138,7 +138,12 @@ static TBuiltInResource DefaultResources()
     };
 }
 
-static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, const char *filename, DynArray<String> &error_messages)
+static ByteBuffer CompileToSPIRV(
+    ShaderModule::Type type,
+    const char *source, const char *filename,
+    const DynArray<String> &version_strings,
+    DynArray<String> &error_messages
+)
 {
 #define GLSL_ERROR(log_type, error_message, ...) \
     { \
@@ -201,7 +206,7 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
         break;
     }
 
-    UInt vulkan_api_version = MathUtil::Min(HYP_VULKAN_API_VERSION, VK_API_VERSION_1_1);
+    UInt vulkan_api_version = MathUtil::Max(HYP_VULKAN_API_VERSION, VK_API_VERSION_1_1);
 
     // Maybe remove... Some platforms giving crash
     // when loading vk1.2 shaders. But we need it for raytracing.
@@ -215,7 +220,7 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
         .client = GLSLANG_CLIENT_VULKAN,
         .client_version = static_cast<glslang_target_client_version_t>(vulkan_api_version),
         .target_language = GLSLANG_TARGET_SPV,
-        .target_language_version = GLSLANG_TARGET_SPV_1_3,
+        .target_language_version = GLSLANG_TARGET_SPV_1_2,
         .code = source,
         .default_version = 450,
         .default_profile = GLSLANG_CORE_PROFILE,
@@ -226,6 +231,18 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
     };
 
     glslang_shader_t *shader = glslang_shader_create(&input);
+
+    String version_strings_combined;
+    
+    for (const auto &str : version_strings) {
+        if (str.Empty()) {
+            continue;
+        }
+
+        version_strings_combined += "#define " + str + "\n";
+    }
+
+    glslang_shader_set_preamble(shader, version_strings_combined.Data());
 
     if (!glslang_shader_preprocess(shader, &input))	{
         GLSL_ERROR(LogType::Error, "GLSL preprocessing failed %s\n", filename);
@@ -282,15 +299,15 @@ static ByteBuffer CompileToSPIRV(ShaderModule::Type type, const char *source, co
 #else
 
 
-// static ByteBuffer CompileToSPIRV(ShaderModule::Type, const ByteArray &, const char *)
-// {
-//     DebugLog(
-//         LogType::Error,
-//         "Not linked with GLSL compiler!\n"
-//     );
-
-//     return ByteBuffer();
-// }
+static ByteBuffer CompileToSPIRV(
+    ShaderModule::Type type,
+    const char *source, const char *filename, 
+    const DynArray<String> &version_strings,
+    DynArray<String> &error_messages
+)
+{
+    return ByteBuffer();
+}
 
 #endif
 
@@ -310,23 +327,23 @@ static const FlatMap<String, ShaderModule::Type> shader_type_names = {
 };
 
 static void ForEachPermutation(
-    const DynArray<String> &props,
+    const DynArray<String> &versions,
     Proc<void, const DynArray<String> &> callback
 )
 {
-    SizeType num_permutations = 1ull << props.Size();
+    SizeType num_permutations = 1ull << versions.Size();
 
     for (SizeType i = 0; i < num_permutations; i++) {
-        DynArray<String> tmp_props;
-        tmp_props.Reserve(MathUtil::BitCount(i));
+        DynArray<String> tmp_versions;
+        tmp_versions.Reserve(MathUtil::BitCount(i));
 
-        for (SizeType j = 0; j < props.Size(); j++) {
-            if (i & (1 << j)) {
-                tmp_props.PushBack(props[j]);
+        for (SizeType j = 0; j < versions.Size(); j++) {
+            if (i & (1ull << j)) {
+                tmp_versions.PushBack(versions[j]);
             }
         }
 
-        callback(tmp_props);
+        callback(tmp_versions);
     }
 }
 
@@ -350,10 +367,71 @@ ShaderCompiler::~ShaderCompiler()
     }
 }
 
-bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
+void ShaderCompiler::GetDefaultVersions(ShaderProps &versions) const
+{
+#if defined(HYP_VULKAN) && HYP_VULKAN
+    versions.Set("HYP_VULKAN");
+
+    constexpr UInt vulkan_version = HYP_VULKAN_API_VERSION;
+    
+    switch (vulkan_version) {
+    case VK_API_VERSION_1_1:
+        versions.Set("HYP_VULKAN_1_1");
+        break;
+    case VK_API_VERSION_1_2:
+        versions.Set("HYP_VULKAN_1_2");
+        break;
+#ifdef VK_API_VERSION_1_3
+    case VK_API_VERSION_1_3:
+        versions.Set("HYP_VULKAN_1_3");
+        break;
+#endif
+    default:
+        break;
+    }
+#elif defined(HYP_DX12) && HYP_DX12
+    versions.Set("DX12");
+#endif
+}
+
+void ShaderCompiler::ParseDefinitionSection(
+    const DefinitionsFile::Section &section,
+    ShaderCompiler::Bundle &bundle
+)
+{
+    for (const auto &section_it : section) {
+        if (section_it.first == "permute") {
+            // set each property
+            for (const auto &element : section_it.second.elements) {
+                bundle.versions.Set(element, true);
+            }
+        } else if (shader_type_names.Contains(section_it.first)) {
+            bundle.sources[shader_type_names.At(section_it.first)] = SourceFile {
+                m_engine->GetAssetManager().GetBasePath() / "vkshaders" / section_it.second.GetValue()
+            };
+        } else {
+            DebugLog(
+                LogType::Warn,
+                "Unknown property in shader definition file: %s\n",
+                section_it.first.Data()
+            );
+        }
+    }
+}
+
+bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
+    const String &name,
+    const ShaderProps &additional_versions,
+    CompiledShaderBatch &out
+)
 {
     if (!CanCompileShaders()) {
-        return false;
+        DebugLog(
+            LogType::Warn,
+            "Not compiled with GLSL compiler support... Shaders may become out of date.\n"
+            "If any .hypshader files are missing, you may need to recompile the engine with glslang linked, "
+            "so that they can be generated.\n"
+        );
     }
 
     if (!m_definitions || !m_definitions->IsValid()) {
@@ -361,10 +439,6 @@ bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
         if (!LoadShaderDefinitions()) {
             return false;
         }
-
-        CompiledShaderBatch tmp;
-
-        return m_cache.Get(name, tmp);
     }
 
     if (!m_definitions->HasSection(name)) {
@@ -378,46 +452,189 @@ bool ShaderCompiler::ReloadCompiledShaderBatch(const String &name)
         return false;
     }
 
+    Bundle bundle { .name = name };
+    GetDefaultVersions(bundle.versions);
+
     const auto &section = m_definitions->GetSection(name);
 
-    Bundle bundle {
-        .name = name
-    };
+    ParseDefinitionSection(section, bundle);
 
-    for (const auto &section_it : section) {
-        if (section_it.first == "permute") {
-            // set each property
-            for (const auto &element : section_it.second.elements) {
-                bundle.props.Set(element, true);
-            }
-        } else if (shader_type_names.Contains(section_it.first)) {
-            bundle.sources[shader_type_names.At(section_it.first)] = SourceFile {
-                FilePath("res/vkshaders") / section_it.second.GetValue()
-            };
-        } else {
-            DebugLog(
-                LogType::Warn,
-                "Unknown property in shader definition file: %s\n",
-                section_it.first.Data()
-            );
+    DynArray<String> added_versions;
+
+    for (const auto &item : additional_versions) {
+        if (!bundle.versions.Get(item)) {
+            bundle.versions.Set(item, true);
+
+            added_versions.PushBack(item);
         }
     }
 
-    return CompileBundle(bundle);
+    if (added_versions.Any()) {
+        String added_versions_string;
+
+        for (SizeType index = 0; index < added_versions.Size(); index++) {
+            added_versions_string += added_versions[index];
+
+            if (index != added_versions.Size() - 1) {
+                added_versions_string += ", ";
+            }
+        }
+
+        // dynamically add the file
+        DebugLog(
+            LogType::Warn,
+            "Dynamic shader compilation for shader %s. Consider adding the following keys to the shader definition file:\n\t%s\n",
+            name.Data(),
+            added_versions_string.Data()
+        );
+    }
+
+    
+    const auto output_file_path = m_engine->GetAssetManager().GetBasePath() / "data/compiled_shaders" / name + ".hypshader";
+    const auto version_hash = bundle.versions.GetHashCode();
+
+    // read file if it already exists.
+    fbom::FBOMReader reader(m_engine, fbom::FBOMConfig { });
+    fbom::FBOMDeserializedObject deserialized;
+
+    DebugLog(
+        LogType::Info,
+        "Attempting load of compiled shader %s...\n",
+        output_file_path.Data()
+    );
+
+    if (auto err = reader.LoadFromFile(output_file_path, deserialized)) {
+        DebugLog(
+            LogType::Error,
+            "Failed to load compiled shader file: %s\n\tMessage: %s\n",
+            output_file_path.Data(),
+            err.message
+        );
+
+        return CompileBundle(bundle, out);
+    }
+ 
+    if (auto compiled_shader_batch = deserialized.Get<CompiledShaderBatch>()) {
+        // Check that each version specified is present in the CompiledShaderBatch.
+        // OR any src files have been changed since the object file was compiled.
+        // if not, we need to recompile those versions.
+
+        // TODO: Each individual item should have a timestamp internally set
+        const UInt64 object_file_last_modified = output_file_path.LastModifiedTimestamp();
+
+        UInt64 max_source_file_last_modified = 0;
+
+        for (auto &source_file : bundle.sources) {
+            max_source_file_last_modified = MathUtil::Max(max_source_file_last_modified, FilePath(source_file.second.path).LastModifiedTimestamp());
+        }
+
+        if (max_source_file_last_modified >= object_file_last_modified) {
+            DebugLog(
+                LogType::Info,
+                "Source file in batch %s has been modified since the batch was last compiled, recompiling...\n",
+                name.Data()
+            );
+
+            return CompileBundle(bundle, out);
+        }
+
+        // compile each..
+        DynArray<String> versions;
+        versions.Reserve(bundle.versions.Size());
+
+        for (auto &item : bundle.versions) {
+            versions.PushBack(item);
+        }
+
+        DynArray<String> missing_versions;
+
+        // now check that each combination is already in the bundle
+        ForEachPermutation(versions, [&](const DynArray<String> &items) {
+            // get hashcode of this set of properties
+            UInt64 version_hash = items.GetHashCode().Value();
+
+            auto it = compiled_shader_batch->compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
+                return item.version_hash == version_hash;
+            });
+
+            if (it == compiled_shader_batch->compiled_shaders.End()) {
+                String missing_versions_string = "[";
+
+                for (SizeType index = 0; index < items.Size(); index++) {
+                    missing_versions_string += items[index];
+
+                    if (index == missing_versions.Size() - 1) {
+                        missing_versions_string += ", ";
+                    }
+                }
+
+                missing_versions_string += "]";
+
+                missing_versions.PushBack(std::move(missing_versions_string));
+            }
+        });
+
+        if (missing_versions.Any()) {
+            String missing_versions_string;
+
+            for (SizeType index = 0; index < missing_versions.Size(); index++) {
+                missing_versions_string += missing_versions[index];
+
+                if (index == missing_versions.Size() - 1) {
+                    missing_versions_string += ", ";
+                }
+            }
+
+            DebugLog(
+                LogType::Info,
+                "Compiled shader is missing versions. Attempting to compile the missing versions.\n\tVersions: [%s]\n",
+                missing_versions_string.Data()
+            );
+
+            return CompileBundle(bundle, out);
+        }
+
+        out = *compiled_shader_batch;
+
+        return true;
+    }
+
+    DebugLog(
+        LogType::Error,
+        "Failed to load the compiled shader %s, and it could not be recompiled.\n",
+        name.Data()
+    );
+
+    return false;
 }
 
 bool ShaderCompiler::LoadShaderDefinitions()
 {
+    const FilePath data_path = m_engine->GetAssetManager().GetBasePath() / "data/compiled_shaders";
+
+    if (!data_path.Exists()) {
+        if (FileSystem::Mkdir(data_path.Data()) != 0) {
+            DebugLog(
+                LogType::Error,
+                "Failed to create data path at %s\n",
+                data_path.Data()
+            );
+
+            return false;
+        }
+    }
+
     if (m_definitions) {
         delete m_definitions;
     }
 
-    m_definitions = new DefinitionsFile(FilePath("res/shaders.def"));
+    m_definitions = new DefinitionsFile(m_engine->GetAssetManager().GetBasePath() / "shaders.def");
 
     if (!m_definitions->IsValid()) {
         DebugLog(
             LogType::Warn,
-            "Failed to load shader definitions file!\n"
+            "Failed to load shader definitions file at path: %s\n",
+            m_definitions->GetFilePath().Data()
         );
 
         delete m_definitions;
@@ -433,36 +650,17 @@ bool ShaderCompiler::LoadShaderDefinitions()
         const auto &key = it.first;
         auto &section = it.second;
 
-        Bundle bundle {
-            .name = key
-        };
+        Bundle bundle { .name = key };
 
-        for (const auto &section_it : section) {
-            if (section_it.first == "permute") {
-                // set each property
-                for (const auto &element : section_it.second.elements) {
-                    bundle.props.Set(element, true);
-                }
-            } else if (shader_type_names.Contains(section_it.first)) {
-                bundle.sources[shader_type_names.At(section_it.first)] = SourceFile {
-                    FilePath("res/vkshaders") / section_it.second.GetValue()
-                };
-            } else {
-                DebugLog(
-                    LogType::Warn,
-                    "Unknown property in shader definition file: %s\n",
-                    section_it.first.Data()
-                );
-            }
-        }
+        ParseDefinitionSection(section, bundle);
 
         bundles.PushBack(std::move(bundle));
     }
 
     const bool supports_rt_shaders = m_engine->GetConfig().Get(CONFIG_RT_SUPPORTED);
 
-    DynArray<bool> results;
-    results.Resize(bundles.Size());
+    FlatMap<Bundle *, bool> results;
+    //results.Resize(bundles.Size());
 
     for (SizeType index = 0; index < bundles.Size(); index++) {
         auto &bundle = bundles[index];
@@ -474,21 +672,27 @@ bool ShaderCompiler::LoadShaderDefinitions()
                 bundle.name.Data()
             );
 
-            results[index] = true;
-
             continue;
         }
 
-        if (GetCompiledShader(bundle.name, bundle.props)) {
-            // compiled shader already exists with props, no need to recompile.
-            // will be set in cache.
-            
-            results[index] = true;
-        }
+        CompiledShader compiled_shader;
+
+        results[&bundle] = GetCompiledShader(bundle.name, bundle.versions, compiled_shader);
     }
 
-    return results.Every([](bool value) {
-        return value;
+    return results.Every([](const KeyValuePair<Bundle *, bool> &it) {
+        if (!it.second) {
+            String permutation_string;
+
+            DebugLog(
+                LogType::Error,
+                "%s: Loading of compiled shader failed with version hash %llu\n",
+                it.first->name.Data(),
+                it.first->versions.GetHashCode().Value()
+            );
+        }
+
+        return it.second;
     });
 
     // bundles.ParallelForEach(
@@ -506,10 +710,10 @@ struct LoadedSourceFile
     UInt64 last_modified_timestamp;
     String original_source;
 
-    FilePath GetOutputFilepath(HashCode props_hash_code) const
+    FilePath GetOutputFilepath(const FilePath &base_path, HashCode version_hash) const
     {
-        return FilePath::Current() / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
-            + "_" + String::ToString(props_hash_code.Value()) + ".shc");
+        return base_path / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
+            + "_" + String::ToString(version_hash.Value()) + ".shc");
     }
 
     HashCode GetHashCode() const
@@ -526,6 +730,10 @@ struct LoadedSourceFile
 
 bool ShaderCompiler::CanCompileShaders() const
 {
+    if (!m_engine->GetConfig().Get(CONFIG_SHADER_COMPILATION)) {
+        return false;
+    }
+
 #ifdef HYP_GLSLANG
     return true;
 #else
@@ -533,16 +741,20 @@ bool ShaderCompiler::CanCompileShaders() const
 #endif
 }
 
-bool ShaderCompiler::CompileBundle(const Bundle &bundle)
+bool ShaderCompiler::CompileBundle(const Bundle &bundle, CompiledShaderBatch &out)
 {
+    if (!CanCompileShaders()) {
+        return false;
+    }
+
     // run with spirv-cross
-    FileSystem::Mkdir("data/compiled_shaders/tmp");
+    FileSystem::Mkdir((m_engine->GetAssetManager().GetBasePath() / "data/compiled_shaders/tmp").Data());
 
     DynArray<LoadedSourceFile> loaded_source_files;
     loaded_source_files.Reserve(bundle.sources.Size());
 
     for (auto &it : bundle.sources) {
-        const auto filepath = FilePath::Join(FilePath::Current().Data(), it.second.path.Data());
+        const FilePath filepath = it.second.path;
         auto source_stream = filepath.Open();
 
         if (!source_stream.IsOpen()) {
@@ -566,7 +778,7 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
         });
     }
 
-    const SizeType num_permutations = 1ull << bundle.props.Size();
+    const SizeType num_permutations = 1ull << bundle.versions.Size();
     SizeType num_compiled_permutations = 0;
 
     if (num_permutations >= 64) {
@@ -581,14 +793,12 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
     }
 
     // compile each..
-    DynArray<String> props;
-    props.Reserve(bundle.props.Size());
+    DynArray<String> versions;
+    versions.Reserve(bundle.versions.Size());
 
-    for (auto &item : bundle.props) {
-        props.PushBack(item);
+    for (auto &item : bundle.versions) {
+        versions.PushBack(item);
     }
-
-    CompiledShaderBatch compiled_shader_batch;
 
     DebugLog(
         LogType::Info,
@@ -598,12 +808,12 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
     );
 
     // compile shader with each permutation of properties
-    ForEachPermutation(props, [&loaded_source_files, &compiled_shader_batch, &num_compiled_permutations](const DynArray<String> &items) {
+    ForEachPermutation(versions, [&](const DynArray<String> &version_strings) {
         // get hashcode of this set of properties
-        HashCode props_hash_code = items.GetHashCode();
+        HashCode version_hash = version_strings.GetHashCode();
 
         CompiledShader compiled_shader {
-            .props_hash = props_hash_code.Value()
+            .version_hash = version_hash.Value()
         };
 
         bool any_files_compiled = false;
@@ -611,7 +821,10 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
         for (const auto &item : loaded_source_files) {
             // check if a file exists w/ same hash
             
-            const auto output_filepath = item.GetOutputFilepath(props_hash_code);
+            const auto output_filepath = item.GetOutputFilepath(
+                m_engine->GetAssetManager().GetBasePath(),
+                version_hash
+            );
 
             if (output_filepath.Exists()) {
                 // file exists and is older than the original source file; no need to build
@@ -638,10 +851,10 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
 
             String permutation_string;
 
-            for (SizeType index = 0; index < items.Size(); index++) {
-                permutation_string += items[index];
+            for (SizeType index = 0; index < version_strings.Size(); index++) {
+                permutation_string += version_strings[index];
 
-                if (index != items.Size() - 1) {
+                if (index != version_strings.Size() - 1) {
                     permutation_string += ", ";
                 }
             }
@@ -653,69 +866,62 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
                 permutation_string.Data()
             );
 
-            {
-                DynArray<String> error_messages;
+            ByteBuffer byte_buffer;
 
-                // set directory to the directory of the shader
-                FileSystem::PushDirectory(FilePath(item.file.path).BasePath());
-                ByteBuffer spirv_bytes = CompileToSPIRV(item.type, item.original_source.Data(), item.file.path.Data(), error_messages);
-                FileSystem::PopDirectory();
+            DynArray<String> error_messages;
 
-                if (spirv_bytes.Empty()) {
-                    DebugLog(
-                        LogType::Error,
-                        "Failed to compile file %s with props hash %u!\n!",
-                        item.file.path.Data(),
-                        props_hash_code.Value()
-                    );
+            // set directory to the directory of the shader
+            const auto dir = m_engine->GetAssetManager().GetBasePath() / FilePath::Relative(FilePath(item.file.path).BasePath(), m_engine->GetAssetManager().GetBasePath());
 
-                    compiled_shader_batch.error_messages.Concat(std::move(error_messages));
+            FileSystem::PushDirectory(dir);
+            byte_buffer = CompileToSPIRV(item.type, item.original_source.Data(), item.file.path.Data(), version_strings, error_messages);
+            FileSystem::PopDirectory();
 
-                    return;
-                }
-
-                // write the spirv to the output file
-                FileByteWriter spirv_writer(output_filepath.Data());
-
-                if (!spirv_writer.IsOpen()) {
-                    DebugLog(
-                        LogType::Error,
-                        "Could not open file %s for writing!\n",
-                        output_filepath.Data()
-                    );
-
-                    return;
-                }
-
-                spirv_writer.Write(spirv_bytes.Data(), spirv_bytes.Size());
-                spirv_writer.Close();
-            }
-
-            any_files_compiled = true;
-
-            if (auto stream = output_filepath.Open()) {
-                compiled_shader.modules[item.type] = stream.ReadBytes();
-            } else {
+            if (byte_buffer.Empty()) {
                 DebugLog(
                     LogType::Error,
-                    "Failed to open compiled shader binary at %s!\n",
+                    "Failed to compile file %s with version hash %u!\n!",
+                    item.file.path.Data(),
+                    version_hash.Value()
+                );
+
+                out.error_messages.Concat(std::move(error_messages));
+
+                return;
+            }
+
+            // write the spirv to the output file
+            FileByteWriter spirv_writer(output_filepath.Data());
+
+            if (!spirv_writer.IsOpen()) {
+                DebugLog(
+                    LogType::Error,
+                    "Could not open file %s for writing!\n",
                     output_filepath.Data()
                 );
 
                 return;
             }
+
+            spirv_writer.Write(byte_buffer.Data(), byte_buffer.Size());
+            spirv_writer.Close();
+
+            any_files_compiled = true;
+
+            compiled_shader.modules[item.type] = byte_buffer;
         }
 
         num_compiled_permutations += static_cast<UInt>(any_files_compiled);
-        compiled_shader_batch.compiled_shaders.PushBack(std::move(compiled_shader));
+        out.compiled_shaders.PushBack(std::move(compiled_shader));
     });
 
-    const FilePath final_output_path = FilePath("data/compiled_shaders") / bundle.name + ".hypshader";
+    const FilePath final_output_path = m_engine->GetAssetManager().GetBasePath() / "data/compiled_shaders" / bundle.name + ".hypshader";
 
     FileByteWriter byte_writer(final_output_path.Data());
 
     fbom::FBOMWriter writer;
-    writer.Append(compiled_shader_batch);
+    writer.Append(out);
+
     auto err = writer.Emit(&byte_writer);
     byte_writer.Close();
 
@@ -723,15 +929,17 @@ bool ShaderCompiler::CompileBundle(const Bundle &bundle)
         return false;
     }
 
-    m_cache.Set(bundle.name, std::move(compiled_shader_batch));
+    m_cache.Set(bundle.name, out);
 
-    DebugLog(
-        LogType::Info,
-        "Compiled %llu new variants for shader %s to: %s\n",
-        num_compiled_permutations,
-        bundle.name.Data(),
-        final_output_path.Data()
-    );
+    if (num_compiled_permutations != 0) {
+        DebugLog(
+            LogType::Info,
+            "Compiled %llu new variants for shader %s to: %s\n",
+            num_compiled_permutations,
+            bundle.name.Data(),
+            final_output_path.Data()
+        );
+    }
 
     return true;
 }
@@ -745,64 +953,50 @@ CompiledShader ShaderCompiler::GetCompiledShader(
 
 CompiledShader ShaderCompiler::GetCompiledShader(
     const String &name,
-    const ShaderProps &props
+    const ShaderProps &versions
 )
 {
-    CompiledShader result;
+    CompiledShader compiled_shader;
+    GetCompiledShader(name, versions, compiled_shader);
 
-    if (CanCompileShaders()) {
-        if (!ReloadCompiledShaderBatch(name)) {
-            DebugLog(
-                LogType::Error,
-                "Failed to attempt reloading of shader batch\n"
-            );
+    return compiled_shader;
+}
 
-            return result;
-        }
-    } else {
+bool ShaderCompiler::GetCompiledShader(
+    const String &name,
+    const ShaderProps &versions,
+    CompiledShader &out
+)
+{
+    const auto version_hash = versions.GetHashCode();
+    
+    if (m_cache.GetShaderInstance(name, version_hash.Value(), out)) {
+        return true;
+    }
+
+    CompiledShaderBatch batch;
+    if (!LoadOrCreateCompiledShaderBatch(name, versions, batch)) {
         DebugLog(
-            LogType::Warn,
-            "Not compiled with GLSL compiler support... Shaders may become out of date.\n"
-            "If any .hypshader files are missing, you may need to recompile the engine with glslang linked, "
-            "so that they can be generated.\n"
+            LogType::Error,
+            "Failed to attempt loading of shader batch\n"
         );
+
+        return false;
     }
 
-    const auto output_file_path = FilePath("data/compiled_shaders") / name + ".hypshader";
+    // set in cache so we can use it later
+    m_cache.Set(name, batch);
 
-    const auto props_hash_code = props.GetHashCode();
-    
-    if (m_cache.GetShaderInstance(name, props_hash_code.Value(), result)) {
-        return result;
-    }
+    auto it = batch.compiled_shaders.FindIf([version_hash](const CompiledShader &compiled_shader) {
+        return compiled_shader.version_hash == version_hash.Value();
+    });
 
-    fbom::FBOMReader reader(m_engine, fbom::FBOMConfig { });
-    fbom::FBOMDeserializedObject deserialized;
+    // what?
+    AssertThrow(it != batch.compiled_shaders.End());
 
-    DebugLog(
-        LogType::Info,
-        "Loading compiled shader %s...\n",
-        output_file_path.Data()
-    );
+    out = *it;
 
-    if (auto err = reader.LoadFromFile(output_file_path, deserialized)) {
-        return result;
-    }
-    
-    if (auto compiled_shader_batch = deserialized.Get<CompiledShaderBatch>()) {
-        // set in cache so we can use it later
-        m_cache.Set(name, *compiled_shader_batch);
-
-        auto it = compiled_shader_batch->compiled_shaders.FindIf([props_hash_code](const CompiledShader &compiled_shader) {
-            return compiled_shader.props_hash == props_hash_code.Value();
-        });
-
-        if (it != compiled_shader_batch->compiled_shaders.End()) {
-            result = *it;
-        }
-    }
-
-    return result;
+    return true;
 }
 
 } // namespace hyperion::v2

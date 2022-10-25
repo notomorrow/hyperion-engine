@@ -16,19 +16,11 @@ struct ShaderObject
 {
     ByteBuffer bytes;
 
-    struct Metadata
-    {
-        std::string name;
-        std::string path;
-    } metadata;
-
     HashCode GetHashCode() const
     {
         HashCode hc;
 
         hc.Add(bytes);
-        hc.Add(metadata.name);
-        hc.Add(metadata.path);
 
         return hc;
     }

@@ -281,10 +281,8 @@ paket-files/
 /res/models/san-miguel
 /res/models/bistro
 
-data/**/tmp/**/*
-data/dump/**/*
-
-*.fbom
+res/data/**/tmp/**/*
+res/data/dump/**/*
 
 project/**/*
 xcode_project/**/*
