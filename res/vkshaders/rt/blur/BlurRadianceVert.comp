@@ -2,6 +2,5 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-
 #define HYP_RADIANCE_BLUR_VERTICAL
 #include "BlurRadiance.glsl"
