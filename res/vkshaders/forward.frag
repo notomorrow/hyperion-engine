@@ -1,9 +1,9 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
-#extension GL_EXT_samplerless_texture_functions : enable
+#extension GL_ARB_separate_shader_objects : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_samplerless_texture_functions : require
 
 #include "include/defines.inc"
 
@@ -14,12 +14,14 @@ layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
-layout(location=12) in vec3 v_ndc_position;
+layout(location=11) in vec4 v_position_ndc;
+layout(location=12) in vec4 v_previous_position_ndc;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
+layout(location=4) out vec2 gbuffer_velocity;
 
 
 #define PARALLAX_ENABLED 1
@@ -113,4 +115,5 @@ void main()
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
+    gbuffer_velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 }

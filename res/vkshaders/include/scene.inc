@@ -4,6 +4,7 @@ struct Scene
 {
     mat4 view;
     mat4 projection;
+    mat4 previous_view_projection;
 
     vec4 camera_position;
     vec4 camera_direction;
@@ -26,6 +27,10 @@ struct Scene
     uint frame_counter;
     uint num_lights;
     uint enabled_render_components_mask;
+
+    mat4 _pad1;
+    mat4 _pad2;
+    mat4 _pad3;
 };
 
 struct Light

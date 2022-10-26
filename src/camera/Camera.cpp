@@ -104,6 +104,10 @@ void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &pro
 
 void Camera::UpdateViewProjectionMatrix()
 {
+    m_previous_view_proj_matrix = (m_previous_view_proj_matrix == Matrix4::identity)
+        ? m_view_proj_mat
+        : m_proj_mat * m_view_mat;
+
     m_view_proj_mat = m_proj_mat * m_view_mat;
 
     m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
@@ -159,6 +163,7 @@ void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
     EnqueueDrawProxyUpdate(engine, CameraDrawProxy {
         .view = m_view_mat,
         .projection = m_proj_mat,
+        .previous_view_projection = m_previous_view_proj_matrix,
         .position = m_translation,
         .direction = m_direction,
         .up = m_up,

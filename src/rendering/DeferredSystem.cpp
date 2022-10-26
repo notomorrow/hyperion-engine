@@ -4,11 +4,12 @@
 namespace hyperion::v2 {
 
 const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_resources = {
-    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR) },   // color
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR) }, // color
     GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_NORMALS) }, // normal
-    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT) }, // material
-    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_GBUFFER_8BIT) }, // tangent
-    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_DEPTH) }   // depth
+    GBufferResource { GBufferFormat(InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8) }, // material
+    GBufferResource { GBufferFormat(InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8) }, // tangent
+    GBufferResource { GBufferFormat(InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F) }, // velocity
+    GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_DEPTH) } // depth
 };
 
 DeferredSystem::DeferredSystem()

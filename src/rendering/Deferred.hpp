@@ -81,6 +81,12 @@ public:
     PostProcessing &GetPostProcessing() { return m_post_processing; }
     const PostProcessing &GetPostProcessing() const  { return m_post_processing; }
 
+    DepthPyramidRenderer &GetDepthPyramidRenderer() { return m_dpr; }
+    const DepthPyramidRenderer &GetDepthPyramidRenderer() const { return m_dpr; }
+
+    MotionVectors &GetMotionVectors() { return m_motion_vectors; }
+    const MotionVectors &GetMotionVectors() const { return m_motion_vectors; }
+
     void Create(Engine *engine);
     void Destroy(Engine *engine);
     void Render(

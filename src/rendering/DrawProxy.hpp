@@ -92,6 +92,7 @@ struct DrawProxy<STUB_CLASS(Camera)>
 {
     Matrix4 view;
     Matrix4 projection;
+    Matrix4 previous_view_projection;
     Vector3 position;
     Vector3 direction;
     Vector3 up;

@@ -7,6 +7,8 @@
 
 namespace hyperion {
 
+const Matrix4 Matrix4::identity = Matrix4::Identity();
+
 Matrix4 Matrix4::Translation(const Vector3 &translation)
 {
     Matrix4 mat;

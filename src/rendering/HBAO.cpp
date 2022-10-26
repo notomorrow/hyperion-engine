@@ -138,21 +138,29 @@ void HBAO::CreateDescriptorSets(Engine *engine)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
 
+        // motion vectors
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(3)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                    .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
+            });
+
         // nearest sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(3)
+        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(4)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
             });
 
         // linear sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(4)
+        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(5)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
             });
 
-        descriptor_set->GetOrAddDescriptor<DynamicStorageBufferDescriptor>(5)
+        descriptor_set->GetOrAddDescriptor<DynamicStorageBufferDescriptor>(6)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
@@ -160,14 +168,14 @@ void HBAO::CreateDescriptorSets(Engine *engine)
             });
 
         // output image
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(6)
+        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(7)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[frame_index].image_view
             });
 
         // prev image
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(7)
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(8)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
