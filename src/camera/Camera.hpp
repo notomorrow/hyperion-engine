@@ -164,6 +164,7 @@ private:
     void UpdateCommandQueue(GameCounter::TickUnit dt);
 
     Matrix4 m_view_proj_mat;
+    Matrix4 m_previous_view_proj_matrix;
 
     std::mutex m_command_queue_mutex;
     std::atomic_uint m_command_queue_count;

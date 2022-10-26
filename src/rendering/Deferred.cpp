@@ -214,8 +214,8 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_dpr.Create(engine, depth_attachment_ref);
     m_ssr.Create(engine);
-    m_hbao.Create(engine);
     m_motion_vectors.Create(engine);
+    m_hbao.Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_results[i] = engine->CreateHandle<Texture>(
@@ -470,10 +470,6 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_hbao.Destroy(engine);
     m_motion_vectors.Destroy(engine);
 
-    //if (engine->GetConfig().Get(CONFIG_RT_SUPPORTED)) {
-    //    m_rt_radiance.Destroy(engine);
-    //}
-
     m_post_processing.Destroy(engine);
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -564,7 +560,7 @@ void DeferredRenderer::Render(
     }
     // end opaque objs
 
-    m_motion_vectors.Render(engine, frame);
+    // m_motion_vectors.Render(engine, frame);
     m_hbao.Render(engine, frame);
     
     m_post_processing.RenderPre(engine, frame);

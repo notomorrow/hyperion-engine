@@ -291,8 +291,8 @@ private:
 
     ControllerSet m_controllers;
 
-    Octree *m_octree { nullptr };
-    bool m_needs_octree_update { false };
+    Octree *m_octree = nullptr;
+    bool m_needs_octree_update = false;
     VisibilityState m_visibility_state;
 
     struct {
@@ -305,6 +305,8 @@ private:
      */
     FlatSet<RendererInstance *> m_renderer_instances;
     std::mutex m_render_instances_mutex;
+
+    Matrix4 m_previous_transform_matrix;
 
     mutable ShaderDataState m_shader_data_state;
 };

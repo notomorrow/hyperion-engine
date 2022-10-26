@@ -61,25 +61,20 @@ static_assert(sizeof(SkeletonShaderData) % 256 == 0);
 
 struct alignas(256) ObjectShaderData
 {
-    // 0
-    Matrix4 model_matrix;
+    ShaderMat4 model_matrix;
+    ShaderMat4 previous_model_matrix;
 
-    // 64
-    Vector4 local_aabb_max;
-    // 80
-    Vector4 local_aabb_min;
-    // 96
-    Vector4 world_aabb_max;
-    // 112
-    Vector4 world_aabb_min;
+    ShaderVec4<Float32> local_aabb_max;
+    ShaderVec4<Float32> local_aabb_min;
+    ShaderVec4<Float32> world_aabb_max;
+    ShaderVec4<Float32> world_aabb_min;
 
-    // 128
     UInt32 entity_id;
     UInt32 scene_id;
     UInt32 mesh_id;
     UInt32 material_id;
-    UInt32 skeleton_id;
 
+    UInt32 skeleton_id;
     UInt32 bucket;
 };
 
@@ -111,10 +106,9 @@ static_assert(sizeof(MaterialShaderData) == 128);
 
 struct alignas(256) SceneShaderData
 {
-    static constexpr UInt32 max_environment_textures = 1;
-
     Matrix4 view;
     Matrix4 projection;
+    Matrix4 previous_view_projection;
 
     ShaderVec4<Float32> camera_position;
     ShaderVec4<Float32> camera_direction;
@@ -139,7 +133,7 @@ struct alignas(256) SceneShaderData
     UInt32 enabled_render_components_mask;
 };
 
-static_assert(sizeof(SceneShaderData) == 256);
+static_assert(sizeof(SceneShaderData) == 512);
 
 struct alignas(16) ShadowShaderData
 {

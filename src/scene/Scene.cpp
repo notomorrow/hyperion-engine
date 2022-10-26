@@ -717,6 +717,7 @@ void Scene::EnqueueRenderUpdates()
         if (m_camera) {
             shader_data.view = m_camera->GetDrawProxy().view;
             shader_data.projection = m_camera->GetDrawProxy().projection;
+            shader_data.previous_view_projection = m_camera->GetDrawProxy().previous_view_projection;
             shader_data.camera_position = m_camera->GetDrawProxy().position.ToVector4();
             shader_data.camera_direction = m_camera->GetDrawProxy().direction.ToVector4();
             shader_data.camera_up = m_camera->GetDrawProxy().up.ToVector4();

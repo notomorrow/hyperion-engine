@@ -296,7 +296,7 @@ void Engine::Initialize()
         HYP_BREAKPOINT;
     }
 
-    shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
+    shader_globals = new ShaderGlobals(max_frames_in_flight);
     shader_globals->Create(this);
 
     m_placeholder_data.Create(this);

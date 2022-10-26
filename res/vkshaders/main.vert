@@ -11,7 +11,8 @@ layout(location=4) out vec3 v_tangent;
 layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
-layout(location=12) out vec3 v_ndc_position;
+layout(location=11) out vec4 v_position_ndc;
+layout(location=12) out vec4 v_previous_position_ndc;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -55,6 +56,7 @@ mat4 CreateSkinningMatrix()
 
 void main() {
     vec4 position;
+    vec4 previous_position;
     mat4 normal_matrix;
     
 #if HYP_ENABLE_SKINNING
@@ -62,32 +64,27 @@ void main() {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
+        previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
     } else {
 #endif
         position = object.model_matrix * vec4(a_position, 1.0);
+        previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
 #if HYP_ENABLE_SKINNING
     }
 #endif
 
-    v_position = position.xyz;
+    v_position = position.xyz / position.w;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_camera_position = scene.camera_position.xyz;
-    
     v_tangent = (normal_matrix * vec4(a_tangent, 0.0)).xyz;
 	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
-    
-    vec4 ndc = scene.projection * scene.view * position;
-    ndc /= ndc.w;
-    v_ndc_position = ndc.xyz;
 
-    // v_fragment_position = (scene.projection * scene.view * position).xyz;
-    // v_fragment_position.xy *= vec2(0.5);
-    // v_fragment_position.xy += vec2(0.5);
+    v_position_ndc = scene.projection * scene.view * position;
+    v_previous_position_ndc = scene.previous_view_projection * previous_position;
 
-    gl_Position = scene.projection * scene.view * position;
-
+    gl_Position = v_position_ndc;
 } 
