@@ -2,25 +2,20 @@
 
 struct Object
 {
-    // 0
     mat4 model_matrix;
+    mat4 previous_model_matrix;
     
-    // 64
     vec4 local_aabb_max;
-    // 80
     vec4 local_aabb_min;
-    // 96
     vec4 world_aabb_max;
-    // 112
     vec4 world_aabb_min;
 
-    // 128
     uint entity_id;
     uint scene_id;
     uint mesh_id;
     uint material_id;
-    uint skeleton_id;
 
+    uint skeleton_id;
     uint bucket;
 };
 

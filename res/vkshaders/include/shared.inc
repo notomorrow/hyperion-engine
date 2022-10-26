@@ -152,7 +152,6 @@ vec4 ReconstructViewSpacePositionFromDepth(mat4 inverse_projection, vec2 coord, 
 
     vec4 inversed = inverse_projection * ndc;
     inversed /= inversed.w;
-    inversed.w = 1.0;
 
     return inversed;
 }
