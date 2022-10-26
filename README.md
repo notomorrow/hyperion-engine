@@ -11,7 +11,7 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 * Highly multi-threaded
      * Async task system
      * Async asset loading
-     * Parallel command list rendering
+     * Parallel command list recording
 * Physically based rendering
      * With physically based camera effects (aperture, exposure etc.)
 * Post processing
@@ -24,6 +24,10 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 * Raytracing - Reflections, Global Illumination (DDGI)
 * Procedural, paged terrain generation
 * Serialization / deserialization system
+* Shader compilation and caching system
+     * Integrates with glslang
+     * Generates separate shader versions with separate functionalities,
+       so you can select one on the fly with the functionality you need, and it will already be compiled and ready to go.
 * Skeletal animation
 * Scene graph + octree
 * GPU occlusion culling
