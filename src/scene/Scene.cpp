@@ -16,6 +16,7 @@ Scene::Scene(
     Handle<Camera> &&camera,
     const InitInfo &info
 ) : EngineComponentBase(info),
+    HasDrawProxy(),
     m_camera(std::move(camera)),
     m_root_node_proxy(new Node("root")),
     m_environment(new RenderEnvironment(this)),
@@ -705,30 +706,33 @@ void Scene::EnqueueRenderUpdates()
     };
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
-        SceneShaderData shader_data {
-            .aabb_max = params.aabb.max.ToVector4(),
-            .aabb_min = params.aabb.min.ToVector4(),
-            .global_timer = params.global_timer,
-            .frame_counter = params.frame_counter,
-            .num_lights = params.num_lights,
-            .enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask()
-        };
+        m_draw_proxy.frame_counter = params.frame_counter;
 
         if (m_camera) {
-            shader_data.view = m_camera->GetDrawProxy().view;
-            shader_data.projection = m_camera->GetDrawProxy().projection;
-            shader_data.previous_view_projection = m_camera->GetDrawProxy().previous_view_projection;
-            shader_data.camera_position = m_camera->GetDrawProxy().position.ToVector4();
-            shader_data.camera_direction = m_camera->GetDrawProxy().direction.ToVector4();
-            shader_data.camera_up = m_camera->GetDrawProxy().up.ToVector4();
-            shader_data.camera_near = m_camera->GetDrawProxy().clip_near;
-            shader_data.camera_fov = m_camera->GetDrawProxy().fov;
-            shader_data.camera_far = m_camera->GetDrawProxy().clip_far;
-            shader_data.resolution_x = m_camera->GetDrawProxy().dimensions.width;
-            shader_data.resolution_y = m_camera->GetDrawProxy().dimensions.height;
+            m_draw_proxy.camera = m_camera->GetDrawProxy();
+        } else {
+            m_draw_proxy.camera = { };
         }
-
+        
+        SceneShaderData shader_data { };
+        shader_data.view = m_draw_proxy.camera.view;
+        shader_data.projection = m_draw_proxy.camera.projection;
+        shader_data.previous_view_projection = m_draw_proxy.camera.previous_view_projection;
+        shader_data.camera_position = m_draw_proxy.camera.position.ToVector4();
+        shader_data.camera_direction = m_draw_proxy.camera.direction.ToVector4();
+        shader_data.camera_up = m_draw_proxy.camera.up.ToVector4();
+        shader_data.camera_near = m_draw_proxy.camera.clip_near;
+        shader_data.camera_fov = m_draw_proxy.camera.fov;
+        shader_data.camera_far = m_draw_proxy.camera.clip_far;
+        shader_data.resolution_x = m_draw_proxy.camera.dimensions.width;
+        shader_data.resolution_y = m_draw_proxy.camera.dimensions.height;
         shader_data.environment_texture_usage = 0u;
+        shader_data.aabb_max = params.aabb.max.ToVector4();
+        shader_data.aabb_min = params.aabb.min.ToVector4();
+        shader_data.global_timer = params.global_timer;
+        shader_data.frame_counter = params.frame_counter;
+        shader_data.num_lights = params.num_lights;
+        shader_data.enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask();
 
         if (GetEngine()->render_state.env_probes.Any()) {//const auto *cubemap_renderer = m_environment->GetRenderComponent<CubemapRenderer>()) {
             // TODO: Make to be packed uvec2 containing indices (each are 1 byte)

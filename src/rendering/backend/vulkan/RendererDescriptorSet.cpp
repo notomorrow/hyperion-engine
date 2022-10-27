@@ -69,7 +69,10 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             // result from rt probes - irradiance
             {DescriptorKey::RT_IRRADIANCE_GRID,    47},
             // result from rt probes - depth
-            {DescriptorKey::RT_DEPTH_GRID,         48}
+            {DescriptorKey::RT_DEPTH_GRID,         48},
+
+            // result from temporal AA pass - temp, will be put into post fx chain
+            {DescriptorKey::TEMPORAL_AA_RESULT,    50}
         }
     },
     {
