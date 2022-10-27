@@ -1,14 +1,21 @@
-#ifndef HYPERION_V2_HBAO_HPP
-#define HYPERION_V2_HBAO_HPP
+#ifndef HYPERION_V2_TEMPORAL_AA_HPP
+#define HYPERION_V2_TEMPORAL_AA_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
 
-#include <rendering/rt/BlurRadiance.hpp>
+#include <math/Matrix4.hpp>
+
+#include <scene/Scene.hpp>
+
+#include <rendering/RenderState.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <rendering/Compute.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 
 namespace hyperion::v2 {
 
+using renderer::UniformBuffer;
 using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::Frame;
@@ -17,13 +24,13 @@ using renderer::Result;
 
 class Engine;
 
-class HBAO
+class TemporalAA
 {
 public:
-    HBAO(const Extent2D &extent);
-    HBAO(const HBAO &other) = delete;
-    HBAO &operator=(const HBAO &other) = delete;
-    ~HBAO();
+    TemporalAA(const Extent2D &extent);
+    TemporalAA(const TemporalAA &other) = delete;
+    TemporalAA &operator=(const TemporalAA &other) = delete;
+    ~TemporalAA();
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -35,9 +42,11 @@ public:
 
 private:
     void CreateImages(Engine *engine);
+    void CreateBuffers(Engine *engine);
     void CreateDescriptorSets(Engine *engine);
     void CreateComputePipelines(Engine *engine);
-    void CreateBlurrer(Engine *engine);
+
+    void BuildJitterMatrix(const SceneDrawProxy &scene);
     
     struct ImageOutput
     {
@@ -63,11 +72,12 @@ private:
     };
 
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
-
+    FixedArray<UniquePtr<UniformBuffer>, max_frames_in_flight> m_uniform_buffers;
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
 
-    Handle<ComputePipeline> m_compute_hbao;
-    BlurRadiance m_blurrer;
+    Matrix4 m_jitter_matrix;
+
+    Handle<ComputePipeline> m_compute_taa;
 };
 
 } // namespace hyperion::v2
