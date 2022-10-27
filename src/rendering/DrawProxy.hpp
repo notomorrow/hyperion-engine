@@ -41,6 +41,7 @@ class Material;
 class Engine;
 class Entity;
 class Camera;
+class Scene;
 class EnvProbe;
 class Light;
 
@@ -104,6 +105,15 @@ struct DrawProxy<STUB_CLASS(Camera)>
 };
 
 using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
+
+template <>
+struct DrawProxy<STUB_CLASS(Scene)>
+{
+    CameraDrawProxy camera;
+    UInt32 frame_counter;
+};
+
+using SceneDrawProxy = DrawProxy<STUB_CLASS(Scene)>;
 
 enum EnvProbeFlags : UInt32
 {

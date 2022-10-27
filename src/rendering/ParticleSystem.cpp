@@ -420,7 +420,7 @@ void ParticleSystem::UpdateParticles(Engine *engine, Frame *frame)
             renderer::ResourceState::INDIRECT_ARG
         );
 
-        if (!engine->render_state.GetScene().camera.frustum.ContainsAABB(aabb)) {
+        if (!engine->render_state.GetScene().scene.camera.frustum.ContainsAABB(aabb)) {
             continue;
         }
 

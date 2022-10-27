@@ -11,6 +11,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
+#include <rendering/DrawProxy.hpp>
 #include <core/Scheduler.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -36,7 +37,9 @@ struct ComponentInitInfo<STUB_CLASS(Scene)>
     ComponentFlagBits flags = SCENE_FLAGS_NONE;
 };
 
-class Scene : public EngineComponentBase<STUB_CLASS(Scene)>
+class Scene
+    : public EngineComponentBase<STUB_CLASS(Scene)>,
+      public HasDrawProxy<STUB_CLASS(Scene)>
 {
     friend class Entity;
     friend class World;

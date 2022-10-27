@@ -505,6 +505,13 @@ void Engine::Initialize()
                 .element_index = 0,
                 .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
             });
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::TEMPORAL_AA_RESULT)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
+            });
     }
 
     // add placeholder shadowmaps

@@ -263,8 +263,8 @@ void MotionVectors::Render(
 )
 {
     CameraMatrixCache current_matrices;
-    current_matrices.view = engine->GetRenderState().GetScene().camera.view;
-    current_matrices.projection = engine->GetRenderState().GetScene().camera.projection;
+    current_matrices.view = engine->GetRenderState().GetScene().scene.camera.view;
+    current_matrices.projection = engine->GetRenderState().GetScene().scene.camera.projection;
     current_matrices.inverse_view = current_matrices.view.Inverted();
     current_matrices.inverse_projection = current_matrices.projection.Inverted();
 

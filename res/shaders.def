@@ -150,3 +150,6 @@ comp = rt/blur/BlurRadianceVert.comp
 
 [CalculateMotionVectors]
 comp = CalculateMotionVectors.comp
+
+[TemporalAA]
+comp = TemporalAA.comp
