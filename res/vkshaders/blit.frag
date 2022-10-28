@@ -32,6 +32,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radia
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_texture;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_vectors_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
 //layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
@@ -63,6 +64,10 @@ void main()
     out_color = deferred_result;
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
+    
+    // TEMP
+    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, temporal_aa_result, v_texcoord0).rgb;
+
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     // blend in UI.
@@ -75,7 +80,6 @@ void main()
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
 
-    // out_color.rgb = SampleGBuffer(gbuffer_velocity_texture, v_texcoord0).rgb;
 
     // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color).aaa, 1.0);
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, rt_radiance_final, v_texcoord0).rgb;//, vec3(2.2));

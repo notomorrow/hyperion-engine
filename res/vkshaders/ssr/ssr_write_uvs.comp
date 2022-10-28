@@ -35,7 +35,7 @@ bool TraceRays(
 	for (; i < ssr_params.num_iterations; i++) {
         marching_position += step;
 
-        hit_pixel = GetProjectedPosition(scene.projection, marching_position);
+        hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
 
         float depth = SampleDepth(hit_pixel);
 
@@ -56,7 +56,7 @@ bool TraceRays(
             step *= 0.5;
             marching_position = marching_position - step * sign(step_delta);
 
-            hit_pixel = GetProjectedPosition(scene.projection, marching_position);
+            hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
             depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel)).z);
             step_delta = abs(marching_position.z) - depth_from_screen;
 

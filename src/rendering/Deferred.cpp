@@ -184,7 +184,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 DeferredRenderer::DeferredRenderer()
     : m_ssr(Extent2D { 512, 512 }),
       m_hbao(Extent2D { 1024, 1024 }), // image is downscaled
-      m_motion_vectors(Extent2D { 512, 512 }),
+      m_temporal_aa(Extent2D { 1024, 1024 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -214,7 +214,6 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_dpr.Create(engine, depth_attachment_ref);
     m_ssr.Create(engine);
-    m_motion_vectors.Create(engine);
     m_hbao.Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
@@ -250,6 +249,8 @@ void DeferredRenderer::Create(Engine *engine)
     
     m_indirect_pass.CreateDescriptors(engine); // no-op
     m_direct_pass.CreateDescriptors(engine);
+    
+    m_temporal_aa.Create(engine);
 
     HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -468,7 +469,7 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_ssr.Destroy(engine);
     m_dpr.Destroy(engine);
     m_hbao.Destroy(engine);
-    m_motion_vectors.Destroy(engine);
+    m_temporal_aa.Destroy(engine);
 
     m_post_processing.Destroy(engine);
 
@@ -528,8 +529,6 @@ void DeferredRenderer::Render(
         DebugMarker marker(primary, "RT Radiance");
 
         environment->RenderRTRadiance(engine, frame);
-
-        //m_rt_radiance.Render(engine, frame);
     }
 
     { // indirect lighting
@@ -560,7 +559,6 @@ void DeferredRenderer::Render(
     }
     // end opaque objs
 
-    // m_motion_vectors.Render(engine, frame);
     m_hbao.Render(engine, frame);
     
     m_post_processing.RenderPre(engine, frame);
@@ -650,6 +648,8 @@ void DeferredRenderer::Render(
     m_results[frame_index]->GetImage().GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::SHADER_RESOURCE);
 
     m_post_processing.RenderPost(engine, frame);
+    
+    m_temporal_aa.Render(engine, frame);
 }
 
 void DeferredRenderer::GenerateMipChain(Engine *engine, Frame *frame, Image *src_image)
