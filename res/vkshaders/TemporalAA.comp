@@ -15,15 +15,40 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(std140, set = 0, binding = 0, row_major) uniform TemporalAAUniforms
 {
-    mat4 jitter_matrix;
     mat4 view_matrix;
     mat4 projection_matrix;
+    mat4 inverse_view_matrix;
+    mat4 inverse_projection_matrix;
+    mat4 inverse_jitter_projection_matrix;
+    mat4 previous_view_projection_matrix;
+    mat4 jitter_matrix;
+    vec2 jitter;
 };
+
+layout(set = 0, binding = 1) uniform texture2D color_texture;
+layout(set = 0, binding = 2) uniform texture2D previous_color_texture;
+layout(set = 0, binding = 3) uniform texture2D depth_texture;
+layout(set = 0, binding = 4) uniform sampler sampler_linear;
+layout(set = 0, binding = 5) uniform sampler sampler_nearest;
+layout(set = 0, binding = 6, rgba16f) writeonly uniform image2D output_image;
 
 layout(push_constant) uniform PushConstants
 {
     uvec2 dimensions;
 };
+
+vec2 PreviousTexcoord(vec2 uv)
+{
+    const mat4 inverse_view_matrix = inverse(view_matrix);
+    const mat4 inverse_projection_matrix = inverse(projection_matrix);
+
+    const float depth = Texture2D(sampler_nearest, depth_texture, uv).r;
+
+    const vec3 view_space_position = ReconstructViewSpacePositionFromDepth(inverse_jitter_projection_matrix, uv, depth).xyz;
+    const vec3 world_space_position = (inverse_view_matrix * vec4(view_space_position, 1.0)).xyz;
+
+    return GetProjectedPositionFromWorld(previous_view_projection_matrix, world_space_position);
+}
 
 void main()
 {
@@ -34,7 +59,14 @@ void main()
     }
 
     const vec2 uv = vec2(pixel_coord) / vec2(dimensions);
+    const vec2 uv_jitter = uv - jitter;
 
+    const vec4 color = Texture2D(sampler_linear, color_texture, uv);
+
+    const vec2 previous_texcoord = PreviousTexcoord(uv);
+    vec4 previous_color = Texture2D(sampler_linear, previous_color_texture, previous_texcoord);
+
+    const vec4 result = mix(color, previous_color, 0.65);
     
-    //imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimensions - 1)), vec4(0.0));
+    imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimensions - 1)), result);
 }

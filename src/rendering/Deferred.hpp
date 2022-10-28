@@ -12,6 +12,7 @@
 #include <rendering/ScreenspaceReflectionRenderer.hpp>
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/HBAO.hpp>
+#include <rendering/TemporalAA.hpp>
 #include <rendering/MotionVectors.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
@@ -78,14 +79,23 @@ public:
     DeferredRenderer &operator=(const DeferredRenderer &other) = delete;
     ~DeferredRenderer();
 
-    PostProcessing &GetPostProcessing() { return m_post_processing; }
-    const PostProcessing &GetPostProcessing() const  { return m_post_processing; }
+    PostProcessing &GetPostProcessing()
+        { return m_post_processing; }
 
-    DepthPyramidRenderer &GetDepthPyramidRenderer() { return m_dpr; }
-    const DepthPyramidRenderer &GetDepthPyramidRenderer() const { return m_dpr; }
+    const PostProcessing &GetPostProcessing() const
+        { return m_post_processing; }
 
-    MotionVectors &GetMotionVectors() { return m_motion_vectors; }
-    const MotionVectors &GetMotionVectors() const { return m_motion_vectors; }
+    DepthPyramidRenderer &GetDepthPyramidRenderer()
+        { return m_dpr; }
+
+    const DepthPyramidRenderer &GetDepthPyramidRenderer() const
+        { return m_dpr; }
+
+    Handle<Texture> &GetCombinedResult(UInt frame_index)
+        { return m_results[frame_index]; }
+
+    const Handle<Texture> &GetCombinedResult(UInt frame_index) const
+        { return m_results[frame_index]; }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -114,7 +124,7 @@ private:
     DeferredPass m_direct_pass;
     PostProcessing m_post_processing;
     HBAO m_hbao;
-    MotionVectors m_motion_vectors;
+    TemporalAA m_temporal_aa;
 
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_opaque_fbos;
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_translucent_fbos;
