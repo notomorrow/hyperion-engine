@@ -258,8 +258,6 @@ void Entity::EnqueueRenderUpdates()
             }
         );
 
-        m_previous_transform_matrix = transform_matrix;
-
         HYPERION_RETURN_OK;
     });
 
@@ -521,7 +519,9 @@ void Entity::SetTransform(const Transform &transform)
     if (m_transform == transform) {
         return;
     }
+    
 
+    m_previous_transform_matrix = m_transform.GetMatrix();
     m_transform = transform;
     m_shader_data_state |= ShaderDataState::DIRTY;
 

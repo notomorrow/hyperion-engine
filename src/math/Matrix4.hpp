@@ -21,6 +21,8 @@ class Matrix4
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
     static const Matrix4 identity;
+    static const Matrix4 zeros;
+    static const Matrix4 ones;
 
     static Matrix4 Translation(const Vector3 &translation);
 #if 0
@@ -31,6 +33,7 @@ public:
     static Matrix4 Scaling(const Vector3 &scaling);
     static Matrix4 Perspective(float fov, int w, int h, float n, float f);
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
+    static Matrix4 Jitter(UInt width, UInt height, const Vector2 &jitter);
     static Matrix4 LookAt(const Vector3 &dir, const Vector3 &up);
     static Matrix4 LookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
 

@@ -43,12 +43,9 @@ public:
 
 private:
     void CreateImages(Engine *engine);
-    void CreateBuffers(Engine *engine);
     void CreateDescriptorSets(Engine *engine);
     void CreateComputePipelines(Engine *engine);
 
-    void BuildJitterMatrix(const SceneDrawProxy &scene, Vector2 &jitter);
-    
     struct ImageOutput
     {
         StorageImage image;
@@ -77,8 +74,6 @@ private:
     FixedArray<UniquePtr<ImageView>, max_frames_in_flight> m_previous_image_views;
     FixedArray<UniquePtr<UniformBuffer>, max_frames_in_flight> m_uniform_buffers;
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
-
-    Matrix4 m_jitter_matrix;
 
     Handle<ComputePipeline> m_compute_taa;
 };

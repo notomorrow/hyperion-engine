@@ -92,7 +92,7 @@ void main()
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);//SampleEffectPre(0, v_texcoord0, vec4(1.0));
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
     ao = ssao_data.a * material.a;
     
 #if HYP_VCT_ENABLED

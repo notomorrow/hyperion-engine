@@ -112,8 +112,13 @@ void main()
         ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
 
+    vec2 current_jitter = scene.taa_params.xy;
+    vec2 previous_jitter = scene.taa_params.zw;
+    vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
+    //velocity -= (current_jitter - previous_jitter) * (1.0 / vec2(scene.resolution_x, scene.resolution_y));
+
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
-    gbuffer_velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
+    gbuffer_velocity = velocity;
 }
