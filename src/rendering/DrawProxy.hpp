@@ -93,7 +93,7 @@ struct DrawProxy<STUB_CLASS(Camera)>
 {
     Matrix4 view;
     Matrix4 projection;
-    Matrix4 previous_view_projection;
+    Matrix4 previous_view;
     Vector3 position;
     Vector3 direction;
     Vector3 up;
@@ -204,7 +204,7 @@ public:
 
 protected:
     bool HasPendingRenderUpdates() const
-        { return m_has_render_updates.load(std::memory_order_acquire); }
+        { return m_has_render_updates.load(std::memory_order_acquire) != 0; }
 
     void WaitForRenderUpdatesToComplete()
     {
@@ -235,14 +235,14 @@ protected:
     template <class Lambda>
     void EnqueueRenderUpdate(Lambda &&lambda)
     {
-        m_has_render_updates.store(true, std::memory_order_release);
+        m_has_render_updates.fetch_add(1u, std::memory_order_release);
 
         auto *self = static_cast<typename T::InnerType *>(this);
 
         self->GetEngine()->GetRenderScheduler().Enqueue([this, lambda = std::forward<Lambda>(lambda)](...) mutable {
             lambda();
 
-            m_has_render_updates.store(false, std::memory_order_release);
+            m_has_render_updates.fetch_sub(1u, std::memory_order_release);
 
             HYPERION_RETURN_OK;
         });
@@ -254,8 +254,7 @@ protected:
     DrawProxy<T> m_draw_proxy;
 
 private:
-
-    std::atomic<bool> m_has_render_updates;
+    std::atomic_uint m_has_render_updates { 0u };
 };
 
 } // namespace hyperion::v2

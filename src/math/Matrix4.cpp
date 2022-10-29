@@ -8,6 +8,8 @@
 namespace hyperion {
 
 const Matrix4 Matrix4::identity = Matrix4::Identity();
+const Matrix4 Matrix4::zeros = Matrix4::Zeros();
+const Matrix4 Matrix4::ones = Matrix4::Ones();
 
 Matrix4 Matrix4::Translation(const Vector3 &translation)
 {
@@ -112,7 +114,7 @@ Matrix4 Matrix4::Scaling(const Vector3 &scale)
 
 Matrix4 Matrix4::Perspective(float fov, int w, int h, float n, float f)
 {
-    Matrix4 mat = Zeros();
+    Matrix4 mat = zeros;
 
     float ar = (float)w / (float)h;
     float tan_half_fov = MathUtil::Tan(MathUtil::DegToRad(fov / 2.0f));
@@ -133,7 +135,7 @@ Matrix4 Matrix4::Perspective(float fov, int w, int h, float n, float f)
 
 Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float f)
 {
-    Matrix4 mat;
+    Matrix4 mat = zeros;
     
     float x_orth = 2.0f / (r - l);
     float y_orth = 2.0f / (b - t);
@@ -146,6 +148,18 @@ Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float
     mat[1] = { 0.0f, y_orth, 0.0f, ty };
     mat[2] = { 0.0f, 0.0f, z_orth, tz };
     mat[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    return mat;
+}
+
+Matrix4 Matrix4::Jitter(UInt width, UInt height, const Vector2 &jitter)
+{
+    const Vector2 pixel_size = Vector2::one / Vector2(width, height);
+
+    Matrix4 mat = identity;
+
+    mat[0][3] += (jitter.x * 2.0f - 1.0f) * pixel_size.x * 0.5f;
+    mat[1][3] += (jitter.y * 2.0f - 1.0f) * pixel_size.y * 0.5f;
 
     return mat;
 }

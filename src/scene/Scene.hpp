@@ -57,8 +57,12 @@ public:
     Scene &operator=(const Scene &other) = delete;
     ~Scene();
 
-    Handle<Camera> &GetCamera() { return m_camera; }
-    const Handle<Camera> &GetCamera() const { return m_camera; }
+    Handle<Camera> &GetCamera()
+        { return m_camera; }
+
+    const Handle<Camera> &GetCamera() const
+        { return m_camera; }
+
     void SetCamera(Handle<Camera> &&camera);
 
     /*! \brief Add the Entity to a new Node attached to the root. */
@@ -95,11 +99,17 @@ public:
     bool CreateTLAS();
 
     /* ONLY CALL FROM GAME THREAD!!! */
-    auto &GetEntities() { return m_entities; }
-    const auto &GetEntities() const { return m_entities; }
+    auto &GetEntities()
+        { return m_entities; }
 
-    NodeProxy &GetRoot() { return m_root_node_proxy; }
-    const NodeProxy &GetRoot() const { return m_root_node_proxy; }
+    const auto &GetEntities() const
+        { return m_entities; }
+
+    NodeProxy &GetRoot()
+        { return m_root_node_proxy; }
+
+    const NodeProxy &GetRoot() const
+        { return m_root_node_proxy; }
 
     /*! \brief Used for deserialization only */
     void SetRoot(NodeProxy &&root)
@@ -115,19 +125,26 @@ public:
         }
     }
 
-    RenderEnvironment *GetEnvironment() const { return m_environment; }
+    RenderEnvironment *GetEnvironment() const
+        { return m_environment; }
 
-    World *GetWorld() const { return m_world; }
+    World *GetWorld() const
+        { return m_world; }
+
     void SetWorld(World *world);
 
-    Scene::ID GetParentID() const { return m_parent_id; }
-    void SetParentID(Scene::ID id) { m_parent_id = id; }
+    Scene::ID GetParentID() const
+        { return m_parent_id; }
+
+    void SetParentID(Scene::ID id)
+        { m_parent_id = id; }
 
     /*! \brief A scene is a "virtual scene" if it exists not as an owner of entities,
         but rather a simple container that has items based on another Scene. For example,
         you could have a "shadow map" scene, which gathers entities from the main scene,
         but does not call Update() on them. */
-    bool IsVirtualScene() const { return m_parent_id != Scene::empty_id; }
+    bool IsVirtualScene() const
+        { return m_parent_id != Scene::empty_id; }
     
     void Init(Engine *engine);
 

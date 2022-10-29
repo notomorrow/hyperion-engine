@@ -3,6 +3,8 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/CubemapRenderer.hpp>
 
+#include <math/Halton.hpp>
+
 #include "rendering/backend/vulkan/RendererFeatures.hpp"
 
 namespace hyperion::v2 {
@@ -713,11 +715,35 @@ void Scene::EnqueueRenderUpdates()
         } else {
             m_draw_proxy.camera = { };
         }
+
+        Matrix4 offset_matrix;
+        Vector2 jitter;
+        Vector2 previous_jitter;
+
+        // TODO: Is this the main camera in the scene?
+        if (m_draw_proxy.camera.projection[3][3] < MathUtil::epsilon<Float>) {
+            // perspective if [3][3] is zero
+            static const HaltonSequence halton;
+
+            const UInt halton_index = params.frame_counter % HaltonSequence::size;
+
+            jitter = halton.sequence[halton_index];
+
+            if (params.frame_counter != 0) {
+                previous_jitter = halton.sequence[(params.frame_counter - 1) % HaltonSequence::size];
+            }
+
+            offset_matrix = Matrix4::Jitter(
+                m_draw_proxy.camera.dimensions.width,
+                m_draw_proxy.camera.dimensions.height,
+                jitter
+            );
+        }
         
         SceneShaderData shader_data { };
         shader_data.view = m_draw_proxy.camera.view;
-        shader_data.projection = m_draw_proxy.camera.projection;
-        shader_data.previous_view_projection = m_draw_proxy.camera.previous_view_projection;
+        shader_data.projection = offset_matrix * m_draw_proxy.camera.projection;
+        shader_data.previous_view = m_draw_proxy.camera.previous_view;
         shader_data.camera_position = m_draw_proxy.camera.position.ToVector4();
         shader_data.camera_direction = m_draw_proxy.camera.direction.ToVector4();
         shader_data.camera_up = m_draw_proxy.camera.up.ToVector4();
@@ -733,21 +759,20 @@ void Scene::EnqueueRenderUpdates()
         shader_data.frame_counter = params.frame_counter;
         shader_data.num_lights = params.num_lights;
         shader_data.enabled_render_components_mask = m_environment->GetEnabledRenderComponentsMask();
+        shader_data.taa_params = Vector4(jitter, previous_jitter);
 
-        if (GetEngine()->render_state.env_probes.Any()) {//const auto *cubemap_renderer = m_environment->GetRenderComponent<CubemapRenderer>()) {
+        if (GetEngine()->render_state.env_probes.Any()) {
             // TODO: Make to be packed uvec2 containing indices (each are 1 byte)
-            shader_data.environment_texture_index = 0u;//cubemap_renderer->GetComponentIndex();
+            shader_data.environment_texture_index = 0u;
 
             for (const auto &it : GetEngine()->render_state.env_probes) {
                 if (it.second.Empty()) {
                     continue;
                 }
 
-                shader_data.environment_texture_usage |= 1u << it.second.Get();//cubemap_renderer->GetComponentIndex();
+                shader_data.environment_texture_usage |= 1u << it.second.Get();
             }
         }
-
-        // DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
         
         GetEngine()->GetRenderData()->scenes.Set(m_id.ToIndex(), shader_data);
 

@@ -84,7 +84,7 @@ void main() {
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
     v_position_ndc = scene.projection * scene.view * position;
-    v_previous_position_ndc = scene.previous_view_projection * previous_position;
+    v_previous_position_ndc = scene.projection * scene.previous_view * previous_position;
 
     gl_Position = v_position_ndc;
 } 
