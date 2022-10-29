@@ -2,6 +2,7 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <math/Vector2.hpp>
 #include <math/MathUtil.hpp>
+#include <math/Halton.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -14,48 +15,6 @@ using renderer::UniformBufferDescriptor;
 using renderer::DynamicStorageBufferDescriptor;
 using renderer::ShaderVec2;
 using renderer::ShaderMat4;
-
-struct HaltonSequence
-{
-    FixedArray<Vector2, 128> sequence;
-
-    HaltonSequence()
-    {
-        for (UInt index = 0; index < static_cast<UInt>(sequence.Size()); index++) {
-            sequence[index].x = GetHalton(index + 1, 2);
-            sequence[index].y = GetHalton(index + 1, 3);
-        }
-    }
-
-    static inline Float GetHalton(UInt index, UInt base)
-    {
-        AssertThrow(base != 0);
-
-        Float f = 1.0f;
-        Float r = 0.0f;
-        UInt current = index;
-
-        do {
-            f = f / static_cast<Float>(base);
-            r = r + f * (current % base);
-            current = current / base;
-        } while (current != 0);
-
-        return r;
-    }
-};
-
-struct alignas(64) TemporalAAUniforms
-{
-    ShaderMat4 view_matrix;
-    ShaderMat4 projection_matrix;
-    ShaderMat4 inverse_view_matrix;
-    ShaderMat4 inverse_projection_matrix;
-    ShaderMat4 inverse_jitter_projection_matrix;
-    ShaderMat4 previous_view_projection_matrix;
-    ShaderMat4 jitter_matrix;
-    ShaderVec2<Float32> jitter;
-};
 
 Result TemporalAA::ImageOutput::Create(Device *device)
 {
@@ -103,7 +62,6 @@ TemporalAA::~TemporalAA() = default;
 void TemporalAA::Create(Engine *engine)
 {
     CreateImages(engine);
-    CreateBuffers(engine);
     CreateDescriptorSets(engine);
     CreateComputePipelines(engine);
 }
@@ -145,30 +103,6 @@ void TemporalAA::Destroy(Engine *engine)
     HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
-void TemporalAA::CreateBuffers(Engine *engine)
-{
-    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_uniform_buffers[frame_index] = UniquePtr<UniformBuffer>::Construct();
-    }
-
-    engine->GetRenderScheduler().Enqueue([this, engine](...) {
-        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_BUBBLE_ERRORS(m_uniform_buffers[frame_index]->Create(
-                engine->GetDevice(),
-                sizeof(TemporalAAUniforms)
-            ));
-
-            m_uniform_buffers[frame_index]->Memset(
-                engine->GetDevice(),
-                sizeof(TemporalAAUniforms),
-                0x00
-            );
-        }
-
-        HYPERION_RETURN_OK;
-    });
-}
-
 void TemporalAA::CreateImages(Engine *engine)
 {
     engine->GetRenderScheduler().Enqueue([this, engine](...) {
@@ -184,16 +118,9 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
-        
-        // AA uniforms
-        descriptor_set->GetOrAddDescriptor<UniformBufferDescriptor>(0)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = m_uniform_buffers[frame_index].Get()
-            });
 
-        // input 0 - this frame
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(1)
+        // input 0 - current frame being rendered
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(0)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &engine->GetDeferredRenderer()
@@ -201,11 +128,20 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
             });
 
         // input 1 - previous frame
+        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(1)
+            ->SetSubDescriptor({
+                .element_index = 0u,
+                .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view,
+               // &engine->GetDeferredRenderer()
+               //     .GetCombinedResult((frame_index + 1) % max_frames_in_flight)->GetImageView()
+            });
+
+        // input 2 - velocity
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(2)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = &engine->GetDeferredRenderer()
-                    .GetCombinedResult((frame_index + 1) % max_frames_in_flight)->GetImageView()
+                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                    .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
             });
 
         // gbuffer input - depth
@@ -276,59 +212,12 @@ void TemporalAA::CreateComputePipelines(Engine *engine)
     engine->InitObject(m_compute_taa);
 }
 
-void TemporalAA::BuildJitterMatrix(const SceneDrawProxy &scene, Vector2 &jitter)
-{
-    if (scene.camera.dimensions.width == 0 || scene.camera.dimensions.height == 0) {
-        return;
-    }
-
-    static const HaltonSequence halton;
-
-    const Vector2 pixel_size = Vector2::one / scene.camera.dimensions;
-    const UInt index = scene.frame_counter % UInt(halton.sequence.Size());
-
-    jitter = halton.sequence[index];
-
-    m_jitter_matrix = scene.camera.projection;
-
-    const Float vertical = MathUtil::Tan(MathUtil::DegToRad(scene.camera.fov) / 2.0f) * scene.camera.clip_near;
-    const Float horizontal = vertical * (Float(scene.camera.dimensions.width) / Float(scene.camera.dimensions.height));
-
-    Vector2 jitter_value = jitter;
-    jitter_value.x *= horizontal / (0.5f * pixel_size.x);
-    jitter_value.y *= vertical / (0.5f * pixel_size.y);
-
-    m_jitter_matrix[2][0] += jitter_value.x / horizontal;//(jitter.x * 2.0f - 1.0f) * pixel_size.x;// / horizontal;
-    m_jitter_matrix[2][1] += jitter_value.y / vertical;// (jitter.y * 2.0f - 1.0f) * pixel_size.y;// / vertical;
-}
-
 void TemporalAA::Render(
     Engine *engine,
     Frame *frame
 )
 {
     const auto &scene = engine->GetRenderState().GetScene().scene;
-
-    Vector2 jitter;
-
-    BuildJitterMatrix(scene, jitter);
-
-    const TemporalAAUniforms uniforms {
-        .view_matrix = scene.camera.view,
-        .projection_matrix = scene.camera.projection,
-        .inverse_view_matrix = scene.camera.view.Inverted(),
-        .inverse_projection_matrix = scene.camera.projection.Inverted(),
-        .inverse_jitter_projection_matrix = m_jitter_matrix.Inverted(),
-        .previous_view_projection_matrix = scene.camera.previous_view_projection,
-        .jitter_matrix = m_jitter_matrix,
-        .jitter = jitter
-    };
-
-    m_uniform_buffers[frame->GetFrameIndex()]->Copy(
-        engine->GetDevice(),
-        sizeof(uniforms),
-        &uniforms
-    );
 
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);

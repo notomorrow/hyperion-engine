@@ -124,7 +124,7 @@ private:
     DeferredPass m_direct_pass;
     PostProcessing m_post_processing;
     HBAO m_hbao;
-    TemporalAA m_temporal_aa;
+    UniquePtr<TemporalAA> m_temporal_aa;
 
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_opaque_fbos;
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_translucent_fbos;

@@ -78,7 +78,8 @@ void main()
         1.0
     );
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
+    //out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
+    //out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_velocity_texture, v_texcoord0).rgb * 10.0;//, vec3(2.2));
 
 
     // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color).aaa, 1.0);

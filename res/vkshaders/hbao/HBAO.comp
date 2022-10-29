@@ -173,7 +173,7 @@ void main()
         return;
     }
 
-    const vec2 uv = vec2(pixel_coord) / vec2(dimension - 1);
+    const vec2 uv = (vec2(pixel_coord) + 0.5) / vec2(dimension);
 
     float occlusion;
     vec3 bent_normal;
@@ -181,10 +181,10 @@ void main()
 
     TraceAO(uv, occlusion, bent_normal, light_color);
 
-    float weight = 0.5;
+    float weight = 0.9;
 
     vec2 motion_vectors = Texture2D(sampler_linear, gbuffer_velocity_texture, uv).rg;
-    weight *= 1.0 - Saturate(length(motion_vectors) * 3.0);
+    weight = weight - Saturate(length(motion_vectors) * 3.0);
 
     vec4 previous_values = Texture2D(sampler_linear, prev_image, uv);
     vec4 next_values = vec4(light_color.rgb, occlusion);

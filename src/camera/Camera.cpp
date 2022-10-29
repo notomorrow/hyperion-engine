@@ -1,8 +1,29 @@
 #include "Camera.hpp"
+#include <math/Halton.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
+
+static Matrix4 BuildJitterMatrix(const Camera &camera, UInt frame_counter)
+{
+    if (camera.GetWidth() == 0 || camera.GetHeight() == 0) {
+        return Matrix4::identity;
+    }
+
+    static const HaltonSequence halton;
+
+    const Vector2 pixel_size = Vector2::one / Vector2(camera.GetWidth(), camera.GetHeight());
+    const UInt index = frame_counter % HaltonSequence::size;
+
+    const Vector2 jitter = halton.sequence[index] * 2.0f - 1.0f;
+
+    Matrix4 jitter_matrix = camera.GetProjectionMatrix();
+    jitter_matrix[0][2] += jitter.x * pixel_size.x;
+    jitter_matrix[1][2] += jitter.y * pixel_size.y;
+
+    return jitter_matrix;
+}
 
 Camera::Camera(CameraType camera_type, int width, int height, float _near, float _far)
     : EngineComponentBase(),
@@ -45,6 +66,8 @@ void Camera::SetTranslation(const Vector3 &translation)
 {
     m_translation = translation;
     m_next_translation = translation;
+    
+    m_previous_view_matrix = m_view_mat;
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -58,6 +81,8 @@ void Camera::SetNextTranslation(const Vector3 &translation)
 void Camera::SetDirection(const Vector3 &direction)
 {
     m_direction = direction;
+    
+    m_previous_view_matrix = m_view_mat;
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -66,6 +91,8 @@ void Camera::SetDirection(const Vector3 &direction)
 void Camera::SetUpVector(const Vector3 &up)
 {
     m_up = up;
+    
+    m_previous_view_matrix = m_view_mat;
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -75,6 +102,8 @@ void Camera::Rotate(const Vector3 &axis, float radians)
 {
     m_direction.Rotate(axis, radians);
     m_direction.Normalize();
+    
+    m_previous_view_matrix = m_view_mat;
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -82,6 +111,7 @@ void Camera::Rotate(const Vector3 &axis, float radians)
 
 void Camera::SetViewMatrix(const Matrix4 &view_mat)
 {
+    m_previous_view_matrix = m_view_mat;
     m_view_mat = view_mat;
 
     UpdateViewProjectionMatrix();
@@ -96,6 +126,8 @@ void Camera::SetProjectionMatrix(const Matrix4 &proj_mat)
 
 void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat)
 {
+    m_previous_view_matrix = m_view_mat;
+
     m_view_mat = view_mat;
     m_proj_mat = proj_mat;
 
@@ -104,10 +136,6 @@ void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &pro
 
 void Camera::UpdateViewProjectionMatrix()
 {
-    m_previous_view_proj_matrix = (m_previous_view_proj_matrix == Matrix4::identity)
-        ? m_view_proj_mat
-        : m_proj_mat * m_view_mat;
-
     m_view_proj_mat = m_proj_mat * m_view_mat;
 
     m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
@@ -163,11 +191,11 @@ void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
     EnqueueDrawProxyUpdate(engine, CameraDrawProxy {
         .view = m_view_mat,
         .projection = m_proj_mat,
-        .previous_view_projection = m_previous_view_proj_matrix,
+        .previous_view = m_previous_view_matrix,
         .position = m_translation,
         .direction = m_direction,
         .up = m_up,
-        .dimensions = Extent2D { static_cast<UInt>(m_width), static_cast<UInt>(m_height) },
+        .dimensions = Extent2D { UInt(m_width), UInt(m_height) },
         .clip_near = m_near,
         .clip_far = m_far,
         .fov = m_fov,

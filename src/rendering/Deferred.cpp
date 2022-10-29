@@ -184,7 +184,6 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 DeferredRenderer::DeferredRenderer()
     : m_ssr(Extent2D { 512, 512 }),
       m_hbao(Extent2D { 1024, 1024 }), // image is downscaled
-      m_temporal_aa(Extent2D { 1024, 1024 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -250,7 +249,8 @@ void DeferredRenderer::Create(Engine *engine)
     m_indirect_pass.CreateDescriptors(engine); // no-op
     m_direct_pass.CreateDescriptors(engine);
     
-    m_temporal_aa.Create(engine);
+    m_temporal_aa.Reset(new TemporalAA(engine->GetInstance()->GetSwapchain()->extent));
+    m_temporal_aa->Create(engine);
 
     HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -469,7 +469,7 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_ssr.Destroy(engine);
     m_dpr.Destroy(engine);
     m_hbao.Destroy(engine);
-    m_temporal_aa.Destroy(engine);
+    m_temporal_aa->Destroy(engine);
 
     m_post_processing.Destroy(engine);
 
@@ -649,7 +649,7 @@ void DeferredRenderer::Render(
 
     m_post_processing.RenderPost(engine, frame);
     
-    m_temporal_aa.Render(engine, frame);
+    m_temporal_aa->Render(engine, frame);
 }
 
 void DeferredRenderer::GenerateMipChain(Engine *engine, Frame *frame, Image *src_image)

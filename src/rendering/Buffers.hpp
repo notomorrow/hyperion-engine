@@ -108,7 +108,7 @@ struct alignas(256) SceneShaderData
 {
     Matrix4 view;
     Matrix4 projection;
-    Matrix4 previous_view_projection;
+    Matrix4 previous_view;
 
     ShaderVec4<Float32> camera_position;
     ShaderVec4<Float32> camera_direction;
@@ -131,6 +131,8 @@ struct alignas(256) SceneShaderData
     UInt32 frame_counter;
     UInt32 num_lights;
     UInt32 enabled_render_components_mask;
+
+    ShaderVec4<Float32> taa_params;
 };
 
 static_assert(sizeof(SceneShaderData) == 512);
