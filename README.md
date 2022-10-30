@@ -45,14 +45,14 @@ In the works
 
 ## Screenshots
 
-![screenshot](/screenshots/rt-ddgi-taa.png)
-*Ray-tracing reflections, DDGI (dynamic diffuse global illumination), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*\
+![screenshot](/screenshots/rt-ddgi-taa.png)\
+*Ray-tracing reflections, DDGI (dynamic diffuse global illumination), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*
 
-![screenshot](/screenshots/hbil-taa.png)
-*Horizon-based indirect lighting (HBIL), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*\
+![screenshot](/screenshots/hbil-taa.png)\
+*Horizon-based indirect lighting (HBIL), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*
 
-![screenshot](/screenshots/pbr4.png)
-*PBR*\
+![screenshot](/screenshots/pbr4.png)\
+*PBR*
 
 ## Building
 
