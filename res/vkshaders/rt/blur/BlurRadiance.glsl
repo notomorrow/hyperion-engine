@@ -3,19 +3,23 @@
 #include "BlurRadianceHeader.inc"
 
 layout(set = 0, binding = 0) uniform texture2D blur_input_texture;
-layout(set = 0, binding = 1) uniform sampler blur_input_sampler;
-layout(set = 0, binding = 2, rgba8) uniform writeonly image2D blur_output_image;
+layout(set = 0, binding = 1) uniform texture2D prev_blur_input_texture;
+layout(set = 0, binding = 2) uniform texture2D velocity_texture;
+layout(set = 0, binding = 3) uniform sampler sampler_linear;
+layout(set = 0, binding = 4) uniform sampler sampler_nearest;
+layout(set = 0, binding = 5, rgba8) uniform writeonly image2D blur_output_image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../include/defines.inc"
 #include "../../include/packing.inc"
 #include "../../include/shared.inc"
 #include "../../include/scene.inc"
+#include "../../include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 //#define HYP_RADIANCE_USE_GAUSSIAN_BLUR
 
-layout(std140, set = 0, binding = 3, row_major) readonly buffer SceneBuffer
+layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
 {
     Scene scene;
 };
@@ -29,7 +33,12 @@ void main(void)
         return;
     }
 
-	const vec2 texcoord = vec2(coord) / vec2(output_dimensions);
+	const vec2 texcoord = (vec2(coord) + 0.5) / vec2(output_dimensions);
+
+    vec4 output_color = Texture2D(sampler_linear, blur_input_texture, texcoord);
+
+#if 0
+
     float weight = 0.25;
 
     // const vec2 blur_input_texture_size = vec2(imageSize(input_image));
@@ -40,7 +49,6 @@ void main(void)
     // const ivec2 input_image_dimensions = imageSize(blur_input_image);
     // const ivec2 input_coord = ivec2(texcoord * vec2(input_image_dimensions - 1));
     
-    vec4 output_color = vec4(0.0);
 
     float num_samples = 0.0;
 
@@ -62,12 +70,17 @@ void main(void)
 
     output_color /= max(num_samples, 1.0);
 
-#ifdef HYP_RADIANCE_BLUR_VERTICAL
-    // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 #endif
 
-    // temp
-    // output_color = Texture2D(blur_input_sampler, blur_input_texture, texcoord);
+    float blending = 0.9;
+    vec2 velocity = Texture2D(sampler_nearest, velocity_texture, texcoord).rg;
+    const float velocity_scale = 1.0;
+    blending = blending - ((length(velocity) - 0.001) * velocity_scale);
+
+    vec4 previous_color = Texture2D(sampler_linear, prev_blur_input_texture, texcoord - velocity);
+    previous_color = ClampColor_3x3(blur_input_texture, previous_color, texcoord, vec2(1.0) / vec2(output_dimensions));
+
+    output_color = mix(output_color, previous_color, blending);
 
     imageStore(blur_output_image, coord, vec4(output_color));
 }

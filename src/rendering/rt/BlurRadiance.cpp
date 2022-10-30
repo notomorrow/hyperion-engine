@@ -113,23 +113,45 @@ void BlurRadiance::CreateDescriptorSets(Engine *engine)
                         : &m_image_outputs[frame_index][i - 1].image_view
                 });
 
+            // previous image (used for temporal blending)
+            descriptor_set
+                ->AddDescriptor<ImageDescriptor>(1)
+                ->SetSubDescriptor({
+                    .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight][i].image_view
+                });
+
+            // velocity (used for temporal blending)
+            descriptor_set
+                ->AddDescriptor<ImageDescriptor>(2)
+                ->SetSubDescriptor({
+                    .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                        .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
+                });
+
             // sampler to use
             descriptor_set
-                ->AddDescriptor<SamplerDescriptor>(1)
+                ->AddDescriptor<SamplerDescriptor>(3)
                 ->SetSubDescriptor({
                     .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
                 });
 
+            // sampler to use
+            descriptor_set
+                ->AddDescriptor<SamplerDescriptor>(4)
+                ->SetSubDescriptor({
+                    .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
+                });
+
             // blurred output
             descriptor_set
-                ->AddDescriptor<StorageImageDescriptor>(2)
+                ->AddDescriptor<StorageImageDescriptor>(5)
                 ->SetSubDescriptor({
                     .image_view = &m_image_outputs[frame_index][i].image_view
                 });
 
             // scene buffer - so we can reconstruct world positions
             descriptor_set
-                ->AddDescriptor<DynamicStorageBufferDescriptor>(3)
+                ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
                 ->SetSubDescriptor({
                     .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
                     .range = static_cast<UInt>(sizeof(SceneShaderData))
@@ -210,11 +232,13 @@ void BlurRadiance::Render(
         auto &descriptor_sets = m_descriptor_sets[frame->GetFrameIndex()];
         FixedArray passes { m_blur_hor.Get(), m_blur_vert.Get() };
         
-        const auto scene_binding = engine->render_state.GetScene();
-        const auto scene_id = scene_binding.id;
-        const UInt scene_index = scene_id ? scene_id.value - 1 : 0u;
+        const auto &scene_binding = engine->render_state.GetScene();
+        const UInt scene_index = scene_binding.id.ToIndex();
 
         for (UInt i = 0; i < static_cast<UInt>(passes.Size()); i++) {
+            m_image_outputs[frame->GetFrameIndex()][i].image.GetGPUImage()
+                ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+
             auto *pass = passes[i];
 
             pass->GetPipeline()->Bind(frame->GetCommandBuffer());
@@ -224,7 +248,7 @@ void BlurRadiance::Render(
                 pass->GetPipeline(),
                 descriptor_sets[i].Get(),
                 0,
-                FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
+                FixedArray { UInt32(scene_index * sizeof(SceneShaderData)) }
             );
 
             const auto &extent = m_image_outputs[frame->GetFrameIndex()][i].image.GetExtent();
@@ -234,7 +258,7 @@ void BlurRadiance::Render(
                 Extent3D {
                     (extent.width + 7) / 8,
                     (extent.height + 7) / 8,
-                    (extent.depth + 7) / 8
+                    1
                 }
             );
 

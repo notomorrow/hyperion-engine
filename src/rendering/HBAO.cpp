@@ -48,7 +48,7 @@ HBAO::HBAO(const Extent2D &extent)
               ImageType::TEXTURE_TYPE_2D
           ))
       },
-      m_blurrer(
+      m_temporal_blending(
           extent,
           FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
@@ -63,12 +63,12 @@ void HBAO::Create(Engine *engine)
     CreateImages(engine);
     CreateDescriptorSets(engine);
     CreateComputePipelines(engine);
-    CreateBlurrer(engine);
+    CreateTemporalBlending(engine);
 }
 
 void HBAO::Destroy(Engine *engine)
 {
-    m_blurrer.Destroy(engine);
+    m_temporal_blending.Destroy(engine);
 
     m_compute_hbao.Reset();
 
@@ -117,67 +117,67 @@ void HBAO::CreateDescriptorSets(Engine *engine)
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
 
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(0)
+        descriptor_set
+            ->AddDescriptor<ImageDescriptor>(0)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_ALBEDO)->GetImageView()
             });
 
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(1)
+        descriptor_set
+            ->AddDescriptor<ImageDescriptor>(1)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView()
             });
 
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(2)
+        descriptor_set
+            ->AddDescriptor<ImageDescriptor>(2)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
 
         // motion vectors
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(3)
+        descriptor_set
+            ->AddDescriptor<ImageDescriptor>(3)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
             });
 
         // nearest sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(4)
+        descriptor_set
+            ->AddDescriptor<SamplerDescriptor>(4)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
             });
 
         // linear sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(5)
+        descriptor_set
+            ->AddDescriptor<SamplerDescriptor>(5)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
             });
 
-        descriptor_set->GetOrAddDescriptor<DynamicStorageBufferDescriptor>(6)
+        descriptor_set
+            ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
                 .range = static_cast<UInt>(sizeof(SceneShaderData))
             });
 
         // output image
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(7)
+        descriptor_set
+            ->AddDescriptor<StorageImageDescriptor>(7)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = &m_image_outputs[frame_index].image_view
             });
 
         // prev image
-        descriptor_set->GetOrAddDescriptor<ImageDescriptor>(8)
+        descriptor_set
+            ->AddDescriptor<ImageDescriptor>(8)
             ->SetSubDescriptor({
-                .element_index = 0u,
                 .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
             });
 
@@ -202,7 +202,7 @@ void HBAO::CreateDescriptorSets(Engine *engine)
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
                 ->SetSubDescriptor({
                     .element_index = 0u,
-                    .image_view = &m_blurrer.GetImageOutput(frame_index).image_view //&m_image_outputs[frame_index].image_view//
+                    .image_view = &m_temporal_blending.GetImageOutput(frame_index).image_view
                 });
         }
 
@@ -220,9 +220,9 @@ void HBAO::CreateComputePipelines(Engine *engine)
     engine->InitObject(m_compute_hbao);
 }
 
-void HBAO::CreateBlurrer(Engine *engine)
+void HBAO::CreateTemporalBlending(Engine *engine)
 {
-    m_blurrer.Create(engine);
+    m_temporal_blending.Create(engine);
 }
 
 void HBAO::Render(
@@ -272,7 +272,7 @@ void HBAO::Render(
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 
-    m_blurrer.Render(engine, frame);
+    m_temporal_blending.Render(engine, frame);
 }
 
 } // namespace hyperion::v2

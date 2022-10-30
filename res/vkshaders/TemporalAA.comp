@@ -72,28 +72,6 @@ vec2 ClosestDepthUV(vec2 uv)
     return closest_uv;
 }
 
-vec4 MinColors_3x3(in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
-{
-    vec4 result = colors[0];
-
-    for (uint i = 1; i < HYP_TAA_NEIGHBORS_3x3; i++) {
-        result = min(result, colors[i]);
-    }
-
-    return result;
-}
-
-vec4 MaxColors_3x3(in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
-{
-    vec4 result = colors[0];
-
-    for (uint i = 1; i < HYP_TAA_NEIGHBORS_3x3; i++) {
-        result = max(result, colors[i]);
-    }
-
-    return result;
-}
-
 vec4 MinColors_2x2(in vec4 colors[HYP_TAA_NEIGHBORS_2x2])
 {
     vec4 result = colors[0];
@@ -110,6 +88,29 @@ vec4 MaxColors_2x2(in vec4 colors[HYP_TAA_NEIGHBORS_2x2])
     vec4 result = colors[0];
 
     for (uint i = 1; i < HYP_TAA_NEIGHBORS_2x2; i++) {
+        result = max(result, colors[i]);
+    }
+
+    return result;
+}
+
+
+vec4 MinColors_3x3(in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
+{
+    vec4 result = colors[0];
+
+    for (uint i = 1; i < HYP_TAA_NEIGHBORS_3x3; i++) {
+        result = min(result, colors[i]);
+    }
+
+    return result;
+}
+
+vec4 MaxColors_3x3(in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
+{
+    vec4 result = colors[0];
+
+    for (uint i = 1; i < HYP_TAA_NEIGHBORS_3x3; i++) {
         result = max(result, colors[i]);
     }
 
