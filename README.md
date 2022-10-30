@@ -45,13 +45,14 @@ In the works
 
 ## Screenshots
 
-Vulkan Renderer:
----
-![screenshot](/screenshots/pbr4.png)
+![screenshot](/screenshots/rt-ddgi-taa.png)
+*Ray-tracing reflections, DDGI (dynamic diffuse global illumination), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*\
 
-OpenGL renderer:
----
-![screenshot](/screenshots/screenshot1-ogl.PNG)
+![screenshot](/screenshots/hbil-taa.png)
+*Horizon-based indirect lighting (HBIL), HBAO (horizon-based ambient occlusion), and TAA (temporal anti-aliasing)*\
+
+![screenshot](/screenshots/pbr4.png)
+*PBR*\
 
 ## Building
 
@@ -61,6 +62,7 @@ Make sure you install the required packages listed in CMakeLists.txt.
 
 ### Known issues
 * Currently some resources are not being cleaned up properly on close
-* Sometimes, may run into a race condition, some things need to be more thread-safe
+* May run into a race condition. This is getting pretty rare though.
 * Scripting has issues with generic types
 * Binding C++ variables to scripts still not fleshed out
+* Voxel cone tracing may have stability issues
