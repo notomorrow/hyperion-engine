@@ -71,9 +71,25 @@ public:
 
     UInt GetSubDescriptorIndex() const { return m_sub_descriptor_index; }
 
-    PushConstantData &GetPushConstants() { return m_push_constant_data; }
-    const PushConstantData &GetPushConstants() const { return m_push_constant_data; }
-    void SetPushConstants(const PushConstantData &pc) { m_push_constant_data = pc; }
+    PushConstantData &GetPushConstants()
+        { return m_push_constant_data; }
+
+    const PushConstantData &GetPushConstants() const
+        { return m_push_constant_data; }
+
+    void SetPushConstants(const PushConstantData &pc)
+        { m_push_constant_data = pc; }
+
+    void SetPushConstants(const void *ptr, SizeType size)
+    {
+        AssertThrow(size <= sizeof(m_push_constant_data));
+
+        Memory::Copy(&m_push_constant_data, ptr, size);
+
+        if (size < sizeof(m_push_constant_data)) {
+            Memory::Set(&m_push_constant_data + size, 0x00, sizeof(m_push_constant_data) - size);
+        }
+    }
 
     virtual void CreateRenderPass(Engine *engine);
     virtual void CreateCommandBuffers(Engine *engine);

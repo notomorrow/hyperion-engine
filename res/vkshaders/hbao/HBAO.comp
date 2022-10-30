@@ -36,20 +36,18 @@ layout(push_constant) uniform PushConstant
     float temporal_blending_factor;
 };
 
-//#include "../include/Temporal.glsl"
+#include "../include/Temporal.glsl"
 
 #define HYP_HBAO_NUM_CIRCLES 4
-#define HYP_HBAO_NUM_SLICES 8
-#define HYP_HBAO_RADIUS 16.0
+#define HYP_HBAO_NUM_SLICES 2
+#define HYP_HBAO_RADIUS 32.0
 #define HYP_HBAO_POWER 1.0
-
-const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
-const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
+#define HYP_HBAO_THICKNESS 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
 float tan_half_fov = tan(fov_rad * 0.5);
 float inv_tan_half_fov = 1.0 / tan_half_fov;
-vec2 focal_len = vec2(inv_tan_half_fov * (float(dimension.y) / float(dimension.x)), inv_tan_half_fov);
+vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scene.resolution_x)), inv_tan_half_fov);
 vec2 inv_focal_len = vec2(1.0) / focal_len;
 vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
 
@@ -69,6 +67,7 @@ float GetDepth(vec2 uv)
 
 vec3 GetPosition(vec2 uv, float depth)
 {
+    // return ReconstructViewSpacePositionFromDepth(inv_proj, uv, depth).xyz;
     const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far);
     return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
 }
@@ -81,14 +80,58 @@ vec3 GetNormal(vec2 uv)
     return view_normal;
 }
 
+float IntegrateUniformWeight(vec2 h)
+{
+    vec2 arc = vec2(1.0) - cos(h);
+
+    return arc.x + arc.y;
+}
+
+float IntegrateArcCosWeight(vec2 h, float n)
+{
+    vec2 arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
+
+    return 0.25 * (arc.x + arc.y);
+}
+
+vec2 RotateDirection(vec2 uv, vec2 cos_sin)
+{
+    return vec2(
+        uv.x * cos_sin.x - uv.y * cos_sin.y,
+        uv.x * cos_sin.y + uv.y * cos_sin.x
+    );
+}
+
+float IntegrateSolidAngle(vec2 integral_factors, float cos_theta0, float cos_theta1)
+{
+    float theta0, theta1;
+
+    theta0 = acos(cos_theta0);
+    theta1 = acos(cos_theta1);
+
+    float sin_theta0, sin_theta1;
+
+    sin_theta0 = sqrt(1.0 - HYP_FMATH_SQR(cos_theta0));
+    sin_theta1 = sqrt(1.0 - HYP_FMATH_SQR(cos_theta1));
+
+    const float integral_x = (theta1 - sin_theta1 * cos_theta1) - (theta0 - sin_theta0 * cos_theta0);
+    const float integral_y = cos_theta0 * cos_theta0 - cos_theta1 * cos_theta1;
+
+    return integral_factors.x * integral_x + integral_factors.y * integral_y;
+}
+
+
+#define HBAO_OLD 0
+
 void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
-    uvec2 pixel_coord = clamp(uvec2(uv * vec2(dimension - 1)), uvec2(0), dimension - 1);
+    uvec2 pixel_coord = clamp(uvec2(uv * vec2(dimension) - 0.5), uvec2(0), dimension - 1);
+    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter);
 
     const float projected_scale = float(dimension.y) / (tan_half_fov * 2.0) * 0.5;
 
-    const float temporal_offset = spatial_offsets[(scene.frame_counter / 6) % 4];
-    const float temporal_rotation = temporal_rotations[scene.frame_counter % 6];
+    const float temporal_offset = GetSpatialOffset(scene.frame_counter);
+    const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
     const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord));
@@ -97,19 +140,56 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
     const float depth = GetDepth(uv);
     const vec3 P = GetPosition(uv, depth);
     const vec3 N = GetNormal(uv);
+#if HBAO_OLD
+    const vec3 V = normalize(vec3(0.0) - P);
+#else
     const vec3 V = normalize(P);
+#endif
+
+
 
     const float camera_distance = P.z;
     const vec2 texel_size = vec2(1.0) / vec2(dimension);
+#if HBAO_OLD
+    const float step_radius = max((projected_scale * HYP_HBAO_RADIUS) / max(camera_distance, HYP_FMATH_EPSILON), float(HYP_HBAO_NUM_SLICES)) / float(HYP_HBAO_NUM_SLICES + 1);
+#else
     const float step_radius = max((projected_scale * 2.0 * HYP_HBAO_RADIUS) / max(camera_distance, HYP_FMATH_EPSILON), float(HYP_HBAO_NUM_SLICES)) / float(HYP_HBAO_NUM_SLICES + 1);
+#endif
 
     occlusion = 0.0;
     bent_normal = vec3(0.0);
     light_color = vec4(0.0);
 
     for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
+
+#if HBAO_OLD
+        float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES));
+        // const vec3 slice_dir = vec3(cos(angle), sin(angle), 0.0);
+        // const vec3 ray = normalize(vec3((slice_dir.xy * - 1.0) * V.z, dot(V.xy, slice_dir.xy)));
+
+        
+        vec3 slice_dir = { cos(angle), sin(angle), 0.0 };
+        // const vec3 ray = normalize(vec3(slice_dir.xy * -V.z, -dot(-V.xy, slice_dir.xy)));
+        // slice_dir.y *= -1.0;
+
+
+
+        vec2 horizons = vec2(-1.0);
+
+        const vec3 plane_normal = normalize(cross(slice_dir, V));
+        const vec3 plane_tangent = cross(V, plane_normal);
+        const vec3 projected_normal = N - plane_normal * dot(N, plane_normal);
+        const float projected_length = length(projected_normal);
+
+        const float cos_n = clamp(dot(normalize(projected_normal), V), -1.0, 1.0);
+        const float n = -sign(dot(projected_normal, plane_tangent)) * acos(cos_n);
+        
+        // const vec2 camera_normals = { dot(ray, N), dot(N, -V) };
+        // const vec2 integral_factors = 0.5 * vec2(dot(N.xy, camera_normals.xy), N.z);
+
+        vec4 local_light[2] = { vec4(0.0), vec4(0.0) };
+#else
         float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
-    
         vec2 ss_ray = { sin(angle), cos(angle) };
         const vec3 ray = normalize(vec3(ss_ray * V.z, -dot(V.xy, ss_ray)));
         ss_ray.y *= -1.0;
@@ -120,8 +200,76 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
         float max_theta = acos(cos_max_theta);
 
         float local_occlusion = 0.0;
+#endif
 
         for (int j = 0; j < HYP_HBAO_NUM_SLICES; j++) {
+
+#if HBAO_OLD
+            // R1 sequence (http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/)
+            const float step_base_noise = float(i + j * HYP_HBAO_NUM_SLICES) * 0.6180339887498948482;
+            const float step_noise = fract(noise_direction + step_base_noise);
+        
+            const vec2 uv_offset = (slice_dir.xy * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
+            const vec4 uv_slice = uv.xyxy + vec4(uv_offset, -uv_offset);
+
+            if (uvec4(uv_slice * vec4(dimension.xyxy) - vec4(0.5)) == pixel_coord.xyxy || abs(uv_slice) != Saturate(abs(uv_slice))) {
+                continue;
+            }
+
+            const vec2 depths = { GetDepth(uv_slice.xy), GetDepth(uv_slice.zw) };
+
+            const vec3 ds = GetPosition(uv_slice.xy, depths.x) - P;
+            const vec3 dt = GetPosition(uv_slice.zw, depths.y) - P;
+            
+
+            const vec2 dsdt = vec2(dot(ds, ds), dot(dt, dt));
+            const vec2 dsdt_length = inversesqrt(dsdt);
+
+            const vec2 falloff = Saturate(dsdt * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
+
+            const vec2 delta_v = vec2(dot(ds, V), dot(dt, V));
+            const vec2 H = delta_v * dsdt_length;
+
+            // vec4 delta_ss = vec4(delta_v.x, dot(ds, ray), delta_v.y, dot(dt, ray));
+            const vec2 dist = vec2(length(ds), length(dt)) / HYP_HBAO_RADIUS;//vec2(length(delta_ss.xy), length(delta_ss.zw)) / HYP_HBAO_RADIUS;
+
+            vec2 tmp_horizons = acos(clamp(H, vec2(-1.0), vec2(1.0)));
+            tmp_horizons.x = n + max(-H.x - n, -HYP_FMATH_PI_HALF);
+            tmp_horizons.y = n + min(H.y - n, HYP_FMATH_PI_HALF);
+            const float tmp_weight = IntegrateUniformWeight(tmp_horizons);
+
+            local_light[0] = mix(
+                local_light[0],
+                mix(vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.xy, 0.0).rgb, 1.0) * tmp_weight, local_light[0], 0.0),//falloff.x),
+                float(H.x > horizons.x)
+            );
+            local_light[1] = mix(
+                local_light[1],
+                mix(vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.zw, 0.0).rgb, 1.0) * tmp_weight, local_light[1], 0.0),//falloff.y),
+                float(H.y > horizons.y)
+            );
+
+            // if (H.x > horizons.x) {
+            //     local_light[0] = vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.xy, 0.0).rgb * IntegrateArcCosWeight(H, n), 1.0);
+            // }
+
+            // if (H.y > horizons.y) {
+            //     local_light[1] = vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.zw, 0.0).rgb * IntegrateArcCosWeight(H, n), 1.0);
+            // }
+
+            // const vec2 weights = { IntegrateSolidAngle(integral_factors, H.x, horizons.x), IntegrateSolidAngle(integral_factors * vec2(-1.0, 1.0), H.y, horizons.y) };
+
+            // local_light[0] += vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.xy, 0.0).rgb, 1.0) * float(H.x > horizons.x) * float(dist.x < 1.0 && dist.x > 0.05);// * tmp_weight;
+            // local_light[1] += vec4(Texture2DLod(sampler_linear, gbuffer_albedo_texture, uv_slice.zw, 0.0).rgb, 1.0) * float(H.y > horizons.y) * float(dist.y < 1.0 && dist.y > 0.05);// * tmp_weight;
+            
+            // horizons = max(horizons, mix(H, horizons, falloff));
+            horizons = mix(
+                mix(H, horizons, HYP_HBAO_THICKNESS),
+                mix(H, horizons, falloff),
+                greaterThan(H, horizons)
+            );
+#else
+
             vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
             uv_offset *= mix(-1.0, 1.0, float(j % 2 == 0));
 
@@ -157,14 +305,31 @@ void TraceAO(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_
                     local_occlusion += (1.0 - HYP_FMATH_SQR(dist)) * (dot(delta, N) - local_occlusion);
                 }
             }
+#endif
         }
 
+#if HBAO_OLD
+        horizons = acos(clamp(horizons, vec2(-1.0), vec2(1.0)));
+        horizons.x = n + max(-horizons.x - n, -HYP_FMATH_PI_HALF);
+        horizons.y = n + min(horizons.y - n, HYP_FMATH_PI_HALF);
+
+        const float bent_angle = (horizons.x + horizons.y) * 0.5;
+        const float arc_cos_weight = IntegrateArcCosWeight(horizons, n);
+
+        bent_normal += V * cos(bent_angle) - plane_tangent * sin(bent_angle);
+        occlusion += 1.0 - (projected_length * arc_cos_weight);
+
+        light_color += local_light[0];// * arc_cos_weight;
+        light_color += local_light[1];// * arc_cos_weight;
+#else
         occlusion += local_occlusion;
+#endif
     }
 
     // bent_normal = normalize(normalize(bent_normal) - (V * 0.5));
     occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES), 1.0 / HYP_HBAO_POWER));
-    light_color /= max(light_color.a, HYP_FMATH_EPSILON);
+    light_color /= max(light_color.a, 1.0);
+    // light_color /= float(HYP_HBAO_NUM_CIRCLES);
 }
 
 void main()

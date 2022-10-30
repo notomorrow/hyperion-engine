@@ -38,10 +38,12 @@ class RenderEnvironment;
 
 enum DeferredFlags : DeferredFlagBits
 {
-    DEFERRED_FLAGS_NONE = 0,
-    DEFERRED_FLAGS_SSR_ENABLED = 1 << 0,
-    DEFERRED_FLAGS_VCT_ENABLED = 1 << 1,
-    DEFERRED_FLAGS_ENV_PROBE_ENABLED = 1 << 2
+    DEFERRED_FLAGS_NONE = 0x0,
+    DEFERRED_FLAGS_SSR_ENABLED = 0x1,
+    DEFERRED_FLAGS_VCT_ENABLED = 0x2,
+    DEFERRED_FLAGS_ENV_PROBE_ENABLED = 0x4,
+    DEFERRED_FLAGS_HBAO_ENABLED = 0x8,
+    DEFERRED_FLAGS_HBIL_ENABLED = 0x10
 };
 
 class DeferredPass : public FullScreenPass
@@ -123,7 +125,7 @@ private:
     DeferredPass m_indirect_pass;
     DeferredPass m_direct_pass;
     PostProcessing m_post_processing;
-    HBAO m_hbao;
+    UniquePtr<HBAO> m_hbao;
     UniquePtr<TemporalAA> m_temporal_aa;
 
     FixedArray<Handle<Framebuffer>, max_frames_in_flight> m_opaque_fbos;

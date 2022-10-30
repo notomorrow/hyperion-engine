@@ -38,12 +38,12 @@ Result HBAO::ImageOutput::Destroy(Device *device)
 HBAO::HBAO(const Extent2D &extent)
     : m_image_outputs {
           ImageOutput(StorageImage(
-              Extent3D(extent.width / 2, extent.height / 2, 1), // downscale
+              Extent3D(extent.width, extent.height, 1),
               InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
               ImageType::TEXTURE_TYPE_2D
           )),
           ImageOutput(StorageImage(
-              Extent3D(extent.width / 2, extent.height / 2, 1), // downscale
+              Extent3D(extent.width, extent.height, 1),
               InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
               ImageType::TEXTURE_TYPE_2D
           ))

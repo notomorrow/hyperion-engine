@@ -37,7 +37,6 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_ENABLED 1
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
-#define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
@@ -53,7 +52,11 @@ vec2 texcoord = v_texcoord0;
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
-#define DEFERRED_FLAG_SSR_ENABLED 0x1
+#define DEFERRED_FLAGS_SSR_ENABLED 0x1
+#define DEFERRED_FLAGS_VCT_ENABLED 0x2
+#define DEFERRED_FLAGS_ENV_PROBE_ENABLED 0x4
+#define DEFERRED_FLAGS_HBAO_ENABLED 0x8
+#define DEFERRED_FLAGS_HBIL_ENABLED 0x10
 
 layout(push_constant) uniform DeferredParams
 {
@@ -118,7 +121,7 @@ void main()
         
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-#if HYP_ENV_PROBE_ENABLED
+#ifdef ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
             const uint probe_index = scene.environment_texture_index;
             EnvProbe probe = env_probes[probe_index];
@@ -156,7 +159,7 @@ void main()
 #endif
 
 #if HYP_SSR_ENABLED
-        if (bool(deferred_params.flags & DEFERRED_FLAG_SSR_ENABLED)) {
+        if (bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED)) {
             vec4 screen_space_reflections = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, texcoord);
             screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
             reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
@@ -167,7 +170,7 @@ void main()
         // quick and dirty hack to get not-so accurate indirect light for the scene --
         // sample lowest mipmap of cubemap, if we have it.
         // later, replace this will spherical harmonics.
-#if HYP_ENV_PROBE_ENABLED
+#ifdef ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
             const uint probe_index = scene.environment_texture_index;
             EnvProbe probe = env_probes[probe_index];
@@ -184,21 +187,19 @@ void main()
         }
 #endif
 
-#if 0
+#ifdef RT_ENABLED
         { // RT Radiance
             const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
             const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
             vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, 0.0);
             reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
         }
+        
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
-
-
-        // TODO: a define for this or parameter
-        // GTAO stores indirect light in RGB
-        irradiance += ssao_data.rgb;
+        // HBAO stores indirect light in RGB
+        irradiance += ssao_data.rgb * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 

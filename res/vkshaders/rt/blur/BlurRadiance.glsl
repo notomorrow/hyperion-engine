@@ -37,8 +37,6 @@ void main(void)
 
     vec4 output_color = Texture2D(sampler_linear, blur_input_texture, texcoord);
 
-#if 0
-
     float weight = 0.25;
 
     // const vec2 blur_input_texture_size = vec2(imageSize(input_image));
@@ -61,7 +59,7 @@ void main(void)
 
         // ivec2 offset_coord = clamp(input_coord + offset, ivec2(0), ivec2(input_image_dimensions - 1));
         vec2 offset_texcoord = Saturate(texcoord + (vec2(offset) * radius));
-        const vec4 input_color = Texture2D(blur_input_sampler, blur_input_texture, offset_texcoord);
+        const vec4 input_color = Texture2D(sampler_linear, blur_input_texture, offset_texcoord);
 
         output_color += input_color;
 
@@ -69,18 +67,6 @@ void main(void)
     }
 
     output_color /= max(num_samples, 1.0);
-
-#endif
-
-    float blending = 0.9;
-    vec2 velocity = Texture2D(sampler_nearest, velocity_texture, texcoord).rg;
-    const float velocity_scale = 1.0;
-    blending = blending - ((length(velocity) - 0.001) * velocity_scale);
-
-    vec4 previous_color = Texture2D(sampler_linear, prev_blur_input_texture, texcoord - velocity);
-    previous_color = ClampColor_3x3(blur_input_texture, previous_color, texcoord, vec2(1.0) / vec2(output_dimensions));
-
-    output_color = mix(output_color, previous_color, blending);
 
     imageStore(blur_output_image, coord, vec4(output_color));
 }

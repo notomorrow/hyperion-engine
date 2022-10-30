@@ -28,10 +28,13 @@ layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
+layout(push_constant) uniform PushConstant {
+    uvec2 output_dimensions;
+};
+
 void main(void)
 {
-    const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 output_dimensions = imageSize(blur_output_image);
+    const uvec2 coord = gl_GlobalInvocationID.xy;
 
     if (any(greaterThanEqual(coord, output_dimensions))) {
         return;
@@ -51,5 +54,5 @@ void main(void)
 
     output_color = mix(output_color, previous_color, blending);
 
-    imageStore(blur_output_image, coord, vec4(output_color));
+    imageStore(blur_output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), vec4(output_color));
 }

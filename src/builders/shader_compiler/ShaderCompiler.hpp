@@ -258,7 +258,7 @@ public:
     );
 
 private:
-    void GetDefaultVersions(ShaderProps &) const;
+    void GetDefaultVersions(ShaderProps &out) const;
 
     void ParseDefinitionSection(
         const DefinitionsFile::Section &section,

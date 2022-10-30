@@ -40,17 +40,17 @@ layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
-layout(std140, set = 0, binding = 4) buffer MeshDescriptions
+layout(std140, set = 0, binding = 2) buffer MeshDescriptions
 {
     MeshDescription mesh_descriptions[];
 };
 
-layout(std140, set = 0, binding = 5) readonly buffer MaterialBuffer
+layout(std140, set = 0, binding = 3) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
 
-layout(std140, set = 0, binding = 6) readonly buffer EntityBuffer
+layout(std140, set = 0, binding = 4) readonly buffer EntityBuffer
 {
     Object entities[];
 };
