@@ -47,14 +47,9 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
               Extent3D(extent),
               InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
               ImageType::TEXTURE_TYPE_2D
-          )),
-          ImageOutput(StorageImage(
-              Extent3D(extent),
-              InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,
-              ImageType::TEXTURE_TYPE_2D
           ))
       },
-      m_blur_radiance(
+      m_temporal_blending(
           extent,
           FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
@@ -75,14 +70,14 @@ void RTRadianceRenderer::Create(Engine *engine)
     );
 
     CreateImages(engine);
-    CreateBlurRadiance(engine);
+    CreateTemporalBlending(engine);
     CreateDescriptorSets(engine);
     CreateRaytracingPipeline(engine);
 }
 
 void RTRadianceRenderer::Destroy(Engine *engine)
 {
-    m_blur_radiance.Destroy(engine);
+    m_temporal_blending.Destroy(engine);
 
     engine->SafeReleaseHandle(std::move(m_shader));
 
@@ -161,27 +156,23 @@ void RTRadianceRenderer::Render(
         2
     );
 
-    for (auto &image_output : m_image_outputs) {
-        image_output.image.GetGPUImage()->InsertBarrier(
-            frame->GetCommandBuffer(),
-            ResourceState::UNORDERED_ACCESS
-        );
-    }
+    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()->InsertBarrier(
+        frame->GetCommandBuffer(),
+        ResourceState::UNORDERED_ACCESS
+    );
 
     m_raytracing_pipeline->TraceRays(
         engine->GetDevice(),
         frame->GetCommandBuffer(),
-        m_image_outputs[0].image.GetExtent()
+        m_image_outputs[frame->GetFrameIndex()].image.GetExtent()
     );
 
-    for (auto &image_output : m_image_outputs) {
-        image_output.image.GetGPUImage()->InsertBarrier(
-            frame->GetCommandBuffer(),
-            ResourceState::UNORDERED_ACCESS
-        );
-    }
+    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()->InsertBarrier(
+        frame->GetCommandBuffer(),
+        ResourceState::SHADER_RESOURCE
+    );
 
-    m_blur_radiance.Render(engine, frame);
+    m_temporal_blending.Render(engine, frame);
 }
 
 void RTRadianceRenderer::CreateImages(Engine *engine)
@@ -213,7 +204,7 @@ void RTRadianceRenderer::ApplyTLASUpdates(Engine *engine, RTUpdateStateFlags fla
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS) {
             // update mesh descriptions buffer in descriptor set
-            m_descriptor_sets[frame_index]->GetDescriptor(4)
+            m_descriptor_sets[frame_index]->GetDescriptor(2)
                 ->SetSubDescriptor({
                     .element_index = 0u,
                     .buffer = m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer()
@@ -238,37 +229,25 @@ void RTRadianceRenderer::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(1)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = &m_image_outputs[0].image_view
-            });
-
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(2)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = &m_image_outputs[1].image_view
-            });
-
-        descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(3)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = &m_image_outputs[2].image_view
+                .image_view = &m_image_outputs[frame_index].image_view
             });
         
         // mesh descriptions
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(4)
+        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(2)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .buffer = m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer()
             });
         
         // materials
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(5)
+        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(3)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .buffer = engine->shader_globals->materials.GetBuffers()[frame_index].get()
             });
         
         // entities
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(6)
+        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(4)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get()
@@ -295,7 +274,7 @@ void RTRadianceRenderer::CreateDescriptorSets(Engine *engine)
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_RADIANCE_RESULT)
                 ->SetSubDescriptor({
                     .element_index = 0u,
-                    .image_view = &m_blur_radiance.GetImageOutput(frame_index).image_view
+                    .image_view = &m_temporal_blending.GetImageOutput(frame_index).image_view
                 });
         }
 
@@ -327,9 +306,9 @@ void RTRadianceRenderer::CreateRaytracingPipeline(Engine *engine)
     });
 }
 
-void RTRadianceRenderer::CreateBlurRadiance(Engine *engine)
+void RTRadianceRenderer::CreateTemporalBlending(Engine *engine)
 {
-    m_blur_radiance.Create(engine);
+    m_temporal_blending.Create(engine);
 }
 
 

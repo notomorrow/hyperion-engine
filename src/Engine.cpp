@@ -289,8 +289,18 @@ void Engine::Initialize()
     HYPERION_ASSERT_RESULT(m_instance->Initialize(use_debug_layers));
 
     FindTextureFormatDefaults();
-
+    
     m_configuration.SetToDefaultConfiguration(this);
+    m_configuration.LoadFromDefinitionsFile(this);
+    
+    // save default configuration to file if
+    // anything changed from the loading process
+    if (!m_configuration.SaveToDefinitionsFile(this)) {
+        DebugLog(
+            LogType::Error,
+            "Failed to save configuration file\n"
+        );
+    }
 
     if (!m_shader_compiler.LoadShaderDefinitions()) {
         HYP_BREAKPOINT;

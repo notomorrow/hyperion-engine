@@ -7,7 +7,7 @@
 
 #include <rendering/Compute.hpp>
 #include <rendering/Shader.hpp>
-#include <rendering/rt/BlurRadiance.hpp>
+#include <rendering/TemporalBlending.hpp>
 #include <rendering/rt/TLAS.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
@@ -62,7 +62,7 @@ private:
     void CreateImages(Engine *engine);
     void CreateDescriptorSets(Engine *engine);
     void CreateRaytracingPipeline(Engine *engine);
-    void CreateBlurRadiance(Engine *engine);
+    void CreateTemporalBlending(Engine *engine);
     
     struct ImageOutput
     {
@@ -92,8 +92,8 @@ private:
 
     Handle<Shader> m_shader;
 
-    FixedArray<ImageOutput, 3> m_image_outputs;
-    BlurRadiance m_blur_radiance;
+    FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
+    TemporalBlending m_temporal_blending;
 
     UniquePtr<RaytracingPipeline> m_raytracing_pipeline;
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;

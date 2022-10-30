@@ -14,6 +14,7 @@ using renderer::DynamicStorageBufferDescriptor;
 using renderer::SamplerDescriptor;
 using renderer::DescriptorKey;
 using renderer::Rect;
+using renderer::ShaderVec2;
 
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
@@ -167,10 +168,19 @@ void TemporalBlending::Render(
 {
     const auto &scene_binding = engine->render_state.GetScene();
     const UInt scene_index = scene_binding.id.ToIndex();
-
+    
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
+    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
+
+    struct alignas(128) {
+        ShaderVec2<UInt32> output_dimensions;
+    } push_constants;
+
+    push_constants.output_dimensions = Extent2D(extent);
+
+    m_perform_blending->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
     m_perform_blending->GetPipeline()->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
@@ -180,8 +190,6 @@ void TemporalBlending::Render(
         0,
         FixedArray { UInt32(scene_index * sizeof(SceneShaderData)) }
     );
-
-    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
 
     m_perform_blending->GetPipeline()->Dispatch(
         frame->GetCommandBuffer(),

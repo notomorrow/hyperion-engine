@@ -82,6 +82,16 @@ vec4 Texture3DTexelLod(sampler samp, texture3D tex, ivec3 coord, int lod)
     return texelFetch(sampler3D(tex, samp), coord, lod);
 }
 
+ivec2 TextureSize(sampler samp, texture2D tex)
+{
+    return textureSize(sampler2D(tex, samp), 0);
+}
+
+ivec3 TextureSize(sampler samp, texture3D tex)
+{
+    return textureSize(sampler3D(tex, samp), 0);
+}
+
 #ifndef HYP_NO_CUBEMAP
 
 vec4 TextureCube(samplerCube tex, vec3 texcoord)

@@ -29,15 +29,18 @@ void DeferredPass::CreateShader(Engine *engine)
 {
     CompiledShader compiled_shader;
 
+    ShaderProps props { };
+    props.Set("RT_ENABLED", engine->GetConfig().Get(CONFIG_RT_ENABLED));
+
     if (m_is_indirect_pass) {
         compiled_shader = engine->GetShaderCompiler().GetCompiledShader(
             "DeferredIndirect",
-            ShaderProps { }
+            props
         );
     } else {
         compiled_shader = engine->GetShaderCompiler().GetCompiledShader(
             "DeferredDirect",
-            ShaderProps { }
+            props
         );
     }
 
@@ -183,7 +186,6 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 
 DeferredRenderer::DeferredRenderer()
     : m_ssr(Extent2D { 512, 512 }),
-      m_hbao(Extent2D { 1024, 1024 }), // image is downscaled
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -213,7 +215,9 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_dpr.Create(engine, depth_attachment_ref);
     m_ssr.Create(engine);
-    m_hbao.Create(engine);
+
+    m_hbao.Reset(new HBAO(engine->GetInstance()->GetSwapchain()->extent));
+    m_hbao->Create(engine);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_results[i] = engine->CreateHandle<Texture>(
@@ -468,7 +472,7 @@ void DeferredRenderer::Destroy(Engine *engine)
 
     m_ssr.Destroy(engine);
     m_dpr.Destroy(engine);
-    m_hbao.Destroy(engine);
+    m_hbao->Destroy(engine);
     m_temporal_aa->Destroy(engine);
 
     m_post_processing.Destroy(engine);
@@ -510,6 +514,14 @@ void DeferredRenderer::Render(
 
     const bool use_ssr = ssr_enabled && engine->GetConfig().Get(CONFIG_SSR);
     const bool use_rt_radiance = engine->GetConfig().Get(CONFIG_RT_REFLECTIONS);
+    const bool use_hbao = engine->GetConfig().Get(CONFIG_HBAO);
+    const bool use_hbil = engine->GetConfig().Get(CONFIG_HBIL);
+
+    struct alignas(128) DeferredData { UInt32 flags; } deferred_data;
+    deferred_data.flags = 0;
+    deferred_data.flags |= use_ssr && m_ssr.IsRendered() ? DEFERRED_FLAGS_SSR_ENABLED : 0;
+    deferred_data.flags |= use_hbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
+    deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
     
     CollectDrawCalls(engine, frame);
 
@@ -534,19 +546,14 @@ void DeferredRenderer::Render(
     { // indirect lighting
         DebugMarker marker(primary, "Record deferred indirect lighting pass");
 
-        m_indirect_pass.m_push_constant_data.deferred_data = {
-            .flags = (use_ssr && m_ssr.IsRendered())
-                ? DEFERRED_FLAGS_SSR_ENABLED
-                : 0
-        };
-
+        m_indirect_pass.SetPushConstants(&deferred_data, sizeof(deferred_data));
         m_indirect_pass.Record(engine, frame_index); // could be moved to only do once
     }
 
     { // direct lighting
         DebugMarker marker(primary, "Record deferred direct lighting pass");
-
-        m_direct_pass.m_push_constant_data = m_indirect_pass.m_push_constant_data;
+        
+        m_direct_pass.SetPushConstants(&deferred_data, sizeof(deferred_data));
         m_direct_pass.Record(engine, frame_index);
     }
 
@@ -559,7 +566,9 @@ void DeferredRenderer::Render(
     }
     // end opaque objs
 
-    m_hbao.Render(engine, frame);
+    if (use_hbao || use_hbil) {
+        m_hbao->Render(engine, frame);
+    }
     
     m_post_processing.RenderPre(engine, frame);
 

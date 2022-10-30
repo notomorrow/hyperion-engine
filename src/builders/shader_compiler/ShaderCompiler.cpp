@@ -207,11 +207,15 @@ static ByteBuffer CompileToSPIRV(
     }
 
     UInt vulkan_api_version = MathUtil::Max(HYP_VULKAN_API_VERSION, VK_API_VERSION_1_1);
+    UInt spirv_api_version = GLSLANG_TARGET_SPV_1_2;
+    UInt spirv_version = 450;
 
     // Maybe remove... Some platforms giving crash
     // when loading vk1.2 shaders. But we need it for raytracing.
     if (ShaderModule::IsRaytracingType(type)) {
         vulkan_api_version = MathUtil::Max(vulkan_api_version, VK_API_VERSION_1_2);
+        spirv_api_version = MathUtil::Max(spirv_api_version, GLSLANG_TARGET_SPV_1_4);
+        spirv_version = MathUtil::Max(spirv_version, 460);
     }
 
     const glslang_input_t input {
@@ -220,9 +224,9 @@ static ByteBuffer CompileToSPIRV(
         .client = GLSLANG_CLIENT_VULKAN,
         .client_version = static_cast<glslang_target_client_version_t>(vulkan_api_version),
         .target_language = GLSLANG_TARGET_SPV,
-        .target_language_version = GLSLANG_TARGET_SPV_1_2,
+        .target_language_version = static_cast<glslang_target_language_version_t>(spirv_api_version),
         .code = source,
-        .default_version = 450,
+        .default_version = int(spirv_version),
         .default_profile = GLSLANG_CORE_PROFILE,
         .force_default_version_and_profile = false,
         .forward_compatible = false,
@@ -660,7 +664,6 @@ bool ShaderCompiler::LoadShaderDefinitions()
     const bool supports_rt_shaders = m_engine->GetConfig().Get(CONFIG_RT_SUPPORTED);
 
     FlatMap<Bundle *, bool> results;
-    //results.Resize(bundles.Size());
 
     for (SizeType index = 0; index < bundles.Size(); index++) {
         auto &bundle = bundles[index];
@@ -948,7 +951,10 @@ CompiledShader ShaderCompiler::GetCompiledShader(
     const String &name
 )
 {
-    return GetCompiledShader(name, ShaderProps { });
+    ShaderProps props { };
+    GetDefaultVersions(props);
+
+    return GetCompiledShader(name, props);
 }
 
 CompiledShader ShaderCompiler::GetCompiledShader(

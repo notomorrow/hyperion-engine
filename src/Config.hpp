@@ -3,6 +3,7 @@
 
 #include <core/Containers.hpp>
 #include <util/Defines.hpp>
+#include <util/definitions/DefinitionsFile.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
@@ -22,15 +23,16 @@ enum OptionName
     CONFIG_RT_GI,
 
     CONFIG_SSR,
-
+    
     CONFIG_HBAO,
+    CONFIG_HBIL,
 
     CONFIG_VOXEL_GI,
 
     CONFIG_MAX
 };
 
-class Option : Variant<bool, Float, Int>
+class Option : public Variant<bool, Float, Int>
 {
     using Base = Variant<bool, Float, Int>;
 
@@ -173,17 +175,26 @@ public:
 
 class Configuration
 {
+    static const FlatMap<OptionName, String> option_name_strings;
+
 public:
     Configuration();
     ~Configuration() = default;
 
-    HYP_FORCE_INLINE Option &Get(OptionName name)
-        { return m_variables[static_cast<UInt>(name)]; }
+    HYP_FORCE_INLINE Option &Get(OptionName option)
+        { return m_variables[static_cast<UInt>(option)]; }
 
-    HYP_FORCE_INLINE const Option &Get(OptionName name) const
-        { return m_variables[static_cast<UInt>(name)]; }
+    HYP_FORCE_INLINE const Option &Get(OptionName option) const
+        { return m_variables[static_cast<UInt>(option)]; }
+
+    bool LoadFromDefinitionsFile(Engine *engine);
+    bool SaveToDefinitionsFile(Engine *engine);
 
     void SetToDefaultConfiguration(Engine *engine);
+
+    static OptionName StringToOptionName(const String &str);
+    static String OptionNameToString(OptionName option);
+    static bool IsRTOption(OptionName option);
 
 private:
     FixedArray<Option, CONFIG_MAX> m_variables;

@@ -12,9 +12,6 @@
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 // radiance image
 layout(set = 0, binding = 1, rgba8) uniform image2D image;
-// normals packed (first 2 components), b is roughness, a will be weight
-layout(set = 0, binding = 2, rgba8) uniform image2D normals_roughness_weight_image;
-layout(set = 0, binding = 3, r32f) uniform image2D depth_image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -57,6 +54,9 @@ void main()
     vec3 color = vec3(0.0);
 
     uint pixel_seed = 0xabcdef;
+
+    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
+    // const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     for (int sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
         const vec2 pixel_center = vec2(gl_LaunchIDEXT.x + RandomFloat(pixel_seed), gl_LaunchIDEXT.y + RandomFloat(pixel_seed));
@@ -105,6 +105,7 @@ void main()
 
     imageStore(image, storage_coord, vec4(color, 1.0));
 
+#if 0
     const vec4 first_hit_ndc_position = scene.projection * scene.view * vec4(FIRST_HIT.position, 1.0);
     const float first_hit_depth = FIRST_HIT.payload.distance >= 0.0
         ? first_hit_ndc_position.z / first_hit_ndc_position.w
@@ -122,4 +123,5 @@ void main()
     normals_roughness_weight.a = radius / 255.0;//FIRST_HIT.payload.roughness;//radius;
 
     imageStore(normals_roughness_weight_image, storage_coord, normals_roughness_weight);
+#endif
 }
