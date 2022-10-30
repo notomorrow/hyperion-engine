@@ -165,8 +165,8 @@ public:
         
         m_scene->SetCamera(
             engine->CreateHandle<Camera>(new FirstPersonCamera(
-                1080, 768,
-                75.0f,
+                1920, 1080,
+                70.0f,
                 0.5f, 30000.0f
             ))
         );
@@ -547,77 +547,8 @@ int main()
 {
     using namespace hyperion::renderer;
 
-    // HYP_BREAKPOINT;
-
-    // Variant<UniquePtr<void>, int> x(UniquePtr<int>(new int(4)).Cast<void>());
-    // auto x_val = x.Get<UniquePtr<void>>().Cast<int>();
-    // std::cout << *x_val << std::endl;
-    // HYP_BREAKPOINT;
-
-#if 0
-
-    // Profile profile_1([]() {
-    //     std::unordered_map<int, unsigned> items;
-        
-    //     for (int i = 0; i < 100; i++) {
-    //         items[i] = static_cast<unsigned>(i) & static_cast<unsigned>(i * 2);
-    //     }
-        
-    //     for (auto &it : items) {
-    //         std::cout << it.first << ": " << it.second << "\n";
-    //     }
-    // });
-    // Profile profile_2([]() {
-    //     FlatMap<int, int> items;
-        
-    //     for (int i = 0; i < 100; i++) {
-    //         items[i] = static_cast<unsigned>(i) & static_cast<unsigned>(i * 2);
-    //     }
-        
-    //     for (auto &it : items) {
-    //         std::cout << it.first << ": " << it.second << "\n";
-    //     }
-    // });
-
-    Profile profile_1([]() {
-        std::queue<Proc<void>> items;
-        for (int i = 0; i < 1024; i++) {
-            EntityDrawProxy ent;
-            ent.entity_id.value = i;
-            items.push([ent]() {
-                std::cout << "I am item number " << ent.entity_id.value << "\n";
-            });
-        }
-        
-        while (!items.empty()) {
-            items.front()();
-            items.pop();
-        }
-    });
-
-    Profile profile_2([]() {
-        std::queue<std::function<void()>> items;
-        for (int i = 0; i < 1024; i++) {
-            EntityDrawProxy ent;
-            ent.entity_id.value = i;
-            items.push([ent]() {
-                std::cout << "I am item number " << ent.entity_id.value << "\n";
-            });
-        }
-        
-        while (!items.empty()) {
-            items.front()();
-            items.pop();
-        }
-    });
-
-    auto results = Profile::RunInterleved({ profile_1, profile_2, profile_1, profile_2 }, 5, 5, 30);
-
-    HYP_BREAKPOINT;
-#endif
-    
     SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 2048, 2048);
+    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1920, 1080);
     system.SetCurrentWindow(window);
 
     SystemEvent event;
@@ -655,12 +586,10 @@ int main()
         engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Terrain", ShaderProps { }))
     );
 
-    {
-        engine->shader_manager.SetShader(
-            ShaderManager::Key::BASIC_SKYBOX,
-            engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Skybox", ShaderProps { }))
-        );
-    }
+    engine->shader_manager.SetShader(
+        ShaderManager::Key::BASIC_SKYBOX,
+        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Skybox", ShaderProps { }))
+    );
 
     my_game->Init(engine, window);
 

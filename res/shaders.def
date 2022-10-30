@@ -153,3 +153,6 @@ comp = CalculateMotionVectors.comp
 
 [TemporalAA]
 comp = TemporalAA.comp
+
+[TemporalBlending]
+comp = TemporalBlending.comp
