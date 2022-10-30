@@ -36,6 +36,8 @@ layout(push_constant) uniform PushConstant
     float temporal_blending_factor;
 };
 
+//#include "../include/Temporal.glsl"
+
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 8
 #define HYP_HBAO_RADIUS 16.0
@@ -181,14 +183,8 @@ void main()
 
     TraceAO(uv, occlusion, bent_normal, light_color);
 
-    float weight = 0.9;
 
-    vec2 motion_vectors = Texture2D(sampler_linear, gbuffer_velocity_texture, uv).rg;
-    weight = weight - Saturate(length(motion_vectors) * 3.0);
-
-    vec4 previous_values = Texture2D(sampler_linear, prev_image, uv);
     vec4 next_values = vec4(light_color.rgb, occlusion);
-    next_values.rgb = mix(next_values.rgb, previous_values.rgb, scene.frame_counter == 0 ? 0.0 : weight);
-
+    
     imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimension - 1)), next_values);
 }
