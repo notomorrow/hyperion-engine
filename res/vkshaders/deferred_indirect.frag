@@ -47,7 +47,7 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 25000.0
+#define IBL_INTENSITY 50000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
@@ -166,8 +166,7 @@ void main()
         }
 #endif
 
-        // TEMP; will be under a compiler conditional.
-        // quick and dirty hack to get not-so accurate indirect light for the scene --
+        // gives not-so accurate indirect light for the scene --
         // sample lowest mipmap of cubemap, if we have it.
         // later, replace this will spherical harmonics.
 #ifdef ENV_PROBE_ENABLED
@@ -182,7 +181,7 @@ void main()
 
                 vec4 env_probe_irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
 
-                // irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
+                irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
             }
         }
 #endif
