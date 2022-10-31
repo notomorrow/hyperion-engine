@@ -44,7 +44,7 @@ void main(void)
 
     vec4 output_color = Texture2D(sampler_nearest, blur_input_texture, uv);
 
-    float blending = 0.92;
+    float blending = 0.85;
     vec2 velocity = Texture2D(sampler_nearest, velocity_texture, uv).rg;
     const float velocity_scale = 1.0;
     blending = blending - ((length(velocity) - 0.001) * velocity_scale);
