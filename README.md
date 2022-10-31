@@ -16,11 +16,11 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
      * With physically based camera effects (aperture, exposure etc.)
 * Post processing
      * HBAO (horizon based ambient occlusion)
-     * Screen space global illumination (cheap!)
+     * Screen space global illumination
      * Screen space reflections with glossiness (SSR)
-     * Screen space refraction
-     * FXAA for anti-aliasing
-     * Tonemapping effects
+     * Refraction
+     * FXAA and TAA for anti-aliasing
+     * Tone mapping
 * Raytracing - Reflections, Global Illumination (DDGI)
 * Procedural, paged terrain generation
 * Serialization / deserialization system
@@ -33,8 +33,11 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 * GPU occlusion culling
 * GPU particle rendering
 * Dynamic cubemap rendering with local correction, so reflections match up
-* Voxel cone tracing (dynamic global illumination and reflections), implemented both with a 3D texture and a sparse voxel octree
-* Shadows - Variance shadow maps, contact-hardened shadows
+* Voxel cone tracing (dynamic global illumination and reflections)
+     * Implemented both with a 3D texture and a sparse voxel octree
+* Shadow rendering
+     * Variance shadow maps
+     * Contact-hardened soft shadows
 * Scripting engine (Hypscript)
 
 
