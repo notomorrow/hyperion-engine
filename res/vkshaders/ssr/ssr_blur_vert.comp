@@ -2,4 +2,5 @@
 
 #define HYP_SSR_BLUR_VERTICAL
 #extension GL_GOOGLE_include_directive : require
+
 #include "ssr_blur.glsl"

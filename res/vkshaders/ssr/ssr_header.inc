@@ -3,16 +3,30 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/defines.inc"
-#include "../include/gbuffer.inc"
+#include "../include/packing.inc"
 #include "../include/scene.inc"
 #include "../include/shared.inc"
 #include "../include/noise.inc"
-#include "../include/Temporal.glsl"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #define HYP_SSR_ROUGHNESS_MAX 1.0
 
-layout(push_constant) uniform PushConstant
+layout(set = 0, binding = 10) uniform texture2D gbuffer_albedo_texture;
+layout(set = 0, binding = 11) uniform texture2D gbuffer_normals_texture;
+layout(set = 0, binding = 12) uniform texture2D gbuffer_material_texture;
+layout(set = 0, binding = 13) uniform texture2D gbuffer_depth_texture;
+
+layout(set = 0, binding = 14) uniform sampler sampler_nearest;
+layout(set = 0, binding = 15) uniform sampler sampler_linear;
+
+layout(std140, set = 0, binding = 16, row_major) readonly buffer SceneBuffer
+{
+    Scene scene;
+};
+
+layout(std140, set = 0, binding = 17) uniform SSRParams
 {
 	ivec2 dimension;
 	float ray_step;
@@ -26,28 +40,7 @@ layout(push_constant) uniform PushConstant
 	float screen_edge_fade_end;
 } ssr_params;
 
-float isoscelesTriangleOpposite(float adjacentLength, float coneTheta)
+float SampleDepth(vec2 uv)
 {
-    // simple trig and algebra - soh, cah, toa - tan(theta) = opp/adj, opp = tan(theta) * adj, then multiply * 2.0f for isosceles triangle base
-    return 2.0 * tan(coneTheta) * adjacentLength;
+	return Texture2D(sampler_nearest, gbuffer_depth_texture, uv).r;
 }
-
-float isoscelesTriangleInRadius(float a, float h)
-{
-    float a2 = a * a;
-    float fh2 = 4.0 * h * h;
-    return (a * (sqrt(a2 + fh2) - a)) / (4.0 * h);
-}
-
-vec4 coneSampleWeightedColor(vec2 samplePos, float mipChannel, float gloss)
-{
-    vec4 sampleColor = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, samplePos, mipChannel);
-    return sampleColor * gloss;
-}
-
-float isoscelesTriangleNextAdjacent(float adjacentLength, float incircleRadius)
-{
-    // subtract the diameter of the incircle to get the adjacent side of the next level on the cone
-    return adjacentLength - (incircleRadius * 2.0);
-}
-

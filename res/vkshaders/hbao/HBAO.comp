@@ -39,13 +39,10 @@ layout(push_constant) uniform PushConstant
 #include "../include/Temporal.glsl"
 
 
-#define HBAO_OLD 0
-
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
 #define HYP_HBAO_RADIUS 32.0
-#define HYP_HBAO_POWER 0.65
-#define HYP_HBIL_POWER 1.0
+#define HYP_HBAO_POWER 1.25
 #define HYP_HBAO_THICKNESS 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
@@ -224,7 +221,6 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     // bent_normal = normalize(normalize(bent_normal) - (V * 0.5));
     occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES), 1.0 / HYP_HBAO_POWER));
     light_color /= max(light_color.a, 1.0);
-    light_color.rgb = pow(light_color.rgb, vec3(1.0 / HYP_HBIL_POWER));
 
     // occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
     // light_color *= 1.0 / (1.0 - ANGLE_BIAS);
