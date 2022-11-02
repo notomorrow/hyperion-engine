@@ -37,7 +37,6 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_ENABLED 1
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
-#define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
@@ -47,21 +46,13 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 50000.0
+#define IBL_INTENSITY 30000.0
 #define IRRADIANCE_MULTIPLIER 1.0
-#define SSAO_DEBUG 0
-#define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
-#define DEFERRED_FLAGS_SSR_ENABLED 0x1
-#define DEFERRED_FLAGS_VCT_ENABLED 0x2
-#define DEFERRED_FLAGS_ENV_PROBE_ENABLED 0x4
-#define DEFERRED_FLAGS_HBAO_ENABLED 0x8
-#define DEFERRED_FLAGS_HBIL_ENABLED 0x10
-
-layout(push_constant) uniform DeferredParams
+layout(push_constant) uniform PushConstant
 {
-    uint flags;
-} deferred_params;
+    DeferredParams deferred_params;
+};
 
 #include "include/DDGI.inc"
 
@@ -106,42 +97,22 @@ void main()
     if (perform_lighting) {
         const float roughness = material.r;
         const float metalness = material.g;
-        
+
         float NdotV = max(0.0001, dot(N, V));
 
         const vec3 diffuse_color = CalculateDiffuseColor(albedo_linear, metalness);
         const vec3 F0 = CalculateF0(albedo_linear, metalness);
-        vec3 F90 = vec3(clamp(dot(F0.rgb, vec3(50.0 * 0.33)), 0.0, 1.0));
 
         F = CalculateFresnelTerm(F0, roughness, NdotV);
 
         const float perceptual_roughness = sqrt(roughness);
         const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
         const vec3 E = CalculateE(F0, dfg);
-        
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-#ifdef ENV_PROBE_ENABLED
-        if (scene.environment_texture_usage != 0) {
-            const uint probe_index = scene.environment_texture_index;
-            EnvProbe probe = env_probes[probe_index];
-
-            if (probe.texture_index != ~0u) {
-                const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
-                const int num_levels = GetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
-                const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
-
-                ibl = EnvProbeSample(
-                    gbuffer_sampler,
-                    env_probe_textures[probe_texture_index],
-                    bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
-                        ? EnvProbeCoordParallaxCorrected(probe, position.xyz, R)
-                        : R,
-                    lod
-                ).rgb;
-            }
-        }
-#endif
+// #ifdef ENV_PROBE_ENABLED
+        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
+// #endif
 
 #if HYP_VCT_ENABLED
         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
@@ -158,47 +129,28 @@ void main()
         }
 #endif
 
-#if HYP_SSR_ENABLED
-        if (bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED)) {
-            vec4 screen_space_reflections = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, texcoord);
-            screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-            reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
-        }
+#ifdef SSR_ENABLED
+        CalculateScreenSpaceReflection(deferred_params, texcoord, reflections);
 #endif
 
-        // gives not-so accurate indirect light for the scene --
-        // sample lowest mipmap of cubemap, if we have it.
-        // later, replace this will spherical harmonics.
-#ifdef ENV_PROBE_ENABLED
-        if (scene.environment_texture_usage != 0) {
-            const uint probe_index = scene.environment_texture_index;
-            EnvProbe probe = env_probes[probe_index];
-
-            if (probe.texture_index != ~0u) {
-                const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
-
-                const int num_levels = GetNumLevels(gbuffer_sampler, env_probe_textures[probe_texture_index]);
-
-                vec4 env_probe_irradiance = EnvProbeSample(gbuffer_sampler, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
-
-                irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
-            }
-        }
-#endif
+// #ifdef ENV_PROBE_ENABLED
+        CalculateEnvProbeIrradiance(deferred_params, N, irradiance);
+// #endif
 
 #ifdef RT_ENABLED
-        { // RT Radiance
-            const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
-            const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
-            vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, 0.0);
-            reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
-        }
-        
+        // { // RT Radiance
+        //     const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
+        //     const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
+        //     vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, 0.0);
+        //     reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
+        // }
+        CalculateRaytracingReflection(deferred_params, texcoord, reflections);
+
+
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
-        // HBAO stores indirect light in RGB
-        irradiance += ssao_data.rgb * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
+        CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
@@ -206,8 +158,8 @@ void main()
         specular_ao *= energy_compensation;
 
         vec3 Fr = E * ibl;
-        Fr *= specular_ao;
 
+        Fr *= specular_ao;
         reflections.rgb *= specular_ao;
 
         vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
@@ -217,22 +169,16 @@ void main()
         Fr *= exposure * IBL_INTENSITY;
         Fd *= exposure * IBL_INTENSITY;
 
-        Fr = (Fr * (1.0 - reflections.a)) + (E * reflections.rgb);
+        IntegrateReflections(Fr, E, reflections);
 
         result = Fd + Fr;
 
-        result = CalculateFogLinear(vec4(result, 1.0), vec4(vec3(0.7, 0.8, 1.0), 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far).rgb;
+        vec4 final_result = vec4(result, 1.0);
+        ApplyFog(position.xyz, final_result);
+        result = final_result.rgb;
     } else {
         result = albedo.rgb;
     }
-
-#if SSAO_DEBUG
-    result = vec3(ao);
-#endif
-
-#ifdef HYP_VULKAN
-    result = irradiance.rgb;
-#endif
 
     output_color = vec4(result, 1.0);
 }

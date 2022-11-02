@@ -14,10 +14,12 @@
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 1) uniform texture2D gbuffer_depth_texture;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 2) uniform texture2D gbuffer_mip_chain;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 3) uniform sampler gbuffer_depth_sampler; // nearest
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler gbuffer_sampler;       // mipmap linear
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 3) uniform sampler sampler_nearest; // nearest
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_linear;       // mipmap linear
 #endif
 
+#define gbuffer_sampler sampler_linear
+#define gbuffer_depth_sampler sampler_nearest
 #define HYP_SAMPLER_NEAREST gbuffer_depth_sampler
 #define HYP_SAMPLER_LINEAR gbuffer_sampler
 

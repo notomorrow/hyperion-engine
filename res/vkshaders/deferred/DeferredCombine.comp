@@ -89,6 +89,7 @@ void main()
     const float roughness = material.r;
     const float metalness = material.g;
     const float transmission = material.b;
+    const float ao = material.a;
 
     const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
@@ -118,15 +119,20 @@ void main()
             result, forward_result
         );
 
-        vec3 Fd = forward_result.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (1.0 /* diffuse BRDF */);
+        vec3 Fd = forward_result.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (1.0 * ao/* diffuse BRDF */);
         Fd *= (1.0 - transmission);
 
         result.rgb = Ft + Fd;
+        
+        /* TODO: Get Env probe  / reflections */
+
     } else {
         result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
     }
 
     result.a = 1.0;
+    
+    // result = vec4(forward_result.a, 0.0, 0.0, 1.0);
 
     // TODO: Do post FX combine here instead of in blit.frag
     

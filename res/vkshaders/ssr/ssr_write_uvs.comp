@@ -96,7 +96,12 @@ float CalculateAlpha(
 void main(void)
 {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-	vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
+
+    if (any(greaterThanEqual(coord, ssr_params.dimension))) {
+        return;
+    }
+
+	vec2 texcoord = (vec2(coord) + 0.5) / vec2(ssr_params.dimension);
 
     const mat4 inverse_proj = inverse(scene.projection);
 
@@ -104,8 +109,17 @@ void main(void)
 	vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
     vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 
+    // scatter the ray based on roughness
+    uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter);
+
+    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
+    // const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
+
     vec3 ray_origin = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, SampleDepth(texcoord)).xyz;
-    vec3 ray_direction = normalize(reflect(normalize(ray_origin), view_space_normal));
+    vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
+    vec3 scattered_direction = view_space_normal + RandomInHemisphere(rnd, view_space_normal) * roughness;
+
+    vec3 ray_direction = normalize(reflect(normalize(ray_origin), scattered_direction));
 
 	vec2 hit_pixel;
     vec3 hit_point;
