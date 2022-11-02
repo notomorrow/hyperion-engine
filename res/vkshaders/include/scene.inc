@@ -29,8 +29,8 @@ struct Scene
     uint enabled_render_components_mask;
 
     vec4 taa_params;
+    vec4 fog_params;
 
-    vec4 _pad1;
     vec4 _pad2;
     vec4 _pad3;
 

@@ -1,10 +1,10 @@
 [DeferredIndirect]
-permute = VCT_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
 frag = deferred_indirect.frag
 vert = deferred.vert
 
 [DeferredDirect]
-permute = VCT_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
 frag = deferred_direct.frag
 vert = deferred.vert
 

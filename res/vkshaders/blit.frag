@@ -57,8 +57,6 @@ void main()
     // out_color = imageLoad(rt_normals_roughness_weight_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
     // out_color = imageLoad(rt_depth_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
     
-    // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
-    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
 
     vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
     out_color = deferred_result;
@@ -78,6 +76,9 @@ void main()
         1.0
     );
 
+    out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
+    out_color.rgb = pow(out_color.rgb, vec3(2.2));
+    
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).aaa;//, vec3(2.2));
     //out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_velocity_texture, v_texcoord0).rgb * 10.0;//, vec3(2.2));
 
