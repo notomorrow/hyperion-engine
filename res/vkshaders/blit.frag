@@ -20,6 +20,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radi
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
+
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
 
 // layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8)  uniform image2D rt_image;
@@ -76,8 +78,8 @@ void main()
         1.0
     );
 
-    out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_blur_vert, v_texcoord0);
-    out_color.rgb = pow(out_color.rgb, vec3(2.2));
+    // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0);
+    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
     
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).aaa;//, vec3(2.2));
     //out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_velocity_texture, v_texcoord0).rgb * 10.0;//, vec3(2.2));

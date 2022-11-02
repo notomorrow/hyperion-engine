@@ -11,6 +11,8 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED 0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
+#define HYP_HBIL_POWER 1.75
+
 struct DeferredParams
 {
     uint flags;
@@ -223,8 +225,8 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, ino
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
-    vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_blur_vert, uv);
-    screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
+    vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
+    // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled));
 }
 #endif
@@ -241,7 +243,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
 
 void CalculateHBILIrradiance(DeferredParams deferred_params, in vec4 ssao_data, inout vec3 irradiance)
 {
-    irradiance += ssao_data.rgb * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
+    irradiance += pow(ssao_data.rgb, vec3(1.0 / HYP_HBIL_POWER)) * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
 }
 
 void IntegrateReflections(inout vec3 Fr, in vec3 E, in vec4 reflections)

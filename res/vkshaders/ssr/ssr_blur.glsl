@@ -2,10 +2,8 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "ssr_header.inc"
-#include "../include/noise.inc"
-#include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 2.0
+#define HYP_SSR_MAX_BLUR_INCREMENT 6.0
 // #define HYP_SSR_USE_GAUSSIAN_BLUR 
 
 #ifndef HYP_SSR_USE_GAUSSIAN_BLUR
@@ -13,19 +11,19 @@
     #define HYP_SSR_BLUR_MULTIPLIER 30.0
 #endif
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba8) uniform readonly image2D ssr_sample_image;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radius;
+layout(set = 0, binding = 1, rgba8) uniform readonly image2D ssr_sample_image;
+layout(set = 0, binding = 2, r8) uniform readonly image2D ssr_radius_image;
+layout(set = 0, binding = 6) uniform texture2D ssr_sample;
+layout(set = 0, binding = 7) uniform texture2D ssr_radius;
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform writeonly image2D ssr_blur;
+    layout(set = 0, binding = 3, rgba8) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE   ssr_sample_image
     #define HYP_SSR_PREV_TEXTURE ssr_sample
 #elif defined(HYP_SSR_BLUR_VERTICAL)
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba8) uniform readonly image2D ssr_blur_hor_image;
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform writeonly image2D ssr_blur;
+    layout(set = 0, binding = 3, rgba8) uniform readonly image2D ssr_blur_hor_image;
+    layout(set = 0, binding = 4, rgba8) uniform writeonly image2D ssr_blur;
+    layout(set = 0, binding = 8) uniform texture2D ssr_blur_hor;
     #define HYP_SSR_PREV_IMAGE   ssr_blur_hor_image
     #define HYP_SSR_PREV_TEXTURE ssr_blur_hor
 #else
@@ -70,7 +68,7 @@ void GaussianBlurAccum(
         if (d < sample_radius) {
             float weight = GaussianWeight(d / sample_radius);
 
-            reflection_sample += imageLoad(HYP_SSR_PREV_IMAGE, tc) * weight;//Texture2D(gbuffer_sampler, HYP_SSR_PREV_IMAGE, tc) * weight;
+            reflection_sample += imageLoad(HYP_SSR_PREV_IMAGE, tc) * weight;
 
 
             divisor += weight;
@@ -83,7 +81,12 @@ void GaussianBlurAccum(
 void main(void)
 {
     const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-	const vec2 texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
+
+    if (any(greaterThanEqual(coord, ssr_params.dimension))) {
+        return;
+    }
+
+	const vec2 texcoord = (vec2(coord) + 0.5) / vec2(ssr_params.dimension);
 
     vec4 reflection_sample = vec4(0.0);
     float accum_radius = 0.0;
@@ -114,7 +117,7 @@ void main(void)
 #endif
 
         vec2 offset_texcoord = offset_coord * blur_amount / vec2(ssr_params.dimension);
-        vec4 offset_reflection_sample = Texture2D(HYP_SAMPLER_LINEAR, HYP_SSR_PREV_TEXTURE, texcoord + offset_texcoord);
+        vec4 offset_reflection_sample = Texture2D(sampler_linear, HYP_SSR_PREV_TEXTURE, texcoord + offset_texcoord);
 
         reflection_sample += offset_reflection_sample;
     }
@@ -123,9 +126,9 @@ void main(void)
 
 #endif
 
-#ifdef HYP_SSR_BLUR_VERTICAL
-    reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
-#endif
+// #ifdef HYP_SSR_BLUR_VERTICAL
+//     reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
+// #endif
 
     imageStore(ssr_blur, coord, reflection_sample);
 }

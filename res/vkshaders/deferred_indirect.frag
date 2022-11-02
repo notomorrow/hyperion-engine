@@ -13,9 +13,7 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
-
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 
@@ -46,7 +44,7 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 30000.0
+#define IBL_INTENSITY 15000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 
 layout(push_constant) uniform PushConstant
@@ -133,9 +131,9 @@ void main()
         CalculateScreenSpaceReflection(deferred_params, texcoord, reflections);
 #endif
 
-// #ifdef ENV_PROBE_ENABLED
+#ifdef ENV_PROBE_ENABLED
         CalculateEnvProbeIrradiance(deferred_params, N, irradiance);
-// #endif
+#endif
 
 #ifdef RT_ENABLED
         // { // RT Radiance
@@ -149,6 +147,7 @@ void main()
 
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
+
 
         CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 
