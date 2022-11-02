@@ -11,6 +11,10 @@ layout(location=1) in vec2 v_texcoord0;
 
 layout(location=0) out vec4 output_color;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
+
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
@@ -25,8 +29,6 @@ vec2 texcoord = v_texcoord0;
 
 #include "include/shadows.inc"
 #include "include/PhysicalCamera.inc"
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
 
 void main()
 {
@@ -117,10 +119,11 @@ void main()
 
         vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
         
-        // direct_component = CalculateFogLinear(direct_component, vec4(0.7, 0.8, 1.0, 1.0), position.xyz, scene.camera_position.xyz, (scene.camera_near + scene.camera_far) * 0.5, scene.camera_far);
         direct_component.a *= attenuation;
         direct_component.rgb *= (exposure * light.position_intensity.w);
         result += direct_component * (light_color * ao * NdotL * shadow);
+
+        ApplyFog(position.xyz, result);
 
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {
