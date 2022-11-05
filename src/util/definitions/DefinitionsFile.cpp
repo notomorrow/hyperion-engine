@@ -35,20 +35,20 @@ void DefinitionsFile::Parse()
 
             // section block
             if (line_trimmed[0] == '[') {
-                std::string section_name;
+                String section_name;
 
                 for (SizeType index = 1; index < line_trimmed.Size() && line_trimmed[index] != ']'; index++) {
                     section_name += line_trimmed[index];
                 }
 
-                if (section_name.empty()) {
+                if (section_name.Empty()) {
                     DebugLog(
                         LogType::Warn,
                         "Empty section name\n"
                     );
                 }
 
-                sections.PushBack(Pair { String(section_name.c_str()), Section { } });
+                sections.PushBack(Pair { std::move(section_name), Section { } });
 
                 continue;
             }

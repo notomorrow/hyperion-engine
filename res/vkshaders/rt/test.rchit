@@ -157,7 +157,7 @@ void main()
     material_color = material.albedo;
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
+        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord * material.uv_scale);
         
         material_color *= albedo_texture;
     }

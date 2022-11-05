@@ -225,4 +225,52 @@ vec3 GTAOMultiBounce(float visibility, const vec3 albedo) {
     return max(vec3(visibility), ((visibility * a + b) * visibility + c) * visibility);
 }
 
+float VanDerCorpus(uint bits) 
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+      
+vec3 CosWeightedRandomHemisphereDirectionHammersley(uint sample_index, uint num_samples, vec3 n)
+{
+    float x = float(sample_index) / float(num_samples);
+
+    uint i = sample_index;
+    i = (i << 16u) | (i >> 16u);
+    i = ((i & 0x55555555u) << 1u) | ((i & 0xAAAAAAAAu) >> 1u);
+    i = ((i & 0x33333333u) << 2u) | ((i & 0xCCCCCCCCu) >> 2u);
+    i = ((i & 0x0F0F0F0Fu) << 4u) | ((i & 0xF0F0F0F0u) >> 4u);
+    i = ((i & 0x00FF00FFu) << 8u) | ((i & 0xFF00FF00u) >> 8u);
+
+    vec2 r = vec2(x, (float(i) * 2.32830643653086963e-10 * 6.2831));
+    vec3 uu = normalize(cross(n, vec3(1.0,1.0,0.0))), vv = cross(uu, n);
+
+    float sqrtx = sqrt(r.x);
+
+    return normalize(vec3(sqrtx * cos(r.y) * uu + sqrtx * sin(r.y) * vv + sqrt(1.0 - r.x) * n));
+}
+
+// Hammersley sequence
+vec2 Hammersley(uint i, uint N)
+{
+    return vec2(float(i) / float(N), VanDerCorpus(i));
+}
+
+vec3 ImportanceSampleGGX(vec2 s, vec3 n, float alpha)
+{
+    float phi = HYP_FMATH_PI * 2.0 * s.x;
+    float cos_theta = 1.0 / sqrt(1.0 + (alpha * alpha * s.y) / (1.0 - s.y));
+    float sin_theta = sqrt(max(0.0, 1.0 - cos_theta * cos_theta));
+
+    vec3 axis = abs(n.x) > 0.001 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 t = normalize(cross(axis, n));
+    vec3 b = cross(n, t);
+
+    return normalize(b * cos(phi) * sin_theta + t * sin(phi) * sin_theta + n * cos_theta);
+}
+
 #endif

@@ -198,7 +198,7 @@ void Material::EnqueueRenderUpdates()
                 )),
                 0, 0, 0
             ),
-            .uv_scale = GetParameter<float>(MATERIAL_KEY_UV_SCALE),
+            .uv_scale = GetParameter<Vector2>(MATERIAL_KEY_UV_SCALE),
             .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
         };
 
@@ -284,7 +284,7 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
-    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        1.0f);
+    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
     m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.005f);
 
     m_shader_data_state |= ShaderDataState::DIRTY;

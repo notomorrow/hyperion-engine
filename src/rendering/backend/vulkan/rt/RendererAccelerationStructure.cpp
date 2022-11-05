@@ -239,12 +239,11 @@ Result AccelerationStructure::CreateAccelerationStructure(
         m_buffer = std::make_unique<AccelerationStructureBuffer>();
 	}
 	
-	VkAccelerationStructureBuildGeometryInfoKHR geometry_info;
-    geometry_info = VkAccelerationStructureBuildGeometryInfoKHR{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
+    VkAccelerationStructureBuildGeometryInfoKHR geometry_info { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
     geometry_info.type = ToVkAccelerationStructureType(type);
     geometry_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     geometry_info.mode = update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    geometry_info.geometryCount = static_cast<UInt32>(geometries.size());
+    geometry_info.geometryCount = UInt32(geometries.size());
     geometry_info.pGeometries = geometries.data();
 
 	AssertThrow(primitive_counts.size() == geometries.size());
@@ -272,7 +271,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
 	));
 
 	// force recreate (TEMP)
-	was_rebuilt = true;
+	// was_rebuilt = true;
 
 	if (was_rebuilt) {
 	    out_update_state_flags |= RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE;
@@ -307,7 +306,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
 		}
 
 		// to be sure it's zeroed out
-		m_buffer->Memset(device, acceleration_structure_size, 0);
+		m_buffer->Memset(device, acceleration_structure_size, 0x00);
 
         VkAccelerationStructureCreateInfoKHR create_info { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
         create_info.buffer = m_buffer->buffer;
@@ -364,16 +363,21 @@ Result AccelerationStructure::CreateAccelerationStructure(
 	geometry_info.srcAccelerationStructure = (update && !was_rebuilt) ? m_acceleration_structure : VK_NULL_HANDLE;
 	geometry_info.scratchData = { .deviceAddress = m_scratch_buffer->GetBufferDeviceAddress(device) };
 	
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR *> range_infos;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> range_infos;
     range_infos.resize(geometries.size());
 
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR *> range_info_ptrs;
+    range_info_ptrs.resize(geometries.size());
+
     for (SizeType i = 0; i < geometries.size(); i++) {
-        range_infos[i] = new VkAccelerationStructureBuildRangeInfoKHR {
+        range_infos[i] = VkAccelerationStructureBuildRangeInfoKHR {
             .primitiveCount = primitive_counts[i],
             .primitiveOffset = 0,
             .firstVertex = 0,
             .transformOffset = 0
         };
+
+		range_info_ptrs[i] = &range_infos[i];
     }
 
     auto commands = instance->GetSingleTimeCommands();
@@ -381,19 +385,15 @@ Result AccelerationStructure::CreateAccelerationStructure(
     commands.Push([&](CommandBuffer *command_buffer) {
         device->GetFeatures().dyn_functions.vkCmdBuildAccelerationStructuresKHR(
             command_buffer->GetCommandBuffer(),
-            static_cast<UInt32>(range_infos.size()),
+            UInt32(range_info_ptrs.size()),
             &geometry_info,
-            range_infos.data()
+            range_info_ptrs.data()
         );
 
         HYPERION_RETURN_OK; 
     });
 
     HYPERION_PASS_ERRORS(commands.Execute(device), result);
-
-    for (auto *range_info : range_infos) {
-        delete range_info;
-    }
 
 	ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 
@@ -664,19 +664,27 @@ Result TopLevelAccelerationStructure::CreateOrRebuildInstancesBuffer(Instance *i
     HYPERION_RETURN_OK;
 }
 
-Result TopLevelAccelerationStructure::UpdateInstancesBuffer(Instance *instance)
+Result TopLevelAccelerationStructure::UpdateInstancesBuffer(Instance *instance, UInt first, UInt last)
 {
+	if (last == first) {
+	    HYPERION_RETURN_OK; 
+	}
+
+	AssertThrow(last > first);
+	AssertThrow(first < m_blas.size());
+	AssertThrow(last <= m_blas.size());
+
     Device *device = instance->GetDevice();
 
-    std::vector<VkAccelerationStructureInstanceKHR> instances(m_blas.size());
+    std::vector<VkAccelerationStructureInstanceKHR> instances(last - first);
 
-    for (SizeType i = 0; i < m_blas.size(); i++) {
+    for (UInt i = first; i < last; i++) {
         const BottomLevelAccelerationStructure *blas = m_blas[i];
         AssertThrow(blas != nullptr);
 
-        const auto instance_index = static_cast<UInt32>(i); /* Index of mesh in mesh descriptions buffer. */
+        const UInt32 instance_index = i; /* Index of mesh in mesh descriptions buffer. */
 
-        instances[i] = VkAccelerationStructureInstanceKHR {
+        instances[i - first] = VkAccelerationStructureInstanceKHR {
             .transform = ToVkTransform(blas->GetTransform()),
             .instanceCustomIndex = instance_index,
             .mask = 0xff,
@@ -686,14 +694,15 @@ Result TopLevelAccelerationStructure::UpdateInstancesBuffer(Instance *instance)
         };
     }
 
-    const SizeType instances_buffer_size = instances.size() * sizeof(VkAccelerationStructureInstanceKHR);
+    const SizeType instances_size = instances.size() * sizeof(VkAccelerationStructureInstanceKHR);
 
     AssertThrow(m_instances_buffer != nullptr);
-    AssertThrow(m_instances_buffer->size == instances_buffer_size);
+    AssertThrow(m_instances_buffer->size >= instances_size);
 
     m_instances_buffer->Copy(
         device,
-        instances_buffer_size,
+		first * sizeof(VkAccelerationStructureInstanceKHR),
+        instances_size,
         instances.data()
     );
 
@@ -733,7 +742,7 @@ Result TopLevelAccelerationStructure::CreateMeshDescriptionsBuffer(Instance *ins
 
 Result TopLevelAccelerationStructure::UpdateMeshDescriptionsBuffer(Instance *instance)
 {
-	return UpdateMeshDescriptionsBuffer(instance, 0u, static_cast<UInt>(m_blas.size()));
+	return UpdateMeshDescriptionsBuffer(instance, 0u, UInt(m_blas.size()));
 }
 
 Result TopLevelAccelerationStructure::UpdateMeshDescriptionsBuffer(Instance *instance, UInt first, UInt last)
@@ -778,8 +787,8 @@ Result TopLevelAccelerationStructure::UpdateMeshDescriptionsBuffer(Instance *ins
 
 	m_mesh_descriptions_buffer->Copy(
 		device,
-		sizeof(MeshDescription) * first,
-		sizeof(MeshDescription) * mesh_descriptions.size(),
+		first * sizeof(MeshDescription),
+		mesh_descriptions.size() * sizeof(MeshDescription),
 		mesh_descriptions.data()
 	);
 
@@ -800,20 +809,18 @@ Result TopLevelAccelerationStructure::UpdateStructure(Instance *instance, RTUpda
 {
 	out_update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
 
-	//return Rebuild(instance, out_update_state_flags); // temp
-
 	if (m_flags & ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING) {
 	    return Rebuild(instance, out_update_state_flags);
 	}
 
-	Range<UInt> dirty_mesh_descriptions { };
+	Range<UInt> dirty_range { };
 
 	for (UInt i = 0; i < static_cast<UInt>(m_blas.size()); i++) {
 		auto *blas = m_blas[i];
 		AssertThrow(blas != nullptr);
 
 		if (blas->GetFlags() & ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE) {
-			dirty_mesh_descriptions |= Range { i, i + 1 };
+			dirty_range |= Range { i, i + 1 };
 
 		    blas->ClearFlag(ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE);
 		}
@@ -822,25 +829,26 @@ Result TopLevelAccelerationStructure::UpdateStructure(Instance *instance, RTUpda
 		HYPERION_BUBBLE_ERRORS(blas->UpdateStructure(instance, blas_update_state_flags));
 
 		if (blas_update_state_flags) {
-		    dirty_mesh_descriptions |= Range { i, i + 1 };
+		    dirty_range |= Range { i, i + 1 };
 		}
 	}
 
-    if (dirty_mesh_descriptions) {
-		out_update_state_flags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
+    if (dirty_range) {
+		out_update_state_flags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS | RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES;
 
         // update data in instances buffer
-        HYPERION_BUBBLE_ERRORS(UpdateInstancesBuffer(instance));
+        HYPERION_BUBBLE_ERRORS(UpdateInstancesBuffer(
+			instance,
+			dirty_range.GetStart(),
+			dirty_range.GetEnd()
+		));
 
         // copy mesh descriptions
         HYPERION_BUBBLE_ERRORS(UpdateMeshDescriptionsBuffer(
             instance,
-            dirty_mesh_descriptions.GetStart(),
-            dirty_mesh_descriptions.GetEnd()
+            dirty_range.GetStart(),
+            dirty_range.GetEnd()
         ));
-
-		
-        //HYPERION_BUBBLE_ERRORS(RebuildMeshDescriptionsBuffer(instance));
 		
 	    HYPERION_BUBBLE_ERRORS(CreateAccelerationStructure(
 		    instance,
@@ -972,6 +980,12 @@ Result BottomLevelAccelerationStructure::Create(Device *device, Instance *instan
 Result BottomLevelAccelerationStructure::UpdateStructure(Instance *instance, RTUpdateStateFlags &out_update_state_flags)
 {
 	out_update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
+	
+	if (m_flags & ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE) {
+	    out_update_state_flags |= RT_UPDATE_STATE_FLAGS_UPDATE_TRANSFORM;
+
+		ClearFlag(ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE);
+	}
 
 	if (m_flags & ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING) {
 	    return Rebuild(instance, out_update_state_flags);
@@ -1022,6 +1036,8 @@ Result BottomLevelAccelerationStructure::Rebuild(Instance *instance, RTUpdateSta
 
 		return result;
 	}
+
+	m_flags &= ~(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING | ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE);
 
 	return result;
 }

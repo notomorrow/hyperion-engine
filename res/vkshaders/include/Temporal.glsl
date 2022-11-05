@@ -30,12 +30,14 @@ float GetTemporalRotation(uint frame_counter)
 
 vec4 AdjustColorIn(in vec4 color)
 {
+    //return color;
     // watch out for NaN
     return vec4(log(color.rgb), color.a);
 }
 
 vec4 AdjustColorOut(in vec4 color)
 {
+    //return color;
     // watch out for NaN
     return vec4(exp(color.rgb), color.a);
 }
@@ -130,6 +132,57 @@ vec4 ClampColor_3x3(in texture2D tex, in vec4 previous_value, in vec2 uv, in vec
     GetPixelNeighborsMinMax_3x3(tex, uv, texel_size, min_value, max_value);
 
     return AdjustColorOut(clamp(AdjustColorIn(previous_value), min_value, max_value));
+}
+
+vec4 ClipAABB(vec4 aabb_min, vec4 aabb_max, vec4 p, vec4 q)
+{
+    vec4 r = q - p;
+    vec4 rmax = aabb_max - p;
+    vec4 rmin = aabb_min - p;
+
+    const float eps = HYP_FMATH_EPSILON;
+
+    if (r.x > rmax.x + eps)
+        r *= (rmax.x / r.x);
+    if (r.y > rmax.y + eps)
+        r *= (rmax.y / r.y);
+    if (r.z > rmax.z + eps)
+        r *= (rmax.z / r.z);
+    if (r.w > rmax.w + eps)
+        r *= (rmax.w / r.w);
+
+    if (r.x < rmin.x - eps)
+        r *= (rmin.x / r.x);
+    if (r.y < rmin.y - eps)
+        r *= (rmin.y / r.y);
+    if (r.z < rmin.z - eps)
+        r *= (rmin.z / r.z);
+    if (r.w < rmin.w - eps)
+        r *= (rmin.w / r.w);
+
+    return p + r;
+}
+
+vec4 ClipToAABB(in vec4 color, in vec4 previous_color, in vec4 avg, in vec4 half_size)
+{
+    if (all(lessThanEqual(abs(previous_color - avg), half_size))) {
+        return previous_color;
+    }
+    
+    vec4 dir = (color - previous_color);
+    vec4 near = avg - sign(dir) * half_size;
+    vec4 tAll = (near - previous_color) / dir;
+    float t = 1e20;
+    for (int i = 0; i < 4; i++) {
+        if (tAll[i] >= 0.0 && tAll[i] < t) {
+            t = tAll[i];
+        }
+    }
+    
+    if (t >= 1e20) {
+		return previous_color;
+    }
+    return previous_color + dir * t;
 }
 
 #endif

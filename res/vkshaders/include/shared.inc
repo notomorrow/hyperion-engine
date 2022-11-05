@@ -1,6 +1,11 @@
 #ifndef HYP_SHARED_GLSL
 #define HYP_SHARED_GLSL
 
+float Luminance(vec3 color)
+{
+    return color.r * 0.2125 + color.g * 0.715 + color.b * 0.0721;
+}
+
 mat4 CreateRotationMatrix(vec3 axis, float angle) {
     axis = normalize(axis);
     float s = sin(angle);
@@ -390,5 +395,40 @@ vec4 GaussianBlur5(
     return color; 
 }
 
-#endif
+vec3 RGBToYCoCg(in vec3 rgb)
+{
+    float co = rgb.r - rgb.b;
+    float t = rgb.b + co / 2.0;
+    float cg = rgb.g - t;
+    float y = t + cg / 2.0;
+    return vec3(y, co, cg);
+}
 
+vec4 RGBToYCoCg(in vec4 rgb)
+{
+    float co = rgb.r - rgb.b;
+    float t = rgb.b + co / 2.0;
+    float cg = rgb.g - t;
+    float y = t + cg / 2.0;
+    return vec4(y, co, cg, rgb.a);
+}
+
+vec3 YCoCgToRGB(in vec3 ycocg)
+{
+    float t = ycocg.r - ycocg.b / 2.0;
+    float g = ycocg.b + t;
+    float b = t - ycocg.g / 2.0;
+    float r = ycocg.g + b;
+    return vec3(r, g, b);
+}
+
+vec4 YCoCgToRGB(in vec4 ycocg)
+{
+    float t = ycocg.r - ycocg.b / 2.0;
+    float g = ycocg.b + t;
+    float b = t - ycocg.g / 2.0;
+    float r = ycocg.g + b;
+    return vec4(r, g, b, ycocg.a);
+}
+
+#endif

@@ -236,7 +236,7 @@ void Entity::EnqueueRenderUpdates()
         .bucket = m_renderable_attributes.material_attributes.bucket
     };
 
-    EnqueueRenderUpdate([this, transform_matrix = m_transform.GetMatrix(), draw_proxy](...) {
+    EnqueueRenderUpdate([this, transform_matrix = m_transform.GetMatrix(), previous_transform_matrix = m_previous_transform_matrix, draw_proxy](...) {
         // update m_draw_proxy on render thread.
         m_draw_proxy = draw_proxy;
 
@@ -244,7 +244,7 @@ void Entity::EnqueueRenderUpdates()
             m_id.value - 1,
             ObjectShaderData {
                 .model_matrix = transform_matrix,
-                .previous_model_matrix = m_previous_transform_matrix,
+                .previous_model_matrix = previous_transform_matrix,
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
@@ -261,7 +261,11 @@ void Entity::EnqueueRenderUpdates()
         HYPERION_RETURN_OK;
     });
 
-    m_shader_data_state = ShaderDataState::CLEAN;
+    if (m_previous_transform_matrix == m_transform.GetMatrix()) {
+        m_shader_data_state = ShaderDataState::CLEAN;
+    }
+
+    m_previous_transform_matrix = m_transform.GetMatrix();
 }
 
 void Entity::UpdateOctree()

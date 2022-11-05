@@ -3,12 +3,11 @@
 #define MATRIX4_H
 
 #include "Vector4.hpp"
-#include "../HashCode.hpp"
-#include "../Util.hpp"
+#include <HashCode.hpp>
+#include <util/Defines.hpp>
 #include <Types.hpp>
 
 #include <iostream>
-#include <array>
 #include <cstring>
 
 namespace hyperion {
@@ -69,8 +68,8 @@ public:
 
     Vector4 GetColumn(UInt index) const;
 
-    bool operator==(const Matrix4 &other) const
-    {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
+    HYP_FORCE_INLINE bool operator==(const Matrix4 &other) const
+        { return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
 
     bool operator!=(const Matrix4 &other) const { return !operator==(other); }
 

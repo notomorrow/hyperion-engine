@@ -62,9 +62,7 @@ void BLAS::SetMaterial(Handle<Material> &&material)
             ? m_material->GetID()
             : Material::empty_id;
         
-        const auto material_index = material_id
-            ? material_id.value - 1
-            : 0u;
+        const auto material_index = material_id.ToIndex();
 
         if (!m_blas.GetGeometries().empty()) {
             for (auto &geometry : m_blas.GetGeometries()) {

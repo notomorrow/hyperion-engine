@@ -42,7 +42,7 @@ layout(push_constant) uniform PushConstant
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
 #define HYP_HBAO_RADIUS 32.0
-#define HYP_HBAO_POWER 1.25
+#define HYP_HBAO_POWER 1.0
 #define HYP_HBAO_THICKNESS 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
@@ -121,7 +121,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
-    const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord));
+    const float noise_direction = RandomFloat(seed);//InterleavedGradientNoise(vec2(pixel_coord));
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
