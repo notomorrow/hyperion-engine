@@ -24,27 +24,27 @@ void InputManager::CheckEvent(SystemEvent *event)
 
     switch (event->GetType()) {
         case SystemEventType::EVENT_KEYDOWN:
-            this->KeyDown(event->GetKeyCode());
+            KeyDown(event->GetKeyCode());
             break;
         case SystemEventType::EVENT_KEYUP:
-            this->KeyUp(event->GetKeyCode());
+            KeyUp(event->GetKeyCode());
             break;
         case SystemEventType::EVENT_MOUSEBUTTON_DOWN:
-            this->MouseButtonDown(event->GetMouseButton());
+            MouseButtonDown(event->GetMouseButton());
             break;
         case SystemEventType::EVENT_MOUSEBUTTON_UP:
-            this->MouseButtonUp(event->GetMouseButton());
+            MouseButtonUp(event->GetMouseButton());
             break;
         case SystemEventType::EVENT_MOUSEMOTION:
-            this->UpdateMousePosition();
+            UpdateMousePosition();
             break;
         case SystemEventType::EVENT_WINDOW_EVENT:
         {
-            auto window_event_type = event->GetWindowEventType();
+            const auto window_event_type = event->GetWindowEventType();
 
             switch (window_event_type) {
             case SystemWindowEventType::EVENT_WINDOW_RESIZED:
-                this->UpdateWindowSize();
+                UpdateWindowSize();
                 break;
             }
         }

@@ -77,7 +77,7 @@ void Game::Teardown(Engine *engine)
     m_is_init = false;
 }
 
-void Game::HandleEvent(Engine *engine, SystemEvent &event)
+void Game::HandleEvent(Engine *engine, SystemEvent &&event)
 {
     if (m_input_manager == nullptr) {
         return;
@@ -92,7 +92,7 @@ void Game::HandleEvent(Engine *engine, SystemEvent &event)
             break;
         default:
             if (engine->game_thread.IsRunning()) {
-                engine->game_thread.GetScheduler().Enqueue([this, engine, event](...) {
+                engine->game_thread.GetScheduler().Enqueue([this, engine, event = std::move(event)](...) mutable {
                     OnInputEvent(engine, event);
 
                     HYPERION_RETURN_OK;
@@ -161,8 +161,13 @@ void Game::OnInputEvent(Engine *engine, const SystemEvent &event)
 
             break;
         }
-        default:
-            break;
+    case SystemEventType::EVENT_FILE_DROP:
+    {
+
+        break;
+    }
+    default:
+        break;
     }
 }
 

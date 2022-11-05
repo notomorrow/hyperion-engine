@@ -30,6 +30,7 @@ struct LoaderResult
         OK,
         ERR,
         ERR_NOT_FOUND,
+        ERR_NO_LOADER,
         ERR_EOF
     };
 

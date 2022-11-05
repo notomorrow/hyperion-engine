@@ -39,9 +39,12 @@ void TerrainPagingController::OnAdded()
     m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.5f);
     m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
     // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
-    auto albedo_texture = GetEngine()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_albedo.png");
-    albedo_texture->GetImage().SetIsSRGB(true);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
+
+    if (auto albedo_texture = GetEngine()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_albedo.png")) {
+        albedo_texture->GetImage().SetIsSRGB(true);
+        m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
+    }
+
     m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_Normal-ogl.png"));
     m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, GetEngine()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_Roughness.png"));
 

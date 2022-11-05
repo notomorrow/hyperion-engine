@@ -84,60 +84,6 @@
 using namespace hyperion;
 using namespace hyperion::v2;
 
-#if 0
-template <class Resource>
-class RenderResource2
-{
-    using renderer::Result;
-
-public:
-    RenderResource2()
-        : m_engine(nullptr),
-          m_data(new ResourceData)
-    {
-        ++m_data->count;
-    }
-
-    ~RenderResource2()
-    {
-        if (m_data && m_data->is_init !--m_data->count) {
-            m_data->resource.Destroy(m_engine);
-        }
-
-        delete m_data;
-    }
-
-    Result Init(Engine *engine)
-    {
-        m_engine = engine;
-
-        if (m_data->is_init) {
-            return Result::OK;
-        }
-
-        const Result result = m_data->resource.Create(engine);
-
-        if (result) {
-            m_data->is_init = true;
-        }
-
-        return result;
-    }
-
-private:
-    struct ResourceData
-    {
-        UInt count = 0;
-        bool is_init = false;
-        Resource resource;
-    };
-
-    Engine *m_engine;
-    ResourceData *m_data;
-};
-#endif
-
-
 //#define HYP_TEST_VCT
 //#define HYP_TEST_TERRAIN
 
@@ -234,7 +180,7 @@ public:
         }
 
         auto cubemap = engine->CreateHandle<Texture>(new TextureCube(
-            engine->GetAssetManager().Load<Texture>(
+            engine->GetAssetManager().LoadMany<Texture>(
                 "textures/chapel/posx.jpg",
                 "textures/chapel/negx.jpg",
                 "textures/chapel/posy.jpg",
@@ -490,7 +436,31 @@ public:
         #endif
     }
 
-    // virtual void OnInputEvent(Engine *engine, const SystemEvent &event) override;
+    virtual void OnInputEvent(Engine *engine, const SystemEvent &event) override
+    {
+        Game::OnInputEvent(engine, event);
+
+        if (event.GetType() == SystemEventType::EVENT_FILE_DROP) {
+            if (const FilePath *path = event.GetEventData().TryGet<FilePath>()) {
+                if (auto reader = path->Open()) {
+
+                    auto batch = engine->GetAssetManager().CreateBatch();
+                    batch.Add<Node>("dropped_object", *path);
+                    batch.LoadAsync();
+
+                    auto results = batch.AwaitResults();
+
+                    if (results.Any()) {
+                        for (auto &it : results) {
+                            GetScene()->GetRoot().AddChild(it.second.Get<Node>());
+                        }
+                    }
+
+                    reader.Close();
+                }
+            }
+        }
+    }
 
     // not overloading; just creating a method to handle camera movement
     void HandleCameraMovement()
@@ -609,7 +579,7 @@ int main()
     while (engine->IsRenderLoopActive()) {
         // input manager stuff
         while (application->PollEvent(event)) {
-            my_game->HandleEvent(engine, event);
+            my_game->HandleEvent(engine, std::move(event));
         }
 
         counter.NextTick();
