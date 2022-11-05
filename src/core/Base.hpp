@@ -244,7 +244,7 @@ public:
         m_init_called.store(true);
         m_engine = engine;
 
-        m_attachment_map.InitializeAll(static_cast<InnerType *>(this));
+        //m_attachment_map.InitializeAll(static_cast<InnerType *>(this));
     }
 
     HYP_FORCE_INLINE Engine *GetEngine() const
@@ -270,17 +270,17 @@ protected:
         CallbackTrackable::Teardown();
     }
 
-    template <class T>
-    void Attach(Handle<T> &handle)
-        { m_attachment_map.template Attach<T>(static_cast<InnerType *>(this), handle, m_init_called); }
+    //template <class T>
+    //void Attach(Handle<T> &handle)
+    //    { m_attachment_map.template Attach<T>(static_cast<InnerType *>(this), handle, m_init_called); }
 
-    template <class T>
-    void Detach(const Handle<T> &handle)
-        { m_attachment_map.template Detach<T>(handle); }
+    //template <class T>
+    //void Detach(const Handle<T> &handle)
+    //    { m_attachment_map.template Detach<T>(handle); }
 
-    template <class T>
-    void Detach(const typename Handle<T>::ID &id)
-        { m_attachment_map.template Detach<T>(id); }
+    //template <class T>
+    //void Detach(const typename Handle<T>::ID &id)
+    //    { m_attachment_map.template Detach<T>(id); }
 
     void Destroy()
     {
@@ -316,7 +316,7 @@ protected:
     Engine *m_engine;
     InitInfo m_init_info;
 
-    AttachmentMap<InnerType> m_attachment_map;
+    //AttachmentMap<InnerType> m_attachment_map;
 };
 
 template <class Type, class WrappedType>

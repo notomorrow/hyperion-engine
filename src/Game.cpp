@@ -6,8 +6,9 @@
 
 namespace hyperion::v2 {
 
-Game::Game()
-    : m_is_init(false),
+Game::Game(RefCountedPtr<Application> application)
+    : m_application(application),
+      m_is_init(false),
       m_input_manager(nullptr)
 {
 }
@@ -22,11 +23,15 @@ Game::~Game()
     delete m_input_manager;
 }
 
-void Game::Init(Engine *engine, SystemWindow *window)
+void Game::Init(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
-    m_input_manager = new InputManager(window);
+    AssertThrowMsg(m_application != nullptr, "No valid Application instance was provided to Game constructor!");
+    AssertThrowMsg(m_application->GetCurrentWindow() != nullptr, "The Application instance has no current window!");
+
+    m_input_manager = new InputManager();
+    m_input_manager->SetWindow(m_application->GetCurrentWindow());
 
     m_scene = engine->CreateHandle<Scene>(
         Handle<Camera>(),
@@ -137,13 +142,10 @@ void Game::OnInputEvent(Engine *engine, const SystemEvent &event)
 
             float mx, my;
 
-            int window_width,
-                window_height;
+            const auto extent = m_input_manager->GetWindow()->GetExtent();
 
-            m_input_manager->GetWindow()->GetSize(&window_width, &window_height);
-
-            mx = (static_cast<float>(mouse_x) - static_cast<float>(window_width) * 0.5f) / (static_cast<float>(window_width));
-            my = (static_cast<float>(mouse_y) - static_cast<float>(window_height) * 0.5f) / (static_cast<float>(window_height));
+            mx = (Float(mouse_x) - Float(extent.width) * 0.5f) / (Float(extent.width));
+            my = (Float(mouse_y) - Float(extent.height) * 0.5f) / (Float(extent.height));
             
             if (m_scene) {
                 m_scene->GetCamera()->PushCommand(CameraCommand {

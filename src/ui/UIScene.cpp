@@ -176,9 +176,11 @@ bool UIScene::OnInputEvent(
         const auto mouse_x = mouse_position.x.load();
         const auto mouse_y = mouse_position.y.load();
 
+        const auto extent = input_manager->GetWindow()->GetExtent();
+
         const Vector2 mouse_ndc(
-            static_cast<Float>(mouse_x) / static_cast<Float>(input_manager->GetWindow()->width),
-            static_cast<Float>(mouse_y) / static_cast<Float>(input_manager->GetWindow()->height)
+            Float(mouse_x) / Float(extent.width),
+            Float(mouse_y) / Float(extent.height)
         );
 
         if (TestRay(mouse_ndc, hit)) {
@@ -208,9 +210,11 @@ bool UIScene::OnInputEvent(
         const auto mouse_x = mouse_position.x.load();
         const auto mouse_y = mouse_position.y.load();
 
+        const auto extent = input_manager->GetWindow()->GetExtent();
+
         const Vector2 mouse_ndc(
-            static_cast<Float>(mouse_x) / static_cast<Float>(input_manager->GetWindow()->width),
-            static_cast<Float>(mouse_y) / static_cast<Float>(input_manager->GetWindow()->height)
+            Float(mouse_x) / Float(extent.width),
+            Float(mouse_y) / Float(extent.height)
         );
 
         if (TestRay(mouse_ndc, hit)) {

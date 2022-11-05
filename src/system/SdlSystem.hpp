@@ -7,13 +7,26 @@
 
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
+
+#include <core/lib/UniquePtr.hpp>
+#include <core/lib/String.hpp>
+#include <core/lib/DynArray.hpp>
+
+#include <rendering/backend/RendererStructs.hpp>
+
 #include <vector>
 #include <string>
 
-#include "Util.hpp"
+#include <util/Defines.hpp>
 #include <Types.hpp>
 
 namespace hyperion {
+
+namespace renderer {
+class Instance;
+} // namespace renderer
+
+using renderer::Extent2D;
 
 enum SystemEventType
 {
@@ -155,54 +168,115 @@ private:
     SDL_Event sdl_event;
 };
 
-class SystemWindow
+struct MouseState
+{
+    MouseButtonMask mask;
+    Int x;
+    Int y;
+};
+
+class ApplicationWindow
 {
 public:
-    SystemWindow(const char *_title, int _width, int _height);
-    SystemWindow(const SystemWindow &other) = delete;
+    ApplicationWindow(const ANSIString &title, UInt width, UInt height);
+    ApplicationWindow(const ApplicationWindow &other) = delete;
+    ApplicationWindow &operator=(const ApplicationWindow &other) = delete;
+    virtual ~ApplicationWindow() = default;
 
-    SystemWindow &operator=(const SystemWindow &other) = delete;
+    virtual void SetMousePosition(Int x, Int y) = 0;
+    virtual MouseState GetMouseState() = 0;
 
-    void SetMousePosition(int x, int y);
-    MouseButtonMask GetMouseState(int *x, int *y);
+    virtual Extent2D GetExtent() const = 0;
+
+    virtual void SetMouseLocked(bool locked) = 0;
+
+#ifdef HYP_VULKAN
+    virtual VkSurfaceKHR CreateVkSurface(renderer::Instance *instance) = 0;
+#endif
+
+protected:
+    ANSIString m_title;
+    UInt m_width;
+    UInt m_height;
+};
+
+class SDLApplicationWindow : public ApplicationWindow
+{
+public:
+    SDLApplicationWindow(const ANSIString &title, UInt width, UInt height);
+    virtual ~SDLApplicationWindow() override;
+
+    
+
+    virtual void SetMousePosition(Int x, Int y) override;
+    virtual MouseState GetMouseState() override;
+
+    virtual Extent2D GetExtent() const override;
+
+    virtual void SetMouseLocked(bool locked) override;
+    
     void Initialize();
-    SDL_Window *GetInternalWindow() {
-        AssertThrow(this->window != nullptr);
-        return this->window;
-    }
-    void LockMouse(bool lock) {
-        SDL_SetRelativeMouseMode(lock ? SDL_TRUE : SDL_FALSE);
-    }
-    void GetSize(int *_width, int *_height) {
-        SDL_GetWindowSize(this->GetInternalWindow(), _width, _height);
-    }
-    VkSurfaceKHR CreateVulkanSurface(VkInstance instance);
 
-    ~SystemWindow();
+    SDL_Window *GetInternalWindow()
+        { return window; }
 
-    const char *title;
-    int width, height;
+    const SDL_Window *GetInternalWindow() const
+        { return window; }
+
+#ifdef HYP_VULKAN
+    virtual VkSurfaceKHR CreateVkSurface(renderer::Instance *instance) override;
+#endif
+    
 private:
     SDL_Window *window = nullptr;
 };
 
-class SystemSDL
+class Application
 {
 public:
-    SystemSDL();
-    ~SystemSDL();
+    Application();
+    virtual ~Application() = default;
 
-    static SystemWindow *CreateSystemWindow(const char *title, int width, int height);
+    ApplicationWindow *GetCurrentWindow()
+        { return m_current_window.Get(); }
 
-    static int PollEvent(SystemEvent *result);
-    void SetCurrentWindow(SystemWindow *window);
-    SystemWindow *GetCurrentWindow();
+    const ApplicationWindow *GetCurrentWindow() const
+        { return m_current_window.Get(); }
+
+    void SetCurrentWindow(UniquePtr<ApplicationWindow> &&window)
+        { m_current_window = std::move(window); }
+
+    virtual UniquePtr<ApplicationWindow> CreateSystemWindow(const ANSIString &title, UInt width, UInt height) = 0;
+    virtual Int PollEvent(SystemEvent &event) = 0;
+
+#ifdef HYP_VULKAN
+    virtual bool GetVkExtensions(Array<const char *> &out_extensions) const = 0;
+#endif
+    
+protected:
+    virtual void ThrowError() { }
+    
+    UniquePtr<ApplicationWindow> m_current_window;
+};
+
+class SDLApplication : public Application
+{
+public:
+    SDLApplication();
+    virtual ~SDLApplication();
+
+    virtual UniquePtr<ApplicationWindow> CreateSystemWindow(const ANSIString &title, UInt width, UInt height) override;
+
+    virtual Int PollEvent(SystemEvent &event) override;
+
+#ifdef HYP_VULKAN
+    virtual bool GetVkExtensions(Array<const char *> &out_extensions) const override;
+#endif
+
+protected:
+    virtual void ThrowError() override;
+    
     std::vector<const char *> GetVulkanExtensionNames();
-
-    static void ThrowError();
-
-private:
-    SystemWindow *current_window;
 };
 
 } // namespace hyperion

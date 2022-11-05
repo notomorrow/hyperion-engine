@@ -149,8 +149,8 @@ class MyGame : public Game
 public:
     Handle<Light> m_sun;
 
-    MyGame()
-        : Game()
+    MyGame(RefCountedPtr<Application> application)
+        : Game(application)
     {
     }
 
@@ -392,8 +392,15 @@ public:
         // add a plane physics shape
         auto plane = engine->CreateHandle<Entity>();
         plane->SetName("Plane entity");
-        plane->SetTranslation(Vector3(0, 15, 0));
+        plane->SetTranslation(Vector3(0, 15, 8));
+        plane->SetMesh(engine->CreateHandle<Mesh>(MeshBuilder::Quad()));
+        plane->SetScale(20.0f);
+        plane->SetMaterial(engine->CreateHandle<Material>());
+        plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.0f);
+        plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
+        plane->SetShader(Handle<Shader>(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
         GetScene()->AddEntity(Handle<Entity>(plane));
+        plane->CreateBLAS();
         plane->AddController<RigidBodyController>(
             UniquePtr<physics::PlanePhysicsShape>::Construct(Vector4(0, 1, 0, 1)),
             physics::PhysicsMaterial { .mass = 0.0f }
@@ -549,15 +556,13 @@ int main()
 {
     using namespace hyperion::renderer;
 
-    SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1920, 1080);
-    system.SetCurrentWindow(window);
-
+    RefCountedPtr<Application> application(new SDLApplication);
+    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1920, 1080));
+    
     SystemEvent event;
 
-    auto *engine = new Engine(system, "My app");
-
-    auto *my_game = new MyGame;
+    auto *engine = new Engine(application, "My app");
+    auto *my_game = new MyGame(application);
 
     engine->Initialize();
 
@@ -591,20 +596,19 @@ int main()
         engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("Skybox", ShaderProps { }))
     );
 
-    my_game->Init(engine, window);
+    my_game->Init(engine);
 
     engine->Compile();
     
-    engine->game_thread.Start(engine, my_game, window);
+    engine->game_thread.Start(engine, my_game);
 
     UInt num_frames = 0;
     float delta_time_accum = 0.0f;
     GameCounter counter;
 
     while (engine->IsRenderLoopActive()) {
-
         // input manager stuff
-        while (SystemSDL::PollEvent(&event)) {
+        while (application->PollEvent(event)) {
             my_game->HandleEvent(engine, event);
         }
 
@@ -627,9 +631,7 @@ int main()
     }
 
     delete my_game;
-
     delete engine;
-    delete window;
 
     return 0;
 }

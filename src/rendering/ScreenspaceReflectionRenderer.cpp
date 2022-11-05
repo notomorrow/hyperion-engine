@@ -137,15 +137,15 @@ void ScreenspaceReflectionRenderer::CreateUniformBuffers(Engine *engine)
     engine->GetRenderScheduler().Enqueue([this, engine](...) {
         SSRParams ssr_params {
             .dimensions = Vector2(m_extent),
-            .ray_step = 1.8f,
-            .num_iterations = 128.0f,
+            .ray_step = 4.0f,
+            .num_iterations = 256.0f,
             .max_ray_distance = 256.0f,
             .distance_bias = 0.15f,
             .offset = 0.01f,
             .eye_fade_start = 0.95f,
             .eye_fade_end = 0.98f,
-            .screen_edge_fade_start = 0.65f,
-            .screen_edge_fade_end = 0.75f
+            .screen_edge_fade_start = 0.75f,
+            .screen_edge_fade_end = 0.995f
         };
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

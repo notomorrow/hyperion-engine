@@ -286,6 +286,34 @@ public:
         return *this;
     }
 
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    RefCountedPtr(const RefCountedPtr<Ty> &other) noexcept
+        : Base(other)
+    {
+    }
+    
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    RefCountedPtr &operator=(const RefCountedPtr<Ty> &other) noexcept
+    {
+        Base::operator=(other);
+
+        return *this;
+    }
+
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    RefCountedPtr(RefCountedPtr<Ty> &&other) noexcept
+        : Base(std::move(other))
+    {
+    }
+    
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    RefCountedPtr &operator=(RefCountedPtr<Ty> &&other) noexcept
+    {
+        Base::operator=(std::move(other));
+
+        return *this;
+    }
+
     ~RefCountedPtr() = default;
 
     HYP_FORCE_INLINE T *Get() const

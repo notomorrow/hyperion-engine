@@ -52,6 +52,9 @@ inline std::vector<wchar_t> ToWide(const char *str)
 #define HYP_UTF8_WIDE
 #define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
 
+#define HYP_UTF8_CHECK_BOUNDS(idx, max) \
+    do { if ((idx) == (max)) { return -1; } } while (0)
+
 #else
 typedef std::string stdstring;
 typedef std::ostream utf8_ostream;
@@ -68,9 +71,9 @@ static auto &fputs = std::fputs;
 #define HYP_UTF8_TOWIDE(str) str
 #endif
 
-typedef uint32_t u32char;
-typedef uint16_t u16char;
-typedef uint8_t  u8char;
+using u32char = hyperion::UInt32;
+using u16char = hyperion::UInt16;
+using u8char = hyperion::UInt8;
 
 inline void init()
 {
@@ -330,29 +333,55 @@ inline u32char *utf32_strcat(u32char *dst, const u32char *src)
     return --dst;
 }
 
+/*! \brief Convert a single utf-8 character (multiple code units) into a single utf-32 char
+ *   \ref{str} _must_ be at least the sizeof u32char! (4 bytes)
+ */
 inline u32char char8to32(const char *str)
 {
-    size_t num_bytes = std::strlen(str);
-    if (num_bytes > sizeof(u32char)) {
-        // not wide enough to store the character
+    union { u32char ret; char ret_bytes[sizeof(u32char)]; };
+    ret = 0;
+
+    hyperion::UInt i = 0;
+    constexpr hyperion::SizeType max = sizeof(u32char);
+
+    if (str[0] <= 0x7F) {
+        ret_bytes[0] = str[i];
+    } else if ((str[0] & 0xE0) == 0xC0) {
+        ret_bytes[0] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[1] = str[i];
+    } else if ((str[0] & 0xF0) == 0xE0) {
+        ret_bytes[0] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[1] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[2] = str[i];
+    } else if ((str[0] & 0xF8) == 0xF0) {
+        ret_bytes[0] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[1] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[2] = str[i++];
+        HYP_UTF8_CHECK_BOUNDS(i, max);
+        ret_bytes[3] = str[i];
+    } else {
+        // invalid utf-8
         return -1;
     }
 
-    u32char result = 0;
-
-    char *result_bytes = reinterpret_cast<char*>(&result);
-    for (size_t i = 0; i < num_bytes; i++) {
-        result_bytes[i] = str[i];
-    }
-
-    return result;
+    return ret;
 }
 
+/*! \brief Convert a single UTF-32 char to UTF-8 array of code points.
+ *  \ref{dst} MUST have a size of at least 4 bytes.
+ */
 inline void char32to8(u32char src, char *dst)
 {
-    char *src_bytes = reinterpret_cast<char*>(&src);
+    std::memset(dst, 0x00, sizeof(u32char));
 
-    for (size_t i = 0; i < sizeof(u32char); i++) {
+    const char *src_bytes = reinterpret_cast<char *>(&src);
+
+    for (hyperion::SizeType i = 0; i < sizeof(u32char); i++) {
         if (src_bytes[i] == 0) {
             // stop reading
             break;
@@ -395,50 +424,62 @@ inline void utf8to32(const char *src, u32char *dst, int size)
     }
 }
 
-inline u32char utf8_charat(const char *str, int index)
+
+inline u32char utf8_charat(const char *str, hyperion::SizeType max, hyperion::SizeType index)
 {
-    int max = std::strlen(str);
-    int count = 0;
+    hyperion::SizeType character_index = 0;
 
-    for (int i = 0; i < max; i++, count++) {
-        unsigned char c = (unsigned char)str[i];
+    for (hyperion::SizeType i = 0; i < max; character_index++) {
+        u8char c(str[i]);
 
-        u32char ret = 0;
-        char *ret_bytes = reinterpret_cast<char*>(&ret);
+        union { u32char ret; char ret_bytes[sizeof(u32char)]; };
+        ret = 0;
 
-        if (c >= 0 && c <= 127) {
-            ret_bytes[0] = str[i];
+        if (c <= 0x7F) {
+            ret_bytes[0] = str[i++];
         } else if ((c & 0xE0) == 0xC0) {
-            ret_bytes[0] = str[i];
-            ret_bytes[1] = str[i + 1];
-            i += 1;
+            ret_bytes[0] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[1] = str[i++];
         } else if ((c & 0xF0) == 0xE0) {
-            ret_bytes[0] = str[i];
-            ret_bytes[1] = str[i + 1];
-            ret_bytes[2] = str[i + 2];
-            i += 2;
+            ret_bytes[0] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[1] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[2] = str[i++];
         } else if ((c & 0xF8) == 0xF0) {
-            ret_bytes[0] = str[i];
-            ret_bytes[1] = str[i + 1];
-            ret_bytes[2] = str[i + 2];
-            ret_bytes[3] = str[i + 3];
-            i += 3;
+            ret_bytes[0] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[1] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[2] = str[i++];
+            HYP_UTF8_CHECK_BOUNDS(i, max);
+            ret_bytes[3] = str[i++];
         } else {
             // invalid utf-8
-            break;
+            return -1;
         }
 
-        if (index == count) {
+        if (character_index == index) {
             // reached index
             return ret;
         }
+
+        // end reached
+        if (c == u8char('\0')) {
+            return -1;
+        }
     }
+
     // error
     return -1;
 }
 
-inline void utf8_charat(const char *str, char *dst, int index)
-    { char32to8(utf8_charat(str, index), dst); }
+/*! \brief Get the UTF-8 char (array of code points) at the specific index of the string.
+ *  \ref{dst} MUST have a size of at least the sizeof u32char, so 4 bytes.
+ */
+inline void utf8_charat(const char *str, char *dst, hyperion::SizeType max, hyperion::SizeType index)
+    { char32to8(utf8_charat(str, max, index), dst); }
 
 #define HYP_UTF_MASK16(ch)             ((uint16_t)(0xffff & (ch)))
 #define HYP_UTF_IS_LEAD_SURROGATE(ch)  ((ch) >= 0xd800u && (ch) <= 0xdbffu)

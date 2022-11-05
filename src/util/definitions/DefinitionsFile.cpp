@@ -29,16 +29,16 @@ void DefinitionsFile::Parse()
             }
 
             // comment
-            if (line_trimmed[0] == '#') {
+            if (line_trimmed.GetChar(0) == '#') {
                 continue;
             }
 
             // section block
-            if (line_trimmed[0] == '[') {
+            if (line_trimmed.GetChar(0) == '[') {
                 String section_name;
 
-                for (SizeType index = 1; index < line_trimmed.Size() && line_trimmed[index] != ']'; index++) {
-                    section_name += line_trimmed[index];
+                for (SizeType index = 1; index < line_trimmed.Length() && line_trimmed.GetChar(index) != ']'; index++) {
+                    section_name += line_trimmed.GetChar(index);
                 }
 
                 if (section_name.Empty()) {
@@ -72,7 +72,7 @@ void DefinitionsFile::Parse()
 
             if (sections.Empty()) {
                 // no section defined; add a default one
-                sections.PushBack(Pair { String("default"), Section {  } });
+                sections.PushBack(Pair { String("default"), Section { } });
             }
 
             const auto &key = split[0];

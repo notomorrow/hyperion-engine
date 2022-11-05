@@ -143,7 +143,7 @@ class Engine
     static constexpr bool use_debug_layers = false;
 
 public:
-    Engine(SystemSDL &, const char *app_name);
+    Engine(RefCountedPtr<Application> application, const char *app_name);
     ~Engine();
     
     Instance *GetInstance() const { return m_instance.get(); }

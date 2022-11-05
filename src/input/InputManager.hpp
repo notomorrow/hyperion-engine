@@ -38,7 +38,7 @@ struct InputState
 class InputManager
 {
 public:
-    InputManager(SystemWindow *window);
+    InputManager();
     ~InputManager();
 
     void CheckEvent(SystemEvent *event);
@@ -49,7 +49,7 @@ public:
     AtomicScalar2D &GetWindowSize() { return m_window_size; }
     const AtomicScalar2D &GetWindowSize() const { return m_window_size; }
 
-    void SetMousePosition(int x,  int y) { GetWindow()->SetMousePosition(x, y); }
+    void SetMousePosition(Int x, Int y);
 
     void KeyDown(int key) { SetKey(key, true); }
     void KeyUp(int key) { SetKey(key, false); }
@@ -65,15 +65,17 @@ public:
     bool IsButtonDown(int btn) const;  
     bool IsButtonUp(int btn) const { return !IsButtonDown(btn); }
 
-    void SetWindow(SystemWindow *_window) { this->window = _window; };
-    SystemWindow *GetWindow() { return this->window; };
+    void SetWindow(ApplicationWindow *window)
+        { m_window = window; }
+
+    ApplicationWindow *GetWindow() { return m_window; }
 
 private:
     InputState m_input_state;
     AtomicScalar2D m_mouse_position;
     AtomicScalar2D m_window_size;
 
-    SystemWindow *window = nullptr;
+    ApplicationWindow *m_window;
 
     std::mutex key_mutex;
 
