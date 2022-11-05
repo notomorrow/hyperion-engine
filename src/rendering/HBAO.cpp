@@ -164,7 +164,7 @@ void HBAO::CreateDescriptorSets(Engine *engine)
             ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
             ->SetSubDescriptor({
                 .buffer = engine->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
-                .range = static_cast<UInt>(sizeof(SceneShaderData))
+                .range = UInt32(sizeof(SceneShaderData))
             });
 
         // output image

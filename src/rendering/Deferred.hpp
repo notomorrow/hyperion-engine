@@ -43,7 +43,9 @@ enum DeferredFlags : DeferredFlagBits
     DEFERRED_FLAGS_VCT_ENABLED = 0x2,
     DEFERRED_FLAGS_ENV_PROBE_ENABLED = 0x4,
     DEFERRED_FLAGS_HBAO_ENABLED = 0x8,
-    DEFERRED_FLAGS_HBIL_ENABLED = 0x10
+    DEFERRED_FLAGS_HBIL_ENABLED = 0x10,
+    DEFERRED_FLAGS_RT_RADIANCE_ENABLED = 0x20,
+    DEFERRED_FLAGS_DDGI_ENABLED = 0x40
 };
 
 class DeferredPass : public FullScreenPass
@@ -72,7 +74,10 @@ class DeferredRenderer
 {
     // perform occlusion culling using indirect draw
     static constexpr bool use_draw_indirect = true;
+
     static const Extent2D mipmap_chain_extent;
+    static const Extent2D hbao_extent;
+    static const Extent2D ssr_extent;
 
 public:
     DeferredRenderer();

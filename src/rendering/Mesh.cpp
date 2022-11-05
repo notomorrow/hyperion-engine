@@ -355,7 +355,7 @@ void Mesh::CalculateNormals(bool weighted)
     std::unordered_map<Index, Array<Vector3>> normals;
 
     // compute per-face normals (facet normals)
-    for (size_t i = 0; i < m_indices.size(); i += 3) {
+    for (SizeType i = 0; i < m_indices.size(); i += 3) {
         const Index i0 = m_indices[i];
         const Index i1 = m_indices[i + 1];
         const Index i2 = m_indices[i + 2];
@@ -373,7 +373,7 @@ void Mesh::CalculateNormals(bool weighted)
         normals[i2].PushBack(n);
     }
 
-    for (size_t i = 0; i < m_vertices.size(); i++) {
+    for (SizeType i = 0; i < m_vertices.size(); i++) {
         if (weighted) {
             m_vertices[i].SetNormal(normals[i].Sum());
         } else {
@@ -480,14 +480,15 @@ void Mesh::CalculateNormals(bool weighted)
 void Mesh::CalculateTangents()
 {
 #if 1
-    struct TangentBitangentPair {
+    struct TangentBitangentPair
+    {
         Vector3 tangent;
         Vector3 bitangent;
     };
 
     std::unordered_map<Index, std::vector<TangentBitangentPair>> data;
 
-    for (size_t i = 0; i < m_indices.size();) {
+    for (SizeType i = 0; i < m_indices.size();) {
         const auto count = MathUtil::Min(3, m_indices.size() - i);
 
         Vertex v[3];
@@ -525,7 +526,7 @@ void Mesh::CalculateTangents()
         i += count;
     }
 
-    for (size_t i = 0; i < m_vertices.size(); i++) {
+    for (SizeType i = 0; i < m_vertices.size(); i++) {
         const auto &tangent_bitangents = data[i];
 
         // find average
@@ -555,7 +556,7 @@ void Mesh::CalculateTangents()
     std::vector<Vector3> new_tangents(m_vertices.size());
     std::vector<Vector3> new_bitangents(m_vertices.size());
 
-    for (size_t i = 0; i < m_indices.size();) {
+    for (SizeType i = 0; i < m_indices.size();) {
         const auto count = MathUtil::Min(3, m_indices.size() - i);
 
         for (UInt32 j = 0; j < count; j++) {
@@ -581,7 +582,7 @@ void Mesh::CalculateTangents()
         i += count;
     }
 
-    for (size_t i = 0; i < m_vertices.size(); i++) {
+    for (SizeType i = 0; i < m_vertices.size(); i++) {
         Vector3 n = m_vertices[i].GetNormal();
         Vector3 tangent = (new_tangents[i] - (n * n.Dot(new_tangents[i])));
         Vector3 cross = n.Cross(new_tangents[i]);

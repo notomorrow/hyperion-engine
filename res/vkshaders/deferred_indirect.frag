@@ -85,7 +85,7 @@ void main()
     vec3 F = vec3(0.0);
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
-    ao = ssao_data.a * material.a;
+    ao = (bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0) * material.a;
     
 #if HYP_VCT_ENABLED
     vec4 vct_specular = vec4(0.0);
@@ -144,10 +144,8 @@ void main()
         // }
         CalculateRaytracingReflection(deferred_params, texcoord, reflections);
 
-
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
-
 
         CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 

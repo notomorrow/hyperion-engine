@@ -139,7 +139,7 @@ private:
 
 
 //#define HYP_TEST_VCT
-// #define HYP_TEST_TERRAIN
+//#define HYP_TEST_TERRAIN
 
 namespace hyperion::v2 {
     
@@ -186,7 +186,7 @@ public:
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/living_room/living_room.obj");//sponza/sponza.obj"); //"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj"); //"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -224,7 +224,7 @@ public:
         }
 #endif
 
-        test_model.Scale(20.35f);
+        test_model.Scale(0.35f);
 
         if (false) {
             auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
@@ -267,7 +267,7 @@ public:
             m_sun = engine->CreateHandle<Light>(new DirectionalLight(
                 Vector3(-0.5f, 0.75f, 0.0f).Normalize(),
                 Color(1.0f, 1.0f, 1.0f),
-                500000.0f
+                150000.0f
             ));
             m_scene->AddLight(m_sun);
 
@@ -366,16 +366,16 @@ public:
             monkey_entity->AddController<ScriptedController>(
                 engine->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
             );
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.05f);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            //monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.0f);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+           //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+           // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
             monkey_entity->RebuildRenderableAttributes();
             monkey.Translate(Vector3(40, 250.5f, 0));
             monkey.Scale(12.0f);
@@ -560,8 +560,6 @@ int main()
     auto *my_game = new MyGame;
 
     engine->Initialize();
-
-    Device *device = engine->GetInstance()->GetDevice();
 
     engine->shader_manager.SetShader(
         ShaderKey::BASIC_VEGETATION,

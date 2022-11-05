@@ -205,7 +205,7 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
             const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
 
             ibl = EnvProbeSample(
-                gbuffer_sampler,
+                sampler_linear,
                 env_probe_textures[probe_texture_index],
                 bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
                     ? EnvProbeCoordParallaxCorrected(probe, P, R)

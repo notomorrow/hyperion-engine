@@ -16,6 +16,8 @@ using renderer::Rect;
 using renderer::Result;
 
 const Extent2D DeferredRenderer::mipmap_chain_extent(512, 512);
+const Extent2D DeferredRenderer::hbao_extent(512, 512);
+const Extent2D DeferredRenderer::ssr_extent(512, 512);
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
     : FullScreenPass(InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F),
@@ -186,7 +188,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 }
 
 DeferredRenderer::DeferredRenderer()
-    : m_ssr(Extent2D { 512, 512 }),
+    : m_ssr(ssr_extent),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -524,6 +526,7 @@ void DeferredRenderer::Render(
     deferred_data.flags |= use_ssr && m_ssr.IsRendered() ? DEFERRED_FLAGS_SSR_ENABLED : 0;
     deferred_data.flags |= use_hbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
     deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
+    deferred_data.flags |= use_rt_radiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
     
     CollectDrawCalls(engine, frame);
 

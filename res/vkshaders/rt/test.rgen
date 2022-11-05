@@ -18,6 +18,7 @@ layout(set = 0, binding = 1, rgba8) uniform image2D image;
 #include "../include/scene.inc"
 #include "../include/shared.inc"
 #include "../include/noise.inc"
+#include "../include/brdf.inc"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #undef HYP_NO_CUBEMAP
@@ -29,10 +30,34 @@ layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
 
 #include "../include/rt/payload.inc"
 
+const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
+const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
+
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 2
 #define RAY_OFFSET 1.0
 #define NUM_SAMPLES 1
+#define NUM_ACCUMULATION_SAMPLES 6
+
+void ComputeOrthonormalBasis(in vec3 normal, out vec3 bitangent, out vec3 tangent)
+{
+    vec3 T;
+    T = cross(normal, vec3(0.0, 1.0, 0.0));
+    T = mix(cross(normal, vec3(1.0, 0.0, 0.0)), T, step(HYP_FMATH_EPSILON, dot(T, T)));
+
+    T = normalize(T);
+
+    tangent = T;
+    bitangent = normalize(cross(normal, T));
+}
+
+const vec2 offsets[5] = vec2[](
+    vec2(-1, -1),
+    vec2(0, -1),
+    vec2(0, 0),
+    vec2(1, 0),
+    vec2(1, 1)
+);
 
 void main() 
 {
@@ -53,13 +78,16 @@ void main()
 
     vec3 color = vec3(0.0);
 
+    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
+    const float noise_direction = RandomFloat(ray_seed);//InterleavedGradientNoise(vec2(pixel_coord));
+    const float temporal_rotation = temporal_rotations[scene.frame_counter % 6] / 360.0;
+
+    // TODO: Only need one ray, we can just use screen space depth/normals
+    
     uint pixel_seed = 0xabcdef;
 
-    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
-    // const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
-
     for (int sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
-        const vec2 pixel_center = vec2(gl_LaunchIDEXT.x + RandomFloat(pixel_seed), gl_LaunchIDEXT.y + RandomFloat(pixel_seed));
+        const vec2 pixel_center = vec2(gl_LaunchIDEXT.x + RandomFloat(ray_seed), gl_LaunchIDEXT.y + RandomFloat(ray_seed));
         const vec2 uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
         const vec2 d = uv * 2.0 - 1.0;
         
@@ -85,10 +113,13 @@ void main()
                 const vec4 hit_position = origin + direction * payload.distance;
                 origin.xyz = hit_position.xyz + payload.normal * RAY_OFFSET;
 
-                vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
-                vec3 scattered_direction = RandomInHemisphere(rnd, payload.normal);
+                const float angle = (noise_direction + temporal_rotation) * HYP_FMATH_PI * 2.0;
 
-                vec3 ray_dir = normalize(payload.normal + scattered_direction * payload.roughness);
+                const vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
+                // vec3 scattered_direction = CosWeightedRandomHemisphereDirectionHammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES, payload.normal); //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);// //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);////, RandomFloat(ray_seed));
+                vec3 scattered_direction = ImportanceSampleGGX(rnd, payload.normal, HYP_FMATH_SQR(payload.roughness));//RandomInHemisphere(rnd, payload.normal);
+
+                vec3 ray_dir = scattered_direction;//mix(payload.normal, scattered_direction, payload.roughness);
 
                 direction.xyz = normalize(reflect(direction.xyz, ray_dir));
             } else {

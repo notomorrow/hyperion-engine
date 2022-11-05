@@ -62,8 +62,10 @@ public:
 
     DynString operator+(const DynString &other) const;
     DynString operator+(DynString &&other) const;
+    DynString operator+(T ch) const;
     DynString &operator+=(const DynString &other);
     DynString &operator+=(DynString &&other);
+    DynString &operator+=(T ch);
 
     bool operator==(const DynString &other) const;
     bool operator==(const T *str) const;
@@ -300,6 +302,15 @@ auto DynString<T, IsUtf8>::operator+(const DynString &other) const -> DynString
 }
 
 template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::operator+(T ch) const -> DynString
+{
+    DynString result(*this);
+    result.Append(ch);
+
+    return result;
+}
+
+template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator+(DynString &&other) const -> DynString
 {
     DynString result(*this);
@@ -320,6 +331,14 @@ template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator+=(DynString &&other) -> DynString&
 {
     Append(std::move(other));
+
+    return *this;
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::operator+=(T ch) -> DynString&
+{
+    Append(ch);
 
     return *this;
 }

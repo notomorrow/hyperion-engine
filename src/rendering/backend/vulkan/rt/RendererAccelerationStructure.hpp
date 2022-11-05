@@ -30,7 +30,9 @@ enum RTUpdateStateFlagBits : RTUpdateStateFlags
 {
     RT_UPDATE_STATE_FLAGS_NONE = 0x0,
     RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE = 0x1,
-    RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS = 0x2
+    RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS = 0x2,
+    RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES = 0x4,
+    RT_UPDATE_STATE_FLAGS_UPDATE_TRANSFORM = 0x8
 };
 
 using AccelerationStructureFlags = UInt;
@@ -141,13 +143,16 @@ public:
         { return m_transform; }
 
     void SetTransform(const Matrix4 &transform)
-        { m_transform = transform; SetNeedsRebuildFlag(); }
+        { m_transform = transform; SetTransformUpdateFlag(); }
 
     Result Destroy(Device *device);
 
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
     
+    void SetTransformUpdateFlag()
+        { SetFlag(ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE); }
+
     void SetNeedsRebuildFlag()
         { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
 
@@ -221,7 +226,7 @@ private:
     std::vector<UInt32> GetPrimitiveCounts() const;
 
     Result CreateOrRebuildInstancesBuffer(Instance *instance);
-    Result UpdateInstancesBuffer(Instance *instance);
+    Result UpdateInstancesBuffer(Instance *instance, UInt first, UInt last);
     
     Result CreateMeshDescriptionsBuffer(Instance *instance);
     Result UpdateMeshDescriptionsBuffer(Instance *instance);
