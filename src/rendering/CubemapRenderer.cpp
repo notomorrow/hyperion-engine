@@ -69,7 +69,7 @@ void CubemapRenderer::Init(Engine *engine)
 
     // testing global skybox
     auto tex = engine->CreateHandle<Texture>(new TextureCube(
-        engine->GetAssetManager().Load<Texture>(
+        engine->GetAssetManager().LoadMany<Texture>(
             "textures/chapel/posx.jpg",
             "textures/chapel/negx.jpg",
             "textures/chapel/posy.jpg",

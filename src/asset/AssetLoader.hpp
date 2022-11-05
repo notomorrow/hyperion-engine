@@ -73,20 +73,21 @@ struct AssetLoaderWrapper
         { return CastedType(); }
 
     template <class Engine>
-    CastedType Load(AssetManager &asset_manager, Engine *engine, const String &path)
+    CastedType Load(AssetManager &asset_manager, Engine *engine, const String &path, LoaderResult &out_result)
     {
-        auto loader_result = loader.Load(asset_manager, path);
+        auto loaded_asset = loader.Load(asset_manager, path);
+        out_result = loaded_asset.result;
 
-        if (!loader_result.result) {
+        if (!loaded_asset.result) {
             return CastedType();
         }
 
-        if (loader_result.value.template Is<UniquePtr<void>>()) {
-            auto casted_result = loader_result.value.template Get<UniquePtr<void>>().template Cast<T>();
+        if (loaded_asset.value.template Is<UniquePtr<void>>()) {
+            auto casted_result = loaded_asset.value.template Get<UniquePtr<void>>().template Cast<T>();
             
             return MakeCastedType<Engine>(engine, std::move(casted_result));
-        } else if (loader_result.value.template Is<AssetValue>()) {
-            auto &as_ref_counted = loader_result.value.template Get<AssetValue>();
+        } else if (loaded_asset.value.template Is<AssetValue>()) {
+            auto &as_ref_counted = loaded_asset.value.template Get<AssetValue>();
 
             if (as_ref_counted.template Is<ResultType>()) {
                 return as_ref_counted.template Get<ResultType>().template Cast<T>();
@@ -136,24 +137,25 @@ struct AssetLoaderWrapper<Node>
     {
     }
 
-    static inline ResultType EmptyResult()
-        { return ResultType(); }
+    static inline NodeProxy EmptyResult()
+        { return NodeProxy(); }
 
     template <class Engine>
-    NodeProxy Load(AssetManager &asset_manager, Engine *engine, const String &path)
+    NodeProxy Load(AssetManager &asset_manager, Engine *engine, const String &path, LoaderResult &out_result)
     {
-        auto loader_result = loader.Load(asset_manager, path);
+        auto loaded_asset = loader.Load(asset_manager, path);
+        out_result = loaded_asset.result;
 
-        if (!loader_result.result) {
+        if (!loaded_asset.result) {
             return CastedType();
         }
 
-        if (loader_result.value.template Is<UniquePtr<void>>()) {
-            auto casted_result = loader_result.value.template Get<UniquePtr<void>>().template Cast<Node>();
+        if (loaded_asset.value.template Is<UniquePtr<void>>()) {
+            auto casted_result = loaded_asset.value.template Get<UniquePtr<void>>().template Cast<Node>();
             
             return MakeCastedType<Engine>(engine, std::move(casted_result));
-        } else if (loader_result.value.template Is<AssetValue>()) {
-            auto &as_ref_counted = loader_result.value.template Get<AssetValue>();
+        } else if (loaded_asset.value.template Is<AssetValue>()) {
+            auto &as_ref_counted = loaded_asset.value.template Get<AssetValue>();
 
             if (as_ref_counted.template Is<ResultType>()) {
                 return as_ref_counted.template Get<ResultType>();

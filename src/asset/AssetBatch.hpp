@@ -17,6 +17,7 @@ class AssetManager;
 struct EnqueuedAsset
 {
     String path;
+    LoaderResult result;
     AssetValue value;
 
     /*! \brief Retrieve the value of the loaded asset. If the requested type does not match
@@ -40,7 +41,10 @@ struct EnqueuedAsset
         return typename Wrapper::CastedType();
     }
 
-    explicit operator bool() const { return value.IsValid(); }
+    explicit operator bool() const
+    {
+        return result.status == LoaderResult::Status::OK && value.IsValid();
+    }
 };
 
 using AssetMap = FlatMap<String, EnqueuedAsset>;
@@ -63,7 +67,7 @@ private:
             auto &asset = batch.enqueued_assets[key];
 
             asset.value.Set(static_cast<typename AssetLoaderWrapper<T>::ResultType>(
-                asset_manager.template Load<T>(asset.path)
+                asset_manager.template Load<T>(asset.path, asset.result)
             ));
         }
     };

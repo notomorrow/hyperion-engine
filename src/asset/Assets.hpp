@@ -64,17 +64,39 @@ public:
             m_loaders[str] = UniquePtr<Loader>::Construct();
         }
     }
+    
+
+    /*! \brief Load a single asset in a synchronous fashion. The resulting object will have a
+        type corresponding to the provided template type.
+        If any errors occur, an empty result is returned.
+        Node -> NodeProxy
+        T -> Handle<T> */
+    template <class T>
+    auto Load(const String &path) -> typename AssetLoaderWrapper<NormalizedType<T>>::CastedType
+    {
+        LoaderResult result;
+
+        auto value = Load<T>(path, result);
+
+        if (result.status != LoaderResult::Status::OK) {
+            return AssetLoaderWrapper<NormalizedType<T>>::EmptyResult();
+        }
+
+        return value;
+    }
 
     /*! \brief Load a single asset in a synchronous fashion. The resulting object will have a
         type corresponding to the provided template type.
         Node -> NodeProxy
         T -> Handle<T> */
     template <class T>
-    auto Load(const String &path) -> typename AssetLoaderWrapper<NormalizedType<T>>::CastedType
+    auto Load(const String &path, LoaderResult &out_result) -> typename AssetLoaderWrapper<NormalizedType<T>>::CastedType
     {
         const String extension(StringUtil::GetExtension(path.Data()).c_str());
 
         if (extension.Empty()) {
+            out_result = { LoaderResult::Status::ERR_NO_LOADER, "File has no extension; cannot determine loader to use" };
+
             return AssetLoaderWrapper<NormalizedType<T>>::EmptyResult();
         }
 
@@ -95,11 +117,14 @@ public:
             }
         }
 
-        AssertThrowMsg(loader != nullptr,
-            "No loader for type! Path: [%s]", extension.Data());
+        if (loader == nullptr) {
+            out_result = { LoaderResult::Status::ERR_NO_LOADER, "No registered loader for the given type" };
+
+            return AssetLoaderWrapper<NormalizedType<T>>::EmptyResult();
+        }
 
         return AssetLoaderWrapper<NormalizedType<T>>(*loader)
-            .Load(*this, m_engine, path);
+            .Load(*this, m_engine, path, out_result);
     }
 
     template <class T>
@@ -113,7 +138,7 @@ public:
         after calling this method. All assets will be returned in the resulting array in the order that their
         respective filepaths were provided in. */
     template <class T, class ... Paths>
-    auto Load(const String &first_path, Paths &&... paths) -> FixedArray<typename AssetLoaderWrapper<NormalizedType<T>>::CastedType, sizeof...(paths) + 1>
+    auto LoadMany(const String &first_path, Paths &&... paths) -> FixedArray<typename AssetLoaderWrapper<NormalizedType<T>>::CastedType, sizeof...(paths) + 1>
     {
         FixedArray<typename AssetLoaderWrapper<NormalizedType<T>>::CastedType, sizeof...(paths) + 1> results_array;
         std::vector<String> paths_array { first_path, std::forward<Paths>(paths)... };

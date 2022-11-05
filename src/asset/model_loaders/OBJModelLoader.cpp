@@ -281,9 +281,10 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             material_library_path += ".mtl";
         }
 
-        material_library = state.asset_manager->Load<MaterialGroup>(material_library_path.c_str());
+        LoaderResult result;
+        material_library = state.asset_manager->Load<MaterialGroup>(material_library_path.c_str(), result);
 
-        if (!material_library) {
+        if (result.status != LoaderResult::Status::OK || !material_library) {
             DebugLog(LogType::Warn, "Obj model loader: Could not load material library at %s\n", material_library_path.c_str());
         }
     }

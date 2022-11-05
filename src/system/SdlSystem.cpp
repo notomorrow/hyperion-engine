@@ -45,6 +45,9 @@ void SDLApplicationWindow::Initialize()
         SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN
     );
 
+    // make sure to use SDL_free on file name strings for these events
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+
     AssertThrowMsg(this->window != nullptr, "Failed to initialize window: %s", SDL_GetError());
 }
 
@@ -108,7 +111,20 @@ UniquePtr<ApplicationWindow> SDLApplication::CreateSystemWindow(const ANSIString
 
 Int SDLApplication::PollEvent(SystemEvent &event)
 {
-    return SDL_PollEvent(event.GetInternalEvent());
+    const Int result = SDL_PollEvent(event.GetInternalEvent());
+
+    if (result) {
+        if (event.GetType() == SystemEventType::EVENT_FILE_DROP) {
+            // set event data variant to the file path
+            event.GetEventData().Set(FilePath(event.GetInternalEvent()->drop.file));
+
+            // need to free or else the mem will leak
+            SDL_free(event.GetInternalEvent()->drop.file);
+            event.GetInternalEvent()->drop.file = nullptr;
+        }
+    }
+
+    return result;
 }
 
 #ifdef HYP_VULKAN
@@ -130,29 +146,6 @@ bool SDLApplication::GetVkExtensions(Array<const char *> &out_extensions) const
     return true;
 }
 #endif
-
-std::vector<const char *> SDLApplication::GetVulkanExtensionNames()
-{
-    UInt32 num_extensions = 0;
-    SDL_Window *window = static_cast<SDLApplicationWindow *>(m_current_window.Get())->GetInternalWindow();
-
-    if (!SDL_Vulkan_GetInstanceExtensions(window, &num_extensions, nullptr)) {
-        ThrowError();
-    }
-
-    std::vector<const char *> extensions(num_extensions);
-
-    if (!SDL_Vulkan_GetInstanceExtensions(window, &num_extensions, extensions.data())) {
-        ThrowError();
-    }
-
-    return extensions;
-}
-
-void SDLApplication::ThrowError()
-{
-    AssertThrowMsg(false, "SDL Error: %s", SDL_GetError());
-}
 
 Application::Application()
 {

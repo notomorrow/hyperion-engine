@@ -8,9 +8,8 @@
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/Containers.hpp>
+#include <util/fs/FsUtil.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 
@@ -27,6 +26,7 @@ class Instance;
 } // namespace renderer
 
 using renderer::Extent2D;
+using v2::FilePath;
 
 enum SystemEventType
 {
@@ -38,7 +38,9 @@ enum SystemEventType
     EVENT_MOUSEMOTION = SDL_MOUSEMOTION,
     EVENT_MOUSEBUTTON_DOWN = SDL_MOUSEBUTTONDOWN,
     EVENT_MOUSEBUTTON_UP = SDL_MOUSEBUTTONUP,
-    EVENT_MOUSESCROLL = SDL_MOUSEWHEEL
+    EVENT_MOUSESCROLL = SDL_MOUSEWHEEL,
+
+    EVENT_FILE_DROP = SDL_DROPFILE
 };
 
 enum SystemWindowEventType
@@ -136,10 +138,37 @@ enum MouseButton
 
 using MouseButtonMask = UInt32;
 
-
 class SystemEvent
 {
 public:
+    using EventData = Variant<FilePath, void *>;
+
+    SystemEvent() = default;
+    SystemEvent(const SystemEvent &other) = delete;
+    SystemEvent &operator=(const SystemEvent &other) = delete;
+
+    SystemEvent(SystemEvent &&other) noexcept
+        : sdl_event(other.sdl_event),
+          m_event_data(std::move(other.m_event_data))
+    {
+        std::memset(&other.sdl_event, 0x00, sizeof(SDL_Event));
+    }
+
+    SystemEvent &operator=(SystemEvent &&other) noexcept
+    {
+        // sdl_event better not have any leakable memory!
+        // we free filedrop memory as soon as we receive the event...
+
+        sdl_event = other.sdl_event;
+        std::memset(&other.sdl_event, 0x00, sizeof(SDL_Event));
+
+        m_event_data = std::move(other.m_event_data);
+
+        return *this;
+    }
+
+    ~SystemEvent() = default;
+
     SystemEventType GetType() const
     {
         return (SystemEventType)sdl_event.type;
@@ -164,8 +193,16 @@ public:
 
     SDL_Event *GetInternalEvent();
 
+    EventData &GetEventData()
+        { return m_event_data; }
+
+    const EventData &GetEventData() const
+        { return m_event_data; }
+
 private:
     SDL_Event sdl_event;
+
+    EventData m_event_data;
 };
 
 struct MouseState
@@ -254,8 +291,6 @@ public:
 #endif
     
 protected:
-    virtual void ThrowError() { }
-    
     UniquePtr<ApplicationWindow> m_current_window;
 };
 
@@ -272,11 +307,6 @@ public:
 #ifdef HYP_VULKAN
     virtual bool GetVkExtensions(Array<const char *> &out_extensions) const override;
 #endif
-
-protected:
-    virtual void ThrowError() override;
-    
-    std::vector<const char *> GetVulkanExtensionNames();
 };
 
 } // namespace hyperion

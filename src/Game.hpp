@@ -45,7 +45,7 @@ public:
     virtual void OnFrameBegin(Engine *engine, Frame *frame) = 0;
     virtual void OnFrameEnd(Engine *engine, Frame *frame) = 0;
 
-    virtual void HandleEvent(Engine *engine, SystemEvent &event) final;
+    virtual void HandleEvent(Engine *engine, SystemEvent &&event) final;
     virtual void OnInputEvent(Engine *engine, const SystemEvent &event);
 
 protected:

@@ -188,9 +188,10 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
     if (!model.skeleton_name.empty()) {
         const auto skeleton_path = String((StringUtil::BasePath(model.filepath) + "/" + model.skeleton_name + ".xml").c_str());
 
-        skeleton = state.asset_manager->Load<Skeleton>(skeleton_path);
+        LoaderResult result;
+        skeleton = state.asset_manager->Load<Skeleton>(skeleton_path, result);
 
-        if (!skeleton) {
+        if (result.status != LoaderResult::Status::OK || !skeleton) {
             DebugLog(LogType::Warn, "Ogre XML parser: Could not load skeleton at %s\n", skeleton_path.Data());
         }
     }
