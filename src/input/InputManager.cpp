@@ -9,8 +9,8 @@ namespace hyperion {
 
 using namespace v2;
 
-InputManager::InputManager(SystemWindow *window)
-    : window(window)
+InputManager::InputManager()
+    : m_window(nullptr)
 {
 }
 
@@ -53,28 +53,41 @@ void InputManager::CheckEvent(SystemEvent *event)
     }
 }
 
+void InputManager::SetMousePosition(Int x, Int y)
+{
+    if (!m_window) {
+        return;
+    }
+
+    m_window->SetMousePosition(x, y);
+}
+
 void InputManager::UpdateMousePosition()
 {
     //Threads::AssertOnThread(THREAD_INPUT);
+    
+    if (!m_window) {
+        return;
+    }
 
-    int mx, my;
+    const MouseState mouse_state = m_window->GetMouseState();
 
-    GetWindow()->GetMouseState(&mx, &my);
-
-    m_mouse_position.x.store(mx);
-    m_mouse_position.y.store(my);
+    m_mouse_position.x.store(mouse_state.x);
+    m_mouse_position.y.store(mouse_state.y);
 }
 
 void InputManager::UpdateWindowSize()
 {
     //Threads::AssertOnThread(THREAD_INPUT);
+    
+    if (!m_window) {
+        return;
+    }
 
-    int width, height;
+    const auto extent = m_window->GetExtent();
 
-    GetWindow()->GetSize(&width, &height);
-
-    m_window_size.x.store(width);
-    m_window_size.y.store(height);
+    m_window_size.x.store(extent.width);
+    m_window_size.y.store(extent.height);
 }
 
 void InputManager::SetKey(int key, bool pressed)

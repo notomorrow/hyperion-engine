@@ -73,8 +73,22 @@ public:
     bool operator!=(const T *str) const;
 
     bool operator<(const DynString &other) const;
-    
+
+    /*! \brief Raw access of the character data of the string at index.
+     * For UTF-8 Strings, the character may not be a valid UTF-8 character,
+     * so for appropriate cases, \ref{GetChar} should be used instead.
+     *
+     * \ref{index} must be less than \ref{Size()}.
+     */
     [[nodiscard]] const T operator[](SizeType index) const;
+
+    /*! \brief Get a char from the String at the given index.
+     * For UTF-8 strings, a UTF-32 decoded character is returned.
+     * If needing to access raw character data, \ref{operator[]} should be used instead.
+     *
+     * \ref{index} must be less than \ref{Length()}.
+     */
+    [[nodiscard]] std::conditional_t<IsUtf8, u32char, T> GetChar(SizeType index) const;
 
     /*! \brief Return the data size in characters. Note, utf-8 strings can have a shorter length than size. */
     [[nodiscard]] typename Base::SizeType Size() const { return Base::Size() - 1; /* for NT char */ }
@@ -402,10 +416,18 @@ bool DynString<T, IsUtf8>::operator<(const DynString &other) const
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::operator[](SizeType index) const -> const T
 {
+    return Base::operator[](index);
+}
+
+template <class T, bool IsUtf8>
+auto DynString<T, IsUtf8>::GetChar(SizeType index) const -> std::conditional_t<IsUtf8, u32char, T>
+{
     if constexpr (is_utf8) {
-        char ch;
-        utf::utf8_charat(Data(), &ch, index);
-        return static_cast<T>(ch);
+        const SizeType size = Size();
+
+        AssertThrow(index < size);
+
+        return utf::utf8_charat(Data(), size, index);
     } else {
         return Base::operator[](index);
     }

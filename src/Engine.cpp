@@ -34,9 +34,9 @@ using renderer::FramebufferObject;
 using renderer::DescriptorKey;
 using renderer::FillMode;
 
-Engine::Engine(SystemSDL &_system, const char *app_name)
+Engine::Engine(RefCountedPtr<Application> application, const char *app_name)
     : shader_globals(nullptr),
-      m_instance(new Instance(_system, app_name, "HyperionEngine")),
+      m_instance(new Instance(application, app_name, "HyperionEngine")),
       m_asset_manager(this),
       m_shader_compiler(this)
 {

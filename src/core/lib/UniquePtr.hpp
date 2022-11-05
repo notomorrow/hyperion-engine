@@ -259,6 +259,23 @@ public:
     UniquePtr(const UniquePtr &other) = delete;
     UniquePtr &operator=(const UniquePtr &other) = delete;
 
+    /*! \brief Allows construction from a UniquePtr of a convertible type. */
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    UniquePtr(UniquePtr<Ty> &&other) noexcept
+        : Base()
+    {
+        Reset<Ty>(other.Release());
+    }
+
+    /*! \brief Allows assign from a UniquePtr of a convertible type. */
+    template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
+    UniquePtr &operator=(UniquePtr<Ty> &&other) noexcept
+    {
+        Reset<Ty>(other.Release());
+
+        return *this;
+    }
+
     UniquePtr(UniquePtr &&other) noexcept
         : Base(std::move(other))
     {
@@ -392,11 +409,11 @@ public:
     }
 
     /*! \brief Conversion to base class UniquePtr. Performs a Cast(). */
-    template <class Ty, typename = typename std::enable_if_t<std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>>>
-    operator UniquePtr<Ty>()
-    {
-        return CastUnsafe<Ty>();
-    }
+    //template <class Ty, typename = typename std::enable_if_t<std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>>>
+    //operator UniquePtr<Ty>()
+    //{
+    //    return CastUnsafe<Ty>();
+    //}
 };
 
 /*! \brief A UniquePtr<void> cannot be constructed except for being moved from an existing

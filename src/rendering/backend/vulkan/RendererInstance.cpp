@@ -149,21 +149,11 @@ Result Instance::SetupDebug()
     HYPERION_RETURN_OK;
 }
 
-void Instance::SetCurrentWindow(SystemWindow *_window)
-{
-    this->window = _window;
-}
-
-SystemWindow *Instance::GetCurrentWindow()
-{
-    return this->window;
-}
-
-Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name)
-    : frame_handler(nullptr)
+Instance::Instance(RefCountedPtr<Application> application, const char *app_name, const char *engine_name)
+    : m_application(application),
+      frame_handler(nullptr)
 {
     this->swapchain = new Swapchain();
-    this->system = _system;
     this->app_name = app_name;
     this->engine_name = engine_name;
     this->device = nullptr;
@@ -213,46 +203,47 @@ Result Instance::SetupDebugMessenger()
 
 Result Instance::Initialize(bool load_debug_layers)
 {
-    // Application names/versions
-    SetCurrentWindow(this->system.GetCurrentWindow());
-
     /* Set up our debug and validation layers */
     if (load_debug_layers) {
         HYPERION_BUBBLE_ERRORS(SetupDebug());
     }
 
-    VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-    app_info.pApplicationName   = app_name;
+    VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+    app_info.pApplicationName = app_name;
     app_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-    app_info.pEngineName        = engine_name;
-    app_info.engineVersion      = VK_MAKE_VERSION(0, 1, 0);
+    app_info.pEngineName = engine_name;
+    app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
     // Set target api version
-    app_info.apiVersion         = HYP_VULKAN_API_VERSION;
+    app_info.apiVersion = HYP_VULKAN_API_VERSION;
 
-    VkInstanceCreateInfo create_info{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    VkInstanceCreateInfo create_info { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     create_info.pApplicationInfo = &app_info;
 
     // Setup validation layers
-    create_info.enabledLayerCount   = uint32_t(this->validation_layers.size());
+    create_info.enabledLayerCount = uint32_t(this->validation_layers.size());
     create_info.ppEnabledLayerNames = this->validation_layers.data();
 
     // Setup Vulkan extensions
-    std::vector<const char *> extension_names = this->system.GetVulkanExtensionNames();
+    Array<const char *> extension_names;
 
-    DebugLog(LogType::Debug, "Got %llu extensions:\n", extension_names.size());
+    if (!m_application->GetVkExtensions(extension_names)) {
+        return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
+    }
 
-    for (const char *ext : extension_names) {
-        DebugLog(LogType::Debug, "\t%s\n", ext);
+    DebugLog(LogType::Debug, "Got %llu extensions:\n", extension_names.Size());
+
+    for (const char *extension_name : extension_names) {
+        DebugLog(LogType::Debug, "\t%s\n", extension_name);
     }
 
 #ifndef HYPERION_BUILD_RELEASE
-    extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
-    create_info.enabledExtensionCount   = uint32_t(extension_names.size());
-    create_info.ppEnabledExtensionNames = extension_names.data();
+    create_info.enabledExtensionCount = UInt32(extension_names.Size());
+    create_info.ppEnabledExtensionNames = extension_names.Data();
 
-    DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.size());
+    DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.Size());
 
     HYPERION_VK_CHECK_MSG(
         vkCreateInstance(&create_info, nullptr, &this->instance),
@@ -385,12 +376,12 @@ Result Instance::Destroy()
 
 Device *Instance::GetDevice()
 {
-    return this->device;
+    return device;
 }
 
 void Instance::CreateSurface()
 {
-    this->surface = GetCurrentWindow()->CreateVulkanSurface(this->instance);
+    surface = m_application->GetCurrentWindow()->CreateVkSurface(this);
     DebugLog(LogType::Debug, "Created window surface\n");
 }
 

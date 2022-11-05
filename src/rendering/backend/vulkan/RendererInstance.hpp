@@ -6,6 +6,8 @@
 #include <optional>
 #include <array>
 
+#include <core/Containers.hpp>
+
 #include <vulkan/vulkan.h>
 
 #include <system/SdlSystem.hpp>
@@ -43,7 +45,7 @@ class Instance
     Result CreateCommandPool(DeviceQueue &queue, UInt index);
 
 public:
-    Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
+    Instance(RefCountedPtr<Application> application, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
     
@@ -82,10 +84,7 @@ public:
     Device *GetDevice();
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
     Result InitializeSwapchain();
-
-    void SetCurrentWindow(SystemWindow *window);
-
-    SystemWindow *GetCurrentWindow();
+    
     Result Destroy();
 
     const char *app_name;
@@ -97,9 +96,7 @@ public:
     FrameHandler *frame_handler;
 
 private:
-
-    SystemWindow *window = nullptr;
-    SystemSDL system;
+    RefCountedPtr<Application> m_application;
 
     VkInstance instance = nullptr;
     VkSurfaceKHR surface = nullptr;

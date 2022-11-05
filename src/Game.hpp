@@ -5,18 +5,14 @@
 #include <input/InputManager.hpp>
 #include <scene/Scene.hpp>
 #include <ui/UIScene.hpp>
+#include <system/SdlSystem.hpp>
 
 namespace hyperion {
-
-class SystemWindow;
-class SystemEvent;
-
 namespace renderer {
 
 class Frame;
 
 } // namespace renderer
-
 } // namespace hyperion
 
 namespace hyperion::v2 {
@@ -30,7 +26,7 @@ class Game
     friend class GameThread;
 
 public:
-    Game();
+    Game(RefCountedPtr<Application> application);
     virtual ~Game();
     
     Handle<Scene> &GetScene()
@@ -39,7 +35,7 @@ public:
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
-    virtual void Init(Engine *engine, SystemWindow *window) final;
+    virtual void Init(Engine *engine) final;
     virtual void Update(Engine *engine, GameCounter::TickUnit delta) final;
     virtual void Teardown(Engine *engine);
 
@@ -63,6 +59,8 @@ protected:
 
     InputManager *GetInputManager() const
         { return m_input_manager; }
+
+    RefCountedPtr<Application> m_application;
 
     InputManager *m_input_manager;
     Handle<Scene> m_scene;
