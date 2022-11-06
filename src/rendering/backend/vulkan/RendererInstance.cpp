@@ -192,7 +192,7 @@ Result Instance::SetupDebugMessenger()
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
     );
     messenger_info.pfnUserCallback = &DebugCallback;
-    messenger_info.pUserData       = nullptr;
+    messenger_info.pUserData = nullptr;
 
     HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger));
 

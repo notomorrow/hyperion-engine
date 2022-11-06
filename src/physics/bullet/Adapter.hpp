@@ -14,6 +14,9 @@ namespace hyperion::v2::physics {
 class BulletPhysicsAdapter : public PhysicsAdapter<BulletPhysicsAdapter>
 {
 public:
+    BulletPhysicsAdapter();
+    ~BulletPhysicsAdapter();
+
     void Init(PhysicsWorldBase *world);
     void Teardown(PhysicsWorldBase *world);
     void Tick(PhysicsWorldBase *world, GameCounter::TickUnitHighPrec delta);

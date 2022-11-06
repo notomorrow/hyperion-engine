@@ -318,7 +318,7 @@ void RendererInstance::CollectDrawCalls(Engine *engine, Frame *frame)
     // check visibility state
     const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.material_attributes.bucket);
     const auto visibility_cursor = engine->render_state.visibility_cursor;
-    const auto &octree_visibility_state_snapshot = engine->GetWorld().GetOctree().GetVisibilityState().snapshots[visibility_cursor];
+    const auto &octree_visibility_state_snapshot = engine->GetWorld()->GetOctree().GetVisibilityState().snapshots[visibility_cursor];
 
     for (auto &&entity : m_entities) {
         if (entity->GetMesh() == nullptr) {

@@ -39,6 +39,7 @@ struct LoaderResult
 
     operator bool() const { return status == Status::OK; }
     bool operator==(Status status) const { return this->status == status; }
+    bool operator!=(Status status) const { return this->status != status; }
 };
 
 } // namespace hyperion::v2

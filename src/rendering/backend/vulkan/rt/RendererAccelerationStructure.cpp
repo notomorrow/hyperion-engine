@@ -483,7 +483,7 @@ std::vector<VkAccelerationStructureGeometryKHR> TopLevelAccelerationStructure::G
 
 std::vector<UInt32> TopLevelAccelerationStructure::GetPrimitiveCounts() const
 {
-    return { static_cast<UInt32>(m_blas.size()) };
+    return { UInt32(m_blas.size()) };
 }
     
 Result TopLevelAccelerationStructure::Create(
@@ -619,7 +619,7 @@ Result TopLevelAccelerationStructure::CreateOrRebuildInstancesBuffer(Instance *i
         const BottomLevelAccelerationStructure *blas = m_blas[i];
         AssertThrow(blas != nullptr);
 
-        const auto instance_index = static_cast<UInt32>(i); /* Index of mesh in mesh descriptions buffer. */
+        const auto instance_index = UInt32(i); /* Index of mesh in mesh descriptions buffer. */
 
         instances[i] = VkAccelerationStructureInstanceKHR {
             .transform = ToVkTransform(blas->GetTransform()),

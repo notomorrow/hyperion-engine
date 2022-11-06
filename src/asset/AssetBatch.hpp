@@ -52,40 +52,58 @@ using AssetMap = FlatMap<String, EnqueuedAsset>;
 struct AssetBatch : private TaskBatch
 {
 private:
-    AssetMap enqueued_assets;
+    // make it be a ptr so this can be moved
+    UniquePtr<AssetMap> enqueued_assets;
 
     template <class T>
     struct LoadObjectWrapper
     {
-        template <class AssetManager, class AssetBatch>
+        template <class AssetManager>
         HYP_FORCE_INLINE void operator()(
-            AssetManager &asset_manager,
-            AssetBatch &batch,
+            AssetManager *asset_manager,
+            AssetMap *map,
             const String &key
         )
         {
-            auto &asset = batch.enqueued_assets[key];
+            auto &asset = (*map)[key];
 
             asset.value.Set(static_cast<typename AssetLoaderWrapper<T>::ResultType>(
-                asset_manager.template Load<T>(asset.path, asset.result)
+                asset_manager->template Load<T>(asset.path, asset.result)
             ));
+
+            if (asset.result != LoaderResult::Status::OK) {
+                asset.value.Reset();
+            }
         }
     };
 
 public:
     using TaskBatch::IsCompleted;
 
-    AssetBatch(AssetManager &asset_manager)
+    AssetBatch(AssetManager *asset_manager)
         : TaskBatch(),
+          enqueued_assets(new AssetMap),
           asset_manager(asset_manager)
     {
+        AssertThrow(asset_manager != nullptr);
     }
 
     AssetBatch(const AssetBatch &other) = delete;
     AssetBatch &operator=(const AssetBatch &other) = delete;
     AssetBatch(AssetBatch &&other) noexcept = delete;
     AssetBatch &operator=(AssetBatch &&other) noexcept = delete;
-    ~AssetBatch() = default;
+
+    ~AssetBatch()
+    {
+        if (enqueued_assets != nullptr) {
+            // all tasks must be completed or the destruction of enqueued_assets
+            // will cause a dangling ptr issue.
+            AssertThrowMsg(
+                enqueued_assets->Empty(),
+                "All enqueued assets must be completed before the destructor of AssetBatch is called or else dangling pointer issues will occur."
+            );
+        }
+    }
 
     /*! \brief Enqueue an asset of type T to be loaded in this batch.
         Only call this method before LoadAsync() is called. */
@@ -95,24 +113,24 @@ public:
         AssertThrowMsg(IsCompleted(),
             "Cannot add assets while loading!");
 
-        const auto result = enqueued_assets.Set(key, EnqueuedAsset {
+        AssertThrowMsg(enqueued_assets != nullptr,
+            "AssetBatch is in invalid state");
+
+        enqueued_assets->Set(key, EnqueuedAsset {
             .path = path
         });
 
         struct Functor
         {
-            AssetBatch *batch;
             String key;
 
-            void operator()()
+            void operator()(AssetManager *asset_manager, AssetMap *asset_map)
             {
-                DebugLog(LogType::Info, "Begin loading key \"%s\"\n", key.Data());
-                LoadObjectWrapper<T>()(batch->asset_manager, *batch, key);
+                LoadObjectWrapper<T>()(asset_manager, asset_map, key);
             }
         };
 
         procs.PushBack(Functor {
-            .batch = this,
             .key = key
         });
     }
@@ -123,10 +141,10 @@ public:
     AssetMap AwaitResults();
     AssetMap ForceLoad();
 
-    AssetManager &asset_manager;
+    AssetManager *asset_manager;
 
 private:
-    Array<Proc<void>> procs;
+    Array<Proc<void, AssetManager *, AssetMap *>> procs;
 };
 
 } // namespace hyperion::V2

@@ -320,6 +320,18 @@ public:
         m_current_type_id = type_id;
     }
 
+    /*! \brief Resets the Variant into an invalid state.
+     * If there is any present value, it will be destructed
+     */
+    void Reset()
+    {
+        if (IsValid()) {
+            Helper::Destruct(m_current_type_id, m_storage.GetPointer());
+        }
+
+        m_current_type_id = invalid_type_id;
+    }
+
     HashCode GetHashCode() const
     {
         return Helper::GetHashCode(m_current_type_id, m_storage.GetPointer());
@@ -540,6 +552,13 @@ struct Variant
     template <class T>
     void Set(T &&value)
         { return m_holder.template Set<T>(std::forward<T>(value)); }
+    
+
+    /*! \brief Resets the Variant into an invalid state.
+     * If there is any present value, it will be destructed
+     */
+    void Reset()
+        { m_holder.Reset(); }
 
     HashCode GetHashCode() const
         { return m_holder.GetHashCode(); }

@@ -50,6 +50,12 @@ class Device;
 class CommandBuffer;
 class StagingBuffer;
 
+enum BufferIDMask : UInt32
+{
+    ID_MASK_BUFFER = 0x1u << 32u,
+    ID_MASK_IMAGE = 0x2u << 32u
+};
+
 class StagingBufferPool
 {
     struct StagingBufferRecord
@@ -171,6 +177,12 @@ public:
     void SetResourceState(ResourceState new_state)
         { resource_state = new_state; }
 
+    void SetID(UInt id)
+        { m_id = id; }
+
+    UInt GetID() const
+        { return m_id; }
+
     void *GetMapping(Device *device) const
     {
         if (!map) {
@@ -192,13 +204,13 @@ public:
     
     static Stats stats;
 
-    UInt index;
-
 protected:
     void Map(Device *device, void **ptr) const;
     void Unmap(Device *device) const;
     void Create();
     void Destroy();
+
+    UInt m_id;
 
     UInt sharing_mode;
     mutable void *map;

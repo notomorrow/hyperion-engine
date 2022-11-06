@@ -311,7 +311,8 @@ void Engine::Initialize()
 
     m_placeholder_data.Create(this);
 
-    m_world.Init(this);
+    m_world = CreateHandle<World>();
+    InitObject(m_world);
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
@@ -899,7 +900,7 @@ void Engine::FinalizeStop()
     m_is_render_loop_active = false;
     task_system.Stop();
 
-    AssertThrow(GetInstance()->GetDevice()->Wait());
+    HYPERION_ASSERT_RESULT(GetInstance()->GetDevice()->Wait());
 
     while (game_thread.IsRunning()) {
         HYP_FLUSH_RENDER_QUEUE(this);
@@ -922,7 +923,7 @@ void Engine::FinalizeStop()
 
     HYP_FLUSH_RENDER_QUEUE(this);
 
-    AssertThrow(GetInstance()->GetDevice()->Wait());
+    HYPERION_ASSERT_RESULT(GetInstance()->GetDevice()->Wait());
 }
 
 void Engine::RenderNextFrame(Game *game)
@@ -943,14 +944,12 @@ void Engine::RenderNextFrame(Game *game)
     }
 
     auto *frame = GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<renderer::Frame>();
-    auto *command_buffer = frame->GetCommandBuffer();
-    const auto frame_index = GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
     PreFrameUpdate(frame);
 
     HYPERION_ASSERT_RESULT(frame->BeginCapture(GetInstance()->GetDevice()));
 
-    m_world.Render(this, frame);
+    m_world->Render(this, frame);
 
     game->OnFrameBegin(this, frame);
 
