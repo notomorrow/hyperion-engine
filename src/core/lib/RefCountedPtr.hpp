@@ -37,20 +37,16 @@ struct RefCountData
     template <class T, class ...Args>
     void Construct(Args &&... args)
     {
-        using Normalized = NormalizedType<T>;
-
-        value = Memory::AllocateAndConstruct<Normalized>(std::forward<Args>(args)...);
-        dtor = &Memory::DestructAndFree<Normalized>;
-        type_id = TypeID::ForType<Normalized>();
+        value = Memory::New<T>(std::forward<Args>(args)...);
+        dtor = &Memory::Delete<T>;
+        type_id = TypeID::ForType<T>();
     }
 
     template <class T>
     void TakeOwnership(T *ptr)
     {
-        using Normalized = NormalizedType<T>;
-
         value = ptr;
-        dtor = &Memory::DestructAndFree<Normalized>;
+        dtor = &Memory::Delete<T>;
         type_id = TypeID::ForType<T>();
     }
 
@@ -204,11 +200,23 @@ protected:
     void DropRefCount()
     {
         if (m_ref) {
-            if (--m_ref->strong_count == 0u) {
-                m_ref->Destruct();
+            if constexpr (std::is_integral_v<CountType>) {
+                if (--m_ref->strong_count == 0u) {
+                    m_ref->Destruct();
 
-                if (m_ref->weak_count == 0u) {
-                    delete m_ref;
+                    if (m_ref->weak_count == 0u) {
+                        delete m_ref;
+                    }
+                }
+            } else {
+                // TODO: will there be a std::is_atomic ?
+                
+                if (m_ref->strong_count.fetch_sub(1) == 1) {
+                    m_ref->Destruct();
+
+                    if (m_ref->weak_count.load() == 0u) {
+                        delete m_ref;
+                    }
                 }
             }
 
@@ -582,9 +590,17 @@ protected:
     void DropRefCount()
     {
         if (m_ref) {
-            if (--m_ref->weak_count == 0u) {
-                if (m_ref->strong_count == 0u) {
-                    delete m_ref;
+            if constexpr (std::is_integral_v<CountType>) {
+                if (--m_ref->weak_count == 0u) {
+                    if (m_ref->strong_count == 0u) {
+                        delete m_ref;
+                    }
+                }
+            } else {
+                if (m_ref->weak_count.fetch_sub(1) == 1) {
+                    if (m_ref->strong_count.load() == 0) {
+                        delete m_ref;
+                    }
                 }
             }
 

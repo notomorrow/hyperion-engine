@@ -31,7 +31,6 @@ Scene::Scene(
 Scene::~Scene()
 {
     Teardown();
-    delete m_environment;
 }
     
 void Scene::Init(Engine *engine)
@@ -134,6 +133,7 @@ void Scene::Init(Engine *engine)
 
         m_camera.Reset();
         m_tlas.Reset();
+        m_environment.Reset();
 
         m_root_node_proxy.Get()->SetScene(nullptr);
 

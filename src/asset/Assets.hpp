@@ -168,7 +168,7 @@ public:
 
     AssetBatch CreateBatch()
     {
-        return AssetBatch(*this);
+        return AssetBatch(this);
     }
 
 private:

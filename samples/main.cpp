@@ -127,7 +127,7 @@ public:
         }
 #endif
 
-        engine->GetWorld().AddScene(Handle<Scene>(m_scene));
+        engine->GetWorld()->AddScene(Handle<Scene>(m_scene));
 
         auto batch = engine->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
@@ -405,7 +405,7 @@ public:
             Ray ray { m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction) };
             RayTestResults results;
 
-            if (engine->GetWorld().GetOctree().TestRay(ray, results)) {
+            if (engine->GetWorld()->GetOctree().TestRay(ray, results)) {
                 // std::cout << "hit with aabb : " << results.Front().hitpoint << "\n";
                 RayTestResults triangle_mesh_results;
 

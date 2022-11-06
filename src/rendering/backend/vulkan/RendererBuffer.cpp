@@ -335,15 +335,15 @@ VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src
 GPUMemory::Stats GPUMemory::stats{};
 
 GPUMemory::GPUMemory()
-    : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
+    : m_id(0),
+      sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
       size(0),
-      index(0),
       map(nullptr),
       resource_state(ResourceState::UNDEFINED)
 {
     static UInt allocations = 0;
 
-    index = allocations++;
+    m_id = allocations++;
 }
 
 GPUMemory::~GPUMemory()
@@ -444,7 +444,7 @@ VmaAllocationCreateInfo GPUBuffer::GetAllocationCreateInfo(Device *device) const
     VmaAllocationCreateInfo alloc_info { };
     alloc_info.flags = vma_allocation_create_flags;
     alloc_info.usage = vma_usage;
-    alloc_info.pUserData = reinterpret_cast<void *>(index);
+    alloc_info.pUserData = reinterpret_cast<void *>(uintptr_t(UInt64(ID_MASK_BUFFER) | UInt64(m_id)));
 
     return alloc_info;
 }
@@ -504,7 +504,7 @@ Result GPUBuffer::CheckCanAllocate(
     AssertThrow(memory_type_index < memory_properties.memoryTypeCount);
 
     const auto heap_index = memory_properties.memoryTypes[memory_type_index].heapIndex;
-    const auto &heap      = memory_properties.memoryHeaps[heap_index];
+    const auto &heap = memory_properties.memoryHeaps[heap_index];
 
     if (heap.size < size) {
         return {Result::RENDERER_ERR, "Heap size is less than requested size. "
@@ -634,10 +634,10 @@ Result GPUBuffer::Create(Device *device, SizeType size, SizeType alignment)
     if (buffer != nullptr) {
         DebugLog(
             LogType::Warn,
-            "Create() called on a buffer (memory #%lu) that has not been destroyed!\n"
+            "Create() called on a buffer (memory #%u) that has not been destroyed!\n"
             "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
             "\tTo prevent memory leaks, calling Destroy() before allocating the memory...\n",
-            index
+            m_id
         );
 
 #ifdef HYP_DEBUG_MODE
@@ -1103,10 +1103,10 @@ Result GPUImageMemory::Create(Device *device, SizeType size, VkImageCreateInfo *
     if (image != nullptr) {
         DebugLog(
             LogType::Warn,
-            "Create() called on an image (memory #%lu) that has not been destroyed!\n"
+            "Create() called on an image (memory #%u) that has not been destroyed!\n"
             "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
             "\tTo prevent memory leaks, calling Destroy() before allocating the memory...\n",
-            index
+            m_id
         );
 
 #ifdef HYP_DEBUG_MODE
@@ -1122,7 +1122,7 @@ Result GPUImageMemory::Create(Device *device, SizeType size, VkImageCreateInfo *
 
     VmaAllocationCreateInfo alloc_info { };
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    alloc_info.pUserData = reinterpret_cast<void *>(uintptr_t(index));
+    alloc_info.pUserData = reinterpret_cast<void *>(uintptr_t(UInt64(ID_MASK_IMAGE) | UInt64(m_id)));
 
     HYPERION_VK_CHECK_MSG(
         vmaCreateImage(

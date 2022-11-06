@@ -52,8 +52,33 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape *physic
     }
 }
 
+BulletPhysicsAdapter::BulletPhysicsAdapter()
+    : m_collision_configuration(nullptr),
+      m_dynamics_world(nullptr),
+      m_dispatcher(nullptr),
+      m_broadphase(nullptr),
+      m_solver(nullptr)
+{
+    
+}
+
+BulletPhysicsAdapter::~BulletPhysicsAdapter()
+{
+    AssertThrow(m_collision_configuration == nullptr);
+    AssertThrow(m_dynamics_world == nullptr);
+    AssertThrow(m_dispatcher == nullptr);
+    AssertThrow(m_broadphase == nullptr);
+    AssertThrow(m_solver == nullptr);
+}
+
 void BulletPhysicsAdapter::Init(PhysicsWorldBase *world)
 {
+    AssertThrow(m_collision_configuration == nullptr);
+    AssertThrow(m_dynamics_world == nullptr);
+    AssertThrow(m_dispatcher == nullptr);
+    AssertThrow(m_broadphase == nullptr);
+    AssertThrow(m_solver == nullptr);
+
     m_collision_configuration = new btDefaultCollisionConfiguration();
     m_dispatcher = new btCollisionDispatcher(m_collision_configuration);
     m_broadphase = new btDbvtBroadphase();
@@ -75,14 +100,25 @@ void BulletPhysicsAdapter::Init(PhysicsWorldBase *world)
 void BulletPhysicsAdapter::Teardown(PhysicsWorldBase *world)
 {
     delete m_dynamics_world;
+    m_dynamics_world = nullptr;
+
     delete m_solver;
+    m_solver = nullptr;
+
     delete m_broadphase;
+    m_broadphase = nullptr;
+
     delete m_dispatcher;
+    m_dispatcher = nullptr;
+
     delete m_collision_configuration;
+    m_collision_configuration = nullptr;
 }
 
 void BulletPhysicsAdapter::Tick(PhysicsWorldBase *world, GameCounter::TickUnitHighPrec delta)
 {
+    AssertThrow(m_dynamics_world != nullptr);
+
     m_dynamics_world->stepSimulation(delta);
 
     for (auto &rigid_body : world->GetRigidBodies()) {
@@ -100,6 +136,8 @@ void BulletPhysicsAdapter::Tick(PhysicsWorldBase *world, GameCounter::TickUnitHi
 
 void BulletPhysicsAdapter::OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
 {
+    AssertThrow(m_dynamics_world != nullptr);
+
     AssertThrow(rigid_body != nullptr);
     AssertThrowMsg(rigid_body->GetShape() != nullptr,
         "No PhysicsShape on RigidBody!");
@@ -143,6 +181,8 @@ void BulletPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody> &rigid_bod
     if (!rigid_body) {
         return;
     }
+
+    AssertThrow(m_dynamics_world != nullptr);
 
     auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
     AssertThrow(internal_data != nullptr);

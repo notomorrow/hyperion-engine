@@ -172,8 +172,8 @@ public:
     AssetManager &GetAssetManager() { return m_asset_manager; }
     const AssetManager &GetAssetManager() const { return m_asset_manager; }
 
-    World &GetWorld() { return m_world; }
-    const World &GetWorld() const { return m_world; }
+    Handle<World> &GetWorld() { return m_world; }
+    const Handle<World> &GetWorld() const { return m_world; }
 
     Configuration &GetConfig() { return m_configuration; }
     const Configuration &GetConfig() const { return m_configuration; }
@@ -380,7 +380,7 @@ private:
 
     SafeDeleter m_safe_deleter;
 
-    World m_world;
+    Handle<World> m_world;
 
     Handle<Mesh> m_full_screen_quad;
 

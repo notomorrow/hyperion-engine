@@ -52,7 +52,7 @@ void Game::Init(Engine *engine)
 
 void Game::Update(Engine *engine, GameCounter::TickUnit delta)
 {
-    engine->GetWorld().Update(engine, delta);
+    engine->GetWorld()->Update(engine, delta);
 
     Logic(engine, delta);
 }
@@ -71,8 +71,10 @@ void Game::InitGame(Engine *engine)
 
 void Game::Teardown(Engine *engine)
 {
-    engine->GetWorld().RemoveScene(m_scene);
+    engine->GetWorld()->RemoveScene(m_scene);
     m_scene.Reset();
+
+    engine->GetWorld().Reset();
 
     m_is_init = false;
 }

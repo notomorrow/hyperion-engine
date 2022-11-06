@@ -8,12 +8,14 @@ namespace hyperion::v2 {
 
 void AssetBatch::LoadAsync(UInt num_batches)
 {
-    if (enqueued_assets.Empty()) {
+    AssertThrowMsg(enqueued_assets != nullptr, "AssetBatch is in invalid state");
+
+    if (enqueued_assets->Empty()) {
         return;
     }
 
     // partition each proc
-    AssertThrow(procs.Size() == enqueued_assets.Size());
+    AssertThrow(procs.Size() == enqueued_assets->Size());
 
     const UInt num_items = static_cast<UInt>(procs.Size());
 
@@ -23,25 +25,38 @@ void AssetBatch::LoadAsync(UInt num_batches)
     const UInt items_per_batch = num_items / num_batches;
 
     for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
-        AddTask([&procs = this->procs, batch_index, items_per_batch, num_items](...) {
-            const UInt offset_index = batch_index * items_per_batch;
-            const UInt max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+        const UInt offset_index = batch_index * items_per_batch;
+        const UInt max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
 
-            for (UInt i = offset_index; i < max_index; ++i) {
-                procs[i]();
+        AssertThrow(max_index >= offset_index);
+
+        Array<Proc<void, AssetManager *, AssetMap *>> batch_procs;
+        batch_procs.Reserve(max_index - offset_index);
+
+        for (UInt i = offset_index; i < max_index; ++i) {
+            batch_procs.PushBack(std::move(procs[i]));
+        }
+
+        AddTask([asset_manager = asset_manager, batch_procs = std::move(batch_procs), asset_map = enqueued_assets.Get()](...) mutable {
+            for (auto &proc : batch_procs) {
+                proc(asset_manager, asset_map);
             }
         });
     }
 
-    asset_manager.m_engine->task_system.EnqueueBatch(this);
+    procs.Clear();
+
+    asset_manager->m_engine->task_system.EnqueueBatch(this);
 }
 
 AssetMap AssetBatch::AwaitResults()
 {
+    AssertThrowMsg(enqueued_assets != nullptr, "AssetBatch is in invalid state");
+
     AwaitCompletion();
 
-    auto results = std::move(enqueued_assets);
-    procs.Clear();
+    AssetMap results = std::move(*enqueued_assets);
+    //procs.Clear();
 
     // enqueued_assets is cleared now
 
@@ -50,12 +65,15 @@ AssetMap AssetBatch::AwaitResults()
 
 AssetMap AssetBatch::ForceLoad()
 {
+    AssertThrowMsg(enqueued_assets != nullptr, "AssetBatch is in invalid state");
+
     for (auto &proc : procs) {
-        proc();
+        proc(asset_manager, enqueued_assets.Get());
     }
 
-    auto results = std::move(enqueued_assets);
     procs.Clear();
+
+    AssetMap results = std::move(*enqueued_assets);
 
     // enqueued_assets is cleared now
 

@@ -53,6 +53,18 @@ public:
     }
 
     template <class T, class ...Args>
+    [[nodiscard]] static void *New(Args &&... args)
+    {
+        return new T(std::forward<Args>(args)...);
+    }
+
+    template <class T>
+    static void Delete(void *ptr)
+    {
+        delete static_cast<T *>(ptr);
+    }
+
+    template <class T, class ...Args>
     static void Construct(void *where, Args &&... args)
     {
         new (where) T(std::forward<Args>(args)...);
@@ -61,7 +73,7 @@ public:
     template <class T, class ...Args>
     [[nodiscard]] static void *AllocateAndConstruct(Args &&... args)
     {
-        void *ptr = HYP_ALLOC_ALIGNED(alignof(T), sizeof(T));
+        void *ptr = std::malloc(sizeof(T));
         new (ptr) T(std::forward<Args>(args)...);
         return ptr;
     }

@@ -143,7 +143,7 @@ public:
     }
 
     RenderEnvironment *GetEnvironment() const
-        { return m_environment; }
+        { return m_environment.Get(); }
 
     World *GetWorld() const
         { return m_world; }
@@ -186,7 +186,7 @@ private:
 
     Handle<Camera> m_camera;
     NodeProxy m_root_node_proxy;
-    RenderEnvironment *m_environment;
+    UniquePtr<RenderEnvironment> m_environment;
     World *m_world;
 
     FogParams m_fog_params;

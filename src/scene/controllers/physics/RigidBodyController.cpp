@@ -31,12 +31,12 @@ void RigidBodyController::OnRemoved()
 
 void RigidBodyController::OnAttachedToScene(Scene *scene)
 {
-    GetEngine()->GetWorld().GetPhysicsWorld().AddRigidBody(Handle<physics::RigidBody>(m_rigid_body));
+    GetEngine()->GetWorld()->GetPhysicsWorld().AddRigidBody(Handle<physics::RigidBody>(m_rigid_body));
 }
 
 void RigidBodyController::OnDetachedFromScene(Scene *scene)
 {
-    GetEngine()->GetWorld().GetPhysicsWorld().RemoveRigidBody(m_rigid_body);
+    GetEngine()->GetWorld()->GetPhysicsWorld().RemoveRigidBody(m_rigid_body);
 }
 
 void RigidBodyController::OnUpdate(GameCounter::TickUnit delta)

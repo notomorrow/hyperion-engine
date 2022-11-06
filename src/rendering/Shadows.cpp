@@ -271,7 +271,7 @@ void ShadowPass::Create(Engine *engine)
 
 void ShadowPass::Destroy(Engine *engine)
 {
-    engine->GetWorld().RemoveScene(m_scene);
+    engine->GetWorld()->RemoveScene(m_scene);
     m_scene.Reset();
 
     engine->GetRenderScheduler().Enqueue([this, engine](...) {
@@ -410,7 +410,7 @@ void ShadowRenderer::InitGame(Engine *engine)
 
     AssertReady();
 
-    engine->GetWorld().AddScene(Handle<Scene>(m_shadow_pass.GetScene()));
+    engine->GetWorld()->AddScene(Handle<Scene>(m_shadow_pass.GetScene()));
 
     for (auto &it : GetParent()->GetScene()->GetEntities()) {
         auto &entity = it.second;
