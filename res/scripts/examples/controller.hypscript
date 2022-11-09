@@ -14,21 +14,21 @@ import mandelbrot;
 //         return self;
 //     }
 
-//     function OnAdded(self: MovementController, node: any)
+//     func OnAdded(self: MovementController, node: any)
 //     {
 //         self.node = node;
 
 //         Print("Added controller to node: %s\n", node);
 //     }
 
-//     function OnRemoved(self: MovementController, node: any)
+//     func OnRemoved(self: MovementController, node: any)
 //     {
 //         Print("Removed from node: %s\n", node);
 
 //         self.node = null;
 //     }
 
-//     function OnTick(self: MovementController, node: any, delta: Float)
+//     func OnTick(self: MovementController, node: any, delta: Float)
 //     {
 
 //     }
@@ -49,7 +49,133 @@ let num_ticks: UInt = 0;
 
 let test_vector = new Vector3();
 
-export function OnAdded(node: any) {
+func Expect( cond : Bool )
+{
+    Print("check cond: %\n", cond);
+
+    if (!cond) {
+        throw "Assertion failed!";
+    }
+}
+
+class ClassWithDefaultGenericArgs<T = Int, U = String>
+{
+    let t: T;
+    let u: U;
+};
+
+if (true) {
+    let test = new ClassWithDefaultGenericArgs < >;
+    Print("ClassWithDefaultGenericArgs < >%\n", test);
+
+    Expect(test.t is Int);
+    Expect(test.u is String);
+}
+
+if (true) {
+    let test = new ClassWithDefaultGenericArgs < Int >;
+    Print("ClassWithDefaultGenericArgs < Int >%\n", test);
+
+    Expect(test.t is Int);
+    Expect(test.u is String);
+}
+
+if (true) {
+    let test = new ClassWithDefaultGenericArgs < String, Int >;
+    Print("ClassWithDefaultGenericArgs < String, Int >%\n", test);
+
+    Expect(test.t is String);
+    Expect(test.u is Int);
+}
+
+if (true) {
+    let test = new ClassWithDefaultGenericArgs < T : String, U : Int >;
+    Print("ClassWithDefaultGenericArgs < T : String, U : Int >%\n", test);
+
+    Expect(test.t is String);
+    Expect(test.u is Int);
+}
+
+if (true) {
+    let test = new ClassWithDefaultGenericArgs < U : String, T : Int >;
+    Print("ClassWithDefaultGenericArgs < U : String, T : Int >%\n", test);
+
+    Expect(test.t is Int);
+    Expect(test.u is String);
+}
+
+func GenericFunction <T> (t : T, cond : Bool)
+{
+    return cond ? t : t - 1;
+}
+
+func GenericFunctionWithDefault <T = Int> (t : T, cond : Bool)
+{
+    return cond ? t : t + 1;
+}
+
+class GenericClass<T>
+{
+    func DoThing(self, t : T, y : T) : T
+    {
+        return t + y;
+    }
+}
+
+if (true) {
+    let test = new GenericClass<Int>();
+    Expect(test.DoThing(1, 1) is Int);
+    Expect(test.DoThing(1, 1) == 2);
+}
+
+if (true) {
+    let test = new GenericClass<Float>();
+    Expect(test.DoThing(1.0, 1.0) is Float);
+    Expect(test.DoThing(1.0, 1.0) == 2.0);
+}
+
+if (true) {
+    let test = new GenericClass<Float>();
+    // Expect(test.DoOtherThing<String>(1.0, "hello") is String);
+    // Expect(test.DoOtherThing<String>(1.0, "hello") == "hello");
+}
+
+if (true) {
+    Expect(GenericFunction<Float>(5.0, true) == 5.0);
+    Expect(GenericFunction<Float>(5.0, false) == 4.0);
+    Expect(GenericFunction<UInt>(5, true) == 5);
+    Expect(GenericFunction<UInt>(5, false) == 4);
+    Expect(GenericFunction<Int>(5, true) == 5);
+    Expect(GenericFunction<Int>(5, false) == 4);
+
+    const u : UInt = 5;
+    Expect(u is UInt);
+
+    Expect(GenericFunctionWithDefault<>(5, true) == 5);
+    Expect(GenericFunctionWithDefault<>(5, false) == 6);
+    Expect(GenericFunctionWithDefault<>(u, true) == 5);
+    Expect(GenericFunctionWithDefault<>(u, false) == 6);
+    Expect(GenericFunctionWithDefault<>(u, true) == u);
+    Expect(GenericFunctionWithDefault<>(u, false) == u + 1);
+
+    // $meta {
+    //     // expect to break
+    //     func BreakMe <T> ()
+    //     {
+    //         return 1;
+    //     }
+
+    //     BreakMe();
+    // }
+}
+
+// if (true) {
+//     let test = new GenericClass<String>();
+//     Expect(test.DoThing("hello ", "world") is String);
+//     Expect(test.DoThing("hello ", "world") == "hello world");
+// }
+
+export func OnAdded(node: any) {
     //Print("Added controller to node: %s\n", node);
 
     controller_node = node;
@@ -59,12 +185,12 @@ export function OnAdded(node: any) {
     //mandelbrot::MandlebrotLine();
 };
 
-export function OnRemoved(node: any) {
+export func OnRemoved(node: any) {
     Print("Remove controller from node: %s\n", controller_node);
     controller_node = null;
 };
 
-export function OnTick(node: any, delta: Float) {
+export func OnTick(node: any, delta: Float) {
     return;
 
     global_time += delta;

@@ -10,7 +10,7 @@ let oldre: Float = 0.0;
 let newim: Float = 0.0;
 let oldim: Float = 0.0;
 
-function Mandlebrot(x: Float, y: Float)
+func Mandlebrot(x: Float, y: Float)
 {
     newre = 0.0;
     newim = 0.0;
@@ -36,7 +36,7 @@ function Mandlebrot(x: Float, y: Float)
     Print(' ');
 }
 
-function MandlebrotLine() {
+func MandlebrotLine() {
     let x: Float = 0.0;
     let y: Float = 0.0;
     while (y < height) {
