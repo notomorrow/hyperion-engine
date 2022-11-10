@@ -457,6 +457,11 @@ if (true) {
     Print("Callable : %\n", Expect(c() == 123));
 }
 
+if (true) {
+    Print("module.name = %\n", module.name);
+    Print("module.path = %\n", module.path);
+}
+
 export func OnAdded(node: any) {
     //Print("Added controller to node: %s\n", node);
 
