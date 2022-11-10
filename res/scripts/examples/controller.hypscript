@@ -52,13 +52,17 @@ let num_ticks: UInt = 0;
 let test_vector = new Vector3();
 
 
-func Expect( cond : Bool )
+func Expect( cond : Bool ) : Bool
 {
     Print("check cond: %\n", cond);
 
     if (!cond) {
         throw "Assertion failed!";
+
+        return false;
     }
+
+    return true;
 }
 
 class ClassWithDefaultGenericArgs< T = Int, U = String >
@@ -249,6 +253,20 @@ func VarArgsFunc(foo : Int, args : String...)
     }
 }
 
+class ClassWithConstMember {
+    const mem : Int;
+}
+
+if (true) {
+    obj : ClassWithConstMember = new ClassWithConstMember;
+    Expect(obj.mem == 0);
+    // should break, but doesn't
+    obj.mem = 5;
+
+    const obj2 : ClassWithConstMember = new ClassWithConstMember;
+    // obj2.mem = 5; // appropriately breaks
+}
+
 if (true) {
     let c = new ClassWithConstructor(int_value: 5);
     Expect(c.i == 5);
@@ -261,8 +279,20 @@ if (true) {
     Print("Foo : %\n", c3.i);
     Expect(c3.i == 129);
 
-    let xx = c.DoThing<Int>;
-    Expect(xx(c, 443) == 2215);
+    const u: UInt = 4;
+
+    Print("u = %\n", u);
+    Print("typeof(u) == %\n", typeof(u));
+
+    let ary : Int[] = [1,2,3,4];
+    ary[0]++;
+    Expect(ary[0] == 2);
+
+    const ary2 : Int[] = [1,2,3,4,5];
+    // ary2[0]++;
+
+    // let xx = c.DoThing<Int>;
+    // Expect(xx(c, 443) == 2215);
     // Expect(c.DoThing<Int>(443) == 2215);
     // Expect(c.DoThing<Int>(443) is Int);
 
@@ -283,11 +313,149 @@ if (true) {
     VarArgsFunc(4, "this", "is", "a", "test");
 }
 
-// if (true) {
-//     let test = new GenericClass<String>();
-//     Expect(test.DoThing("hello ", "world") is String);
-//     Expect(test.DoThing("hello ", "world") == "hello world");
-// }
+class MyObject {
+    val : Int;
+
+    // because we type it with `Function`, we are able to
+    // change it to any other `Function` type later
+    let proc : Function = func (self : MyObject, thing : Float) {
+        return self.val + thing;
+    };
+
+    // this one gets a more specific type and cannot be changed,
+    // except to one with the same args
+    let proc2 = func (self : MyObject, thing : Float) {
+        return self.val + thing;
+    };
+
+    func operator==(self : MyObject, other : MyObject) : Bool {
+        return self.val == other.val;
+    }
+
+    // func operator!=(self : MyObject, other : MyObject) : Bool {
+    //     return !self.operator==(other);
+    // }
+};
+
+class ClassWithGenericMember <T> {
+    const member : T;
+};
+
+if (true) {
+    c : ClassWithGenericMember<Int> = new ClassWithGenericMember<Int>;
+    Expect(c.member == 0);
+    Expect(c.member is Int);
+
+    c2 : ClassWithGenericMember<String> = new ClassWithGenericMember<String>;
+    // Expect(c2.member == ""); // string compare is currently broken
+    Expect(c2.member is String);
+    Print("c2.member = %\n", c2.member);
+
+    // operator overloading of ==.
+
+    obj1 : MyObject = new MyObject;
+    obj1.val = 5;
+
+    obj2 : MyObject = new MyObject;
+    obj2.val = 6;
+
+    Expect(!(obj1 == obj2));
+
+    obj2.val = 5;
+    Expect(obj1 == obj2);
+
+    // dynamic swapping of functions
+    Expect(obj2.proc == obj1.proc);
+    Expect(obj2.proc(5) == 10);
+    obj2.proc = func (self: MyObject, thing : Int) {
+        return self.val * thing;
+    };
+    Expect(obj2.proc(5) == 25);
+    Expect(obj2.proc != obj1.proc);
+
+    let obj2_proc = obj2.proc;
+    obj1.proc = obj2_proc;
+    Expect(obj1.proc == obj2.proc);
+    Expect(obj1.proc(100) == 500);
+
+    // should work
+    obj2.proc = func (self : MyObject, good : Float) {
+        return null;
+    };
+
+    // should break
+    // obj2.proc2 = func (self : MyObject, uhoh : Float) {
+    //     return null;
+    // };
+}
+
+class ClassWithToStringOverload <T = Int> {
+    let val : T;
+
+    func ClassWithToStringOverload(self, val : T) {
+        self.val = val;
+    }
+
+    func ToString(self) : String {
+        return global::ToString(self.val);
+    }
+};
+
+if (true) {
+    obj : ClassWithToStringOverload<> = new ClassWithToStringOverload<>(12345);
+    // Expect(obj.ToString() == "12345"); // string compare broken
+
+    // should print: obj = 12345
+    Print("obj = %\n", obj);
+}
+
+if (true) {
+    // recursion
+
+    func Recurse(times: Int) {
+        if (times > 0) {
+            return Recurse(times - 1);
+        }
+
+        return times;
+    }
+
+    Expect(Recurse(100) == 0);
+}
+
+// closures and captures
+if (true) {
+    captured_var : Int = 5;
+
+    func Lambda(x : Int) {
+        return captured_var * x;
+    }
+
+    Print("Test closures 1  %\n", Expect(Lambda(5) == 25));
+
+    func Lambda2(x : Float) {
+        return func (y : Float) {
+            return x * y;
+        };
+    }
+
+    Print("Test closures 2  %\n", Expect(Lambda2(100)(50) == 5000));
+}
+
+// callable objects
+if (true) {
+    class Callable {
+        i: Int;
+        func $invoke(self: Callable) {
+            return self.i;
+        }
+    }
+
+    c : Callable = new Callable;
+    c.i = 123;
+
+    Print("Callable : %\n", Expect(c() == 123));
+}
 
 export func OnAdded(node: any) {
     //Print("Added controller to node: %s\n", node);
