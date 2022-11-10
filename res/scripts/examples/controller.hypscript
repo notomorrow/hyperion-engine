@@ -263,8 +263,8 @@ if (true) {
 
     let xx = c.DoThing<Int>;
     Expect(xx(c, 443) == 2215);
-    Expect(c.DoThing<Int>(443) == 2215);
-    Expect(c.DoThing<Int>(443) is Int);
+    // Expect(c.DoThing<Int>(443) == 2215);
+    // Expect(c.DoThing<Int>(443) is Int);
 
     Print("Items : %\n", c.items);
 
