@@ -49,8 +49,6 @@ let controller_node: any = null;
 let global_time: Float = 0.0;
 let num_ticks: UInt = 0;
 
-let test_vector = new Vector3();
-
 
 func Expect( cond : Bool ) : Bool
 {
@@ -64,6 +62,34 @@ func Expect( cond : Bool ) : Bool
 
     return true;
 }
+
+test_vector_0 : Vector3 = new Vector3(2.0, 4.0, 6.0);
+test_vector_1 : Vector3 = new Vector3(1.0, 3.0, 5.0);
+test_vector_2 : Vector3 = test_vector_0 + test_vector_1;
+
+Print("test_vector_0 = %\n", test_vector_0.ToString());
+Print("test_vector_1 = %\n", test_vector_1.ToString());
+Print("test_vector_2 = %\n", test_vector_2.ToString());
+
+Expect(test_vector_2.GetX() == 3.0);
+Expect(test_vector_2.GetY() == 7.0);
+Expect(test_vector_2.GetZ() == 11.0);
+
+test_vector_0 += new Vector3(1.0, 1.0, 1.0);
+Expect(test_vector_0.GetX() == 3.0);
+Expect(test_vector_0.GetY() == 5.0);
+Expect(test_vector_0.GetZ() == 7.0);
+
+// check operator== and operator!= work
+Expect(test_vector_0 != test_vector_1);
+test_vector_0 -= new Vector3(2.0, 2.0, 2.0);
+Expect(test_vector_0 == test_vector_1);
+
+// checking normalization.
+// Normalized() doesn't modify the vector, but Normalize() does.
+Expect(test_vector_0.Normalized().Length() > 0.999);
+test_vector_0.Normalize();
+Expect(test_vector_0.Length() > 0.999);
 
 class ClassWithDefaultGenericArgs< T = Int, U = String >
 {
