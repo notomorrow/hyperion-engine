@@ -4,86 +4,49 @@
 import mandelbrot;
 import "../tests.hypscript";
 
-mandelbrot::MandelbrotLine();
+// mandelbrot::MandelbrotLine();
 
-controller_node: any = null;
+timer : Float = 0.0;
+num_ticks : UInt = 0;
 
-global_time: Float = 0.0;
-num_ticks: UInt = 0;
+class MovementController {
+private:
+    entity: any;
 
+public:
+    MovementController(self: MovementController)
+    {
+        self.entity = null;
+    }
 
-// export class MovementController {
-// public:
-//     node: any;
+    func OnAdded(self: MovementController, entity: any)
+    {
+        self.entity = entity;
 
-//     MovementController(self: MovementController) : MovementController
-//     {
-//         self.node = null;
+        Print("Script added controller to Entity: %s\n", entity);
+    }
 
-//         return self;
-//     }
+    func OnRemoved(self: MovementController, entity: any)
+    {
+        Print("Script removed from Entity: %s\n", entity);
 
-//     func OnAdded(self: MovementController, node: any)
-//     {
-//         self.node = node;
+        self.entity = null;
+    }
 
-//         Print("Added controller to node: %s\n", node);
-//     }
+    func OnTick(self: MovementController, delta: Float)
+    {
+        timer += delta;
+        num_ticks++;
 
-//     func OnRemoved(self: MovementController, node: any)
-//     {
-//         Print("Removed from node: %s\n", node);
+        if (num_ticks > 50) {
+            const avg_fps : Float = timer / num_ticks;
 
-//         self.node = null;
-//     }
+            Print("Avg ticks per second: %\n", avg_fps);
 
-//     func OnTick(self: MovementController, node: any, delta: Float)
-//     {
-
-//     }
-// };
-
-// const movement_controller = new MovementController();
-
-// export const OnAdded = movement_controller.OnAdded;
-// export const OnRemoved = movement_controller.OnRemoved;
-// export const OnTick = movement_controller.OnTick;
-
-
-
-
-
-export func OnAdded(node: any) {
-    //Print("Added controller to node: %s\n", node);
-
-    controller_node = node;
-
-    //Print("controller_node now = %\n", controller_node);
-
-    //mandelbrot::MandlebrotLine();
-};
-
-export func OnRemoved(node: any) {
-    Print("Remove controller from node: %s\n", controller_node);
-    controller_node = null;
-};
-
-export func OnTick(node: any, delta: Float) {
-    return;
-
-    global_time += delta;
-    num_ticks += 1;
-
-    //test_vector.SetX(test_vector.GetX() + delta);
-
-    if (global_time >= 1.0) {
-        let avg_time: Float = global_time / num_ticks;
-
-        Print("CPU Ticks per second (in script): %\n", 1.0 / avg_time);
-        //Print("test_vector: %\n", test_vector.ToString());
-        global_time = 0.0;
-        num_ticks = 0;
+            timer = 0.0;
+            num_ticks = 0;
+        }
     }
 };
 
-Print("End of script\n");
+export movement_controller : MovementController = new MovementController;

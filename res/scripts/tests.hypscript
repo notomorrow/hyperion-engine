@@ -22,6 +22,14 @@ Expect(math::Floor<Float>(0.998) == 0.0);
 Expect(math::Ceil<Float>(0.998) == 1.0);
 Expect(math::PI >= 3.14 && math::PI < 3.15);
 
+test_uint : UInt = 0u;
+test_uint -= 1;
+Print("test_uint = %\n", test_uint);
+//Expect(test_uint == 0xFFFFFFFF);
+//Expect(test_uint == ~0);
+
+
+
 test_vector_0 : Vector3 = new Vector3(2.0, 4.0, 6.0);
 test_vector_1 : Vector3 = new Vector3(1.0, 3.0, 5.0);
 test_vector_2 : Vector3 = test_vector_0 + test_vector_1;
