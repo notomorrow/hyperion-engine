@@ -1,24 +1,10 @@
+#importpath "../" "../library";
 
-
-
-import mandelbrot;
-import "../tests.hypscript";
-
-// mandelbrot::MandelbrotLine();
+import core::engine::{ CreateEntity };
+import tests;
 
 timer : Float = 0.0;
 num_ticks : UInt = 0;
-
-class Engine {
-    handle : any = null;
-
-    func CreateEntity(self : Engine) : Entity {
-        return Engine_CreateEntity(self.handle);
-    }
-};
-
-export engine : Engine = new Engine();
-
 
 class ExampleController {
 private:
@@ -32,11 +18,9 @@ public:
 
     func OnAdded(self: ExampleController, entity: any)
     {
-        test_entity : Entity = engine.CreateEntity();
-
+        test_entity : Entity = CreateEntity();
         Print("test_entity = %\n", test_entity);
-        // Print("test_entity.GetName() = %\n", test_entity.GetName());
-        // test_entity.SetTranslation()
+        // InitObject(test_entity);
 
         self.entity = entity;
 
