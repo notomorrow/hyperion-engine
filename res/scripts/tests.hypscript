@@ -25,10 +25,15 @@ Expect(math::PI >= 3.14 && math::PI < 3.15);
 test_uint : UInt = 0u;
 test_uint -= 1;
 Print("test_uint = %\n", test_uint);
-//Expect(test_uint == 0xFFFFFFFF);
-//Expect(test_uint == ~0);
+Print("0xFFFFFFFFu = %\n", 0xFFFFFFFFu);
+Print("0u - 1 = %\n", 0u - 1);
+Expect(test_uint == 0xFFFFFFFFu);
+Expect(test_uint == ~0u);
 
-
+let test_float = 200f;
+Print("test_float = %\n", test_float);
+Expect(test_float is Float);
+Expect(test_float == 200.0);
 
 test_vector_0 : Vector3 = new Vector3(2.0, 4.0, 6.0);
 test_vector_1 : Vector3 = new Vector3(1.0, 3.0, 5.0);
