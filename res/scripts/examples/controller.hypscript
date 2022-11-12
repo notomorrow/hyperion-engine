@@ -9,31 +9,48 @@ import "../tests.hypscript";
 timer : Float = 0.0;
 num_ticks : UInt = 0;
 
-class MovementController {
+class Engine {
+    handle : any = null;
+
+    func CreateEntity(self : Engine) : Entity {
+        return Engine_CreateEntity(self.handle);
+    }
+};
+
+export engine : Engine = new Engine();
+
+
+class ExampleController {
 private:
     entity: any;
 
 public:
-    MovementController(self: MovementController)
+    ExampleController(self: ExampleController)
     {
         self.entity = null;
     }
 
-    func OnAdded(self: MovementController, entity: any)
+    func OnAdded(self: ExampleController, entity: any)
     {
+        test_entity : Entity = engine.CreateEntity();
+
+        Print("test_entity = %\n", test_entity);
+        // Print("test_entity.GetName() = %\n", test_entity.GetName());
+        // test_entity.SetTranslation()
+
         self.entity = entity;
 
         Print("Script added controller to Entity: %s\n", entity);
     }
 
-    func OnRemoved(self: MovementController, entity: any)
+    func OnRemoved(self: ExampleController, entity: any)
     {
         Print("Script removed from Entity: %s\n", entity);
 
         self.entity = null;
     }
 
-    func OnTick(self: MovementController, delta: Float)
+    func OnTick(self: ExampleController, delta: Float)
     {
         timer += delta;
         num_ticks++;
@@ -49,4 +66,4 @@ public:
     }
 };
 
-export movement_controller : MovementController = new MovementController;
+export movement_controller : ExampleController = new ExampleController;
