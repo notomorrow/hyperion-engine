@@ -33,16 +33,19 @@ struct Skeleton {
 };
 
 
-layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer {
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer
+{
     Skeleton skeleton;
 };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 24, row_major) uniform CubemapUniforms {
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 24, row_major) uniform CubemapUniforms
+{
     mat4 projection_matrices[6];
     mat4 view_matrices[6];
 } cubemap_uniforms[/*HYP_MAX_ENV_PROBES*/1];
 
-layout(push_constant) uniform PushConstant {
+layout(push_constant) uniform PushConstant
+{
     uint render_component_index;
 } push_constants;
 
