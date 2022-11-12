@@ -508,3 +508,21 @@ if (true) {
     y = 1;
     Expect(x || y);
 }
+
+// // alias testing
+// if (true) {
+//     x : Int = 5;
+//     alias y = x;
+//     y++;
+//     Expect(x == 6);
+//     Expect(y == 6);
+
+//     const x1 : Int = 5;
+//     alias y1 = x;
+//     y1++; // should break
+
+//     alias Z = ClassWithToStringOverload<Int>;
+//     z : Z = new Z();
+//     Print("z = %\n", z);
+//     // Expect(z is ClassWithToStringOverload)
+// }
