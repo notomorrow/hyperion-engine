@@ -526,3 +526,36 @@ if (true) {
 //     Print("z = %\n", z);
 //     // Expect(z is ClassWithToStringOverload)
 // }
+
+// test references
+if (true) {
+    func DoNotModifyReference(j : Int) {
+        j++;
+    }
+
+    func ModifyReference(ref j : Int, k : Float) {
+        j++;
+        k++;
+    }
+    
+    Print("Test references\n");
+    x : Int = 5;
+    ref y : Int = x;
+    y++;
+
+    Print("x = %\n", y);
+    Print("y = %\n", y);
+    Expect(x == 6);
+
+    DoNotModifyReference(y);
+
+    Expect(x == 6);
+    Expect(y == 6);
+
+    ModifyReference(x, y);
+
+    Expect(x == 7);
+    Expect(y == 7);
+
+    ModifyReference(4343, 433);
+}
