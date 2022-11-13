@@ -1,5 +1,7 @@
-//import library::math;
-import "math";
+#importpath "./library";
+
+import math;
+import containers::{ Stack };
 
 func Expect( cond : Bool ) : Bool
 {
@@ -533,11 +535,27 @@ if (true) {
         j++;
     }
 
+    let n : Float = 10;
+    ref p: Float = n;
+
     func ModifyReference(ref j : Int, k : Float) {
         j++;
         k++;
+
+        q : Float = 15;
+        p = q;
     }
     
+    func PassConstReference(const ref x : Int) {
+        // illegal
+        // x++;
+
+        Print("const ref passed: %\n", x);
+
+        p = x;
+        p++;
+    }
+
     Print("Test references\n");
     x : Int = 5;
     ref y : Int = x;
@@ -557,5 +575,35 @@ if (true) {
     Expect(x == 7);
     Expect(y == 7);
 
-    ModifyReference(4343, 433);
+    Expect(p == 15);
+    Expect(n == 15);
+    // illegal
+    // ModifyReference(4343, 433);
+
+    Print("Const ref test\n");
+    const const_var : Int = 123;
+
+    PassConstReference(p);
+    // legal
+    PassConstReference(const_var);
+    Print("const_var = %\n", const_var);
+    Expect(const_var == 123);
+    // illegal
+    // ModifyReference(const_var, 5);
+}
+
+if (true) {
+    // test container
+
+    stk : Stack<Float> = new Stack<Float>;
+
+    stk.Push(5.0f);
+    Expect(stk.Top() == 5.0f);
+    stk.Push(6.0f);
+    Expect(stk.Top() == 6.0f);
+    Expect(stk.Pop() == 6.0f);
+    Expect(stk.Top() == 5.0f);
+    stk.Pop();
+    Expect(stk.Size() == 0);
+    Expect(stk.Empty());
 }

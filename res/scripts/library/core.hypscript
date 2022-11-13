@@ -9,3 +9,13 @@ module engine {
         return Engine_CreateEntity(_engine.handle);
     }
 }
+
+func AssertEqual(lhs, rhs) {
+    if (!(lhs == rhs)) {
+        throw "Assertion failed!";
+
+        return false;
+    }
+
+    return true;
+}
