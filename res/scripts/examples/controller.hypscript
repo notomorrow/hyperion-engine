@@ -1,6 +1,6 @@
 #importpath "../" "../library";
 
-import core::engine;
+import core::engine::{ CreateEntity };
 import tests;
 
 timer : Float = 0.0;
@@ -18,8 +18,9 @@ public:
 
     func OnAdded(self: ExampleController, entity: any)
     {
-        test_entity : Entity = engine::CreateEntity();
+        test_entity : Entity = CreateEntity();
         Print("test_entity = %\n", test_entity);
+        // InitObject(test_entity);
 
         self.entity = entity;
 
