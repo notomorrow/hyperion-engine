@@ -1,0 +1,31 @@
+class Stack<T> {
+    ary: T[];
+
+    Stack(self) {
+    }
+
+    func Push(self, value : T) {
+        ArrayPush(self.ary, value);
+    }
+
+    func Pop(self) : T {
+        return ArrayPop(self.ary);
+    }
+
+    func Size(const self) : Int {
+        return ArraySize(self.ary);
+    }
+
+    func Top(const self) : T {
+        //const idx : Int = ;
+        return self.ary[ArraySize(self.ary) - 1];
+    }
+
+    func Empty(const self) : Bool {
+        return ArraySize(self.ary) == 0;
+    }
+
+    func Any(const self) : Bool {
+        return ArraySize(self.ary) != 0;
+    }
+}
