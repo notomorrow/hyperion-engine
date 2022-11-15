@@ -607,3 +607,5 @@ if (true) {
     Expect(stk.Size() == 0);
     Expect(stk.Empty());
 }
+
+export const Foo : Int = 123;

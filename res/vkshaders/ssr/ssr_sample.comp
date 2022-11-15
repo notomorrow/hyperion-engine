@@ -41,6 +41,11 @@ void main(void)
     vec4 reflection_sample = vec4(0.0);
 
     float depth = SampleDepth(texcoord);
+
+    if (depth > 0.9995) {
+        return;
+    }
+
     vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth).xyz;
     vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
     vec3 V = normalize(scene.camera_position.xyz - P);

@@ -1,7 +1,7 @@
 #importpath "../" "../library";
 
 import core::engine::{ CreateEntity };
-import tests;
+// import tests;
 
 timer : Float = 0.0;
 num_ticks : UInt = 0;
