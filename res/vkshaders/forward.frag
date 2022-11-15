@@ -22,6 +22,7 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
+layout(location=5) out vec4 gbuffer_mask;
 
 
 #define PARALLAX_ENABLED 1
@@ -121,4 +122,5 @@ void main()
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
+    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
 }

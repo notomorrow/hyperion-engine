@@ -81,7 +81,7 @@ float CalculateAlpha(
     // Fade ray hits that approach the screen edge
     vec2 hit_pixel_ndc = hit_pixel * 2.0 - 1.0;
     float max_dimension = min(1.0, max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
-    alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
+    // alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
     // Fade ray hits base on how much they face the camera
     float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
@@ -107,7 +107,13 @@ void main(void)
 
     float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
 	vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
-    vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, SampleDepth(texcoord)).xyz;
+    const float depth = SampleDepth(texcoord);
+
+    if (depth > 0.9995) {
+        return;
+    }
+
+    vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     vec3 V = normalize(P);
     vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 

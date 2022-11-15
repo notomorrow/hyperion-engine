@@ -9,11 +9,13 @@ layout(location=1) in vec3 v_screen_space_position;
 layout(location=2) in vec2 v_texcoord0;
 
 layout(location=0) out vec4 gbuffer_albedo;
+layout(location=5) out vec4 gbuffer_mask;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
 #include "../include/gbuffer.inc"
 #include "../include/material.inc"
+#include "../include/object.inc"
 
 void main()
 {
@@ -38,6 +40,9 @@ void main()
         1.0
     );
 
+    uint mask = GET_OBJECT_BUCKET(object);
+    mask |= OBJECT_MASK_UI_BUTTON;
+
     gbuffer_albedo = result;
-    // gbuffer_albedo = vec4(v_texcoord0, 0.0, 1.0);
+    gbuffer_mask = UINT_TO_VEC4(mask);
 }
