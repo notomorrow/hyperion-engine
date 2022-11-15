@@ -40,21 +40,44 @@ void main(void)
         return;
     }
 
+    const float velocity_scale = 16.0;
+
     const vec2 uv = (vec2(coord) + 0.5) / vec2(output_dimensions);
     const vec2 texel_size = vec2(1.0) / vec2(output_dimensions);
 
     vec4 color = Texture2D(sampler_nearest, input_texture, uv);
-
-    float blending = 0.85;
     vec2 velocity = Texture2D(sampler_nearest, velocity_texture, uv).rg;
-    const float velocity_scale = 16.0;
-    blending = blending - ((length(velocity) - 0.001) * velocity_scale);
-
-    
-    vec4 color_ycocg = RGBToYCoCg(color);
-
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
 
+    vec4 color_ycocg = AdjustColorIn(RGBToYCoCg(color));
+    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
+
+#if 0
+    // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
+
+    vec4 mean = color_ycocg;
+    vec4 stddev = mean * mean;
+
+    const vec2 offsets[4] = vec2[](
+        vec2(-1.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, -1.0),
+        vec2(0.0, 1.0)
+    );
+
+    for (int i = 0; i < 4; i++) {
+        vec4 c = RGBToYCoCg(Texture2D(sampler_nearest, input_texture, clamp(uv + (offsets[i] * texel_size), 0.0, 1.0)));
+        mean += c;
+        stddev += c * c;
+    }
+
+    mean /= 5.0;
+    stddev = sqrt(stddev / 5.0 - (mean * mean));
+
+    vec4 clipped = ClipToAABB(color_ycocg, previous_color_ycocg, mean, stddev);
+    const float lum0 = RGBToYCoCg(color).r;
+    const float lum1 = clipped.r;
+#else
     vec2 du = vec2(texel_size.x, 0.0);
     vec2 dv = vec2(0.0, texel_size.y);
 
@@ -80,47 +103,15 @@ void main(void)
     cmax = AdjustColorOut(0.5 * (cmax + cmax5));
     cavg = AdjustColorOut(0.5 * (cavg + cavg5));
 
-#if 0
-    // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
-    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
-
-    vec4 mean = AdjustColorIn(color_ycocg);
-    vec4 stddev = mean * mean;
-
-    const vec2 offsets[4] = vec2[](
-        vec2(-1.0, 0.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, -1.0),
-        vec2(0.0, 1.0)
-    );
-
-    for (int i = 0; i < 4; i++) {
-        vec4 c = RGBToYCoCg(Texture2D(sampler_nearest, input_texture, uv + (offsets[i] * texel_size)));
-        mean += c;
-        stddev += c * c;
-    }
-
-    mean /= 5.0;
-    stddev = sqrt(stddev / 5.0 - (mean * mean));
-
-    vec4 clipped = YCoCgToRGB(ClipToAABB(color_ycocg, previous_color_ycocg, mean, stddev));
-#else
-    // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
-    // vec4 clipped = previous_color;
-
     vec4 clipped = ClipAABB(cmin, cmax, clamp(cavg, cmin, cmax), previous_color);
+    const float lum0 = Luminance(color.rgb);
+    const float lum1 = Luminance(clipped.rgb);
 #endif
-
-    // clipped = ClampColor_3x3(input_texture, clipped, uv, texel_size);
-
-    const float lum0 = RGBToYCoCg(color).r;//Luminance(color.rgb);
-    const float lum1 = RGBToYCoCg(clipped).r;//Luminance(clipped.rgb);
 
     float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
     float unbiased_weight = 1.0 - unbiased_diff;
     float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
-    float feedback = Saturate(mix(0.88, 0.95, unbiased_weight_sqr) - ((length(velocity) - 0.001) * velocity_scale));
-
+    float feedback = Saturate(mix(0.88, 0.92, unbiased_weight_sqr) - ((length(velocity) - 0.001) * velocity_scale));
 
     color = mix(color, clipped, feedback);
 

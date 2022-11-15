@@ -15,16 +15,27 @@
 
 #endif
 
+#define UINT_TO_VEC4(_value) \
+    (unpackUnorm4x8((_value)))
+
+#define UINT_TO_VEC2(_value) \
+    (unpackUnorm2x16((_value)))
+
+#define VEC4_TO_UINT(_value) \
+    (packUnorm4x8((_value)))
+
+#define VEC2_TO_UINT(_value) \
+    (packUnorm2x16((_value)))
 
 #define HYP_FEATURES_BINDLESS_TEXTURES 0
 #define HYP_FEATURES_GEOMETRY_SHADER   0
 #define HYP_MATERIAL_CUBEMAP_TEXTURES  1
 
-#define HYP_DESCRIPTOR_SET_GLOBAL 1
-#define HYP_DESCRIPTOR_SET_SCENE  2
+#define HYP_DESCRIPTOR_SET_GLOBAL    1
+#define HYP_DESCRIPTOR_SET_SCENE     2
 #define HYP_DESCRIPTOR_SET_VOXELIZER 3
-#define HYP_DESCRIPTOR_SET_OBJECT 4
-#define HYP_DESCRIPTOR_SET_TEXTURES 5
+#define HYP_DESCRIPTOR_SET_OBJECT    4
+#define HYP_DESCRIPTOR_SET_TEXTURES  5
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
     #define HYP_DESCRIPTOR_SET_RAYTRACING 6

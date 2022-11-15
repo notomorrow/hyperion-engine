@@ -221,13 +221,13 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
 // #endif
 
 #ifdef SSR_ENABLED
-void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
+void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, float depth, inout vec4 reflections)
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
     // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-    reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled));
+    reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled) * float(depth < 0.995));
 }
 #endif
 

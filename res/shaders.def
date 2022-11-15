@@ -156,3 +156,7 @@ comp = TemporalAA.comp
 
 [TemporalBlending]
 comp = TemporalBlending.comp
+
+
+[TestHLSL]
+vert = TestHLSL.hlsl

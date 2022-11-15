@@ -3,7 +3,7 @@
 
 #include "defines.inc"
 
-#define NUM_GBUFFER_TEXTURES 6 // we do 5 not because that is our count in C++ land (minus depth tex), but because translucent and opaque albedo are both stored in the array
+#define NUM_GBUFFER_TEXTURES 7
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
@@ -30,6 +30,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_lin
 #define gbuffer_material_texture HYP_GBUFFER_TEXTURE(2)
 #define gbuffer_tangents_texture HYP_GBUFFER_TEXTURE(3)
 #define gbuffer_velocity_texture HYP_GBUFFER_TEXTURE(4)
+#define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
