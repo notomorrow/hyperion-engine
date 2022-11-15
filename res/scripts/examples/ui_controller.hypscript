@@ -1,0 +1,64 @@
+#importpath "../" "../library";
+
+import core::engine;
+
+// dynamic import
+const tests = Module.Load("res/scripts/tests");
+
+enum UIEventType {
+    NONE,
+
+    MOUSE_DOWN,
+    MOUSE_UP
+}
+
+class TestUIController {
+    const receives_update : Bool = false;
+
+    entity: any;
+
+    TestUIController(self : TestUIController)
+    {
+        self.entity = null;
+
+        if (tests) {
+            Print("tests = %\n", tests);
+
+            const Foo : Int = tests.Get("Foo");
+
+            Print("Foo = %\n", Foo);
+
+            const tests_reload = Module.Load("res/scripts/tests");
+            Print("tests_reload = %\n", tests_reload);
+        } else {
+            throw "Failed to load module";
+        }
+    }
+
+    func OnAdded(self : TestUIController, entity : any)
+    {
+        self.entity = entity;
+    }
+
+    func OnRemoved(self : TestUIController, entity : any)
+    {
+        self.entity = null;
+    }
+
+    func OnTick(self : TestUIController, delta : Float)
+    {
+        Print("Tick UI Component")
+    }
+
+    func OnEvent(self : TestUIController, event_type : UIEventType)
+    {
+        // if (event_type == UIEventType.MOUSE_DOWN) {
+        //     Print("Mousedown on %\n", self.entity);
+        // } else if (event_type == UIEventType.MOUSE_UP) {
+        //     Print("Mouseup on %\n", self.entity);
+        // }
+        Print("Got UI event: %\n", event_type);
+    }
+};
+
+export const controller = new TestUIController;

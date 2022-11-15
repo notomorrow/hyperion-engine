@@ -128,7 +128,7 @@ void main()
 #endif
 
 #ifdef SSR_ENABLED
-        CalculateScreenSpaceReflection(deferred_params, texcoord, reflections);
+        CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
 #endif
 
 #ifdef ENV_PROBE_ENABLED
