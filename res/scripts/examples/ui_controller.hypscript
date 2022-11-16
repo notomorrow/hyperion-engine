@@ -1,0 +1,50 @@
+#importpath "../" "../library";
+
+import core::engine;
+
+enum UIEventType {
+    NONE,
+
+    MOUSE_DOWN,
+    MOUSE_UP
+}
+
+// UIEventType is Enum<Int>;
+
+class TestUIController {
+    const receives_update : Bool = false;
+
+    entity: any;
+
+    TestUIController(self : TestUIController)
+    {
+        self.entity = null;
+    }
+
+    func OnAdded(self : TestUIController, entity : any)
+    {
+        self.entity = entity;
+    }
+
+    func OnRemoved(self : TestUIController, entity : any)
+    {
+        self.entity = null;
+    }
+
+    func OnTick(self : TestUIController, delta : Float)
+    {
+        Print("Tick UI Component")
+    }
+
+    func OnEvent(self : TestUIController, event_type : UIEventType)
+    {
+        // if (event_type == UIEventType.MOUSE_DOWN) {
+        //     Print("Mousedown on %\n", self.entity);
+        // } else if (event_type == UIEventType.MOUSE_UP) {
+        //     Print("Mouseup on %\n", self.entity);
+        // }
+        Print("Got UI event: %\n", event_type);
+    }
+};
+
+export const controller = new TestUIController;
