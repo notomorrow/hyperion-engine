@@ -1,4 +1,5 @@
 #importpath "../" "../library";
+import tests;
 
 import core::engine;
 
@@ -19,6 +20,8 @@ class TestUIController {
     TestUIController(self : TestUIController)
     {
         self.entity = null;
+        // const _mod = Module.Load("res/scripts/tests");
+        // Print("_mod = %\n", _mod);
     }
 
     func OnAdded(self : TestUIController, entity : any)
