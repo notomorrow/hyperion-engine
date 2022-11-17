@@ -131,9 +131,9 @@ void main()
         CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
 #endif
 
-#ifdef ENV_PROBE_ENABLED
+// #ifdef ENV_PROBE_ENABLED
         CalculateEnvProbeIrradiance(deferred_params, N, irradiance);
-#endif
+// #endif
 
 #ifdef RT_ENABLED
         // { // RT Radiance

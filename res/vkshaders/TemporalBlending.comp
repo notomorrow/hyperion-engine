@@ -13,6 +13,9 @@ layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 layout(set = 0, binding = 5, rgba8) uniform writeonly image2D blur_output_image;
 
+// #define MINMAX_3X3_ROUNDED
+#define MINMAX_4TAP_VARYING
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "./include/defines.inc"
 #include "./include/packing.inc"
@@ -28,8 +31,11 @@ layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
+layout(set = 0, binding = 7) uniform texture2D depth_texture;
+
 layout(push_constant) uniform PushConstant {
     uvec2 output_dimensions;
+    uvec2 depth_texture_dimensions;
 };
 
 void main(void)
@@ -40,21 +46,32 @@ void main(void)
         return;
     }
 
-    const float velocity_scale = 16.0;
+    const float velocity_scale = 8.0;
 
     const vec2 uv = (vec2(coord) + 0.5) / vec2(output_dimensions);
     const vec2 texel_size = vec2(1.0) / vec2(output_dimensions);
 
     vec4 color = Texture2D(sampler_nearest, input_texture, uv);
-    vec2 velocity = Texture2D(sampler_nearest, velocity_texture, uv).rg;
-    vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
 
-    vec4 color_ycocg = AdjustColorIn(RGBToYCoCg(color));
-    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
+    vec2 velocity;
+    float view_space_depth;
+
+    InitTemporalParams(
+        depth_texture,
+        depth_texture_dimensions,
+        uv,
+        scene.camera_near,
+        scene.camera_far,
+        velocity,
+        view_space_depth
+    );
+
 
 #if 0
+    vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
+    vec4 color_ycocg = AdjustColorIn(RGBToYCoCg(color));
+    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
     // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
-
     vec4 mean = color_ycocg;
     vec4 stddev = mean * mean;
 
@@ -77,43 +94,16 @@ void main(void)
     vec4 clipped = ClipToAABB(color_ycocg, previous_color_ycocg, mean, stddev);
     const float lum0 = RGBToYCoCg(color).r;
     const float lum1 = clipped.r;
-#else
-    vec2 du = vec2(texel_size.x, 0.0);
-    vec2 dv = vec2(0.0, texel_size.y);
 
-    vec4 ctl = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv - dv - du));
-    vec4 ctc = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv - dv));
-    vec4 ctr = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv - dv + du));
-    vec4 cml = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv - du));
-    vec4 cmc = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv));
-    vec4 cmr = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv + du));
-    vec4 cbl = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv + dv - du));
-    vec4 cbc = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv + dv));
-    vec4 cbr = AdjustColorIn(Texture2D(sampler_nearest, input_texture, uv + dv + du));
+#elif 0
 
-    vec4 cmin = min(ctl, min(ctc, min(ctr, min(cml, min(cmc, min(cmr, min(cbl, min(cbc, cbr))))))));
-    vec4 cmax = max(ctl, max(ctc, max(ctr, max(cml, max(cmc, max(cmr, max(cbl, max(cbc, cbr))))))));
+    color = TemporalResolve(input_texture, prev_input_texture, uv, velocity, texel_size);
 
-    vec4 cavg = (ctl + ctc + ctr + cml + cmc + cmr + cbl + cbc + cbr) / 9.0;
-
-    vec4 cmin5 = min(ctc, min(cml, min(cmc, min(cmr, cbc))));
-    vec4 cmax5 = max(ctc, max(cml, max(cmc, max(cmr, cbc))));
-    vec4 cavg5 = (ctc + cml + cmc + cmr + cbc) / 5.0;
-    cmin = AdjustColorOut(0.5 * (cmin + cmin5));
-    cmax = AdjustColorOut(0.5 * (cmax + cmax5));
-    cavg = AdjustColorOut(0.5 * (cavg + cavg5));
-
-    vec4 clipped = ClipAABB(cmin, cmax, clamp(cavg, cmin, cmax), previous_color);
-    const float lum0 = Luminance(color.rgb);
-    const float lum1 = Luminance(clipped.rgb);
+#elif defined(MINMAX_3X3_ROUNDED)
+    color = TemporalBlendRounded(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
+#elif defined(MINMAX_4TAP_VARYING)
+    color = TemporalBlendVarying(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 #endif
-
-    float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
-    float unbiased_weight = 1.0 - unbiased_diff;
-    float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
-    float feedback = Saturate(mix(0.88, 0.92, unbiased_weight_sqr) - ((length(velocity) - 0.001) * velocity_scale));
-
-    color = mix(color, clipped, feedback);
 
     imageStore(blur_output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);
 }
