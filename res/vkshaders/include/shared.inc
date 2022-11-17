@@ -159,12 +159,14 @@ float ProjectedDepth(mat4 projection, float depth)
 
 float ViewDepth(float depth, float near, float far)
 {
-   /* float x = 1.0 - (far / near);
+    float x = 1.0 - (far / near);
     float y = (far / near);
+    float z = x / far;
+    float w = y / far;
 
-    return 1.0 / ((x / far) * depth + (y / far));*/
+    return 1.0 / (z * depth + w);
     
-    return (far * near) / (far - depth * (far - near));
+    //return (far * near) / (far - depth * (far - near));
 }
 
 vec4 ReconstructWorldSpacePositionFromDepth(mat4 inverse_projection, mat4 inverse_view, vec2 coord, float depth)
