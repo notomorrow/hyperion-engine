@@ -43,7 +43,6 @@ void main()
 {
     vec4 albedo = vec4(0.0);
 
-
     //out_color = texture(shadow_map, texcoord);
 
     // if (post_processing.masks[HYP_STAGE_POST] != 0) {
@@ -81,7 +80,7 @@ void main()
     // out_color = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0);
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));
     
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).aaa;//, vec3(2.2));
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0).rrr;//, vec3(2.2));
 
 
