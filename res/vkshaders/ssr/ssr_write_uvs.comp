@@ -14,16 +14,17 @@ vec2 scene_resolution = vec2(ssr_params.dimension);
 bool TraceRays(
     vec3 ray_origin,
     vec3 ray_direction,
-    float jitter,
     out vec2 hit_pixel,
     out vec3 hit_point,
+    out float hit_weight,
     out float num_iterations
 )
 {
     bool intersect = false;
     num_iterations = 0.0;
+    hit_weight = 0.0;
 
-    vec3 step = ssr_params.ray_step * normalize(ray_direction);
+    vec3 ray_step = ssr_params.ray_step * normalize(ray_direction);
     vec3 marching_position = ray_origin;
     float depth_from_screen;
     float step_delta;
@@ -32,8 +33,8 @@ bool TraceRays(
 
     int i = 0;
 
-	for (; i < ssr_params.num_iterations; i++) {
-        marching_position += step;
+    for (; i < ssr_params.num_iterations; i++) {
+        marching_position += ray_step;
 
         hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
 
@@ -50,17 +51,18 @@ bool TraceRays(
         }
     }
 
-	if (intersect) {
-		// binary search
-		for (; i < ssr_params.num_iterations; i++) {
-            step *= 0.5;
-            marching_position = marching_position - step * sign(step_delta);
+    if (intersect) {
+        // binary search
+        for (; i < ssr_params.num_iterations; i++) {
+            ray_step *= 0.5;
+            marching_position = marching_position - ray_step * sign(step_delta);
 
             hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
             depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel)).z);
             step_delta = abs(marching_position.z) - depth_from_screen;
 
             if (abs(step_delta) < ssr_params.distance_bias) {
+                // hit_weight = smoothstep(0.1, 0.95, max(abs(hit_pixel.x), abs(hit_pixel.y)));
                 return true;
             }
         }
@@ -80,15 +82,20 @@ float CalculateAlpha(
 
     // Fade ray hits that approach the screen edge
     vec2 hit_pixel_ndc = hit_pixel * 2.0 - 1.0;
-    float max_dimension = min(1.0, max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
+    float max_dimension = Saturate(max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
     // alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
+    alpha = 1.0 - smoothstep(0.1, 0.9, max_dimension);
+
+    const float dp = dot(ray_direction, -scene.camera_direction.xyz);
+    // alpha *= 1.0 - smoothstep(0.8, 1.0, dp);
+
     // Fade ray hits base on how much they face the camera
-    float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
+    // float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
     // alpha *= 1.0 - (eye_direction - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start);
 
     // Fade ray hits based on distance from ray origin
-    //alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
+    // alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
 
     return alpha;
 }
@@ -101,56 +108,52 @@ void main(void)
         return;
     }
 
-	vec2 texcoord = (vec2(coord) + 0.5) / vec2(ssr_params.dimension);
+    vec2 texcoord = (vec2(coord) + 0.5) / vec2(ssr_params.dimension);
 
     const mat4 inverse_proj = inverse(scene.projection);
 
-    float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
-	vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
+    const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
+    const float perceptual_roughness = sqrt(roughness);
+
+    vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
     const float depth = SampleDepth(texcoord);
 
     if (depth > 0.9995) {
+        imageStore(ssr_uvs, coord, vec4(0.0));
         return;
     }
 
     vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
-    vec3 V = normalize(P);
+    vec3 V = normalize(vec3(0.0) - P);
     vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 
     vec3 ray_origin = P;
     
-    // scatter the ray based on roughness
+    // scatter the ray based on surface roughness
     uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter);
-
-    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
-    // const float temporal_rotation = GetTemporalRotation(scene.frame_counter) / 360.0 * HYP_FMATH_PI * 2.0;
-    // const vec2 ss_ray = vec2(sin(temporal_rotation), cos(temporal_rotation));
-    // vec4 camera_space_ray = inverse(scene.projection) * vec4(ss_ray, 0.0, 1.0);//normalize(vec3(ss_ray * V.z, -dot(V.xy, ss_ray)));
-    // camera_space_ray /= camera_space_ray.w;
 
     vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
     vec3 scattered_direction = view_space_normal + RandomInHemisphere(rnd, view_space_normal) * roughness;
-
     vec3 ray_direction = normalize(reflect(normalize(ray_origin), scattered_direction));
 
-	vec2 hit_pixel;
+    vec2 hit_pixel;
     vec3 hit_point;
+    float hit_weight;
     float num_iterations;
 
-    vec2 uv2 = texcoord * scene_resolution;
-    float jitter = fract((texcoord.x + texcoord.y) * 0.25 + SSR_JITTER_OFFSET);
-
-    bool intersect = TraceRays(ray_origin, ray_direction, jitter, hit_pixel, hit_point, num_iterations);
+    bool intersect = TraceRays(ray_origin, ray_direction, hit_pixel, hit_point, hit_weight, num_iterations);
 
     float dist = distance(ray_origin, hit_point);
 
-    float alpha = CalculateAlpha(num_iterations, 1.0, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
+    float alpha = CalculateAlpha(num_iterations, 1.0, hit_pixel, hit_point, dist, ray_direction);// * float(intersect);
 
-    if (!intersect) {
-        imageStore(ssr_uvs, coord, vec4(0.0));
+    // if (!intersect) {
+    //     imageStore(ssr_uvs, coord, vec4(0.0));
 
-        return;
-    }
+    //     return;
+    // }
+
+    // alpha *= hit_weight;
 
     imageStore(ssr_uvs, coord, vec4(hit_pixel, 0.0, alpha));
 }

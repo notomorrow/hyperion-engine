@@ -4,14 +4,14 @@
 #include "../include/shared.inc"
 #include "../include/brdf.inc"
 
-#define DEFERRED_FLAGS_SSR_ENABLED 0x1
-#define DEFERRED_FLAGS_VCT_ENABLED 0x2
-#define DEFERRED_FLAGS_ENV_PROBE_ENABLED 0x4
-#define DEFERRED_FLAGS_HBAO_ENABLED 0x8
-#define DEFERRED_FLAGS_HBIL_ENABLED 0x10
+#define DEFERRED_FLAGS_SSR_ENABLED         0x1
+#define DEFERRED_FLAGS_VCT_ENABLED         0x2
+#define DEFERRED_FLAGS_ENV_PROBE_ENABLED   0x4
+#define DEFERRED_FLAGS_HBAO_ENABLED        0x8
+#define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_POWER 1.75
+#define HYP_HBIL_POWER 2.0
 
 struct DeferredParams
 {
@@ -227,7 +227,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
     // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-    reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled) * float(depth < 0.995));
+    reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
 }
 #endif
 

@@ -53,6 +53,7 @@ void main()
 
     InitTemporalParams(
         depth_texture,
+        velocity_texture,
         depth_texture_dimensions,
         uv,
         camera_near_far.x,
@@ -69,6 +70,8 @@ void main()
         texel_size,
         view_space_depth
     );
+
+    result = any(isnan(result)) ? vec4(0.0) : result;
 
     imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimensions - 1)), result);
 }
