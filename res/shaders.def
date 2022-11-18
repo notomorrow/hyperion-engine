@@ -148,6 +148,8 @@ comp = rt/blur/BlurRadianceHor.comp
 [BlurRadianceVert]
 comp = rt/blur/BlurRadianceVert.comp
 
+# Temporal
+
 [CalculateMotionVectors]
 comp = CalculateMotionVectors.comp
 
@@ -157,6 +159,11 @@ comp = TemporalAA.comp
 [TemporalBlending]
 comp = TemporalBlending.comp
 
+[ImageBlurCompute]
+permute = HORIZONTAL
+comp = Blur.comp
+
+# Testing
 
 [TestHLSL]
 vert = TestHLSL.hlsl

@@ -396,6 +396,7 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
 
 void InitTemporalParams(
     in texture2D depth_texture,
+    in texture2D velocity_texture,
     in vec2 depth_texture_dimensions,
     in vec2 uv,
     in float camera_near,
@@ -469,9 +470,9 @@ vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_te
     const float _GatherBase = 0.5;
     const float _GatherSubpixelMotion = 0.1666;
 
-    const vec2 texel_vel = velocity / texel_size;
+    const vec2 texel_vel = velocity / max(vec2(HYP_FMATH_EPSILON), texel_size);
     const float texel_vel_mag = length(texel_vel) * view_space_depth;
-    const float subpixel_motion = Saturate(_SubpixelThreshold / (HYP_FMATH_EPSILON + texel_vel_mag));
+    const float subpixel_motion = Saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
     const float min_max_support = _GatherBase + _GatherSubpixelMotion * subpixel_motion;
 
     const vec2 ss_offset01 = min_max_support * vec2(-texel_size.x, texel_size.y);

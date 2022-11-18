@@ -58,6 +58,7 @@ void main(void)
 
     InitTemporalParams(
         depth_texture,
+        velocity_texture,
         depth_texture_dimensions,
         uv,
         scene.camera_near,

@@ -41,7 +41,7 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 64.0
+#define HYP_HBAO_RADIUS 24.0
 #define HYP_HBAO_POWER 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
@@ -120,7 +120,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
-    const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord));
+    const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord)); //RandomFloat(seed);
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
@@ -139,9 +139,9 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
         float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
 
-        vec2 ss_ray = vec2(cos(angle), sin(angle));
-        vec2 horizons = vec2(-1.0);
+        vec2 ss_ray = vec2(sin(angle), cos(angle));
 
+        vec2 horizons = vec2(-1.0);
         vec2 slice_ao = vec2(0.0);
         vec4 slice_light[2] = { vec4(0.0), vec4(0.0) };
 
@@ -175,7 +175,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
                 const vec2 falloff = Saturate(DdotD * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
 
-                const vec2 color_weights = smoothstep(0.01, 0.4, dist) * fade;
+                const vec2 color_weights = smoothstep(0.1, 0.4, dist) * fade;
                 const vec2 condition = vec2(greaterThan(H - falloff, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
 
                 const vec3 new_color_0 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0).rgb;
@@ -202,7 +202,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                     condition
                 );
 
-                horizons = mix(horizons, mix(H, horizons, falloff), condition);
+                horizons = mix(horizons, H - falloff, condition);
             }
         }
 
