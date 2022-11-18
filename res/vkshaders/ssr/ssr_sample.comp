@@ -22,6 +22,25 @@ const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE](
     vec2(2, 2)
 );
 
+float IsoscelesTriangleOpposite(float adjacent_length, float cone_theta)
+{
+    return 2.0 * tan(cone_theta) * adjacent_length;
+}
+
+float IsoscelesTriangleInRadius(float a, float h)
+{
+    float a2 = a * a;
+    float fh2 = 4.0 * h * h;
+
+    return (a * (sqrt(a2 + fh2) - a)) / (4.0 * h);
+}
+
+float IsoscelesTriangleNextAdjacent(float adjacent_length, float incircle_radius)
+{
+    // subtract the diameter of the incircle to get the adjacent side of the next level on the cone
+    return adjacent_length - (incircle_radius * 2.0);
+}
+
 void main(void)
 {
     const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
@@ -34,11 +53,14 @@ void main(void)
 
 	const vec2 texcoord = (vec2(coord) + 0.5) / ssr_image_dimensions;
 
-    const vec4 uv_sample = imageLoad(ssr_uv_image, coord);
+    vec4 uv_sample = imageLoad(ssr_uv_image, coord);
     const vec2 uv = uv_sample.xy;
     const float alpha = uv_sample.w;
 
     vec4 reflection_sample = vec4(0.0);
+    float roughness = 0.0;
+    float out_radius = 0.0;
+    float accum_radius = 0.0;
 
     float depth = SampleDepth(texcoord);
 
@@ -49,42 +71,65 @@ void main(void)
     vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth).xyz;
     vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
     vec3 V = normalize(scene.camera_position.xyz - P);
-    float roughness = 0.0;
 
-    float out_radius = 0.0;
-    float accum_radius = 0.0;
-
-    if (alpha > 0.0) {
+    if (alpha > 0.01) {
         roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
         roughness = clamp(roughness, 0.001, 0.999);
+        const float gloss = 1.0 - roughness;
 
-        const float cone_angle = RoughnessToConeAngle(roughness);
+        const float cone_angle = RoughnessToConeAngle(roughness) * 0.5;
 
         const float trace_size = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
         const float max_mip_level = 5.0;
 
         vec2 sample_texcoord = texcoord;//+ (offset * filter_size);
         ivec2 sample_coord = ivec2(sample_texcoord * vec2(ssr_params.dimension));
+        const vec4 hit_data = imageLoad(ssr_uv_image, sample_coord);
+        const vec2 hit_uv = hit_data.xy;
+        const float hit_mask = hit_data.w;
+        const vec2 delta_p = (hit_uv - texcoord);
 
-        vec4 hit_data = imageLoad(ssr_uv_image, sample_coord);
-        vec2 hit_uv = hit_data.xy;
-        float hit_mask = hit_data.w;
+        float adjacent_length = length(delta_p);
+        vec2 adjacent_unit = normalize(delta_p);
 
-        if (hit_mask >= 0.001) {
-            const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * tan(cone_angle);
+        float remaining_alpha = 1.0;
+        float gloss_multiplier = gloss;
 
-            float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
+        vec4 accum_color = vec4(0.0);
 
-            // sample mip
+        for (int i = 0; i < 14; i++) {
+            const float opposite_length = IsoscelesTriangleOpposite(adjacent_length, cone_angle);
+            const float incircle_size = IsoscelesTriangleInRadius(opposite_length, adjacent_length);
+            const vec2 sample_position = texcoord + adjacent_unit * (adjacent_length - incircle_size);
+
+            float mip_level = clamp(log2(/*current_radius*/ incircle_size * max(ssr_image_dimensions.x, ssr_image_dimensions.y) ), 0.0, max_mip_level);
+
             vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_albedo_texture, hit_uv, mip_level);
-            current_reflection_sample.a = hit_mask;
+            current_reflection_sample.rgb *= vec3(gloss_multiplier);
+            current_reflection_sample.a = gloss_multiplier;
 
-            reflection_sample += current_reflection_sample;
+            remaining_alpha -= current_reflection_sample.a;
 
-            accum_radius = current_radius;
+            if (remaining_alpha < 0.0) {
+                current_reflection_sample.rgb *= (1.0 - abs(remaining_alpha));
+            }
+
+            accum_color += current_reflection_sample;
+
+            if (accum_color.a >= 1.0) {
+                break;
+            }
+
+            adjacent_length = IsoscelesTriangleNextAdjacent(adjacent_length, incircle_size);
+
+            gloss_multiplier *= gloss;
+
+            accum_radius += incircle_size;
         }
 
-        // reflection_sample *= clamp(1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX), 0.0, 1.0);
+        reflection_sample = accum_color;
+        accum_radius /= 14.0;
+
         reflection_sample.a *= alpha;
     }
 
