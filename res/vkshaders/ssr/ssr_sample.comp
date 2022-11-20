@@ -8,8 +8,8 @@
 #define SSR_KERNEL_SIZE 8
 //#define SSR_CONE_SAMPLING
 
-layout(set = 0, binding = 0, rgba8) uniform readonly image2D ssr_uv_image;
-layout(set = 0, binding = 1, rgba8) uniform writeonly image2D ssr_sample;
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D ssr_uv_image;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D ssr_sample;
 layout(set = 0, binding = 2, r8) uniform writeonly image2D ssr_radius;
 
 const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE]( 
