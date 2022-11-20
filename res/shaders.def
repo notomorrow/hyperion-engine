@@ -158,6 +158,7 @@ comp = CalculateMotionVectors.comp
 comp = TemporalAA.comp
 
 [TemporalBlending]
+permute = OUTPUT_RGBA8, OUTPUT_RGBA16F, OUTPUT_RGBA32F
 comp = TemporalBlending.comp
 
 [ImageBlurCompute]

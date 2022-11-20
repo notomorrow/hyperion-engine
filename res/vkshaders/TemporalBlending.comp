@@ -6,12 +6,24 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+#ifndef OUTPUT_FORMAT
+    #if defined(OUTPUT_RGBA8)
+        #define OUTPUT_FORMAT rgba8
+    #elif defined(OUTPUT_RGBA16F)
+        #define OUTPUT_FORMAT rgba16f
+    #elif defined(OUTPUT_RGBA32F)
+        #define OUTPUT_FORMAT rgba32f
+    #else
+        #define OUTPUT_FORMAT rgba8
+    #endif
+#endif
+
 layout(set = 0, binding = 0) uniform texture2D input_texture;
 layout(set = 0, binding = 1) uniform texture2D prev_input_texture;
 layout(set = 0, binding = 2) uniform texture2D velocity_texture;
 layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
-layout(set = 0, binding = 5, rgba8) uniform writeonly image2D blur_output_image;
+layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D blur_output_image;
 
 // #define MINMAX_3X3_ROUNDED
 #define MINMAX_4TAP_VARYING
