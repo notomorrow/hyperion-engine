@@ -6,6 +6,7 @@
 #include "../include/shared.inc"
 
 #define SSR_KERNEL_SIZE 8
+//#define SSR_CONE_SAMPLING
 
 layout(set = 0, binding = 0, rgba8) uniform readonly image2D ssr_uv_image;
 layout(set = 0, binding = 1, rgba8) uniform writeonly image2D ssr_sample;
@@ -50,7 +51,6 @@ void main(void)
     }
 
     const vec2 ssr_image_dimensions = vec2(ssr_params.dimension);
-
 	const vec2 texcoord = (vec2(coord) + 0.5) / ssr_image_dimensions;
 
     vec4 uv_sample = imageLoad(ssr_uv_image, coord);
@@ -97,14 +97,21 @@ void main(void)
 
         vec4 accum_color = vec4(0.0);
 
+#ifdef SSR_CONE_SAMPLING
         for (int i = 0; i < 14; i++) {
             const float opposite_length = IsoscelesTriangleOpposite(adjacent_length, cone_angle);
             const float incircle_size = IsoscelesTriangleInRadius(opposite_length, adjacent_length);
             const vec2 sample_position = texcoord + adjacent_unit * (adjacent_length - incircle_size);
 
-            float mip_level = clamp(log2(/*current_radius*/ incircle_size * max(ssr_image_dimensions.x, ssr_image_dimensions.y) ), 0.0, max_mip_level);
+            const float mip_level = clamp(log2(/*current_radius*/ incircle_size * max(ssr_image_dimensions.x, ssr_image_dimensions.y)), 0.0, max_mip_level);
+#else
+            const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * tan(cone_angle);
+            const float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
+#endif
 
             vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_albedo_texture, hit_uv, mip_level);
+
+#if SSR_CONE_SAMPLING
             current_reflection_sample.rgb *= vec3(gloss_multiplier);
             current_reflection_sample.a = gloss_multiplier;
 
@@ -121,14 +128,16 @@ void main(void)
             }
 
             adjacent_length = IsoscelesTriangleNextAdjacent(adjacent_length, incircle_size);
-
             gloss_multiplier *= gloss;
-
             accum_radius += incircle_size;
         }
 
-        reflection_sample = accum_color;
         accum_radius /= 14.0;
+#else
+        accum_color = current_reflection_sample;
+#endif
+
+        reflection_sample = accum_color;
 
         reflection_sample.a *= alpha;
     }

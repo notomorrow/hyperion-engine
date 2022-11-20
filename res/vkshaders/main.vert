@@ -14,19 +14,30 @@ layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out vec4 v_position_ndc;
 layout(location=12) out vec4 v_previous_position_ndc;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
-layout (location = 6) in vec4 a_bone_weights;
-layout (location = 7) in vec4 a_bone_indices;
+HYP_ATTRIBUTE(0) vec3 a_position;
+HYP_ATTRIBUTE(1) vec3 a_normal;
+HYP_ATTRIBUTE(2) vec2 a_texcoord0;
+HYP_ATTRIBUTE(3) vec3 a_texcoord1;
+HYP_ATTRIBUTE(4) vec3 a_tangent;
+HYP_ATTRIBUTE(5) vec3 a_bitangent;
+HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
+HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
+
+#if defined(SKINNING) && defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
+    #define VERTEX_SKINNING_ENABLED
+#endif
+
+// layout (location = 0) in vec3 a_position;
+// layout (location = 1) in vec3 a_normal;
+// layout (location = 2) in vec2 a_texcoord0;
+// layout (location = 3) in vec2 a_texcoord1;
+// layout (location = 4) in vec3 a_tangent;
+// layout (location = 5) in vec3 a_bitangent;
+// layout (location = 6) in vec4 a_bone_weights;
+// layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
 #include "include/object.inc"
-
-#define HYP_ENABLE_SKINNING 1
 
 struct Skeleton
 {
@@ -37,6 +48,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly
 {
     Skeleton skeleton;
 };
+
+#ifdef VERTEX_SKINNING_ENABLED
 
 mat4 CreateSkinningMatrix()
 {
@@ -54,26 +67,30 @@ mat4 CreateSkinningMatrix()
 	return skinning;
 }
 
+#endif
+
 void main() {
     vec4 position;
     vec4 previous_position;
     mat4 normal_matrix;
     
-#if HYP_ENABLE_SKINNING
-    if (bool(object.skeleton_id)) {
+#ifdef VERTEX_SKINNING_ENABLED
+    if (bool(object.skeleton_id))
+    {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    } else {
+    }
+    else
 #endif
+    {
         position = object.model_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
-#if HYP_ENABLE_SKINNING
+
     }
-#endif
 
     v_position = position.xyz / position.w;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;

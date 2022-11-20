@@ -356,7 +356,7 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     for (uint i = 0; i < HYP_TAA_NEIGHBORS_3x3; i++) {
         offset_uv = uv + (neighbor_uv_offsets_3x3[i] * texel_size);
 
-        current_colors_3x3[i] = AdjustColor(Texture2DLod(sampler_nearest, color_texture, offset_uv, 0.0));
+        current_colors_3x3[i] = AdjustColor(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
         previous_colors_3x3[i] = AdjustColor(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
     }
 
@@ -372,7 +372,7 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     for (uint i = 0; i < HYP_TAA_NEIGHBORS_2x2; i++) {
         offset_uv = uv + (neighbor_uv_offsets_2x2[i] * texel_size);
 
-        current_colors_2x2[i] = AdjustColor(Texture2DLod(sampler_nearest, color_texture, offset_uv, 0.0));
+        current_colors_2x2[i] = AdjustColor(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
         previous_colors_2x2[i] = AdjustColor(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
     }
 
@@ -382,9 +382,9 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     vec4 current_color_min = mix(current_color_min_3x3, current_color_min_2x2, 0.5);
     vec4 previous_color_max = mix(previous_color_max_3x3, previous_color_max_2x2, 0.5);
 
-    const float feedback = 0.9;
-    const float velocity_scale = 1.0;
-    const float blend = feedback - ((length(velocity) - 0.001) * velocity_scale);
+    const float feedback = 0.92;
+    const float velocity_scale = 8.0;
+    const float blend = Saturate(feedback - ((length(velocity) - 0.001) * velocity_scale));
 
     const vec4 current_color = current_colors_2x2[2];
     const vec4 previous_color = previous_colors_2x2[2];
@@ -420,7 +420,7 @@ vec4 TemporalLuminanceResolve(vec4 color, vec4 color_clipped)
     float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
     float unbiased_weight = 1.0 - unbiased_diff;
     float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
-    float feedback = Saturate(mix(0.88, 0.97, unbiased_weight_sqr));
+    float feedback = Saturate(mix(0.88, 0.98, unbiased_weight_sqr));
 
     return mix(color, color_clipped, feedback);
 }
@@ -433,15 +433,15 @@ vec4 TemporalBlendRounded(in texture2D input_texture, in texture2D prev_input_te
     vec2 du = vec2(texel_size.x, 0.0);
     vec2 dv = vec2(0.0, texel_size.y);
 
-    vec4 ctl = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv - du));
-    vec4 ctc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv));
-    vec4 ctr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv + du));
-    vec4 cml = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - du));
-    vec4 cmc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv));
-    vec4 cmr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + du));
-    vec4 cbl = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv - du));
-    vec4 cbc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv));
-    vec4 cbr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv + du));
+    vec4 ctl = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv - du));
+    vec4 ctc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv));
+    vec4 ctr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv + du));
+    vec4 cml = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - du));
+    vec4 cmc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv));
+    vec4 cmr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + du));
+    vec4 cbl = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv - du));
+    vec4 cbc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv));
+    vec4 cbr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv + du));
 
     vec4 cmin = min(ctl, min(ctc, min(ctr, min(cml, min(cmc, min(cmr, min(cbl, min(cbc, cbr))))))));
     vec4 cmax = max(ctl, max(ctc, max(ctr, max(cml, max(cmc, max(cmr, max(cbl, max(cbc, cbr))))))));

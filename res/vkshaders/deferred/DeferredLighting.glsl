@@ -11,7 +11,7 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_POWER 2.0
+#define HYP_HBIL_POWER 2.5
 
 struct DeferredParams
 {
@@ -110,10 +110,10 @@ void RefractionSolidSphere(
     const vec3 R = refract(-V, N, eta_ir);
     float NdotR = dot(N, R);
     float d = thickness * -NdotR;
+    vec3 n1 = normalize(NdotR * R - N * 0.5);
 
     Refraction refraction;
     refraction.position = vec3(P + R * d);
-    vec3 n1 = normalize(NdotR * R - N * 0.5);
     refraction.direction = refract(R, n1, eta_ir);
 
     out_refraction = refraction;
