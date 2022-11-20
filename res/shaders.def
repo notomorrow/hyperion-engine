@@ -80,6 +80,7 @@ frag = ui/UIObject.frag
 vert = ui/UIObject.vert
 
 [DebugAABB]
+permute = IMMEDIATE_MODE
 frag = aabb.frag
 vert = aabb.vert
 
