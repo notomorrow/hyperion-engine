@@ -145,15 +145,7 @@ void main(void)
 
     float dist = distance(ray_origin, hit_point);
 
-    float alpha = CalculateAlpha(num_iterations, 1.0, hit_pixel, hit_point, dist, ray_direction);// * float(intersect);
-
-    // if (!intersect) {
-    //     imageStore(ssr_uvs, coord, vec4(0.0));
-
-    //     return;
-    // }
-
-    // alpha *= hit_weight;
+    float alpha = CalculateAlpha(num_iterations, 1.0, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
 
     imageStore(ssr_uvs, coord, vec4(hit_pixel, 0.0, alpha));
 }

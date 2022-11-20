@@ -37,7 +37,7 @@ void main()
         return;
     }
 
-    const vec2 uv = vec2(pixel_coord) / vec2(dimensions);
+    const vec2 uv = vec2(pixel_coord + vec2(0.5)) / vec2(dimensions);
 
     // GPU Gems 3, Chapter 27
 
