@@ -108,9 +108,9 @@ void main()
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-// #ifdef ENV_PROBE_ENABLED
+#ifdef ENV_PROBE_ENABLED
         ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
-// #endif
+#endif
 
 #if HYP_VCT_ENABLED
         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
@@ -131,9 +131,9 @@ void main()
         CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
 #endif
 
-// #ifdef ENV_PROBE_ENABLED
+#ifdef ENV_PROBE_ENABLED
         CalculateEnvProbeIrradiance(deferred_params, N, irradiance);
-// #endif
+#endif
 
 #ifdef RT_ENABLED
         // { // RT Radiance

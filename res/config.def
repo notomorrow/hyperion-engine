@@ -5,6 +5,7 @@ RTSupported = false
 RTEnabled = false
 RTReflections = false
 RTGlobalIllumination = false
+DebugDDGIProbes = false
 ScreenSpaceReflections = true
 HBAO = true
 HBIL = true
