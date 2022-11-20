@@ -115,9 +115,11 @@ void main()
 
                 const float angle = (noise_direction + temporal_rotation) * HYP_FMATH_PI * 2.0;
 
-                const vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
+                const vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
+                // const vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
                 // vec3 scattered_direction = CosWeightedRandomHemisphereDirectionHammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES, payload.normal); //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);// //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);////, RandomFloat(ray_seed));
-                vec3 scattered_direction = ImportanceSampleGGX(rnd, payload.normal, HYP_FMATH_SQR(payload.roughness));//RandomInHemisphere(rnd, payload.normal);
+                // vec3 scattered_direction = ImportanceSampleGGX(rnd, payload.normal, HYP_FMATH_SQR(payload.roughness));//RandomInHemisphere(rnd, payload.normal);
+                vec3 scattered_direction = RandomInHemisphere(rnd, payload.normal);
 
                 vec3 ray_dir = scattered_direction;//mix(payload.normal, scattered_direction, payload.roughness);
 
