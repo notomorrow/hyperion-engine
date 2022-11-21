@@ -41,7 +41,7 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 24.0
+#define HYP_HBAO_RADIUS 32.0
 #define HYP_HBAO_POWER 0.85
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
