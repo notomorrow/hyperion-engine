@@ -143,6 +143,37 @@ public:
         }
     }
 
+    DynArray(T *ptr, SizeType size)
+        : DynArray()
+    {
+        Reserve(size);
+
+        for (SizeType i = 0; i < size; i++) {
+            PushBack(ptr[i]);
+        }
+    }
+
+    DynArray(const T *ptr, SizeType size)
+        : DynArray()
+    {
+        Reserve(size);
+
+        for (SizeType i = 0; i < size; i++) {
+            PushBack(ptr[i]);
+        }
+    }
+
+    DynArray(Iterator first, Iterator last)
+        : DynArray()
+    {
+        const SizeType dist = last - first;
+        Reserve(dist);
+
+        for (auto it = first; it != last; ++it) {
+            PushBack(*it);
+        }
+    }
+
     DynArray(const DynArray &other);
     DynArray(DynArray &&other) noexcept;
     ~DynArray();
