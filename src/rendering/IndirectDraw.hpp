@@ -37,6 +37,9 @@ class Material;
 class Engine;
 class Entity;
 
+struct RenderCommand_CreateIndirectRenderer;
+struct RenderCommand_DestroyIndirectRenderer;
+
 class IndirectDrawState
 {
 public:
@@ -93,6 +96,9 @@ struct alignas(16) IndirectParams
 class IndirectRenderer
 {
 public:
+    friend struct RenderCommand_CreateIndirectRenderer;
+    friend struct RenderCommand_DestroyIndirectRenderer;
+
     IndirectRenderer();
     ~IndirectRenderer();
 
