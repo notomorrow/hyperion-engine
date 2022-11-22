@@ -12,6 +12,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererResult.hpp>
 
 #include <memory>
 
@@ -26,29 +27,33 @@ using renderer::Device;
 using renderer::DescriptorSet;
 using renderer::AttachmentRef;
 using renderer::Extent2D;
+using renderer::Result;
 
 class Engine;
 
 class BlurRadiance
 {
-    static constexpr bool generate_mipmap = false;
-
 public:
     struct ImageOutput
     {
         StorageImage image;
         ImageView image_view;
 
-        void Create(Device *device)
+        Result Create(Device *device)
         {
-            HYPERION_ASSERT_RESULT(image.Create(device));
-            HYPERION_ASSERT_RESULT(image_view.Create(device, &image));
+            HYPERION_BUBBLE_ERRORS(image.Create(device));
+            HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
+            HYPERION_RETURN_OK;
         }
 
-        void Destroy(Device *device)
+        Result Destroy(Device *device)
         {
-            HYPERION_ASSERT_RESULT(image.Destroy(device));
-            HYPERION_ASSERT_RESULT(image_view.Destroy(device));
+            auto result = Result::OK;
+
+            HYPERION_PASS_ERRORS(image.Destroy(device), result);
+            HYPERION_PASS_ERRORS(image_view.Destroy(device), result);
+
+            return result;
         }
     };
 
@@ -89,7 +94,7 @@ private:
     Handle<ComputePipeline> m_blur_vert;
 
     FixedArray<FixedArray<UniquePtr<DescriptorSet>, 2>, max_frames_in_flight> m_descriptor_sets;
-    FixedArray<FixedArray<ImageOutput, generate_mipmap ? 1 : 2>, max_frames_in_flight> m_image_outputs;
+    FixedArray<FixedArray<ImageOutput, 2>, max_frames_in_flight> m_image_outputs;
 };
 
 } // namespace hyperion::v2
