@@ -5,8 +5,8 @@ struct Object
     mat4 model_matrix;
     mat4 previous_model_matrix;
     
-    vec4 local_aabb_max;
-    vec4 local_aabb_min;
+    vec4 _pad0;
+    vec4 _pad1;
     vec4 world_aabb_max;
     vec4 world_aabb_min;
 
