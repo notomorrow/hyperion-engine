@@ -86,7 +86,7 @@ struct ProbeGridInfo
 
     Extent2D GetImageDimensions() const
     {
-        return { static_cast<UInt32>(MathUtil::NextPowerOf2(NumProbes())), num_rays_per_probe };
+        return { UInt32(MathUtil::NextPowerOf2(NumProbes())), num_rays_per_probe };
     }
 };
 
@@ -129,7 +129,7 @@ public:
     void SetTLAS(Handle<TLAS> &&tlas)
         { m_tlas = std::move(tlas); }
 
-    void ApplyTLASUpdates(Engine *engine, RTUpdateStateFlags flags);
+    void ApplyTLASUpdates( RTUpdateStateFlags flags);
 
     StorageBuffer *GetRadianceBuffer() const
         { return m_radiance_buffer.Get(); }
@@ -140,19 +140,19 @@ public:
     ImageView *GetIrradianceImageView() const
         { return m_irradiance_image_view.Get(); }
 
-    void Init(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init();
+    void Destroy();
 
-    void RenderProbes(Engine *engine, Frame *frame);
-    void ComputeIrradiance(Engine *engine, Frame *frame);
+    void RenderProbes( Frame *frame);
+    void ComputeIrradiance( Frame *frame);
 
 private:
-    void CreatePipeline(Engine *engine);
-    void CreateComputePipelines(Engine *engine);
-    void CreateUniformBuffer(Engine *engine);
-    void CreateStorageBuffers(Engine *engine);
-    void CreateDescriptorSets(Engine *engine);
-    void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
+    void CreatePipeline();
+    void CreateComputePipelines();
+    void CreateUniformBuffer();
+    void CreateStorageBuffers();
+    void CreateDescriptorSets();
+    void SubmitPushConstants( CommandBuffer *command_buffer);
 
     ProbeGridInfo m_grid_info;
     Array<Probe> m_probes;

@@ -14,9 +14,9 @@ struct RENDER_COMMAND(BindEnvProbe) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        engine->GetRenderState().BindEnvProbe(id);
+        Engine::Get()->GetRenderState().BindEnvProbe(id);
 
         HYPERION_RETURN_OK;
     }
@@ -31,9 +31,9 @@ struct RENDER_COMMAND(UnbindEnvProbe) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        engine->GetRenderState().UnbindEnvProbe(id);
+        Engine::Get()->GetRenderState().UnbindEnvProbe(id);
 
         HYPERION_RETURN_OK;
     }
@@ -50,18 +50,18 @@ struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         // find the texture slot of this env probe (if it exists)
         UInt texture_index = ~0u;
 
-        const auto it = engine->render_state.env_probes.Find(env_probe.GetID());
+        const auto it = Engine::Get()->render_state.env_probes.Find(env_probe.GetID());
 
-        if (it != engine->render_state.env_probes.End() && it->second.Any()) {
+        if (it != Engine::Get()->render_state.env_probes.End() && it->second.Any()) {
             texture_index = it->second.Get();
         }
 
-        engine->GetRenderData()->env_probes.Set(
+        Engine::Get()->GetRenderData()->env_probes.Set(
             env_probe.GetID().ToIndex(),
             EnvProbeShaderData {
                 .aabb_max = Vector4(draw_proxy.aabb.max, 1.0f),
@@ -74,7 +74,7 @@ struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommandBase2
 
         // update cubemap texture in array of bound env probes
         if (texture_index != ~0u) {
-            const auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
+            const auto &descriptor_pool = Engine::Get()->GetInstance()->GetDescriptorPool();
 
             for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 const auto *descriptor_set = descriptor_pool.GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -84,7 +84,7 @@ struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommandBase2
                     texture_index,
                     env_probe.m_texture
                         ? &env_probe.m_texture->GetImageView()
-                        : &engine->GetPlaceholderData().GetImageViewCube1x1R8()
+                        : &Engine::Get()->GetPlaceholderData().GetImageViewCube1x1R8()
                 );
             }
         }
@@ -118,33 +118,31 @@ EnvProbe::~EnvProbe()
     Teardown();
 }
 
-void EnvProbe::Init(Engine *engine)
+void EnvProbe::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
-    engine->InitObject(m_texture);
+    Engine::Get()->InitObject(m_texture);
 
     SetReady(true);
 
     // force update first time to init render data
-    Update(engine);
+    Update();
 
     OnTeardown([this]() {
-        auto *engine = GetEngine();
-
         SetReady(false);
 
-        engine->SafeReleaseHandle<Texture>(std::move(m_texture));
+        Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_texture));
         
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 
-void EnvProbe::EnqueueBind(Engine *engine) const
+void EnvProbe::EnqueueBind() const
 {
     Threads::AssertOnThread(~THREAD_RENDER);
     AssertReady();
@@ -152,7 +150,7 @@ void EnvProbe::EnqueueBind(Engine *engine) const
     RenderCommands::Push<RENDER_COMMAND(BindEnvProbe)>(m_id);
 }
 
-void EnvProbe::EnqueueUnbind(Engine *engine) const
+void EnvProbe::EnqueueUnbind() const
 {
     Threads::AssertOnThread(~THREAD_RENDER);
     AssertReady();
@@ -160,7 +158,7 @@ void EnvProbe::EnqueueUnbind(Engine *engine) const
     RenderCommands::Push<RENDER_COMMAND(UnbindEnvProbe)>(m_id);
 }
 
-void EnvProbe::Update(Engine *engine)
+void EnvProbe::Update()
 {
     AssertReady();
 

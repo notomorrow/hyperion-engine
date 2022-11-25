@@ -25,10 +25,10 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(engine->GetDevice()));
+            HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(Engine::Get()->GetDevice()));
         }
 
         HYPERION_RETURN_OK;
@@ -44,12 +44,12 @@ struct RENDER_COMMAND(DestroyTemporalBlendingImageOutputs) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         auto result = Result::OK;
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            image_outputs[frame_index].Destroy(engine->GetDevice());
+            image_outputs[frame_index].Destroy(Engine::Get()->GetDevice());
         }
 
         return result;
@@ -65,15 +65,15 @@ struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             auto &descriptor_set = descriptor_sets[frame_index];
             AssertThrow(descriptor_set != nullptr);
                 
             HYPERION_ASSERT_RESULT(descriptor_set->Create(
-                engine->GetDevice(),
-                &engine->GetInstance()->GetDescriptorPool()
+                Engine::Get()->GetDevice(),
+                &Engine::Get()->GetInstance()->GetDescriptorPool()
             ));
         }
 
@@ -109,19 +109,19 @@ TemporalBlending::TemporalBlending(
 
 TemporalBlending::~TemporalBlending() = default;
 
-void TemporalBlending::Create(Engine *engine)
+void TemporalBlending::Create()
 {
-    CreateImageOutputs(engine);
-    CreateDescriptorSets(engine);
-    CreateComputePipelines(engine);
+    CreateImageOutputs();
+    CreateDescriptorSets();
+    CreateComputePipelines();
 }
 
-void TemporalBlending::Destroy(Engine *engine)
+void TemporalBlending::Destroy()
 {
     m_perform_blending.Reset();
 
     for (auto &descriptor_set : m_descriptor_sets) {
-        engine->SafeRelease(std::move(descriptor_set));
+        Engine::Get()->SafeRelease(std::move(descriptor_set));
     }
 
     RenderCommands::Push<RENDER_COMMAND(DestroyTemporalBlendingImageOutputs)>(
@@ -129,7 +129,7 @@ void TemporalBlending::Destroy(Engine *engine)
     );
 }
 
-void TemporalBlending::CreateImageOutputs(Engine *engine)
+void TemporalBlending::CreateImageOutputs()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto &image_output = m_image_outputs[frame_index];
@@ -148,7 +148,7 @@ void TemporalBlending::CreateImageOutputs(Engine *engine)
     );
 }
 
-void TemporalBlending::CreateDescriptorSets(Engine *engine)
+void TemporalBlending::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
@@ -171,7 +171,7 @@ void TemporalBlending::CreateDescriptorSets(Engine *engine)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(2)
             ->SetSubDescriptor({
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
             });
 
@@ -179,14 +179,14 @@ void TemporalBlending::CreateDescriptorSets(Engine *engine)
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(3)
             ->SetSubDescriptor({
-                .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
+                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
             });
 
         // sampler to use
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(4)
             ->SetSubDescriptor({
-                .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
+                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerNearest()
             });
 
         // blurred output
@@ -200,7 +200,7 @@ void TemporalBlending::CreateDescriptorSets(Engine *engine)
         descriptor_set
             ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
             ->SetSubDescriptor({
-                .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
+                .buffer = Engine::Get()->shader_globals->scenes.GetBuffers()[frame_index].get(),
                 .range = static_cast<UInt>(sizeof(SceneShaderData))
             });
 
@@ -208,7 +208,7 @@ void TemporalBlending::CreateDescriptorSets(Engine *engine)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(7)
             ->SetSubDescriptor({
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
 
@@ -220,7 +220,7 @@ void TemporalBlending::CreateDescriptorSets(Engine *engine)
     );
 }
 
-void TemporalBlending::CreateComputePipelines(Engine *engine)
+void TemporalBlending::CreateComputePipelines()
 {
     ShaderProps shader_props;
 
@@ -236,20 +236,20 @@ void TemporalBlending::CreateComputePipelines(Engine *engine)
         break;
     }
 
-    m_perform_blending = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("TemporalBlending")),
+    m_perform_blending = Engine::Get()->CreateHandle<ComputePipeline>(
+        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("TemporalBlending")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_perform_blending);
+    Engine::Get()->InitObject(m_perform_blending);
 }
 
 void TemporalBlending::Render(
-    Engine *engine,
+    
     Frame *frame
 )
 {
-    const auto &scene_binding = engine->render_state.GetScene();
+    const auto &scene_binding = Engine::Get()->render_state.GetScene();
     const UInt scene_index = scene_binding.id.ToIndex();
     
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
@@ -264,7 +264,7 @@ void TemporalBlending::Render(
 
     push_constants.output_dimensions = Extent2D(extent);
     push_constants.depth_texture_dimensions = Extent2D(
-        engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+        Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetAttachment()->GetImage()->GetExtent()
     );
 
@@ -272,7 +272,7 @@ void TemporalBlending::Render(
     m_perform_blending->GetPipeline()->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        engine->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetInstance()->GetDescriptorPool(),
         m_perform_blending->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,

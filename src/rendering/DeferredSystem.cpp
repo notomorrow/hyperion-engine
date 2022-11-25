@@ -20,7 +20,7 @@ const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_
 };
 
 static void AddOwnedAttachment(
-    Engine *engine,
+    
     InternalFormat format,
     Handle<RenderPass> &render_pass,
     Array<std::unique_ptr<Attachment>> &attachments
@@ -29,7 +29,7 @@ static void AddOwnedAttachment(
     AttachmentRef *attachment_ref;
 
     auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
-        engine->GetInstance()->swapchain->extent,
+        Engine::Get()->GetInstance()->swapchain->extent,
         format,
         nullptr
     );
@@ -40,7 +40,7 @@ static void AddOwnedAttachment(
     ));
 
     HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
-        engine->GetInstance()->GetDevice(),
+        Engine::Get()->GetInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
         &attachment_ref
@@ -50,13 +50,12 @@ static void AddOwnedAttachment(
 }
 
 static void AddSharedAttachment(
-    Engine *engine,
     UInt attachment_index,
     Handle<RenderPass> &render_pass,
     Array<std::unique_ptr<Attachment>> &attachments
 )
 {
-    auto &opaque_fbo = engine->GetDeferredSystem()[BUCKET_OPAQUE].GetFramebuffers()[0];
+    auto &opaque_fbo = Engine::Get()->GetDeferredSystem()[BUCKET_OPAQUE].GetFramebuffers()[0];
     AssertThrow(opaque_fbo != nullptr);
 
     renderer::AttachmentRef *attachment_ref;
@@ -64,7 +63,7 @@ static void AddSharedAttachment(
     AssertThrow(attachment_index < opaque_fbo->GetFramebuffer().GetAttachmentRefs().size());
 
     HYPERION_ASSERT_RESULT(opaque_fbo->GetFramebuffer().GetAttachmentRefs().at(attachment_index)->AddAttachmentRef(
-        engine->GetInstance()->GetDevice(),
+        Engine::Get()->GetInstance()->GetDevice(),
         renderer::StoreOperation::STORE,
         &attachment_ref
     ));
@@ -74,17 +73,17 @@ static void AddSharedAttachment(
     render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 }
 
-static InternalFormat GetImageFormat(Engine *engine, GBufferResourceName resource)
+static InternalFormat GetImageFormat( GBufferResourceName resource)
 {
     InternalFormat color_format;
 
     if (const InternalFormat *format = DeferredSystem::gbuffer_resources[resource].format.TryGet<InternalFormat>()) {
         color_format = *format;
     } else if (const TextureFormatDefault *default_format = DeferredSystem::gbuffer_resources[resource].format.TryGet<TextureFormatDefault>()) {
-        color_format = engine->GetDefaultFormat(*default_format);   
+        color_format = Engine::Get()->GetDefaultFormat(*default_format);   
     } else if (const Array<InternalFormat> *default_formats = DeferredSystem::gbuffer_resources[resource].format.TryGet<Array<InternalFormat>>()) {
         for (const InternalFormat format : *default_formats) {
-            if (engine->GetDevice()->GetFeatures().IsSupportedFormat(format, renderer::ImageSupportType::SRV)) {
+            if (Engine::Get()->GetDevice()->GetFeatures().IsSupportedFormat(format, renderer::ImageSupportType::SRV)) {
                 color_format = format;
 
                 break;
@@ -104,32 +103,32 @@ DeferredSystem::DeferredSystem()
     }
 }
 
-void DeferredSystem::AddFramebuffersToPipelines(Engine *engine)
+void DeferredSystem::AddFramebuffersToPipelines()
 {
     for (auto &bucket : m_buckets) {
         bucket.AddFramebuffersToPipelines();
     }
 }
 
-void DeferredSystem::AddPendingRendererInstances(Engine *engine)
+void DeferredSystem::AddPendingRendererInstances()
 {
     for (auto &bucket : m_buckets) {
-        bucket.AddPendingRendererInstances(engine);
+        bucket.AddPendingRendererInstances();
     }
 }
 
-void DeferredSystem::Create(Engine *engine)
+void DeferredSystem::Create()
 {
     for (auto &bucket : m_buckets) {
-        bucket.CreateRenderPass(engine);
-        bucket.CreateFramebuffers(engine);
+        bucket.CreateRenderPass();
+        bucket.CreateFramebuffers();
     }
 }
 
-void DeferredSystem::Destroy(Engine *engine)
+void DeferredSystem::Destroy()
 {
     for (auto &bucket : m_buckets) {
-        bucket.Destroy(engine);
+        bucket.Destroy();
     }
 }
 
@@ -158,7 +157,7 @@ void DeferredSystem::RendererInstanceHolder::AddRendererInstance(Handle<Renderer
     );
 }
 
-void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -174,7 +173,7 @@ void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances(Engine 
     for (auto it = renderer_instances_pending_addition.Begin(); it != renderer_instances_pending_addition.End(); ++it) {
         AssertThrow(*it != nullptr);
 
-        engine->InitObject(*it);
+        Engine::Get()->InitObject(*it);
 
         renderer_instances.PushBack(std::move(*it));
     }
@@ -197,7 +196,7 @@ void DeferredSystem::RendererInstanceHolder::AddFramebuffersToPipeline(Handle<Re
     }
 }
 
-void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::CreateRenderPass()
 {
     AssertThrow(render_pass == nullptr);
 
@@ -207,17 +206,16 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    render_pass = engine->CreateHandle<RenderPass>(
+    render_pass = Engine::Get()->CreateHandle<RenderPass>(
         RenderPassStage::SHADER,
         mode
     );
 
-    const InternalFormat color_format = GetImageFormat(engine, GBUFFER_RESOURCE_ALBEDO);
+    const InternalFormat color_format = GetImageFormat(GBUFFER_RESOURCE_ALBEDO);
 
     if (bucket == BUCKET_UI) {
         // ui only has this attachment.
         AddOwnedAttachment(
-            engine,
             color_format,
             render_pass,
             attachments
@@ -226,7 +224,6 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         // add gbuffer attachments
         // color attachment is unique for all buckets
         AddOwnedAttachment(
-            engine,
             color_format,
             render_pass,
             attachments
@@ -236,10 +233,9 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
         // which will be shared with other renderable buckets
         if (bucket == BUCKET_OPAQUE) {
             for (UInt i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
-                const InternalFormat format = GetImageFormat(engine, GBufferResourceName(i));
+                const InternalFormat format = GetImageFormat(GBufferResourceName(i));
 
                 AddOwnedAttachment(
-                    engine,
                     format,
                     render_pass,
                     attachments
@@ -249,7 +245,6 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
             // add the attachments shared with opaque bucket
             for (UInt i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
                 AddSharedAttachment(
-                    engine,
                     i,
                     render_pass,
                     attachments
@@ -259,17 +254,17 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass(Engine *engine)
     }
 
     for (const auto &attachment : attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
+        HYPERION_ASSERT_RESULT(attachment->Create(Engine::Get()->GetInstance()->GetDevice()));
     }
     
-    engine->InitObject(render_pass);
+    Engine::Get()->InitObject(render_pass);
 }
 
-void DeferredSystem::RendererInstanceHolder::CreateFramebuffers(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::CreateFramebuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto framebuffer = engine->CreateHandle<Framebuffer>(
-            engine->GetInstance()->swapchain->extent,
+        auto framebuffer = Engine::Get()->CreateHandle<Framebuffer>(
+            Engine::Get()->GetInstance()->swapchain->extent,
             Handle<RenderPass>(render_pass)
         );
 
@@ -277,12 +272,12 @@ void DeferredSystem::RendererInstanceHolder::CreateFramebuffers(Engine *engine)
             framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 
-        engine->InitObject(framebuffer);
+        Engine::Get()->InitObject(framebuffer);
         framebuffers[frame_index] = std::move(framebuffer);
     }
 }
 
-void DeferredSystem::RendererInstanceHolder::Destroy(Engine *engine)
+void DeferredSystem::RendererInstanceHolder::Destroy()
 {
     auto result = renderer::Result::OK;
 
@@ -296,7 +291,7 @@ void DeferredSystem::RendererInstanceHolder::Destroy(Engine *engine)
 
     for (const auto &attachment : attachments) {
         HYPERION_PASS_ERRORS(
-            attachment->Destroy(engine->GetInstance()->GetDevice()),
+            attachment->Destroy(Engine::Get()->GetInstance()->GetDevice()),
             result
         );
     }

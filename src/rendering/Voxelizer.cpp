@@ -23,18 +23,18 @@ Voxelizer::~Voxelizer()
     Teardown();
 }
 
-void Voxelizer::Init(Engine *engine)
+void Voxelizer::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
     const auto voxel_map_size_signed = static_cast<Int64>(voxel_map_size);
 
-    m_scene = engine->CreateHandle<Scene>(
-        engine->CreateHandle<Camera>(new OrthoCamera(
+    m_scene = Engine::Get()->CreateHandle<Scene>(
+        Engine::Get()->CreateHandle<Camera>(new OrthoCamera(
             voxel_map_size, voxel_map_size,
             -voxel_map_size_signed / 2, voxel_map_size_signed / 2,
             -voxel_map_size_signed / 2, voxel_map_size_signed / 2,
@@ -42,18 +42,16 @@ void Voxelizer::Init(Engine *engine)
         ))
     );
 
-    engine->InitObject(m_scene);
+    Engine::Get()->InitObject(m_scene);
     
-    CreateBuffers(engine);
-    CreateShader(engine);
-    CreateRenderPass(engine);
-    CreateFramebuffer(engine);
-    CreateDescriptors(engine);
-    CreatePipeline(engine);
+    CreateBuffers();
+    CreateShader();
+    CreateRenderPass();
+    CreateFramebuffer();
+    CreateDescriptors();
+    CreatePipeline();
 
     OnTeardown([this]() {
-        auto *engine = GetEngine();
-
         m_shader.Reset();
         m_framebuffer.Reset();
         m_render_pass.Reset();
@@ -67,21 +65,21 @@ void Voxelizer::Init(Engine *engine)
             {
             }
 
-            virtual Result operator()(Engine *engine)
+            virtual Result operator()()
             {
                 auto result = renderer::Result::OK;
 
                 if (voxelizer.m_counter != nullptr) {
-                    voxelizer.m_counter->Destroy(engine);
+                    voxelizer.m_counter->Destroy();
                 }
 
                 if (voxelizer.m_fragment_list_buffer != nullptr) {
-                    engine->SafeRelease(UniquePtr<StorageBuffer>(voxelizer.m_fragment_list_buffer.release()));
+                    Engine::Get()->SafeRelease(UniquePtr<StorageBuffer>(voxelizer.m_fragment_list_buffer.release()));
                 }
 
                 for (auto &attachment : voxelizer.m_attachments) {
                     HYPERION_PASS_ERRORS(
-                        attachment->Destroy(engine->GetInstance()->GetDevice()),
+                        attachment->Destroy(Engine::Get()->GetInstance()->GetDevice()),
                         result
                     );
                 }
@@ -94,7 +92,7 @@ void Voxelizer::Init(Engine *engine)
 
         RenderCommands::Push<RENDER_COMMAND(DestroyVoxelizer)>(*this);
 
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
 
         m_renderer_instance.Reset();
         m_attachments.clear();
@@ -104,7 +102,7 @@ void Voxelizer::Init(Engine *engine)
     });
 }
 
-void Voxelizer::CreatePipeline(Engine *engine)
+void Voxelizer::CreatePipeline()
 {
     auto renderer_instance = std::make_unique<RendererInstance>(
         std::move(m_shader),
@@ -121,11 +119,11 @@ void Voxelizer::CreatePipeline(Engine *engine)
         )
     );
     
-    engine->InitObject(m_framebuffer);
+    Engine::Get()->InitObject(m_framebuffer);
     
-    m_renderer_instance = engine->AddRendererInstance(std::move(renderer_instance));
+    m_renderer_instance = Engine::Get()->AddRendererInstance(std::move(renderer_instance));
     
-    for (auto &item : engine->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
+    for (auto &item : Engine::Get()->GetDeferredSystem().Get(Bucket::BUCKET_OPAQUE).GetRendererInstances()) {
         for (auto &entity : item->GetEntities()) {
             if (entity != nullptr) {
                 m_renderer_instance->AddEntity(Handle<Entity>(entity));
@@ -133,10 +131,10 @@ void Voxelizer::CreatePipeline(Engine *engine)
         }
     }
 
-    engine->InitObject(m_renderer_instance);
+    Engine::Get()->InitObject(m_renderer_instance);
 }
 
-void Voxelizer::CreateBuffers(Engine *engine)
+void Voxelizer::CreateBuffers()
 {
     m_counter = std::make_unique<AtomicCounter>();
     m_fragment_list_buffer = std::make_unique<StorageBuffer>();
@@ -150,14 +148,14 @@ void Voxelizer::CreateBuffers(Engine *engine)
         {
         }
 
-        virtual Result operator()(Engine *engine)
+        virtual Result operator()()
         {
             auto result = Result::OK;
 
-            voxelizer.m_counter->Create(engine);
+            voxelizer.m_counter->Create();
             
             HYPERION_PASS_ERRORS(
-                voxelizer.m_fragment_list_buffer->Create(engine->GetInstance()->GetDevice(), default_fragment_list_buffer_size),
+                voxelizer.m_fragment_list_buffer->Create(Engine::Get()->GetInstance()->GetDevice(), default_fragment_list_buffer_size),
                 result
             );
 
@@ -168,15 +166,15 @@ void Voxelizer::CreateBuffers(Engine *engine)
     RenderCommands::Push<RENDER_COMMAND(CreateVoxelizerBuffers)>(*this);
 }
 
-void Voxelizer::CreateShader(Engine *engine)
+void Voxelizer::CreateShader()
 {
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
     };
 
-    if (engine->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
-        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}});
+    if (Engine::Get()->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
+        sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}});
     } else {
         DebugLog(
             LogType::Debug,
@@ -184,31 +182,31 @@ void Voxelizer::CreateShader(Engine *engine)
         );
     }
     
-    m_shader = engine->CreateHandle<Shader>(sub_shaders);
-    engine->InitObject(m_shader);
+    m_shader = Engine::Get()->CreateHandle<Shader>(sub_shaders);
+    Engine::Get()->InitObject(m_shader);
 }
 
-void Voxelizer::CreateRenderPass(Engine *engine)
+void Voxelizer::CreateRenderPass()
 {
-    m_render_pass = engine->CreateHandle<RenderPass>(
+    m_render_pass = Engine::Get()->CreateHandle<RenderPass>(
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
-    engine->InitObject(m_render_pass);
+    Engine::Get()->InitObject(m_render_pass);
 }
 
-void Voxelizer::CreateFramebuffer(Engine *engine)
+void Voxelizer::CreateFramebuffer()
 {
-    m_framebuffer = engine->CreateHandle<Framebuffer>(
+    m_framebuffer = Engine::Get()->CreateHandle<Framebuffer>(
         Extent2D { voxel_map_size, voxel_map_size },
         Handle<RenderPass>(m_render_pass)
     );
     
-    engine->InitObject(m_framebuffer);
+    Engine::Get()->InitObject(m_framebuffer);
 }
 
-void Voxelizer::CreateDescriptors(Engine *engine)
+void Voxelizer::CreateDescriptors()
 {
     struct RENDER_COMMAND(CreateVoxelizerDescriptors) : RenderCommandBase2
     {
@@ -219,9 +217,9 @@ void Voxelizer::CreateDescriptors(Engine *engine)
         {
         }
 
-        virtual Result operator()(Engine *engine)
+        virtual Result operator()()
         {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
             descriptor_set
@@ -248,7 +246,7 @@ void Voxelizer::CreateDescriptors(Engine *engine)
 /* We only reconstruct the buffer if the number of rendered fragments is
  * greater than what our buffer can hold (or the buffer has not yet been created).
  * We round up to the nearest power of two. */
-void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *)
+void Voxelizer::ResizeFragmentListBuffer( Frame *)
 {
     const SizeType new_size = m_num_fragments * sizeof(Fragment);
 
@@ -265,17 +263,17 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *)
         new_size
     );
 
-    engine->SafeRelease(UniquePtr<StorageBuffer>(m_fragment_list_buffer.release()));
+    Engine::Get()->SafeRelease(UniquePtr<StorageBuffer>(m_fragment_list_buffer.release()));
 
     m_fragment_list_buffer.reset(new StorageBuffer);
     
     HYPERION_ASSERT_RESULT(m_fragment_list_buffer->Create(
-        engine->GetInstance()->GetDevice(),
+        Engine::Get()->GetInstance()->GetDevice(),
         new_size
     ));
 
     // TODO! frame index
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+    auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
     descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
@@ -284,29 +282,29 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine, Frame *)
         .buffer = m_fragment_list_buffer.get()
     });
 
-    descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
+    descriptor_set->ApplyUpdates(Engine::Get()->GetInstance()->GetDevice());
 }
 
-void Voxelizer::RenderFragmentList(Engine *engine, Frame *, bool count_mode)
+void Voxelizer::RenderFragmentList( Frame *, bool count_mode)
 {
     m_renderer_instance->GetPipeline()->push_constants.voxelizer_data = {
         .grid_size = voxel_map_size,
         .count_mode = count_mode
     };
 
-    auto single_time_commands = engine->GetInstance()->GetSingleTimeCommands();
+    auto single_time_commands = Engine::Get()->GetInstance()->GetSingleTimeCommands();
 
     single_time_commands.Push([&](CommandBuffer *command_buffer) {
         auto temp_frame = Frame::TemporaryFrame(command_buffer);
 
         m_framebuffer->BeginCapture(command_buffer);
         
-        if (!engine->render_state.GetScene()) {
-            engine->render_state.BindScene(m_scene.Get());
-            m_renderer_instance->Render(engine, &temp_frame);
-            engine->render_state.UnbindScene();
+        if (!Engine::Get()->render_state.GetScene()) {
+            Engine::Get()->render_state.BindScene(m_scene.Get());
+            m_renderer_instance->Render(&temp_frame);
+            Engine::Get()->render_state.UnbindScene();
         } else {
-            m_renderer_instance->Render(engine, &temp_frame);
+            m_renderer_instance->Render(&temp_frame);
         }
 
         m_framebuffer->EndCapture(command_buffer);
@@ -314,27 +312,27 @@ void Voxelizer::RenderFragmentList(Engine *engine, Frame *, bool count_mode)
         HYPERION_RETURN_OK;
     });
 
-    HYPERION_ASSERT_RESULT(single_time_commands.Execute(engine->GetDevice()));
+    HYPERION_ASSERT_RESULT(single_time_commands.Execute(Engine::Get()->GetDevice()));
 }
 
-void Voxelizer::Render(Engine *engine, Frame *frame)
+void Voxelizer::Render( Frame *frame)
 {
     m_scene->GetCamera()->UpdateMatrices();
 
-    m_counter->Reset(engine);
+    m_counter->Reset();
 
-    RenderFragmentList(engine, frame, true);
+    RenderFragmentList(frame, true);
 
-    m_num_fragments = m_counter->Read(engine);
+    m_num_fragments = m_counter->Read();
     DebugLog(LogType::Debug, "Render %lu fragments (%llu MiB)\n", m_num_fragments, (m_num_fragments * sizeof(Fragment)) / 1000000ull);
 
-    ResizeFragmentListBuffer(engine, frame);
+    ResizeFragmentListBuffer(frame);
 
-    m_counter->Reset(engine);
+    m_counter->Reset();
 
     /* now we render the scene again, this time storing color values into the
      * fragment list buffer.  */
-    RenderFragmentList(engine, frame, false);
+    RenderFragmentList(frame, false);
 }
 
 } // namespace hyperion::v2

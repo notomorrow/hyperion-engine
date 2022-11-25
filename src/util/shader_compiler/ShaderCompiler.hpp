@@ -431,7 +431,7 @@ public:
         }
     };
 
-    ShaderCompiler(Engine *engine);
+    ShaderCompiler();
     ShaderCompiler(const ShaderCompiler &other) = delete;
     ShaderCompiler &operator=(const ShaderCompiler &other) = delete;
     ~ShaderCompiler();
@@ -495,7 +495,6 @@ private:
         CompiledShaderBatch &out
     );
 
-    Engine *m_engine;
     DefinitionsFile *m_definitions;
     ShaderCache m_cache;
     Array<Bundle> m_bundles;

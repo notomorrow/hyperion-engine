@@ -1,7 +1,9 @@
 #ifndef HYPERION_V2_COMPONENTS_BASE_H
 #define HYPERION_V2_COMPONENTS_BASE_H
 
+#include <core/Core.hpp>
 #include <core/Containers.hpp>
+#include <Component.hpp>
 #include <core/Class.hpp>
 #include <core/Handle.hpp>
 #include <core/lib/TypeMap.hpp>
@@ -21,10 +23,6 @@ namespace hyperion::v2 {
 
 using renderer::Instance;
 using renderer::Device;
-
-class Engine;
-
-Device *GetEngineDevice(Engine *engine);
 
 template <class Parent>
 struct AttachmentSet
@@ -180,8 +178,7 @@ public:
           m_init_info(init_info),
           m_id(empty_id),
           m_init_called(false),
-          m_is_ready(false),
-          m_engine(nullptr)
+          m_is_ready(false)
     {
     }
 
@@ -234,27 +231,9 @@ public:
     /*! \brief Just a function to store that Init() has been called from a derived class
      * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.
      */
-    void Init(Engine *engine)
+    void Init()
     {
-        AssertThrowMsg(
-            engine != nullptr,
-            "Engine was nullptr!"
-        );
-
         m_init_called.store(true);
-        m_engine = engine;
-
-        //m_attachment_map.InitializeAll(static_cast<InnerType *>(this));
-    }
-
-    HYP_FORCE_INLINE Engine *GetEngine() const
-    {
-        AssertThrowMsg(
-            m_engine != nullptr,
-            "GetEngine() called when engine is not set! This indicates using a component which has not had Init() called on it."
-        );
-
-        return m_engine;
     }
 
 protected:
@@ -263,9 +242,7 @@ protected:
 
     void Teardown()
     {
-        if (IsInitCalled()) {
-            GetEngine()->GetObjectSystem().template Release<InnerType>(GetID());
-        }
+        RemoveFromObjectSystem();
 
         CallbackTrackable::Teardown();
     }
@@ -285,7 +262,6 @@ protected:
     void Destroy()
     {
         m_init_called.store(false);
-        m_engine = nullptr;
     }
     
     void SetReady(bool is_ready)
@@ -313,10 +289,18 @@ protected:
     String m_name;
     std::atomic_bool m_init_called;
     std::atomic_bool m_is_ready;
-    Engine *m_engine;
     InitInfo m_init_info;
 
     //AttachmentMap<InnerType> m_attachment_map;
+
+private:
+
+    void RemoveFromObjectSystem()
+    {
+        if (IsInitCalled()) {
+            GetObjectSystem().template Release<InnerType>(GetID());
+        }
+    }
 };
 
 template <class Type, class WrappedType>
@@ -361,7 +345,7 @@ public:
 
     /* Standard non-specialized initialization function */
     template <class ...Args>
-    void Create(Engine *engine, Args &&... args)
+    void Create( Args &&... args)
     {
         const char *wrapped_type_name = EngineComponentBase<Type>::GetClass().GetName();
 
@@ -371,7 +355,7 @@ public:
             wrapped_type_name
         );
 
-        auto result = m_wrapped.Create(GetEngineDevice(engine), std::forward<Args>(args)...);
+        auto result = m_wrapped.Create(GetEngineDevice(), std::forward<Args>(args)...);
         AssertThrowMsg(
             result,
             "Creation of object of type %s failed.\n\tError Code: %d\n\tMessage: %s",
@@ -386,12 +370,12 @@ public:
         m_wrapped_destroyed = false;
 #endif
 
-        EngineComponentBase<Type>::Init(engine);
+        EngineComponentBase<Type>::Init();
     }
 
     /* Standard non-specialized destruction function */
     template <class ...Args>
-    void Destroy(Engine *engine, Args &&... args)
+    void Destroy( Args &&... args)
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 
@@ -409,7 +393,7 @@ public:
             wrapped_type_name
         );
 
-        auto result = m_wrapped.Destroy(GetEngineDevice(engine), std::move(args)...);
+        auto result = m_wrapped.Destroy(GetEngineDevice(), std::move(args)...);
         AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
 
         m_wrapped_created = false;

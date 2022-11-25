@@ -91,10 +91,8 @@ public:
         { return m_updates_pending.load(); }
 
     /*! \brief Adds and removes all pending items to be added or removed.
-        Only call from the owner thread.
-        @param engine A pointer to the Engine object. Used to initialize any newly objects. */
-    template <class Engine>
-    void UpdateItems(Engine *engine)
+        Only call from the owner thread.*/
+    void UpdateItems()
     {
         Threads::AssertOnThread(m_owner_thread);
 
@@ -131,7 +129,7 @@ public:
             });
 
             if (it == m_owned_items.End()) {
-                // engine->InitObject(front);
+                // Engine::Get()->InitObject(front);
 
                 m_owned_items.PushBack(std::move(front));
             }

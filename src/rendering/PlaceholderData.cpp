@@ -43,9 +43,9 @@ PlaceholderData::PlaceholderData()
 {
 }
 
-void PlaceholderData::Create(Engine *engine)
+void PlaceholderData::Create()
 {
-    auto *device = engine->GetDevice();
+    auto *device = Engine::Get()->GetDevice();
 
     HYPERION_ASSERT_RESULT(m_image_2d_1x1_r8.Create(device));
     HYPERION_ASSERT_RESULT(m_image_view_2d_1x1_r8.Create(device, &m_image_2d_1x1_r8));
@@ -60,9 +60,9 @@ void PlaceholderData::Create(Engine *engine)
     HYPERION_ASSERT_RESULT(m_sampler_nearest.Create(device));
 }
 
-void PlaceholderData::Destroy(Engine *engine)
+void PlaceholderData::Destroy()
 {
-    auto *device = engine->GetDevice();
+    auto *device = Engine::Get()->GetDevice();
 
     HYPERION_ASSERT_RESULT(m_image_2d_1x1_r8.Destroy(device));
     HYPERION_ASSERT_RESULT(m_image_view_2d_1x1_r8.Destroy(device));
