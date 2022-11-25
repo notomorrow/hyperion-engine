@@ -1,11 +1,12 @@
 #ifndef HYPERION_V2_FBOM_MARSHALER_HPP
 #define HYPERION_V2_FBOM_MARSHALER_HPP
 
+#include <core/Core.hpp>
+#include <core/lib/UniquePtr.hpp>
+
 #include <asset/serialization/fbom/FBOMDeserializedObject.hpp>
 #include <asset/serialization/fbom/FBOMType.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
-
-#include <core/lib/UniquePtr.hpp>
 
 #include <Constants.hpp>
 
@@ -28,7 +29,7 @@ public:
 
 protected:
     virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
+    virtual FBOMResult Deserialize( const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
 };
 
 template <class T>
@@ -40,7 +41,7 @@ public:
     virtual FBOMType GetObjectType() const override = 0;
 
     virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(Engine *, const FBOMObject &in, UniquePtr<T> &out_object) const = 0;
+    virtual FBOMResult Deserialize( const FBOMObject &in, UniquePtr<T> &out_object) const = 0;
 
 private:
     virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
@@ -50,16 +51,16 @@ private:
         return Serialize(*extracted_value.Get(), out);
     }
 
-    virtual FBOMResult Deserialize(Engine *engine, const FBOMObject &in, FBOMDeserializedObject &out) const override
+    virtual FBOMResult Deserialize( const FBOMObject &in, FBOMDeserializedObject &out) const override
     {
         UniquePtr<T> ptr;
 
-        auto result = Deserialize(engine, in, ptr);
+        auto result = Deserialize(in, ptr);
 
         if (result.value == FBOMResult::FBOM_OK) {
             AssertThrow(ptr != nullptr);
 
-            auto result_value = AssetLoaderWrapper<T>::MakeResultType(engine, std::move(ptr));
+            auto result_value = AssetLoaderWrapper<T>::MakeResultType(GetEngine(), std::move(ptr));
             AssertThrow(result_value.Get() != nullptr);
 
             out.Set<T>(std::move(result_value));

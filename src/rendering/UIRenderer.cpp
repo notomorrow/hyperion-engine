@@ -22,10 +22,10 @@ struct RENDER_COMMAND(CreateUIDescriptors) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set
@@ -47,13 +47,13 @@ struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         auto result = renderer::Result::OK;
 
         // remove descriptors from global descriptor set
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             // set to placeholder data.
@@ -61,7 +61,7 @@ struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommandBase2
                 ->GetDescriptor(DescriptorKey::UI_TEXTURE)
                 ->SetSubDescriptor({
                     .element_index = UInt(component_index),
-                    .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                    .image_view = &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8()
                 });
         }
 
@@ -81,40 +81,38 @@ UIRenderer::~UIRenderer()
     Teardown();
 }
 
-void UIRenderer::Init(Engine *engine)
+void UIRenderer::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
-    engine->InitObject(m_scene);
+    Engine::Get()->InitObject(m_scene);
 
-    CreateFramebuffers(engine);
-    CreateDescriptors(engine);
+    CreateFramebuffers();
+    CreateDescriptors();
 
     SetReady(true);
 
     OnTeardown([this]() {
         SetReady(false);
 
-        auto *engine = GetEngine();
-
         RenderCommands::Push<RENDER_COMMAND(DestroyUIDescriptors)>(GetComponentIndex());
 
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 
-void UIRenderer::CreateFramebuffers(Engine *engine)
+void UIRenderer::CreateFramebuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_framebuffers[frame_index] = engine->GetDeferredSystem()[Bucket::BUCKET_UI].GetFramebuffers()[frame_index];
+        m_framebuffers[frame_index] = Engine::Get()->GetDeferredSystem()[Bucket::BUCKET_UI].GetFramebuffers()[frame_index];
     }
 }
 
-void UIRenderer::CreateDescriptors(Engine *engine)
+void UIRenderer::CreateDescriptors()
 {
     // create descriptors in render thread
     RenderCommands::Push<RENDER_COMMAND(CreateUIDescriptors)>(
@@ -127,13 +125,13 @@ void UIRenderer::CreateDescriptors(Engine *engine)
 }
 
 // called from game thread
-void UIRenderer::InitGame(Engine *engine) { }
+void UIRenderer::InitGame() { }
 
 void UIRenderer::OnRemoved() { }
 
-void UIRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta) { }
+void UIRenderer::OnUpdate( GameCounter::TickUnit delta) { }
 
-void UIRenderer::OnRender(Engine *engine, Frame *frame)
+void UIRenderer::OnRender( Frame *frame)
 {
     // Threads::AssertOnThread(THREAD_RENDER);
 
@@ -141,13 +139,13 @@ void UIRenderer::OnRender(Engine *engine, Frame *frame)
     const auto frame_index = frame->GetFrameIndex();
 
     m_framebuffers[frame_index]->BeginCapture(command_buffer);
-    engine->render_state.BindScene(m_scene.Get());
+    Engine::Get()->render_state.BindScene(m_scene.Get());
 
-    for (auto &renderer_instance : engine->GetDeferredSystem().Get(Bucket::BUCKET_UI).GetRendererInstances()) {
-        renderer_instance->Render(engine, frame);
+    for (auto &renderer_instance : Engine::Get()->GetDeferredSystem().Get(Bucket::BUCKET_UI).GetRendererInstances()) {
+        renderer_instance->Render(frame);
     }
 
-    engine->render_state.UnbindScene();
+    Engine::Get()->render_state.UnbindScene();
     m_framebuffers[frame_index]->EndCapture(command_buffer);
 }
 

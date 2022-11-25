@@ -35,13 +35,13 @@ Script::~Script()
     Teardown();
 }
 
-void Script::Init(Engine *engine)
+void Script::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 }
 
 bool Script::Compile()

@@ -16,15 +16,15 @@ SSAOEffect::SSAOEffect()
 
 SSAOEffect::~SSAOEffect() = default;
 
-Handle<Shader> SSAOEffect::CreateShader(Engine *engine)
+Handle<Shader> SSAOEffect::CreateShader()
 {
-    return engine->CreateHandle<Shader>(
+    return Engine::Get()->CreateHandle<Shader>(
         std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {
-                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
+                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/SSAO.frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/SSAO.frag.spv")).ReadBytes()
             }}
         }
     );

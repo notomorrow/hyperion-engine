@@ -47,7 +47,7 @@ PostFXPass::PostFXPass(
 
 PostFXPass::~PostFXPass() = default;
 
-void PostFXPass::CreateDescriptors(Engine *engine)
+void PostFXPass::CreateDescriptors()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -55,7 +55,7 @@ void PostFXPass::CreateDescriptors(Engine *engine)
         auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
     
         if (!framebuffer.GetAttachmentRefs().empty()) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
             auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(m_descriptor_key);
 
             AssertThrowMsg(framebuffer.GetAttachmentRefs().size() == 1, "> 1 attachments not supported currently for full screen passes");
@@ -93,43 +93,41 @@ PostProcessingEffect::~PostProcessingEffect()
     Teardown();
 }
 
-void PostProcessingEffect::Init(Engine *engine)
+void PostProcessingEffect::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
-    m_shader = CreateShader(engine);
-    engine->InitObject(m_shader);
+    m_shader = CreateShader();
+    Engine::Get()->InitObject(m_shader);
 
     m_pass.SetShader(Handle<Shader>(m_shader));
-    m_pass.Create(engine);
+    m_pass.Create();
 
     SetReady(true);
 
     OnTeardown([this]() {
-        auto *engine = GetEngine();
-
         SetReady(false);
 
-        m_pass.Destroy(engine);
+        m_pass.Destroy();
         m_shader.Reset();
 
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 
 PostProcessing::PostProcessing() = default;
 PostProcessing::~PostProcessing() = default;
 
-void PostProcessing::Create(Engine *engine)
+void PostProcessing::Create()
 {
     // Fill out placeholder images -- 8 pre, 8 post.
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             for (auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
                 auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(descriptor_key);
@@ -137,7 +135,7 @@ void PostProcessing::Create(Engine *engine)
                 for (UInt effect_index = 0; effect_index < 8; effect_index++) {
                     descriptor->SetSubDescriptor({
                         .element_index = effect_index,
-                        .image_view = &engine->GetPlaceholderData().GetImageView2D1x1R8()
+                        .image_view = &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8()
                     });
                 }
             }
@@ -147,25 +145,25 @@ void PostProcessing::Create(Engine *engine)
     for (auto &effect : m_pre_effects) {
         AssertThrow(effect.second != nullptr);
 
-        effect.second->Init(engine);
+        effect.second->Init();
     }
     
     for (auto &effect : m_post_effects) {
         AssertThrow(effect.second != nullptr);
 
-        effect.second->Init(engine);
+        effect.second->Init();
     }
 
-    CreateUniformBuffer(engine);
+    CreateUniformBuffer();
 }
 
-void PostProcessing::Destroy(Engine *engine)
+void PostProcessing::Destroy()
 {
     m_pre_effects.Clear();
     m_post_effects.Clear();
 
     for (const auto descriptor_set_index : DescriptorSet::global_buffer_mapping) {
-        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(descriptor_set_index);
+        auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(descriptor_set_index);
 
         descriptor_set->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
             ->RemoveSubDescriptor(0);
@@ -176,14 +174,14 @@ void PostProcessing::Destroy(Engine *engine)
         }
     }
 
-    HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(engine->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(Engine::Get()->GetDevice()));
 }
 
-void PostProcessing::CreateUniformBuffer(Engine *engine)
+void PostProcessing::CreateUniformBuffer()
 {
     Threads::AssertOnThread(THREAD_RENDER);
     
-    HYPERION_ASSERT_RESULT(m_uniform_buffer.Create(engine->GetDevice(), sizeof(PostProcessingUniforms)));
+    HYPERION_ASSERT_RESULT(m_uniform_buffer.Create(Engine::Get()->GetDevice(), sizeof(PostProcessingUniforms)));
 
     PostProcessingUniforms post_processing_uniforms{};
 
@@ -215,13 +213,13 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
     }
 
     m_uniform_buffer.Copy(
-        engine->GetDevice(),
+        Engine::Get()->GetDevice(),
         sizeof(PostProcessingUniforms),
         &post_processing_uniforms
     );
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+        auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
@@ -232,7 +230,7 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
     }
 }
 
-void PostProcessing::RenderPre(Engine *engine, Frame *frame) const
+void PostProcessing::RenderPre( Frame *frame) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -245,14 +243,14 @@ void PostProcessing::RenderPre(Engine *engine, Frame *frame) const
             .post_fx_data = { index << 1 }
         });
 
-        effect->GetPass().Record(engine, frame->GetFrameIndex());
-        effect->GetPass().Render(engine, frame);
+        effect->GetPass().Record(frame->GetFrameIndex());
+        effect->GetPass().Render(frame);
 
         ++index;
     }
 }
 
-void PostProcessing::RenderPost(Engine *engine, Frame *frame) const
+void PostProcessing::RenderPost( Frame *frame) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -265,8 +263,8 @@ void PostProcessing::RenderPost(Engine *engine, Frame *frame) const
             .post_fx_data = { (index << 1) | 1 }
         });
 
-        effect->GetPass().Record(engine, frame->GetFrameIndex());
-        effect->GetPass().Render(engine, frame);
+        effect->GetPass().Record(frame->GetFrameIndex());
+        effect->GetPass().Render(frame);
 
         ++index;
     }

@@ -15,7 +15,7 @@ void RenderScheduler::Commit(RenderCommandBase2 *ptr)
     m_num_enqueued.fetch_add(1, std::memory_order_relaxed);
 }
 
-RenderScheduler::FlushResult RenderScheduler::Flush(Engine *engine)
+RenderScheduler::FlushResult RenderScheduler::Flush()
 {
     FlushResult result { Result::OK, 0 };
 
@@ -27,7 +27,7 @@ RenderScheduler::FlushResult RenderScheduler::Flush(Engine *engine)
 
         ++result.num_executed;
 
-        result.result = (*front)(engine);
+        result.result = (*front)();
         front->~RenderCommandBase2();
 
         m_commands.PopFront();

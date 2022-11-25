@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_SAFE_DELETER_H
 #define HYPERION_V2_SAFE_DELETER_H
 
+#include <core/Core.hpp>
 #include <core/Containers.hpp>
 #include <core/lib/Pair.hpp>
 #include <core/Handle.hpp>
@@ -14,24 +15,17 @@
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 
-#include <Types.hpp>
-
 #include <mutex>
 #include <tuple>
 #include <atomic>
 
 namespace hyperion::v2 {
 
-
-class Engine;
-
 using renderer::Device;
 using renderer::GPUBuffer;
 using renderer::GPUImageMemory;
 
 using HandleDeletionMaskBits = UInt;
-
-extern Device *GetEngineDevice(Engine *engine);
 
 enum HandleDeletionMask : HandleDeletionMaskBits
 {
@@ -124,7 +118,7 @@ public:
         bool operator<(const HandleDeletionEntry &other) const
             { return Base::operator<(other); }
     
-        void PerformDeletion(Engine *engine, bool force = false)
+        void PerformDeletion( bool force = false)
         {
             // cycle should be at zero
             AssertThrow(force || Base::second == 0u);
@@ -174,14 +168,14 @@ public:
 
         ~BufferOrImageDeletionEntry() = default;
 
-        void PerformDeletion(Engine *engine, bool force = false)
+        void PerformDeletion( bool force = false)
         {
             // cycle should be at zero
             AssertThrow(force || Base::second == 0u);
 
             if (Base::first != nullptr) {
                 AssertThrow(destroy_buffer_fn != nullptr);
-                auto result = destroy_buffer_fn(Base::first.Get(), GetEngineDevice(engine));
+                auto result = destroy_buffer_fn(Base::first.Get(), GetEngineDevice());
 
                 if (!result) {
                     DebugLog(
@@ -200,42 +194,42 @@ public:
         }
     };
 
-    void PerformEnqueuedDeletions(Engine *engine);
-    void ForceReleaseAll(Engine *engine);
+    void PerformEnqueuedDeletions();
+    void ForceReleaseAll();
 
-    bool DeleteEnqueuedBuffersAndImages(Engine *engine)
+    bool DeleteEnqueuedBuffersAndImages()
     {
         auto &queue = m_buffers_and_images;
 
-        return DeleteEnqueuedItemsImpl(engine, queue);
+        return DeleteEnqueuedItemsImpl(queue);
     }
 
-    void ForceDeleteBuffersAndImages(Engine *engine)
+    void ForceDeleteBuffersAndImages()
     {
         auto &queue = m_buffers_and_images;
 
-        ForceDeleteEnqueuedItemsImpl(engine, queue);
+        ForceDeleteEnqueuedItemsImpl(queue);
     }
 
     template <class T>
-    bool DeleteEnqueuedHandlesOfType(Engine *engine)
+    bool DeleteEnqueuedHandlesOfType()
     {
         auto &queue = std::get<FlatSet<HandleDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
 
-        return DeleteEnqueuedItemsImpl(engine, queue);
+        return DeleteEnqueuedItemsImpl(queue);
     }
 
     template <class T>
-    void ForceDeleteHandlesOfType(Engine *engine)
+    void ForceDeleteHandlesOfType()
     {
         auto &queue = std::get<FlatSet<HandleDeletionEntry<T>>>(m_render_resource_deletion_queue_items);
 
-        ForceDeleteEnqueuedItemsImpl(engine, queue);
+        ForceDeleteEnqueuedItemsImpl(queue);
     }
 
     // returns true if all were completed
     template <class Container>
-    bool DeleteEnqueuedItemsImpl(Engine *engine, Container &queue)
+    bool DeleteEnqueuedItemsImpl( Container &queue)
     {
         for (auto it = queue.Begin(); it != queue.End();) {
             auto &front = *it;
@@ -243,7 +237,7 @@ public:
             AssertThrow(front.first != nullptr);
 
             if (!front.second) {
-                front.PerformDeletion(engine);
+                front.PerformDeletion();
 
                 it = queue.Erase(it);
             } else {
@@ -257,13 +251,13 @@ public:
     }
 
     template <class Container>
-    void ForceDeleteEnqueuedItemsImpl(Engine *engine, Container &queue)
+    void ForceDeleteEnqueuedItemsImpl( Container &queue)
     {
         for (auto it = queue.Begin(); it != queue.End();) {
             auto &front = *it;
 
             AssertThrow(front.first != nullptr);
-            front.PerformDeletion(engine, true);
+            front.PerformDeletion(true);
             it = queue.Erase(it);
         }
 

@@ -24,7 +24,6 @@ class Frame;
 
 namespace hyperion::v2 {
 
-class Engine;
 class RenderEnvironment;
 
 using renderer::Frame;
@@ -68,11 +67,11 @@ public:
     virtual void SetComponentIndex(Index index) { m_index = index; }
 
     /*! \brief Init the component. Runs in RENDER/MAIN thread. */
-    virtual void ComponentInit(Engine *engine) = 0;
+    virtual void ComponentInit() = 0;
     /*! \brief Update data for the component. Runs on GAME thread. */
-    virtual void ComponentUpdate(Engine *engine, GameCounter::TickUnit delta) { }
+    virtual void ComponentUpdate( GameCounter::TickUnit delta) { }
     /*! \brief Perform rendering. Runs in RENDER thread. */
-    virtual void ComponentRender(Engine *engine, Frame *frame) = 0;
+    virtual void ComponentRender( Frame *frame) = 0;
     /*! \brief Called when the component is removed. */
     virtual void ComponentRemoved() = 0;
 
@@ -125,35 +124,35 @@ public:
         }
     }
     
-    virtual void ComponentInit(Engine *engine) override final
+    virtual void ComponentInit() override final
     {
         // Threads::AssertOnThread(THREAD_RENDER);
         Threads::AssertOnThread(THREAD_GAME);
 
-        static_cast<Derived *>(this)->Init(engine);
+        static_cast<Derived *>(this)->Init();
 
         m_component_is_render_init = true;
     }
 
-    virtual void ComponentUpdate(Engine *engine, GameCounter::TickUnit delta) override final
+    virtual void ComponentUpdate( GameCounter::TickUnit delta) override final
     {
         Threads::AssertOnThread(THREAD_GAME);
 
         if (!m_component_is_game_init) {
-            static_cast<Derived *>(this)->InitGame(engine);
+            static_cast<Derived *>(this)->InitGame();
 
             m_component_is_game_init = true;
         }
 
-        static_cast<Derived *>(this)->OnUpdate(engine, delta);
+        static_cast<Derived *>(this)->OnUpdate(delta);
     }
 
-    virtual void ComponentRender(Engine *engine, Frame *frame) override final
+    virtual void ComponentRender( Frame *frame) override final
     {
         Threads::AssertOnThread(THREAD_RENDER);
 
         if (m_render_frame_slicing_counter >= m_render_frame_slicing) {
-            static_cast<Derived *>(this)->OnRender(engine, frame);
+            static_cast<Derived *>(this)->OnRender(frame);
 
             m_render_frame_slicing_counter = 0;
         } else {

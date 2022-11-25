@@ -12,15 +12,15 @@ TonemapEffect::TonemapEffect()
 
 TonemapEffect::~TonemapEffect() = default;
 
-Handle<Shader> TonemapEffect::CreateShader(Engine *engine)
+Handle<Shader> TonemapEffect::CreateShader()
 {
-    return engine->CreateHandle<Shader>(
+    return Engine::Get()->CreateHandle<Shader>(
         std::vector<SubShader> {
             SubShader{ShaderModule::Type::VERTEX, {
-                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
+                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->GetAssetManager().GetBasePath().Data(), "/vkshaders/tonemap.frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/tonemap.frag.spv")).ReadBytes()
             }}
         }
     );

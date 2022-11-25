@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_ASSET_LOADER_HPP
 #define HYPERION_V2_ASSET_LOADER_HPP
 
+#include <core/Core.hpp>
 #include <core/Containers.hpp>
 #include <core/Handle.hpp>
 #include <scene/Node.hpp>
@@ -166,7 +167,7 @@ struct AssetLoaderWrapper<Node>
     }
 
     template <class Engine>
-    static auto MakeCastedType(Engine *, UniquePtr<Node> &&casted_result) -> CastedType
+    static auto MakeCastedType(Engine *engine, UniquePtr<Node> &&casted_result) -> CastedType
     {
         if (casted_result) {
             return NodeProxy(casted_result.Release());
