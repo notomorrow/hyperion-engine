@@ -16,11 +16,11 @@ struct RENDER_COMMAND(CreateTLAS) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         return tlas->Create(
-            engine->GetDevice(),
-            engine->GetInstance(),
+            Engine::Get()->GetDevice(),
+            Engine::Get()->GetInstance(),
             std::vector<renderer::BottomLevelAccelerationStructure *>(blases.Begin(), blases.End())
         );
     }
@@ -35,9 +35,9 @@ struct RENDER_COMMAND(DestroyTLAS) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        return tlas->Destroy(engine->GetDevice());
+        return tlas->Destroy(Engine::Get()->GetDevice());
     }
 };
 
@@ -58,7 +58,7 @@ void TLAS::AddBLAS(Handle<BLAS> &&blas)
     }
 
     if (IsInitCalled()) {
-        if (!GetEngine()->InitObject(blas)) {
+        if (!Engine::Get()->InitObject(blas)) {
             // the blas could not be initialzied. not valid?
             return;
         }
@@ -70,13 +70,13 @@ void TLAS::AddBLAS(Handle<BLAS> &&blas)
     m_has_blas_updates.store(true);
 }
 
-void TLAS::Init(Engine *engine)
+void TLAS::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
     
     // add all pending to be added to the list
     if (m_has_blas_updates.load()) {
@@ -89,7 +89,7 @@ void TLAS::Init(Engine *engine)
 
     for (SizeType i = 0; i < m_blas.Size(); i++) {
         AssertThrow(m_blas[i] != nullptr);
-        AssertThrow(engine->InitObject(m_blas[i]));
+        AssertThrow(Engine::Get()->InitObject(m_blas[i]));
     }
 
     Array<BottomLevelAccelerationStructure *> internal_blases;
@@ -101,7 +101,7 @@ void TLAS::Init(Engine *engine)
 
     RenderCommands::Push<RENDER_COMMAND(CreateTLAS)>(&m_tlas, std::move(internal_blases));
 
-    HYP_FLUSH_RENDER_QUEUE(engine);
+    HYP_FLUSH_RENDER_QUEUE();
 
     SetReady(true);
 
@@ -119,7 +119,7 @@ void TLAS::Init(Engine *engine)
 
         RenderCommands::Push<RENDER_COMMAND(DestroyTLAS)>(&m_tlas);
 
-        HYP_FLUSH_RENDER_QUEUE(GetEngine());
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 
@@ -140,7 +140,7 @@ void TLAS::PerformBLASUpdates()
 }
 
 void TLAS::UpdateRender(
-    Engine *engine,
+    
     Frame *frame,
     RTUpdateStateFlags &out_update_state_flags
 )
@@ -162,10 +162,10 @@ void TLAS::UpdateRender(
         AssertThrow(blas->GetInternalBLAS().GetGeometries()[0]->GetPackedVertexStorageBuffer() != nullptr);
 
         //bool was_blas_rebuilt = false;
-        //blas->UpdateRender(engine, frame, was_blas_rebuilt);
+        //blas->UpdateRenderframe, was_blas_rebuilt);
     }
     
-    HYPERION_ASSERT_RESULT(m_tlas.UpdateStructure(engine->GetInstance(), out_update_state_flags));
+    HYPERION_ASSERT_RESULT(m_tlas.UpdateStructure(Engine::Get()->GetInstance(), out_update_state_flags));
 }
 
 } // namespace hyperion::v2

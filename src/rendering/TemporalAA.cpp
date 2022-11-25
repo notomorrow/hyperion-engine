@@ -29,19 +29,19 @@ struct RENDER_COMMAND(CreateTemporalAADescriptors) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             // create our own descriptor sets
             AssertThrow(descriptor_sets[frame_index] != nullptr);
             
             HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                engine->GetDevice(),
-                &engine->GetInstance()->GetDescriptorPool()
+                Engine::Get()->GetDevice(),
+                &Engine::Get()->GetInstance()->GetDescriptorPool()
             ));
 
             // Add the final result to the global descriptor set
-            auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set_globals
@@ -66,20 +66,20 @@ struct RENDER_COMMAND(DestroyTemporalAADescriptorsAndImageOutputs) : RenderComma
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         auto result = Result::OK;
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            image_outputs[frame_index].Destroy(engine->GetDevice());
+            image_outputs[frame_index].Destroy(Engine::Get()->GetDevice());
 
             // unset final result from the global descriptor set
-            auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::TEMPORAL_AA_RESULT)
-                ->SetElementSRV(0, &engine->GetPlaceholderData().GetImageView2D1x1R8());
+                ->SetElementSRV(0, &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8());
         }
 
         return result;
@@ -96,10 +96,10 @@ struct RENDER_COMMAND(CreateTemporalAAImageOutputs) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(engine->GetDevice()));
+            HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(Engine::Get()->GetDevice()));
         }
 
         HYPERION_RETURN_OK;
@@ -149,24 +149,24 @@ TemporalAA::TemporalAA(const Extent2D &extent)
 
 TemporalAA::~TemporalAA() = default;
 
-void TemporalAA::Create(Engine *engine)
+void TemporalAA::Create()
 {
-    CreateImages(engine);
-    CreateDescriptorSets(engine);
-    CreateComputePipelines(engine);
+    CreateImages();
+    CreateDescriptorSets();
+    CreateComputePipelines();
 }
 
-void TemporalAA::Destroy(Engine *engine)
+void TemporalAA::Destroy()
 {
     m_compute_taa.Reset();
 
     // release our owned descriptor sets
     for (auto &descriptor_set : m_descriptor_sets) {
-        engine->SafeRelease(std::move(descriptor_set));
+        Engine::Get()->SafeRelease(std::move(descriptor_set));
     }
     
     for (auto &uniform_buffer : m_uniform_buffers) {
-        engine->SafeRelease(std::move(uniform_buffer));
+        Engine::Get()->SafeRelease(std::move(uniform_buffer));
     }
 
     RenderCommands::Push<RENDER_COMMAND(DestroyTemporalAADescriptorsAndImageOutputs)>(
@@ -174,17 +174,17 @@ void TemporalAA::Destroy(Engine *engine)
         m_image_outputs.Data()
     );
 
-    HYP_FLUSH_RENDER_QUEUE(engine);
+    HYP_FLUSH_RENDER_QUEUE();
 }
 
-void TemporalAA::CreateImages(Engine *engine)
+void TemporalAA::CreateImages()
 {
     RenderCommands::Push<RENDER_COMMAND(CreateTemporalAAImageOutputs)>(
         m_image_outputs.Data()
     );
 }
 
-void TemporalAA::CreateDescriptorSets(Engine *engine)
+void TemporalAA::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
@@ -193,7 +193,7 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(0)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = &engine->GetDeferredRenderer()
+                .image_view = &Engine::Get()->GetDeferredRenderer()
                     .GetCombinedResult(frame_index)->GetImageView()
             });
 
@@ -202,7 +202,7 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
             ->SetSubDescriptor({
                 .element_index = 0u,
                 .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view,
-               // &engine->GetDeferredRenderer()
+               // &Engine::Get()->GetDeferredRenderer()
                //     .GetCombinedResult((frame_index + 1) % max_frames_in_flight)->GetImageView()
             });
 
@@ -210,7 +210,7 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(2)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
             });
 
@@ -218,7 +218,7 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<ImageDescriptor>(3)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .image_view = engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                     .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
             });
         
@@ -226,14 +226,14 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
         descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(4)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .sampler = &engine->GetPlaceholderData().GetSamplerLinear()
+                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
             });
         
         // nearest sampler
         descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(5)
             ->SetSubDescriptor({
                 .element_index = 0u,
-                .sampler = &engine->GetPlaceholderData().GetSamplerNearest()
+                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerNearest()
             });
 
         // output
@@ -252,22 +252,22 @@ void TemporalAA::CreateDescriptorSets(Engine *engine)
     );
 }
 
-void TemporalAA::CreateComputePipelines(Engine *engine)
+void TemporalAA::CreateComputePipelines()
 {
-    m_compute_taa = engine->CreateHandle<ComputePipeline>(
-        engine->CreateHandle<Shader>(engine->GetShaderCompiler().GetCompiledShader("TemporalAA")),
+    m_compute_taa = Engine::Get()->CreateHandle<ComputePipeline>(
+        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("TemporalAA")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    engine->InitObject(m_compute_taa);
+    Engine::Get()->InitObject(m_compute_taa);
 }
 
 void TemporalAA::Render(
-    Engine *engine,
+    
     Frame *frame
 )
 {
-    const auto &scene = engine->GetRenderState().GetScene().scene;
+    const auto &scene = Engine::Get()->GetRenderState().GetScene().scene;
 
     m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
@@ -282,7 +282,7 @@ void TemporalAA::Render(
 
     push_constants.dimensions = Extent2D(extent);
     push_constants.depth_texture_dimensions = Extent2D(
-        engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+        Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetAttachment()->GetImage()->GetExtent()
     );
     push_constants.camera_near_far = Vector2(scene.camera.clip_near, scene.camera.clip_far);
@@ -291,7 +291,7 @@ void TemporalAA::Render(
     m_compute_taa->GetPipeline()->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        engine->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetInstance()->GetDescriptorPool(),
         m_compute_taa->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0

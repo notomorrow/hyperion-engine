@@ -9,13 +9,13 @@ RigidBody::~RigidBody()
     Teardown();
 }
 
-void RigidBody::Init(Engine *engine)
+void RigidBody::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
     // do nothing
 }

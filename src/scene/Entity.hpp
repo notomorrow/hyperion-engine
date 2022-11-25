@@ -81,12 +81,7 @@ public:
 
     Entity(const Entity &other) = delete;
     Entity &operator=(const Entity &other) = delete;
-    // Entity(Entity &&other) noexcept;
-    // Entity &operator=(Entity &&other) noexcept;
     ~Entity();
-
-    Octree *GetOctree() const
-        { return m_octree; }
 
     const VisibilityState &GetVisibilityState() const
         { return m_visibility_state; }
@@ -198,8 +193,8 @@ public:
     
     bool IsReady() const;
 
-    void Init(Engine *engine);
-    void Update(Engine *engine, GameCounter::TickUnit delta);
+    void Init();
+    void Update( GameCounter::TickUnit delta);
 
     /* All controller operations should only be used from the GAME thread */
 
@@ -268,10 +263,10 @@ public:
         { return m_controllers; }
 
 public:
-    void AddToOctree(Engine *engine, Octree &octree);
+    void AddToOctree( Octree &octree);
 
 private:
-    void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
+    void UpdateControllers( GameCounter::TickUnit delta);
     
     void EnqueueRenderUpdates();
     void UpdateOctree();
@@ -283,7 +278,7 @@ private:
     void OnRemovedFromOctree(Octree *octree);
     void OnMovedToOctant(Octree *octree);
 
-    void RemoveFromOctree(Engine *engine);
+    void RemoveFromOctree();
 
     Handle<Mesh> m_mesh;
     Handle<Shader> m_shader;

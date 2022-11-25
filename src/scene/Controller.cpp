@@ -1,5 +1,6 @@
 #include "Controller.hpp"
 #include <scene/Entity.hpp>
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 
@@ -15,13 +16,6 @@ Controller::Controller(const String &name, bool receives_update)
 
 Controller::~Controller()
 {
-}
-
-Engine *Controller::GetEngine() const
-{
-    AssertThrow(m_owner != nullptr);
-
-    return m_owner->GetEngine();
 }
 
 void Controller::SetScript(const Handle<Script> &script)

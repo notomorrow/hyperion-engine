@@ -23,7 +23,7 @@ Game::~Game()
     delete m_input_manager;
 }
 
-void Game::Init(Engine *engine)
+void Game::Init()
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
@@ -33,56 +33,56 @@ void Game::Init(Engine *engine)
     m_input_manager = new InputManager();
     m_input_manager->SetWindow(m_application->GetCurrentWindow());
 
-    m_scene = engine->CreateHandle<Scene>(
+    m_scene = Engine::Get()->CreateHandle<Scene>(
         Handle<Camera>(),
         Scene::InitInfo {
             .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
         }
     );
 
-    engine->InitObject(m_scene);
+    Engine::Get()->InitObject(m_scene);
 
     m_is_init = true;
 
     static_assert(THREAD_MAIN == THREAD_RENDER,
         "InitRender must be enqueued instead of directly called if main thread != render thread!");
 
-    InitRender(engine);
+    InitRender();
 }
 
-void Game::Update(Engine *engine, GameCounter::TickUnit delta)
+void Game::Update( GameCounter::TickUnit delta)
 {
-    engine->GetComponents().Update(engine, delta);
-    engine->GetWorld()->Update(engine, delta);
+    Engine::Get()->GetComponents().Update(delta);
+    Engine::Get()->GetWorld()->Update(delta);
 
-    Logic(engine, delta);
+    Logic(delta);
 }
 
-void Game::InitRender(Engine *engine)
+void Game::InitRender()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 }
 
-void Game::InitGame(Engine *engine)
+void Game::InitGame()
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_ui.Init(engine);
+    m_ui.Init();
 }
 
-void Game::Teardown(Engine *engine)
+void Game::Teardown()
 {
     if (m_scene) {
-        engine->GetWorld()->RemoveScene(m_scene->GetID());
+        Engine::Get()->GetWorld()->RemoveScene(m_scene->GetID());
         m_scene.Reset();
     }
 
-    engine->GetWorld().Reset();
+    Engine::Get()->GetWorld().Reset();
 
     m_is_init = false;
 }
 
-void Game::HandleEvent(Engine *engine, SystemEvent &&event)
+void Game::HandleEvent( SystemEvent &&event)
 {
     if (m_input_manager == nullptr) {
         return;
@@ -92,13 +92,13 @@ void Game::HandleEvent(Engine *engine, SystemEvent &&event)
 
     switch (event.GetType()) {
         case SystemEventType::EVENT_SHUTDOWN:
-            engine->RequestStop();
+            Engine::Get()->RequestStop();
 
             break;
         default:
-            if (engine->game_thread.IsRunning()) {
-                engine->game_thread.GetScheduler().Enqueue([this, engine, event = std::move(event)](...) mutable {
-                    OnInputEvent(engine, event);
+            if (Engine::Get()->game_thread.IsRunning()) {
+                Engine::Get()->game_thread.GetScheduler().Enqueue([this, event = std::move(event)](...) mutable {
+                    OnInputEvent(event);
 
                     HYPERION_RETURN_OK;
                 });
@@ -108,7 +108,7 @@ void Game::HandleEvent(Engine *engine, SystemEvent &&event)
     }
 }
 
-void Game::OnInputEvent(Engine *engine, const SystemEvent &event)
+void Game::OnInputEvent( const SystemEvent &event)
 {
     Threads::AssertOnThread(THREAD_GAME);
 

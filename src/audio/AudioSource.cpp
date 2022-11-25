@@ -22,13 +22,13 @@ AudioSource::~AudioSource()
     Teardown();
 }
 
-void AudioSource::Init(Engine *engine)
+void AudioSource::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
     if (AudioManager::GetInstance()->IsInitialized()) {
         auto al_format = AL_FORMAT_MONO8;

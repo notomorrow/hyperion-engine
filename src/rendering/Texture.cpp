@@ -29,14 +29,14 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(image->Create(engine->GetDevice(), engine->GetInstance(), initial_state));
-        HYPERION_BUBBLE_ERRORS(image_view->Create(engine->GetInstance()->GetDevice(), image));
-        HYPERION_BUBBLE_ERRORS(sampler->Create(engine->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image->Create(Engine::Get()->GetDevice(), Engine::Get()->GetInstance(), initial_state));
+        HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetInstance()->GetDevice(), image));
+        HYPERION_BUBBLE_ERRORS(sampler->Create(Engine::Get()->GetInstance()->GetDevice()));
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
-        engine->GetRenderData()->textures.AddResource(texture);
+        Engine::Get()->GetRenderData()->textures.AddResource(texture);
 #endif
 
         HYPERION_RETURN_OK;
@@ -62,15 +62,15 @@ struct RENDER_COMMAND(DestroyTexture) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
 #if HYP_FEATURES_BINDLESS_TEXTURES
-        engine->GetRenderData()->textures.RemoveResource(id);
+        Engine::Get()->GetRenderData()->textures.RemoveResource(id);
 #endif
 
-        HYPERION_BUBBLE_ERRORS(sampler->Destroy(engine->GetInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image_view->Destroy(engine->GetInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image->Destroy(engine->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(sampler->Destroy(Engine::Get()->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image_view->Destroy(Engine::Get()->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image->Destroy(Engine::Get()->GetInstance()->GetDevice()));
 
         HYPERION_RETURN_OK;
     }
@@ -113,13 +113,13 @@ Texture::~Texture()
     Teardown();
 }
 
-void Texture::Init(Engine *engine)
+void Texture::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
     RenderCommands::Push<RENDER_COMMAND(CreateTexture)>(
         this,
@@ -132,8 +132,6 @@ void Texture::Init(Engine *engine)
     SetReady(true);
     
     OnTeardown([this]() {
-        auto *engine = GetEngine();
-
         SetReady(false);
 
         RenderCommands::Push<RENDER_COMMAND(DestroyTexture)>(
@@ -143,7 +141,7 @@ void Texture::Init(Engine *engine)
             &m_sampler
         );
         
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 

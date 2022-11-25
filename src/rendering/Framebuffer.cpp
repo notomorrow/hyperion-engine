@@ -14,9 +14,9 @@ struct RENDER_COMMAND(CreateFramebuffer) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        return framebuffer->Create(engine->GetDevice(), render_pass);
+        return framebuffer->Create(Engine::Get()->GetDevice(), render_pass);
     }
 };
 
@@ -29,9 +29,9 @@ struct RENDER_COMMAND(DestroyFramebuffer) : RenderCommandBase2
     {
     }
 
-    virtual Result operator()(Engine *engine)
+    virtual Result operator()()
     {
-        return framebuffer->Destroy(engine->GetDevice());
+        return framebuffer->Destroy(Engine::Get()->GetDevice());
     }
 };
 
@@ -56,28 +56,26 @@ Framebuffer::~Framebuffer()
     Teardown();
 }
 
-void Framebuffer::Init(Engine *engine)
+void Framebuffer::Init()
 {
     if (IsInitCalled()) {
         return;
     }
 
-    EngineComponentBase::Init(engine);
+    EngineComponentBase::Init();
 
-    engine->InitObject(m_render_pass);
+    Engine::Get()->InitObject(m_render_pass);
 
     RenderCommands::Push<RENDER_COMMAND(CreateFramebuffer)>(&m_framebuffer, &m_render_pass->GetRenderPass());
 
     SetReady(true);
 
     OnTeardown([this]() {
-        auto *engine = GetEngine();
-
         SetReady(false);
 
         RenderCommands::Push<RENDER_COMMAND(DestroyFramebuffer)>(&m_framebuffer);
         
-        HYP_FLUSH_RENDER_QUEUE(engine);
+        HYP_FLUSH_RENDER_QUEUE();
     });
 }
 

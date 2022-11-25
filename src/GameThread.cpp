@@ -17,7 +17,7 @@ GameThread::GameThread()
 {
 }
 
-void GameThread::operator()(Engine *engine, Game *game)
+void GameThread::operator()( Game *game)
 {
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
@@ -31,11 +31,11 @@ void GameThread::operator()(Engine *engine, Game *game)
 
     m_is_running.store(true, std::memory_order_relaxed);
 
-    game->InitGame(engine);
+    game->InitGame();
     
     Queue<Scheduler::ScheduledTask> tasks;
 
-    while (engine->m_running.load(std::memory_order_relaxed)) {
+    while (Engine::Get()->m_running.load(std::memory_order_relaxed)) {
         if (auto num_enqueued = m_scheduler.NumEnqueued()) {
             m_scheduler.AcceptAll(tasks);
 
@@ -52,7 +52,7 @@ void GameThread::operator()(Engine *engine, Game *game)
 
         counter.NextTick();
         
-        game->Update(engine, counter.delta);
+        game->Update(counter.delta);
     }
 
     // flush scheduler
@@ -60,7 +60,7 @@ void GameThread::operator()(Engine *engine, Game *game)
         fn(MathUtil::epsilon<GameCounter::TickUnit>);
     });
 
-    game->Teardown(engine);
+    game->Teardown();
 
     m_is_running.store(false, std::memory_order_relaxed);
 }
