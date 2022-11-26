@@ -15,7 +15,7 @@ using renderer::TlasDescriptor;
 using renderer::ResourceState;
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateProbeGridImage) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridImage) : RenderCommand
 {
     renderer::StorageImage *storage_image;
 
@@ -26,11 +26,11 @@ struct RENDER_COMMAND(CreateProbeGridImage) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return storage_image->Create(Engine::Get()->GetDevice());
+        return storage_image->Create(Engine::Get()->GetGPUDevice());
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridImageView) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridImageView) : RenderCommand
 {
     renderer::ImageView *image_view;
     renderer::Image *image;
@@ -43,11 +43,11 @@ struct RENDER_COMMAND(CreateProbeGridImageView) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return image_view->Create(Engine::Get()->GetDevice(), image);
+        return image_view->Create(Engine::Get()->GetGPUDevice(), image);
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommand
 {
     UniquePtr<renderer::DescriptorSet> *descriptor_sets;
     renderer::UniformBuffer *uniform_buffer;
@@ -73,12 +73,12 @@ struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommandBase2
             AssertThrow(descriptor_sets[frame_index] != nullptr);
             
             HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                Engine::Get()->GetDevice(),
-                &Engine::Get()->GetInstance()->GetDescriptorPool()
+                Engine::Get()->GetGPUDevice(),
+                &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
             ));
 
             // Add the final result to the global descriptor set
-            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set_globals
@@ -107,7 +107,7 @@ struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroyProbeGridDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyProbeGridDescriptors) : RenderCommand
 {
     RENDER_COMMAND(DestroyProbeGridDescriptors)()
     {
@@ -117,11 +117,11 @@ struct RENDER_COMMAND(DestroyProbeGridDescriptors) : RenderCommandBase2
     {
         auto result = Result::OK;
 
-        Device *device = Engine::Get()->GetDevice();
+        Device *device = Engine::Get()->GetGPUDevice();
         
         // remove result image from global descriptor set
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             // set to placeholder image
@@ -144,7 +144,7 @@ struct RENDER_COMMAND(DestroyProbeGridDescriptors) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : RenderCommand
 {
     renderer::UniformBuffer *uniform_buffer;
     ProbeSystemUniforms uniforms;
@@ -157,14 +157,14 @@ struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(Engine::Get()->GetDevice(), sizeof(ProbeSystemUniforms)));
-        uniform_buffer->Copy(Engine::Get()->GetDevice(), sizeof(ProbeSystemUniforms), &uniforms);
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(ProbeSystemUniforms)));
+        uniform_buffer->Copy(Engine::Get()->GetGPUDevice(), sizeof(ProbeSystemUniforms), &uniforms);
 
         HYPERION_RETURN_OK;
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : RenderCommand
 {
     renderer::StorageBuffer *radiance_buffer;
     ProbeGridInfo grid_info;
@@ -177,14 +177,14 @@ struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(radiance_buffer->Create(Engine::Get()->GetDevice(), grid_info.GetImageDimensions().Size() * sizeof(ProbeRayData)));
-        radiance_buffer->Memset(Engine::Get()->GetDevice(), grid_info.GetImageDimensions().Size() * sizeof(ProbeRayData), 0x00);
+        HYPERION_BUBBLE_ERRORS(radiance_buffer->Create(Engine::Get()->GetGPUDevice(), grid_info.GetImageDimensions().Size() * sizeof(ProbeRayData)));
+        radiance_buffer->Memset(Engine::Get()->GetGPUDevice(), grid_info.GetImageDimensions().Size() * sizeof(ProbeRayData), 0x00);
 
         HYPERION_RETURN_OK;
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridPipeline) : RenderCommandBase2
+struct RENDER_COMMAND(CreateProbeGridPipeline) : RenderCommand
 {
     renderer::RaytracingPipeline *pipeline;
     renderer::ShaderProgram *shader_program;
@@ -198,9 +198,9 @@ struct RENDER_COMMAND(CreateProbeGridPipeline) : RenderCommandBase2
     virtual Result operator()()
     {
         return pipeline->Create(
-            Engine::Get()->GetDevice(),
+            Engine::Get()->GetGPUDevice(),
             shader_program,
-            &Engine::Get()->GetInstance()->GetDescriptorPool()
+            &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
         );
     }
 };
@@ -219,7 +219,7 @@ ProbeGrid::~ProbeGrid()
 void ProbeGrid::Init()
 {
     AssertThrowMsg(
-        Engine::Get()->InitObject(m_tlas),
+        InitObject(m_tlas),
         "Failed to initialize the top level acceleration structure!"
     );
 
@@ -277,19 +277,19 @@ void ProbeGrid::Destroy()
 
     RenderCommands::Push<RENDER_COMMAND(DestroyProbeGridDescriptors)>();
 
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 }
 
 void ProbeGrid::CreatePipeline()
 {
-    m_shader = Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbe"));
-    Engine::Get()->InitObject(m_shader);
+    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbe"));
+    InitObject(m_shader);
 
     m_pipeline.Reset(new RaytracingPipeline(
         Array<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
-            Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
-            Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+            Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
+            Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
         }
     ));
 
@@ -301,33 +301,33 @@ void ProbeGrid::CreatePipeline()
 
 void ProbeGrid::CreateComputePipelines()
 {
-    m_update_irradiance = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbeUpdateIrradiance")),
+    m_update_irradiance = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbeUpdateIrradiance")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_update_irradiance);
+    InitObject(m_update_irradiance);
 
-    m_update_depth = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbeUpdateDepth")),
+    m_update_depth = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbeUpdateDepth")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_update_depth);
+    InitObject(m_update_depth);
 
-    m_copy_border_texels_irradiance = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsIrradiance")),
+    m_copy_border_texels_irradiance = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsIrradiance")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_copy_border_texels_irradiance);
+    InitObject(m_copy_border_texels_irradiance);
 
-    m_copy_border_texels_depth = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsDepth")),
+    m_copy_border_texels_depth = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTCopyBorderTexelsDepth")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_copy_border_texels_depth);
+    InitObject(m_copy_border_texels_depth);
 }
 
 void ProbeGrid::CreateUniformBuffer()
@@ -503,7 +503,7 @@ void ProbeGrid::CreateDescriptorSets()
     );
 }
 
-void ProbeGrid::ApplyTLASUpdates( RTUpdateStateFlags flags)
+void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
 {
     if (!flags) {
         return;
@@ -532,7 +532,7 @@ void ProbeGrid::ApplyTLASUpdates( RTUpdateStateFlags flags)
     }
 }
 
-void ProbeGrid::SubmitPushConstants( CommandBuffer *command_buffer)
+void ProbeGrid::SubmitPushConstants(CommandBuffer *command_buffer)
 {
     m_random_generator.Next();
 
@@ -547,12 +547,12 @@ void ProbeGrid::SubmitPushConstants( CommandBuffer *command_buffer)
     m_pipeline->SubmitPushConstants(command_buffer);
 }
 
-void ProbeGrid::RenderProbes( Frame *frame)
+void ProbeGrid::RenderProbes(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     
     if (m_has_tlas_updates[frame->GetFrameIndex()]) {
-        m_descriptor_sets[frame->GetFrameIndex()]->ApplyUpdates(Engine::Get()->GetDevice());
+        m_descriptor_sets[frame->GetFrameIndex()]->ApplyUpdates(Engine::Get()->GetGPUDevice());
 
         m_has_tlas_updates[frame->GetFrameIndex()] = false;
     }
@@ -564,14 +564,14 @@ void ProbeGrid::RenderProbes( Frame *frame)
     m_pipeline->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_pipeline.Get(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0
     );
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_pipeline.Get(),
         DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, frame->GetFrameIndex()),
         1,
@@ -582,14 +582,14 @@ void ProbeGrid::RenderProbes( Frame *frame)
     );
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_pipeline.Get(),
         DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, frame->GetFrameIndex()),
         2
     );
 
     m_pipeline->TraceRays(
-        Engine::Get()->GetDevice(),
+        Engine::Get()->GetGPUDevice(),
         frame->GetCommandBuffer(),
         Extent3D {
             m_grid_info.NumProbes(),
@@ -601,7 +601,7 @@ void ProbeGrid::RenderProbes( Frame *frame)
     m_radiance_buffer->InsertBarrier(frame->GetCommandBuffer(), ResourceState::UNORDERED_ACCESS);
 }
 
-void ProbeGrid::ComputeIrradiance( Frame *frame)
+void ProbeGrid::ComputeIrradiance(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -620,7 +620,7 @@ void ProbeGrid::ComputeIrradiance( Frame *frame)
     m_update_irradiance->GetPipeline()->Bind(frame->GetCommandBuffer());
     
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_update_irradiance->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0
@@ -638,7 +638,7 @@ void ProbeGrid::ComputeIrradiance( Frame *frame)
     m_update_depth->GetPipeline()->Bind(frame->GetCommandBuffer());
     
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_update_depth->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0
@@ -667,7 +667,7 @@ void ProbeGrid::ComputeIrradiance( Frame *frame)
     m_copy_border_texels_irradiance->GetPipeline()->Bind(frame->GetCommandBuffer());
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_copy_border_texels_irradiance->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0
@@ -685,7 +685,7 @@ void ProbeGrid::ComputeIrradiance( Frame *frame)
     m_copy_border_texels_depth->GetPipeline()->Bind(frame->GetCommandBuffer());
     
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_copy_border_texels_depth->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0

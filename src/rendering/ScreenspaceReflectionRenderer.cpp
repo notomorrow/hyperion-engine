@@ -28,7 +28,7 @@ struct alignas(16) SSRParams
         screen_edge_fade_end;
 };
 
-struct RENDER_COMMAND(CreateSSRImageOutputs) : RenderCommandBase2
+struct RENDER_COMMAND(CreateSSRImageOutputs) : RenderCommand
 {
     Extent2D extent;
     FixedArray<ScreenspaceReflectionRenderer::ImageOutput, 4> *image_outputs;
@@ -70,17 +70,17 @@ struct RENDER_COMMAND(CreateSSRImageOutputs) : RenderCommandBase2
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (auto &image_output : image_outputs[frame_index]) {
-                image_output.Create(Engine::Get()->GetDevice());
+                image_output.Create(Engine::Get()->GetGPUDevice());
             }
 
-            radius_outputs[frame_index].Create(Engine::Get()->GetDevice());
+            radius_outputs[frame_index].Create(Engine::Get()->GetGPUDevice());
         }
 
         HYPERION_RETURN_OK;
     }
 };
 
-struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommandBase2
+struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommand
 {
     Extent2D extent;
     UniquePtr<UniformBuffer> *uniform_buffers;
@@ -112,12 +112,12 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommandBase2
             AssertThrow(uniform_buffers[frame_index] != nullptr);
             
             HYPERION_BUBBLE_ERRORS(uniform_buffers[frame_index]->Create(
-                Engine::Get()->GetDevice(),
+                Engine::Get()->GetGPUDevice(),
                 sizeof(ssr_params)
             ));
 
             uniform_buffers[frame_index]->Copy(
-                Engine::Get()->GetDevice(),
+                Engine::Get()->GetGPUDevice(),
                 sizeof(ssr_params),
                 &ssr_params
             );
@@ -127,7 +127,7 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommand
 {
     UniquePtr<renderer::DescriptorSet> *descriptor_sets;
     FixedArray<renderer::ImageView *, max_frames_in_flight> image_views;
@@ -147,12 +147,12 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommandBase2
             AssertThrow(descriptor_sets[frame_index] != nullptr);
             
             HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                Engine::Get()->GetDevice(),
-                &Engine::Get()->GetInstance()->GetDescriptorPool()
+                Engine::Get()->GetGPUDevice(),
+                &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
             ));
 
             // Add the final result to the global descriptor set
-            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set_globals
@@ -164,7 +164,7 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroySSRInstance) : RenderCommandBase2
+struct RENDER_COMMAND(DestroySSRInstance) : RenderCommand
 {
     FixedArray<ScreenspaceReflectionRenderer::ImageOutput, 4> *image_outputs;
     ScreenspaceReflectionRenderer::ImageOutput *radius_outputs;
@@ -181,13 +181,13 @@ struct RENDER_COMMAND(DestroySSRInstance) : RenderCommandBase2
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (UInt j = 0; j < UInt(image_outputs[frame_index].Size()); j++) {
-                image_outputs[frame_index][j].Destroy(Engine::Get()->GetDevice());
+                image_outputs[frame_index][j].Destroy(Engine::Get()->GetGPUDevice());
             }
 
-            radius_outputs[frame_index].Destroy(Engine::Get()->GetDevice());
+            radius_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice());
 
             // unset final result from the global descriptor set
-            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set_globals
@@ -251,7 +251,7 @@ void ScreenspaceReflectionRenderer::Destroy()
         m_radius_output.Data()
     );
 
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 }
 
 void ScreenspaceReflectionRenderer::CreateUniformBuffers()
@@ -364,33 +364,33 @@ void ScreenspaceReflectionRenderer::CreateDescriptorSets()
 
 void ScreenspaceReflectionRenderer::CreateComputePipelines()
 {
-    m_write_uvs = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRWriteUVs")),
+    m_write_uvs = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRWriteUVs")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_write_uvs);
+    InitObject(m_write_uvs);
 
-    m_sample = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRSample")),
+    m_sample = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRSample")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_sample);
+    InitObject(m_sample);
 
-    m_blur_hor = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurHor")),
+    m_blur_hor = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurHor")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_blur_hor);
+    InitObject(m_blur_hor);
 
-    m_blur_vert = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurVert")),
+    m_blur_vert = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurVert")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_blur_vert);
+    InitObject(m_blur_vert);
 }
 
 void ScreenspaceReflectionRenderer::Render(
@@ -415,7 +415,7 @@ void ScreenspaceReflectionRenderer::Render(
     m_write_uvs->GetPipeline()->Bind(command_buffer);
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_write_uvs->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
@@ -440,7 +440,7 @@ void ScreenspaceReflectionRenderer::Render(
     m_sample->GetPipeline()->Bind(command_buffer);
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_sample->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
@@ -465,7 +465,7 @@ void ScreenspaceReflectionRenderer::Render(
     m_blur_hor->GetPipeline()->Bind(command_buffer);
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_blur_hor->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
@@ -488,7 +488,7 @@ void ScreenspaceReflectionRenderer::Render(
     m_blur_vert->GetPipeline()->Bind(command_buffer);
 
     frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_blur_vert->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,

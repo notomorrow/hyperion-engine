@@ -19,7 +19,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(UploadMeshData) : RenderCommandBase2
+struct RENDER_COMMAND(UploadMeshData) : RenderCommand
 {
     std::vector<Float> vertex_data;
     std::vector<Mesh::Index> index_data;
@@ -40,8 +40,8 @@ struct RENDER_COMMAND(UploadMeshData) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        auto *instance = Engine::Get()->GetInstance();
-        auto *device = Engine::Get()->GetDevice();
+        auto *instance = Engine::Get()->GetGPUInstance();
+        auto *device = Engine::Get()->GetGPUDevice();
 
         const SizeType packed_buffer_size = vertex_data.size() * sizeof(Float);
         const SizeType packed_indices_size = index_data.size() * sizeof(Mesh::Index);
@@ -81,7 +81,7 @@ struct RENDER_COMMAND(UploadMeshData) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroyMeshData) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyMeshData) : RenderCommand
 {
     renderer::VertexBuffer *vbo;
     renderer::IndexBuffer *ibo;
@@ -98,7 +98,7 @@ struct RENDER_COMMAND(DestroyMeshData) : RenderCommandBase2
     {
         auto result = renderer::Result::OK;
 
-        auto *device = Engine::Get()->GetDevice();
+        auto *device = Engine::Get()->GetGPUDevice();
         
         HYPERION_PASS_ERRORS(vbo->Destroy(device), result);
         HYPERION_PASS_ERRORS(ibo->Destroy(device), result);
@@ -248,7 +248,7 @@ void Mesh::Init()
             m_ibo.get()
         );
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
 
         SetReady(false);
     });
@@ -310,7 +310,7 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 #undef PACKED_SET_ATTR
 
-void Mesh::Render( CommandBuffer *cmd) const
+void Mesh::Render(CommandBuffer *cmd) const
 {
     //Threads::AssertOnThread(THREAD_RENDER);
 

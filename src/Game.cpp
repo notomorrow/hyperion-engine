@@ -33,14 +33,14 @@ void Game::Init()
     m_input_manager = new InputManager();
     m_input_manager->SetWindow(m_application->GetCurrentWindow());
 
-    m_scene = Engine::Get()->CreateHandle<Scene>(
+    m_scene = CreateObject<Scene>(
         Handle<Camera>(),
         Scene::InitInfo {
             .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
         }
     );
 
-    Engine::Get()->InitObject(m_scene);
+    InitObject(m_scene);
 
     m_is_init = true;
 
@@ -50,7 +50,7 @@ void Game::Init()
     InitRender();
 }
 
-void Game::Update( GameCounter::TickUnit delta)
+void Game::Update(GameCounter::TickUnit delta)
 {
     Engine::Get()->GetComponents().Update(delta);
     Engine::Get()->GetWorld()->Update(delta);
@@ -82,7 +82,7 @@ void Game::Teardown()
     m_is_init = false;
 }
 
-void Game::HandleEvent( SystemEvent &&event)
+void Game::HandleEvent(SystemEvent &&event)
 {
     if (m_input_manager == nullptr) {
         return;
@@ -108,7 +108,7 @@ void Game::HandleEvent( SystemEvent &&event)
     }
 }
 
-void Game::OnInputEvent( const SystemEvent &event)
+void Game::OnInputEvent(const SystemEvent &event)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -127,13 +127,15 @@ void Game::OnInputEvent( const SystemEvent &event)
 
                 event.GetMouseWheel(&wheel_x, &wheel_y);
 
-                m_scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_SCROLL,
-                    .scroll_data = {
-                        .wheel_x = wheel_x,
-                        .wheel_y = wheel_y
-                    }
-                });
+                if (auto *controller = m_scene->GetCamera()->GetCameraController()) {
+                    controller->PushCommand(CameraCommand {
+                        .command = CameraCommand::CAMERA_COMMAND_SCROLL,
+                        .scroll_data = {
+                            .wheel_x = wheel_x,
+                            .wheel_y = wheel_y
+                        }
+                    });
+                }
             }
 
             break;
@@ -153,15 +155,17 @@ void Game::OnInputEvent( const SystemEvent &event)
             my = (Float(mouse_y) - Float(extent.height) * 0.5f) / (Float(extent.height));
             
             if (m_scene) {
-                m_scene->GetCamera()->PushCommand(CameraCommand {
-                    .command = CameraCommand::CAMERA_COMMAND_MAG,
-                    .mag_data = {
-                        .mouse_x = mouse_x,
-                        .mouse_y = mouse_y,
-                        .mx = mx,
-                        .my = my
-                    }
-                });
+                if (auto *controller = m_scene->GetCamera()->GetCameraController()) {
+                    controller->PushCommand(CameraCommand {
+                        .command = CameraCommand::CAMERA_COMMAND_MAG,
+                        .mag_data = {
+                            .mouse_x = mouse_x,
+                            .mouse_y = mouse_y,
+                            .mx = mx,
+                            .my = my
+                        }
+                    });
+                }
             }
 
             break;

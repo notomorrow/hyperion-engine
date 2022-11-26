@@ -584,7 +584,7 @@ Result DescriptorPool::Create(Device *device)
     );
 
 #define HYP_DEBUG_LOG_LIMIT(limit_name) \
-    DebugLog( \
+    DebugLog(\
         LogType::Debug, \
         "Limit " #limit_name ": %llu\n", \
         device->GetFeatures().GetPhysicalDeviceProperties().limits.limit_name \
@@ -710,8 +710,8 @@ void DescriptorPool::RemoveDescriptorSet(UInt index)
 
             // if (IsCreated()) { // creating at runtime, after descriptor sets all created
             //     HYPERION_BUBBLE_ERRORS((*it)->Create(
-            //         Engine::Get()->GetDevice(),
-            //         &Engine::Get()->GetInstance()->GetDescriptorPool()
+            //         Engine::Get()->GetGPUDevice(),
+            //         &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
             //     ));
             // }
 

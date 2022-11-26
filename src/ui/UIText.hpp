@@ -3,6 +3,7 @@
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
+#include <core/Handle.hpp>
 
 #include <ui/UIScene.hpp>
 
@@ -148,31 +149,8 @@ private:
 class UIText
 {
 public:
-    static UniquePtr<Mesh> BuildTextMesh(const FontMap &font_map, const String &text);
+    static Handle<Mesh> BuildTextMesh(const FontMap &font_map, const String &text);
 };
-
-// class UIText : public UIObject
-// {
-// protected:
-//     struct UICharMesh
-//     {
-//         UniquePtr<Mesh> quad_mesh;
-//         Transform transform;
-//     };
-
-// public:
-//     UIText(const FontMap &font_map, const String &text);
-//     virtual ~UIText();
-
-//     virtual void Init() override;
-
-// protected:
-//     static Array<UICharMesh> BuildCharMeshes(const FontMap &font_map, const String &text);
-//     static UniquePtr<Mesh> OptimizeCharMeshes(Array<UICharMesh> &&char_meshes);
-
-//     FontMap m_font_map;
-//     String m_text;
-// };
 
 } // namespace hyperion::v2
 

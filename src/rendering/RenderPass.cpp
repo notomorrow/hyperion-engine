@@ -6,7 +6,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateRenderPass) : RenderCommandBase2
+struct RENDER_COMMAND(CreateRenderPass) : RenderCommand
 {
     renderer::RenderPass *render_pass;
 
@@ -17,11 +17,11 @@ struct RENDER_COMMAND(CreateRenderPass) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return render_pass->Create(Engine::Get()->GetDevice());
+        return render_pass->Create(Engine::Get()->GetGPUDevice());
     }
 };
 
-struct RENDER_COMMAND(DestroyRenderPass) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyRenderPass) : RenderCommand
 {
     renderer::RenderPass *render_pass;
 
@@ -32,7 +32,7 @@ struct RENDER_COMMAND(DestroyRenderPass) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return render_pass->Destroy(Engine::Get()->GetDevice());
+        return render_pass->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
 
@@ -70,7 +70,7 @@ void RenderPass::Init()
 
         SetReady(false);
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

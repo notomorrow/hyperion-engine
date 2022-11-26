@@ -11,6 +11,7 @@
 
 namespace hyperion {
 namespace renderer {
+
 ComputePipeline::ComputePipeline()
     : Pipeline()
 {
@@ -25,6 +26,8 @@ ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Bind(CommandBuffer *command_buffer) const
 {
+    AssertThrow(pipeline != nullptr);
+
     vkCmdBindPipeline(
         command_buffer->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -136,8 +139,15 @@ Result ComputePipeline::Create(
 
     VkComputePipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
 
+    if (shader == nullptr) {
+        return { Result::RENDERER_ERR, "Compute shader not provided to pipeline" };
+    }
+
     const auto &stages = shader->GetShaderStages();
-    AssertThrowMsg(stages.size() == 1, "Compute pipelines must have only one shader stage");
+
+    if (stages.size() != 1) {
+        return { Result::RENDERER_ERR, "Compute pipelines must have only one shader stage" };
+    }
 
     pipeline_info.stage = stages.front();
     pipeline_info.layout = layout;

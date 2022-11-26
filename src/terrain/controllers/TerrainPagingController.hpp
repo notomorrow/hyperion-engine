@@ -3,6 +3,7 @@
 
 #include "../TerrainMeshBuilder.hpp"
 #include <TaskSystem.hpp>
+#include <core/Handle.hpp>
 #include <core/lib/Queue.hpp>
 #include <core/lib/AtomicSemaphore.hpp>
 #include <scene/controllers/PagingController.hpp>
@@ -40,7 +41,7 @@ private:
     struct TerrainGenerationResult
     {
         PatchInfo patch_info;
-        std::unique_ptr<Mesh> mesh;
+        Handle<Mesh> mesh;
     };
 
     Seed m_seed;

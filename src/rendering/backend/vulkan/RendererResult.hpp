@@ -6,7 +6,8 @@
 
 namespace hyperion {
 namespace renderer {
-struct Result {
+
+struct Result{
     static const Result OK;
 
     enum {

@@ -14,12 +14,12 @@ RigidBodyController::RigidBodyController(
 
 void RigidBodyController::OnAdded()
 {
-    m_rigid_body = Engine::Get()->CreateHandle<physics::RigidBody>(
+    m_rigid_body = CreateObject<physics::RigidBody>(
         std::move(m_shape),
         m_physics_material
     );
 
-    Engine::Get()->InitObject(m_rigid_body);
+    InitObject(m_rigid_body);
 
     m_rigid_body->SetTransform(GetOwner()->GetTransform());    
 }

@@ -7,7 +7,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommandBase2
+struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommand
 {
     TypeMap<UniquePtr<RenderComponentBase>> *render_components;
 
@@ -60,7 +60,7 @@ void RenderEnvironment::SetTLAS(const Handle<TLAS> &tlas)
 {
     m_tlas = tlas;
 
-    Engine::Get()->InitObject(m_tlas);
+    InitObject(m_tlas);
 
     m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_TLAS);
 }
@@ -69,7 +69,7 @@ void RenderEnvironment::SetTLAS(Handle<TLAS> &&tlas)
 {
     m_tlas = std::move(tlas);
 
-    Engine::Get()->InitObject(m_tlas);
+    InitObject(m_tlas);
 
     m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_TLAS);
 }
@@ -82,14 +82,14 @@ void RenderEnvironment::Init()
     
     EngineComponentBase::Init();
 
-    m_particle_system = Engine::Get()->CreateHandle<ParticleSystem>();
-    Engine::Get()->InitObject(m_particle_system);
+    m_particle_system = CreateObject<ParticleSystem>();
+    InitObject(m_particle_system);
     
-    if (auto tlas = m_tlas.Lock()) {
-        m_rt_radiance.SetTLAS(tlas);
+    if (m_tlas) {
+        m_rt_radiance.SetTLAS(m_tlas);
         m_rt_radiance.Create();
 
-        m_probe_system.SetTLAS(tlas);
+        m_probe_system.SetTLAS(m_tlas);
         m_probe_system.Init();
 
         m_has_rt_radiance = true;
@@ -131,11 +131,11 @@ void RenderEnvironment::Init()
 
         m_update_marker.fetch_and(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 
-void RenderEnvironment::Update( GameCounter::TickUnit delta)
+void RenderEnvironment::Update(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -184,7 +184,7 @@ void RenderEnvironment::OnEntityRenderableAttributesChanged(Handle<Entity> &enti
     m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_ENTITIES);
 }
 
-void RenderEnvironment::ApplyTLASUpdates( Frame *frame, RTUpdateStateFlags flags)
+void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
@@ -197,7 +197,7 @@ void RenderEnvironment::ApplyTLASUpdates( Frame *frame, RTUpdateStateFlags flags
     }
 }
 
-void RenderEnvironment::RenderRTRadiance( Frame *frame)
+void RenderEnvironment::RenderRTRadiance(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
@@ -218,7 +218,7 @@ void RenderEnvironment::RenderRTRadiance( Frame *frame)
     }
 }
 
-void RenderEnvironment::RenderComponents( Frame *frame)
+void RenderEnvironment::RenderComponents(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
@@ -296,26 +296,26 @@ void RenderEnvironment::RenderComponents( Frame *frame)
         if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_TLAS) {
             inverse_mask |= RENDER_ENVIRONMENT_UPDATES_TLAS;
 
-            if (auto tlas = m_tlas.Lock()) {
+            if (m_tlas) {
                 if (m_has_rt_radiance) {
                     m_rt_radiance.Destroy();
                     m_probe_system.Destroy();
                 }
                 
-                m_probe_system.SetTLAS(tlas);
-                m_rt_radiance.SetTLAS(tlas);
+                m_probe_system.SetTLAS(m_tlas);
+                m_rt_radiance.SetTLAS(m_tlas);
 
                 m_rt_radiance.Create();
                 m_probe_system.Init();
                 m_has_rt_radiance = true;
 
-                HYP_FLUSH_RENDER_QUEUE();
+                HYP_SYNC_RENDER();
             } else {
                 if (m_has_rt_radiance) {
                     m_rt_radiance.Destroy();
                     m_probe_system.Destroy();
 
-                    HYP_FLUSH_RENDER_QUEUE();
+                    HYP_SYNC_RENDER();
                 }
 
                 m_has_rt_radiance = false;

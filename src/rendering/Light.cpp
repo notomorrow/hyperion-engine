@@ -8,7 +8,7 @@ namespace hyperion::v2 {
 
 class Light;
 
-struct RENDER_COMMAND(BindLight) : RenderCommandBase2
+struct RENDER_COMMAND(BindLight) : RenderCommand
 {
     Light::ID id;
 
@@ -25,7 +25,7 @@ struct RENDER_COMMAND(BindLight) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(UnbindLight) : RenderCommandBase2
+struct RENDER_COMMAND(UnbindLight) : RenderCommand
 {
     Light::ID id;
 
@@ -42,7 +42,7 @@ struct RENDER_COMMAND(UnbindLight) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(UpdateLightShaderData) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateLightShaderData) : RenderCommand
 {
     Light &light;
     LightDrawProxy draw_proxy;
@@ -90,6 +90,36 @@ Light::Light(
 {
 }
 
+Light::Light(Light &&other) noexcept
+    : EngineComponentBase(std::move(other)),
+      m_type(other.m_type),
+      m_position(other.m_position),
+      m_color(other.m_color),
+      m_intensity(other.m_intensity),
+      m_radius(other.m_radius),
+      m_shadow_map_index(other.m_shadow_map_index),
+      m_shader_data_state(ShaderDataState::DIRTY)
+{
+    other.m_shadow_map_index = ~0u;
+}
+
+// Light &Light::operator=(Light &&other) noexcept
+// {
+//     EngineComponentBase::operator=(std::move(other));
+
+//     m_type = other.m_type;
+//     m_position = other.m_position;
+//     m_color = other.m_color;
+//     m_intensity = other.m_intensity;
+//     m_radius = other.m_radius;
+//     m_shadow_map_index = other.m_shadow_map_index;
+//     m_shader_data_state = ShaderDataState::DIRTY;
+
+//     other.m_shadow_map_index = ~0u;
+
+//     return *this;
+// }
+
 Light::~Light()
 {
     Teardown();
@@ -110,7 +140,7 @@ void Light::Init()
     OnTeardown([this]() {
         SetReady(false);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

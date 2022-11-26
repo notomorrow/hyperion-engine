@@ -9,7 +9,7 @@ using renderer::Result;
 
 class Camera;
 
-struct RENDER_COMMAND(UpdateCameraDrawProxy) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateCameraDrawProxy) : RenderCommand
 {
     Camera *camera;
     CameraDrawProxy draw_proxy;
@@ -48,18 +48,87 @@ static Matrix4 BuildJitterMatrix(const Camera &camera, UInt frame_counter)
     return jitter_matrix;
 }
 
-Camera::Camera(CameraType camera_type, int width, int height, float _near, float _far)
+CameraController::CameraController(CameraType type)
+    : m_camera(nullptr),
+      m_type(type),
+      m_command_queue_count { 0 }
+{
+}
+
+void CameraController::PushCommand(const CameraCommand &command)
+{
+    std::lock_guard guard(m_command_queue_mutex);
+
+    ++m_command_queue_count;
+
+    m_command_queue.Push(command);
+}
+
+void CameraController::UpdateCommandQueue(GameCounter::TickUnit dt)
+{
+    if (m_command_queue_count == 0) {
+        return;
+    }
+
+    std::lock_guard guard(m_command_queue_mutex);
+
+    while (m_command_queue.Any()) {
+        RespondToCommand(m_command_queue.Front(), dt);
+
+        m_command_queue.Pop();
+    }
+
+    m_command_queue_count = 0;
+}
+
+Camera::Camera()
+    : Camera(128, 128)
+{
+}
+
+Camera::Camera(int width, int height)
     : EngineComponentBase(),
       HasDrawProxy(),
-      m_camera_type(camera_type),
+      m_fov(60.0f),
+      m_width(width),
+      m_height(height),
+      m_near(0.01f),
+      m_far(1000.0f),
+      m_translation(Vector3::Zero()),
+      m_direction(Vector3::UnitZ()),
+      m_up(Vector3::UnitY())
+{
+}
+
+Camera::Camera(float fov, int width, int height, float _near, float _far)
+    : EngineComponentBase(),
+      HasDrawProxy(),
+      m_fov(fov),
       m_width(width),
       m_height(height),
       m_near(_near),
       m_far(_far),
       m_translation(Vector3::Zero()),
       m_direction(Vector3::UnitZ()),
-      m_up(Vector3::UnitY()),
-      m_command_queue_count{0}
+      m_up(Vector3::UnitY())
+{
+}
+
+Camera::Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far)
+    : EngineComponentBase(),
+      HasDrawProxy(),
+      m_fov(0.0f),
+      m_width(width),
+      m_height(height),
+      m_left(left),
+      m_right(right),
+      m_bottom(bottom),
+      m_top(top),
+      m_near(_near),
+      m_far(_far),
+      m_translation(Vector3::Zero()),
+      m_direction(Vector3::UnitZ()),
+      m_up(Vector3::UnitY())
 {
 }
 
@@ -81,7 +150,7 @@ void Camera::Init()
     OnTeardown([this]() {
         SetReady(false);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 
@@ -92,6 +161,10 @@ void Camera::SetTranslation(const Vector3 &translation)
     
     m_previous_view_matrix = m_view_mat;
 
+    if (m_camera_controller != nullptr) {
+        m_camera_controller->SetTranslation(translation);
+    }
+
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
 }
@@ -99,6 +172,10 @@ void Camera::SetTranslation(const Vector3 &translation)
 void Camera::SetNextTranslation(const Vector3 &translation)
 {
     m_next_translation = translation;
+
+    if (m_camera_controller != nullptr) {
+        m_camera_controller->SetNextTranslation(translation);
+    }
 }
 
 void Camera::SetDirection(const Vector3 &direction)
@@ -106,6 +183,10 @@ void Camera::SetDirection(const Vector3 &direction)
     m_direction = direction;
     
     m_previous_view_matrix = m_view_mat;
+
+    if (m_camera_controller != nullptr) {
+        m_camera_controller->SetDirection(direction);
+    }
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -116,6 +197,10 @@ void Camera::SetUpVector(const Vector3 &up)
     m_up = up;
     
     m_previous_view_matrix = m_view_mat;
+
+    if (m_camera_controller != nullptr) {
+        m_camera_controller->SetUpVector(up);
+    }
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
@@ -206,10 +291,14 @@ Vector4 Camera::TransformScreenToWorld(const Vector2 &screen) const
     return TransformNDCToWorld(TransformScreenToNDC(screen));
 }
 
-void Camera::Update( GameCounter::TickUnit dt)
+void Camera::Update(GameCounter::TickUnit dt)
 {
-    UpdateCommandQueue(dt);
-    UpdateLogic(dt);
+    if (m_camera_controller) {
+        m_camera_controller->m_camera = this;
+
+        m_camera_controller->UpdateCommandQueue(dt);
+        m_camera_controller->UpdateLogic(dt);
+    }
 
     m_translation = m_next_translation;
 
@@ -233,37 +322,28 @@ void Camera::Update( GameCounter::TickUnit dt)
     );
 }
 
+void Camera::UpdateViewMatrix()
+{
+    if (m_camera_controller) {
+        m_camera_controller->UpdateViewMatrix();
+    }
+}
+
+void Camera::UpdateProjectionatrix()
+{
+    if (m_camera_controller) {
+        m_camera_controller->UpdateProjectionMatrix();
+    }
+}
+
 void Camera::UpdateMatrices()
 {
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+    if (m_camera_controller) {
+        m_camera_controller->UpdateViewMatrix();
+        m_camera_controller->UpdateProjectionMatrix();
+    }
+
     UpdateViewProjectionMatrix();
-}
-
-void Camera::PushCommand(const CameraCommand &command)
-{
-    std::lock_guard guard(m_command_queue_mutex);
-
-    ++m_command_queue_count;
-
-    m_command_queue.Push(command);
-}
-
-void Camera::UpdateCommandQueue(GameCounter::TickUnit dt)
-{
-    if (m_command_queue_count == 0) {
-        return;
-    }
-
-    std::lock_guard guard(m_command_queue_mutex);
-
-    while (m_command_queue.Any()) {
-        RespondToCommand(m_command_queue.Front(), dt);
-
-        m_command_queue.Pop();
-    }
-
-    m_command_queue_count = 0;
 }
 
 } // namespace hyperion::v2

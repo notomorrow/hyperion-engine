@@ -3,9 +3,9 @@
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
-#include <Component.hpp>
+#include <core/ObjectPool.hpp>
 #include <core/Class.hpp>
-#include <core/Handle.hpp>
+#include <core/HandleID.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/StaticString.hpp>
 #include <rendering/backend/RendererInstance.hpp>
@@ -23,90 +23,6 @@ namespace hyperion::v2 {
 
 using renderer::Instance;
 using renderer::Device;
-
-template <class Parent>
-struct AttachmentSet
-{
-    using Initializer = std::add_pointer_t<void(WeakHandleBase &, Parent *)>;
-
-    Initializer init_fn;
-    Array<WeakHandleBase> objects;
-};
-
-template <class Parent>
-class AttachmentMap
-{
-public:
-    void InitializeAll(Parent *parent)
-    {
-        for (auto &it : m_attachments) {
-            for (auto &object_it : it.second.objects) {
-                WeakHandleBase &handle = object_it;
-
-                it.second.init_fn(handle, parent);
-            }
-        }
-    }
-
-    template <class T>
-    void Attach(Parent *parent, Handle<T> &handle, bool init_immediately)
-    {
-        AssertThrow(parent != nullptr);
-
-        if (!handle) {
-            return;
-        }
-
-        if (init_immediately) {
-            parent->GetEngine()->template Attach<T>(handle, init_immediately);
-        }
-
-        auto it = m_attachments.template Find<NormalizedType<T>>();
-
-        if (it == m_attachments.End()) {
-            m_attachments.template Set<NormalizedType<T>>(AttachmentSet<Parent> {
-                .init_fn = [](WeakHandleBase &handle, Parent *parent) {
-                    auto handle_casted = handle.Lock<T>();
-                    AssertThrow(handle_casted);
-
-                    parent->GetEngine()->template Attach<T>(handle_casted);
-                },
-                .objects = Array<WeakHandleBase> {
-                    WeakHandleBase(handle)
-                }
-            });
-
-            return;
-        }
-
-        it->second.objects.PushBack(WeakHandleBase(handle));
-    }
-
-    template <class T>
-    bool Detach(const Handle<T> &handle)
-    {
-        if (!handle) {
-            return false;
-        }
-
-        auto it = m_attachments.template Find<NormalizedType<T>>();
-
-        if (it == m_attachments.End()) {
-            return false;
-        }
-
-        auto objects_it = it->second.objects.Find(handle);
-
-        if (objects_it == it->second.objects.End()) {
-            return false;
-        }
-
-        return it->second.objects.Erase(objects_it);
-    }
-
-private:
-    TypeMap<AttachmentSet<Parent>> m_attachments;
-};
 
 template <class T, class ClassName>
 struct StubbedClass : public Class<ClassName>
@@ -184,7 +100,40 @@ public:
 
     EngineComponentBase(const EngineComponentBase &other) = delete;
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
-    ~EngineComponentBase() {}
+
+    EngineComponentBase(EngineComponentBase &&other) noexcept
+        : CallbackTrackable(), // TODO: Get rid of callback trackable then we wont have to do a move for that.
+          m_name(std::move(other.m_name)),
+          m_init_info(std::move(other.m_init_info)),
+          m_id(other.m_id),
+          m_init_called { other.m_init_called.load() },
+          m_is_ready { other.m_is_ready.load() }
+    {
+        other.m_id = empty_id;
+        other.m_init_called.store(false);
+        other.m_is_ready.store(false);
+    }
+
+    EngineComponentBase &operator=(EngineComponentBase &&other) noexcept = delete;
+
+    // EngineComponentBase &operator=(EngineComponentBase &&other) noexcept
+    // {
+    //     CallbackTrackable::operator=(std::move(other));
+
+    //     m_name = std::move(other.m_name);
+    //     m_init_info = std::move(other.m_init_info);
+    //     m_id = std::move(other.m_id);
+    //     m_init_called.store(other.m_init_called.load());
+    //     m_is_ready.store(other.m_is_ready.load());
+
+    //     other.m_id = empty_id;
+    //     other.m_init_called.store(false);
+    //     other.m_is_ready.store(false);
+
+    //     return *this;
+    // }
+
+    ~EngineComponentBase() = default;
 
     HYP_FORCE_INLINE InitInfo &GetInitInfo()
         { return m_init_info; }
@@ -242,22 +191,10 @@ protected:
 
     void Teardown()
     {
-        RemoveFromObjectSystem();
+        // RemoveFromObjectSystem();
 
         CallbackTrackable::Teardown();
     }
-
-    //template <class T>
-    //void Attach(Handle<T> &handle)
-    //    { m_attachment_map.template Attach<T>(static_cast<InnerType *>(this), handle, m_init_called); }
-
-    //template <class T>
-    //void Detach(const Handle<T> &handle)
-    //    { m_attachment_map.template Detach<T>(handle); }
-
-    //template <class T>
-    //void Detach(const typename Handle<T>::ID &id)
-    //    { m_attachment_map.template Detach<T>(id); }
 
     void Destroy()
     {
@@ -291,16 +228,14 @@ protected:
     std::atomic_bool m_is_ready;
     InitInfo m_init_info;
 
-    //AttachmentMap<InnerType> m_attachment_map;
-
 private:
 
-    void RemoveFromObjectSystem()
-    {
-        if (IsInitCalled()) {
-            GetObjectSystem().template Release<InnerType>(GetID());
-        }
-    }
+    // void RemoveFromObjectSystem()
+    // {
+    //     if (IsInitCalled()) {
+    //         GetObjectPool().template Release<InnerType>(GetID());
+    //     }
+    // }
 };
 
 template <class Type, class WrappedType>
@@ -345,7 +280,7 @@ public:
 
     /* Standard non-specialized initialization function */
     template <class ...Args>
-    void Create( Args &&... args)
+    void Create(Args &&... args)
     {
         const char *wrapped_type_name = EngineComponentBase<Type>::GetClass().GetName();
 
@@ -375,7 +310,7 @@ public:
 
     /* Standard non-specialized destruction function */
     template <class ...Args>
-    void Destroy( Args &&... args)
+    void Destroy(Args &&... args)
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 

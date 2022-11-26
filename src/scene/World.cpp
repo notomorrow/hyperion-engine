@@ -30,7 +30,7 @@ void World::Init()
     }
 
     for (auto &it : m_scenes) {
-        Engine::Get()->InitObject(it.second);
+        InitObject(it.second);
     }
     
     EngineComponentBase::Init();
@@ -143,7 +143,7 @@ void World::AddScene(Handle<Scene> &&scene)
         return;
     }
 
-    Engine::Get()->InitObject(scene);
+    InitObject(scene);
 
     std::lock_guard guard(m_scene_update_mutex);
 

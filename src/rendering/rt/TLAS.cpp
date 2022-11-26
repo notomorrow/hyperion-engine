@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateTLAS) : RenderCommandBase2
+struct RENDER_COMMAND(CreateTLAS) : RenderCommand
 {
     renderer::TopLevelAccelerationStructure *tlas;
     Array<renderer::BottomLevelAccelerationStructure *> blases;
@@ -19,14 +19,14 @@ struct RENDER_COMMAND(CreateTLAS) : RenderCommandBase2
     virtual Result operator()()
     {
         return tlas->Create(
-            Engine::Get()->GetDevice(),
-            Engine::Get()->GetInstance(),
+            Engine::Get()->GetGPUDevice(),
+            Engine::Get()->GetGPUInstance(),
             std::vector<renderer::BottomLevelAccelerationStructure *>(blases.Begin(), blases.End())
         );
     }
 };
 
-struct RENDER_COMMAND(DestroyTLAS) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyTLAS) : RenderCommand
 {
     renderer::TopLevelAccelerationStructure *tlas;
 
@@ -37,7 +37,7 @@ struct RENDER_COMMAND(DestroyTLAS) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return tlas->Destroy(Engine::Get()->GetDevice());
+        return tlas->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
 
@@ -58,7 +58,7 @@ void TLAS::AddBLAS(Handle<BLAS> &&blas)
     }
 
     if (IsInitCalled()) {
-        if (!Engine::Get()->InitObject(blas)) {
+        if (!InitObject(blas)) {
             // the blas could not be initialzied. not valid?
             return;
         }
@@ -89,7 +89,7 @@ void TLAS::Init()
 
     for (SizeType i = 0; i < m_blas.Size(); i++) {
         AssertThrow(m_blas[i] != nullptr);
-        AssertThrow(Engine::Get()->InitObject(m_blas[i]));
+        AssertThrow(InitObject(m_blas[i]));
     }
 
     Array<BottomLevelAccelerationStructure *> internal_blases;
@@ -101,7 +101,7 @@ void TLAS::Init()
 
     RenderCommands::Push<RENDER_COMMAND(CreateTLAS)>(&m_tlas, std::move(internal_blases));
 
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 
     SetReady(true);
 
@@ -119,7 +119,7 @@ void TLAS::Init()
 
         RenderCommands::Push<RENDER_COMMAND(DestroyTLAS)>(&m_tlas);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 
@@ -165,7 +165,7 @@ void TLAS::UpdateRender(
         //blas->UpdateRenderframe, was_blas_rebuilt);
     }
     
-    HYPERION_ASSERT_RESULT(m_tlas.UpdateStructure(Engine::Get()->GetInstance(), out_update_state_flags));
+    HYPERION_ASSERT_RESULT(m_tlas.UpdateStructure(Engine::Get()->GetGPUInstance(), out_update_state_flags));
 }
 
 } // namespace hyperion::v2

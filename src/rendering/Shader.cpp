@@ -7,7 +7,7 @@ using renderer::Result;
 
 void ShaderGlobals::Create()
 {
-    auto *device = Engine::Get()->GetDevice();
+    auto *device = Engine::Get()->GetGPUDevice();
 
     scenes.Create(device);
     materials.Create(device);
@@ -24,7 +24,7 @@ void ShaderGlobals::Create()
 
 void ShaderGlobals::Destroy()
 {
-    auto *device = Engine::Get()->GetDevice();
+    auto *device = Engine::Get()->GetGPUDevice();
 
     cubemap_uniforms.Destroy(device);
     env_probes.Destroy(device);
@@ -38,7 +38,7 @@ void ShaderGlobals::Destroy()
     immediate_draws.Destroy(device);
 }
 
-struct RENDER_COMMAND(CreateShaderProgram) : RenderCommandBase2
+struct RENDER_COMMAND(CreateShaderProgram) : RenderCommand
 {
     renderer::ShaderProgram *shader_program;
     // Array<SubShader> subshaders;
@@ -53,26 +53,23 @@ struct RENDER_COMMAND(CreateShaderProgram) : RenderCommandBase2
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateShaderProgram)()
-    {
-        DebugLog(LogType::Error, "Destruct %s  %p\n", __FUNCTION__, (void*)this);
-    }
+    virtual ~RENDER_COMMAND(CreateShaderProgram)() = default;
 
     virtual Result operator()()
     {
         for (const SubShader &sub_shader : subshaders) {
             HYPERION_BUBBLE_ERRORS(shader_program->AttachShader(
-                Engine::Get()->GetInstance()->GetDevice(),
+                Engine::Get()->GetGPUInstance()->GetDevice(),
                 sub_shader.type,
                 sub_shader.spirv
             ));
         }
 
-        return shader_program->Create(Engine::Get()->GetDevice());
+        return shader_program->Create(Engine::Get()->GetGPUDevice());
     }
 };
 
-struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommand
 {
     renderer::ShaderProgram *shader_program;
 
@@ -83,7 +80,7 @@ struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return shader_program->Destroy(Engine::Get()->GetDevice());
+        return shader_program->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
 
@@ -147,7 +144,7 @@ void Shader::Init()
 
         RenderCommands::Push<RENDER_COMMAND(DestroyShaderProgram)>(m_shader_program.get());
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

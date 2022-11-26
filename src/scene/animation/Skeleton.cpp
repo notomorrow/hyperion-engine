@@ -38,7 +38,7 @@ void Skeleton::Init()
     SetReady(true);
 
     OnTeardown([this]() {
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
         
         SetReady(false);
     });
