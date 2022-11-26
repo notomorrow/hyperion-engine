@@ -22,9 +22,7 @@ void AudioController::SetSource(Handle<AudioSource> &&source)
 {
     Stop();
 
-    if (GetOwner() != nullptr) {
-        Engine::Get()->InitObject(source);
-    }
+    InitObject(source);
 
     m_source = std::move(source);
 }
@@ -55,7 +53,7 @@ void AudioController::OnAdded()
 {
     m_last_position = GetOwner()->GetTranslation();
 
-    Engine::Get()->InitObject(m_source);
+    InitObject(m_source);
 }
 
 void AudioController::OnRemoved()

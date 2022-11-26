@@ -11,7 +11,7 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_POWER 2.5
+#define HYP_HBIL_POWER 0.5
 
 struct DeferredParams
 {

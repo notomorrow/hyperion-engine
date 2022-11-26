@@ -14,7 +14,7 @@ namespace hyperion::v2 {
 
 class Entity;
 
-struct RENDER_COMMAND(UpdateEntityRenderData) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateEntityRenderData) : RenderCommand
 {
     Entity *entity;
     EntityDrawProxy draw_proxy;
@@ -139,13 +139,13 @@ void Entity::Init()
     m_draw_proxy.entity_id = m_id;
     m_previous_transform_matrix = m_transform.GetMatrix();
 
-    Engine::Get()->InitObject(m_shader);
-    Engine::Get()->InitObject(m_material);
-    Engine::Get()->InitObject(m_skeleton);
-    Engine::Get()->InitObject(m_blas);
+    InitObject(m_shader);
+    InitObject(m_material);
+    InitObject(m_skeleton);
+    InitObject(m_blas);
 
     // set our aabb to be the mesh aabb now that it is init
-    if (Engine::Get()->InitObject(m_mesh)) {
+    if (InitObject(m_mesh)) {
         m_local_aabb = m_mesh->CalculateAABB();
 
         if (!m_local_aabb.Empty()) {
@@ -162,7 +162,7 @@ void Entity::Init()
     SetReady(true);
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && HYP_FEATURES_ENABLE_RAYTRACING
-    //if (Engine::Get()->GetDevice()->GetFeatures().IsRaytracingEnabled()) {
+    //if (Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingEnabled()) {
     //    CreateBLAS();
     //}
 #endif
@@ -201,7 +201,7 @@ void Entity::Init()
         m_material.Reset();
         m_blas.Reset();
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
         
         Engine::Get()->SafeReleaseHandle<Skeleton>(std::move(m_skeleton));
         Engine::Get()->SafeReleaseHandle<Mesh>(std::move(m_mesh));
@@ -209,7 +209,7 @@ void Entity::Init()
     });
 }
 
-void Entity::Update( GameCounter::TickUnit delta)
+void Entity::Update(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -337,7 +337,7 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
     m_mesh = std::move(mesh);
 
     if (IsInitCalled()) {
-        if (Engine::Get()->InitObject(m_mesh)) {
+        if (InitObject(m_mesh)) {
             m_local_aabb = m_mesh->CalculateAABB();
 
             if (!m_local_aabb.Empty()) {
@@ -366,7 +366,7 @@ void Entity::SetSkeleton(Handle<Skeleton> &&skeleton)
     m_skeleton = std::move(skeleton);
 
     if (m_skeleton && IsInitCalled()) {
-        Engine::Get()->InitObject(m_skeleton);
+        InitObject(m_skeleton);
     }
 
     RebuildRenderableAttributes();
@@ -386,7 +386,7 @@ void Entity::SetShader(Handle<Shader> &&shader)
     
     if (m_shader) {
         if (IsInitCalled()) {
-            Engine::Get()->InitObject(m_shader);
+            InitObject(m_shader);
         }
 
         RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
@@ -411,7 +411,7 @@ void Entity::SetMaterial(Handle<Material> &&material)
         new_renderable_attributes.material_attributes = m_material->GetRenderAttributes();
 
         if (IsInitCalled()) {
-            Engine::Get()->InitObject(m_material);
+            InitObject(m_material);
         }
     } else {
         new_renderable_attributes.material_attributes = { };
@@ -653,7 +653,7 @@ void Entity::OnMovedToOctant(Octree *octree)
 }
 
 
-void Entity::AddToOctree( Octree &octree)
+void Entity::AddToOctree(Octree &octree)
 {
     AssertThrow(m_octree == nullptr);
 
@@ -687,7 +687,7 @@ bool Entity::CreateBLAS()
     }
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && HYP_FEATURES_ENABLE_RAYTRACING
-    if (!Engine::Get()->GetDevice()->GetFeatures().IsRaytracingEnabled()) {
+    if (!Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingEnabled()) {
         return false;
     }
 #else
@@ -699,7 +699,7 @@ bool Entity::CreateBLAS()
         return false;
     }
 
-    m_blas = Engine::Get()->CreateHandle<BLAS>(
+    m_blas = CreateObject<BLAS>(
         m_id,
         Handle<Mesh>(m_mesh),
         Handle<Material>(m_material),
@@ -707,7 +707,7 @@ bool Entity::CreateBLAS()
     );
 
     if (IsInitCalled()) {
-        if (Engine::Get()->InitObject(m_blas)) {
+        if (InitObject(m_blas)) {
             // add it to the scene if it exists
             // otherwise, have to add to scene when the Entity is added to a scene
 

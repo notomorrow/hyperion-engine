@@ -16,7 +16,7 @@ using renderer::SamplerDescriptor;
 using renderer::CommandBuffer;
 using renderer::Result;
 
-struct RENDER_COMMAND(UpdateMaterialRenderData) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateMaterialRenderData) : RenderCommand
 {
     Material::ID id;
     MaterialShaderData shader_data;
@@ -45,7 +45,7 @@ struct RENDER_COMMAND(UpdateMaterialRenderData) : RenderCommandBase2
             for (SizeType i = 0; i < bound_texture_ids.Size(); i++) {
                 if (bound_texture_ids[i] != Texture::empty_id) {
 #if HYP_FEATURES_BINDLESS_TEXTURES
-                    shader_data.texture_index[i] = ids[i].ToIndex();
+                    shader_data.texture_index[i] = bound_texture_ids[i].ToIndex();
 #else
                     shader_data.texture_index[i] = i;
 #endif
@@ -65,7 +65,7 @@ struct RENDER_COMMAND(UpdateMaterialRenderData) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(UpdateMaterialTexture) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateMaterialTexture) : RenderCommand
 {
     Material::ID id;
     SizeType texture_index;
@@ -86,7 +86,7 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : RenderCommandBase2
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const auto descriptor_set_index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, id.value - 1, frame_index);
 
-            const auto &descriptor_pool = Engine::Get()->GetInstance()->GetDescriptorPool();
+            const auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
             const auto *descriptor_set = descriptor_pool.GetDescriptorSet(descriptor_set_index);
             auto *descriptor = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
 
@@ -100,7 +100,7 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommand
 {
     Material::ID id;
     Handle<Texture> *textures;
@@ -122,10 +122,10 @@ struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommandBase2
             const auto parent_index = DescriptorSet::Index(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES);
             const auto index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, id.ToIndex(), frame_index);
 
-            auto &descriptor_pool = Engine::Get()->GetInstance()->GetDescriptorPool();
+            auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
 
             auto *descriptor_set = descriptor_pool.AddDescriptorSet(
-                Engine::Get()->GetDevice(),
+                Engine::Get()->GetGPUDevice(),
                 std::make_unique<DescriptorSet>(
                     parent_index,
                     static_cast<UInt>(index),
@@ -158,8 +158,8 @@ struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommandBase2
 
             if (descriptor_pool.IsCreated()) { // creating at runtime, after descriptor sets all created
                 HYPERION_BUBBLE_ERRORS(descriptor_set->Create(
-                    Engine::Get()->GetDevice(),
-                    &Engine::Get()->GetInstance()->GetDescriptorPool()
+                    Engine::Get()->GetGPUDevice(),
+                    &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 ));
             }
 
@@ -170,7 +170,7 @@ struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommand
 {
     renderer::DescriptorSet **descriptor_sets;
 
@@ -181,7 +181,7 @@ struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        auto &descriptor_pool = Engine::Get()->GetInstance()->GetDescriptorPool();
+        auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             if (!descriptor_sets[frame_index]) {
@@ -189,7 +189,7 @@ struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommandBase2
             }
 
             if (descriptor_pool.IsCreated()) { // creating at runtime, after descriptor sets all created
-                HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Destroy(Engine::Get()->GetDevice()));
+                HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Destroy(Engine::Get()->GetGPUDevice()));
             }
 
             descriptor_pool.RemoveDescriptorSet(descriptor_sets[frame_index]);
@@ -231,7 +231,7 @@ void Material::Init()
 
     for (SizeType i = 0; i < m_textures.Size(); i++) {
         if (auto &texture = m_textures.ValueAt(i)) {
-            Engine::Get()->InitObject(texture);
+            InitObject(texture);
         }
     }
 
@@ -256,7 +256,7 @@ void Material::Init()
         EnqueueDescriptorSetDestroy();
 #endif
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 
@@ -389,7 +389,7 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
             Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_textures[key]));
         }
 
-        Engine::Get()->InitObject(texture);
+        InitObject(texture);
     }
 
     m_textures.Set(key, std::move(texture));
@@ -432,7 +432,7 @@ void MaterialGroup::Init()
     EngineComponentBase::Init();
 
     for (auto &it : m_materials) {
-        Engine::Get()->InitObject(it.second);
+        InitObject(it.second);
     }
 
     OnTeardown([this](...) {
@@ -443,7 +443,7 @@ void MaterialGroup::Init()
 void MaterialGroup::Add(const std::string &name, Handle<Material> &&material)
 {
     if (IsInitCalled()) {
-        Engine::Get()->InitObject(material);
+        InitObject(material);
     }
 
     m_materials[name] = std::move(material);

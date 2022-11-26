@@ -210,9 +210,9 @@ static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShade
 /* max number of materials, based on size in mb */
 static const SizeType max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
 static const SizeType max_materials_bytes = max_materials * sizeof(MaterialShaderData);
-/* max number of objects, based on size in mb */
-static const SizeType max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
-static const SizeType max_objects_bytes = max_materials * sizeof(ObjectShaderData);
+/* max number of entities, based on size in mb */
+static const SizeType max_entities = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+static const SizeType max_entities_bytes = max_entities * sizeof(ObjectShaderData);
 /* max number of scenes (cameras, essentially), based on size in kb */
 static const SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
 static const SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);

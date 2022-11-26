@@ -9,7 +9,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateUIDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(CreateUIDescriptors) : RenderCommand
 {
     SizeType component_index;
     FixedArray<renderer::ImageView *, max_frames_in_flight> image_views;
@@ -25,7 +25,7 @@ struct RENDER_COMMAND(CreateUIDescriptors) : RenderCommandBase2
     virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             descriptor_set
@@ -37,7 +37,7 @@ struct RENDER_COMMAND(CreateUIDescriptors) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommand
 {
     SizeType component_index;
 
@@ -53,7 +53,7 @@ struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommandBase2
 
         // remove descriptors from global descriptor set
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
             // set to placeholder data.
@@ -78,7 +78,15 @@ UIRenderer::UIRenderer(Handle<Scene> &&scene)
 
 UIRenderer::~UIRenderer()
 {
-    Teardown();
+    if (!IsInitCalled()) {
+        return;
+    }
+
+    SetReady(false);
+
+    RenderCommands::Push<RENDER_COMMAND(DestroyUIDescriptors)>(GetComponentIndex());
+
+    HYP_SYNC_RENDER();
 }
 
 void UIRenderer::Init()
@@ -89,20 +97,12 @@ void UIRenderer::Init()
 
     EngineComponentBase::Init();
 
-    Engine::Get()->InitObject(m_scene);
+    InitObject(m_scene);
 
     CreateFramebuffers();
     CreateDescriptors();
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        RenderCommands::Push<RENDER_COMMAND(DestroyUIDescriptors)>(GetComponentIndex());
-
-        HYP_FLUSH_RENDER_QUEUE();
-    });
 }
 
 void UIRenderer::CreateFramebuffers()
@@ -129,9 +129,9 @@ void UIRenderer::InitGame() { }
 
 void UIRenderer::OnRemoved() { }
 
-void UIRenderer::OnUpdate( GameCounter::TickUnit delta) { }
+void UIRenderer::OnUpdate(GameCounter::TickUnit delta) { }
 
-void UIRenderer::OnRender( Frame *frame)
+void UIRenderer::OnRender(Frame *frame)
 {
     // Threads::AssertOnThread(THREAD_RENDER);
 

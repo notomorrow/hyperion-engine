@@ -12,7 +12,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(BindLights) : RenderCommandBase2
+struct RENDER_COMMAND(BindLights) : RenderCommand
 {
     SizeType num_lights;
     Light::ID *ids;
@@ -35,7 +35,7 @@ struct RENDER_COMMAND(BindLights) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(BindEnvProbes) : RenderCommandBase2
+struct RENDER_COMMAND(BindEnvProbes) : RenderCommand
 {
     SizeType num_env_probes;
     EnvProbe::ID *ids;
@@ -90,7 +90,7 @@ void Scene::Init()
     
     EngineComponentBase::Init();
 
-    Engine::Get()->InitObject(m_camera);
+    InitObject(m_camera);
 
     if (!m_tlas) {
         if (Engine::Get()->GetConfig().Get(CONFIG_RT_SUPPORTED) && HasFlags(InitInfo::SCENE_FLAGS_HAS_TLAS)) {
@@ -100,7 +100,7 @@ void Scene::Init()
         }
     }
 
-    Engine::Get()->InitObject(m_tlas);
+    InitObject(m_tlas);
 
     {
         m_environment->Init();
@@ -112,7 +112,7 @@ void Scene::Init()
 
     for (auto &it : m_entities) {
         auto &entity = it.second;
-        AssertThrow(Engine::Get()->InitObject(entity));
+        AssertThrow(InitObject(entity));
     }
 
     if (m_entities_pending_removal.Any()) {
@@ -123,7 +123,7 @@ void Scene::Init()
         for (auto &entity : m_entities_pending_addition) {
             AssertThrow(entity);
             
-            Engine::Get()->InitObject(entity);
+            InitObject(entity);
         }
 
         AddPendingEntities();
@@ -136,7 +136,7 @@ void Scene::Init()
 
         for (auto &it : m_lights) {
             auto &light = it.second;
-            AssertThrow(Engine::Get()->InitObject(light));
+            AssertThrow(InitObject(light));
 
             light_ids[index++] = it.first;
         }
@@ -154,7 +154,7 @@ void Scene::Init()
 
         for (auto &it : m_env_probes) {
             auto &env_probe = it.second;
-            AssertThrow(Engine::Get()->InitObject(env_probe));
+            AssertThrow(InitObject(env_probe));
 
             env_probe_ids[index++] = it.first;
         }
@@ -192,7 +192,7 @@ void Scene::Init()
         m_entities_pending_addition.Clear();
         m_entities_pending_removal.Clear();
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
 
         SetReady(false);
     });
@@ -202,7 +202,7 @@ void Scene::SetCamera(Handle<Camera> &&camera)
 {
     m_camera = std::move(camera);
 
-    Engine::Get()->InitObject(m_camera);
+    InitObject(m_camera);
 }
 
 void Scene::SetWorld(World *world)
@@ -327,7 +327,7 @@ bool Scene::AddEntityInternal(Handle<Entity> &&entity)
         return false;
     }
 
-    Engine::Get()->InitObject(entity);
+    InitObject(entity);
 
     entity->SetScene(this);
 
@@ -508,7 +508,7 @@ bool Scene::AddLight(Handle<Light> &&light)
         return false;
     }
 
-    if (Engine::Get()->InitObject(it->second)) {
+    if (InitObject(it->second)) {
         it->second->EnqueueBind();
     }
 
@@ -530,7 +530,7 @@ bool Scene::AddLight(const Handle<Light> &light)
         return false;
     }
 
-    if (Engine::Get()->InitObject(it->second)) {
+    if (InitObject(it->second)) {
         it->second->EnqueueBind();
     }
 
@@ -567,7 +567,7 @@ bool Scene::AddEnvProbe(Handle<EnvProbe> &&env_probe)
         return false;
     }
 
-    if (Engine::Get()->InitObject(it->second)) {
+    if (InitObject(it->second)) {
         it->second->EnqueueBind();
     }
 
@@ -589,7 +589,7 @@ bool Scene::AddEnvProbe(const Handle<EnvProbe> &env_probe)
         return false;
     }
 
-    if (Engine::Get()->InitObject(it->second)) {
+    if (InitObject(it->second)) {
         it->second->EnqueueBind();
     }
 
@@ -727,7 +727,7 @@ void Scene::RemoveFromRendererInstances(Handle<Entity> &entity)
 
 void Scene::EnqueueRenderUpdates()
 {
-    struct RENDER_COMMAND(UpdateSceneRenderData) : RenderCommandBase2
+    struct RENDER_COMMAND(UpdateSceneRenderData) : RenderCommand
     {
         Scene::ID id;
         BoundingBox aabb;
@@ -853,17 +853,17 @@ bool Scene::CreateTLAS()
         return true;
     }
     
-    if (!Engine::Get()->GetDevice()->GetFeatures().IsRaytracingSupported()) {
+    if (!Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingSupported()) {
         // cannot create TLAS if RT is not supported.
         SetFlags(InitInfo::SCENE_FLAGS_HAS_TLAS, false);
 
         return false;
     }
 
-    m_tlas = Engine::Get()->CreateHandle<TLAS>();
+    m_tlas = CreateObject<TLAS>();
 
     if (IsReady()) {
-        Engine::Get()->InitObject(m_tlas);
+        InitObject(m_tlas);
 
         m_environment->SetTLAS(m_tlas);
     }

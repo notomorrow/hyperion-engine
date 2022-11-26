@@ -12,7 +12,7 @@
 #include <rendering/Renderer.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <core/Handle.hpp>
+#include <core/HandleID.hpp>
 
 namespace hyperion::v2 {
 
@@ -27,7 +27,7 @@ public:
     void Create();
     void Destroy();
 
-    void Render( Frame *frame);
+    void Render(Frame *frame);
 
 private:
     Handle<RendererInstance> m_renderer_instance;

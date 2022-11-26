@@ -9,7 +9,7 @@ RenderScheduler RenderCommands::scheduler = { };
 std::mutex RenderCommands::mtx = std::mutex();
 std::condition_variable RenderCommands::flushed_cv = std::condition_variable();
 
-void RenderScheduler::Commit(RenderCommandBase2 *ptr)
+void RenderScheduler::Commit(RenderCommand *ptr)
 {
     m_commands.PushBack(ptr);
     m_num_enqueued.fetch_add(1, std::memory_order_relaxed);
@@ -17,18 +17,20 @@ void RenderScheduler::Commit(RenderCommandBase2 *ptr)
 
 RenderScheduler::FlushResult RenderScheduler::Flush()
 {
+    Threads::AssertOnThread(m_owner_thread);
+
     FlushResult result { Result::OK, 0 };
 
     SizeType count = m_num_enqueued.load(std::memory_order_relaxed);
 
     while (count) {
-        RenderCommandBase2 *front = m_commands.Front();
+        RenderCommand *front = m_commands.Front();
         --count;
 
         ++result.num_executed;
 
         result.result = (*front)();
-        front->~RenderCommandBase2();
+        front->~RenderCommand();
 
         m_commands.PopFront();
 
@@ -36,7 +38,7 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
             DebugLog(LogType::Error, "Error! %s\n", result.result.message);
 
             while (m_commands.Any()) {
-                m_commands.PopFront()->~RenderCommandBase2();
+                m_commands.PopFront()->~RenderCommand();
             }
 
             break;

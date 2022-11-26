@@ -49,7 +49,7 @@ void SparseVoxelOctree::Init()
     OnTeardown([this]() {
         SetReady(false);
 
-        struct RENDER_COMMAND(DestroySVO) : RenderCommandBase2
+        struct RENDER_COMMAND(DestroySVO) : RenderCommand
         {
             SparseVoxelOctree &svo;
 
@@ -68,7 +68,7 @@ void SparseVoxelOctree::Init()
                     }
 
                     HYPERION_PASS_ERRORS(
-                        svo.m_descriptor_sets[frame_index]->Destroy(Engine::Get()->GetDevice()),
+                        svo.m_descriptor_sets[frame_index]->Destroy(Engine::Get()->GetGPUDevice()),
                         result
                     );
                 }
@@ -79,21 +79,21 @@ void SparseVoxelOctree::Init()
 
                 if (svo.m_build_info_buffer != nullptr) {
                     HYPERION_PASS_ERRORS(
-                        svo.m_build_info_buffer->Destroy(Engine::Get()->GetDevice()),
+                        svo.m_build_info_buffer->Destroy(Engine::Get()->GetGPUDevice()),
                         result
                     );
                 }
 
                 if (svo.m_indirect_buffer != nullptr) {
                     HYPERION_PASS_ERRORS(
-                        svo.m_indirect_buffer->Destroy(Engine::Get()->GetDevice()),
+                        svo.m_indirect_buffer->Destroy(Engine::Get()->GetGPUDevice()),
                         result
                     );
                 }
 
                 if (svo.m_octree_buffer != nullptr) {
                     HYPERION_PASS_ERRORS(
-                        svo.m_octree_buffer->Destroy(Engine::Get()->GetDevice()),
+                        svo.m_octree_buffer->Destroy(Engine::Get()->GetGPUDevice()),
                         result
                     );
                 }
@@ -104,7 +104,7 @@ void SparseVoxelOctree::Init()
 
         RenderCommands::Push<RENDER_COMMAND(DestroySVO)>(*this);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
 
         m_voxelizer.reset(nullptr);
 
@@ -191,7 +191,7 @@ void SparseVoxelOctree::OnEntityRenderableAttributesChanged(Handle<Entity> &enti
     }
 }
 
-void SparseVoxelOctree::OnUpdate( GameCounter::TickUnit delta)
+void SparseVoxelOctree::OnUpdate(GameCounter::TickUnit delta)
 {
     // Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
@@ -233,7 +233,7 @@ void SparseVoxelOctree::CreateBuffers()
     m_indirect_buffer = std::make_unique<IndirectBuffer>();
     m_counter = std::make_unique<AtomicCounter>();
 
-    struct RENDER_COMMAND(CreateSVOBuffers) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateSVOBuffers) : RenderCommand
     {
         SparseVoxelOctree &svo;
 
@@ -249,12 +249,12 @@ void SparseVoxelOctree::CreateBuffers()
             svo.m_counter->Create();
 
             HYPERION_PASS_ERRORS(
-                svo.m_build_info_buffer->Create(Engine::Get()->GetInstance()->GetDevice(), 2 * sizeof(UInt32)),
+                svo.m_build_info_buffer->Create(Engine::Get()->GetGPUInstance()->GetDevice(), 2 * sizeof(UInt32)),
                 result
             );
 
             HYPERION_PASS_ERRORS(
-                svo.m_indirect_buffer->Create(Engine::Get()->GetInstance()->GetDevice(), 3 * sizeof(UInt32)),
+                svo.m_indirect_buffer->Create(Engine::Get()->GetGPUInstance()->GetDevice(), 3 * sizeof(UInt32)),
                 result
             );
 
@@ -271,7 +271,7 @@ void SparseVoxelOctree::CreateBuffers()
             );
 
             HYPERION_PASS_ERRORS(
-                svo.m_octree_buffer->Create(Engine::Get()->GetInstance()->GetDevice(), num_nodes * sizeof(OctreeNode)),
+                svo.m_octree_buffer->Create(Engine::Get()->GetGPUInstance()->GetDevice(), num_nodes * sizeof(OctreeNode)),
                 result
             );
 
@@ -279,14 +279,14 @@ void SparseVoxelOctree::CreateBuffers()
                 Engine::Get()->SafeRelease(UniquePtr<renderer::StorageBuffer>(svo.m_octree_buffer.release()));
 
                 HYPERION_PASS_ERRORS(
-                    svo.m_build_info_buffer->Destroy(Engine::Get()->GetInstance()->GetDevice()),
+                    svo.m_build_info_buffer->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()),
                     result
                 );
 
                 svo.m_build_info_buffer.reset(nullptr);
 
                 HYPERION_PASS_ERRORS(
-                    svo.m_indirect_buffer->Destroy(Engine::Get()->GetInstance()->GetDevice()),
+                    svo.m_indirect_buffer->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()),
                     result
                 );
 
@@ -306,7 +306,7 @@ void SparseVoxelOctree::CreateDescriptors()
         m_descriptor_sets[frame_index] = UniquePtr<DescriptorSet>::Construct();
     }
 
-    struct RENDER_COMMAND(CreateSVODescriptors) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateSVODescriptors) : RenderCommand
     {
         SparseVoxelOctree &svo;
 
@@ -353,12 +353,12 @@ void SparseVoxelOctree::CreateDescriptors()
                     ->SetSubDescriptor({ .buffer = svo.m_counter->GetBuffer() });
 
                 HYPERION_BUBBLE_ERRORS(descriptor_set->Create(
-                    Engine::Get()->GetDevice(),
-                    &Engine::Get()->GetInstance()->GetDescriptorPool()
+                    Engine::Get()->GetGPUDevice(),
+                    &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 ));
 
                 // set octree buffer in global descriptor set
-                auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+                auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                     .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
                 
                 descriptor_set_globals->GetDescriptor(DescriptorKey::SVO_BUFFER)->SetSubDescriptor({
@@ -376,8 +376,8 @@ void SparseVoxelOctree::CreateDescriptors()
 
 void SparseVoxelOctree::CreateComputePipelines()
 {
-    m_alloc_nodes = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_alloc_nodes = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_alloc_nodes.comp.spv")).Read()}}
             }
@@ -385,10 +385,10 @@ void SparseVoxelOctree::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    AssertThrow(Engine::Get()->InitObject(m_alloc_nodes));
+    AssertThrow(InitObject(m_alloc_nodes));
 
-    m_init_nodes = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_init_nodes = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_init_nodes.comp.spv")).Read()}}
             }
@@ -396,10 +396,10 @@ void SparseVoxelOctree::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    AssertThrow(Engine::Get()->InitObject(m_init_nodes));
+    AssertThrow(InitObject(m_init_nodes));
 
-    m_tag_nodes = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_tag_nodes = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_tag_nodes.comp.spv")).Read()}}
             }
@@ -407,10 +407,10 @@ void SparseVoxelOctree::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    AssertThrow(Engine::Get()->InitObject(m_tag_nodes));
+    AssertThrow(InitObject(m_tag_nodes));
 
-    m_modify_args = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_modify_args = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_modify_args.comp.spv")).Read()}}
             }
@@ -418,10 +418,10 @@ void SparseVoxelOctree::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    AssertThrow(Engine::Get()->InitObject(m_modify_args));
+    AssertThrow(InitObject(m_modify_args));
 
-    m_write_mipmaps = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_write_mipmaps = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_write_mipmaps.comp.spv")).Read()}}
             }
@@ -429,10 +429,10 @@ void SparseVoxelOctree::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    AssertThrow(Engine::Get()->InitObject(m_write_mipmaps));
+    AssertThrow(InitObject(m_write_mipmaps));
 }
 
-void SparseVoxelOctree::OnRender( Frame *frame)
+void SparseVoxelOctree::OnRender(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -444,7 +444,7 @@ void SparseVoxelOctree::OnRender( Frame *frame)
         ->GetDescriptor(1)
         ->SetSubDescriptor({ .element_index = 0u, .buffer = m_voxelizer->GetFragmentListBuffer() });
 
-    m_descriptor_sets[0]->ApplyUpdates(Engine::Get()->GetDevice());
+    m_descriptor_sets[0]->ApplyUpdates(Engine::Get()->GetGPUDevice());
 
     m_counter->Reset();
 
@@ -472,12 +472,12 @@ void SparseVoxelOctree::OnRender( Frame *frame)
 
         Engine::Get()->SafeRelease(UniquePtr<renderer::StorageBuffer>(m_octree_buffer.release()));
 
-        // HYPERION_ASSERT_RESULT(m_octree_buffer->Destroy(Engine::Get()->GetDevice()));
+        // HYPERION_ASSERT_RESULT(m_octree_buffer->Destroy(Engine::Get()->GetGPUDevice()));
         m_octree_buffer.reset(new StorageBuffer());
-        HYPERION_ASSERT_RESULT(m_octree_buffer->Create(Engine::Get()->GetDevice(), num_nodes * sizeof(OctreeNode)));
+        HYPERION_ASSERT_RESULT(m_octree_buffer->Create(Engine::Get()->GetGPUDevice(), num_nodes * sizeof(OctreeNode)));
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
             
             descriptor_set_globals->GetDescriptor(DescriptorKey::SVO_BUFFER)->SetSubDescriptor({
@@ -491,14 +491,14 @@ void SparseVoxelOctree::OnRender( Frame *frame)
                 .buffer = m_octree_buffer.get()
             });
 
-            m_descriptor_sets[frame_index]->ApplyUpdates(Engine::Get()->GetDevice());
+            m_descriptor_sets[frame_index]->ApplyUpdates(Engine::Get()->GetGPUDevice());
         }
     }
     
-    HYPERION_ASSERT_RESULT(Engine::Get()->GetInstance()->GetStagingBufferPool().Use(
-        Engine::Get()->GetInstance()->GetDevice(),
+    HYPERION_ASSERT_RESULT(Engine::Get()->GetGPUInstance()->GetStagingBufferPool().Use(
+        Engine::Get()->GetGPUInstance()->GetDevice(),
         [&](Context &context) {
-            auto *device = Engine::Get()->GetDevice();
+            auto *device = Engine::Get()->GetGPUDevice();
 
             StagingBuffer *build_info_staging_buffer = context.Acquire(m_build_info_buffer->size);
             build_info_staging_buffer->Copy(device, std::size(build_info) * sizeof(UInt32), build_info);
@@ -506,7 +506,7 @@ void SparseVoxelOctree::OnRender( Frame *frame)
             StagingBuffer *indirect_staging_buffer = context.Acquire(m_indirect_buffer->size);
             indirect_staging_buffer->Copy(device, std::size(indirect_info) * sizeof(UInt32), indirect_info);
 
-            auto commands = Engine::Get()->GetInstance()->GetSingleTimeCommands();
+            auto commands = Engine::Get()->GetGPUInstance()->GetSingleTimeCommands();
 
             /* Copy our data from staging buffers */
             commands.Push([&](CommandBuffer *command_buffer) {
@@ -574,7 +574,7 @@ void SparseVoxelOctree::WriteMipmaps()
 
 	const UInt32 fragment_group_x = group_x_64(m_voxelizer->NumFragments());
 
-    auto commands = Engine::Get()->GetInstance()->GetSingleTimeCommands();
+    auto commands = Engine::Get()->GetGPUInstance()->GetSingleTimeCommands();
 
     commands.Push([&](CommandBuffer *command_buffer) {
         for (UInt32 i = 2; i <= m_voxelizer->octree_depth; i++) {
@@ -592,7 +592,7 @@ void SparseVoxelOctree::WriteMipmaps()
         HYPERION_RETURN_OK;
     });
 
-    HYPERION_ASSERT_RESULT(commands.Execute(Engine::Get()->GetDevice()));
+    HYPERION_ASSERT_RESULT(commands.Execute(Engine::Get()->GetGPUDevice()));
 }
 
 void SparseVoxelOctree::BindDescriptorSets(
@@ -602,7 +602,7 @@ void SparseVoxelOctree::BindDescriptorSets(
 ) const
 {
     command_buffer->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         pipeline->GetPipeline(),
         m_descriptor_sets[frame_index].Get(),
         static_cast<DescriptorSet::Index>(0)

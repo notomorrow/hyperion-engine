@@ -7,7 +7,7 @@ using renderer::Result;
 
 class Texture;
 
-struct RENDER_COMMAND(CreateTexture) : RenderCommandBase2
+struct RENDER_COMMAND(CreateTexture) : RenderCommand
 {
     Texture *texture;
     renderer::ResourceState initial_state;
@@ -31,9 +31,9 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(image->Create(Engine::Get()->GetDevice(), Engine::Get()->GetInstance(), initial_state));
-        HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetInstance()->GetDevice(), image));
-        HYPERION_BUBBLE_ERRORS(sampler->Create(Engine::Get()->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image->Create(Engine::Get()->GetGPUDevice(), Engine::Get()->GetGPUInstance(), initial_state));
+        HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetGPUInstance()->GetDevice(), image));
+        HYPERION_BUBBLE_ERRORS(sampler->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
         Engine::Get()->GetRenderData()->textures.AddResource(texture);
@@ -43,7 +43,7 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(DestroyTexture) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyTexture) : RenderCommand
 {
     Texture::ID id;
     renderer::Image *image;
@@ -68,9 +68,9 @@ struct RENDER_COMMAND(DestroyTexture) : RenderCommandBase2
         Engine::Get()->GetRenderData()->textures.RemoveResource(id);
 #endif
 
-        HYPERION_BUBBLE_ERRORS(sampler->Destroy(Engine::Get()->GetInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image_view->Destroy(Engine::Get()->GetInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image->Destroy(Engine::Get()->GetInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(sampler->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image_view->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
+        HYPERION_BUBBLE_ERRORS(image->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
 
         HYPERION_RETURN_OK;
     }
@@ -108,6 +108,25 @@ Texture::Texture(
 {
 }
 
+Texture::Texture(Texture &&other) noexcept
+    : EngineComponentBase(std::move(other)),
+      m_image(std::move(other.m_image)),
+      m_image_view(std::move(other.m_image_view)),
+      m_sampler(std::move(other.m_sampler))
+{
+}
+
+// Texture &Texture::operator=(Texture &&other) noexcept
+// {
+//     EngineComponentBase::operator=(std::move(other));
+
+//     m_image = std::move(other.m_image),
+//     m_image_view = std::move(other.m_image_view),
+//     m_sampler = std::move(other.m_sampler);
+
+//     return *this;
+// }
+
 Texture::~Texture()
 {
     Teardown();
@@ -141,7 +160,7 @@ void Texture::Init()
             &m_sampler
         );
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

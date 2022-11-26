@@ -152,14 +152,14 @@ public:
         { return m_frame_counter; }
 
     void Init();
-    void Update( GameCounter::TickUnit delta);
+    void Update(GameCounter::TickUnit delta);
 
-    void RenderRTRadiance( Frame *frame);
+    void RenderRTRadiance(Frame *frame);
 
-    void RenderComponents( Frame *frame);
+    void RenderComponents(Frame *frame);
 
 private:
-    void ApplyTLASUpdates( Frame *frame, RTUpdateStateFlags flags);
+    void ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags);
 
     Scene *m_scene;
 
@@ -183,7 +183,7 @@ private:
     RTRadianceRenderer m_rt_radiance;
     ProbeGrid m_probe_system;
     bool m_has_rt_radiance;
-    WeakHandle<TLAS> m_tlas;
+    Handle<TLAS> m_tlas;
 
     Float m_global_timer;
     UInt32 m_frame_counter;

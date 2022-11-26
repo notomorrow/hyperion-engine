@@ -47,7 +47,7 @@ struct ShaderGlobals
 
     ShaderData<StorageBuffer, SceneShaderData, max_scenes> scenes;
     ShaderData<StorageBuffer, LightShaderData, max_lights> lights;
-    ShaderData<StorageBuffer, ObjectShaderData, max_objects> objects;
+    ShaderData<StorageBuffer, ObjectShaderData, max_entities> objects;
     ShaderData<StorageBuffer, MaterialShaderData, max_materials> materials;
     ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons> skeletons;
     ShaderData<UniformBuffer, ShadowShaderData, max_shadow_maps> shadow_maps;

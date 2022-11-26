@@ -29,7 +29,7 @@ static void AddOwnedAttachment(
     AttachmentRef *attachment_ref;
 
     auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
-        Engine::Get()->GetInstance()->swapchain->extent,
+        Engine::Get()->GetGPUInstance()->swapchain->extent,
         format,
         nullptr
     );
@@ -40,7 +40,7 @@ static void AddOwnedAttachment(
     ));
 
     HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentRef(
-        Engine::Get()->GetInstance()->GetDevice(),
+        Engine::Get()->GetGPUInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
         &attachment_ref
@@ -63,7 +63,7 @@ static void AddSharedAttachment(
     AssertThrow(attachment_index < opaque_fbo->GetFramebuffer().GetAttachmentRefs().size());
 
     HYPERION_ASSERT_RESULT(opaque_fbo->GetFramebuffer().GetAttachmentRefs().at(attachment_index)->AddAttachmentRef(
-        Engine::Get()->GetInstance()->GetDevice(),
+        Engine::Get()->GetGPUInstance()->GetDevice(),
         renderer::StoreOperation::STORE,
         &attachment_ref
     ));
@@ -73,7 +73,7 @@ static void AddSharedAttachment(
     render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 }
 
-static InternalFormat GetImageFormat( GBufferResourceName resource)
+static InternalFormat GetImageFormat(GBufferResourceName resource)
 {
     InternalFormat color_format;
 
@@ -83,7 +83,7 @@ static InternalFormat GetImageFormat( GBufferResourceName resource)
         color_format = Engine::Get()->GetDefaultFormat(*default_format);   
     } else if (const Array<InternalFormat> *default_formats = DeferredSystem::gbuffer_resources[resource].format.TryGet<Array<InternalFormat>>()) {
         for (const InternalFormat format : *default_formats) {
-            if (Engine::Get()->GetDevice()->GetFeatures().IsSupportedFormat(format, renderer::ImageSupportType::SRV)) {
+            if (Engine::Get()->GetGPUDevice()->GetFeatures().IsSupportedFormat(format, renderer::ImageSupportType::SRV)) {
                 color_format = format;
 
                 break;
@@ -173,7 +173,7 @@ void DeferredSystem::RendererInstanceHolder::AddPendingRendererInstances()
     for (auto it = renderer_instances_pending_addition.Begin(); it != renderer_instances_pending_addition.End(); ++it) {
         AssertThrow(*it != nullptr);
 
-        Engine::Get()->InitObject(*it);
+        InitObject(*it);
 
         renderer_instances.PushBack(std::move(*it));
     }
@@ -206,7 +206,7 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass()
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    render_pass = Engine::Get()->CreateHandle<RenderPass>(
+    render_pass = CreateObject<RenderPass>(
         RenderPassStage::SHADER,
         mode
     );
@@ -254,17 +254,17 @@ void DeferredSystem::RendererInstanceHolder::CreateRenderPass()
     }
 
     for (const auto &attachment : attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(Engine::Get()->GetInstance()->GetDevice()));
+        HYPERION_ASSERT_RESULT(attachment->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
     }
     
-    Engine::Get()->InitObject(render_pass);
+    InitObject(render_pass);
 }
 
 void DeferredSystem::RendererInstanceHolder::CreateFramebuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto framebuffer = Engine::Get()->CreateHandle<Framebuffer>(
-            Engine::Get()->GetInstance()->swapchain->extent,
+        auto framebuffer = CreateObject<Framebuffer>(
+            Engine::Get()->GetGPUInstance()->swapchain->extent,
             Handle<RenderPass>(render_pass)
         );
 
@@ -272,7 +272,7 @@ void DeferredSystem::RendererInstanceHolder::CreateFramebuffers()
             framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 
-        Engine::Get()->InitObject(framebuffer);
+        InitObject(framebuffer);
         framebuffers[frame_index] = std::move(framebuffer);
     }
 }
@@ -291,7 +291,7 @@ void DeferredSystem::RendererInstanceHolder::Destroy()
 
     for (const auto &attachment : attachments) {
         HYPERION_PASS_ERRORS(
-            attachment->Destroy(Engine::Get()->GetInstance()->GetDevice()),
+            attachment->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()),
             result
         );
     }

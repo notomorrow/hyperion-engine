@@ -10,10 +10,6 @@
 
 #include <Constants.hpp>
 
-namespace hyperion::v2 {
-class Engine;
-} // namespace hyperion::v2
-
 namespace hyperion::v2::fbom {
 
 class FBOMObject;
@@ -29,7 +25,7 @@ public:
 
 protected:
     virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize( const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
+    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
 };
 
 template <class T>
@@ -41,7 +37,7 @@ public:
     virtual FBOMType GetObjectType() const override = 0;
 
     virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize( const FBOMObject &in, UniquePtr<T> &out_object) const = 0;
+    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const = 0;
 
 private:
     virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
@@ -51,16 +47,16 @@ private:
         return Serialize(*extracted_value.Get(), out);
     }
 
-    virtual FBOMResult Deserialize( const FBOMObject &in, FBOMDeserializedObject &out) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override
     {
-        UniquePtr<T> ptr;
+        UniquePtr<void> ptr;
 
         auto result = Deserialize(in, ptr);
 
         if (result.value == FBOMResult::FBOM_OK) {
             AssertThrow(ptr != nullptr);
 
-            auto result_value = AssetLoaderWrapper<T>::MakeResultType(GetEngine(), std::move(ptr));
+            auto result_value = AssetLoaderWrapper<T>::MakeResultType(std::move(ptr));
             AssertThrow(result_value.Get() != nullptr);
 
             out.Set<T>(std::move(result_value));
