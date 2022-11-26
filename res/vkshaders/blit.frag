@@ -55,7 +55,7 @@ void main()
     // out_color.a = 1.0;
     // out_color.rgb = pow(out_color.rgb, vec3(2.2));
     
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).aaa;//, vec3(2.2));
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0).rrr;//, vec3(2.2));
 
 

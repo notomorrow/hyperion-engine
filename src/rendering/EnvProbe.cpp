@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 class EnvProbe;
 
-struct RENDER_COMMAND(BindEnvProbe) : RenderCommandBase2
+struct RENDER_COMMAND(BindEnvProbe) : RenderCommand
 {
     EnvProbe::ID id;
 
@@ -22,7 +22,7 @@ struct RENDER_COMMAND(BindEnvProbe) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(UnbindEnvProbe) : RenderCommandBase2
+struct RENDER_COMMAND(UnbindEnvProbe) : RenderCommand
 {
     EnvProbe::ID id;
 
@@ -39,7 +39,7 @@ struct RENDER_COMMAND(UnbindEnvProbe) : RenderCommandBase2
     }
 };
 
-struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommandBase2
+struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommand
 {
     EnvProbe &env_probe;
     EnvProbeDrawProxy draw_proxy;
@@ -74,7 +74,7 @@ struct RENDER_COMMAND(UpdateEnvProbeRenderData) : RenderCommandBase2
 
         // update cubemap texture in array of bound env probes
         if (texture_index != ~0u) {
-            const auto &descriptor_pool = Engine::Get()->GetInstance()->GetDescriptorPool();
+            const auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
 
             for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 const auto *descriptor_set = descriptor_pool.GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -126,7 +126,7 @@ void EnvProbe::Init()
 
     EngineComponentBase::Init();
 
-    Engine::Get()->InitObject(m_texture);
+    InitObject(m_texture);
 
     SetReady(true);
 
@@ -138,7 +138,7 @@ void EnvProbe::Init()
 
         Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_texture));
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

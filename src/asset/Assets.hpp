@@ -11,7 +11,7 @@
 #include <util/Defines.hpp>
 #include <Threads.hpp>
 #include <Constants.hpp>
-#include <Component.hpp>
+#include <core/ObjectPool.hpp>
 
 #include <TaskSystem.hpp>
 
@@ -119,7 +119,7 @@ public:
         }
 
         return AssetLoaderWrapper<NormalizedType<T>>(*loader)
-            .Load(*this, GetEngine(), path, out_result);
+            .Load(*this, path, out_result);
     }
 
     template <class T>
@@ -142,8 +142,6 @@ public:
         UInt path_index = 0;
 
         for (const auto &path : paths_array) {
-            DebugLog(LogType::Error, "path %s\n", path.Data());
-            // temp:
             batch.Add<T>(String::ToString(path_index++), path);
         }
 
@@ -167,7 +165,7 @@ public:
     }
 
 private:
-    ComponentSystem &GetObjectSystem();
+    ObjectPool &GetObjectPool();
 
     FilePath m_base_path;
     FlatMap<String, UniquePtr<AssetLoaderBase>> m_loaders;

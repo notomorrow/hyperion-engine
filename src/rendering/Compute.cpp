@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 
-struct RENDER_COMMAND(CreateComputeShader) : RenderCommandBase2
+struct RENDER_COMMAND(CreateComputeShader) : RenderCommand
 {
     renderer::ComputePipeline *pipeline;
     renderer::ShaderProgram *shader_program;
@@ -19,14 +19,14 @@ struct RENDER_COMMAND(CreateComputeShader) : RenderCommandBase2
     virtual Result operator()()
     {
         return pipeline->Create(
-            Engine::Get()->GetDevice(),
+            Engine::Get()->GetGPUDevice(),
             shader_program,
-            &Engine::Get()->GetInstance()->GetDescriptorPool()
+            &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
         );
     }
 };
 
-struct RENDER_COMMAND(DestroyComputeShader) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyComputeShader) : RenderCommand
 {
     ComputePipeline &pipeline;
 
@@ -37,7 +37,7 @@ struct RENDER_COMMAND(DestroyComputeShader) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return pipeline.GetPipeline()->Destroy(Engine::Get()->GetDevice());
+        return pipeline.GetPipeline()->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
     
@@ -69,24 +69,28 @@ void ComputePipeline::Init()
 
     EngineComponentBase::Init();
 
-    AssertThrow(Engine::Get()->InitObject(m_shader));
+    InitObject(m_shader);
 
-    OnInit(Engine::Get()->callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
+    if (m_shader) {
         RenderCommands::Push<RENDER_COMMAND(CreateComputeShader)>(
             &m_pipeline,
             m_shader->GetShaderProgram()
         );
 
+        HYP_SYNC_RENDER();
+
         SetReady(true);
+    }
 
-        OnTeardown([this]() {
-            SetReady(false);
+    OnTeardown([this]() {
+        SetReady(false);
 
+        if (m_shader) {
             RenderCommands::Push<RENDER_COMMAND(DestroyComputeShader)>(*this);
             
-            HYP_FLUSH_RENDER_QUEUE();
-        });
-    }));
+            HYP_SYNC_RENDER();
+        }
+    });
 }
 
 } // namespace hyperion::v2

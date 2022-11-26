@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 void WaitForRenderUpdatesToComplete()
 {
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 }
 
 } // namespace hyperion::v2

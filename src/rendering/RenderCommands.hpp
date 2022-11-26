@@ -21,22 +21,9 @@ using renderer::Result;
 
 #define RENDER_COMMAND(name) RenderCommand_##name
 
-template <class T>
-struct RenderCommandData2 { };
-
-struct RenderCommand2_UpdateEntityData;
-
-template <>
-struct RenderCommandData2<RenderCommand2_UpdateEntityData>
+struct RenderCommand
 {
-    Int x[64];
-};
-
-struct RenderCommandBase2
-{
-    Result(*fn_ptr)(RenderCommandBase2 *);
-
-    virtual ~RenderCommandBase2() = default;
+    virtual ~RenderCommand() = default;
 
     HYP_FORCE_INLINE Result Call()
     {
@@ -46,112 +33,6 @@ struct RenderCommandBase2
     virtual Result operator()() = 0;
 };
 
-struct RenderCommand2_UpdateEntityData : RenderCommandBase2
-{
-    RenderCommandData2<RenderCommand2_UpdateEntityData> data;
-
-    RenderCommand2_UpdateEntityData()
-    {
-        RenderCommandBase2::fn_ptr = [](RenderCommandBase2 *self) -> Result
-        {
-            auto *self_casted = static_cast<RenderCommand2_UpdateEntityData *>(self);
-            self_casted->data.x[0] = 123;
-
-            volatile int y = 0;
-
-            for (int x = 0; x < 100; x++) {
-                ++y;
-            }
-
-            HYPERION_RETURN_OK;
-        };
-    }
-
-    virtual ~RenderCommand2_UpdateEntityData() = default;
-
-    // Int x[64];
-
-    // virtual Result operator()()
-    // {
-    //     // data.shader_data.bucket = Bucket::BUCKET_INTERNAL;
-
-    //     x[0] = 123;
-
-    //     volatile int y = 0;
-
-    //     for (int x = 0; x < 100; x++) {
-    //         ++y;
-    //     }
-
-    //     HYPERION_RETURN_OK;
-    // }
-};
-
-#define DEFINE_RENDER_COMMAND(name, fnptr) \
-    struct RenderCommand_##name : RenderCommandBase2 \
-    { \
-        RenderCommandData2< RenderCommand_##name > data; \
-        RenderCommand_##name() \
-        { \
-            RenderCommandBase2::fn_ptr = &Execute; \
-        } \
-        \
-        RenderCommand_##name(RenderCommandData2< RenderCommand_##name > &&data) \
-            : data(std::move(data)) \
-        { \
-            RenderCommandBase2::fn_ptr = &Execute; \
-        } \
-        \
-        virtual ~RenderCommand_##name() = default; \
-        \
-        \
-        static Result Execute(RenderCommandBase2 *ptr) \
-        { \
-            auto tmp = (fnptr); \
-            return tmp(static_cast< RenderCommand_##name * >(ptr), ); \
-        } \
-    };
-
-
-// struct RENDER_COMMAND(FooBar);
-
-// template <>
-// struct RenderCommandData2<RenderCommand_FooBar>
-// {
-//     Int x[64];
-// };
-
-// DEFINE_RENDER_COMMAND(FooBar, [](RenderCommand_FooBar *self, ) -> Result {
-//     self->data.x[0] = 123;
-
-//     volatile int y = 0;
-
-//     for (int x = 0; x < 100; x++) {
-//         ++y;
-//     }
-
-//     HYPERION_RETURN_OK;
-// });
-
-struct RENDER_COMMAND(FooBar) : RenderCommandBase2
-{
-    Int x[64];
-
-    virtual Result operator()() final
-    {
-        x[0] = 123;
-
-        volatile int y = 0;
-
-        for (int x = 0; x < 100; x++) {
-            ++y;
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-
 struct RenderScheduler
 {
     struct FlushResult
@@ -160,7 +41,7 @@ struct RenderScheduler
         SizeType num_executed;
     };
 
-    Array<RenderCommandBase2 *> m_commands;
+    Array<RenderCommand *> m_commands;
 
     std::mutex m_mutex;
     std::atomic<SizeType> m_num_enqueued;
@@ -177,7 +58,7 @@ struct RenderScheduler
         m_owner_thread = id;
     }
 
-    void Commit(RenderCommandBase2 *command);
+    void Commit(RenderCommand *command);
 
     FlushResult Flush();
 };
@@ -231,7 +112,7 @@ public:
 
     HYP_FORCE_INLINE static SizeType Count()
     {
-        return scheduler.m_num_enqueued.load(std::memory_order_relaxed);
+        return scheduler.m_num_enqueued.load();
     }
 
     HYP_FORCE_INLINE static Result Flush()

@@ -33,16 +33,17 @@ void VoxelConeTracing::Init()
 
     EngineComponentBase::Init();
 
-    m_scene = Engine::Get()->CreateHandle<Scene>(
-        Engine::Get()->CreateHandle<Camera>(new OrthoCamera(
-            voxel_map_extent.width, voxel_map_extent.height,
-            -static_cast<float>(voxel_map_extent[0]) * 0.5f, static_cast<float>(voxel_map_extent[0]) * 0.5f,
-            -static_cast<float>(voxel_map_extent[1]) * 0.5f, static_cast<float>(voxel_map_extent[1]) * 0.5f,
-            -static_cast<float>(voxel_map_extent[2]) * 0.5f, static_cast<float>(voxel_map_extent[2]) * 0.5f
-        ))
+    m_scene = CreateObject<Scene>(
+        CreateObject<Camera>(voxel_map_extent.width, voxel_map_extent.height)
     );
 
-    Engine::Get()->InitObject(m_scene);
+    m_scene->GetCamera()->SetCameraController(UniquePtr<OrthoCameraController>::Construct(
+        -Float(voxel_map_extent[0]) * 0.5f, Float(voxel_map_extent[0]) * 0.5f,
+        -Float(voxel_map_extent[1]) * 0.5f, Float(voxel_map_extent[1]) * 0.5f,
+        -Float(voxel_map_extent[2]) * 0.5f, Float(voxel_map_extent[2]) * 0.5f
+    ));
+
+    InitObject(m_scene);
 
     CreateImagesAndBuffers();
     CreateShader();
@@ -67,7 +68,7 @@ void VoxelConeTracing::Init()
         m_generate_mipmap.Reset();
         m_perform_temporal_blending.Reset();
 
-        struct RENDER_COMMAND(DestroyVCT) : RenderCommandBase2
+        struct RENDER_COMMAND(DestroyVCT) : RenderCommand
         {
             VoxelConeTracing &vct;
 
@@ -79,7 +80,7 @@ void VoxelConeTracing::Init()
             virtual Result operator()()
             {
                 // unset descriptors
-                auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
+                auto *descriptor_set = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                     .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
                 descriptor_set
@@ -93,11 +94,11 @@ void VoxelConeTracing::Init()
                     ->GetDescriptor(1)
                     ->SetSubDescriptor({
                         .element_index = 0u,
-                        .buffer = Engine::Get()->GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(Engine::Get()->GetDevice(), sizeof(VoxelUniforms))
+                        .buffer = Engine::Get()->GetPlaceholderData().GetOrCreateBuffer<UniformBuffer>(Engine::Get()->GetGPUDevice(), sizeof(VoxelUniforms))
                     });
 
                 for (UInt i = 0; i < max_frames_in_flight; i++) {
-                    auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+                    auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
                     descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
                         ->SetSubDescriptor({
                             .element_index = 0u,
@@ -108,26 +109,26 @@ void VoxelConeTracing::Init()
                         // destroy owned descriptor sets, as well as individual mip imageviews
                         if constexpr (VoxelConeTracing::manual_mipmap_generation) {
                             for (auto &descriptor_set : vct.m_generate_mipmap_descriptor_sets[i]) {
-                                HYPERION_ASSERT_RESULT(descriptor_set->Destroy(Engine::Get()->GetDevice()));
+                                HYPERION_ASSERT_RESULT(descriptor_set->Destroy(Engine::Get()->GetGPUDevice()));
                             }
 
                             vct.m_generate_mipmap_descriptor_sets[i].Clear();
 
                             for (auto &mip_image_view : vct.m_mips[i]) {
-                                HYPERION_ASSERT_RESULT(mip_image_view->Destroy(Engine::Get()->GetDevice()));
+                                HYPERION_ASSERT_RESULT(mip_image_view->Destroy(Engine::Get()->GetGPUDevice()));
                             }
 
                             vct.m_mips[i].Clear();
                         }
                 }
 
-                return vct.m_uniform_buffer.Destroy(Engine::Get()->GetDevice());
+                return vct.m_uniform_buffer.Destroy(Engine::Get()->GetGPUDevice());
             }
         };
 
         RenderCommands::Push<RENDER_COMMAND(DestroyVCT)>(*this);
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
 
         Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_voxel_image));
         Engine::Get()->SafeReleaseHandle<Shader>(std::move(m_shader));
@@ -205,13 +206,13 @@ void VoxelConeTracing::OnEntityRenderableAttributesChanged(Handle<Entity> &entit
     }
 }
 
-void VoxelConeTracing::OnUpdate( GameCounter::TickUnit delta)
+void VoxelConeTracing::OnUpdate(GameCounter::TickUnit delta)
 {
     // Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
 }
 
-void VoxelConeTracing::OnRender( Frame *frame)
+void VoxelConeTracing::OnRender(Frame *frame)
 {
     if (!Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI)) {
         return;
@@ -232,7 +233,7 @@ void VoxelConeTracing::OnRender( Frame *frame)
     m_clear_voxels->GetPipeline()->Bind(command_buffer);
 
     command_buffer->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_clear_voxels->GetPipeline(),
         DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
     );
@@ -242,7 +243,7 @@ void VoxelConeTracing::OnRender( Frame *frame)
     Engine::Get()->render_state.BindScene(m_scene.Get());
 
     command_buffer->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_renderer_instance->GetPipeline(),
         DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
     );
@@ -265,7 +266,7 @@ void VoxelConeTracing::OnRender( Frame *frame)
     m_perform_temporal_blending->GetPipeline()->Bind(command_buffer);
 
     command_buffer->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_perform_temporal_blending->GetPipeline(),
         DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
     );
@@ -310,7 +311,7 @@ void VoxelConeTracing::OnRender( Frame *frame)
             }
 
             command_buffer->BindDescriptorSet(
-                Engine::Get()->GetInstance()->GetDescriptorPool(),
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
                 m_generate_mipmap->GetPipeline(),
                 m_generate_mipmap_descriptor_sets[frame_index][mip_level].get(),
                 static_cast<DescriptorSet::Index>(0)
@@ -361,7 +362,7 @@ void VoxelConeTracing::OnRender( Frame *frame)
         * directly call the renderer functions rather than enqueueing a command.
         */
         HYPERION_PASS_ERRORS(
-            m_voxel_image->GetImage().GenerateMipmaps(Engine::Get()->GetDevice(), command_buffer),
+            m_voxel_image->GetImage().GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
             result
         );
 
@@ -384,7 +385,7 @@ void VoxelConeTracing::OnComponentIndexChanged(RenderComponentBase::Index new_in
 
 void VoxelConeTracing::CreateImagesAndBuffers()
 {
-    m_voxel_image = Engine::Get()->CreateHandle<Texture>(
+    m_voxel_image = CreateObject<Texture>(
         StorageImage(
             voxel_map_extent,
             InternalFormat::RGBA8,
@@ -395,9 +396,9 @@ void VoxelConeTracing::CreateImagesAndBuffers()
         WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER
     );
 
-    Engine::Get()->InitObject(m_voxel_image);
+    InitObject(m_voxel_image);
 
-    m_temporal_blending_image = Engine::Get()->CreateHandle<Texture>(
+    m_temporal_blending_image = CreateObject<Texture>(
         StorageImage(
             temporal_image_extent,
             InternalFormat::RGBA8, // alpha channel is used as temporal blending amount.
@@ -408,7 +409,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
         WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER
     );
 
-    Engine::Get()->InitObject(m_temporal_blending_image);
+    InitObject(m_temporal_blending_image);
 
     if constexpr (manual_mipmap_generation) {
         const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
@@ -423,7 +424,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
         }
     }
 
-    struct RENDER_COMMAND(CreateVCTImagesAndBuffers) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateVCTImagesAndBuffers) : RenderCommand
     {
         VoxelConeTracing &vct;
 
@@ -434,7 +435,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
 
         virtual Result operator()()
         {
-            HYPERION_BUBBLE_ERRORS(vct.m_uniform_buffer.Create(Engine::Get()->GetDevice(), sizeof(VoxelUniforms)));
+            HYPERION_BUBBLE_ERRORS(vct.m_uniform_buffer.Create(Engine::Get()->GetGPUDevice(), sizeof(VoxelUniforms)));
 
             const VoxelUniforms uniforms
             {
@@ -445,7 +446,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
             };
 
             vct.m_uniform_buffer.Copy(
-                Engine::Get()->GetDevice(),
+                Engine::Get()->GetGPUDevice(),
                 sizeof(uniforms),
                 &uniforms
             );
@@ -457,7 +458,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
                 for (UInt i = 0; i < max_frames_in_flight; i++) {
                     for (UInt mip_level = 0; mip_level < num_mip_levels; mip_level++) {
                         HYPERION_ASSERT_RESULT(vct.m_mips[i][mip_level]->Create(
-                            Engine::Get()->GetDevice(),
+                            Engine::Get()->GetGPUDevice(),
                             &vct.m_voxel_image->GetImage(),
                             mip_level, 1,
                             0, vct.m_voxel_image->GetImage().NumFaces()
@@ -475,7 +476,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
 
 void VoxelConeTracing::CreateRendererInstance()
 {
-    auto renderer_instance = std::make_unique<RendererInstance>(
+    m_renderer_instance = CreateObject<RendererInstance>(
         std::move(m_shader),
         Handle<RenderPass>(m_render_pass),
         RenderableAttributeSet(
@@ -491,39 +492,39 @@ void VoxelConeTracing::CreateRendererInstance()
     );
 
     for (auto &framebuffer : m_framebuffers) {
-        renderer_instance->AddFramebuffer(Handle<Framebuffer>(framebuffer));
+        m_renderer_instance->AddFramebuffer(Handle<Framebuffer>(framebuffer));
     }
     
-    m_renderer_instance = Engine::Get()->AddRendererInstance(std::move(renderer_instance));
-    Engine::Get()->InitObject(m_renderer_instance);
+    Engine::Get()->AddRendererInstance(m_renderer_instance);
+    InitObject(m_renderer_instance);
 }
 
 void VoxelConeTracing::CreateComputePipelines()
 {
-    m_clear_voxels = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("VCTClearVoxels"))
+    m_clear_voxels = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("VCTClearVoxels"))
     );
 
-    Engine::Get()->InitObject(m_clear_voxels);
+    InitObject(m_clear_voxels);
 
     if constexpr (manual_mipmap_generation) {
-        m_generate_mipmap = Engine::Get()->CreateHandle<ComputePipeline>(
-            Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("VCTGenerateMipmap")),
+        m_generate_mipmap = CreateObject<ComputePipeline>(
+            CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("VCTGenerateMipmap")),
             Array<const DescriptorSet *> { m_generate_mipmap_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
         );
 
-        Engine::Get()->InitObject(m_generate_mipmap);
+        InitObject(m_generate_mipmap);
     }
 
-    m_perform_temporal_blending = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(
+    m_perform_temporal_blending = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/vct/TemporalBlending.comp.spv")).Read()}}
             }
         )
     );
 
-    Engine::Get()->InitObject(m_perform_temporal_blending);
+    InitObject(m_perform_temporal_blending);
 }
 
 void VoxelConeTracing::CreateShader()
@@ -533,7 +534,7 @@ void VoxelConeTracing::CreateShader()
         {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/vct/voxelize.frag.spv")).Read()}}
     };
 
-    if (Engine::Get()->GetDevice()->GetFeatures().SupportsGeometryShaders()) {
+    if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsGeometryShaders()) {
         sub_shaders.push_back({ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/vct/voxelize.geom.spv")).Read()}});
     } else {
         DebugLog(
@@ -542,29 +543,29 @@ void VoxelConeTracing::CreateShader()
         );
     }
     
-    m_shader = Engine::Get()->CreateHandle<Shader>(sub_shaders);
-    Engine::Get()->InitObject(m_shader);
+    m_shader = CreateObject<Shader>(sub_shaders);
+    InitObject(m_shader);
 }
 
 void VoxelConeTracing::CreateRenderPass()
 {
-    m_render_pass = Engine::Get()->CreateHandle<RenderPass>(
+    m_render_pass = CreateObject<RenderPass>(
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
-    Engine::Get()->InitObject(m_render_pass);
+    InitObject(m_render_pass);
 }
 
 void VoxelConeTracing::CreateFramebuffers()
 {
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_framebuffers[i] = Engine::Get()->CreateHandle<Framebuffer>(
+        m_framebuffers[i] = CreateObject<Framebuffer>(
             Extent2D(voxel_map_extent),
             Handle<RenderPass>(m_render_pass)
         );
         
-        Engine::Get()->InitObject(m_framebuffers[i]);
+        InitObject(m_framebuffers[i]);
     }
 }
 
@@ -620,7 +621,7 @@ void VoxelConeTracing::CreateDescriptors()
         }
     }
 
-    struct RENDER_COMMAND(CreateVCTDescriptors) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateVCTDescriptors) : RenderCommand
     {
         VoxelConeTracing &vct;
 
@@ -633,7 +634,7 @@ void VoxelConeTracing::CreateDescriptors()
         {
             DebugLog(LogType::Debug, "Add voxel cone tracing descriptors\n");
 
-            auto *descriptor_set = Engine::Get()->GetInstance()->GetDescriptorPool()
+            auto *descriptor_set = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
             descriptor_set
@@ -656,7 +657,7 @@ void VoxelConeTracing::CreateDescriptors()
                 ->SetSubDescriptor({ .element_index = 0u, .sampler = &vct.m_voxel_image->GetSampler() });
             
             for (UInt i = 0; i < max_frames_in_flight; i++) {
-                auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+                auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
                 descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
                     ->SetSubDescriptor({
                         .element_index = 0u,
@@ -670,8 +671,8 @@ void VoxelConeTracing::CreateDescriptors()
                         AssertThrow(mip_descriptor_set != nullptr);
 
                         HYPERION_ASSERT_RESULT(mip_descriptor_set->Create(
-                            Engine::Get()->GetDevice(),
-                            &Engine::Get()->GetInstance()->GetDescriptorPool()
+                            Engine::Get()->GetGPUDevice(),
+                            &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                         ));
                     }
                 }

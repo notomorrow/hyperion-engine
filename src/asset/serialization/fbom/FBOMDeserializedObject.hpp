@@ -8,7 +8,7 @@
 #include <core/lib/Variant.hpp>
 #include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/UniquePtr.hpp>
-#include <core/Handle.hpp>
+#include <core/HandleID.hpp>
 
 #include <asset/AssetBatch.hpp>
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
@@ -68,15 +68,7 @@ public:
     template <class T>
     auto Get() -> typename AssetLoaderWrapper<T>::CastedType
     {
-        using Wrapper = AssetLoaderWrapper<T>;
-
-        if constexpr (std::is_same_v<typename Wrapper::CastedType, typename Wrapper::ResultType>) {
-            return m_value.Get<typename Wrapper::ResultType>();
-        } else {
-            return m_value.Get<typename Wrapper::ResultType>().template Cast<T>();
-        }
-
-        return typename Wrapper::CastedType();
+        return AssetLoaderWrapper<T>::ExtractAssetValue(m_value);
     }
 
     /*! \brief Extracts the value held inside the Any */

@@ -28,21 +28,20 @@ void UIScene::Init()
 
     EngineComponentBase::Init();
 
-    m_scene = Engine::Get()->CreateHandle<Scene>(
-        Engine::Get()->CreateHandle<Camera>(new OrthoCamera(
-            2048, 2048,
-            -1, 1,
-            -1, 1,
-            -1, 1
-        ))
-    );
+    m_scene = CreateObject<Scene>(CreateObject<Camera>());
 
-    Engine::Get()->InitObject(m_scene);
+    m_scene->GetCamera()->SetCameraController(UniquePtr<OrthoCameraController>::Construct(
+        -1.0f, 1.0f,
+        -1.0f, 1.0f,
+        -1.0f, 1.0f
+    ));
+
+    InitObject(m_scene);
 
     m_scene->GetCamera()->SetDirection(Vector3(0.0f, 0.0f, -1.0f));
 
     // for (auto &object : m_ui_objects) {
-    //     AssertThrow(Engine::Get()->InitObject(object));
+    //     AssertThrow(InitObject(object));
 
     //     m_scene->AddEntity(Handle<Entity>(object->GetEntity()));
     // }
@@ -57,7 +56,7 @@ void UIScene::Init()
     });
 }
 
-void UIScene::Update( GameCounter::TickUnit delta)
+void UIScene::Update(GameCounter::TickUnit delta)
 {
     m_scene->Update(delta, false);
 }
@@ -90,23 +89,6 @@ bool UIScene::TestRay(const Vector2 &position, RayHit &out_first_hit)
 
     return false;
 }
-
-// void UIScene::Add(Handle<UIObject> &&object)
-// {
-//     Threads::AssertOnThread(THREAD_GAME);
-
-//     if (!object) {
-//         return;
-//     }
-
-//     if (IsInitCalled()) {
-//         GetEngine()->InitObject(object);
-
-//         m_scene->AddEntity(Handle<Entity>(object->GetEntity()));
-//     }
-
-//     m_ui_objects.PushBack(std::move(object));
-// }
 
 bool UIScene::OnInputEvent(
     InputManager *input_manager,

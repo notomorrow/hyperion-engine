@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateBLAS) : RenderCommandBase2
+struct RENDER_COMMAND(CreateBLAS) : RenderCommand
 {
     renderer::BottomLevelAccelerationStructure *blas;
 
@@ -16,11 +16,11 @@ struct RENDER_COMMAND(CreateBLAS) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return blas->Create(Engine::Get()->GetDevice(), Engine::Get()->GetInstance());
+        return blas->Create(Engine::Get()->GetGPUDevice(), Engine::Get()->GetGPUInstance());
     }
 };
 
-struct RENDER_COMMAND(DestroyBLAS) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyBLAS) : RenderCommand
 {
     renderer::BottomLevelAccelerationStructure *blas;
 
@@ -31,7 +31,7 @@ struct RENDER_COMMAND(DestroyBLAS) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return blas->Destroy(Engine::Get()->GetDevice());
+        return blas->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
 
@@ -68,7 +68,7 @@ void BLAS::SetMesh(Handle<Mesh> &&mesh)
     }
 
     if (m_mesh) {
-        Engine::Get()->InitObject(m_mesh);
+        InitObject(m_mesh);
 
         auto material_id = m_material
             ? m_material->GetID()
@@ -131,11 +131,11 @@ void BLAS::Init()
 
     UInt material_index = 0;
 
-    if (Engine::Get()->InitObject(m_material)) {
+    if (InitObject(m_material)) {
         material_index = m_material->GetID().ToIndex();
     }
 
-    AssertThrow(Engine::Get()->InitObject(m_mesh));
+    AssertThrow(InitObject(m_mesh));
     
     m_blas.SetTransform(m_transform.GetMatrix());
     m_blas.AddGeometry(std::make_unique<AccelerationGeometry>(
@@ -147,7 +147,7 @@ void BLAS::Init()
 
     RenderCommands::Push<RENDER_COMMAND(CreateBLAS)>(&m_blas);
 
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 
     SetReady(true);
 
@@ -156,7 +156,7 @@ void BLAS::Init()
 
         RenderCommands::Push<RENDER_COMMAND(DestroyBLAS)>(&m_blas);
 
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 
@@ -179,7 +179,7 @@ void BLAS::UpdateRender(
         return;
     }
     
-    HYPERION_ASSERT_RESULT(m_wrapped.UpdateStructure(Engine::Get()->GetInstance(), out_was_rebuilt));
+    HYPERION_ASSERT_RESULT(m_wrapped.UpdateStructure(Engine::Get()->GetGPUInstance(), out_was_rebuilt));
 #endif
 }
 

@@ -229,6 +229,22 @@ public:
 
         return this;
     }
+    
+    Descriptor *SetElementAccelerationStructure(UInt index, const AccelerationStructure *acceleration_structure)
+    {
+        AssertThrowMsg(
+            m_descriptor_type == DescriptorType::ACCELERATION_STRUCTURE,
+            "SetElementAccelerationStructure() requires descriptor of type ACCELERATION_STRUCTURE."
+        );
+
+        SubDescriptor element;
+        element.element_index = index;
+        element.acceleration_structure = acceleration_structure;
+
+        SetSubDescriptor(std::move(element));
+
+        return this;
+    }
 
     /*! \brief Remove the sub-descriptor at the given index. */
     void RemoveSubDescriptor(UInt index);
@@ -614,7 +630,7 @@ private:
 #define HYP_DEFINE_DESCRIPTOR(class_name, descriptor_type) \
     class class_name : public Descriptor { \
     public: \
-        class_name( \
+        class_name(\
             UInt binding \
         ) : Descriptor(binding, descriptor_type) {} \
     }

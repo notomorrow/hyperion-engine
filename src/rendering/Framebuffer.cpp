@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 
-struct RENDER_COMMAND(CreateFramebuffer) : RenderCommandBase2
+struct RENDER_COMMAND(CreateFramebuffer) : RenderCommand
 {
     renderer::FramebufferObject *framebuffer;
     renderer::RenderPass *render_pass;
@@ -16,11 +16,11 @@ struct RENDER_COMMAND(CreateFramebuffer) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return framebuffer->Create(Engine::Get()->GetDevice(), render_pass);
+        return framebuffer->Create(Engine::Get()->GetGPUDevice(), render_pass);
     }
 };
 
-struct RENDER_COMMAND(DestroyFramebuffer) : RenderCommandBase2
+struct RENDER_COMMAND(DestroyFramebuffer) : RenderCommand
 {
     renderer::FramebufferObject *framebuffer;
 
@@ -31,7 +31,7 @@ struct RENDER_COMMAND(DestroyFramebuffer) : RenderCommandBase2
 
     virtual Result operator()()
     {
-        return framebuffer->Destroy(Engine::Get()->GetDevice());
+        return framebuffer->Destroy(Engine::Get()->GetGPUDevice());
     }
 };
 
@@ -64,7 +64,7 @@ void Framebuffer::Init()
 
     EngineComponentBase::Init();
 
-    Engine::Get()->InitObject(m_render_pass);
+    InitObject(m_render_pass);
 
     RenderCommands::Push<RENDER_COMMAND(CreateFramebuffer)>(&m_framebuffer, &m_render_pass->GetRenderPass());
 
@@ -75,7 +75,7 @@ void Framebuffer::Init()
 
         RenderCommands::Push<RENDER_COMMAND(DestroyFramebuffer)>(&m_framebuffer);
         
-        HYP_FLUSH_RENDER_QUEUE();
+        HYP_SYNC_RENDER();
     });
 }
 

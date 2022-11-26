@@ -40,12 +40,12 @@ HBAO::HBAO(const Extent2D &extent)
     : m_image_outputs {
           ImageOutput(StorageImage(
               Extent3D(extent.width, extent.height, 1),
-              InternalFormat::RGBA8,
+              InternalFormat::RGBA16F,
               ImageType::TEXTURE_TYPE_2D
           )),
           ImageOutput(StorageImage(
               Extent3D(extent.width, extent.height, 1),
-              InternalFormat::RGBA8,
+              InternalFormat::RGBA16F,
               ImageType::TEXTURE_TYPE_2D
           ))
       },
@@ -53,30 +53,31 @@ HBAO::HBAO(const Extent2D &extent)
           std::array<ImageOutput, 2> {
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
+                  InternalFormat::RGBA16F,
                   ImageType::TEXTURE_TYPE_2D
               )),
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
+                  InternalFormat::RGBA16F,
                   ImageType::TEXTURE_TYPE_2D
               ))
           },
           std::array<ImageOutput, 2> {
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
+                  InternalFormat::RGBA16F,
                   ImageType::TEXTURE_TYPE_2D
               )),
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
+                  InternalFormat::RGBA16F,
                   ImageType::TEXTURE_TYPE_2D
               ))
           }
       },
       m_temporal_blending(
           extent,
+          InternalFormat::RGBA16F,
           FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
       )
@@ -109,7 +110,7 @@ void HBAO::Destroy()
         }
     }
 
-    struct RENDER_COMMAND(DestroyHBAODescriptors) : RenderCommandBase2
+    struct RENDER_COMMAND(DestroyHBAODescriptors) : RenderCommand
     {
         HBAO::ImageOutput *image_outputs;
 
@@ -123,10 +124,10 @@ void HBAO::Destroy()
             auto result = Result::OK;
 
             for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                image_outputs[frame_index].Destroy(Engine::Get()->GetDevice());
+                image_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice());
 
                 // unset final result from the global descriptor set
-                auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+                auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                     .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
                 descriptor_set_globals
@@ -140,12 +141,12 @@ void HBAO::Destroy()
 
     RenderCommands::Push<RENDER_COMMAND(DestroyHBAODescriptors)>(m_image_outputs.Data());
 
-    HYP_FLUSH_RENDER_QUEUE();
+    HYP_SYNC_RENDER();
 }
 
 void HBAO::CreateImages()
 {
-    struct RENDER_COMMAND(CreateHBAOImageOutputs) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateHBAOImageOutputs) : RenderCommand
     {
         HBAO::ImageOutput *image_outputs;
         std::array<HBAO::ImageOutput, 2> *blur_image_outputs;
@@ -159,11 +160,11 @@ void HBAO::CreateImages()
         virtual Result operator()()
         {
             for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(Engine::Get()->GetDevice()));
+                HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(Engine::Get()->GetGPUDevice()));
 
                 if constexpr (blur_result) {
                     for (UInt i = 0; i < 2; i++) {
-                        HYPERION_BUBBLE_ERRORS(blur_image_outputs[frame_index][i].Create(Engine::Get()->GetDevice()));
+                        HYPERION_BUBBLE_ERRORS(blur_image_outputs[frame_index][i].Create(Engine::Get()->GetGPUDevice()));
                     }
                 }
             }
@@ -295,7 +296,7 @@ void HBAO::CreateDescriptorSets()
         }
     }
 
-    struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommandBase2
+    struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
     {
         UniquePtr<DescriptorSet> *descriptor_sets;
         FixedArray<UniquePtr<DescriptorSet>, 2> *blur_descriptor_sets;
@@ -316,8 +317,8 @@ void HBAO::CreateDescriptorSets()
                 AssertThrow(descriptor_sets[frame_index] != nullptr);
                 
                 HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                    Engine::Get()->GetDevice(),
-                    &Engine::Get()->GetInstance()->GetDescriptorPool()
+                    Engine::Get()->GetGPUDevice(),
+                    &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 ));
 
                 if constexpr (blur_result) {
@@ -325,14 +326,14 @@ void HBAO::CreateDescriptorSets()
                         AssertThrow(blur_descriptor_sets[frame_index][blur_pass_index] != nullptr);
                         
                         HYPERION_BUBBLE_ERRORS(blur_descriptor_sets[frame_index][blur_pass_index]->Create(
-                            Engine::Get()->GetDevice(),
-                            &Engine::Get()->GetInstance()->GetDescriptorPool()
+                            Engine::Get()->GetGPUDevice(),
+                            &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                         ));
                     }
                 }
 
                 // Add the final result to the global descriptor set
-                auto *descriptor_set_globals = Engine::Get()->GetInstance()->GetDescriptorPool()
+                auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                     .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
                 descriptor_set_globals
@@ -359,27 +360,27 @@ void HBAO::CreateDescriptorSets()
 
 void HBAO::CreateComputePipelines()
 {
-    m_compute_hbao = Engine::Get()->CreateHandle<ComputePipeline>(
-        Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("HBAO")),
+    m_compute_hbao = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("HBAO")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
-    Engine::Get()->InitObject(m_compute_hbao);
+    InitObject(m_compute_hbao);
 
     if constexpr (blur_result) {
-        m_blur_hor = Engine::Get()->CreateHandle<ComputePipeline>(
-            Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "HORIZONTAL" }))),
+        m_blur_hor = CreateObject<ComputePipeline>(
+            CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA16F" }))),
             Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
         );
 
-        Engine::Get()->InitObject(m_blur_hor);
+        InitObject(m_blur_hor);
 
-        m_blur_vert = Engine::Get()->CreateHandle<ComputePipeline>(
-            Engine::Get()->CreateHandle<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute")),
+        m_blur_vert = CreateObject<ComputePipeline>(
+            CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "OUTPUT_RGBA16F" }))),
             Array<const DescriptorSet *> { m_blur_descriptor_sets[0][1].Get() }
         );
 
-        Engine::Get()->InitObject(m_blur_vert);
+        InitObject(m_blur_vert);
     }
 }
 
@@ -419,7 +420,7 @@ void HBAO::Render(
     m_compute_hbao->GetPipeline()->Bind(command_buffer);
 
     command_buffer->BindDescriptorSet(
-        Engine::Get()->GetInstance()->GetDescriptorPool(),
+        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_compute_hbao->GetPipeline(),
         m_descriptor_sets[frame_index].Get(),
         0,
@@ -470,7 +471,7 @@ void HBAO::Render(
                 ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
     
             command_buffer->BindDescriptorSet(
-                Engine::Get()->GetInstance()->GetDescriptorPool(),
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
                 compute_pipeline->GetPipeline(),
                 m_blur_descriptor_sets[frame_index][blur_pass_index].Get(),
                 0
