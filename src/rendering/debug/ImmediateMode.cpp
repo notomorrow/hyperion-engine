@@ -44,7 +44,7 @@ void ImmediateMode::Create()
     m_shapes[UInt(DebugDrawShape::PLANE)] = MeshBuilder::Quad();
 
     for (auto &shape : m_shapes) {
-        AssertThrow(Engine::Get()->InitObject(shape));
+        AssertThrow(InitObject(shape));
     }
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

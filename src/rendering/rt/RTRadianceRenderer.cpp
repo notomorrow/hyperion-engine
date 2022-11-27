@@ -299,7 +299,7 @@ void RTRadianceRenderer::CreateDescriptorSets()
             ->SetElementAccelerationStructure(0, &m_tlas->GetInternalTLAS());
 
         descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(1)
-            ->SetElementSRV(0, &m_image_outputs[frame_index].image_view);
+            ->SetElementUAV(0, &m_image_outputs[frame_index].image_view);
         
         // mesh descriptions
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(2)

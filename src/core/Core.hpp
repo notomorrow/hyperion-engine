@@ -17,6 +17,8 @@ namespace hyperion::v2 {
 class Engine;
 class ObjectPool;
 
+struct RenderCommand;
+
 template <class T>
 struct Handle;
 
@@ -26,8 +28,8 @@ renderer::Device *GetEngineDevice();
 
 ObjectPool &GetObjectPool();
 
-template <class T, class Engine>
-static HYP_FORCE_INLINE bool InitObjectIntern(Engine *engine, Handle<T> &handle)
+template <class T, class EngineImpl>
+static HYP_FORCE_INLINE bool InitObjectIntern(EngineImpl *engine, Handle<T> &handle)
 {
     return engine->template InitObject<T>(handle);
 }
