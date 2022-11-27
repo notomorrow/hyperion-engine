@@ -47,6 +47,7 @@ vec2 texcoord = v_texcoord0;
 #define IBL_INTENSITY 5000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 
+
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -136,12 +137,6 @@ void main()
 #endif
 
 #ifdef RT_ENABLED
-        // { // RT Radiance
-        //     const int num_levels = GetNumLevels(HYP_SAMPLER_LINEAR, rt_radiance_final);
-        //     const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
-        //     vec4 rt_radiance = Texture2DLod(HYP_SAMPLER_LINEAR, rt_radiance_final, texcoord, 0.0);
-        //     reflections = rt_radiance;//mix(reflections, rt_radiance, rt_radiance.a);
-        // }
         CalculateRaytracingReflection(deferred_params, texcoord, reflections);
 
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;

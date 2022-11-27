@@ -11,7 +11,8 @@ layout(location=4) out vec3 v_tangent;
 layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
-layout(location=12) out vec3 v_view_space_position;
+layout(location=11) out vec4 v_position_ndc;
+layout(location=12) out vec4 v_previous_position_ndc;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -52,6 +53,7 @@ mat4 CreateSkinningMatrix()
 
 void main() {
     vec4 position;
+    vec4 previous_position;
     mat4 normal_matrix;
 
     vec3 displaced_position = a_position;
@@ -63,9 +65,12 @@ void main() {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
+        previous_position = object.previous_model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
     } else {
+        // This is not valid calc for prevous position with displacement
         position = object.model_matrix * vec4(displaced_position, 1.0);
+		previous_position = object.previous_model_matrix * vec4(displaced_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
     }
 
@@ -78,7 +83,8 @@ void main() {
 	v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
     
-    v_view_space_position = (scene.view * position).xyz;
+    v_position_ndc = scene.projection * scene.view * position;
+    v_previous_position_ndc = scene.projection * scene.previous_view * previous_position;
 
-    gl_Position = scene.projection * scene.view * position;
+    gl_Position = v_position_ndc;
 } 
