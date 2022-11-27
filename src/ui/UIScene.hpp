@@ -31,15 +31,6 @@ namespace hyperion::v2 {
 
 using renderer::Extent2D;
 
-// class UIObject : public EngineComponentBase<STUB_CLASS(UIObject)>
-// {
-// public:
-//     UIObject();
-//     virtual ~UIObject();
-
-//     virtual void Init();
-// };
-
 class UIScene : public EngineComponentBase<STUB_CLASS(UIScene)>
 {
 public:
