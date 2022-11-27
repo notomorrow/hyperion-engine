@@ -1,6 +1,15 @@
 #ifndef HYP_SHARED_GLSL
 #define HYP_SHARED_GLSL
 
+// HLSL Compat
+#define saturate(_x) Saturate(_x)
+#define float2 vec2
+#define float3 vec3
+#define float4 vec4
+#define float2x2 mat2
+#define float3x3 mat3
+#define float4x4 mat4
+
 float Luminance(vec3 color)
 {
     return color.r * 0.2125 + color.g * 0.715 + color.b * 0.0721;
