@@ -12,6 +12,7 @@ layout(location=4) out vec3 v_tangent;
 layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
+layout(location=11) out flat uint v_object_index;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -23,6 +24,8 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
+
+#define HYP_INSTANCING
 #include "include/object.inc"
 #include "include/env_probe.inc"
 
@@ -75,7 +78,7 @@ void main()
         normal_matrix = transpose(inverse(object.model_matrix));
     } else {
 #if HYP_ENABLE_SKINNING
-        if (bool(object.skeleton_id)) {
+        if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
             mat4 skinning_matrix = CreateSkinningMatrix();
 
             position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
@@ -102,6 +105,8 @@ void main()
 
     mat4 projection_matrix = cubemap_uniforms[render_component_index].projection_matrices[gl_ViewIndex];
     mat4 view_matrix = cubemap_uniforms[render_component_index].view_matrices[gl_ViewIndex];
+
+    v_object_index = OBJECT_INDEX;
 
     gl_Position = projection_matrix * view_matrix * position;
 }

@@ -1,4 +1,4 @@
-#version 450
+#version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
@@ -13,6 +13,7 @@ layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out vec4 v_position_ndc;
 layout(location=12) out vec4 v_previous_position_ndc;
+layout(location=15) out flat uint v_object_index;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -37,6 +38,8 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 // layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
+
+#define HYP_INSTANCING
 #include "include/object.inc"
 
 struct Skeleton
@@ -73,9 +76,9 @@ void main() {
     vec4 position;
     vec4 previous_position;
     mat4 normal_matrix;
-    
+
 #ifdef VERTEX_SKINNING_ENABLED
-    if (bool(object.skeleton_id))
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
     {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
@@ -89,7 +92,6 @@ void main() {
         position = object.model_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
-
     }
 
     v_position = position.xyz / position.w;
@@ -102,6 +104,9 @@ void main() {
 
     v_position_ndc = scene.projection * scene.view * position;
     v_previous_position_ndc = scene.projection * scene.previous_view * previous_position;
+
+
+    v_object_index = OBJECT_INDEX;
 
     gl_Position = v_position_ndc;
 } 

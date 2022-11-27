@@ -154,8 +154,8 @@ void main()
     
     material_color = material.albedo;
 
-    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
+    if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
         material_color *= albedo_texture;
     }
@@ -163,5 +163,5 @@ void main()
     payload.color = material_color.rgb;
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
-    payload.roughness = GET_MATERIAL_PARAM(MATERIAL_PARAM_ROUGHNESS);
+    payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
 }

@@ -30,9 +30,6 @@ layout(location=2) out vec4 gbuffer_material;
 void main()
 {
     vec3 normal = normalize(v_normal);
-    //float metalness = material.metalness;
-    //float roughness = material.roughness;
-    
     vec2 texcoord = v_texcoord0;
 
     

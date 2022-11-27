@@ -12,12 +12,14 @@ layout(location=1) in vec3 v_normal[];
 layout(location=2) in vec2 v_texcoord0[];
 layout(location=3) in vec3 v_voxel[];
 layout(location=4) in float v_lighting[];
+layout(location=5) in flat uint v_object_index;
 
 layout(location=0) out vec3 position;
 layout(location=1) out vec3 normal;
 layout(location=2) out vec2 texcoord;
 layout(location=3) out vec3 voxel;
 layout(location=4) out float lighting;
+layout(location=5) out flat uint object_index;
 
 vec2 Project(in vec3 v, in uint axis) { return axis == 0 ? v.yz : (axis == 1 ? v.xz : v.xy); }
 
@@ -37,21 +39,24 @@ void main() {
     normal = v_normal[0];
 	texcoord = v_texcoord0[0];
 	lighting = v_lighting[0];
-	voxel    = v_voxel[0];
+	voxel = v_voxel[0];
+	object_index = v_object_index[0];
 	gl_Position = vec4(Project(pos0, axis), 1.0f, 1.0f);
 	EmitVertex();
     position = pos1;
     normal = v_normal[1];
 	texcoord = v_texcoord0[1];
 	lighting = v_lighting[1];
-	voxel    = v_voxel[1];
+	voxel = v_voxel[1];
+	object_index = v_object_index[1];
 	gl_Position = vec4(Project(pos1, axis), 1.0f, 1.0f);
 	EmitVertex();
     position = pos2;
     normal = v_normal[2];
 	texcoord = v_texcoord0[2];
 	lighting = v_lighting[2];
-	voxel    = v_voxel[2];
+	voxel = v_voxel[2];
+	object_index = v_object_index[2];
 	gl_Position = vec4(Project(pos2, axis), 1.0f, 1.0f);
 	EmitVertex();
 	EndPrimitive();
