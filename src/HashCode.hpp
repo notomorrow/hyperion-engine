@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <functional>
 #include <string>
+#include <cstring>
 
 namespace hyperion {
 

@@ -17,8 +17,6 @@ namespace hyperion::v2 {
 class Engine;
 class ObjectPool;
 
-struct RenderCommand;
-
 template <class T>
 struct Handle;
 

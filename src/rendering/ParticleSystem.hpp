@@ -3,6 +3,7 @@
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
+#include <core/ThreadSafeContainer.hpp>
 #include <Threads.hpp>
 
 #include <math/Vector3.hpp>

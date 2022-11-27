@@ -6,6 +6,7 @@
 #include <core/ObjectPool.hpp>
 #include <core/Class.hpp>
 #include <core/HandleID.hpp>
+#include <core/Handle.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/StaticString.hpp>
 #include <rendering/backend/RendererInstance.hpp>

@@ -63,6 +63,7 @@ VkFormat ToVkFormat(InternalFormat fmt)
     case InternalFormat::DEPTH_16:    return VK_FORMAT_D16_UNORM_S8_UINT;
     case InternalFormat::DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
     case InternalFormat::DEPTH_32F:   return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    default: break;
     }
 
     AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));

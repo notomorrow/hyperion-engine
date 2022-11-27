@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include <core/Core.hpp>
+#include <Types.hpp>
 
 namespace hyperion::v2 {
 
