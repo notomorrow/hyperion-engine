@@ -8,6 +8,7 @@
 layout (location = 0) out vec3 v_position;
 layout (location = 1) out vec3 v_screen_space_position;
 layout (location = 2) out vec2 v_texcoord0;
+layout (location = 3) out flat uint v_object_index;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -17,6 +18,8 @@ layout (location = 4) in vec3 a_tangent;
 layout (location = 5) in vec3 a_bitangent;
 
 #include "../include/scene.inc"
+
+#define HYP_INSTANCING
 #include "../include/object.inc"
 
 void main()
@@ -27,6 +30,8 @@ void main()
     v_position = position.xyz;
     v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
     v_texcoord0 = a_texcoord0;
+
+    v_object_index = OBJECT_INDEX;
 
     gl_Position = ndc_position;
 

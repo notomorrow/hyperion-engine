@@ -24,6 +24,7 @@ layout (location = 5) in vec3 a_bitangent;
 
     #define MODEL_MATRIX (model_matrix)
 #else
+    #define HYP_INSTANCING
     #include "include/object.inc"
 
     #define MODEL_MATRIX (object.model_matrix)

@@ -1,5 +1,8 @@
 #include "defines.inc"
 
+#define ENTITY_GPU_FLAG_NONE         0x0
+#define ENTITY_GPU_FLAG_HAS_SKELETON 0x1
+
 struct Object
 {
     mat4 model_matrix;
@@ -10,13 +13,29 @@ struct Object
     vec4 world_aabb_max;
     vec4 world_aabb_min;
 
-    uint entity_id;
-    uint scene_id;
-    uint mesh_id;
-    uint material_id;
+    uint entity_index;
+    uint scene_index;
+    uint material_index;
+    uint skeleton_index;
 
-    uint skeleton_id;
     uint bucket;
+    uint flags;
+    uint _pad3;
+
+    vec4 _pad4;
+    vec4 _pad5;
+};
+
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 60
+
+struct EntityInstanceBatch
+{
+    uint num_entities;
+    uint owner_id;
+    uint _pad1;
+    uint _pad2;
+
+    uvec4 indices[15];
 };
 
 // can use up to 16 bits.
@@ -38,9 +57,22 @@ struct Object
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std430, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
 {
-    Object object;
+    Object objects[];
 };
+
+#ifdef VERTEX_SHADER
+    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 3) readonly buffer EntityInstanceBatchBuffer
+    {
+        EntityInstanceBatch entity_instance_batch;
+    };
+    
+    // having to do this, flat array doesn't work... possible glsl compiler bug
+    #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
+    #define object (objects[OBJECT_INDEX])
+#elif defined(FRAGMENT_SHADER)
+    #define object (objects[v_object_index])
+#endif
 
 #endif

@@ -11,9 +11,11 @@ layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
 layout(location=3) in vec3 g_voxel;
 layout(location=4) in float g_lighting;
+layout(location=5) in uint g_object_index;
+
+#define v_object_index g_object_index
 
 #include "../include/scene.inc"
-#include "../include/object.inc"
 #include "../include/material.inc"
 
 #include "../include/vct/shared.inc"
@@ -29,11 +31,11 @@ layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D v
 
 void main()
 {
-    vec4 frag_color = material.albedo;
+    vec4 frag_color = CURRENT_MATERIAL.albedo;
 
 #if HYP_VCT_SAMPLE_ALBEDO_MAP
-    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, g_texcoord);
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, g_texcoord);
         
         frag_color *= albedo_texture;
     }

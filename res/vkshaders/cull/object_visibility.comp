@@ -16,6 +16,11 @@ layout(local_size_x = 256) in;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+layout(std140, set = 0, binding = 0, row_major) readonly buffer EntityBuffer
+{
+    Object entities[];
+};
+
 layout(std140, set = 0, binding = 1, row_major) readonly buffer SceneBuffer
 {
     Scene scene;
@@ -35,16 +40,21 @@ struct ObjectInstance
 {
     uint entity_id;
     uint draw_command_index;
+    uint instance_index;
     uint batch_index;
-    uint num_indices;
-    vec4 aabb_max;
-    vec4 aabb_min;
 
-    uint packed_data;
-    uint _pad0, _pad1, _pad2;
+    // uint entity_id;
+    // uint draw_command_index;
+    // uint batch_index;
+    // uint num_indices;
+    // vec4 aabb_max;
+    // vec4 aabb_min;
+
+    // uint packed_data;
+    // uint _pad0, _pad1, _pad2;
 };
 
-layout(std140, set = 0, binding = 3, row_major) readonly buffer InstancesBuffer
+layout(std140, set = 0, binding = 3) readonly buffer InstancesBuffer
 {
     ObjectInstance instances[];
 };
@@ -54,21 +64,26 @@ layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer
     IndirectDrawCommand indirect_draw_commands[];
 };
 
-layout(set = 0, binding = 5) uniform texture2D depth_pyramid;
-layout(set = 0, binding = 6) uniform sampler depth_pyramid_sampler;
+layout(std140, set = 0, binding = 5) buffer EntityInstanceBatchBuffer
+{
+    EntityInstanceBatch entity_instance_batches[];
+};
+
+layout(set = 0, binding = 6) uniform texture2D depth_pyramid;
+layout(set = 0, binding = 7) uniform sampler depth_pyramid_sampler;
 
 layout(push_constant) uniform ObjectVisibilityData
 {
     uint batch_offset;
-    uint num_drawables;
+    uint num_instances;
     uint scene_id;
     uvec2 depth_pyramid_dimensions;
 } push_constants;
 
-uint GetObjectBucket(ObjectInstance object_instance)
-{
-    return object_instance.packed_data & 0xFF;
-}
+// uint GetObjectBucket(ObjectInstance object_instance)
+// {
+//     return object_instance.packed_data & 0xFF;
+// }
 
 bool IsPixelVisible(vec3 clip_min, vec3 clip_max)
 {
@@ -94,7 +109,7 @@ void main()
     const uint id = gl_GlobalInvocationID.x;
     const uint index = push_constants.batch_offset + id;
 
-    if (id >= push_constants.num_drawables) {
+    if (id >= push_constants.num_instances) {
         return;
     }
 
@@ -102,19 +117,27 @@ void main()
     const uint entity_id = object_instance.entity_id;
     const uint draw_command_index = object_instance.draw_command_index;
 
-    uint num_instances = 0;
+    // entity id should not ever be zero/unset,
+    // but we should make sure we do not cause a gpu crash by indexing
+    // the uint - 1.
+    if (entity_id == 0) {
+        return;
+    }
+
+    Object entity = entities[entity_id - 1];
+
+    bool is_visible = false;
 
     AABB aabb;
-    aabb.max = object_instance.aabb_max.xyz;
-    aabb.min = object_instance.aabb_min.xyz;
+    aabb.max = entity.world_aabb_max.xyz;
+    aabb.min = entity.world_aabb_min.xyz;
 
     uint cull_bits = 0x7F;
-    bool skip_check = bool(GetObjectBucket(object_instance) & (1 << HYP_OBJECT_BUCKET_SKYBOX));
+    bool skip_check = bool(GET_OBJECT_BUCKET(entity) & OBJECT_MASK_SKY);
 
-    num_instances += int(skip_check);
+    is_visible = skip_check;
 
-    // entity id should not ever be zero/unset
-    if (all(bvec3(!skip_check, entity_id, push_constants.scene_id))) {
+    if (all(bvec2(!skip_check, push_constants.scene_id))) {
         // get view/proj matrices from scene.
         mat4 view = scene.view;
         mat4 proj = scene.projection;
@@ -158,13 +181,16 @@ void main()
 
             // //find the max depth
             float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
-            num_instances += int(clip_min.z <= max_depth);
+            is_visible = (clip_min.z <= max_depth);
         }
     }
 
-    indirect_draw_commands[draw_command_index].index_count = object_instance.num_indices;
-    indirect_draw_commands[draw_command_index].instance_count = num_instances;
-    indirect_draw_commands[draw_command_index].first_index = 0;
-    indirect_draw_commands[draw_command_index].vertex_offset = 0;
-    indirect_draw_commands[draw_command_index].first_instance = 0;
+    if (is_visible) {
+        uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);
+
+        atomicExchange(
+            entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
+            entity.entity_index
+        );
+    }
 }
