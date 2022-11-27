@@ -24,6 +24,8 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
+
+#define HYP_INSTANCING
 #include "include/object.inc"
 
 struct Skeleton {
@@ -61,7 +63,7 @@ void main() {
     displaced_position += vec3(sin(scene.global_timer * 2.0) * 0.1, 0.0, cos(scene.global_timer * 2.0) * 0.1) * movement;
     displaced_position += vec3(sin(scene.global_timer * 0.5) * 0.4, 0.0, cos(scene.global_timer * 0.5) * 0.4) * movement;
     
-    if (bool(object.skeleton_id)) {
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(displaced_position, 1.0);

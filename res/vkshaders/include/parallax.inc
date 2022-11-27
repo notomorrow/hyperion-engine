@@ -6,7 +6,7 @@
 #define PARALLAX_NUM_LAYERS 20
 
 #define PARALLAX_SAMPLE_TEXTURE(texcoords) \
-  (1.0 - SAMPLE_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP, texcoords).r)
+  (1.0 - SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_PARALLAX_MAP, texcoords).r)
 
 vec2 ParallaxMappedTexCoords(float parallax_height, vec2 texCoords, vec3 viewDir)
 {

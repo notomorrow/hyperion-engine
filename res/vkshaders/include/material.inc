@@ -28,14 +28,29 @@ struct Material
 #define MATERIAL_PARAM_TRANSMISSION 2
 #define MATERIAL_PARAM_UI_BACKGROUND_COLOR 15
 
-#define GET_MATERIAL_PARAM(index) \
-    unpackUnorm4x8(material.packed_params[(index) / 4])[(index) % 4]
+#define GET_MATERIAL_PARAM(mat, index) \
+    unpackUnorm4x8(mat.packed_params[(index) / 4])[(index) % 4]
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
-    {
-        Material material;
-    };
+    #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+        layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
+        {
+            Material materials[];
+        };
+
+        #ifndef CURRENT_MATERIAL
+            #define CURRENT_MATERIAL (materials[object.material_index])
+        #endif
+    #else
+        layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
+        {
+            Material material;
+        };
+
+        #ifndef CURRENT_MATERIAL
+            #define CURRENT_MATERIAL material
+        #endif
+    #endif
 
     #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
         layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
@@ -68,36 +83,36 @@ struct Material
 
 #define MATERIAL_ALPHA_DISCARD         0.2
 
-#define HAS_TEXTURE(index) \
-    ((material.texture_usage & (1 << index)) != 0)
+#define HAS_TEXTURE(mat, index) \
+    (((mat).texture_usage & (1 << index)) != 0)
 
-#define GET_TEXTURE(index) \
-    textures[material.texture_indices[(index / 4)][index % 4]]
+#define GET_TEXTURE(mat, index) \
+    textures[(mat).texture_indices[(index / 4)][index % 4]]
 
 #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-    #define GET_TEXTURE_CUBE(index) \
-        cubemap_textures[material.texture_indices[(index / 4)][index % 4]]
+    #define GET_TEXTURE_CUBE(mat, index) \
+        cubemap_textures[(mat).texture_indices[(index / 4)][index % 4]]
 #endif
 
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
-    #define SAMPLE_TEXTURE(index, texcoord) \
-        Texture2D(texture_sampler, GET_TEXTURE(index), (texcoord))
+    #define SAMPLE_TEXTURE(mat, index, texcoord) \
+        Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
 
-    #define SAMPLE_TEXTURE_TRIPLANAR(index, position, normal) \
-        Texture2DTriplanar(texture_sampler, GET_TEXTURE(index), (position), (normal))
+    #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
+        Texture2DTriplanar(texture_sampler, GET_TEXTURE(mat, index), (position), (normal))
 
-    #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
-        TextureCube(texture_sampler, GET_TEXTURE_CUBE(index), (texcoord))
+    #define SAMPLE_TEXTURE_CUBE(mat, index, texcoord) \
+        TextureCube(texture_sampler, GET_TEXTURE_CUBE(mat, index), (texcoord))
 #else
-    #define SAMPLE_TEXTURE(index, texcoord) \
-        Texture2D(GET_TEXTURE(index), (texcoord))
+    #define SAMPLE_TEXTURE(mat, index, texcoord) \
+        Texture2D(GET_TEXTURE(mat, index), (texcoord))
 
-    #define SAMPLE_TEXTURE_TRIPLANAR(index, position, normal) \
-        Texture2DTriplanar(GET_TEXTURE(index), (position), (normal))
+    #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
+        Texture2DTriplanar(GET_TEXTURE(mat, index), (position), (normal))
 
     #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-        #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
-            TextureCube(GET_TEXTURE_CUBE(index), (texcoord))
+        #define SAMPLE_TEXTURE_CUBE(mat, index, texcoord) \
+            TextureCube(GET_TEXTURE_CUBE(mat, index), (texcoord))
     #endif
 #endif
 

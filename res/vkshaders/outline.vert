@@ -14,6 +14,7 @@ layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
 layout(location=12) out vec3 v_view_space_position;
+layout(location=13) out uint v_object_index;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -25,6 +26,8 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
+
+#define HYP_INSTANCING
 #include "include/object.inc"
 
 struct Skeleton {
@@ -60,7 +63,7 @@ void main()
     // extrude along normal
     vec4 extendedPosition = vec4(a_position + a_normal * OUTLINE_WIDTH, 1.0);
     
-    if (bool(object.skeleton_id)) {
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * extendedPosition;
@@ -80,6 +83,8 @@ void main()
 	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
     
     v_view_space_position = (scene.view * position).xyz;
+
+    v_object_index = OBJECT_INDEX;
 
     gl_Position = scene.projection * scene.view * position;
 }

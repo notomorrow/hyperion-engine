@@ -9,9 +9,11 @@
 layout(location=1) in vec3 v_position;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=7) in flat vec3 v_camera_position;
+layout(location=15) in flat uint v_object_index;
 
 layout(location=0) out vec4 output_shadow;
 
+#include "include/object.inc"
 #include "include/material.inc"
 #include "include/shared.inc"
 
@@ -21,8 +23,8 @@ layout(location=0) out vec4 output_shadow;
 void main()
 {
 #if defined(HYP_SHADOW_SAMPLE_ALBEDO) && HYP_SHADOW_SAMPLE_ALBEDO
-    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
         if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
             discard;
