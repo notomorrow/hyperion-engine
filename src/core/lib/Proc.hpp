@@ -8,6 +8,7 @@
 #include <util/Defines.hpp>
 
 #include <type_traits>
+#include <cstddef>
 
 namespace hyperion {
 namespace detail {

@@ -46,12 +46,12 @@ void AstModuleProperty::Visit(AstVisitor *visitor, Module *mod)
         ));
     } else if (m_field_name == "directory") {
         m_expr_value = std::shared_ptr<AstString>(new AstString(
-            FilePath(mod->GetLocation().GetFileName().c_str()).BasePath().Data(),
+            v2::FilePath(mod->GetLocation().GetFileName().c_str()).BasePath().Data(),
             m_location
         ));
     } else if (m_field_name == "basename") {
         m_expr_value = std::shared_ptr<AstString>(new AstString(
-            FilePath(mod->GetLocation().GetFileName().c_str()).Basename().Data(),
+            v2::FilePath(mod->GetLocation().GetFileName().c_str()).Basename().Data(),
             m_location
         ));
     }

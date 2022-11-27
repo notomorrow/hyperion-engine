@@ -182,6 +182,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
                 }
 
                 break;
+            default: break;
             }
         }
 
