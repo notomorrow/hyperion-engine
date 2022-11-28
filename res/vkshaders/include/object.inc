@@ -17,6 +17,19 @@ struct Object
 
     uint skeleton_id;
     uint bucket;
+    uint _pad2;
+    uint _pad3;
+
+    vec4 _pad4;
+    vec4 _pad5;
+};
+
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 63
+
+struct EntityInstanceBatch
+{
+    uint ids[MAX_ENTITIES_PER_INSTANCE_BATCH];
+    uint num_entities;
 };
 
 // can use up to 16 bits.
@@ -38,9 +51,21 @@ struct Object
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std430, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
 {
-    Object object;
+    Object objects[];
 };
+
+#ifdef VERTEX_SHADER
+    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 3) readonly buffer EntityInstaceBatchBuffer
+    {
+        EntityInstanceBatch entity_instance_batch;
+    };
+    
+    #define OBJECT_INDEX (entity_instance_batch.ids[gl_InstanceIndex] - 1)
+    #define object (objects[OBJECT_INDEX])
+#elif defined(FRAGMENT_SHADER)
+    #define object (objects[v_object_index])
+#endif
 
 #endif

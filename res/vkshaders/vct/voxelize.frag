@@ -13,7 +13,6 @@ layout(location=3) in vec3 g_voxel;
 layout(location=4) in float g_lighting;
 
 #include "../include/scene.inc"
-#include "../include/object.inc"
 #include "../include/material.inc"
 
 #include "../include/vct/shared.inc"

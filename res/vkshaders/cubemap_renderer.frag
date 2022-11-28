@@ -13,6 +13,7 @@ layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
+layout(location=11) in flat uint v_object_index;
 
 layout(location=0) out vec4 output_color;
 

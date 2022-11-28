@@ -164,9 +164,9 @@ void main()
 
     atomicAdd(indirect_draw_commands[draw_command_index].instance_count, num_instances);
 
-    //indirect_draw_commands[draw_command_index].index_count = object_instance.num_indices;
-    //indirect_draw_commands[draw_command_index].instance_count = num_instances;
-    //indirect_draw_commands[draw_command_index].first_index = 0;
-    //indirect_draw_commands[draw_command_index].vertex_offset = 0;
-    //indirect_draw_commands[draw_command_index].first_instance = 0;
+    // indirect_draw_commands[draw_command_index].index_count = object_instance.num_indices;
+    // indirect_draw_commands[draw_command_index].instance_count = num_instances;
+    // indirect_draw_commands[draw_command_index].first_index = 0;
+    // indirect_draw_commands[draw_command_index].vertex_offset = 0;
+    // indirect_draw_commands[draw_command_index].first_instance = 0;
 }

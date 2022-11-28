@@ -5,6 +5,7 @@
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
+layout(location=3) out flat uint v_object_index;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -16,6 +17,8 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
+
+#define HYP_INSTANCING
 #include "include/object.inc"
 
 void main()
@@ -30,6 +33,8 @@ void main()
 
     mat4 view_matrix = scene.view;
     view_matrix[3] = vec4(0.0, 0.0, 0.0, 1.0);
+
+    v_object_index = OBJECT_INDEX;
 
     gl_Position = scene.projection * view_matrix * position;
 } 

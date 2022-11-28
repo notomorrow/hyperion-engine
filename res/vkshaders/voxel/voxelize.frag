@@ -12,7 +12,6 @@ layout(location=2) in vec2 g_texcoord;
 layout(location=3) in vec3 g_voxel_pos;
 
 #include "../include/scene.inc"
-#include "../include/object.inc"
 #include "../include/material.inc"
 #include "../include/defines.inc"
 

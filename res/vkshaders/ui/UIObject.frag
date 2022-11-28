@@ -7,6 +7,7 @@
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_screen_space_position;
 layout(location=2) in vec2 v_texcoord0;
+layout(location=3) in flat uint v_object_index;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=5) out vec4 gbuffer_mask;

@@ -18,6 +18,7 @@ layout (location = 5) in vec3 a_bitangent;
 layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
+#define HYP_INSTANCING
 #include "../include/object.inc"
 #include "../include/voxel/shared.inc"
 
