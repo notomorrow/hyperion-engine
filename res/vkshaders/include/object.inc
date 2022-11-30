@@ -24,12 +24,16 @@ struct Object
     vec4 _pad5;
 };
 
-#define MAX_ENTITIES_PER_INSTANCE_BATCH 63
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 60
 
 struct EntityInstanceBatch
 {
-    uint ids[MAX_ENTITIES_PER_INSTANCE_BATCH];
     uint num_entities;
+    uint owner_id;
+    uint _pad1;
+    uint _pad2;
+
+    uvec4 ids[15];
 };
 
 // can use up to 16 bits.
@@ -62,7 +66,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly
         EntityInstanceBatch entity_instance_batch;
     };
     
-    #define OBJECT_INDEX (entity_instance_batch.ids[gl_InstanceIndex] - 1)
+    // having to do this, flat array doesn't work... possible glsl compiler bug
+    #define OBJECT_INDEX (entity_instance_batch.ids[gl_InstanceIndex / 4][gl_InstanceIndex & 3] - 1)
     #define object (objects[OBJECT_INDEX])
 #elif defined(FRAGMENT_SHADER)
     #define object (objects[v_object_index])

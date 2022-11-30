@@ -49,9 +49,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_py
 
 void main()
 {
-    gbuffer_albedo = UINT_TO_VEC4(v_object_index);
-    return;
-
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 normal = normalize(v_normal);
     float NdotV = dot(normal, view_vector);

@@ -1,4 +1,4 @@
-#version 450
+#version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
@@ -76,7 +76,7 @@ void main() {
     vec4 position;
     vec4 previous_position;
     mat4 normal_matrix;
-    
+
 #ifdef VERTEX_SKINNING_ENABLED
     if (bool(object.skeleton_id))
     {
@@ -92,7 +92,6 @@ void main() {
         position = object.model_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
-
     }
 
     v_position = position.xyz / position.w;
@@ -105,6 +104,7 @@ void main() {
 
     v_position_ndc = scene.projection * scene.view * position;
     v_previous_position_ndc = scene.projection * scene.previous_view * previous_position;
+
 
     v_object_index = OBJECT_INDEX;
 
