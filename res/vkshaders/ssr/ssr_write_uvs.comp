@@ -8,6 +8,7 @@ layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D ssr_uvs;
 #include "../include/Temporal.glsl"
 
 #define SSR_JITTER_OFFSET 0.0
+#define MAX_ROUGHNESS 0.7
 
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
@@ -72,8 +73,11 @@ bool TraceRays(
 }
 
 float CalculateAlpha(
-    float num_iterations, float reflectivity,
-    vec2 hit_pixel, vec3 hit_point, float dist, vec3 ray_direction
+    float num_iterations,
+    vec2 hit_pixel,
+    vec3 hit_point,
+    float dist,
+    vec3 ray_direction
 )
 {
     float alpha = 1.0;
@@ -87,7 +91,7 @@ float CalculateAlpha(
 
     alpha = 1.0 - smoothstep(0.1, 0.9, max_dimension);
 
-    const float dp = dot(ray_direction, -scene.camera_direction.xyz);
+    // const float dp = dot(ray_direction, -scene.camera_direction.xyz);
     // alpha *= 1.0 - smoothstep(0.8, 1.0, dp);
 
     // Fade ray hits base on how much they face the camera
@@ -145,7 +149,8 @@ void main(void)
 
     float dist = distance(ray_origin, hit_point);
 
-    float alpha = CalculateAlpha(num_iterations, 1.0, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
+    float alpha = CalculateAlpha(num_iterations, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
+    alpha = mix(alpha, 0.0, saturate(roughness / MAX_ROUGHNESS));
 
     imageStore(ssr_uvs, coord, vec4(hit_pixel, 0.0, alpha));
 }

@@ -9,7 +9,9 @@ frag = deferred_direct.frag
 vert = deferred.vert
 
 [DeferredCombine]
-comp = deferred/DeferredCombine.comp
+permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+frag = deferred/DeferredCombine.frag
+vert = PostEffect.vert
 
 [ObjectVisibility]
 comp = cull/object_visibility.comp
