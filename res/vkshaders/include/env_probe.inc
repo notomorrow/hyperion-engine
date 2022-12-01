@@ -15,10 +15,12 @@ struct EnvProbe {
 
 #define HYP_ENV_PROBE_PARALLAX_CORRECTED 0x1
 
+#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_ENV_PROBES];
 layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26) uniform EnvProbeUniforms {
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
+#endif
 
 vec4 EnvProbeSample(
     sampler samp, textureCube tex,
