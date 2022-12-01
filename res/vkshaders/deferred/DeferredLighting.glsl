@@ -122,10 +122,12 @@ void RefractionSolidSphere(
 #ifndef HYP_DEFERRED_NO_REFRACTION
 
 vec3 CalculateRefraction(
+    uvec2 image_dimensions,
     vec3 P, vec3 N, vec3 V, vec2 texcoord,
     vec3 F0, vec3 E,
     float transmission, float roughness,
-    vec4 opaque_color, vec4 translucent_color
+    vec4 opaque_color, vec4 translucent_color,
+    vec3 brdf
 )
 {
     // dimensions of mip chain image
@@ -152,8 +154,10 @@ vec3 CalculateRefraction(
 
     const float lod = ApplyIORToRoughness(IOR, roughness) * log2(float(max_dimension));
 
-    vec3 Fd = translucent_color.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (1.0 /* diffuse BRDF */);
+    vec3 Fd = translucent_color.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (brdf);
     Fd *= (1.0 - transmission);
+
+    const float texel_size = 1.0 / float(max_dimension);
 
     vec3 Ft = Texture2DLod(sampler_linear, gbuffer_mip_chain, refraction_texcoord, lod).rgb;
 
@@ -167,7 +171,9 @@ vec3 CalculateRefraction(
 
 #endif
 
-// #ifdef ENV_PROBE_ENABLED
+
+#ifndef HYP_DEFERRED_NO_ENV_PROBE
+#ifdef ENV_PROBE_ENABLED
 
 #include "../include/env_probe.inc"
 
@@ -217,9 +223,10 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
 
     return ibl;
 }
+#endif
+#endif
 
-// #endif
-
+#ifndef HYP_DEFERRED_NO_SSR
 #ifdef SSR_ENABLED
 void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, float depth, inout vec4 reflections)
 {
@@ -230,7 +237,9 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
 }
 #endif
+#endif
 
+#ifndef HYP_DEFERRED_NO_RT_RADIANCE
 #ifdef RT_ENABLED
 void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
 {
@@ -239,6 +248,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
     reflections = mix(reflections, rt_radiance, rt_radiance.a * float(enabled));
 }
+#endif
 #endif
 
 void CalculateHBILIrradiance(DeferredParams deferred_params, in vec4 ssao_data, inout vec3 irradiance)
