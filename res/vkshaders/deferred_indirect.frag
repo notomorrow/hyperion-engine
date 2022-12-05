@@ -44,9 +44,8 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 5000.0
+#define IBL_INTENSITY 1000.0
 #define IRRADIANCE_MULTIPLIER 1.0
-
 
 layout(push_constant) uniform PushConstant
 {

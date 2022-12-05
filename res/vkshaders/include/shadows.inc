@@ -2,6 +2,7 @@
 #define HYP_SHADOWS_GLSL
 
 #include "noise.inc"
+#include "aabb.inc"
 
 #define HYP_SHADOW_BIAS 0.005
 #define HYP_SHADOW_VARIABLE_BIAS 1
@@ -9,7 +10,7 @@
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
 
-#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.4
+#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.025
 
 #define HYP_SHADOW_SAMPLES_4
 //#define HYP_SHADOW_SAMPLES_8
@@ -47,7 +48,7 @@ const mat4 shadow_bias_matrix = mat4(
 
 vec3 GetShadowCoord(uint index, vec3 pos)
 {
-    mat4 shadow_matrix = shadow_bias_matrix * shadow_data.matrices[index].projection * shadow_data.matrices[index].view;
+    mat4 shadow_matrix = shadow_bias_matrix * shadow_map_data[index].projection * shadow_map_data[index].view;
     vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
     shadow_position.xyz /= shadow_position.w;
   
@@ -87,8 +88,20 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     
     float percent_in_shadow = variance / (variance + HYP_FMATH_SQR(d));
     percent_in_shadow = smoothstep(HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION, 1.0, percent_in_shadow);
+
+    AABB aabb;
+    aabb.min = shadow_map_data[index].aabb_min.xyz;
+    aabb.max = shadow_map_data[index].aabb_max.xyz;
+
+    vec3 sphere_center;
+    float sphere_radius;
+    AABBToSphere(aabb, sphere_center, sphere_radius);
     
-    return percent_in_shadow;
+    //const vec3 aabb_extent = shadow_map_data[index].aabb_max.xyz - shadow_map_data[index].aabb_min.xyz;
+    //const vec3 aabb_center = (shadow_map_data[index].aabb_max.xyz - shadow_map_data[index].aabb_min.xyz) * 0.5;
+    //const float fade = distance(pos, aabb_center) / max(aabb_extent.x, max(aabb_extent.y, aabb_extent.z));
+
+    return AABBContainsPoint(aabb, pos) ? percent_in_shadow : 1.0;
 }
 
 float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float shadow_map_coord_z)
