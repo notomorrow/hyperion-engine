@@ -91,7 +91,6 @@ void main()
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
-        // const vec4 F = SchlickFresnel(F0, F90, LdotH);
         const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
         const float perceptual_roughness = sqrt(roughness);
@@ -102,14 +101,20 @@ void main()
         const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
         const vec4 specular_lobe = D * G * F;
 
-        float dist = length(light.position_intensity.xyz - position.xyz);
-        // float d = max(dist - light.radius, 0.0);
-        // float denom = d / light.radius + 1.0;
+        const float dist = length(light.position_intensity.xyz - position.xyz);
+        const float r = max(light.radius, HYP_FMATH_EPSILON);
+        const float d = max(dist - r, 0.0);
+        const float denom = 1.0 + (d / r);
+        const float cutoff = 0.001;
     
         float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-            ((10.0 / max(dist, HYP_FMATH_EPSILON))) : 1.0;
-        attenuation *= attenuation;
-        attenuation = Saturate(attenuation);
+            ((1.0 / (max(HYP_FMATH_SQR(denom), HYP_FMATH_EPSILON)))) : 1.0;
+
+        attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
+        attenuation = saturate(attenuation);
+    
+        // attenuation *= attenuation;
+        // attenuation = Saturate(attenuation);
         // float attenuation = 1.0;//mix(1.0, 1.0 - min(length(light.position_intensity.xyz - position.xyz) / max(light.radius, 0.0001), 1.0), float(light.type == HYP_LIGHT_TYPE_POINT));
 
         vec4 specular = specular_lobe;
@@ -118,12 +123,13 @@ void main()
         vec4 diffuse = diffuse_lobe;
 
         vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
-        
-        direct_component.a *= attenuation;
-        direct_component.rgb *= (exposure * light.position_intensity.w);
-        result += direct_component * (light_color * ao * NdotL * shadow);
 
-        ApplyFog(position.xyz, result);
+        direct_component.rgb *= (exposure);
+        result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
+        result.a = attenuation;
+
+        // ApplyFog(position.xyz, result);
+
 
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {

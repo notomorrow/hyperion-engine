@@ -78,5 +78,5 @@ void main()
 
     v_object_index = OBJECT_INDEX;
 
-    gl_Position = shadow_data.matrices[0].projection * shadow_data.matrices[0].view * position;
+    gl_Position = shadow_map_data[0].projection * shadow_map_data[0].view * position;
 } 

@@ -36,7 +36,7 @@ void main()
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
 
-        if (albedo_texture.a < 0.5) {
+        if (albedo_texture.a < 0.2) {
             discard;
         }
 
@@ -49,6 +49,6 @@ void main()
 
     float NdotL = max(0.0001, dot(N, L));
 
-    output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
+    // output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
     // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 }
