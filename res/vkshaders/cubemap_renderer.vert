@@ -74,7 +74,7 @@ void main()
     mat4 normal_matrix;
 
     if (object.bucket == HYP_OBJECT_BUCKET_SKYBOX) {
-        position = vec4((a_position * 10.0) + scene.camera_position.xyz, 1.0);
+        position = vec4((a_position * 150.0) + scene.camera_position.xyz, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix));
     } else {
 #if HYP_ENABLE_SKINNING

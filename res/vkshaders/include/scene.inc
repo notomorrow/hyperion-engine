@@ -52,10 +52,16 @@ struct Light
     vec4 position_intensity; // or direction for directional lights
 };
 
-struct ShadowMap {
+struct ShadowMap
+{
     mat4 projection;
     mat4 view;
-    uint scene_index;
+    vec4 aabb_max;
+    vec4 aabb_min;
+
+    vec4 _pad0; vec4 _pad1;
+    vec4 _pad2; vec4 _pad3;
+    vec4 _pad4; vec4 _pad5;
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -71,10 +77,10 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer Ligh
 
 layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform ShadowShaderData
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly buffer ShadowShaderData
 {
-    ShadowMap matrices[113];
-} shadow_data;
+    ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
+};
 
 
 // RenderComponentName enum
