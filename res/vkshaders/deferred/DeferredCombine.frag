@@ -4,9 +4,6 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-// layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
-
-
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 texcoord;
