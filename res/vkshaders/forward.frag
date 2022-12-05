@@ -25,7 +25,6 @@ layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
 
-
 #define PARALLAX_ENABLED 1
 #define HAS_REFRACTION 1
 
@@ -38,26 +37,16 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/parallax.inc"
 #endif
 
-//tmp
-#include "include/aabb.inc"
-
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
-
 
 void main()
 {
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 normal = normalize(v_normal);
     
-    float NdotV = dot(normal, view_vector);
-    
     vec3 tangent_view = transpose(v_tbn_matrix) * view_vector;
     vec3 tangent_position = v_tbn_matrix * v_position;
-
-    vec3 reflection_vector = reflect(view_vector, normal);
     
     gbuffer_albedo = CURRENT_MATERIAL.albedo;
     
@@ -65,8 +54,6 @@ void main()
     float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
     float transmission = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_TRANSMISSION);
-
-    // float perceptual_roughness = sqrt(roughness);
     
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
     
@@ -102,13 +89,13 @@ void main()
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP)) {
         float metalness_sample = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
         
-        metalness = metalness_sample;//mix(metalness, metalness_sample, metalness_sample);
+        metalness = metalness_sample;
     }
     
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
         float roughness_sample = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ROUGHNESS_MAP, texcoord).r;
         
-        roughness = roughness_sample;//mix(roughness, roughness_sample, roughness_sample);
+        roughness = roughness_sample;
     }
     
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_AO_MAP)) {
@@ -118,7 +105,6 @@ void main()
     vec2 current_jitter = scene.taa_params.xy;
     vec2 previous_jitter = scene.taa_params.zw;
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
-    //velocity -= (current_jitter - previous_jitter) * (1.0 / vec2(scene.resolution_x, scene.resolution_y));
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
