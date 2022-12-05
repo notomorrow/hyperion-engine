@@ -28,15 +28,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
     #define VERTEX_SKINNING_ENABLED
 #endif
 
-// layout (location = 0) in vec3 a_position;
-// layout (location = 1) in vec3 a_normal;
-// layout (location = 2) in vec2 a_texcoord0;
-// layout (location = 3) in vec2 a_texcoord1;
-// layout (location = 4) in vec3 a_tangent;
-// layout (location = 5) in vec3 a_bitangent;
-// layout (location = 6) in vec4 a_bone_weights;
-// layout (location = 7) in vec4 a_bone_indices;
-
 #include "include/scene.inc"
 
 #define HYP_INSTANCING
@@ -104,7 +95,6 @@ void main() {
 
     v_position_ndc = scene.projection * scene.view * position;
     v_previous_position_ndc = scene.projection * scene.previous_view * previous_position;
-
 
     v_object_index = OBJECT_INDEX;
 

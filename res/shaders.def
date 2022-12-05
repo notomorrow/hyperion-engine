@@ -45,7 +45,8 @@ frag = Terrain.frag
 vert = main.vert
 
 [HBAO]
-comp = hbao/HBAO.comp
+frag = hbao/HBAO.frag
+vert = PostEffect.vert
 
 [Particle]
 frag = particles/Particle.frag
