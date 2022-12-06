@@ -75,7 +75,7 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer Ligh
     Light light;
 };
 
-layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
+layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform texture2D shadow_maps[];
 
 layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly buffer ShadowShaderData
 {
