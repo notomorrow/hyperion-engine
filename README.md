@@ -43,8 +43,8 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 
 Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
 
-## Docs
-In the works
+## Docs (in the works)
+[Scripting Language](doc/ScriptingLanguage.md)
 
 ## Screenshots
 ![screenshot](/screenshots/hbao-ssr-ssgi-3.jpg)\
