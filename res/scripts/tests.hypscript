@@ -462,6 +462,18 @@ if (true) {
     Print("module.path = %\n", module.path);
 }
 
+// dynamic module loading
+const dynamic_module = Module.Load("res/scripts/test_dynamic_module");
+Expect(dynamic_module.Get("v") == 12345);
+
+// testing reflection
+const refl_value = new Vector3();
+Print("reflect::HasMember(refl_value, \"__intern\") == %\n", Expect(reflect::HasMember(refl_value, "__intern")));
+Print("reflect::HasMember(refl_value, \"operator+\") == %\n", Expect(reflect::HasMember(refl_value, "operator+")));
+Print("reflect::HasMember(refl_value, \"blah\") == !%\n", Expect(!reflect::HasMember(refl_value, "blah")));
+
+
+
 // testing logical operators
 if (true) {
     Print("Constant && operators\n");
