@@ -58,7 +58,7 @@ vec3 GetShadowCoord(uint index, vec3 pos)
 float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = texture(shadow_maps[index], coord.xy + offset);
+    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + offset);
     const float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
@@ -74,7 +74,7 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 float GetShadowVariance(uint index, vec3 pos, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = Texture2D(shadow_maps[index], coord.xy);
+    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[index], coord.xy);
     const float moment = shadow_sample.r;
 
     if (coord.z <= moment) {
@@ -164,10 +164,10 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 #define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3) \
     { \
         vec4 blocker_samples = vec4( \
-            texture(shadow_maps[index], coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size)).r, \
-            texture(shadow_maps[index], coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size)).r, \
-            texture(shadow_maps[index], coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size)).r, \
-            texture(shadow_maps[index], coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size)).r \
+            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size)).r, \
+            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size)).r, \
+            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size)).r, \
+            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size)).r \
         ); \
         vec4 are_samples_blocking = vec4(lessThan(blocker_samples, vec4(shadow_map_depth))); \
         total_blocker_depth += dot(blocker_samples * are_samples_blocking, vec4(1.0)); \
