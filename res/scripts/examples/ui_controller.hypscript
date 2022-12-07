@@ -9,17 +9,34 @@ enum UIEventType {
     NONE,
 
     MOUSE_DOWN,
-    MOUSE_UP
+    MOUSE_UP,
+    MOUSE_DRAG,
+    MOUSE_HOVER
+}
+
+proxy class Entity {
+    func operator+(self : Entity, other : Entity) {
+        return "FOOP";
+    }
+
+    func SetTranslation(self : Entity, pos : Vector3) {
+        EntitySetTranslation(self, pos);
+    }
+
+    func ToString(self : Entity) : String {
+        return "<Entity>";
+    }
 }
 
 class TestUIController {
     const receives_update : Bool = false;
 
-    entity: any;
+    click_position : Vector2 = new Vector2();
+    entity : Entity;
 
     TestUIController(self : TestUIController)
     {
-        self.entity = null;
+        //self.entity = null;
 
         if (tests) {
             Print("tests = %\n", tests);
@@ -35,14 +52,14 @@ class TestUIController {
         }
     }
 
-    func OnAdded(self : TestUIController, entity : any)
+    func OnAdded(self : TestUIController, entity : Entity)
     {
         self.entity = entity;
     }
 
-    func OnRemoved(self : TestUIController, entity : any)
+    func OnRemoved(self : TestUIController, entity : Entity)
     {
-        self.entity = null;
+        //self.entity = null;
     }
 
     func OnTick(self : TestUIController, delta : Float)
@@ -50,14 +67,18 @@ class TestUIController {
         Print("Tick UI Component")
     }
 
-    func OnEvent(self : TestUIController, event_type : UIEventType)
+    func OnEvent(self : TestUIController, event_type : Int, mouse_position : Vector2)
     {
-        // if (event_type == UIEventType.MOUSE_DOWN) {
-        //     Print("Mousedown on %\n", self.entity);
-        // } else if (event_type == UIEventType.MOUSE_UP) {
-        //     Print("Mouseup on %\n", self.entity);
-        // }
         Print("Got UI event: %\n", event_type);
+        Print("mouse_position: %, %\n", mouse_position.GetX(), mouse_position.GetY());
+
+        if (event_type == UIEventType.MOUSE_DOWN) {
+            self.click_position = mouse_position;
+        } else if (event_type == UIEventType.MOUSE_UP) {
+            self.click_position = new Vector2(0.0, 0.0);
+        } else if (event_type == UIEventType.MOUSE_DRAG) {
+            self.entity.SetTranslation(new Vector3(mouse_position.GetX(), 1.0 - mouse_position.GetY(), 0.0));
+        }
     }
 };
 

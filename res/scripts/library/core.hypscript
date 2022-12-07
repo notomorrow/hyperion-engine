@@ -5,9 +5,9 @@ module engine {
 
     export _engine : EngineWrapper = new EngineWrapper();
 
-    func CreateEntity() : Entity {
-        return Engine_CreateEntity(_engine.handle);
-    }
+    // func CreateEntity() : Entity {
+    //     return Engine_CreateEntity(_engine.handle);
+    // }
 }
 
 func AssertEqual(lhs, rhs) {
