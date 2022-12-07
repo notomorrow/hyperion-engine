@@ -15,17 +15,12 @@ enum UIEventType {
 }
 
 proxy class Entity {
-    func operator+(self : Entity, other : Entity) {
-        return "FOOP";
-    }
-
     func SetTranslation(self : Entity, pos : Vector3) {
-        EntitySetTranslation(self, pos);
+        Entity_SetTranslation(self, pos);
     }
 
-    func ToString(self : Entity) : String {
-        return "<Entity>";
-    }
+    func GetTranslation(self : Entity) : Vector3 => Entity_GetTranslation(self);
+    func GetWorldAABB(self : Entity) : BoundingBox => Entity_GetWorldAABB(self);
 }
 
 class TestUIController {
@@ -69,15 +64,19 @@ class TestUIController {
 
     func OnEvent(self : TestUIController, event_type : Int, mouse_position : Vector2)
     {
-        Print("Got UI event: %\n", event_type);
-        Print("mouse_position: %, %\n", mouse_position.GetX(), mouse_position.GetY());
+        const entity_position : Vector3 = self.entity.GetTranslation();
+        const aabb : BoundingBox = self.entity.GetWorldAABB();
+        const min = aabb.GetMin();
+        const max = aabb.GetMax();
+
+        const center : Vector3 = (max + min) * new Vector3(0.5, 0.5, 0.5);
 
         if (event_type == UIEventType.MOUSE_DOWN) {
-            self.click_position = mouse_position;
+            self.click_position = new Vector2(mouse_position.GetX() - entity_position.GetX(), mouse_position.GetY() - entity_position.GetY());
         } else if (event_type == UIEventType.MOUSE_UP) {
             self.click_position = new Vector2(0.0, 0.0);
         } else if (event_type == UIEventType.MOUSE_DRAG) {
-            self.entity.SetTranslation(new Vector3(mouse_position.GetX(), 1.0 - mouse_position.GetY(), 0.0));
+            self.entity.SetTranslation(new Vector3(mouse_position.GetX() + self.click_position.GetX(), mouse_position.GetY() + self.click_position.GetY()/*(mouse_position.GetY() - (1.0 - self.click_position.GetY()))*/, 0.0));
         }
     }
 };
