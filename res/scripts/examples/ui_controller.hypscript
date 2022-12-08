@@ -1,9 +1,10 @@
 #importpath "../" "../library";
 
 import core::engine;
+import scene::{ Entity };
 
 // dynamic import
-const tests = Module.Load("res/scripts/tests");
+//const tests = Module.Load("../tests");
 
 enum UIEventType {
     NONE,
@@ -31,20 +32,18 @@ class TestUIController {
 
     TestUIController(self : TestUIController)
     {
-        //self.entity = null;
-
-        if (tests) {
+        /*if (tests) {
             Print("tests = %\n", tests);
 
             const Foo : Int = tests.Get("Foo");
 
             Print("Foo = %\n", Foo);
 
-            const tests_reload = Module.Load("res/scripts/tests");
+            const tests_reload = Module.Load("../tests");
             Print("tests_reload = %\n", tests_reload);
         } else {
             throw "Failed to load module";
-        }
+        }*/
     }
 
     func OnAdded(self : TestUIController, entity : Entity)
