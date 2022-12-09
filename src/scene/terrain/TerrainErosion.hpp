@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_TERRAIN_EROSION_HPP
 #define HYPERION_V2_TERRAIN_EROSION_HPP
 
-#include <terrain/TerrainHeightInfo.hpp>
+#include <scene/terrain/TerrainHeightInfo.hpp>
 
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/Pair.hpp>

@@ -213,7 +213,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
             const float max_dimension = min(1.0, max(abs(new_uv_ndc.x), abs(new_uv_ndc.y)));
             const float fade = 1.0;// - max(0.0, max_dimension - 0.75) / (1.0 - 0.98);
 
-            if (new_uv.xy == Saturate(new_uv.xy)) {
+            if (new_uv.xy == saturate(new_uv.xy)) {
                 // new_uv = Saturate(new_uv);
 
                 vec3 ds = GetPosition(new_uv.xy, GetDepth(new_uv.xy)) - P;
@@ -236,7 +236,14 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
 
                 const vec4 new_color_0 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0);
+                const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
+
                 const vec4 new_color_1 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.zw, 0.0);
+                const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
+
+                // metallic objects do not emit diffuse light
+                new_color_0 *= 1.0 - material_0.g;
+                new_color_1 *= 1.0 - material_1.g;
 
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 
@@ -265,7 +272,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
         occlusion += slice_ao.x + slice_ao.y;
     }
 
-    occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
+    occlusion = 1.0 - saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
     // occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
 
     light_color /= float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);

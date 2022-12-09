@@ -9,7 +9,7 @@ const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 #define HYP_TAA_NEIGHBORS_3x3 9
 #define HYP_TAA_NEIGHBORS_2x2 5
 
-#define ADJUST_COLOR_HDR
+// #define ADJUST_COLOR_HDR
 
 #ifdef ADJUST_COLOR_HDR
     #define ADJUST_COLOR_IN(col) \
@@ -58,14 +58,12 @@ float GetTemporalRotation(uint frame_counter)
 
 vec4 AdjustColorIn(in vec4 color)
 {
-    return color;
     // watch out for NaN
     return vec4(log(color.rgb), color.a);
 }
 
 vec4 AdjustColorOut(in vec4 color)
 {
-    return color;
     // watch out for NaN
     return vec4(exp(color.rgb), color.a);
 }
@@ -145,22 +143,6 @@ void GetPixelTexelNeighborsMinMax_3x3(in texture2D tex, in ivec2 coord, in ivec2
 
 //     return result;
 // }
-
-vec4 ClampColorTexel_3x3(in texture2D tex, in vec4 previous_value, in ivec2 coord, in ivec2 dimensions)
-{
-    vec4 min_value, max_value;
-    GetPixelTexelNeighborsMinMax_3x3(tex, coord, dimensions, min_value, max_value);
-
-    return AdjustColorOut(clamp(AdjustColorIn(previous_value), min_value, max_value));
-}
-
-vec4 ClampColor_3x3(in texture2D tex, in vec4 previous_value, in vec2 uv, in vec2 texel_size)
-{
-    vec4 min_value, max_value;
-    GetPixelNeighborsMinMax_3x3(tex, uv, texel_size, min_value, max_value);
-
-    return AdjustColorOut(clamp(AdjustColorIn(previous_value), min_value, max_value));
-}
 
 vec4 ClipAABB(vec4 aabb_min, vec4 aabb_max, vec4 p, vec4 q)
 {
@@ -308,14 +290,6 @@ vec4 MaxColors_3x3(in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
     return result;
 }
 
-vec4 PixelHistory(in vec4 current_color, in vec4 previous_color, in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
-{
-    vec4 color_min = MinColors_3x3(colors);
-    vec4 color_max = MaxColors_3x3(colors);
-
-    return clamp(previous_color, color_min, color_max);
-}
-
 vec4 ColorClamping(vec4 color_min, vec4 color_max, vec4 current_color, vec4 previous_color)
 {
     vec3 p_clip = (color_max.rgb + color_min.rgb) * 0.5;
@@ -336,18 +310,41 @@ vec4 ColorClamping(vec4 color_min, vec4 color_max, vec4 current_color, vec4 prev
     }
 }
 
-vec4 AdjustColor(vec4 color)
+vec4 PixelHistory(in vec4 current_color, in vec4 previous_color, in vec4 colors[HYP_TAA_NEIGHBORS_3x3])
 {
-    //float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    //float luminance_weight = 1.0 / (1.0 + luminance);
-    //return vec4(color.rgb, 1.0) * luminance_weight;
+    vec4 color_min = MinColors_3x3(colors);
+    vec4 color_max = MaxColors_3x3(colors);
 
-    // watch out for NaN
-    return vec4(log(color.rgb), color.a);
+    // return ColorClamping(color_min, color_max, current_color, previous_color);
+    return clamp(previous_color, color_min, color_max);
 }
 
-vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_texture, vec2 uv, vec2 velocity, vec2 texel_size)
+vec4 TemporalLuminanceResolve(vec4 color, vec4 color_clipped)
 {
+    const float lum0 = Luminance(color.rgb);
+    const float lum1 = Luminance(color_clipped.rgb);
+
+    float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
+    float unbiased_weight = 1.0 - unbiased_diff;
+    float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
+    float feedback = Saturate(mix(0.88, 0.98, unbiased_weight_sqr));
+
+    return mix(color, color_clipped, feedback);
+}
+
+
+vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_texture, vec2 uv, vec2 velocity, vec2 texel_size, float view_space_depth)
+{
+    const float _SubpixelThreshold = 0.5;
+    const float _GatherBase = 0.5;
+    const float _GatherSubpixelMotion = 0.1666;
+
+    const vec2 texel_vel = velocity / max(vec2(HYP_FMATH_EPSILON), texel_size);
+    const float texel_vel_mag = length(texel_vel) * view_space_depth;
+    const float subpixel_motion = Saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
+    const float min_max_support = _GatherBase + _GatherSubpixelMotion * subpixel_motion;
+
+
     vec4 current_colors_3x3[HYP_TAA_NEIGHBORS_3x3];
     vec4 previous_colors_3x3[HYP_TAA_NEIGHBORS_3x3];
 
@@ -356,8 +353,8 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     for (uint i = 0; i < HYP_TAA_NEIGHBORS_3x3; i++) {
         offset_uv = uv + (neighbor_uv_offsets_3x3[i] * texel_size);
 
-        current_colors_3x3[i] = AdjustColor(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
-        previous_colors_3x3[i] = AdjustColor(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
+        current_colors_3x3[i] = ADJUST_COLOR_IN(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
+        previous_colors_3x3[i] = ADJUST_COLOR_IN(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
     }
 
     vec4 current_color_min_3x3 = MinColors_3x3(current_colors_3x3);
@@ -372,8 +369,8 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     for (uint i = 0; i < HYP_TAA_NEIGHBORS_2x2; i++) {
         offset_uv = uv + (neighbor_uv_offsets_2x2[i] * texel_size);
 
-        current_colors_2x2[i] = AdjustColor(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
-        previous_colors_2x2[i] = AdjustColor(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
+        current_colors_2x2[i] = ADJUST_COLOR_IN(Texture2DLod(sampler_linear, color_texture, offset_uv, 0.0));
+        previous_colors_2x2[i] = ADJUST_COLOR_IN(Texture2DLod(sampler_linear, previous_color_texture, offset_uv - velocity, 0.0));
     }
 
     vec4 current_color_min_2x2 = MinColors_2x2(current_colors_2x2);
@@ -382,16 +379,16 @@ vec4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_tex
     vec4 current_color_min = mix(current_color_min_3x3, current_color_min_2x2, 0.5);
     vec4 previous_color_max = mix(previous_color_max_3x3, previous_color_max_2x2, 0.5);
 
-    const float feedback = 0.92;
-    const float velocity_scale = 8.0;
-    const float blend = Saturate(feedback - ((length(velocity) - 0.001) * velocity_scale));
+    const float feedback = 0.88;
+    const float velocity_scale = 16.0;
+    const float blend = saturate(feedback - ((length(velocity) - 0.001) * velocity_scale));
 
     const vec4 current_color = current_colors_2x2[2];
     const vec4 previous_color = previous_colors_2x2[2];
     const vec4 previous_color_constrained = PixelHistory(current_color, previous_color, current_colors_3x3);//previous_colors_2x2);
 
     vec4 result = mix(current_color, previous_color_constrained, blend);
-    return vec4(exp(result.rgb), result.a);
+    return TemporalLuminanceResolve(ADJUST_COLOR_OUT(current_color), ADJUST_COLOR_OUT(previous_color_constrained));
 }
 
 void InitTemporalParams(
@@ -412,36 +409,33 @@ void InitTemporalParams(
     view_space_depth = ViewDepth(closest_fragment.z, camera_near, camera_far);
 }
 
-vec4 TemporalLuminanceResolve(vec4 color, vec4 color_clipped)
-{
-    const float lum0 = Luminance(color.rgb);
-    const float lum1 = Luminance(color_clipped.rgb);
-
-    float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
-    float unbiased_weight = 1.0 - unbiased_diff;
-    float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
-    float feedback = Saturate(mix(0.88, 0.98, unbiased_weight_sqr));
-
-    return mix(color, color_clipped, feedback);
-}
-
 vec4 TemporalBlendRounded(in texture2D input_texture, in texture2D prev_input_texture, vec2 uv, vec2 velocity, vec2 texel_size, float view_space_depth)
 {
-    const vec4 color = Texture2D(sampler_nearest, input_texture, uv);
+    const vec4 color = Texture2D(sampler_linear, input_texture, uv);
     const vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
+
+
+    const float _SubpixelThreshold = 0.5;
+    const float _GatherBase = 0.5;
+    const float _GatherSubpixelMotion = 0.1666;
+
+    const vec2 texel_vel = velocity / max(vec2(HYP_FMATH_EPSILON), texel_size);
+    const float texel_vel_mag = length(texel_vel) * view_space_depth;
+    const float subpixel_motion = Saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
+    const float min_max_support = _GatherBase + _GatherSubpixelMotion * subpixel_motion;
 
     vec2 du = vec2(texel_size.x, 0.0);
     vec2 dv = vec2(0.0, texel_size.y);
 
-    vec4 ctl = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv - du));
-    vec4 ctc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv));
-    vec4 ctr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - dv + du));
-    vec4 cml = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - du));
-    vec4 cmc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv));
-    vec4 cmr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + du));
-    vec4 cbl = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv - du));
-    vec4 cbc = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv));
-    vec4 cbr = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + dv + du));
+    vec4 ctl = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv - du));
+    vec4 ctc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv));
+    vec4 ctr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - dv + du));
+    vec4 cml = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv - du));
+    vec4 cmc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv));
+    vec4 cmr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + du));
+    vec4 cbl = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv - du));
+    vec4 cbc = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv));
+    vec4 cbr = ADJUST_COLOR_IN(Texture2D(sampler_nearest, input_texture, uv + dv + du));
 
     vec4 cmin = min(ctl, min(ctc, min(ctr, min(cml, min(cmc, min(cmr, min(cbl, min(cbc, cbr))))))));
     vec4 cmax = max(ctl, max(ctc, max(ctr, max(cml, max(cmc, max(cmr, max(cbl, max(cbc, cbr))))))));
@@ -463,33 +457,39 @@ vec4 TemporalBlendRounded(in texture2D input_texture, in texture2D prev_input_te
 
 vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_texture, vec2 uv, vec2 velocity, vec2 texel_size, float view_space_depth)
 {
-    const vec4 color = Texture2D(sampler_nearest, input_texture, uv);
-    const vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
+    const vec4 color = RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv));
+    const vec4 previous_color = RGBToYCoCg(Texture2D(sampler_linear, prev_input_texture, uv - velocity));
 
-    const float _SubpixelThreshold = 0.5;
+    const float _SubpixelThreshold = 0.6;
     const float _GatherBase = 0.5;
     const float _GatherSubpixelMotion = 0.1666;
 
     const vec2 texel_vel = velocity / max(vec2(HYP_FMATH_EPSILON), texel_size);
     const float texel_vel_mag = length(texel_vel) * view_space_depth;
-    const float subpixel_motion = Saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
+    const float subpixel_motion = saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
     const float min_max_support = _GatherBase + _GatherSubpixelMotion * subpixel_motion;
 
     const vec2 ss_offset01 = min_max_support * vec2(-texel_size.x, texel_size.y);
     const vec2 ss_offset11 = min_max_support * vec2(texel_size.x, texel_size.y);
 
-    const vec4 c00 = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - ss_offset11));
-    const vec4 c10 = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv - ss_offset01));
-    const vec4 c01 = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + ss_offset01));
-    const vec4 c11 = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + ss_offset11));
+    const vec4 c00 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv - ss_offset11)));
+    const vec4 c10 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv - ss_offset01)));
+    const vec4 c01 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv + ss_offset01)));
+    const vec4 c11 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv + ss_offset11)));
 
-    const vec4 cmin = min(c00, min(c10, min(c01, c11)));
-    const vec4 cmax = max(c00, max(c10, max(c01, c11)));
-    const vec4 cavg = (c00 + c10 + c01 + c11) / 4.0;
+    vec4 cmin = min(c00, min(c10, min(c01, c11)));
+    vec4 cmax = max(c00, max(c10, max(c01, c11)));
+    vec4 cavg = (c00 + c10 + c01 + c11) / 4.0;
+
+    vec2 chroma_extent = vec2(0.25 * 0.5 * (cmax.r - cmin.r));
+    vec2 chroma_center = color.gb;
+    cmin.yz = chroma_center - chroma_extent;
+    cmax.yz = chroma_center + chroma_extent;
+    cavg.yz = chroma_center;
 
     const vec4 clipped = ADJUST_COLOR_OUT(ClipAABB(cmin, cmax, clamp(cavg, cmin, cmax), ADJUST_COLOR_IN(previous_color)));
 
-    return TemporalLuminanceResolve(color, clipped);
+    return YCoCgToRGB(TemporalLuminanceResolve(color, clipped));
 }
 
 #endif

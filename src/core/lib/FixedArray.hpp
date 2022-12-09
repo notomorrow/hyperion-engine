@@ -27,7 +27,7 @@ class FixedArrayImpl;
 //     containers::detail::FixedArrayImpl(&m_values[0]).method_name(__VA_ARGS__)
 
 template <class T, SizeType Sz>
-class FixedArray //
+class FixedArray
 {
 public:
     T m_values[MathUtil::Max(Sz, 1)];
@@ -38,43 +38,6 @@ public:
     using KeyType = UInt;
 
     static constexpr SizeType size = Sz;
-
-private:
-
-//     template <class Method, class ...Args>
-//     auto ImplMethod(Method method, Args &&... args)
-//     {
-//         containers::detail::FixedArrayImpl<T, Sz> impl(&m_values[0]);
-//         return impl.*method(std::forward<Args>(args)...);
-//     }
-
-
-// #define FIXED_ARRAY_IMPL_METHOD(method_name, ...) \
-//     ImplMethod(&containers::detail::FixedArrayImpl<T, Sz>::method_name __VA_OPT__(,) __VA_ARGS__)
-
-
-public:
-
-    // FixedArray();
-
-    // template <class ... Args>
-    // constexpr FixedArray(Args &&... args)
-    //     : m_values { std::forward<Args>(args)... }
-    // {
-    // }
-
-    // constexpr FixedArray(const T *ary, SizeType count)
-    // {
-    //     for (SizeType i = 0; i < MathUtil::Min(Sz, count); i++) {
-    //         m_values = ary[i];
-    //     }
-    // }
-
-    // FixedArray(const FixedArray &other);
-    // FixedArray &operator=(const FixedArray &other);
-    // FixedArray(FixedArray &&other) noexcept;
-    // FixedArray &operator=(FixedArray &&other) noexcept;
-    // ~FixedArray();
 
     template <class Function>
     FixedArray Map(Function &&fn) const

@@ -6,7 +6,7 @@
 #include <scene/controllers/PagingController.hpp>
 #include <util/NoiseFactory.hpp>
 
-#include <terrain/TerrainHeightInfo.hpp>
+#include <scene/terrain/TerrainHeightInfo.hpp>
 
 #include <memory>
 #include <vector>

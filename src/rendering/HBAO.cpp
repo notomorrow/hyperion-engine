@@ -11,6 +11,30 @@ using renderer::SamplerDescriptor;
 using renderer::DynamicStorageBufferDescriptor;
 using renderer::CommandBuffer;
 
+struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
+{
+    UniquePtr<DescriptorSet> *descriptor_sets;
+
+    RENDER_COMMAND(CreateHBAODescriptorSets)(UniquePtr<DescriptorSet> *descriptor_sets)
+        : descriptor_sets(descriptor_sets)
+    {
+    }
+
+    virtual Result operator()()
+    {
+        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            // create our own descriptor sets
+            AssertThrow(descriptor_sets[frame_index] != nullptr);
+            
+            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
+                Engine::Get()->GetGPUDevice(),
+                &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
+            ));
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
 
 struct RENDER_COMMAND(CreateFullScreenPass) : RenderCommand
 {
@@ -49,9 +73,13 @@ struct RENDER_COMMAND(DestroyFullScreenPass) : RenderCommand
 struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
 {
     FullScreenPass *pass;
+    TemporalBlending *temporal_blending;
+    FixedArray<ImageView *, max_frames_in_flight> blur_image_views;
 
-    RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)(FullScreenPass *pass)
-        : pass(pass)
+    RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)(FullScreenPass *pass, TemporalBlending *temporal_blending, FixedArray<ImageView *, max_frames_in_flight> &&blur_image_views)
+        : pass(pass),
+          temporal_blending(temporal_blending),
+          blur_image_views(std::move(blur_image_views))
     {
     }
 
@@ -64,10 +92,14 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = pass->GetAttachmentRef(0)->GetImageView()
-                });
+                ->SetElementSRV(
+                    0,
+                    blur_image_views[frame_index]
+                        ? blur_image_views[frame_index]
+                        : (temporal_blending
+                            ? &temporal_blending->GetImageOutput(frame_index).image_view
+                            : pass->GetAttachmentRef(0)->GetImageView())
+                );
         }
 
         HYPERION_RETURN_OK;
@@ -113,7 +145,7 @@ HBAO::HBAO(const Extent2D &extent)
           ))
       },
       m_blur_image_outputs {
-          std::array<ImageOutput, 2> {
+          FixedArray<ImageOutput, 2> {
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
                   InternalFormat::RGBA16F,
@@ -125,7 +157,7 @@ HBAO::HBAO(const Extent2D &extent)
                   ImageType::TEXTURE_TYPE_2D
               ))
           },
-          std::array<ImageOutput, 2> {
+          FixedArray<ImageOutput, 2> {
               ImageOutput(StorageImage(
                   Extent3D(extent.width, extent.height, 1),
                   InternalFormat::RGBA16F,
@@ -137,13 +169,7 @@ HBAO::HBAO(const Extent2D &extent)
                   ImageType::TEXTURE_TYPE_2D
               ))
           }
-      },
-      m_temporal_blending(
-          extent,
-          InternalFormat::RGBA16F,
-          FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
-          FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
-      )
+      }
 {
 }
 
@@ -152,18 +178,32 @@ HBAO::~HBAO() = default;
 void HBAO::Create()
 {
     CreateImages();
-    CreateTemporalBlending();
-    CreateDescriptorSets();
-    CreateComputePipelines();
 
-    RenderCommands::Push<RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)>(m_hbao_pass.Get());
+    CreateDescriptorSets();
+
+    CreatePass();
+
+    CreateTemporalBlending();
+
+    if constexpr (blur_result) {
+        CreateBlurComputeShaders();
+    }
+
+    PUSH_RENDER_COMMAND(
+        AddHBAOFinalImagesToGlobalDescriptorSet,
+        m_hbao_pass.Get(),
+        m_temporal_blending.Get(),
+        FixedArray<ImageView *, max_frames_in_flight> {
+            blur_result ? &m_blur_image_outputs[0].Back().image_view : nullptr,
+            blur_result ? &m_blur_image_outputs[1].Back().image_view : nullptr
+        }
+    );
 }
 
 void HBAO::Destroy()
 {
-    //m_temporal_blending.Destroy();
+    m_temporal_blending->Destroy();
 
-    //m_compute_hbao.Reset();
     m_blur_hor.Reset();
     m_blur_vert.Reset();
 
@@ -173,7 +213,7 @@ void HBAO::Destroy()
         Engine::Get()->SafeRelease(std::move(m_descriptor_sets[frame_index]));
 
         for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
-            Engine::Get()->SafeRelease(std::move(m_blur_descriptor_sets[frame_index][blur_pass_index]));
+            Engine::Get()->SafeRelease(std::move(m_blur_descriptor_sets[blur_pass_index][frame_index]));
         }
     }
 
@@ -206,7 +246,7 @@ void HBAO::Destroy()
         }
     };
 
-    RenderCommands::Push<RENDER_COMMAND(DestroyHBAODescriptors)>(m_image_outputs.Data());
+    PUSH_RENDER_COMMAND(DestroyHBAODescriptors, m_image_outputs.Data());
 
     HYP_SYNC_RENDER();
 }
@@ -216,9 +256,9 @@ void HBAO::CreateImages()
     struct RENDER_COMMAND(CreateHBAOImageOutputs) : RenderCommand
     {
         HBAO::ImageOutput *image_outputs;
-        std::array<HBAO::ImageOutput, 2> *blur_image_outputs;
+        FixedArray<HBAO::ImageOutput, 2> *blur_image_outputs;
 
-        RENDER_COMMAND(CreateHBAOImageOutputs)(HBAO::ImageOutput *image_outputs, std::array<HBAO::ImageOutput, 2> *blur_image_outputs)
+        RENDER_COMMAND(CreateHBAOImageOutputs)(HBAO::ImageOutput *image_outputs, FixedArray<HBAO::ImageOutput, 2> *blur_image_outputs)
             : image_outputs(image_outputs),
               blur_image_outputs(blur_image_outputs)
         {
@@ -240,7 +280,7 @@ void HBAO::CreateImages()
         }
     };
 
-    RenderCommands::Push<RENDER_COMMAND(CreateHBAOImageOutputs)>(m_image_outputs.Data(), m_blur_image_outputs.data());
+    PUSH_RENDER_COMMAND(CreateHBAOImageOutputs, m_image_outputs.Data(), m_blur_image_outputs.Data());
 }
 
 void HBAO::CreateDescriptorSets()
@@ -299,119 +339,74 @@ void HBAO::CreateDescriptorSets()
                 .range = UInt32(sizeof(SceneShaderData))
             });
 
-        // output image
-        descriptor_set
-            ->AddDescriptor<StorageImageDescriptor>(7)
-            ->SetSubDescriptor({
-                .image_view = &m_image_outputs[frame_index].image_view
-            });
-
-        // prev image
-        descriptor_set
-            ->AddDescriptor<ImageDescriptor>(8)
-            ->SetSubDescriptor({
-                .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
-            });
-
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    if constexpr (blur_result) {
-        // create blur descriptor sets
-        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
-                auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
-
-                descriptor_set
-                    ->AddDescriptor<ImageDescriptor>(0)
-                    ->SetSubDescriptor({
-                        .image_view = blur_pass_index == 0
-                            ? &m_temporal_blending.GetImageOutput(frame_index).image_view//&m_image_outputs[frame_index].image_view
-                            : &m_blur_image_outputs[frame_index][blur_pass_index - 1].image_view
-                    });
-
-                descriptor_set
-                    ->AddDescriptor<ImageDescriptor>(1)
-                    ->SetSubDescriptor({
-                        .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                            .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
-                    });
-
-                // nearest sampler
-                descriptor_set
-                    ->AddDescriptor<SamplerDescriptor>(2)
-                    ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
-
-                // linear sampler
-                descriptor_set
-                    ->AddDescriptor<SamplerDescriptor>(3)
-                    ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
-
-                // output image
-                descriptor_set
-                    ->AddDescriptor<StorageImageDescriptor>(4)
-                    ->SetSubDescriptor({
-                        .image_view = &m_blur_image_outputs[frame_index][blur_pass_index].image_view
-                    });
-
-                m_blur_descriptor_sets[frame_index][blur_pass_index] = std::move(descriptor_set);
-            }
-        }
-    }
-
-    struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
-    {
-        UniquePtr<DescriptorSet> *descriptor_sets;
-        FixedArray<UniquePtr<DescriptorSet>, 2> *blur_descriptor_sets;
-
-        RENDER_COMMAND(CreateHBAODescriptorSets)(UniquePtr<DescriptorSet> *descriptor_sets, FixedArray<UniquePtr<DescriptorSet>, 2> *blur_descriptor_sets)
-            : descriptor_sets(descriptor_sets),
-              blur_descriptor_sets(blur_descriptor_sets)
-        {
-        }
-
-        virtual Result operator()()
-        {
-            for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                // create our own descriptor sets
-                AssertThrow(descriptor_sets[frame_index] != nullptr);
-                
-                HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                    Engine::Get()->GetGPUDevice(),
-                    &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
-                ));
-
-                if constexpr (blur_result) {
-                    for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
-                        AssertThrow(blur_descriptor_sets[frame_index][blur_pass_index] != nullptr);
-                        
-                        HYPERION_BUBBLE_ERRORS(blur_descriptor_sets[frame_index][blur_pass_index]->Create(
-                            Engine::Get()->GetGPUDevice(),
-                            &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
-                        ));
-                    }
-                }
-            }
-
-            HYPERION_RETURN_OK;
-        }
-    };
-
-    RenderCommands::Push<RENDER_COMMAND(CreateHBAODescriptorSets)>(
-        m_descriptor_sets.Data(),
-        m_blur_descriptor_sets.Data()
+    PUSH_RENDER_COMMAND(
+        CreateHBAODescriptorSets,
+        m_descriptor_sets.Data()
     );
 }
 
-void HBAO::CreateComputePipelines()
+void HBAO::CreateBlurComputeShaders()
 {
-    /*m_compute_hbao = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("HBAO")),
-        Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
+    AssertThrow(m_temporal_blending != nullptr);
+
+    for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
+        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+
+            descriptor_set
+                ->AddDescriptor<ImageDescriptor>(0)
+                ->SetElementSRV(0, blur_pass_index == 0
+                    ? &m_temporal_blending->GetImageOutput(frame_index).image_view
+                    : &m_blur_image_outputs[blur_pass_index - 1][frame_index].image_view);
+
+            descriptor_set
+                ->AddDescriptor<ImageDescriptor>(1)
+                ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+
+            // nearest sampler
+            descriptor_set
+                ->AddDescriptor<SamplerDescriptor>(2)
+                ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
+
+            // linear sampler
+            descriptor_set
+                ->AddDescriptor<SamplerDescriptor>(3)
+                ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
+
+            // output image
+            descriptor_set
+                ->AddDescriptor<StorageImageDescriptor>(4)
+                ->SetElementUAV(0, &m_blur_image_outputs[blur_pass_index][frame_index].image_view);
+
+            m_blur_descriptor_sets[blur_pass_index][frame_index] = std::move(descriptor_set);
+        }
+
+        PUSH_RENDER_COMMAND(
+            CreateHBAODescriptorSets,
+            m_blur_descriptor_sets[blur_pass_index].Data()
+        );
+    }
+
+    m_blur_hor = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA16F" }))),
+        Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
     );
 
-    InitObject(m_compute_hbao);*/
-    
+    InitObject(m_blur_hor);
+
+    m_blur_vert = CreateObject<ComputePipeline>(
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "OUTPUT_RGBA16F" }))),
+        Array<const DescriptorSet *> { m_blur_descriptor_sets[1][0].Get() }
+    );
+
+    InitObject(m_blur_vert);
+}
+
+void HBAO::CreatePass()
+{
     auto hbao_shader = Engine::Get()->CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("HBAO"));
     Engine::Get()->InitObject(hbao_shader);
 
@@ -420,27 +415,19 @@ void HBAO::CreateComputePipelines()
         Array<const DescriptorSet *> { m_descriptor_sets.Front().Get() }
     ));
     m_hbao_pass->Create();
-
-    if constexpr (blur_result) {
-        m_blur_hor = CreateObject<ComputePipeline>(
-            CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA16F" }))),
-            Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
-        );
-
-        InitObject(m_blur_hor);
-
-        m_blur_vert = CreateObject<ComputePipeline>(
-            CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "OUTPUT_RGBA16F" }))),
-            Array<const DescriptorSet *> { m_blur_descriptor_sets[0][1].Get() }
-        );
-
-        InitObject(m_blur_vert);
-    }
 }
 
 void HBAO::CreateTemporalBlending()
 {
-    //m_temporal_blending.Create();
+    AssertThrow(m_hbao_pass != nullptr);
+
+    m_temporal_blending.Reset(new TemporalBlending(
+        m_hbao_pass->GetFramebuffer()->GetExtent(),
+        InternalFormat::RGBA16F,
+        m_hbao_pass->GetFramebuffer()
+    ));
+
+    m_temporal_blending->Create();
 }
 
 void HBAO::Render(Frame *frame)
@@ -509,7 +496,7 @@ void HBAO::Render(Frame *frame)
     /*m_image_outputs[frame_index].image.GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);*/
 
-   // m_temporal_blending.Render(frame);
+    m_temporal_blending->Render(frame);
 
     if constexpr (blur_result) { // apply blurring
         for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
@@ -543,7 +530,7 @@ void HBAO::Render(Frame *frame)
             command_buffer->BindDescriptorSet(
                 Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
                 compute_pipeline->GetPipeline(),
-                m_blur_descriptor_sets[frame_index][blur_pass_index].Get(),
+                m_blur_descriptor_sets[blur_pass_index][frame_index].Get(),
                 0
             );
 
@@ -556,7 +543,7 @@ void HBAO::Render(Frame *frame)
                 }
             );
 
-            m_blur_image_outputs[frame_index][blur_pass_index].image.GetGPUImage()
+            m_blur_image_outputs[blur_pass_index][frame_index].image.GetGPUImage()
                 ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
         }
     }

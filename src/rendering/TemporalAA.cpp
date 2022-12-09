@@ -258,10 +258,7 @@ void TemporalAA::CreateComputePipelines()
     InitObject(m_compute_taa);
 }
 
-void TemporalAA::Render(
-    
-    Frame *frame
-)
+void TemporalAA::Render(Frame *frame)
 {
     const auto &scene = Engine::Get()->GetRenderState().GetScene().scene;
 

@@ -42,7 +42,8 @@
 #include <asset/serialization/fbom/marshals/NodeMarshal.hpp>
 #include <asset/serialization/fbom/marshals/SceneMarshal.hpp>
 
-#include <terrain/controllers/TerrainPagingController.hpp>
+#include <scene/terrain/controllers/TerrainPagingController.hpp>
+#include <scene/skydome/controllers/SkydomeController.hpp>
 
 #include <rendering/vct/VoxelConeTracing.hpp>
 #include <rendering/SparseVoxelOctree.hpp>
@@ -119,6 +120,8 @@ public:
             Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
         ));
 
+        // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+
 #ifdef HYP_TEST_VCT
         { // voxel cone tracing for indirect light and reflections
             m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
@@ -147,7 +150,7 @@ public:
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
 
-        test_model.Scale(0.1f);
+        test_model.Scale(0.2f);
 
         if (false) {
             int i = 0;
@@ -295,7 +298,7 @@ public:
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
         skybox_spatial->RebuildRenderableAttributes();
-        m_scene->AddEntity(std::move(skybox_spatial));
+        // m_scene->AddEntity(std::move(skybox_spatial));
         
         for (auto &child : test_model.GetChildren()) {
             if (const Handle<Entity> &entity = child.GetEntity()) {
@@ -320,10 +323,17 @@ public:
             }
         }
 
+        if (true) { // skydome
+            if (auto skydome_node = m_scene->GetRoot().AddChild()) {
+                skydome_node.SetEntity(CreateObject<Entity>());
+                skydome_node.GetEntity()->AddController<SkydomeController>();
+            }
+        }
+
         if (true) { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
                 Handle<Light>(m_sun),
-                test_model.GetWorldAABB()
+                test_model.GetWorldAABB() * 5.0f
             );
         }
 
@@ -331,10 +341,10 @@ public:
             monkey.SetName("monkey");
             auto monkey_entity = monkey[0].GetEntity();
             monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.0f);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.1f);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
             // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
             // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
            //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
@@ -364,7 +374,7 @@ public:
             mh.SetName("mh_model");
             mh.Scale(1.0f);
             for (auto &mh_child : mh.GetChildren()) {
-                mh_child.SetEntity(Handle<Entity>::empty);
+                // mh_child.SetEntity(Handle<Entity>::empty);
 
                 if (auto entity = mh_child.GetEntity()) {
                     // entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
@@ -476,7 +486,18 @@ public:
                 MathUtil::Cos(light->GetID().Value() + timer) * 30.0f
             ));
         }
-        m_sun->SetPosition(Vector3(MathUtil::Sin(timer * 0.002f), MathUtil::Cos(timer * 0.002f), -MathUtil::Sin(timer * 0.002f)).Normalize());
+
+        if (GetInputManager()->IsKeyDown(KEY_ARROW_LEFT)) {
+            m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.02f, 0.0f, 0.0f)).Normalize());
+        } else if (GetInputManager()->IsKeyDown(KEY_ARROW_RIGHT)) {
+            m_sun->SetPosition((m_sun->GetPosition() + Vector3(-0.02f, 0.0f, 0.0f)).Normalize());
+        } else if (GetInputManager()->IsKeyDown(KEY_ARROW_UP)) {
+            m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.0f, 0.02f, 0.0f)).Normalize());
+        } else if (GetInputManager()->IsKeyDown(KEY_ARROW_DOWN)) {
+            m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.0f, -0.02f, 0.0f)).Normalize());
+        }
+
+        // m_sun->SetPosition(Vector3(MathUtil::Sin(timer * 0.25f), MathUtil::Cos(timer * 0.25f), -MathUtil::Sin(timer * 0.25f)).Normalize());
 
         if (auto house = GetScene()->GetRoot().Select("house")) {
             //house.Rotate(Quaternion(Vector3(0, 1, 0), 0.1f * delta));

@@ -6,6 +6,7 @@
 #include <core/Containers.hpp>
 
 #include <rendering/Compute.hpp>
+#include <rendering/Framebuffer.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -63,14 +64,18 @@ public:
 
     TemporalBlending(
         const Extent2D &extent,
-        const FixedArray<Image *, max_frames_in_flight> &input_images,
         const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
     );
 
     TemporalBlending(
         const Extent2D &extent,
         InternalFormat image_format,
-        const FixedArray<Image *, max_frames_in_flight> &input_images,
+        const Handle<Framebuffer> &input_framebuffer
+    );
+
+    TemporalBlending(
+        const Extent2D &extent,
+        InternalFormat image_format,
         const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
     );
 
@@ -97,13 +102,14 @@ private:
     Extent2D m_extent;
     InternalFormat m_image_format;
 
-    FixedArray<Image *, max_frames_in_flight> m_input_images;
     FixedArray<ImageView *, max_frames_in_flight> m_input_image_views;
 
     Handle<ComputePipeline> m_perform_blending;
 
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
+
+    Handle<Framebuffer> m_input_framebuffer;
 };
 
 } // namespace hyperion::v2

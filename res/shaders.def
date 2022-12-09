@@ -40,6 +40,10 @@ vert = vegetation.vert
 frag = skybox.frag
 vert = skybox.vert
 
+[Skydome]
+frag = Skydome.frag
+vert = skybox.vert
+
 [Terrain]
 frag = Terrain.frag
 vert = main.vert

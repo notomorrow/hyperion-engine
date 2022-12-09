@@ -167,7 +167,6 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
       },
       m_temporal_blending(
           extent,
-          FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].image, &m_image_outputs[1].image },
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
       ),
       m_has_tlas_updates { false, false }

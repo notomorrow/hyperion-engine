@@ -169,6 +169,15 @@ NodeProxy NodeProxy::AddChild(const NodeProxy &node)
     return Get()->AddChild(node);
 }
 
+bool NodeProxy::Remove()
+{
+    if (!Get()) {
+        return false;
+    }
+
+    return Get()->Remove();
+}
+
 const Transform &NodeProxy::GetLocalTransform() const
 {
     if (Get()) {
