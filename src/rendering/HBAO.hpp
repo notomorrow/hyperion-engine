@@ -20,11 +20,15 @@ using renderer::Result;
 
 class Engine;
 
+struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;
+
 class HBAO
 {
     static constexpr bool blur_result = false;
 
 public:
+    friend struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;
+
     HBAO(const Extent2D &extent);
     HBAO(const HBAO &other) = delete;
     HBAO &operator=(const HBAO &other) = delete;
@@ -37,9 +41,10 @@ public:
 
 private:
     void CreateImages();
-    void CreateDescriptorSets();
-    void CreateComputePipelines();
+    void CreatePass();
     void CreateTemporalBlending();
+    void CreateDescriptorSets();
+    void CreateBlurComputeShaders();
     
     struct ImageOutput
     {
@@ -65,16 +70,16 @@ private:
     };
 
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
-    std::array<std::array<ImageOutput, 2>, max_frames_in_flight> m_blur_image_outputs;
+    FixedArray<FixedArray<ImageOutput, 2>, max_frames_in_flight> m_blur_image_outputs;
 
     FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
-    FixedArray<FixedArray<UniquePtr<DescriptorSet>, 2>, max_frames_in_flight> m_blur_descriptor_sets;
+    FixedArray<FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight>, 2> m_blur_descriptor_sets;
 
     UniquePtr<FullScreenPass> m_hbao_pass;
     //Handle<ComputePipeline> m_compute_hbao;
     Handle<ComputePipeline> m_blur_hor;
     Handle<ComputePipeline> m_blur_vert;
-    TemporalBlending m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporal_blending;
 };
 
 } // namespace hyperion::v2

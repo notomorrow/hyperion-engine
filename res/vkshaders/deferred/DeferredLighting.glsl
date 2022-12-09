@@ -12,6 +12,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_POWER 1.0
+#define ENV_PROBE_MULTIPLIER 1.0
 
 struct DeferredParams
 {
@@ -192,7 +193,7 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 N, inout v
 
             vec4 env_probe_irradiance = EnvProbeSample(sampler_linear, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
 
-            irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a;
+            irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a * ENV_PROBE_MULTIPLIER;
         }
     }
 }
@@ -221,7 +222,7 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
         }
     }
 
-    return ibl;
+    return ibl * ENV_PROBE_MULTIPLIER;
 }
 #endif
 #endif

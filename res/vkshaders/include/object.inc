@@ -44,10 +44,11 @@ struct EntityInstanceBatch
 #define OBJECT_MASK_PARTICLE    (0x04)
 #define OBJECT_MASK_VEGETATION  (0x08)
 #define OBJECT_MASK_SKY         (0x10)
-#define OBJECT_MASK_UI          (0x20)
-#define OBJECT_MASK_UI_TEXT     (0x40)
-#define OBJECT_MASK_UI_BUTTON   (0x80)
-#define OBJECT_MASK_UI_PANEL    (0x100)
+#define OBJECT_MASK_TERRAIN     (0x20)
+#define OBJECT_MASK_UI          (0x40)
+#define OBJECT_MASK_UI_TEXT     (0x80)
+#define OBJECT_MASK_UI_BUTTON   (0x100)
+#define OBJECT_MASK_UI_PANEL    (0x200)
 
 #define GET_OBJECT_BUCKET(obj) \
     ((int((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE)) \

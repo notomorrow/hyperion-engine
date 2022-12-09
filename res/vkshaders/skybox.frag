@@ -15,6 +15,7 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
+layout(location=4) out vec4 gbuffer_mask;
 
 #include "include/gbuffer.inc"
 #include "include/object.inc"
@@ -34,4 +35,5 @@ void main()
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);
     gbuffer_tangents = vec4(0.0);  // not needed
+    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
 }

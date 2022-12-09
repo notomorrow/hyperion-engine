@@ -1,7 +1,7 @@
 #include "TerrainMeshBuilder.hpp"
 #include <Threads.hpp>
 #include <math/MathUtil.hpp>
-#include <terrain/TerrainErosion.hpp>
+#include <scene/terrain/TerrainErosion.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {

@@ -1,4 +1,4 @@
-#include <terrain/TerrainErosion.hpp>
+#include <scene/terrain/TerrainErosion.hpp>
 
 #include <math/MathUtil.hpp>
 

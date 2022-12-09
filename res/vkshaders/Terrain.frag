@@ -14,13 +14,16 @@ layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
-layout(location=12) in vec3 v_view_space_position;
+layout(location=11) in vec4 v_position_ndc;
+layout(location=12) in vec4 v_previous_position_ndc;
 layout(location=15) in flat uint v_object_index;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
+layout(location=4) out vec2 gbuffer_velocity;
+layout(location=5) out vec4 gbuffer_mask;
 
 #define PARALLAX_ENABLED 1
 
@@ -116,9 +119,14 @@ void main()
     // }
 
     // gbuffer_albedo.rgb = GetTriplanarBlend(normal);
-    
+
+    vec2 current_jitter = scene.taa_params.xy;
+    vec2 previous_jitter = scene.taa_params.zw;
+    vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(roughness, metalness, 0.0, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
+    gbuffer_velocity = velocity;
+    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object) | OBJECT_MASK_TERRAIN);
 }

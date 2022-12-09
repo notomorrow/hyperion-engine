@@ -84,12 +84,10 @@ struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : RenderCommand
 
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
-    const FixedArray<Image *, max_frames_in_flight> &input_images,
     const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
 ) : TemporalBlending(
         extent,
         InternalFormat::RGBA8,
-        input_images,
         input_image_views
     )
 {
@@ -98,11 +96,19 @@ TemporalBlending::TemporalBlending(
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
     InternalFormat image_format,
-    const FixedArray<Image *, max_frames_in_flight> &input_images,
+    const Handle<Framebuffer> &input_framebuffer
+) : m_extent(extent),
+    m_image_format(image_format),
+    m_input_framebuffer(input_framebuffer)
+{
+}
+
+TemporalBlending::TemporalBlending(
+    const Extent2D &extent,
+    InternalFormat image_format,
     const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
 ) : m_extent(extent),
     m_image_format(image_format),
-    m_input_images(input_images),
     m_input_image_views(input_image_views)
 {
 }
@@ -111,6 +117,8 @@ TemporalBlending::~TemporalBlending() = default;
 
 void TemporalBlending::Create()
 {
+    InitObject(m_input_framebuffer);
+
     CreateImageOutputs();
     CreateDescriptorSets();
     CreateComputePipelines();
@@ -153,11 +161,17 @@ void TemporalBlending::CreateDescriptorSets()
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
 
+        if (m_input_framebuffer) {
+            AssertThrowMsg(m_input_framebuffer->GetAttachmentRefs().size() != 0, "No attachment refs on input framebuffer!");
+        }
+
         // input image (first pass just radiance image, second pass is prev image)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(0)
             ->SetSubDescriptor({
-                .image_view = m_input_image_views[frame_index]
+                .image_view = m_input_framebuffer
+                    ? m_input_framebuffer->GetAttachmentRefs()[0]->GetImageView()
+                    : m_input_image_views[frame_index]
             });
 
         // previous image (used for temporal blending)
@@ -201,7 +215,7 @@ void TemporalBlending::CreateDescriptorSets()
             ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
             ->SetSubDescriptor({
                 .buffer = Engine::Get()->shader_globals->scenes.GetBuffers()[frame_index].get(),
-                .range = static_cast<UInt>(sizeof(SceneShaderData))
+                .range = UInt32(sizeof(SceneShaderData))
             });
 
         // depth texture
@@ -244,10 +258,7 @@ void TemporalBlending::CreateComputePipelines()
     InitObject(m_perform_blending);
 }
 
-void TemporalBlending::Render(
-    
-    Frame *frame
-)
+void TemporalBlending::Render(Frame *frame)
 {
     const auto &scene_binding = Engine::Get()->render_state.GetScene();
     const UInt scene_index = scene_binding.id.ToIndex();

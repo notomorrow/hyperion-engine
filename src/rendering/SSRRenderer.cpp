@@ -204,7 +204,6 @@ SSRRenderer::SSRRenderer(const Extent2D &extent)
       m_temporal_blending(
           extent,
           InternalFormat::RGBA16F,
-          FixedArray<Image *, max_frames_in_flight> { &m_image_outputs[0].Back().image, &m_image_outputs[1].Back().image },
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].Back().image_view, &m_image_outputs[1].Back().image_view }
       ),
       m_is_rendered(false)
