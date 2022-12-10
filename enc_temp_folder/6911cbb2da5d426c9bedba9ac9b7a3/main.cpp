@@ -315,10 +315,27 @@ public:
         }
 
         cube_obj.Scale(50.0f);
+<<<<<<< HEAD
+=======
 
         auto axis_angles = Engine::Get()->GetAssetManager().Load<Node>("models/editor/axis_arrows.obj");
         axis_angles.Scale(10.0f);
         GetScene()->GetRoot().AddChild(axis_angles);
+
+        auto skybox_material = CreateObject<Material>();
+        skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4 { 1.0f, 1.0f, 1.0f, 1.0f }));
+        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
+        skybox_material->SetBucket(BUCKET_SKYBOX);
+        skybox_material->SetIsDepthWriteEnabled(false);
+        skybox_material->SetIsDepthTestEnabled(false);
+        skybox_material->SetFaceCullMode(FaceCullMode::FRONT);
+
+        auto skybox_spatial = cube_obj[0].GetEntity();
+        skybox_spatial->SetMaterial(std::move(skybox_material));
+        skybox_spatial->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
+        skybox_spatial->RebuildRenderableAttributes();
+        // m_scene->AddEntity(std::move(skybox_spatial));
+>>>>>>> 5fb43c76 (Fixed issue where bindless textures are being removed before ready)
         
         for (auto &child : test_model.GetChildren()) {
             if (const Handle<Entity> &entity = child.GetEntity()) {
@@ -337,9 +354,16 @@ public:
         m_scene->GetFogParams().end_distance = 40000.0f;
         
         if (false) { // paged procedural terrain
+<<<<<<< HEAD
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
+=======
+            if (auto terrain_node = m_scene->GetRoot().AddChild()) {
+                terrain_node.SetEntity(CreateObject<Entity>());
+                terrain_node.GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
+            }
+>>>>>>> 5fb43c76 (Fixed issue where bindless textures are being removed before ready)
         }
 
         if (true) { // skydome
@@ -361,15 +385,26 @@ public:
             auto monkey_entity = monkey[0].GetEntity();
             monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
             monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+<<<<<<< HEAD
             monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+=======
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+>>>>>>> 5fb43c76 (Fixed issue where bindless textures are being removed before ready)
             monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
             monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
             monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
             monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+<<<<<<< HEAD
            //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
             monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
            // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
+=======
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 0.8f));
+            monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
+>>>>>>> 5fb43c76 (Fixed issue where bindless textures are being removed before ready)
             monkey_entity->RebuildRenderableAttributes();
             monkey.SetLocalTranslation(Vector3(0.0f, 25.0f, 15.0f));
             monkey.Scale(6.0f);
@@ -455,9 +490,11 @@ public:
             );
             //plane->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
         }
-
         
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5fb43c76 (Fixed issue where bindless textures are being removed before ready)
         if (true) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/smoke.png"),

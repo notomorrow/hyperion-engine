@@ -90,9 +90,10 @@ public:
         }
 
         HYP_FORCE_INLINE void IncRef()
-        {
-            ref_count.fetch_add(1, std::memory_order_relaxed);
-        }
+            { ref_count.fetch_add(1, std::memory_order_relaxed); }
+
+        HYP_FORCE_INLINE UInt16 GetRefCount() const
+            { return ref_count.load(); }
 
         UInt DecRef()
         {
@@ -154,6 +155,11 @@ public:
         if (m_data[index].DecRef() == 0) {
             GetIDCreator<T>().FreeID(index + 1);
         }
+    }
+
+    HYP_FORCE_INLINE UInt16 GetRefCount(UInt index)
+    {
+        return m_data[index].GetRefCount();
     }
 
     HYP_FORCE_INLINE T &Get(UInt index)

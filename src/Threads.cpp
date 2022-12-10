@@ -3,18 +3,17 @@
 namespace hyperion::v2 {
 
 const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
-    decltype(thread_ids)::KeyValuePair { THREAD_MAIN, ThreadID { static_cast<UInt>(THREAD_MAIN), StringView("MainThread") } },
-    // decltype(thread_ids)::Pair { THREAD_RENDER   ThreadID { static_cast<UInt>(THREAD_RENDER),  "RenderThread" } },
-    decltype(thread_ids)::KeyValuePair { THREAD_GAME, ThreadID { static_cast<UInt>(THREAD_GAME), StringView("GameThread") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadID { static_cast<UInt>(THREAD_TERRAIN), StringView("TerrainGenerationThread") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0, ThreadID { static_cast<UInt>(THREAD_TASK_0), StringView("TaskThread0") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1, ThreadID { static_cast<UInt>(THREAD_TASK_1), StringView("TaskThread1") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2, ThreadID { static_cast<UInt>(THREAD_TASK_2), StringView("TaskThread2") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3, ThreadID { static_cast<UInt>(THREAD_TASK_3), StringView("TaskThread3") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4, ThreadID { static_cast<UInt>(THREAD_TASK_4), StringView("TaskThread4") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5, ThreadID { static_cast<UInt>(THREAD_TASK_5), StringView("TaskThread5") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6, ThreadID { static_cast<UInt>(THREAD_TASK_6), StringView("TaskThread6") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7, ThreadID { static_cast<UInt>(THREAD_TASK_7), StringView("TaskThread7") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_MAIN, ThreadID { UInt(THREAD_MAIN), StringView("MainThread") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_GAME, ThreadID { UInt(THREAD_GAME), StringView("GameThread") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadID { UInt(THREAD_TERRAIN), StringView("TerrainGenerationThread") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0, ThreadID { UInt(THREAD_TASK_0), StringView("TaskThread0") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1, ThreadID { UInt(THREAD_TASK_1), StringView("TaskThread1") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2, ThreadID { UInt(THREAD_TASK_2), StringView("TaskThread2") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3, ThreadID { UInt(THREAD_TASK_3), StringView("TaskThread3") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4, ThreadID { UInt(THREAD_TASK_4), StringView("TaskThread4") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5, ThreadID { UInt(THREAD_TASK_5), StringView("TaskThread5") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6, ThreadID { UInt(THREAD_TASK_6), StringView("TaskThread6") } },
+    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7, ThreadID { UInt(THREAD_TASK_7), StringView("TaskThread7") } },
 };
 
 #ifdef HYP_ENABLE_THREAD_ID

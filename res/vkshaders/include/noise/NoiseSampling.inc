@@ -179,8 +179,18 @@ uint prime_permTN2[PRIME_PERM_COUNT] = {
     2411 + (923 << 16),  2417 + (872 << 16),  2423 + (1860 << 16),
 };
 
+vec3 random_pcg3d(uvec3 v)
+{
+  v = v * 1664525u + 1013904223u;
+  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+  v ^= v >> 16u;
+  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+  return vec3(v) * (1.0/float(0xffffffffu));
+}
+
 // Faure-Lemieux scrambled radical inverse
-float radinv_fl(uint n, uint dim) {
+float radinv_fl(uint n, uint dim)
+{
   dim = dim % PRIME_PERM_COUNT;
   const uint p_p = prime_permTN2[dim];
 

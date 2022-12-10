@@ -32,7 +32,7 @@ struct Handle
     {
     }
 
-    explicit Handle(const ID &id)
+    explicit Handle(ID id)
         : index(id.Value())
     {
         if (index != 0) {
@@ -120,6 +120,11 @@ struct Handle
 
     bool IsValid() const
         { return index != 0; }
+
+    UInt16 GetRefCount() const
+    {
+        return index == 0 ? 0 : GetContainer<T>().GetRefCount(index);
+    }
 
     ID GetID() const
         { return { UInt(index) }; }

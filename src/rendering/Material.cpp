@@ -16,6 +16,8 @@ using renderer::SamplerDescriptor;
 using renderer::CommandBuffer;
 using renderer::Result;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(UpdateMaterialRenderData) : RenderCommand
 {
     ID<Material> id;
@@ -200,6 +202,8 @@ struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommand
     }
 };
 
+#pragma endregion
+
 Material::Material()
     : EngineComponentBase(),
       m_render_attributes { .bucket = Bucket::BUCKET_OPAQUE },
@@ -218,7 +222,19 @@ Material::Material(const String &name, Bucket bucket)
 
 Material::~Material()
 {
-    Teardown();
+    SetReady(false);
+
+    for (SizeType i = 0; i < m_textures.Size(); i++) {
+        Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_textures.ValueAt(i)));
+    }
+
+    if (IsInitCalled()) {
+#if !HYP_FEATURES_BINDLESS_TEXTURES
+        EnqueueDescriptorSetDestroy();
+#endif
+
+        HYP_SYNC_RENDER();
+    }
 }
 
 void Material::Init()
@@ -242,22 +258,6 @@ void Material::Init()
     SetReady(true);
 
     EnqueueRenderUpdates();
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        for (SizeType i = 0; i < m_textures.Size(); i++) {
-            if (auto &texture = m_textures.ValueAt(i)) {
-                Engine::Get()->SafeReleaseHandle<Texture>(std::move(texture));
-            }
-        }
-
-#if !HYP_FEATURES_BINDLESS_TEXTURES
-        EnqueueDescriptorSetDestroy();
-#endif
-
-        HYP_SYNC_RENDER();
-    });
 }
 
 void Material::Update()

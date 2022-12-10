@@ -46,6 +46,10 @@ class SafeDeleter
 public:
     void SafeReleaseHandle(Handle<Texture> &&resource)
     {
+        if (resource.GetRefCount() == 1) {
+            EnqueueTextureBindlessStorageRemoval(resource.GetID());
+        }
+
         SafeReleaseHandleImpl<Texture>(std::move(resource), RENDERABLE_DELETION_TEXTURES);
     }
     
@@ -279,6 +283,8 @@ private:
             m_render_resource_deletion_flag |= mask;
         }
     }
+
+    void EnqueueTextureBindlessStorageRemoval(ID<Texture> id);
 
     std::tuple<
         FlatSet<HandleDeletionEntry<Texture>>,
