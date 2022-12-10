@@ -33,6 +33,14 @@ class Engine;
 
 struct RenderCommand_CreateTemporalImageOutputs;
 
+enum class TemporalBlendTechnique
+{
+    TECHNIQUE_0,
+    TECHNIQUE_1,
+    TECHNIQUE_2,
+    TECHNIQUE_3
+};
+
 class TemporalBlending
 {
 public:
@@ -64,18 +72,21 @@ public:
 
     TemporalBlending(
         const Extent2D &extent,
+        TemporalBlendTechnique technique,
         const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
     );
 
     TemporalBlending(
         const Extent2D &extent,
         InternalFormat image_format,
+        TemporalBlendTechnique technique,
         const Handle<Framebuffer> &input_framebuffer
     );
 
     TemporalBlending(
         const Extent2D &extent,
         InternalFormat image_format,
+        TemporalBlendTechnique technique,
         const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
     );
 
@@ -101,6 +112,7 @@ private:
 
     Extent2D m_extent;
     InternalFormat m_image_format;
+    TemporalBlendTechnique m_technique;
 
     FixedArray<ImageView *, max_frames_in_flight> m_input_image_views;
 

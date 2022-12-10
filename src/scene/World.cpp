@@ -98,10 +98,7 @@ void World::PerformSceneUpdates()
     m_has_scene_updates.store(false);
 }
 
-void World::Update(
-    
-    GameCounter::TickUnit delta
-)
+void World::Update(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 

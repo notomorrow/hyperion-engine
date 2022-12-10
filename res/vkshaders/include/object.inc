@@ -51,10 +51,10 @@ struct EntityInstanceBatch
 #define OBJECT_MASK_UI_PANEL    (0x200)
 
 #define GET_OBJECT_BUCKET(obj) \
-    ((int((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE)) \
-        | (int((obj).bucket == HYP_OBJECT_BUCKET_TRANSLUCENT) * (OBJECT_MASK_TRANSLUCENT)) \
-        | (int((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)) \
-        | (int((obj).bucket == HYP_OBJECT_BUCKET_UI) * (OBJECT_MASK_UI)))
+    ((uint((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE)) \
+        | (uint((obj).bucket == HYP_OBJECT_BUCKET_TRANSLUCENT) * (OBJECT_MASK_TRANSLUCENT)) \
+        | (uint((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)) \
+        | (uint((obj).bucket == HYP_OBJECT_BUCKET_UI) * (OBJECT_MASK_UI)))
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

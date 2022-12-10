@@ -204,6 +204,7 @@ SSRRenderer::SSRRenderer(const Extent2D &extent)
       m_temporal_blending(
           extent,
           InternalFormat::RGBA16F,
+          TemporalBlendTechnique::TECHNIQUE_3,
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].Back().image_view, &m_image_outputs[1].Back().image_view }
       ),
       m_is_rendered(false)
@@ -396,10 +397,7 @@ void SSRRenderer::CreateComputePipelines()
     InitObject(m_blur_vert);
 }
 
-void SSRRenderer::Render(
-    
-    Frame *frame
-)
+void SSRRenderer::Render(Frame *frame)
 {
     const auto &scene_binding = Engine::Get()->render_state.GetScene();
     const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
@@ -422,7 +420,7 @@ void SSRRenderer::Render(
         m_write_uvs->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
-        FixedArray { static_cast<UInt32>(Engine::Get()->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
+        FixedArray { UInt32(Engine::Get()->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
     );
 
     m_write_uvs->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });

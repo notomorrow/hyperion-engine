@@ -14,22 +14,30 @@ namespace hyperion::v2 {
 class DefinitionsFile
 {
 public:
+    struct Element
+    {
+        static const Element empty;
+
+        String name;
+        Array<String> sub_elements;
+    };
+
     struct Value
     {
-        Array<String> elements;
+        Array<Element> elements;
 
-        const String &GetValue() const
+        const Element &GetValue() const
         {
             return elements.Any()
                 ? elements.Front()
-                : String::empty;
+                : Element::empty;
         }
 
-        const String &GetValue(SizeType index) const
+        const Element &GetValue(SizeType index) const
         {
             return index < elements.Size()
                 ? elements[index]
-                : String::empty;
+                : Element::empty;
         }
     };
 

@@ -61,6 +61,21 @@ vec3 RandomInHemisphere(vec3 rand, vec3 n)
     return v * sign(dot(v, n));
 }
 
+vec3 RandomInHemisphereCosineWeighted(vec3 rand, vec3 n) {
+    float r = rand.x * 0.5 + 0.5;
+    float angle = (rand.y + 1.0) * HYP_FMATH_PI;
+    float sr = sqrt(r);
+    vec2 p = vec2(sr * cos(angle), sr * sin(angle));
+
+    vec3 ph = vec3(p.xy, sqrt(1.0 - p*p));
+
+    vec3 tangent = normalize(rand);
+    vec3 bitangent = cross(tangent, n);
+    tangent = cross(bitangent, n);
+
+    return tangent * ph.x + bitangent * ph.y + n * ph.z;
+}
+
 // Generates a seed for a random number generator from 2 inputs plus a backoff
 // https://github.com/nvpro-samples/optix_prime_baking/blob/332a886f1ac46c0b3eea9e89a59593470c755a0e/random.h
 // https://github.com/nvpro-samples/vk_raytracing_tutorial_KHR/tree/master/ray_tracing_jitter_cam

@@ -61,6 +61,18 @@ public:
     [[nodiscard]] T &Back()                               { return Base::Back(); }
     [[nodiscard]] const T &Back() const                   { return Base::Back(); }
 
+    Array<T> ToArray() const
+    {
+        Array<T> result;
+        result.Reserve(Size());
+
+        for (const auto &it : *this) {
+            result.PushBack(it);
+        }
+
+        return result;
+    }
+
     HYP_DEF_STL_BEGIN_END(
         Base::Begin(),
         Base::End()

@@ -228,7 +228,7 @@ void ShadowPass::CreateRenderGroup()
             },
             MaterialAttributes {
                 .bucket = BUCKET_SHADOW,
-                .cull_faces = FaceCullMode::NONE
+                .cull_faces = FaceCullMode::BACK
             }
         )
     );

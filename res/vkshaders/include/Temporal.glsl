@@ -460,7 +460,7 @@ vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_te
     const vec4 color = RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv));
     const vec4 previous_color = RGBToYCoCg(Texture2D(sampler_linear, prev_input_texture, uv - velocity));
 
-    const float _SubpixelThreshold = 0.6;
+    const float _SubpixelThreshold = 0.5;
     const float _GatherBase = 0.5;
     const float _GatherSubpixelMotion = 0.1666;
 

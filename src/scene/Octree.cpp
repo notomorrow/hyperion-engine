@@ -773,7 +773,7 @@ void Octree::CalculateVisibility(Scene *scene)
         return;
     }
 
-    const auto &frustum = scene->GetCamera()->GetFrustum();
+    const Frustum &frustum = scene->GetCamera()->GetFrustum();
 
     if (frustum.ContainsAABB(m_aabb)) {
         const auto cursor = LoadVisibilityCursor();
@@ -785,7 +785,7 @@ void Octree::CalculateVisibility(Scene *scene)
 void Octree::UpdateVisibilityState(Scene *scene, UInt8 cursor)
 {
     /* assume we are already visible from CalculateVisibility() check */
-    const auto &frustum = scene->GetCamera()->GetFrustum();
+    const Frustum &frustum = scene->GetCamera()->GetFrustum();
 
     m_visibility_state.SetVisible(scene->GetID(), cursor);
 

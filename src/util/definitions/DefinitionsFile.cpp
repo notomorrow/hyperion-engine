@@ -3,6 +3,8 @@
 
 namespace hyperion::v2 {
 
+const DefinitionsFile::Element DefinitionsFile::Element::empty = { };
+
 DefinitionsFile::DefinitionsFile(const FilePath &path)
     : m_path(path),
       m_is_valid(false)
@@ -75,13 +77,58 @@ void DefinitionsFile::Parse()
                 sections.PushBack(Pair { String("default"), Section { } });
             }
 
-            const auto &key = split[0];
+            const String &key = split[0];
 
             // split value by commas
             Value value;
 
             for (auto &item : split[1].Split(',')) {
-                value.elements.PushBack(item.Trimmed());
+                String item_trimmed = item.Trimmed();
+
+                Element element;
+
+                for (SizeType index = 0; index < item_trimmed.Size(); index++) {
+                    if (std::isspace(item_trimmed[index])) {
+                        continue;
+                    }
+
+                    // read sub-elements
+                    if (item_trimmed[index] == '(') {
+                        ++index;
+
+                        String working_name;
+
+                        while (index < item_trimmed.Size()) {
+                            if (std::isspace(item_trimmed[index])) {
+                                if (working_name.Any()) {
+                                    element.sub_elements.PushBack(std::move(working_name));
+                                }
+
+                                ++index;
+                                continue;
+                            }
+
+                            if (item_trimmed[index] == ')') {
+                                ++index;
+                                break;
+                            }
+
+                            working_name += item_trimmed[index];
+
+                            ++index;
+                        }
+
+                        if (working_name.Any()) {
+                            element.sub_elements.PushBack(std::move(working_name));
+                        }
+
+                        break;
+                    } else {
+                        element.name += item_trimmed[index];
+                    }
+                }
+
+                value.elements.PushBack(std::move(element));
             }
 
             sections.Back().second[key] = std::move(value);

@@ -249,7 +249,7 @@ public:
             m_sun = CreateObject<Light>(DirectionalLight(
                 Vector3(-0.1f, 0.1f, 0.1f).Normalize(),
                 Color(1.0f, 1.0f, 1.0f),
-                150000.0f
+                100000.0f
             ));
 
             m_scene->AddLight(m_sun);
@@ -333,7 +333,7 @@ public:
         if (true) { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
                 Handle<Light>(m_sun),
-                test_model.GetWorldAABB() * 5.0f
+                test_model.GetWorldAABB()
             );
         }
 
@@ -341,10 +341,10 @@ public:
             monkey.SetName("monkey");
             auto monkey_entity = monkey[0].GetEntity();
             monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.1f);
-            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.15f);
+            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
             // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
             // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
            //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
@@ -352,7 +352,7 @@ public:
            // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
             monkey_entity->RebuildRenderableAttributes();
-            monkey.Translate(Vector3(0, 250.5f, 0));
+            monkey.Translate(Vector3(0.0f, 30.5f, -25.0f));
             monkey.Scale(12.0f);
             InitObject(monkey_entity);
 

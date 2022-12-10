@@ -44,8 +44,8 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
-#define IRRADIANCE_MULTIPLIER 5.0
+#define IBL_INTENSITY 2000.0
+#define IRRADIANCE_MULTIPLIER 1.0
 
 layout(push_constant) uniform PushConstant
 {
@@ -85,7 +85,7 @@ void main()
     vec3 F = vec3(0.0);
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
-    ao = (bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0) * material.a;
+    ao = min(bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0, material.a);
     
 #if HYP_VCT_ENABLED
     vec4 vct_specular = vec4(0.0);
