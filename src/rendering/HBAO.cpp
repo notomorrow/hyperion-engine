@@ -11,6 +11,8 @@ using renderer::SamplerDescriptor;
 using renderer::DynamicStorageBufferDescriptor;
 using renderer::CommandBuffer;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
 {
     UniquePtr<DescriptorSet> *descriptor_sets;
@@ -105,6 +107,8 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 Result HBAO::ImageOutput::Create(Device *device)
 {

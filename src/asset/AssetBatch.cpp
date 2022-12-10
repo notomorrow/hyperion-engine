@@ -17,7 +17,7 @@ void AssetBatch::LoadAsync(UInt num_batches)
     // partition each proc
     AssertThrow(procs.Size() == enqueued_assets->Size());
 
-    const UInt num_items = static_cast<UInt>(procs.Size());
+    const UInt num_items = UInt(procs.Size());
 
     num_batches = MathUtil::Max(num_batches, 1u);
     num_batches = MathUtil::Min(num_batches, num_items);
@@ -56,8 +56,6 @@ AssetMap AssetBatch::AwaitResults()
     AwaitCompletion();
 
     AssetMap results = std::move(*enqueued_assets);
-    //procs.Clear();
-
     // enqueued_assets is cleared now
 
     return results;
@@ -74,7 +72,6 @@ AssetMap AssetBatch::ForceLoad()
     procs.Clear();
 
     AssetMap results = std::move(*enqueued_assets);
-
     // enqueued_assets is cleared now
 
     return results;

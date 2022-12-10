@@ -103,9 +103,9 @@ public:
             if (it != m_loaders.End()) {
                 loader = it->second.Get();
             } else {
-                for (auto &it : m_loaders) {
-                    if (path.EndsWith(it.first)) {
-                        loader = it.second.Get();
+                for (auto &loader_it : m_loaders) {
+                    if (path.EndsWith(loader_it.first)) {
+                        loader = loader_it.second.Get();
                         break;
                     }
                 }
@@ -176,7 +176,7 @@ class AssetLoader : public AssetLoaderBase
 protected:
     static inline auto GetTryFilepaths(const FilePath &filepath, const FilePath &original_filepath)
     {
-        const auto current_path = FilePath::Current();
+        const FilePath current_path = FilePath::Current();
 
         FixedArray<FilePath, 3> paths {
             FilePath::Relative(original_filepath, current_path),
@@ -198,8 +198,8 @@ public:
             "File could not be found"
         };
 
-        const auto original_filepath = FilePath(path);
-        const auto filepath = GetRebasedFilepath(asset_manager, original_filepath);
+        const FilePath original_filepath(path);
+        const FilePath filepath = GetRebasedFilepath(asset_manager, original_filepath);
         const auto paths = GetTryFilepaths(filepath, original_filepath);
 
         for (const auto &path : paths) {
@@ -233,18 +233,18 @@ public:
 protected:
     virtual LoadedAsset LoadAsset(LoaderState &state) const = 0;
 
-    FilePath GetRebasedFilepath(AssetManager &asset_manager, String filepath) const
+    FilePath GetRebasedFilepath(const AssetManager &asset_manager, const FilePath &filepath) const
     {
-        filepath = FilePath::Relative(filepath, FilePath::Current());
+        const FilePath relative_filepath = FilePath::Relative(filepath, FilePath::Current());
 
         if (asset_manager.GetBasePath().Any()) {
             return FilePath::Join(
                 asset_manager.GetBasePath().Data(),
-                filepath.Data()
+                relative_filepath.Data()
             );
         }
 
-        return filepath;
+        return relative_filepath;
     }
 };
 

@@ -1,6 +1,26 @@
 #include "SafeDeleter.hpp"
+#include <rendering/RenderCommands.hpp>
+#include <Engine.hpp>
+
+#include "backend/vulkan/RendererFeatures.hpp"
 
 namespace hyperion::v2 {
+
+struct RENDER_COMMAND(RemoveTextureFromBindlessStorage) : RenderCommand
+{
+    ID<Texture> id;
+
+    RENDER_COMMAND(RemoveTextureFromBindlessStorage)(ID<Texture> id) : id(id)
+    {
+    }
+
+    virtual Result operator()()
+    {
+        Engine::Get()->GetRenderData()->textures.RemoveResource(id);
+
+        HYPERION_RETURN_OK;
+    }
+};
 
 void SafeDeleter::PerformEnqueuedDeletions()
 {
@@ -72,6 +92,13 @@ void SafeDeleter::ForceReleaseAll()
         }
 
         m_render_resource_deletion_flag.store(deletion_flags);
+    }
+}
+
+void SafeDeleter::EnqueueTextureBindlessStorageRemoval(ID<Texture> id)
+{
+    if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+        PUSH_RENDER_COMMAND(RemoveTextureFromBindlessStorage, id);
     }
 }
 
