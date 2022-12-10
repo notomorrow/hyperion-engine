@@ -1,13 +1,9 @@
+
 proxy class Entity {
-    func operator+(self : Entity, other : Entity) {
-        return "FOOP";
-    }
-
     func SetTranslation(self : Entity, pos : Vector3) {
-        EntitySetTranslation(self, pos);
+        Entity_SetTranslation(self, pos);
     }
 
-    func ToString(self : Entity) : String {
-        return "<Entity>";
-    }
+    func GetTranslation(self : Entity) : Vector3 => Entity_GetTranslation(self);
+    func GetWorldAABB(self : Entity) : BoundingBox => Entity_GetWorldAABB(self);
 }
