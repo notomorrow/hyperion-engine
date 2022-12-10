@@ -30,10 +30,10 @@ void main()
         
         if (albedo_texture.a < MATERIAL_ALPHA_DISCARD
             || /* font map: */ albedo_texture.r < MATERIAL_ALPHA_DISCARD) {
-            discard;
+        //    discard;
         }
 
-        ui_color = albedo_texture;
+        //ui_color = albedo_texture;
     }
 
     vec4 result = vec4(

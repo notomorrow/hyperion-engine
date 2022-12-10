@@ -17,6 +17,8 @@ using renderer::SamplerDescriptor;
 using renderer::StorageImageDescriptor;
 using renderer::StorageImage2D;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateShadowMapDescriptors) : RenderCommand
 {
     SizeType shadow_map_index;
@@ -118,6 +120,8 @@ struct RENDER_COMMAND(DestroyShadowPassData) : RenderCommand
         return result;
     }
 };
+
+#pragma endregion
 
 ShadowPass::ShadowPass()
     : FullScreenPass(),

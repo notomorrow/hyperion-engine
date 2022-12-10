@@ -72,7 +72,11 @@ void BindlessStorage::RemoveResource(ID<Texture> id)
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        descriptor->RemoveSubDescriptor(id.ToIndex());
+        descriptor->SetElementImageSamplerCombined(
+            id.ToIndex(),
+            &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8(),
+            &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
+        );
     }
 
     m_texture_ids.Erase(id);

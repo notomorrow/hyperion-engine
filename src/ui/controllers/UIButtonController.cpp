@@ -46,8 +46,7 @@ void UIButtonController::OnAdded()
     mat->SetBucket(Bucket::BUCKET_UI);
     mat->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>(font_map.GetTexture()));
     mat->SetFaceCullMode(FaceCullMode::NONE);
-    mat->SetBlendMode(BlendMode::ADDITIVE);
-    mat->SetIsAlphaBlended(true);
+    mat->SetBlendMode(BlendMode::NORMAL);
     GetOwner()->SetMaterial(std::move(mat));
 
     Controller::OnAdded();

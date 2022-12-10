@@ -1,11 +1,14 @@
 #include "Texture.hpp"
-#include "../Engine.hpp"
+#include <Engine.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
 
 using renderer::Result;
 
 class Texture;
+
+#pragma region Render commands
 
 struct RENDER_COMMAND(CreateTexture) : RenderCommand
 {
@@ -34,10 +37,10 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommand
         HYPERION_BUBBLE_ERRORS(image->Create(Engine::Get()->GetGPUDevice(), Engine::Get()->GetGPUInstance(), initial_state));
         HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetGPUInstance()->GetDevice(), image));
         HYPERION_BUBBLE_ERRORS(sampler->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
-
-#if HYP_FEATURES_BINDLESS_TEXTURES
-        Engine::Get()->GetRenderData()->textures.AddResource(texture);
-#endif
+        
+        if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+            Engine::Get()->GetRenderData()->textures.AddResource(texture);
+        }
 
         HYPERION_RETURN_OK;
     }
@@ -64,9 +67,9 @@ struct RENDER_COMMAND(DestroyTexture) : RenderCommand
 
     virtual Result operator()()
     {
-#if HYP_FEATURES_BINDLESS_TEXTURES
-        Engine::Get()->GetRenderData()->textures.RemoveResource(id);
-#endif
+        if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+            Engine::Get()->GetRenderData()->textures.RemoveResource(id);
+        }
 
         HYPERION_BUBBLE_ERRORS(sampler->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
         HYPERION_BUBBLE_ERRORS(image_view->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
@@ -75,6 +78,8 @@ struct RENDER_COMMAND(DestroyTexture) : RenderCommand
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 Texture::Texture(
     Extent3D extent,
@@ -129,7 +134,18 @@ Texture::Texture(Texture &&other) noexcept
 
 Texture::~Texture()
 {
-    Teardown();
+    SetReady(false);
+
+    if (IsInitCalled()) {
+        RenderCommands::Push<RENDER_COMMAND(DestroyTexture)>(
+            m_id,
+            &m_image,
+            &m_image_view,
+            &m_sampler
+        );
+        
+        HYP_SYNC_RENDER();
+    }
 }
 
 void Texture::Init()
@@ -149,19 +165,6 @@ void Texture::Init()
     );
 
     SetReady(true);
-    
-    OnTeardown([this]() {
-        SetReady(false);
-
-        RenderCommands::Push<RENDER_COMMAND(DestroyTexture)>(
-            m_id,
-            &m_image,
-            &m_image_view,
-            &m_sampler
-        );
-        
-        HYP_SYNC_RENDER();
-    });
 }
 
 } // namespace hyperion::v2

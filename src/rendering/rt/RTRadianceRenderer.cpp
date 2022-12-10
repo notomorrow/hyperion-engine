@@ -12,6 +12,8 @@ using renderer::TlasDescriptor;
 using renderer::ResourceState;
 using renderer::Result;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : RenderCommand
 {
     UniquePtr<DescriptorSet> *descriptor_sets;
@@ -40,10 +42,7 @@ struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : RenderCommand
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_RADIANCE_RESULT)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = image_views[frame_index]
-                });
+                ->SetElementSRV(0, image_views[frame_index]);
         }
 
         HYPERION_RETURN_OK;
@@ -97,10 +96,7 @@ struct RENDER_COMMAND(DestroyRTRadianceRenderer) : RenderCommand
             // set to placeholder image
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_RADIANCE_RESULT)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(0, &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8());
         }
 
         return result;
@@ -125,6 +121,8 @@ struct RENDER_COMMAND(CreateRTRadianceImageOutputs) : RenderCommand
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 Result RTRadianceRenderer::ImageOutput::Create(Device *device)
 {
@@ -167,7 +165,8 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
       },
       m_temporal_blending(
           extent,
-          TemporalBlendTechnique::TECHNIQUE_1,
+          InternalFormat::RGBA8,
+          TemporalBlendTechnique::TECHNIQUE_3,
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
       ),
       m_has_tlas_updates { false, false }
@@ -203,7 +202,7 @@ void RTRadianceRenderer::Destroy()
         Engine::Get()->SafeRelease(std::move(descriptor_set));
     }
 
-    RenderCommands::Push<RENDER_COMMAND(DestroyRTRadianceRenderer)>(m_image_outputs.Data());
+    PUSH_RENDER_COMMAND(DestroyRTRadianceRenderer, m_image_outputs.Data());
 
     HYP_SYNC_RENDER();
 }
@@ -265,7 +264,7 @@ void RTRadianceRenderer::Render(Frame *frame)
 
 void RTRadianceRenderer::CreateImages()
 {
-    RenderCommands::Push<RENDER_COMMAND(CreateRTRadianceImageOutputs)>(m_image_outputs.Data());
+    PUSH_RENDER_COMMAND(CreateRTRadianceImageOutputs, m_image_outputs.Data());
 }
 
 void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
@@ -317,7 +316,8 @@ void RTRadianceRenderer::CreateDescriptorSets()
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateRTRadianceDescriptorSets)>(
+    PUSH_RENDER_COMMAND(
+        CreateRTRadianceDescriptorSets,
         m_descriptor_sets.Data(),
         FixedArray<ImageView *, max_frames_in_flight> {
             &m_temporal_blending.GetImageOutput(0).image_view,
@@ -342,7 +342,8 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
     ));
 
     Engine::Get()->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](...) {
-        RenderCommands::Push<RENDER_COMMAND(CreateRTRadiancePipeline)>(
+        PUSH_RENDER_COMMAND(
+            CreateRTRadiancePipeline,
             m_raytracing_pipeline.Get(),
             m_shader->GetShaderProgram()
         );

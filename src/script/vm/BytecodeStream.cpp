@@ -42,7 +42,7 @@ BytecodeStream &BytecodeStream::operator=(const BytecodeStream &other)
 
 void BytecodeStream::ReadZeroTerminatedString(SChar *ptr)
 {
-    UByte ch = 0;
+    UByte ch;
     SizeType i = 0;
 
     do {
