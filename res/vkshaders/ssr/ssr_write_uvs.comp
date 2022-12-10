@@ -8,7 +8,7 @@ layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D ssr_uvs;
 #include "../include/Temporal.glsl"
 
 #define SSR_JITTER_OFFSET 0.0
-#define MAX_ROUGHNESS 0.995
+#define MAX_ROUGHNESS 0.75
 
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
@@ -134,11 +134,11 @@ void main(void)
     vec3 ray_origin = P;
     
     // scatter the ray based on surface roughness
-    uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter % 4);
 
     vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
-    vec3 scattered_direction = view_space_normal + RandomInHemisphere(rnd, view_space_normal) * roughness;
-    vec3 ray_direction = normalize(reflect(normalize(ray_origin), scattered_direction));
+    vec3 scattered_direction = normalize(view_space_normal + RandomInHemisphereCosineWeighted(rnd, view_space_normal) * roughness);
+    vec3 ray_direction = reflect(normalize(ray_origin), scattered_direction);
 
     vec2 hit_pixel;
     vec3 hit_point;

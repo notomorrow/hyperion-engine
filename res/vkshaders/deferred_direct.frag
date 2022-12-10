@@ -30,6 +30,11 @@ vec2 texcoord = v_texcoord0;
 #include "include/shadows.inc"
 #include "include/PhysicalCamera.inc"
 
+layout(push_constant) uniform PushConstant
+{
+    DeferredParams deferred_params;
+};
+
 void main()
 {
     vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
@@ -67,7 +72,7 @@ void main()
     float shadow = 1.0;
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, texcoord);
-    ao = ssao_data.a * material.a;
+    ao = min(bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0, material.a);
 
     if (perform_lighting) {
 

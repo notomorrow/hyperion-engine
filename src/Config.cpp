@@ -84,9 +84,9 @@ bool Configuration::LoadFromDefinitionsFile()
             } else {
                 union { Int i; Float f; } tmp_value;
 
-                if (option_value.GetValue() == "true") {
+                if (option_value.GetValue().name == "true") {
                     value = true;
-                } else if (option_value.GetValue() == "false") {
+                } else if (option_value.GetValue().name == "false") {
                     value = false;
                 } else if (StringUtil::Parse(option_it.first.Data(), &tmp_value.i)) {
                     value = tmp_value.i;

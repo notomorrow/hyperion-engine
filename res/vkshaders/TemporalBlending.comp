@@ -25,8 +25,17 @@ layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D blur_output_image;
 
-// #define MINMAX_3X3_ROUNDED
-#define MINMAX_4TAP_VARYING
+#ifdef TEMPORAL_BLEND_TECHNIQUE_0
+    #define TEMPORAL_BLEND_TECHNIQUE 0
+#elif defined(TEMPORAL_BLEND_TECHNIQUE_1)
+    #define TEMPORAL_BLEND_TECHNIQUE 1
+#elif defined(TEMPORAL_BLEND_TECHNIQUE_2)
+    #define TEMPORAL_BLEND_TECHNIQUE 2
+#elif defined(TEMPORAL_BLEND_TECHNIQUE_3)
+    #define TEMPORAL_BLEND_TECHNIQUE 3
+#else
+    #define TEMPORAL_BLEND_TECHNIQUE 3
+#endif
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "./include/defines.inc"
@@ -78,12 +87,18 @@ void main(void)
     );
 
 
-#if 0
+#if TEMPORAL_BLEND_TECHNIQUE == 0
+    #undef ADJUST_COLOR_HDR
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
-    vec4 color_ycocg = (RGBToYCoCg(color));
+
+    vec4 color_ycocg = RGBToYCoCg(color);
     vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
+
+    color = ADJUST_COLOR_IN(color);
+    previous_color = ADJUST_COLOR_IN(previous_color);
+
     // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
-    vec4 mean = color_ycocg;
+    vec4 mean = color;//color_ycocg;
     vec4 stddev = mean * mean;
 
     const float _SubpixelThreshold = 0.5;
@@ -104,32 +119,35 @@ void main(void)
     );
 
     for (int i = 0; i < 4; i++) {
-        vec4 c = RGBToYCoCg(Texture2D(sampler_linear, input_texture, clamp(uv + (offsets[i] * texel_size), 0.0, 1.0)));
+        vec4 c = /*RGBToYCoCg*/(ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, clamp(uv + (offsets[i] * texel_size), 0.0, 1.0))));
         mean += c;
         stddev += c * c;
     }
 
     mean /= 5.0;
     stddev = sqrt(stddev / 5.0 - (mean * mean));
+    vec4 clipped = ClipToAABB(color/*_ycocg*/, previous_color/*_ycocg*/, mean, stddev);
 
-    vec4 clipped = ClipToAABB(color_ycocg, previous_color_ycocg, mean, stddev);
+
     // color = TemporalLuminanceResolve((YCoCgToRGB(color_ycocg)), (YCoCgToRGB(clipped)));
 
     const float lum0 = color_ycocg.r;
-    const float lum1 = clipped.r;
+    const float lum1 = RGBToYCoCg(clipped).r;
 
     float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
     float unbiased_weight = 1.0 - unbiased_diff;
     float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
     float feedback = Saturate(mix(0.88, 0.98, unbiased_weight_sqr));
 
-    color = mix(color, YCoCgToRGB(clipped), feedback);
-#elif 0
+    color = ADJUST_COLOR_OUT(mix(color, /*YCoCgToRGB*/(clipped), feedback));
+    // color = ADJUST_COLOR_OUT(stddev);
+    // color = any(isnan(color)) ? vec4(0.0) : color;
+#elif TEMPORAL_BLEND_TECHNIQUE == 1
     color = TemporalResolve(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 
-#elif defined(MINMAX_3X3_ROUNDED)
+#elif TEMPORAL_BLEND_TECHNIQUE == 2
     color = TemporalBlendRounded(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
-#elif defined(MINMAX_4TAP_VARYING)
+#elif TEMPORAL_BLEND_TECHNIQUE == 3
     color = TemporalBlendVarying(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 #endif
 

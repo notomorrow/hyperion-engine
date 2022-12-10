@@ -84,10 +84,12 @@ struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : RenderCommand
 
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
+    TemporalBlendTechnique technique,
     const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
 ) : TemporalBlending(
         extent,
         InternalFormat::RGBA8,
+        technique,
         input_image_views
     )
 {
@@ -96,9 +98,11 @@ TemporalBlending::TemporalBlending(
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
     InternalFormat image_format,
+    TemporalBlendTechnique technique,
     const Handle<Framebuffer> &input_framebuffer
 ) : m_extent(extent),
     m_image_format(image_format),
+    m_technique(technique),
     m_input_framebuffer(input_framebuffer)
 {
 }
@@ -106,9 +110,11 @@ TemporalBlending::TemporalBlending(
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
     InternalFormat image_format,
+    TemporalBlendTechnique technique,
     const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
 ) : m_extent(extent),
     m_image_format(image_format),
+    m_technique(technique),
     m_input_image_views(input_image_views)
 {
 }
@@ -250,8 +256,10 @@ void TemporalBlending::CreateComputePipelines()
         break;
     }
 
+    shader_props.Set("TEMPORAL_BLEND_TECHNIQUE_" + String::ToString(Int(m_technique)));
+
     m_perform_blending = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("TemporalBlending")),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("TemporalBlending", shader_props)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

@@ -424,6 +424,7 @@ void HBAO::CreateTemporalBlending()
     m_temporal_blending.Reset(new TemporalBlending(
         m_hbao_pass->GetFramebuffer()->GetExtent(),
         InternalFormat::RGBA16F,
+        TemporalBlendTechnique::TECHNIQUE_3,
         m_hbao_pass->GetFramebuffer()
     ));
 

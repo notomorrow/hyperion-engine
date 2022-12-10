@@ -23,6 +23,8 @@ struct ShaderProperty
     String name;
     bool is_permutation = false;
     bool is_global = false;
+    String value;
+    Array<String> possible_values;
 
     ShaderProperty() = default;
 
@@ -36,7 +38,9 @@ struct ShaderProperty
     ShaderProperty(const ShaderProperty &other)
         : name(other.name),
           is_permutation(other.is_permutation),
-          is_global(other.is_global)
+          is_global(other.is_global),
+          value(other.value),
+          possible_values(other.possible_values)
     {
     }
 
@@ -45,6 +49,8 @@ struct ShaderProperty
         name = other.name;
         is_permutation = other.is_permutation;
         is_global = other.is_global;
+        value = other.value;
+        possible_values = other.possible_values;
 
         return *this;
     }
@@ -52,7 +58,9 @@ struct ShaderProperty
     ShaderProperty(ShaderProperty &&other) noexcept
         : name(std::move(other.name)),
           is_permutation(other.is_permutation),
-          is_global(other.is_global)
+          is_global(other.is_global),
+          value(std::move(other.value)),
+          possible_values(std::move(other.possible_values))
     {
         other.is_permutation = false;
         other.is_global = false;
@@ -63,6 +71,8 @@ struct ShaderProperty
         name = std::move(other.name);
         is_permutation = other.is_permutation;
         is_global = other.is_global;
+        value = std::move(other.value);
+        possible_values = std::move(other.possible_values);
 
         other.is_permutation = false;
         other.is_global = false;
@@ -78,6 +88,12 @@ struct ShaderProperty
 
     bool operator<(const ShaderProperty &other) const
         { return name < other.name; }
+
+    bool IsValueGroup() const
+        { return possible_values.Any(); }
+
+    bool HasValue() const
+        { return value.Any(); }
 
     HashCode GetHashCode() const
     {
@@ -113,6 +129,13 @@ public:
     {
         for (const String &prop_key : props) {
             m_props.Insert(ShaderProperty(prop_key, true)); // default to permutable
+        }
+    }
+
+    ShaderProps(const Array<ShaderProperty> &props)
+    {
+        for (const ShaderProperty &property : props) {
+            m_props.Insert(property);
         }
     }
 
@@ -227,6 +250,11 @@ public:
         return hc;
     }
 
+    Array<ShaderProperty> ToArray() const
+    {
+        return m_props.ToArray();
+    }
+
     HYP_DEF_STL_BEGIN_END(
         m_props.Begin(),
         m_props.End()
@@ -236,6 +264,22 @@ private:
     ShaderProps &AddPermutation(const String &key)
     {
         ShaderProperty shader_property(key, true);
+
+        const auto it = m_props.Find(shader_property);
+
+        if (it == m_props.End()) {
+            m_props.Insert(shader_property);
+        } else {
+            *it = shader_property;
+        }
+
+        return *this;
+    }
+
+    ShaderProps &AddValueGroup(const String &key, const Array<String> &possible_values)
+    {
+        ShaderProperty shader_property(key, false);
+        shader_property.possible_values = possible_values;
 
         const auto it = m_props.Find(shader_property);
 

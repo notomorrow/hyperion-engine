@@ -11,7 +11,7 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_POWER 1.0
+#define HYP_HBIL_MULTIPLIER 1.75
 #define ENV_PROBE_MULTIPLIER 1.0
 
 struct DeferredParams
@@ -209,7 +209,7 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
         if (probe.texture_index != ~0u) {
             const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
             const int num_levels = GetNumLevels(sampler_linear, env_probe_textures[probe_texture_index]);
-            const float lod = float(num_levels) * perceptual_roughness * (2.0 - perceptual_roughness);
+            const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
             ibl = EnvProbeSample(
                 sampler_linear,
@@ -254,7 +254,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
 
 void CalculateHBILIrradiance(DeferredParams deferred_params, in vec4 ssao_data, inout vec3 irradiance)
 {
-    irradiance += pow(ssao_data.rgb, vec3(1.0 / HYP_HBIL_POWER)) * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
+    irradiance += ssao_data.rgb * HYP_HBIL_MULTIPLIER * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
 }
 
 void IntegrateReflections(inout vec3 Fr, in vec3 E, in vec4 reflections)

@@ -25,7 +25,7 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/packing.inc"
 #include "include/tonemap.inc"
 
-#define SUN_INTENSITY 5.0
+#define SUN_INTENSITY 15.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3
@@ -161,8 +161,8 @@ void main()
     vec3 sky_color = atmosphere;
     sky_color = 1.0 - exp(-1.0 * sky_color);
 
-    // TODO: prevent from getting tonemapped twice
-    sky_color = TonemapReinhard(sky_color);
+    // sky will not be tonemapped outside of this:
+    sky_color = Tonemap(sky_color);
 
     gbuffer_albedo = vec4(sky_color, 0.0);
 
