@@ -15,15 +15,6 @@ enum UIEventType {
     MOUSE_HOVER
 }
 
-proxy class Entity {
-    func SetTranslation(self : Entity, pos : Vector3) {
-        Entity_SetTranslation(self, pos);
-    }
-
-    func GetTranslation(self : Entity) : Vector3 => Entity_GetTranslation(self);
-    func GetWorldAABB(self : Entity) : BoundingBox => Entity_GetWorldAABB(self);
-}
-
 class TestUIController {
     const receives_update : Bool = false;
 
