@@ -15,7 +15,7 @@ inline static constexpr UInt32 group_x_64(UInt32 x) { return (x >> 6u) + ((x & 0
 
 SparseVoxelOctree::SparseVoxelOctree()
     : EngineComponentBase(),
-      RenderComponent(550 /* TEMP */)
+      RenderComponent(10)
 {
 }
 
@@ -38,6 +38,8 @@ void SparseVoxelOctree::Init()
     if (m_voxelizer == nullptr) {
         m_voxelizer = std::make_unique<Voxelizer>();
         m_voxelizer->Init();
+
+        m_voxelizer->GetScene()->SetParentScene(Handle<Scene>(GetParent()->GetScene()->GetID()));
     }
 
     CreateBuffers();
@@ -139,55 +141,7 @@ void SparseVoxelOctree::InitGame()
             continue;
         }
 
-        const auto &renderable_attributes = entity->GetRenderableAttributes();
-
-        if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
-            && (renderable_attributes.mesh_attributes.vertex_attributes
-                & m_voxelizer->GetRenderGroup()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
-
-            m_voxelizer->GetRenderGroup()->AddEntity(Handle<Entity>(it.second));
-        }
-    }
-}
-
-void SparseVoxelOctree::OnEntityAdded(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    const auto &renderable_attributes = entity->GetRenderableAttributes();
-
-    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
-        && (renderable_attributes.mesh_attributes.vertex_attributes
-            & m_voxelizer->GetRenderGroup()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
-        m_voxelizer->GetRenderGroup()->AddEntity(Handle<Entity>(entity));
-    }
-}
-
-void SparseVoxelOctree::OnEntityRemoved(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    m_voxelizer->GetRenderGroup()->RemoveEntity(Handle<Entity>(entity));
-}
-
-void SparseVoxelOctree::OnEntityRenderableAttributesChanged(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    const auto &renderable_attributes = entity->GetRenderableAttributes();
-
-    if (BucketHasGlobalIllumination(renderable_attributes.material_attributes.bucket)
-        && (renderable_attributes.mesh_attributes.vertex_attributes
-            & m_voxelizer->GetRenderGroup()->GetRenderableAttributes().mesh_attributes.vertex_attributes)) {
-        m_voxelizer->GetRenderGroup()->AddEntity(Handle<Entity>(entity));
-    } else {
-        m_voxelizer->GetRenderGroup()->RemoveEntity(Handle<Entity>(entity));
+        m_voxelizer->GetScene()->AddEntity(entity);
     }
 }
 
@@ -377,55 +331,35 @@ void SparseVoxelOctree::CreateDescriptors()
 void SparseVoxelOctree::CreateComputePipelines()
 {
     m_alloc_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_alloc_nodes.comp.spv")).Read()}}
-            }
-        ),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOAllocNodes")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_alloc_nodes));
 
     m_init_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_init_nodes.comp.spv")).Read()}}
-            }
-        ),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOInitNodes")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_init_nodes));
 
     m_tag_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_tag_nodes.comp.spv")).Read()}}
-            }
-        ),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOTagNodes")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_tag_nodes));
 
     m_modify_args = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_modify_args.comp.spv")).Read()}}
-            }
-        ),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOModifyArgs")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_modify_args));
 
     m_write_mipmaps = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(
-            std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "vkshaders/voxel/octree_write_mipmaps.comp.spv")).Read()}}
-            }
-        ),
+        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOWriteMipmaps")),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

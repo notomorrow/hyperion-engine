@@ -7,6 +7,7 @@
 
 #include <util/Defines.hpp>
 #include <Types.hpp>
+#include <HashCode.hpp>
 
 namespace hyperion::v2 {
 
@@ -16,6 +17,8 @@ using renderer::FillMode;
 using renderer::StencilState;
 using renderer::VertexAttributeSet;
 using renderer::BlendMode;
+
+class Framebuffer;
 
 struct MaterialAttributes
 {
@@ -58,6 +61,18 @@ struct MaterialAttributes
     {
          return ToTuple() < other.ToTuple();
     }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(bucket);
+        hc.Add(fill_mode);
+        hc.Add(blend_mode);
+        hc.Add(cull_faces);
+        hc.Add(flags);
+
+        return hc;
+    }
 };
 
 struct MeshAttributes
@@ -83,11 +98,21 @@ struct MeshAttributes
     {
          return ToTuple() < other.ToTuple();
     }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(vertex_attributes);
+        hc.Add(topology);
+
+        return hc;
+    }
 };
 
 struct RenderableAttributeSet
 {
     ID<Shader> shader_id;
+    ID<Framebuffer> framebuffer_id; // only used for scenes, not per entity
     MeshAttributes mesh_attributes;
     MaterialAttributes material_attributes;
     StencilState stencil_state { };
@@ -128,6 +153,7 @@ struct RenderableAttributeSet
     {
         return std::make_tuple(
             shader_id,
+            framebuffer_id,
             mesh_attributes,
             material_attributes,
             stencil_state
@@ -136,15 +162,28 @@ struct RenderableAttributeSet
 
     bool operator==(const RenderableAttributeSet &other) const
     {
-        return shader_id == other.shader_id
+        /*return shader_id == other.shader_id
             && mesh_attributes == other.mesh_attributes
             && material_attributes == other.material_attributes
-            && stencil_state == other.stencil_state;
+            && stencil_state == other.stencil_state;*/
+        return GetHashCode() == other.GetHashCode();
     }
 
     bool operator<(const RenderableAttributeSet &other) const
     {
-         return ToTuple() < other.ToTuple();
+         return GetHashCode().Value() < other.GetHashCode().Value();//ToTuple() < other.ToTuple();
+    }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(shader_id.GetHashCode());
+        hc.Add(framebuffer_id.GetHashCode());
+        hc.Add(mesh_attributes.GetHashCode());
+        hc.Add(material_attributes.GetHashCode());
+        hc.Add(stencil_state.GetHashCode());
+
+        return hc;
     }
 };
 

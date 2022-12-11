@@ -2,7 +2,6 @@
 #define HYPERION_V2_RENDERER_H
 
 #include <core/Containers.hpp>
-#include <scene/Entity.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Framebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
@@ -47,6 +46,7 @@ class Engine;
 class Mesh;
 class Material;
 class Skeleton;
+class Entity;
 
 /*! \brief Represents a handle to a graphics pipeline,
     which can be used for doing standalone drawing without requiring
@@ -70,10 +70,6 @@ public:
     /*! \brief For using this RenderGroup as a standalone graphics pipeline that will simply
         be bound, with all draw calls recorded elsewhere. */
     void Bind(Frame *frame);
-    
-    /*! \brief For using this RenderGroup as a standalone graphics pipeline that will simply
-        be bound, with all draw calls recorded elsewhere. */
-    void SetConstants(void *ptr, SizeType size);
 
     /*! \brief For using this RenderGroup as a standalone graphics pipeline that will simply
         be bound, with all draw calls recorded elsewhere. */
@@ -116,11 +112,6 @@ public:
     const Handle<Shader> &GetShader() const { return m_shader; }
     
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
-    
-    void AddEntity(Handle<Entity> &&entity);
-    void RemoveEntity(Handle<Entity> &&entity, bool call_on_removed = true);
-    auto &GetEntities() { return m_entities; }
-    const auto &GetEntities() const { return m_entities; }
 
     void AddFramebuffer(Handle<Framebuffer> &&fbo) { m_fbos.PushBack(std::move(fbo)); }
     void RemoveFramebuffer(ID<Framebuffer> id);
@@ -151,6 +142,8 @@ public:
     // render non-indirect (collects draw calls, then renders)
     void Render(Frame *frame);
 
+    void SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies);
+
     RendererProxy GetProxy()
         { return RendererProxy(this); }
 
@@ -161,15 +154,6 @@ private:
         UInt scene_index
     );
 
-    void PerformEnqueuedEntityUpdates(UInt frame_index);
-    
-    void UpdateEnqueuedEntitiesFlag()
-    {
-        m_enqueued_entities_flag.store(
-           m_entities_pending_addition.Any() || m_entities_pending_removal.Any()
-        );
-    }
-
     std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 
     Handle<Shader> m_shader;
@@ -179,17 +163,9 @@ private:
     
     Array<Handle<Framebuffer>> m_fbos;
 
-    Array<Handle<Entity>> m_entities; // lives in RENDER thread
-    Array<Handle<Entity>> m_entities_pending_addition; // shared
-    Array<Handle<Entity>> m_entities_pending_removal; // shared
-
     // for each frame in flight - have an array of command buffers to use
     // for async command buffer recording.
     FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> m_command_buffers;
-
-    // std::mutex m_enqueued_entities_mutex;
-    BinarySemaphore m_enqueued_entities_sp;
-    std::atomic_bool m_enqueued_entities_flag { false };
 
     // cache so we don't allocate every frame
     Array<Array<DrawCall>> m_divided_draw_calls;
@@ -201,6 +177,8 @@ private:
     UInt m_command_buffer_index = 0u;
 
     FlatMap<UInt, EntityBatchIndex> m_entity_batches;
+
+    Array<EntityDrawProxy> m_draw_proxies;
 
     DrawCallCollection m_draw_state;
 };

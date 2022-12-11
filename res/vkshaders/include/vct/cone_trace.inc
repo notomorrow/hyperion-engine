@@ -5,20 +5,87 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          5.0
-#define VCT_DIFFUSE_RATIO(roughness)  1.0
-#define VCT_SPECULAR_MAX_DIST         0.25
+#define VCT_DIFFUSE_MAX_DIST          1.0
+#define VCT_DIFFUSE_RATIO(roughness)  10.0
+#define VCT_SPECULAR_MAX_DIST         0.35
 
 #define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
 #define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.015)
 
-vec4 FetchVoxel(vec3 position, float lod)
-{
-    vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
-    //rgba.rgb = pow(rgba.rgb, vec3(2.2));
-    return rgba;
-}
+#if HYP_VCT_MODE == HYP_VCT_MODE_TEXTURE
+
+    vec4 FetchVoxel(vec3 position, float lod)
+    {
+        vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
+        //rgba.rgb = pow(rgba.rgb, vec3(2.2));
+        return rgba;
+    }
+
+#elif HYP_VCT_MODE == HYP_VCT_MODE_SVO
+
+    layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 40) readonly buffer uuOctree { uvec2 uOctree[]; };
+
+    const float uVolumeDimension = 1024.0;
+    #define VCT_ORIGIN_OFFSET 0.4
+
+    const int DIFFUSE_CONE_COUNT_16 = 16;
+    const float DIFFUSE_CONE_APERTURE_16 = 0.872665;
+
+    const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
+        vec3( 0.57735,   0.57735,   0.57735  ),
+        vec3( 0.57735,  -0.57735,  -0.57735  ),
+        vec3(-0.57735,   0.57735,  -0.57735  ),
+        vec3(-0.57735,  -0.57735,   0.57735  ),
+        vec3(-0.903007, -0.182696, -0.388844 ),
+        vec3(-0.903007,  0.182696,  0.388844 ),
+        vec3( 0.903007, -0.182696,  0.388844 ),
+        vec3( 0.903007,  0.182696, -0.388844 ),
+        vec3(-0.388844, -0.903007, -0.182696 ),
+        vec3( 0.388844, -0.903007,  0.182696 ),
+        vec3( 0.388844,  0.903007, -0.182696 ),
+        vec3(-0.388844,  0.903007,  0.182696 ),
+        vec3(-0.182696, -0.388844, -0.903007 ),
+        vec3( 0.182696,  0.388844, -0.903007 ),
+        vec3(-0.182696,  0.388844,  0.903007 ),
+        vec3( 0.182696, -0.388844,  0.903007 )
+    };
+
+    vec4 SampleSVO(vec3 position, float lod)
+    {
+        uint resolution = uint(uVolumeDimension);
+        uint target_resolution = uint(mix(0, 1 << 3, clamp(lod, 0.0, 7.0) / 7.0));
+
+        uvec3 voxel_position = clamp(
+            uvec3(OffsetVoxelPosition(position) * resolution), 
+            uvec3(0u), 
+            uvec3(resolution - 1u)
+        );
+
+        uint idx = 0, cur = 0; 
+        uvec3 cmp;
+        do {
+            resolution >>= 1;
+            cmp = uvec3(greaterThanEqual(voxel_position, uvec3(resolution)));
+            idx = cur + (uint(cmp.x) | (uint(cmp.y) << 1u) | (uint(cmp.z) << 2u));
+            cur = uOctree[idx].x & 0x7fffffffu;
+            voxel_position -= cmp * resolution;
+        } while (cur != 0u && resolution > target_resolution);
+
+        return RGBA8ToVec4Raw(uOctree[idx].y) / 255.0;
+    }
+
+    vec4 FetchVoxel(vec3 position, float lod)
+    {
+        float lower_level = float(floor(lod));
+        float upper_level = float(ceil(lod));
+
+        vec4 lower_sample = SampleSVO(position, lower_level);
+        vec4 upper_sample = SampleSVO(position, upper_level);
+
+        return mix(lower_sample, upper_sample, fract(lod));
+    }
+#endif
 
 vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max_dist)
 {
