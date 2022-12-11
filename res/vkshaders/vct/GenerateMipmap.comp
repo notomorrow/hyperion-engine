@@ -12,8 +12,6 @@ layout(set = 0, binding = 0) uniform texture3D mip_in;
 layout(set = 0, binding = 1, rgba8) uniform writeonly image3D mip_out;
 layout(set = 0, binding = 2) uniform sampler voxel_map_sampler;
 
-layout(set = 0, binding = 3) uniform texture3D temporal_blending;
-
 layout(push_constant) uniform VoxelMipData
 {
     uvec4 mip_dimensions;
@@ -42,9 +40,9 @@ void main()
     vec4 final_color = color;
 
     // if (mip_level == 0) {
-        vec4 temporal_blending_value = Texture3D(voxel_map_sampler, temporal_blending, texcoord);
+    //    vec4 temporal_blending_value = Texture3D(voxel_map_sampler, temporal_blending, texcoord);
         // final_color.rgb = mix(temporal_blending_value.rgb, color.rgb, temporal_blending_value.a);
-        final_color.rgb = temporal_blending_value.rgb;
+     //   final_color.rgb = temporal_blending_value.rgb;
     // }
 
     imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1.0)), final_color);

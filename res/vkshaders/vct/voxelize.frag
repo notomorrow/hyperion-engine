@@ -11,12 +11,15 @@ layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
 layout(location=3) in vec3 g_voxel;
 layout(location=4) in float g_lighting;
-layout(location=5) in uint g_object_index;
+layout(location=5) in flat uint g_object_index;
 
 #define v_object_index g_object_index
 
 #include "../include/scene.inc"
 #include "../include/material.inc"
+
+#define HYP_INSTANCING
+#include "../include/object.inc"
 
 #include "../include/vct/shared.inc"
 

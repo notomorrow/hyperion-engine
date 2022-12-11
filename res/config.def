@@ -9,4 +9,4 @@ DebugDDGIProbes = false
 ScreenSpaceReflections = false
 HBAO = false
 HBIL = false
-VCTGlobalIllumination = false
+VCTGlobalIllumination = true

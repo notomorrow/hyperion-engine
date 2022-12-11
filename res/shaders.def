@@ -121,10 +121,17 @@ comp = vct/GenerateMipmap.comp
 [VCTClearVoxels]
 comp = vct/clear_voxels.comp
 
-[VCTVoxelize]
-frag = voxel/voxelize.frag
-geom = voxel/voxelize.geom
-vert = voxel/voxelize.vert
+[VCTVoxelizeTextureGridWithGeometryShader]
+frag = vct/voxelize.frag
+geom = vct/voxelize.geom
+vert = vct/voxelize.vert
+
+[VCTVoxelizeTextureGridWithoutGeometryShader]
+frag = vct/voxelize.frag
+vert = vct/voxelize.vert
+
+[VCTTemporalBlending]
+comp = vct/TemporalBlending.comp
 
 # RT
 
