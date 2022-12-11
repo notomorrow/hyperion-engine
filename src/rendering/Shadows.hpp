@@ -58,8 +58,6 @@ public:
         }
     }
 
-    void SetParentScene(ID<Scene> id);
-
     ShadowMode GetShadowMode() const { return m_shadow_mode; }
     void SetShadowMode(ShadowMode shadow_mode) { m_shadow_mode = shadow_mode; }
 
@@ -103,7 +101,6 @@ public:
     }
 
     void CreateShader();
-    void CreateRenderGroup();
     virtual void CreateFramebuffer() override;
     virtual void CreateDescriptors() override;
 
@@ -153,15 +150,6 @@ public:
     const Vector3 &GetOrigin() const { return m_shadow_pass.GetOrigin(); }
     void SetOrigin(const Vector3 &origin) { m_shadow_pass.SetOrigin(origin); }
 
-    void SetParentScene(const Handle<Scene> &parent_scene)
-    {
-        if (parent_scene.IsValid()) {
-            m_shadow_pass.SetParentScene(parent_scene->GetID());
-        } else {
-            m_shadow_pass.SetParentScene(Scene::empty_id);
-        }
-    }
-
     void Init();     // init on render thread
     void InitGame(); // init on game thread
 
@@ -171,9 +159,6 @@ public:
 private:
     void UpdateSceneCamera();
 
-    virtual void OnEntityAdded(Handle<Entity> &entity) override;
-    virtual void OnEntityRemoved(Handle<Entity> &entity) override;
-    virtual void OnEntityRenderableAttributesChanged(Handle<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     ShadowPass m_shadow_pass;

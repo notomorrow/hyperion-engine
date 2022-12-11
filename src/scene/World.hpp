@@ -27,6 +27,7 @@ public:
     PhysicsWorld &GetPhysicsWorld() { return m_physics_world; }
     const PhysicsWorld &GetPhysicsWorld() const { return m_physics_world; }
 
+    void AddScene(const Handle<Scene> &scene);
     void AddScene(Handle<Scene> &&scene);
     void RemoveScene(ID<Scene> id);
 
@@ -36,26 +37,21 @@ public:
      * The main logic loop of the engine happens here. Each Scene in the World is updated,
      * and within each Scene, each Entity, etc.
      */
-    void Update(
-        
-        GameCounter::TickUnit delta
-    );
+    void Update(GameCounter::TickUnit delta);
 
     /*! \brief Perform any necessary render thread specific updates to the World. */
-    void Render(
-        
-        Frame *frame
-    );
+    void Render(Frame *frame);
 
 private:
     void PerformSceneUpdates();
 
     Octree m_octree;
     PhysicsWorld m_physics_world;
-    // TODO: Thread safe container to not need 2 sets of scenes, one for update/render
-    FlatMap<ID<Scene>, Handle<Scene>> m_scenes;
+
+    FlatSet<Handle<Scene>> m_scenes;
     FlatSet<Handle<Scene>> m_scenes_pending_addition;
-    FlatSet<ID<Scene>> m_scenes_pending_removal;
+    FlatSet<Handle<Scene>> m_scenes_pending_removal;
+
     std::atomic_bool m_has_scene_updates { false };
     BinarySemaphore m_scene_update_sp;
     std::mutex m_scene_update_mutex;

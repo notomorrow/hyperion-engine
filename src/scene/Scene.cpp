@@ -12,6 +12,27 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
+#pragma region Render commands
+
+struct RENDER_COMMAND(UpdateRenderGroupDrawables) : RenderCommand
+{
+    RenderGroup *render_group;
+    Array<EntityDrawProxy> drawables;
+
+    RENDER_COMMAND(UpdateRenderGroupDrawables)(RenderGroup *render_group, Array<EntityDrawProxy> &&drawables)
+        : render_group(render_group),
+          drawables(std::move(drawables))
+    {
+    }
+
+    virtual Result operator()()
+    {
+        render_group->SetDrawProxies(std::move(drawables));
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 struct RENDER_COMMAND(BindLights) : RenderCommand
 {
     SizeType num_lights;
@@ -57,6 +78,8 @@ struct RENDER_COMMAND(BindEnvProbes) : RenderCommand
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 Scene::Scene(Handle<Camera> &&camera)
     : Scene(std::move(camera), { })
@@ -180,8 +203,6 @@ void Scene::Init()
             AssertThrow(it.second != nullptr);
 
             it.second->SetIsInScene(GetID(), false);
-
-            RemoveFromRenderGroups(it.second);
 
             if (it.second->m_octree != nullptr) {
                 it.second->RemoveFromOctree();
@@ -339,7 +360,6 @@ bool Scene::AddEntityInternal(Handle<Entity> &&entity)
 bool Scene::RemoveEntityInternal(const Handle<Entity> &entity)
 {
     // Threads::AssertOnThread(THREAD_GAME);
-    // AssertReady();
 
     if (!entity) {
         return false;
@@ -376,7 +396,7 @@ bool Scene::RemoveEntityInternal(const Handle<Entity> &entity)
 
 bool Scene::HasEntity(ID<Entity> entity_id) const
 {
-    // Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(THREAD_GAME);
 
     return m_entities.Find(entity_id) != m_entities.End();
 }
@@ -390,25 +410,9 @@ void Scene::AddPendingEntities()
     for (auto &entity : m_entities_pending_addition) {
         const ID<Entity> id = entity->GetID();
 
-        if (entity->IsRenderable() && !entity->GetPrimaryRenderGroup()) {
-            if (auto renderer_instance = Engine::Get()->FindOrCreateRenderGroup(entity->GetShader(), entity->GetRenderableAttributes())) {
-                renderer_instance->AddEntity(Handle<Entity>(entity));
-                entity->EnqueueRenderUpdates();
-
-                entity->m_primary_renderer_instance = {
-                    .renderer_instance = renderer_instance.Get(),
-                    .changed = false
-                };
-            } else {
-                DebugLog(
-                    LogType::Error,
-                    "Could not find or create optimal RenderGroup for Entity #%lu!\n",
-                    entity->GetID().value
-                );
-
-                continue;
-            }
-        }
+        // if (entity->IsRenderable()) {
+        //     entity->EnqueueRenderUpdates();
+        // }
 
         if (entity->m_octree == nullptr) {
             if (m_world != nullptr) {
@@ -430,7 +434,6 @@ void Scene::AddPendingEntities()
             }
         }
 
-        m_environment->OnEntityAdded(entity);
         m_entities.Insert(id, std::move(entity));
     }
 
@@ -448,8 +451,6 @@ void Scene::RemovePendingEntities()
 
         auto &found_entity = it->second;
         AssertThrow(found_entity.IsValid());
-
-        RemoveFromRenderGroups(found_entity);
 
         if (found_entity->m_octree != nullptr) {
             DebugLog(
@@ -478,7 +479,6 @@ void Scene::RemovePendingEntities()
             }
         }
 
-        m_environment->OnEntityRemoved(it->second);
         m_entities.Erase(it);
     }
 
@@ -651,91 +651,135 @@ void Scene::Update(GameCounter::TickUnit delta)
 
     EnqueueRenderUpdates();
 
-    if (!IsVirtualScene()) {
-        // update render environment
-        m_environment->Update(delta);
+    // update render environment
+    m_environment->Update(delta);
 
-        // update each light
-        for (auto &it : m_lights) {
-            Handle<Light> &light = it.second;
-            
-            const bool in_frustum =  light->GetType() != LightType::DIRECTIONAL
-                || (m_camera.IsValid() && m_camera->GetFrustum().ContainsAABB(light->GetWorldAABB()));
+    // update each light
+    for (auto &it : m_lights) {
+        Handle<Light> &light = it.second;
+        
+        const bool in_frustum = light->GetType() != LightType::DIRECTIONAL
+            || (m_camera.IsValid() && m_camera->GetFrustum().ContainsAABB(light->GetWorldAABB()));
 
-            if (in_frustum != light->IsVisible(GetID())) {
-                light->SetIsVisible(GetID(), in_frustum);
-            }
-
-            light->Update();
+        if (in_frustum != light->IsVisible(GetID())) {
+            light->SetIsVisible(GetID(), in_frustum);
         }
 
-        // update each environment probe
-        for (auto &it : m_env_probes) {
-            Handle<EnvProbe> &env_probe = it.second;
+        light->Update();
+    }
 
-            env_probe->Update();
+    // update each environment probe
+    for (auto &it : m_env_probes) {
+        Handle<EnvProbe> &env_probe = it.second;
+
+        env_probe->Update();
+    }
+
+    m_draw_collection.Reset();
+
+    const RenderableAttributeSet *override_attributes = m_override_renderable_attributes.TryGet();
+
+    const Handle<Framebuffer> &framebuffer = m_camera
+        ? m_camera->GetFramebuffer()
+        : Handle<Framebuffer>::empty;
+
+    // update each entity
+    for (auto &it : m_entities) {
+        Handle<Entity> &entity = it.second;
+
+        entity->Update(delta);
+
+        if (entity->IsRenderable()) {
+            PushEntityToRender(entity, override_attributes);
         }
+    }
 
-        // update each entity
-        for (auto &it : m_entities) {
+    if (m_parent_scene) {
+        for (auto &it : m_parent_scene->GetEntities()) {
             Handle<Entity> &entity = it.second;
-
-            entity->Update(delta);
-
-            if (entity->m_primary_renderer_instance.changed) {
-                RequestRenderGroupUpdate(entity);
+            
+            if (entity->IsRenderable()) {
+                PushEntityToRender(entity, override_attributes);
             }
         }
     }
-}
 
-void Scene::RequestRenderGroupUpdate(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_GAME);
+    for (auto &it : m_draw_collection) {
+        const RenderableAttributeSet &attributes = it.first;
+        Array<EntityDrawProxy> &draw_proxies = it.second;
 
-    AssertThrow(entity != nullptr);
-    AssertThrow(entity->IsInScene(GetID()));
+        auto render_group_it = m_render_groups.Find(attributes);
 
-    if (entity->GetPrimaryRenderGroup() != nullptr) {
-        RemoveFromRenderGroup(entity, entity->m_primary_renderer_instance.renderer_instance);
-    }
+        if (render_group_it == m_render_groups.End() || !render_group_it->second) {
+            Handle<RenderGroup> render_group = Engine::Get()->FindOrCreateRenderGroup(attributes);
 
-    if (entity->IsRenderable()) {
-        if (auto renderer_instance = Engine::Get()->FindOrCreateRenderGroup(entity->GetShader(), entity->GetRenderableAttributes())) {
-            renderer_instance->AddEntity(Handle<Entity>(entity));
+            if (!render_group.IsValid()) {
+                DebugLog(LogType::Error, "Render group not valid for attribute set %llu!\n", attributes.GetHashCode().Value());
 
-            entity->m_primary_renderer_instance.renderer_instance = renderer_instance.Get();
-        } else {
-            DebugLog(
-                LogType::Error,
-                "Could not find or create optimal RenderGroup for Entity #%lu!\n",
-                entity->GetID().value
-            );
+                continue;
+            }
+
+            InitObject(render_group);
+
+            auto insert_result = m_render_groups.Insert(attributes, std::move(render_group));
+            AssertThrow(insert_result.second);
+
+            render_group_it = insert_result.first;
         }
+        
+        PUSH_RENDER_COMMAND(UpdateRenderGroupDrawables, render_group_it->second.Get(), std::move(draw_proxies));
+    }
+}
+
+void Scene::PushEntityToRender(const Handle<Entity> &entity, const RenderableAttributeSet *override_attributes)
+{
+    const Handle<Framebuffer> &framebuffer = m_camera
+        ? m_camera->GetFramebuffer()
+        : Handle<Framebuffer>::empty;
+
+    RenderableAttributeSet attributes = entity->GetRenderableAttributes();
+
+    if (framebuffer) {
+        attributes.framebuffer_id = framebuffer->GetID();
     }
 
-    // don't continue requesting, even if we couldn't find or create a RenderGroup
-    entity->m_primary_renderer_instance.changed = false;
+    if (override_attributes) {
+        attributes.shader_id = override_attributes->shader_id ? override_attributes->shader_id : attributes.shader_id;
+        attributes.material_attributes = override_attributes->material_attributes;
+        attributes.stencil_state = override_attributes->stencil_state;
+    }
+
+    m_draw_collection.Insert(attributes, entity->GetDrawProxy());
 }
 
-void Scene::RemoveFromRenderGroup(Handle<Entity> &entity, RenderGroup *renderer_instance)
+void Scene::Render(Frame *frame, void *push_constant_ptr, SizeType push_constant_size)
 {
-    renderer_instance->RemoveEntity(Handle<Entity>(entity));
-    entity->m_primary_renderer_instance.renderer_instance = nullptr;
-}
+    Threads::AssertOnThread(THREAD_RENDER);
 
-void Scene::RemoveFromRenderGroups(Handle<Entity> &entity)
-{
-    auto renderer_instances = entity->m_render_groups;
+    AssertThrowMsg(m_camera.IsValid(), "Cannot render scene with no Camera attached");
+    AssertThrowMsg(m_camera->GetFramebuffer().IsValid(), "Scene has Camera, but no Framebuffer is attached");
 
-    for (auto *renderer_instance : renderer_instances) {
-        if (renderer_instance == nullptr) {
-            continue;
+    auto *command_buffer = frame->GetCommandBuffer();
+    const UInt frame_index = frame->GetFrameIndex();
+
+    m_camera->GetFramebuffer()->BeginCapture(frame_index, command_buffer);
+
+    Engine::Get()->render_state.BindScene(this);
+
+    // TODO: Thread safe container here
+    for (auto &it : m_render_groups) {
+        AssertThrow(it.first.framebuffer_id == m_camera->GetFramebuffer()->GetID());
+
+        if (push_constant_ptr && push_constant_size) {
+            it.second->GetPipeline()->SetPushConstants(push_constant_ptr, push_constant_size);
         }
 
-        // have to inc ref so it can hold it in a temporary container
-        renderer_instance->RemoveEntity(Handle<Entity>(entity));
+        it.second->Render(frame);
     }
+
+    Engine::Get()->render_state.UnbindScene();
+
+    m_camera->GetFramebuffer()->EndCapture(frame_index, command_buffer);
 }
 
 void Scene::EnqueueRenderUpdates()

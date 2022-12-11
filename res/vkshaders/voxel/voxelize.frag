@@ -19,6 +19,7 @@ layout(location=4) in flat uint g_object_index;
 #include "../include/material.inc"
 #include "../include/defines.inc"
 
+#define HYP_VCT_MODE HYP_VCT_MODE_SVO
 #include "../include/voxel/shared.inc"
 
 layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0) buffer AtomicCounter {
@@ -36,7 +37,6 @@ layout(push_constant) uniform Constants {
     uint count_mode;
 };
 
-#define HYP_VCT_MODE HYP_VCT_MODE_SVO
 #include "../include/vct/Voxelize.inc"
 
 #define VOXEL_GRID_SCALE 1.0

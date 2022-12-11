@@ -108,11 +108,17 @@ public:
     virtual void InitGame() override
     {
         Game::InitGame();
+
+        if (Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI)) { // voxel cone tracing for indirect light and reflections
+            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(VoxelConeTracing::Params {
+                BoundingBox(-256.0f, 256.0f)
+            });
+        }
         
         m_scene->SetCamera(
             CreateObject<Camera>(
                 70.0f,
-                1920, 1080,
+                1280, 768,
                 0.5f, 30000.0f
             )
         );
@@ -122,16 +128,8 @@ public:
         ));
 
         // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+        
 
-#ifdef HYP_TEST_VCT
-        { // voxel cone tracing for indirect light and reflections
-            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
-                VoxelConeTracing::Params {
-                    BoundingBox(-128, 128)
-                }
-            );
-        }
-#endif
         Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
 
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
@@ -151,9 +149,9 @@ public:
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
 
-        material_test_obj.Scale(5.0f);
+        /*material_test_obj.Scale(5.0f);
         material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
-        GetScene()->GetRoot().AddChild(material_test_obj);
+        GetScene()->GetRoot().AddChild(material_test_obj);*/
 
         test_model.Scale(0.2f);
 
@@ -192,12 +190,12 @@ public:
         }
 
         if (true) {
-            auto container_node = GetUI().GetScene()->GetRoot().AddChild();
-            container_node.SetEntity(CreateObject<Entity>());
-            container_node.GetEntity()->SetTranslation(Vector3(0.4f, 0.4f, 0.0f));
-            container_node.GetEntity()->AddController<UIContainerController>();
+            //auto container_node = GetUI().GetScene()->GetRoot().AddChild();
+            //container_node.SetEntity(CreateObject<Entity>());
+            //container_node.GetEntity()->SetTranslation(Vector3(0.4f, 0.4f, 0.0f));
+            //container_node.GetEntity()->AddController<UIContainerController>();
 
-            container_node.Scale(0.2f);
+            //container_node.Scale(0.2f);
 
             auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
             btn_node.SetEntity(CreateObject<Entity>());
@@ -225,13 +223,13 @@ public:
         InitObject(cubemap);
 
         if (true) { // hardware skinning
-            zombie.Scale(3.25f);
+            zombie.Scale(4.25f);
             zombie.Translate(Vector3(0, 0, -9));
             auto zombie_entity = zombie[0].GetEntity();
             zombie_entity->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 1.0f));
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.21f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
             zombie_entity->RebuildRenderableAttributes();
             InitObject(zombie_entity);
             zombie_entity->CreateBLAS();
@@ -262,7 +260,7 @@ public:
             m_sun = CreateObject<Light>(DirectionalLight(
                 Vector3(-0.1f, 0.1f, 0.1f).Normalize(),
                 Color(1.0f, 1.0f, 1.0f),
-                100000.0f
+                250000.0f
             ));
 
             m_scene->AddLight(m_sun);
@@ -343,10 +341,9 @@ public:
         m_scene->GetFogParams().end_distance = 40000.0f;
         
         if (true) { // paged procedural terrain
-            if (auto terrain_node = m_scene->GetRoot().AddChild()) {
-                terrain_node.SetEntity(CreateObject<Entity>());
-                terrain_node.GetEntity()->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
-            }
+            auto terrain_entity = CreateObject<Entity>();
+            GetScene()->AddEntity(terrain_entity);
+            terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
         if (true) { // skydome
@@ -389,10 +386,10 @@ public:
             monkey_entity->CreateBLAS();
             m_scene->GetRoot().AddChild(monkey);
 
-            monkey[0].GetEntity()->AddController<RigidBodyController>(
+            /*monkey[0].GetEntity()->AddController<RigidBodyController>(
                 UniquePtr<physics::BoxPhysicsShape>::Construct(BoundingBox(-1, 1)),
                 physics::PhysicsMaterial { .mass = 1.0f }
-            );
+            );*/
         }
 
         if (true) {
@@ -437,7 +434,7 @@ public:
         }
 
 
-        if (true) {
+        if (false) {
             // add a plane physics shape
             auto plane = CreateObject<Entity>();
             plane->SetName("Plane entity");
@@ -465,7 +462,7 @@ public:
 
         
 
-        if (false) { // particles test
+        if (true) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/smoke.png"),
                 .max_particles = 1024u,
@@ -563,7 +560,7 @@ public:
                 )
             );
 
-            auto ray_direction = mouse_world.Normalized();// * -1.0f;
+            auto ray_direction = mouse_world.Normalized() * -1.0f;
 
             // std::cout << "ray direction: " << ray_direction << "\n";
 
@@ -667,14 +664,12 @@ public:
 };
 } // namespace hyperion::v2
 
-
-
 int main()
 {
     using namespace hyperion::renderer;
 
     RefCountedPtr<Application> application(new SDLApplication("My Application"));
-    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1920, 1080));
+    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1280, 768));
     
     SystemEvent event;
 

@@ -37,11 +37,11 @@ void PagingController::OnAdded()
 {
     const PatchCoord origin { 0, 0 };
 
-    AddPatch(origin);
+    //AddPatch(origin);
 
-    for (const auto neighbor : GetNeighbors(origin)) {
-        AddPatch(neighbor.coord);
-    }
+    //for (const auto neighbor : GetNeighbors(origin)) {
+    //    AddPatch(neighbor.coord);
+    //}
 }
 
 void PagingController::OnRemoved()
@@ -61,28 +61,31 @@ void PagingController::OnRemoved()
 void PagingController::OnAttachedToScene(ID<Scene> id)
 {
     if (auto scene = Handle<Scene>(id)) {
-        if (scene->IsVirtualScene()) {
-            return;
-        }
-
-        if (const auto &camera = scene->GetCamera()) {
-            m_camera = camera;
+        if (scene->IsWorldScene()) {
+            m_scene = scene;
         }
     }
 }
 
 void PagingController::OnDetachedFromScene(ID<Scene> id)
 {
-    if (auto scene = Handle<Scene>(id)) {
-        if (scene->GetCamera() == m_camera) {
-            m_camera.Reset();
-        }
+    if (m_scene && m_scene->GetID() == id) {
+        m_scene.Reset();
     }
 }
 
 void PagingController::OnUpdate(GameCounter::TickUnit delta)
 {
-    if (!m_camera) {
+    if (!m_scene) {
+        DebugLog(
+            LogType::Warn,
+            "PagingController not attached to a Scene\n"
+        );
+
+        return;
+    }
+
+    if (!m_scene->GetCamera()) {
         DebugLog(
             LogType::Warn,
             "PagingController on Scene with no Camera\n"
@@ -91,8 +94,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
         return;
     }
 
-    const PatchCoord camera_coord = WorldSpaceToCoord(m_camera->GetTranslation());
-
+    const PatchCoord camera_coord = WorldSpaceToCoord(m_scene->GetCamera()->GetTranslation());
     // ensure a patch right under the camera exists
     // if all patches are removed we are not able to add any other linked ones otherwise
     if (GetPatch(camera_coord) == nullptr) {
@@ -106,7 +108,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
 
     for (Int x = MathUtil::Floor(-m_max_distance); x <= MathUtil::Ceil(m_max_distance) + 1; x++) {
         for (Int z = MathUtil::Floor(-m_max_distance); z <= MathUtil::Ceil(m_max_distance) + 1; z++) {
-            patch_coords_in_range.Insert(camera_coord + Vector(static_cast<Float>(x), static_cast<Float>(z)));
+            patch_coords_in_range.Insert(camera_coord + Vector(Float(x), Float(z)));
         }
     }
 

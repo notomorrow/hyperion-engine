@@ -7,14 +7,14 @@
 #include "Octree.hpp"
 #include <core/Base.hpp>
 #include <core/Scheduler.hpp>
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/FlatMap.hpp>
+#include <core/Containers.hpp>
 #include <rendering/rt/TLAS.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/DrawProxy.hpp>
+#include <rendering/EntityDrawCollection.hpp>
 #include <scene/camera/Camera.hpp>
 #include <math/Color.hpp>
 #include <GameCounter.hpp>
@@ -159,22 +159,46 @@ public:
 
     void SetWorld(World *world);
 
-    ID<Scene> GetParentID() const
-        { return m_parent_id; }
+    const Handle<Scene> &GetParentScene() const
+        { return m_parent_scene; }
 
-    void SetParentID(ID<Scene> id)
-        { m_parent_id = id; }
+    void SetParentScene(const Handle<Scene> &parent_scene)
+        { m_parent_scene = parent_scene; }
 
     /*! \brief A scene is a "virtual scene" if it exists not as an owner of entities,
         but rather a simple container that has items based on another Scene. For example,
         you could have a "shadow map" scene, which gathers entities from the main scene,
         but does not call Update() on them. */
     bool IsVirtualScene() const
-        { return m_parent_id != Scene::empty_id; }
+        { return m_parent_scene.IsValid(); }
+
+    bool IsWorldScene() const
+        { return !m_parent_scene.IsValid(); }
+
+    void SetOverrideRenderableAttributes(const RenderableAttributeSet &attributes)
+        { m_override_renderable_attributes.Set(attributes); }
+
+    bool HasOverrideRenderableAttributes() const
+        { return m_override_renderable_attributes.HasValue(); }
+
+    void SetHasOverrideRenderableAttributes(bool has_override_renderable_attributes)
+    {
+        if (m_override_renderable_attributes.HasValue() == has_override_renderable_attributes) {
+            return;
+        }
+
+        if (has_override_renderable_attributes) {
+            m_override_renderable_attributes.Set({ });
+        } else {
+            m_override_renderable_attributes.Unset();
+        }
+    }
     
     void Init();
 
     void ForceUpdate();
+
+    void Render(Frame *frame, void *push_constant_ptr = nullptr, SizeType push_constant_size = 0);
 
 private:
     // World only calls
@@ -185,9 +209,7 @@ private:
     void AddPendingEntities();
     void RemovePendingEntities();
 
-    void RequestRenderGroupUpdate(Handle<Entity> &entity);
-    void RemoveFromRenderGroup(Handle<Entity> &entity, RenderGroup *renderer_instance);
-    void RemoveFromRenderGroups(Handle<Entity> &entity);
+    void PushEntityToRender(const Handle<Entity> &entity, const RenderableAttributeSet *override_attributes);
 
     Handle<Camera> m_camera;
     NodeProxy m_root_node_proxy;
@@ -210,7 +232,11 @@ private:
     Handle<TLAS> m_tlas;
 
     Matrix4 m_last_view_projection_matrix;
-    ID<Scene> m_parent_id;
+    Handle<Scene> m_parent_scene;
+
+    EntityDrawCollection m_draw_collection;
+    FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;
+    Optional<RenderableAttributeSet> m_override_renderable_attributes;
                                  
     mutable ShaderDataState m_shader_data_state;
 };

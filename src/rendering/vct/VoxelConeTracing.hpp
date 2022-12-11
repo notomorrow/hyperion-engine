@@ -70,19 +70,13 @@ public:
     void OnUpdate(GameCounter::TickUnit delta);
     void OnRender(Frame *frame);
 
-    // void RenderVoxels(Frame *frame);
-
 private:
     void CreateImagesAndBuffers();
-    void CreateRenderGroup();
     void CreateComputePipelines();
     void CreateShader();
     void CreateFramebuffer();
     void CreateDescriptors();
 
-    virtual void OnEntityAdded(Handle<Entity> &entity) override;
-    virtual void OnEntityRemoved(Handle<Entity> &entity) override;
-    virtual void OnEntityRenderableAttributesChanged(Handle<Entity> &entity) override;
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     Params m_params;
@@ -90,7 +84,6 @@ private:
     Handle<Scene> m_scene;
     Handle<Framebuffer> m_framebuffer;
     Handle<Shader> m_shader;
-    Handle<RenderGroup> m_render_group;
     Handle<ComputePipeline> m_clear_voxels;
     Handle<ComputePipeline> m_generate_mipmap;
     Handle<ComputePipeline> m_perform_temporal_blending;
