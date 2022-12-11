@@ -58,9 +58,9 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : RenderCommand
                 cubemap_renderer.m_framebuffer->RemoveAttachmentRef(attachment.get());
             }
 
-            if (cubemap_renderer.m_render_group != nullptr) {
-                cubemap_renderer.m_render_group->RemoveFramebuffer(cubemap_renderer.m_framebuffer->GetID());
-            }
+            //if (cubemap_renderer.m_render_group != nullptr) {
+            //    cubemap_renderer.m_render_group->RemoveFramebuffer(cubemap_renderer.m_framebuffer->GetID());
+            //}
         }
 
         for (auto &attachment : cubemap_renderer.m_attachments) {
@@ -157,13 +157,41 @@ void CubemapRenderer::Init()
     CreateShader();
     CreateFramebuffer();
     CreateImagesAndBuffers();
-    CreateRenderGroup();
 
-    m_scene = CreateObject<Scene>(Handle<Camera>());
+    m_scene = CreateObject<Scene>(CreateObject<Camera>());
+    m_scene->SetName("Cubemap renderer scene");
+    m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
+        MeshAttributes { },
+        MaterialAttributes {
+            .bucket = BUCKET_INTERNAL,
+            .cull_faces = FaceCullMode::BACK
+        },
+        m_shader->GetID()
+    ));
+
+    m_scene->GetCamera()->SetFramebuffer(m_framebuffer);
+
     InitObject(m_scene);
 
+    // testing global skybox
+    auto tex = CreateObject<Texture>(TextureCube(
+        Engine::Get()->GetAssetManager().LoadMany<Texture>(
+            "textures/chapel/posx.jpg",
+            "textures/chapel/negx.jpg",
+            "textures/chapel/posy.jpg",
+            "textures/chapel/negy.jpg",
+            "textures/chapel/posz.jpg",
+            "textures/chapel/negz.jpg"
+        )
+    ));
+    tex->GetImage().SetIsSRGB(true);
+
     m_env_probe = CreateObject<EnvProbe>(
-        Handle<Texture>(m_cubemaps[0]),
+
+        // TEMP
+        //std::move(tex),
+
+        Handle<Texture>(m_cubemaps[0]), // TODO
         m_aabb
     );
 
@@ -204,19 +232,9 @@ void CubemapRenderer::InitGame()
     AssertThrow(m_env_probe.IsValid());
     GetParent()->GetScene()->AddEnvProbe(m_env_probe);
 
-    for (auto &it : GetParent()->GetScene()->GetEntities()) {
-        auto &entity = it.second;
+    m_scene->SetParentScene(Handle<Scene>(GetParent()->GetScene()->GetID()));
 
-        if (!entity) {
-            continue;
-        }
-
-        if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
-            m_render_group->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
-
-            m_render_group->AddEntity(Handle<Entity>(it.second));
-        }
-    }
+    Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
 }
 
 void CubemapRenderer::OnRemoved()
@@ -227,41 +245,8 @@ void CubemapRenderer::OnRemoved()
     AssertThrow(m_env_probe.IsValid());
 
     GetParent()->GetScene()->RemoveEnvProbe(m_env_probe->GetID());
-}
-
-void CubemapRenderer::OnEntityAdded(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
-        m_render_group->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
-        m_render_group->AddEntity(Handle<Entity>(entity));
-    }
-}
-
-void CubemapRenderer::OnEntityRemoved(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    m_render_group->RemoveEntity(Handle<Entity>(entity));
-}
-
-void CubemapRenderer::OnEntityRenderableAttributesChanged(Handle<Entity> &entity)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    if (entity->GetRenderableAttributes().mesh_attributes.vertex_attributes &
-        m_render_group->GetRenderableAttributes().mesh_attributes.vertex_attributes) {
-        m_render_group->AddEntity(Handle<Entity>(entity));
-    } else {
-        m_render_group->RemoveEntity(Handle<Entity>(entity));
-    }
+    
+    Engine::Get()->GetWorld()->RemoveScene(m_scene->GetID());
 }
 
 void CubemapRenderer::OnUpdate(GameCounter::TickUnit delta)
@@ -278,19 +263,7 @@ void CubemapRenderer::OnRender(Frame *frame)
 
     auto result = renderer::Result::OK;
 
-    m_framebuffer->BeginCapture(frame_index, command_buffer);
-
-    m_render_group->GetPipeline()->push_constants = {
-        .render_component_data = {
-            .index = GetComponentIndex()
-        }
-    };
-
-    Engine::Get()->GetRenderState().BindScene(m_scene.Get());
-    m_render_group->Render(frame);
-    Engine::Get()->GetRenderState().UnbindScene();
-
-    m_framebuffer->EndCapture(frame_index, command_buffer);
+    m_scene->Render(frame);
 
     Image *framebuffer_image = m_framebuffer->GetAttachmentRefs()[0]->GetAttachment()->GetImage();
 
@@ -359,28 +332,6 @@ void CubemapRenderer::CreateImagesAndBuffers()
         LogType::Debug,
         "Added cubemap uniform buffers\n"
     );
-}
-
-void CubemapRenderer::CreateRenderGroup()
-{
-    m_render_group = CreateObject<RenderGroup>(
-        Handle<Shader>(m_shader),
-        RenderableAttributeSet(
-            MeshAttributes {
-                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-            },
-            MaterialAttributes {
-                .bucket = BUCKET_INTERNAL,
-                .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST
-                    | MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE
-            }
-        )
-    );
-
-    m_render_group->AddFramebuffer(Handle<Framebuffer>(m_framebuffer));
-
-    Engine::Get()->AddRenderGroup(m_render_group);
-    InitObject(m_render_group);
 }
 
 void CubemapRenderer::CreateShader()

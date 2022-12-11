@@ -21,6 +21,8 @@ layout (location = 7) in vec4 a_bone_indices;
 
 #define HYP_INSTANCING
 #include "../include/object.inc"
+
+#define HYP_VCT_MODE HYP_VCT_MODE_SVO
 #include "../include/voxel/shared.inc"
 
 void main()
@@ -30,8 +32,8 @@ void main()
     v_normal = (transpose(inverse(object.model_matrix)) * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
     
-    vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);  //object.local_aabb_max.xyz; //scene.aabb_max.xyz;  //;
-    vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0); //object.local_aabb_min.xyz; //scene.aabb_min.xyz;  //;
+    vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 0.0);  //object.local_aabb_max.xyz; //scene.aabb_max.xyz;  //;
+    vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 0.0); //object.local_aabb_min.xyz; //scene.aabb_min.xyz;  //;
 
     v_voxel = ScaleToAABB(aabb_max, aabb_min, v_position);
 

@@ -10,3 +10,4 @@ ScreenSpaceReflections = true
 HBAO = true
 HBIL = true
 VCTGlobalIllumination = false
+VCTGlobalIlluminationSVO = false

@@ -35,14 +35,11 @@ void main()
     out_color = deferred_result;
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
-    
-    // TEMP
+
     out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, temporal_aa_result, v_texcoord0).rgb;
 
     bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
     out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
-
-    // out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
     // blend in UI.
     vec4 ui_color = Texture2D(HYP_SAMPLER_NEAREST, ui_texture, v_texcoord0);
