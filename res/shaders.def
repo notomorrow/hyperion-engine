@@ -108,9 +108,13 @@ comp = voxel/octree_modify_args.comp
 [SVOWriteMipmaps]
 comp = voxel/octree_write_mipmaps.comp
 
-[SVOVoxelize]
+[SVOVoxelizeWithGeometryShader]
 frag = voxel/voxelize.frag
 geom = voxel/voxelize.geom
+vert = voxel/voxelize.vert
+
+[SVOVoxelizeWithoutGeometryShader]
+frag = voxel/voxelize.frag
 vert = voxel/voxelize.vert
 
 # Texture-based VCT

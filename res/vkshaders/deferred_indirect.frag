@@ -36,11 +36,11 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 
-#if HYP_VCT_ENABLED
-#include "include/vct/cone_trace.inc"
-#else
+// #if HYP_VCT_ENABLED
+// #include "include/vct/cone_trace.inc"
+// #else
 #include "include/voxel/vct.inc"
-#endif
+// #endif
 
 /* Begin main shader program */
 
@@ -113,18 +113,20 @@ void main()
 #endif
 
 #if HYP_VCT_ENABLED
-        if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
-            vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+//         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
+//             vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
+//             vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
 
-#if HYP_VCT_INDIRECT_ENABLED
-            irradiance  = vct_diffuse.rgb;
-#endif
+// #if HYP_VCT_INDIRECT_ENABLED
+//             irradiance  = vct_diffuse.rgb;
+// #endif
 
-#if HYP_VCT_REFLECTIONS_ENABLED
-            reflections = vct_specular;
-#endif
-        }
+// #if HYP_VCT_REFLECTIONS_ENABLED
+//             reflections = vct_specular;
+// #endif
+//         }
+
+        reflections = sampleSVO(position.xyz, vec3(-64.0), vec3(64.0), 0.0);
 #endif
 
 #ifdef SSR_ENABLED
