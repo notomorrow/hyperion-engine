@@ -25,6 +25,7 @@ layout (location = 7) in vec4 a_bone_indices;
 #define HYP_INSTANCING
 #include "../include/object.inc"
 
+#define HYP_VCT_MODE HYP_VCT_MODE_TEXTURE
 #include "../include/vct/shared.inc"
 
 void main()

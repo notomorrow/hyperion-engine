@@ -1,5 +1,5 @@
 [DeferredIndirect]
-permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED, VCT_ENABLED(SVO TEXTURE)
 frag = deferred_indirect.frag
 vert = deferred.vert
 

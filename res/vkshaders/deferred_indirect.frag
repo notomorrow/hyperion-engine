@@ -32,15 +32,12 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radia
 
 vec2 texcoord = v_texcoord0;
 
-#define HYP_VCT_ENABLED 1
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 
-// #if HYP_VCT_ENABLED
-// #include "include/vct/cone_trace.inc"
-// #else
-#include "include/voxel/vct.inc"
-// #endif
+#ifdef VCT_ENABLED_TEXTURE
+    #include "include/vct/cone_trace.inc"
+#endif
 
 /* Begin main shader program */
 
@@ -87,7 +84,7 @@ void main()
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
     ao = min(bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0, material.a);
     
-#if HYP_VCT_ENABLED
+#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
     vec4 vct_specular = vec4(0.0);
     vec4 vct_diffuse = vec4(0.0);
 #endif
@@ -108,25 +105,23 @@ void main()
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-#ifdef ENV_PROBE_ENABLED
-        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
+#ifdef VCT_ENABLED_TEXTURE
+        if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
+            vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
+            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+
+#if HYP_VCT_INDIRECT_ENABLED
+            irradiance = vct_diffuse.rgb;
 #endif
 
-#if HYP_VCT_ENABLED
-//         if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
-//             vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-//             vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+#if HYP_VCT_REFLECTIONS_ENABLED
+            reflections = vct_specular;
+#endif
+        }
+#endif
 
-// #if HYP_VCT_INDIRECT_ENABLED
-//             irradiance  = vct_diffuse.rgb;
-// #endif
-
-// #if HYP_VCT_REFLECTIONS_ENABLED
-//             reflections = vct_specular;
-// #endif
-//         }
-
-        reflections = sampleSVO(position.xyz, vec3(-64.0), vec3(64.0), 0.0);
+#ifdef ENV_PROBE_ENABLED
+        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
 #endif
 
 #ifdef SSR_ENABLED

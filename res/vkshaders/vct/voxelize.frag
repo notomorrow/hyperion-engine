@@ -21,6 +21,7 @@ layout(location=5) in flat uint g_object_index;
 #define HYP_INSTANCING
 #include "../include/object.inc"
 
+#define HYP_VCT_MODE HYP_VCT_MODE_TEXTURE
 #include "../include/vct/shared.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D voxel_image;
@@ -29,7 +30,6 @@ layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D v
 #define HYP_VCT_LIGHTING 0
 #define HYP_VCT_LIGHTING_AMBIENT 0.1
 
-#define HYP_VCT_MODE HYP_VCT_MODE_TEXTURE
 #include "../include/vct/Voxelize.inc"
 
 void main()
@@ -48,10 +48,10 @@ void main()
     vec3 L = light.position_intensity.xyz;
     L -= g_position.xyz * float(min(light.type, 1));
     L = normalize(L);
-    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, Saturate(dot(g_normal, L))));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
+    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, Saturate(dot(g_normal, L))));
 #endif
 
-    // frag_color.rgb = pow(frag_color.rgb, vec3(1.0 / 2.2));
+    frag_color.rgb *= 1.0 - GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     frag_color.a = 1.0;
 
 	WriteVoxel(g_voxel, frag_color);
