@@ -25,7 +25,7 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/packing.inc"
 #include "include/tonemap.inc"
 
-#define SUN_INTENSITY 15.0
+#define SUN_INTENSITY 5.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3

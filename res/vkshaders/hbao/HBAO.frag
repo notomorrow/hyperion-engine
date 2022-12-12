@@ -24,10 +24,11 @@ layout(set = 0, binding = 0) uniform texture2D gbuffer_albedo_texture;
 layout(set = 0, binding = 1) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 2) uniform texture2D gbuffer_depth_texture;
 layout(set = 0, binding = 3) uniform texture2D gbuffer_velocity_texture;
-layout(set = 0, binding = 4) uniform sampler sampler_nearest;
-layout(set = 0, binding = 5) uniform sampler sampler_linear;
+layout(set = 0, binding = 4) uniform texture2D gbuffer_material_texture;
+layout(set = 0, binding = 5) uniform sampler sampler_nearest;
+layout(set = 0, binding = 6) uniform sampler sampler_linear;
 
-layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
+layout(std140, set = 0, binding = 7, row_major) readonly buffer SceneBuffer
 {
     Scene scene;
 };
@@ -223,8 +224,15 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 const vec2 color_weights = step(0.05, dist) * fade;
                 const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
 
-                const vec4 new_color_0 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0);
-                const vec4 new_color_1 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.zw, 0.0);
+                vec4 new_color_0 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0);
+                const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
+
+                vec4 new_color_1 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.zw, 0.0);
+                const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
+
+                // metallic objects do not emit diffuse light
+                new_color_0 *= 1.0 - material_0.g;
+                new_color_1 *= 1.0 - material_1.g;
 
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 

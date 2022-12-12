@@ -17,8 +17,8 @@
 #define HYP_PENUMBRA_SAMPLES_4
 //#define HYP_PENUMBRA_SAMPLES_8
 
-//#define HYP_SHADOW_PENUMBRA 1
-#define HYP_SHADOW_VARIANCE 1
+#define HYP_SHADOW_PENUMBRA 1
+//#define HYP_SHADOW_VARIANCE 1
 
 const vec2 shadow_pcf_kernel[16] = vec2[16](
     vec2(-0.94201624, -0.39906216),
