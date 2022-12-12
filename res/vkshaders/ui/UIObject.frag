@@ -22,7 +22,8 @@ void main()
 {
     vec4 background = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 5.0);
 
-    vec4 ui_color = vec4(0.0, 0.005, 0.015, 0.9);
+    vec4 ui_color = vec4(0.0, 0.035, 0.045, 0.75);
+    //vec4 ui_color = vec4(0.8, 0.75, 0.7, 0.6);
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
