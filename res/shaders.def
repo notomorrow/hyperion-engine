@@ -24,6 +24,7 @@ frag = blit.frag
 vert = blit.vert
 
 [CubemapRenderer]
+permute = LIGHTING, SHADOWS
 frag = cubemap_renderer.frag
 vert = cubemap_renderer.vert
 

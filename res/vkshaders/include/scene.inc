@@ -25,7 +25,7 @@ struct Scene
 
     float global_timer;
     uint frame_counter;
-    uint num_lights;
+    uint custom_index;
     uint enabled_render_components_mask;
 
     vec4 taa_params;
@@ -89,6 +89,7 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly
 #define HYP_RENDER_COMPONENT_CUBEMAP 2
 #define HYP_RENDER_COMPONENT_SVO 3
 #define HYP_RENDER_COMPONENT_UI 4
+#define HYP_RENDER_COMPONENT_ENV_GRID 5
 
 bool IsRenderComponentEnabled(uint name)
 {

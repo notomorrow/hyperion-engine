@@ -20,21 +20,6 @@ layout(location=0) out vec4 color_output;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 55) uniform texture2D deferred_indirect_lighting;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 56) uniform texture2D deferred_direct_lighting;
 
-// layout(set = 0, binding = 0) uniform texture2D deferred_indirect_lighting;
-// layout(set = 0, binding = 1) uniform texture2D deferred_direct_lighting;
-// layout(set = 0, binding = 2) uniform texture2D gbuffer_mip_chain;
-// layout(set = 0, binding = 3) uniform sampler HYP_SAMPLER_NEAREST;
-// layout(set = 0, binding = 4) uniform sampler HYP_SAMPLER_LINEAR;
-// layout(set = 0, binding = 5, rgba16f) uniform image2D combined_result;
-
-// layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneShaderData
-// {
-//     Scene scene;
-// };
-
-// layout(set = 0, binding = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
-// layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
-
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 #define HYP_DEFERRED_NO_SSR // temp
 #define HYP_DEFERRED_NO_ENV_PROBE // temp

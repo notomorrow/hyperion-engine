@@ -13,6 +13,10 @@ layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out flat uint v_object_index;
+layout(location=12) out flat uint v_env_probe_index;
+layout(location=13) out flat vec3 v_env_probe_extent;
+layout(location=14) out flat uint v_cube_face_index;
+layout(location=15) out vec2 v_cube_face_uv;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -35,22 +39,26 @@ struct Skeleton {
     mat4 bones[128];
 };
 
-
 layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer
 {
     Skeleton skeleton;
 };
 
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 24, row_major) uniform CubemapUniforms
-{
-    mat4 projection_matrices[6];
-    mat4 view_matrices[6];
-} cubemap_uniforms[/*HYP_MAX_ENV_PROBES*/1];
+// struct EnvProbeMatrices
+// {
+//     mat4 projection_matrices[6];
+//     mat4 view_matrices[6];
+// };
+
+// layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 20, row_major) readonly buffer EnvProbeMatricesBuffer
+// {
+//     EnvProbeMatrices env_probe_uniforms[];
+// };
 
 layout(push_constant) uniform PushConstant
 {
-    uint render_component_index;
-} push_constants;
+    uint env_probe_index;
+};
 
 mat4 CreateSkinningMatrix()
 {
@@ -101,12 +109,16 @@ void main()
     v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
     v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
-    const uint render_component_index = push_constants.render_component_index;
-
-    mat4 projection_matrix = cubemap_uniforms[render_component_index].projection_matrices[gl_ViewIndex];
-    mat4 view_matrix = cubemap_uniforms[render_component_index].view_matrices[gl_ViewIndex];
+    mat4 projection_matrix = scene.projection;
+    mat4 view_matrix = env_probes[env_probe_index].face_view_matrices[gl_ViewIndex];
 
     v_object_index = OBJECT_INDEX;
+    v_env_probe_index = env_probe_index;
+
+    v_env_probe_extent = env_probes[env_probe_index].aabb_max.xyz - env_probes[env_probe_index].aabb_min.xyz;
 
     gl_Position = projection_matrix * view_matrix * position;
+
+    v_cube_face_index = gl_ViewIndex;
+    v_cube_face_uv = gl_Position.xy * 0.5 + 0.5;
 }

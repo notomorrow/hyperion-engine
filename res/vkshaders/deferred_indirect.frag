@@ -63,7 +63,7 @@ void main()
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
     vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
-    
+
     bool perform_lighting = albedo.a > 0.0;
     
     vec3 albedo_linear = albedo.rgb;
@@ -121,7 +121,7 @@ void main()
 #endif
 
 #ifdef ENV_PROBE_ENABLED
-        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
+        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, scene.camera_position.xyz, perceptual_roughness);
 #endif
 
 #ifdef SSR_ENABLED
@@ -129,7 +129,7 @@ void main()
 #endif
 
 #ifdef ENV_PROBE_ENABLED
-        CalculateEnvProbeIrradiance(deferred_params, N, irradiance);
+        CalculateEnvProbeIrradiance(deferred_params, position.xyz, N, irradiance);
 #endif
 
 #ifdef RT_ENABLED
@@ -168,5 +168,5 @@ void main()
         result = albedo.rgb;
     }
 
-    output_color = vec4(result, 1.0);
+    output_color = vec4(result.rgb, 1.0);
 }

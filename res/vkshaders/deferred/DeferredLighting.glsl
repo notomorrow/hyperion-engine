@@ -11,7 +11,7 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_MULTIPLIER 1.75
+#define HYP_HBIL_MULTIPLIER 1.0
 #define ENV_PROBE_MULTIPLIER 1.0
 
 struct DeferredParams
@@ -178,52 +178,170 @@ vec3 CalculateRefraction(
 
 #include "../include/env_probe.inc"
 
-// gives not-so accurate indirect light for the scene --
-// sample lowest mipmap of cubemap, if we have it.
-// later, replace this will spherical harmonics.
-void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 N, inout vec3 irradiance)
+int GetLocalEnvProbeIndex(vec3 world_position)
 {
-    if (scene.environment_texture_usage != 0) {
-        const uint probe_index = scene.environment_texture_index;
-        EnvProbe probe = env_probes[probe_index];
+    vec3 diff = world_position - env_grid.center.xyz;
+    vec3 pos_clamped = ((diff + (env_grid.aabb_extent.xyz * 0.5)) / env_grid.aabb_extent.xyz);
 
-        if (probe.texture_index != ~0u) {
-            const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
-            const int num_levels = GetNumLevels(sampler_linear, env_probe_textures[probe_texture_index]);
+    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
 
-            vec4 env_probe_irradiance = EnvProbeSample(sampler_linear, env_probe_textures[probe_texture_index], N, float(num_levels - 1));
+    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z);
 
-            irradiance += env_probe_irradiance.rgb * env_probe_irradiance.a * ENV_PROBE_MULTIPLIER;
-        }
+    return probe_index_at_point;
+}
+
+int GetLocalEnvProbeIndexOffset(vec3 world_position, vec3 offset)
+{
+    vec3 diff = world_position - env_grid.center.xyz;
+    vec3 pos_clamped = ((diff + (env_grid.aabb_extent.xyz * 0.5)) / env_grid.aabb_extent.xyz);
+
+    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz)) + ivec3(floor(offset));//ivec3(vec3(offset) + vec3(env_grid.density.xyz) * 0.5);//ivec3(pos_clamped * vec3(env_grid.density.xyz));
+
+    int offset_index = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z);
+
+
+    return offset_index;
+}
+
+void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec3 ibl, bool include_shadow)
+{
+    EnvProbe probe = GET_GRID_PROBE(probe_index);
+
+    if (probe.texture_index != ~0u) {
+        const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES - 1));
+
+        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+        const vec3 diff = P - center;
+
+        const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
+
+        vec4 env_probe_sample = EnvProbeSample(
+            sampler_linear,
+            env_probe_textures[probe_texture_index],
+            is_parallax_corrected
+                ? EnvProbeCoordParallaxCorrected(probe, P, R)
+                : R,
+            lod
+        );
+
+        ibl = env_probe_sample.rgb * mix(1.0, env_probe_sample.a, float(include_shadow));
     }
 }
 
-vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, float perceptual_roughness)
+vec3 EvaluateEnvGridIBL(vec3 P, vec3 dir, float lod, bool include_shadow)
 {
     vec3 ibl = vec3(0.0);
 
-    if (scene.environment_texture_usage != 0) {
-        const uint probe_index = scene.environment_texture_index;
-        EnvProbe probe = env_probes[probe_index];
+    int probe_index_at_point = GetLocalEnvProbeIndex(P);
 
-        if (probe.texture_index != ~0u) {
-            const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
-            const int num_levels = GetNumLevels(sampler_linear, env_probe_textures[probe_texture_index]);
-            const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+        return vec3(0.0);
+    }
 
-            ibl = EnvProbeSample(
-                sampler_linear,
-                env_probe_textures[probe_texture_index],
-                bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
-                    ? EnvProbeCoordParallaxCorrected(probe, P, R)
-                    : R,
-                lod
-            ).rgb;
+    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
+        _ApplyEnvProbeSample(probe_index_at_point, P, dir, lod, ibl, include_shadow);
+
+        EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+        const vec3 diff = P - center;
+
+        // vec3 next_position = center + ((extent * 0.5) * normalize(diff));
+
+        const float blend = 10.0;
+
+        float probe_idx = float(probe_index_at_point);
+
+
+        vec3 vec = saturate((abs(diff) - ((extent_unpadded * 0.5) - vec3(blend))) / vec3(blend));
+
+        if (length(vec) > 0.0) {
+            const float max_component = max(vec.x, max(vec.y, vec.z));
+            ivec3 neighbor_coord = ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
+
+            int next_probe_index;
+
+            vec3 color_x = vec3(0.0);
+            vec3 color_y = vec3(0.0);
+            vec3 color_z = vec3(0.0);
+
+            vec3 weights = vec;
+
+            vec3 probe_indices = vec3(0.0);
+
+            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(neighbor_coord.x, 0.0, 0.0));
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_x, include_shadow);
+
+                const float weight = weights.x * 0.5;
+
+                ibl = mix(ibl, color_x, weight);
+            }
+            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, neighbor_coord.y, 0.0));
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_y, include_shadow);
+
+                const float weight = weights.y * 0.5;
+
+                ibl = mix(ibl, color_y, weight);
+            }
+            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, 0.0, neighbor_coord.z));
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_z, include_shadow);
+
+                const float weight = weights.z * 0.5;
+
+                ibl = mix(ibl, color_z, weight);
+            }
         }
+    }
+
+    return ibl;
+}
+
+// gives not-so accurate indirect light for the scene --
+// sample lowest mipmap of cubemap, if we have it.
+// later, replace this will spherical harmonics.
+void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
+{
+    int probe_index_at_point = GetLocalEnvProbeIndex(P);
+
+    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+        return;
+    }
+
+    const float lod = 5.0;
+
+    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
+        irradiance += EvaluateEnvGridIBL(P, N, lod, false) * ENV_PROBE_MULTIPLIER;
+    }
+}
+
+vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
+{
+    vec3 ibl = vec3(0.0);
+
+    int probe_index_at_point = GetLocalEnvProbeIndex(P);
+
+    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+        return vec3(0.0);
+    }
+
+    const float lod = float(7.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+
+    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
+        ibl = EvaluateEnvGridIBL(P, R, lod, true);
     }
 
     return ibl * ENV_PROBE_MULTIPLIER;
 }
+
 #endif
 #endif
 
