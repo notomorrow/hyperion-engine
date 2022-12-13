@@ -16,6 +16,8 @@ const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_RT_GI, "RTGlobalIllumination" },
     { CONFIG_RT_GI_DEBUG_PROBES, "DebugDDGIProbes" },
     { CONFIG_SSR, "ScreenSpaceReflections" },
+    { CONFIG_ENV_GRID_REFLECTIONS, "EnvGridReflections" },
+    { CONFIG_ENV_GRID_GI, "EnvGridGlobalIllumination" },
     { CONFIG_HBAO, "HBAO" },
     { CONFIG_HBIL, "HBIL" },
     { CONFIG_VOXEL_GI, "VCTGlobalIllumination" },

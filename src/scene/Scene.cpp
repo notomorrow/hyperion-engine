@@ -115,17 +115,18 @@ void Scene::Init()
 
     InitObject(m_camera);
 
-    if (!m_tlas) {
-        if (Engine::Get()->GetConfig().Get(CONFIG_RT_SUPPORTED) && HasFlags(InitInfo::SCENE_FLAGS_HAS_TLAS)) {
-            CreateTLAS();
-        } else {
-            SetFlags(InitInfo::SCENE_FLAGS_HAS_TLAS, false);
+    if (IsWorldScene()) {
+        if (!m_tlas) {
+            if (Engine::Get()->GetConfig().Get(CONFIG_RT_SUPPORTED) && HasFlags(InitInfo::SCENE_FLAGS_HAS_TLAS)) {
+                CreateTLAS();
+            } else {
+                SetFlags(InitInfo::SCENE_FLAGS_HAS_TLAS, false);
+            }
         }
-    }
 
-    InitObject(m_tlas);
+        InitObject(m_tlas);
 
-    {
+        // TODO: Environment should be on World?
         m_environment->Init();
 
         if (m_tlas) {
@@ -224,6 +225,12 @@ void Scene::SetCamera(Handle<Camera> &&camera)
     m_camera = std::move(camera);
 
     InitObject(m_camera);
+}
+
+void Scene::SetCustomID(IDBase id)
+{
+    m_custom_id = id;
+    m_shader_data_state = ShaderDataState::DIRTY;
 }
 
 void Scene::SetWorld(World *world)
@@ -409,10 +416,6 @@ void Scene::AddPendingEntities()
 
     for (auto &entity : m_entities_pending_addition) {
         const ID<Entity> id = entity->GetID();
-
-        // if (entity->IsRenderable()) {
-        //     entity->EnqueueRenderUpdates();
-        // }
 
         if (entity->m_octree == nullptr) {
             if (m_world != nullptr) {
@@ -651,10 +654,7 @@ void Scene::Update(GameCounter::TickUnit delta)
 
     EnqueueRenderUpdates();
 
-    // update render environment
-    m_environment->Update(delta);
-
-    // update each light
+    // update light visibility states
     for (auto &it : m_lights) {
         Handle<Light> &light = it.second;
         
@@ -664,15 +664,25 @@ void Scene::Update(GameCounter::TickUnit delta)
         if (in_frustum != light->IsVisible(GetID())) {
             light->SetIsVisible(GetID(), in_frustum);
         }
-
-        light->Update();
     }
 
-    // update each environment probe
-    for (auto &it : m_env_probes) {
-        Handle<EnvProbe> &env_probe = it.second;
+    if (IsWorldScene()) {
+        // update render environment
+        m_environment->Update(delta);
 
-        env_probe->Update();
+        // update each light
+        for (auto &it : m_lights) {
+            Handle<Light> &light = it.second;
+
+            light->Update();
+        }
+
+        // update each environment probe
+        for (auto &it : m_env_probes) {
+            Handle<EnvProbe> &env_probe = it.second;
+
+            env_probe->Update();
+        }
     }
 
     m_draw_collection.Reset();
@@ -718,8 +728,6 @@ void Scene::Update(GameCounter::TickUnit delta)
 
                 continue;
             }
-
-            InitObject(render_group);
 
             auto insert_result = m_render_groups.Insert(attributes, std::move(render_group));
             AssertThrow(insert_result.second);
@@ -794,6 +802,7 @@ void Scene::EnqueueRenderUpdates()
         RenderEnvironment *render_environment;
         CameraDrawProxy camera_draw_proxy;
         SceneDrawProxy &draw_proxy;
+        IDBase custom_id;
 
         RENDER_COMMAND(UpdateSceneRenderData)(
             ID<Scene> id,
@@ -803,7 +812,8 @@ void Scene::EnqueueRenderUpdates()
             const FogParams &fog_params,
             RenderEnvironment *render_environment,
             const CameraDrawProxy &camera_draw_proxy,
-            SceneDrawProxy &draw_proxy
+            SceneDrawProxy &draw_proxy,
+            IDBase custom_id
         ) : id(id),
             aabb(aabb),
             global_timer(global_timer),
@@ -811,7 +821,8 @@ void Scene::EnqueueRenderUpdates()
             fog_params(fog_params),
             render_environment(render_environment),
             camera_draw_proxy(camera_draw_proxy),
-            draw_proxy(draw_proxy)
+            draw_proxy(draw_proxy),
+            custom_id(custom_id)
         {
         }
 
@@ -863,16 +874,16 @@ void Scene::EnqueueRenderUpdates()
             shader_data.aabb_min         = aabb.min.ToVector4();
             shader_data.global_timer     = global_timer;
             shader_data.frame_counter    = frame_counter;
-            shader_data.num_lights       = UInt32(num_lights);
+            shader_data.custom_index     = custom_id.ToIndex();
             shader_data.enabled_render_components_mask = render_environment->GetEnabledRenderComponentsMask();
             shader_data.taa_params       = Vector4(jitter, previous_jitter);
             shader_data.fog_params       = Vector4(UInt32(fog_params.color), fog_params.start_distance, fog_params.end_distance, 0.0f);
 
-            if (Engine::Get()->render_state.env_probes.Any()) {
+            if (Engine::Get()->GetRenderState().bound_env_probes.Any()) {
                 // TODO: Make to be packed uvec2 containing indices (each are 1 byte)
                 shader_data.environment_texture_index = 0u;
 
-                for (const auto &it : Engine::Get()->render_state.env_probes) {
+                for (const auto &it : Engine::Get()->GetRenderState().bound_env_probes) {
                     if (it.second.Empty()) {
                         continue;
                     }
@@ -895,7 +906,8 @@ void Scene::EnqueueRenderUpdates()
         m_fog_params,
         m_environment.Get(),
         m_camera ? m_camera->GetDrawProxy() : CameraDrawProxy { },
-        m_draw_proxy
+        m_draw_proxy,
+        m_custom_id
     );
 
     m_shader_data_state = ShaderDataState::CLEAN;
@@ -903,6 +915,7 @@ void Scene::EnqueueRenderUpdates()
 
 bool Scene::CreateTLAS()
 {
+    AssertThrowMsg(IsWorldScene(), "Can only create TLAS for world scenes");
     AssertIsInitCalled();
 
     if (m_tlas) {

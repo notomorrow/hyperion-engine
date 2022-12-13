@@ -82,7 +82,7 @@ private:
     };
 
     static constexpr SizeType max_render_command_types = 128;
-    static constexpr SizeType render_command_cache_size = 1024;
+    static constexpr SizeType render_command_cache_size = 2048;
 
     // last item must always evaluate to false, same way null terminated char strings work
     static HeapArray<HolderRef, max_render_command_types> holders;
@@ -169,7 +169,7 @@ private:
             Data()
             {
                 // zero out cache memory
-                Memory::Set(cache, 0x00, sizeof(T) * render_command_cache_size);
+                Memory::Set(cache, 0, sizeof(T) * render_command_cache_size);
 
                 SizeType index = RenderCommands::render_command_type_index.fetch_add(1);
                 AssertThrow(index < max_render_command_types - 1);

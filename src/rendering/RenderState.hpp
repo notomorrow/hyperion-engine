@@ -19,6 +19,7 @@
 namespace hyperion::v2 {
 
 class RenderEnvironment;
+class EnvGrid;
 
 using RenderStateMask = UInt32;
 
@@ -76,8 +77,19 @@ struct RenderState
 {
     std::stack<RenderBinding<Scene>> scene_bindings;
     FlatMap<ID<Light>, LightDrawProxy> lights;
-    FlatMap<ID<EnvProbe>, Optional<UInt>> env_probes; // map to texture slot
+    FlatMap<ID<EnvProbe>, Optional<UInt>> bound_env_probes; // map to texture slot
+    ID<EnvGrid> bound_env_grid;
     UInt8 visibility_cursor = MathUtil::MaxSafeValue<UInt8>();
+
+    void BindEnvGrid(ID<EnvGrid> id)
+    {
+        bound_env_grid = id;
+    }
+
+    void UnbindEnvGrid()
+    {
+        bound_env_grid = ID<EnvGrid>();
+    }
 
     void BindLight(ID<Light> id, const LightDrawProxy &light)
     {
@@ -126,18 +138,18 @@ struct RenderState
             return;
         }
 
-        env_probes.Insert(env_probe, Optional<UInt>(m_env_probe_texture_slot_counter++));
+        bound_env_probes.Insert(env_probe, Optional<UInt>(m_env_probe_texture_slot_counter++));
     }
 
     void UnbindEnvProbe(ID<EnvProbe> env_probe)
     {
-        env_probes.Erase(env_probe);
+        bound_env_probes.Erase(env_probe);
     }
 
     void Reset(RenderStateMask mask)
     {
         if (mask & RENDER_STATE_ENV_PROBES) {
-            env_probes.Clear();
+            bound_env_probes.Clear();
             m_env_probe_texture_slot_counter = 0u;
         }
 
