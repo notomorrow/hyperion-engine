@@ -50,6 +50,20 @@ void main()
 
     float NdotL = max(0.0001, dot(N, L));
 
+    // if (v_view_index == 0) {
+    //     output_color = vec4(1.0, 0.0, 0.0, 1.0);
+    // } else if (v_view_index == 1) {
+    //     output_color = vec4(1.0, 1.0, 0.0, 1.0);
+    // } else if (v_view_index == 2) {
+    //     output_color = vec4(1.0, 1.0, 1.0, 1.0);
+    // } else if (v_view_index == 3) {
+    //     output_color = vec4(0.0, 1.0, 1.0, 1.0);
+    // } else if (v_view_index == 4) {
+    //     output_color = vec4(0.0, 0.0, 1.0, 1.0);
+    // } else if (v_view_index == 5) {
+    //     output_color = vec4(1.0, 0.0, 1.0, 1.0);
+    // }
+
     // output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
     // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 }

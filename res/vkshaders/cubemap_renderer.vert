@@ -54,8 +54,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly
 
 layout(push_constant) uniform PushConstant
 {
-    uint render_component_index;
-} push_constants;
+    uint env_probe_index;
+};
 
 mat4 CreateSkinningMatrix()
 {
@@ -107,7 +107,7 @@ void main()
     v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
     mat4 projection_matrix = scene.projection;
-    mat4 view_matrix = env_probes[scene.custom_index].face_view_matrices[gl_ViewIndex];
+    mat4 view_matrix = env_probes[env_probe_index].face_view_matrices[gl_ViewIndex];
 
     v_object_index = OBJECT_INDEX;
     v_view_index = gl_ViewIndex;

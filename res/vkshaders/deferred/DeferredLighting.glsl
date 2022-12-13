@@ -209,7 +209,7 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
         if (probe.texture_index != ~0u) {
             const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
             const int num_levels = GetNumLevels(sampler_linear, env_probe_textures[probe_texture_index]);
-            const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+            const float lod = 0.0;//float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
             ibl = EnvProbeSample(
                 sampler_linear,

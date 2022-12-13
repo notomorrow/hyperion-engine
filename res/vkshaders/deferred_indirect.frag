@@ -168,5 +168,5 @@ void main()
         result = albedo.rgb;
     }
 
-    output_color = TextureCube(HYP_SAMPLER_LINEAR, env_probe_textures[0], R);//vec4(ibl.rgb, 1.0);//vec4(result, 1.0);
+    output_color = vec4(ibl.rgb, 1.0);//vec4(result, 1.0);
 }

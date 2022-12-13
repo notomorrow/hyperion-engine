@@ -7,6 +7,8 @@
 
 struct EnvProbe
 {
+    mat4 face_view_matrices[6];
+
     vec4 aabb_max;
     vec4 aabb_min;
     vec4 world_position;
@@ -16,17 +18,44 @@ struct EnvProbe
     uint _pad0;
     uint _pad1;
 
-    mat4 face_view_matrices[6];
+    uvec4 _pad2;
+    uvec4 _pad3;
+    uvec4 _pad4;
+    uvec4 _pad5;
+};
+
+struct EnvGrid
+{
+    uvec4 probe_indices[HYP_MAX_BOUND_ENV_PROBES / 4];
+
+    vec4 center;
+
+    uint enabled_indices_mask;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
+
+    vec4 _pad3;
+    vec4 _pad4;
 };
 
 #define HYP_ENV_PROBE_PARALLAX_CORRECTED 0x1
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
+{
+    EnvGrid env_grid;
+};
+
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_ENV_PROBES];
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbeBuffer
+layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbeBuffer
 {
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
+
+#define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
+
 #endif
 
 vec4 EnvProbeSample(
