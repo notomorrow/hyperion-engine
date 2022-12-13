@@ -13,7 +13,7 @@ layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out flat uint v_object_index;
-layout(location=12) out flat uint v_view_index;
+layout(location=12) out flat uint v_env_probe_index;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -110,7 +110,7 @@ void main()
     mat4 view_matrix = env_probes[env_probe_index].face_view_matrices[gl_ViewIndex];
 
     v_object_index = OBJECT_INDEX;
-    v_view_index = gl_ViewIndex;
+    v_env_probe_index = env_probe_index;
 
     gl_Position = projection_matrix * view_matrix * position;
 }

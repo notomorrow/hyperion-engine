@@ -202,23 +202,30 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
 {
     vec3 ibl = vec3(0.0);
 
-    if (scene.environment_texture_usage != 0) {
-        const uint probe_index = scene.environment_texture_index;
-        EnvProbe probe = env_probes[probe_index];
+    if (bool(env_grid.enabled_indices_mask & (1 << 0))) {
+        EnvProbe probe = GET_GRID_PROBE(0);
 
         if (probe.texture_index != ~0u) {
             const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES));
             const int num_levels = GetNumLevels(sampler_linear, env_probe_textures[probe_texture_index]);
             const float lod = 0.0;//float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
+            const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+            const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+            const float dist = distance(P, center);
+
+            const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
+
             ibl = EnvProbeSample(
                 sampler_linear,
                 env_probe_textures[probe_texture_index],
-                bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED)
+                is_parallax_corrected
                     ? EnvProbeCoordParallaxCorrected(probe, P, R)
                     : R,
                 lod
             ).rgb;
+
+            ibl = mix(ibl, vec3(0.0), vec3(float(is_parallax_corrected)) * (vec3(dist) / extent));
         }
     }
 

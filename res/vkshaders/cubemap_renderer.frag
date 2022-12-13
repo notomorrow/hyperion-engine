@@ -14,7 +14,7 @@ layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 layout(location=11) in flat uint v_object_index;
-layout(location=12) in flat uint v_view_index;
+layout(location=12) in flat uint v_env_probe_index;
 
 layout(location=0) out vec4 output_color;
 
@@ -23,7 +23,7 @@ layout(location=0) out vec4 output_color;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.1
+#define HYP_CUBEMAP_AMBIENT 0.25
 
 void main()
 {
@@ -50,6 +50,7 @@ void main()
 
     float NdotL = max(0.0001, dot(N, L));
 
+
     // if (v_view_index == 0) {
     //     output_color = vec4(1.0, 0.0, 0.0, 1.0);
     // } else if (v_view_index == 1) {
@@ -64,6 +65,6 @@ void main()
     //     output_color = vec4(1.0, 0.0, 1.0, 1.0);
     // }
 
-    // output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
+    output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
     // output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 }
