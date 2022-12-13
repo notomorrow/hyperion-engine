@@ -5,19 +5,26 @@
 
 // ENV PROBES
 
-struct EnvProbe {
+struct EnvProbe
+{
     vec4 aabb_max;
     vec4 aabb_min;
     vec4 world_position;
+
     uint texture_index;
     uint flags;
+    uint _pad0;
+    uint _pad1;
+
+    mat4 face_view_matrices[6];
 };
 
 #define HYP_ENV_PROBE_PARALLAX_CORRECTED 0x1
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_ENV_PROBES];
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26) uniform EnvProbeUniforms {
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbeBuffer
+{
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
 #endif

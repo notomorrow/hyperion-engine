@@ -14,6 +14,7 @@ layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 layout(location=11) in flat uint v_object_index;
+layout(location=12) in flat uint v_view_index;
 
 layout(location=0) out vec4 output_color;
 
@@ -36,9 +37,9 @@ void main()
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
 
-        if (albedo_texture.a < 0.2) {
-            discard;
-        }
+        // if (albedo_texture.a < 0.2) {
+        //     discard;
+        // }
 
         output_color *= albedo_texture;
     }

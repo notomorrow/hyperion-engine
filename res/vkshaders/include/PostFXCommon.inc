@@ -4,7 +4,7 @@
 #include "shared.inc"
 #include "gbuffer.inc"
 
-#define HYP_MAX_EFFECTS_PER_SLOT 8
+#define HYP_MAX_EFFECTS_PER_SLOT 4
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 8) uniform texture2D effects_pre_stack[HYP_MAX_EFFECTS_PER_SLOT];
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 9) uniform texture2D effects_post_stack[HYP_MAX_EFFECTS_PER_SLOT];
