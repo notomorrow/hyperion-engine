@@ -88,7 +88,7 @@ void main()
         const float HdotV = max(0.0001, dot(H, V));
 
         if (light.shadow_map_index != ~0u) {
-            shadow = GetShadow(light.shadow_map_index, position.xyz, NdotL);
+            shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
 
         vec4 light_color = unpackUnorm4x8(light.color_encoded);

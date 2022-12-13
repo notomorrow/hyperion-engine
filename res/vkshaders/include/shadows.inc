@@ -112,7 +112,7 @@ float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float
     return penumbra;
 }
 
-float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
+float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
 
@@ -221,10 +221,10 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 }
 
 
-float GetShadow(uint index, vec3 position, float NdotL)
+float GetShadow(uint index, vec3 position, vec2 texcoord, float NdotL)
 {
 #if HYP_SHADOW_PENUMBRA
-    return GetShadowContactHardened(index, position, NdotL);
+    return GetShadowContactHardened(index, position, texcoord, NdotL);
 #elif HYP_SHADOW_VARIANCE
     return GetShadowVariance(index, position, NdotL);
 #else

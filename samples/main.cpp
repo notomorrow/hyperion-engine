@@ -18,6 +18,7 @@
 #include <rendering/rt/ProbeSystem.hpp>
 #include <rendering/post_fx/FXAA.hpp>
 #include <rendering/post_fx/Tonemap.hpp>
+#include <rendering/EnvGrid.hpp>
 #include <scene/controllers/AudioController.hpp>
 #include <scene/controllers/AnimationController.hpp>
 #include <scene/controllers/AabbDebugController.hpp>
@@ -227,8 +228,8 @@ public:
             zombie.Translate(Vector3(0, 0, -9));
             auto zombie_entity = zombie[0].GetEntity();
             zombie_entity->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.21f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
             zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
             zombie_entity->RebuildRenderableAttributes();
             InitObject(zombie_entity);
@@ -296,11 +297,16 @@ public:
             }
         }
 
-        if (true) { // adding cubemap rendering with a bounding box
+        if (false) { // adding cubemap rendering with a bounding box
             m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
-                Extent2D { 512, 512 },
-                test_model.GetWorldAABB(),//BoundingBox(Vector3(-128, -8, -128), Vector3(128, 25, 128)),
-                FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
+                test_model.GetWorldAABB()
+            );
+        }
+
+        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
+            m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
+                test_model.GetWorldAABB(),
+                Extent3D { 4, 2, 4 }
             );
         }
 
@@ -309,20 +315,6 @@ public:
         }
 
         cube_obj.Scale(50.0f);
-
-        auto skybox_material = CreateObject<Material>();
-        skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(cubemap));
-        skybox_material->SetBucket(BUCKET_SKYBOX);
-        skybox_material->SetIsDepthWriteEnabled(false);
-        skybox_material->SetIsDepthTestEnabled(false);
-        skybox_material->SetFaceCullMode(FaceCullMode::FRONT);
-
-        auto skybox_spatial = cube_obj[0].GetEntity();
-        skybox_spatial->SetMaterial(std::move(skybox_material));
-        skybox_spatial->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX)));
-        skybox_spatial->RebuildRenderableAttributes();
-        // m_scene->AddEntity(std::move(skybox_spatial));
         
         for (auto &child : test_model.GetChildren()) {
             if (const Handle<Entity> &entity = child.GetEntity()) {
@@ -340,13 +332,13 @@ public:
         m_scene->GetFogParams().start_distance = 5000.0f;
         m_scene->GetFogParams().end_distance = 40000.0f;
         
-        if (true) { // paged procedural terrain
+        if (false) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
-        if (true) { // skydome
+        if (false) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -364,18 +356,18 @@ public:
             monkey.SetName("monkey");
             auto monkey_entity = monkey[0].GetEntity();
             monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.15f);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-            // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
            //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
            // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
             monkey_entity->RebuildRenderableAttributes();
-            monkey.Translate(Vector3(0.0f, 160.5f, 0.0f));
+            monkey.SetLocalTranslation(Vector3(0.0f, 25.0f, 15.0f));
             monkey.Scale(6.0f);
             InitObject(monkey_entity);
 
@@ -392,7 +384,7 @@ public:
             );*/
         }
 
-        if (true) {
+        if (false) {
             auto mh = Engine::Get()->GetAssetManager().Load<Node>("models/mh/mh1.obj");
             mh.SetName("mh_model");
             mh.Scale(1.0f);
@@ -438,15 +430,15 @@ public:
             // add a plane physics shape
             auto plane = CreateObject<Entity>();
             plane->SetName("Plane entity");
-            plane->SetTranslation(Vector3(0, 0, 0));
+            plane->SetTranslation(Vector3(0, 15, 0));
             plane->SetMesh(MeshBuilder::Quad());
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(250.0f);
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.8f, 1.0f, 1.0f));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.075f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.001f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
-            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
+            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
@@ -738,6 +730,12 @@ int main()
                 LogType::Debug,
                 "Render FPS: %f\n",
                 1.0f / (delta_time_accum / static_cast<float>(num_frames))
+            );
+
+            DebugLog(
+                LogType::Debug,
+                "Number of RenderGroups: %llu\n",
+                Engine::Get()->GetRenderGroupMapping().Size()
             );
 
             delta_time_accum = 0.0f;

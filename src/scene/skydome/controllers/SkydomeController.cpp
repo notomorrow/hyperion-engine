@@ -14,7 +14,7 @@ void SkydomeController::OnAdded()
     m_dome = dome_node[0].GetEntity();
 
     if (m_dome) {
-        m_dome->SetScale(50.0f);
+        m_dome->SetScale(500.0f);
         
         Handle<Material> material = CreateObject<Material>();
         material->SetBucket(Bucket::BUCKET_SKYBOX);

@@ -34,7 +34,7 @@ void DeferredPass::CreateShader()
     ShaderProps props { };
     props.Set("RT_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED));
     props.Set("SSR_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_SSR));
-    props.Set("ENV_PROBE_ENABLED", true);
+    props.Set("ENV_PROBE_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS));
     props.Set("VCT_ENABLED_TEXTURE", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI));
     props.Set("VCT_ENABLED_SVO", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI_SVO));
 
@@ -133,7 +133,7 @@ void DeferredPass::Record(UInt frame_index)
             );
 #endif
             // render with each light
-            for (const auto &it : Engine::Get()->render_state.lights) {
+            for (const auto &it : Engine::Get()->GetRenderState().lights) {
                 const LightDrawProxy &light = it.second;
 
                 if (light.visibility_bits & (1ull << SizeType(scene_index))) {
@@ -144,7 +144,8 @@ void DeferredPass::Record(UInt frame_index)
                         DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
                         FixedArray {
                             HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                            HYP_RENDER_OBJECT_OFFSET(Light, it.first.ToIndex())
+                            HYP_RENDER_OBJECT_OFFSET(Light, it.first.ToIndex()),
+                            HYP_RENDER_OBJECT_OFFSET(EnvGrid, Engine::Get()->GetRenderState().bound_env_grid.ToIndex())
                         }
                     );
 
@@ -316,7 +317,7 @@ void DeferredRenderer::CreateCombinePass()
     ShaderProps props(renderer::static_mesh_vertex_attributes);
     props.Set("RT_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED));
     props.Set("SSR_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_SSR));
-    props.Set("ENV_PROBE_ENABLED", true);
+    props.Set("ENV_PROBE_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS));
 
     auto deferred_combine_shader = Engine::Get()->CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
         "DeferredCombine",
@@ -488,7 +489,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
             FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
             FixedArray {
                 HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                HYP_RENDER_OBJECT_OFFSET(Light, 0)
+                HYP_RENDER_OBJECT_OFFSET(Light, 0),
+                HYP_RENDER_OBJECT_OFFSET(EnvGrid, Engine::Get()->GetRenderState().bound_env_grid.ToIndex())
             }
         );
 
