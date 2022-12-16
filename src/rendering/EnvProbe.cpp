@@ -424,11 +424,6 @@ void EnvProbe::UpdateRenderData(UInt probe_index)
     AssertThrow(probe_index < max_bound_env_probes);
 
     EnvProbeShaderData data {
-        .aabb_max = Vector4(m_draw_proxy.aabb.max, 1.0f),
-        .aabb_min = Vector4(m_draw_proxy.aabb.min, 1.0f),
-        .world_position = Vector4(m_draw_proxy.world_position, 1.0f),
-        .texture_index = probe_index,
-        .flags = UInt32(m_draw_proxy.flags),
         .face_view_matrices = {
             ShaderMat4(GetViewMatrices()[0]),
             ShaderMat4(GetViewMatrices()[1]),
@@ -437,6 +432,11 @@ void EnvProbe::UpdateRenderData(UInt probe_index)
             ShaderMat4(GetViewMatrices()[4]),
             ShaderMat4(GetViewMatrices()[5])
         },
+        .aabb_max = Vector4(m_draw_proxy.aabb.max, 1.0f),
+        .aabb_min = Vector4(m_draw_proxy.aabb.min, 1.0f),
+        .world_position = Vector4(m_draw_proxy.world_position, 1.0f),
+        .texture_index = probe_index,
+        .flags = UInt32(m_draw_proxy.flags)
     };
 
     Engine::Get()->GetRenderData()->env_probes.Set(GetID().ToIndex(), data);

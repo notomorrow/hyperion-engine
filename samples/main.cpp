@@ -119,7 +119,7 @@ public:
         m_scene->SetCamera(
             CreateObject<Camera>(
                 70.0f,
-                1280, 768,
+                1920, 1080,
                 0.5f, 30000.0f
             )
         );
@@ -338,7 +338,7 @@ public:
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
-        if (false) { // skydome
+        if (true) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -661,7 +661,7 @@ int main()
     using namespace hyperion::renderer;
 
     RefCountedPtr<Application> application(new SDLApplication("My Application"));
-    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1280, 768));
+    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1920, 1080));
     
     SystemEvent event;
 

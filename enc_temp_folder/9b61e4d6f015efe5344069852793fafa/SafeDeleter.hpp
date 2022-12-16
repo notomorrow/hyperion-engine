@@ -7,7 +7,6 @@
 #include <core/ID.hpp>
 
 #include <rendering/Texture.hpp>
-#include <rendering/Bindless.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Shader.hpp>
