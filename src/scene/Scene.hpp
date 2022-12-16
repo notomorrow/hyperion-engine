@@ -172,15 +172,26 @@ public:
     void SetParentScene(Handle<Scene> &&parent_scene)
         { m_parent_scene = std::move(parent_scene); }
 
-    /*! \brief A scene is a "virtual scene" if it exists not as an owner of entities,
+    /*! \brief A scene is a non-world scene if it exists not as an owner of entities,
         but rather a simple container that has items based on another Scene. For example,
         you could have a "shadow map" scene, which gathers entities from the main scene,
         but does not call Update() on them. */
-    bool IsVirtualScene() const
-        { return m_parent_scene.IsValid(); }
-
     bool IsWorldScene() const
-        { return !m_parent_scene.IsValid(); }
+        { return !m_parent_scene.IsValid() && !m_is_non_world_scene; }
+
+    void SetIsWorldScene(bool is_world_scene)
+    {
+        if (is_world_scene == IsWorldScene()) {
+            return;
+        }
+
+        if (is_world_scene) {
+            m_parent_scene.Reset();
+            m_is_non_world_scene = false;
+        } else {
+            m_is_non_world_scene = true;
+        }
+    }
 
     void SetOverrideRenderableAttributes(const RenderableAttributeSet &attributes)
         { m_override_renderable_attributes.Set(attributes); }
@@ -246,7 +257,9 @@ private:
     Handle<TLAS> m_tlas;
 
     Matrix4 m_last_view_projection_matrix;
+
     Handle<Scene> m_parent_scene;
+    bool m_is_non_world_scene;
 
     EntityDrawCollection m_draw_collection;
     FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;

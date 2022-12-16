@@ -95,6 +95,7 @@ Scene::Scene(
     m_root_node_proxy(new Node("root")),
     m_environment(new RenderEnvironment(this)),
     m_world(nullptr),
+    m_is_non_world_scene(false),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
     m_root_node_proxy.Get()->SetScene(this);
