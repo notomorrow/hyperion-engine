@@ -148,6 +148,8 @@ bool Controller::CreateScriptedMethods()
 
 void Controller::OnAdded()
 {
+    Threads::AssertOnThread(THREAD_GAME);
+
     if (HasScript()) {
         if ((m_script_valid = CreateScriptedObjects())) {
             m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
@@ -157,6 +159,8 @@ void Controller::OnAdded()
 
 void Controller::OnRemoved()
 {
+    Threads::AssertOnThread(THREAD_GAME);
+
     if (HasScript() && IsScriptValid()) {
         m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
     }
@@ -164,6 +168,8 @@ void Controller::OnRemoved()
 
 void Controller::OnUpdate(GameCounter::TickUnit delta)
 {
+    Threads::AssertOnThread(THREAD_GAME);
+
     if (HasScript() && IsScriptValid()) {
         m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_TICK], m_self_object, Float(delta));
     }
