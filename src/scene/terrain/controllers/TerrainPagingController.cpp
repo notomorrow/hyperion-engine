@@ -41,7 +41,7 @@ void TerrainPagingController::OnAdded()
     // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
 
     if (auto albedo_texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_albedo.png")) {
-        albedo_texture->GetImage().SetIsSRGB(true);
+        albedo_texture->GetImage()->SetIsSRGB(true);
         m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
     }
 

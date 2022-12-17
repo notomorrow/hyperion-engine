@@ -48,25 +48,18 @@ public:
 
     struct ImageOutput
     {
-        StorageImage image;
-        ImageView image_view;
+        ImageRef image;
+        ImageViewRef image_view;
 
         Result Create(Device *device)
         {
-            HYPERION_BUBBLE_ERRORS(image.Create(device));
-            HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
+            AssertThrow(image.IsValid());
+            AssertThrow(image_view.IsValid());
+
+            HYPERION_BUBBLE_ERRORS(image->Create(device));
+            HYPERION_BUBBLE_ERRORS(image_view->Create(device, image.Get()));
 
             HYPERION_RETURN_OK;
-        }
-
-        Result Destroy(Device *device)
-        {
-            auto result = Result::OK;
-
-            HYPERION_PASS_ERRORS(image.Destroy(device), result);
-            HYPERION_PASS_ERRORS(image_view.Destroy(device), result);
-
-            return result;
         }
     };
 
@@ -118,7 +111,7 @@ private:
 
     Handle<ComputePipeline> m_perform_blending;
 
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
 
     Handle<Framebuffer> m_input_framebuffer;

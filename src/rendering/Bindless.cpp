@@ -30,35 +30,34 @@ void BindlessStorage::Destroy()
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        for (const ID<Texture> &id : m_texture_ids) {
-            descriptor->RemoveSubDescriptor(id.ToIndex());
+        for (const auto &it : m_texture_ids) {
+            descriptor->RemoveSubDescriptor(it.first.ToIndex());
         }
     }
 
     m_texture_ids.Clear();
 }
 
-void BindlessStorage::AddResource(const Texture *texture)
+void BindlessStorage::AddResource(Texture *texture)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     AssertThrow(texture != nullptr);
-    
-    UInt indices[] = { 0, 0 };
 
     for (SizeType i = 0; i < m_descriptor_sets.Size(); i++) {
         auto *descriptor_set = m_descriptor_sets[i];
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
         
-        indices[i] = descriptor->SetSubDescriptor({
-            .element_index = texture->GetID().ToIndex(),
-            .image_view = &texture->GetImageView(),
-            .sampler = &texture->GetSampler()
-        });
+        descriptor->SetElementImageSamplerCombined(
+            texture->GetID().ToIndex(),
+            texture->GetImageView(),
+            texture->GetSampler()
+        );
     }
+    
+    const auto insert_result = m_texture_ids.Insert(texture->GetID(), texture);
 
-    AssertThrow(indices[0] == indices[1] && indices[0] == (texture->GetID().ToIndex()));
-    m_texture_ids.Insert(texture->GetID());
+    AssertThrowMsg(insert_result.second, "Duplicate AddResource call for index %u!", texture->GetID().ToIndex());
 }
 
 void BindlessStorage::RemoveResource(ID<Texture> id)
@@ -95,17 +94,21 @@ void BindlessStorage::MarkResourceChanged(ID<Texture> id)
     }
 }
 
-bool BindlessStorage::GetResourceIndex(ID<Texture> id, UInt *out_index) const
+Texture *BindlessStorage::GetResource(ID<Texture> id) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     if (!id) {
-        return false;
+        return nullptr;
     }
 
-    *out_index = id.ToIndex();
+    const auto it = m_texture_ids.Find(id);
 
-    return m_texture_ids.Contains(id);
+    if (it == m_texture_ids.End()) {
+        return nullptr;
+    }
+
+    return it->second;
 }
 
 } // namespace hyperion::v2

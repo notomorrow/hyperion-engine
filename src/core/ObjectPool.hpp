@@ -2,8 +2,7 @@
 #define HYPERION_V2_CORE_OBJECT_POOL_HPP
 
 #include <core/Containers.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/FlatMap.hpp>
+#include <core/IDCreator.hpp>
 #include <core/ID.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -17,40 +16,6 @@
 namespace hyperion::v2 {
 
 class Engine;
-
-struct IDCreator
-{
-    TypeID type_id;
-    std::atomic<UInt> id_counter { 0u };
-    std::mutex free_id_mutex;
-    Queue<UInt> free_indices;
-
-    UInt NextID()
-    {
-        std::lock_guard guard(free_id_mutex);
-
-        if (free_indices.Empty()) {
-            return id_counter.fetch_add(1) + 1;
-        }
-
-        return free_indices.Pop();
-    }
-
-    void FreeID(UInt index)
-    {
-        std::lock_guard guard(free_id_mutex);
-
-        free_indices.Push(index);
-    }
-};
-
-template <class T>
-IDCreator &GetIDCreator()
-{
-    static IDCreator id_creator { TypeID::ForType<T>() };
-
-    return id_creator;
-}
 
 template <class T>
 struct HandleDefinition;
@@ -92,9 +57,6 @@ public:
         HYP_FORCE_INLINE void IncRef()
             { ref_count.fetch_add(1, std::memory_order_relaxed); }
 
-        HYP_FORCE_INLINE UInt16 GetRefCount() const
-            { return ref_count.load(); }
-
         UInt DecRef()
         {
             AssertThrow(HasValue());
@@ -118,7 +80,7 @@ public:
     private:
 
         HYP_FORCE_INLINE bool HasValue() const
-            { return ref_count.load(std::memory_order_relaxed) != 0; }
+            { return ref_count.load() != 0; }
     };
 
     ObjectContainer()
@@ -133,7 +95,7 @@ public:
 
     HYP_FORCE_INLINE UInt NextIndex()
     {
-        const UInt index = GetIDCreator<T>().NextID() - 1;
+        const UInt index = IDCreator::ForType<T>().NextID() - 1;
 
         AssertThrowMsg(
             index < HandleDefinition<T>::max_size,
@@ -153,13 +115,8 @@ public:
     HYP_FORCE_INLINE void DecRef(UInt index)
     {
         if (m_data[index].DecRef() == 0) {
-            GetIDCreator<T>().FreeID(index + 1);
+            IDCreator::ForType<T>().FreeID(index + 1);
         }
-    }
-
-    HYP_FORCE_INLINE UInt16 GetRefCount(UInt index)
-    {
-        return m_data[index].GetRefCount();
     }
 
     HYP_FORCE_INLINE T &Get(UInt index)
@@ -201,7 +158,7 @@ public:
     struct HandleDefinition< T > \
     { \
         static constexpr SizeType max_size = (_max_size); \
-    };
+    }
 
 
 #define DEF_HANDLE_NS(ns, T, _max_size) \
@@ -213,7 +170,7 @@ public:
     struct HandleDefinition< ns::T > \
     { \
         static constexpr SizeType max_size = (_max_size); \
-    };
+    }
 
 DEF_HANDLE(Texture,                      16384);
 DEF_HANDLE(Camera,                       64);

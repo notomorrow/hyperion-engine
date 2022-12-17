@@ -332,13 +332,13 @@ void ParticleSpawner::CreateDescriptorSets()
         m_descriptor_sets[frame_index]
             .AddDescriptor<renderer::ImageDescriptor>(6)
             ->SetElementSRV(0, m_params.texture
-                ? &m_params.texture->GetImageView()
+                ? m_params.texture->GetImageView()
                 : &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8());
 
         m_descriptor_sets[frame_index]
             .AddDescriptor<renderer::SamplerDescriptor>(7)
             ->SetElementSampler(0, m_params.texture
-                ? &m_params.texture->GetSampler()
+                ? m_params.texture->GetSampler()
                 : &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
     }
 

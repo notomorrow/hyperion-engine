@@ -15,6 +15,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderState.hpp>
+#include <rendering/RenderObject.hpp>
 #include <rendering/RenderCommands.hpp>
 #include <rendering/debug/ImmediateMode.hpp>
 #include <scene/World.hpp>
@@ -238,7 +239,7 @@ public:
     {
         auto &container = GetObjectPool().GetContainer<T>();
 
-        SizeType index = container.NextIndex();
+        const UInt index = container.NextIndex();
 
         container.ConstructAtIndex(
             index,
@@ -261,7 +262,7 @@ public:
     {
         auto &container = GetObjectPool().GetContainer<T>();
 
-        SizeType index = container.NextIndex();
+        const UInt index = container.NextIndex();
 
         container.ConstructAtIndex(
             index,
@@ -276,7 +277,7 @@ public:
     {
         auto &container = GetObjectPool().GetContainer<T>();
 
-        SizeType index = container.NextIndex();
+        const UInt index = container.NextIndex();
         container.ConstructAtIndex(index);
 
         return Handle<T>(ID<T>(index + 1));

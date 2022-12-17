@@ -220,7 +220,7 @@ public:
                 "textures/chapel/negz.jpg"
             )
         ));
-        cubemap->GetImage().SetIsSRGB(true);
+        cubemap->GetImage()->SetIsSRGB(true);
         InitObject(cubemap);
 
         if (true) { // hardware skinning
@@ -293,7 +293,7 @@ public:
             )));
 
             for (auto &light : m_point_lights) {
-                m_scene->AddLight(light);
+            //    m_scene->AddLight(light);
             }
         }
 
@@ -430,7 +430,7 @@ public:
         }
 
 
-        if (true) {
+        if (false) {
             // add a plane physics shape
             auto plane = CreateObject<Entity>();
             plane->SetName("Plane entity");

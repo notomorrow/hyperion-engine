@@ -131,14 +131,14 @@ public:
 
     void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
-    StorageBuffer *GetRadianceBuffer() const
-        { return m_radiance_buffer.Get(); }
+    const GPUBufferRef &GetRadianceBuffer() const
+        { return m_radiance_buffer; }
 
-    StorageImage *GetIrradianceImage() const
-        { return m_irradiance_image.Get(); }
+    const ImageRef &GetIrradianceImage() const
+        { return m_irradiance_image; }
 
-    ImageView *GetIrradianceImageView() const
-        { return m_irradiance_image_view.Get(); }
+    const ImageViewRef &GetIrradianceImageView() const
+        { return m_irradiance_image_view; }
 
     void Init();
     void Destroy();
@@ -164,14 +164,14 @@ private:
 
     Handle<Shader> m_shader;
 
-    UniquePtr<RaytracingPipeline> m_pipeline;
-    UniquePtr<UniformBuffer> m_uniform_buffer;
-    UniquePtr<StorageBuffer> m_radiance_buffer;
-    UniquePtr<StorageImage> m_irradiance_image;
-    UniquePtr<ImageView> m_irradiance_image_view;
-    UniquePtr<StorageImage> m_depth_image;
-    UniquePtr<ImageView> m_depth_image_view;
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    RaytracingPipelineRef m_pipeline;
+    GPUBufferRef m_uniform_buffer;
+    GPUBufferRef m_radiance_buffer;
+    ImageRef m_irradiance_image;
+    ImageViewRef m_irradiance_image_view;
+    ImageRef m_depth_image;
+    ImageViewRef m_depth_image_view;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
 
     Handle<TLAS> m_tlas;
     FixedArray<bool, max_frames_in_flight> m_has_tlas_updates;

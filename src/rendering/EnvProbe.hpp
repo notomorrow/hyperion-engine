@@ -86,7 +86,7 @@ private:
     Handle<Scene> m_scene;
 
     CubemapUniforms m_cubemap_uniforms;
-    FixedArray<UniquePtr<UniformBuffer>, max_frames_in_flight> m_cubemap_render_uniform_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight> m_cubemap_render_uniform_buffers;
 
     Matrix4 m_projection_matrix;
     FixedArray<Matrix4, 6> m_view_matrices;

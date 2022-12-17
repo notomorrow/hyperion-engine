@@ -35,32 +35,11 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyTemporalBlendingImageOutputs) : RenderCommand
-{
-    TemporalBlending::ImageOutput *image_outputs;
-
-    RENDER_COMMAND(DestroyTemporalBlendingImageOutputs)(TemporalBlending::ImageOutput *image_outputs)
-        : image_outputs(image_outputs)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        auto result = Result::OK;
-
-        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            image_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice());
-        }
-
-        return result;
-    }
-};
-
 struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : RenderCommand
 {
-    UniquePtr<renderer::DescriptorSet> *descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
-    RENDER_COMMAND(CreateTemporalBlendingDescriptors)(UniquePtr<renderer::DescriptorSet> *descriptor_sets)
+    RENDER_COMMAND(CreateTemporalBlendingDescriptors)(const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets)
         : descriptor_sets(descriptor_sets)
     {
     }
@@ -68,8 +47,8 @@ struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : RenderCommand
     virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto &descriptor_set = descriptor_sets[frame_index];
-            AssertThrow(descriptor_set != nullptr);
+            DescriptorSetRef &descriptor_set = descriptor_sets[frame_index];
+            AssertThrow(descriptor_set.IsValid());
                 
             HYPERION_ASSERT_RESULT(descriptor_set->Create(
                 Engine::Get()->GetGPUDevice(),
@@ -135,12 +114,13 @@ void TemporalBlending::Destroy()
     m_perform_blending.Reset();
 
     for (auto &descriptor_set : m_descriptor_sets) {
-        Engine::Get()->SafeRelease(std::move(descriptor_set));
+        SafeRelease(std::move(descriptor_set));
     }
 
-    RenderCommands::Push<RENDER_COMMAND(DestroyTemporalBlendingImageOutputs)>(
-        m_image_outputs.Data()
-    );
+    for (auto &image_output : m_image_outputs) {
+        SafeRelease(std::move(image_output.image));
+        SafeRelease(std::move(image_output.image_view));
+    }
 }
 
 void TemporalBlending::CreateImageOutputs()
@@ -148,13 +128,15 @@ void TemporalBlending::CreateImageOutputs()
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         auto &image_output = m_image_outputs[frame_index];
 
-        image_output.image = StorageImage(
+        image_output.image = ImageRef::Construct(StorageImage(
             Extent3D(m_extent),
             InternalFormat::RGBA8,
             ImageType::TEXTURE_TYPE_2D,
             FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
             nullptr
-        );
+        ));
+
+        image_output.image_view = ImageViewRef::Construct();
     }
 
     RenderCommands::Push<RENDER_COMMAND(CreateTemporalBlendingImageOutputs)>(
@@ -165,7 +147,7 @@ void TemporalBlending::CreateImageOutputs()
 void TemporalBlending::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+        auto descriptor_set = DescriptorSetRef::Construct();
 
         if (m_input_framebuffer) {
             AssertThrowMsg(m_input_framebuffer->GetAttachmentRefs().size() != 0, "No attachment refs on input framebuffer!");
@@ -174,70 +156,47 @@ void TemporalBlending::CreateDescriptorSets()
         // input image (first pass just radiance image, second pass is prev image)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(0)
-            ->SetSubDescriptor({
-                .image_view = m_input_framebuffer
-                    ? m_input_framebuffer->GetAttachmentRefs()[0]->GetImageView()
-                    : m_input_image_views[frame_index]
-            });
+            ->SetElementSRV(0, m_input_framebuffer ? m_input_framebuffer->GetAttachmentRefs()[0]->GetImageView() : m_input_image_views[frame_index]);
 
         // previous image (used for temporal blending)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(1)
-            ->SetSubDescriptor({
-                .image_view = &m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view
-            });
+            ->SetElementSRV(0, m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view);
 
         // velocity (used for temporal blending)
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(2)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
         // sampler to use
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(3)
-            ->SetSubDescriptor({
-                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
-            });
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
 
         // sampler to use
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(4)
-            ->SetSubDescriptor({
-                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerNearest()
-            });
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
 
         // blurred output
         descriptor_set
             ->AddDescriptor<StorageImageDescriptor>(5)
-            ->SetSubDescriptor({
-                .image_view = &m_image_outputs[frame_index].image_view
-            });
+            ->SetElementUAV(0, m_image_outputs[frame_index].image_view);
 
         // scene buffer - so we can reconstruct world positions
         descriptor_set
             ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
-            ->SetSubDescriptor({
-                .buffer = Engine::Get()->shader_globals->scenes.GetBuffers()[frame_index].get(),
-                .range = UInt32(sizeof(SceneShaderData))
-            });
+            ->SetElementBuffer<SceneShaderData>(0, Engine::Get()->shader_globals->scenes.GetBuffers()[frame_index].get());
 
         // depth texture
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(7)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateTemporalBlendingDescriptors)>(
-        m_descriptor_sets.Data()
-    );
+    PUSH_RENDER_COMMAND(CreateTemporalBlendingDescriptors, m_descriptor_sets);
 }
 
 void TemporalBlending::CreateComputePipelines()
@@ -271,10 +230,10 @@ void TemporalBlending::Render(Frame *frame)
     const auto &scene_binding = Engine::Get()->render_state.GetScene();
     const UInt scene_index = scene_binding.id.ToIndex();
     
-    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
+    m_image_outputs[frame->GetFrameIndex()].image->GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image.GetExtent();
+    const auto &extent = m_image_outputs[frame->GetFrameIndex()].image->GetExtent();
 
     struct alignas(128) {
         ShaderVec2<UInt32> output_dimensions;
@@ -308,7 +267,7 @@ void TemporalBlending::Render(Frame *frame)
     );
 
     // set it to be able to be used as texture2D for next pass, or outside of this
-    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()
+    m_image_outputs[frame->GetFrameIndex()].image->GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 }
 

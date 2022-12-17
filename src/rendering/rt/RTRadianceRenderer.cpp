@@ -16,12 +16,14 @@ using renderer::Result;
 
 struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : RenderCommand
 {
-    UniquePtr<DescriptorSet> *descriptor_sets;
-    FixedArray<renderer::ImageView *, max_frames_in_flight> image_views;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
+    FixedArray<ImageViewRef, max_frames_in_flight> image_views;
 
-    RENDER_COMMAND(CreateRTRadianceDescriptorSets)(UniquePtr<DescriptorSet> *descriptor_sets, FixedArray<renderer::ImageView *, max_frames_in_flight> &&image_views)
-        : descriptor_sets(descriptor_sets),
-          image_views(std::move(image_views))
+    RENDER_COMMAND(CreateRTRadianceDescriptorSets)(
+        const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets,
+        const FixedArray<ImageViewRef, max_frames_in_flight> &image_views
+    ) : descriptor_sets(descriptor_sets),
+        image_views(image_views)
     {
     }
 
@@ -51,10 +53,10 @@ struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : RenderCommand
 
 struct RENDER_COMMAND(CreateRTRadiancePipeline) : RenderCommand
 {
-    renderer::RaytracingPipeline *pipeline;
-    renderer::ShaderProgram *shader_program;
+    RaytracingPipelineRef pipeline;
+    ShaderProgramRef shader_program;
 
-    RENDER_COMMAND(CreateRTRadiancePipeline)(renderer::RaytracingPipeline *pipeline, renderer::ShaderProgram *shader_program)
+    RENDER_COMMAND(CreateRTRadiancePipeline)(const RaytracingPipelineRef &pipeline, const ShaderProgramRef &shader_program)
         : pipeline(pipeline),
           shader_program(shader_program)
     {
@@ -64,7 +66,7 @@ struct RENDER_COMMAND(CreateRTRadiancePipeline) : RenderCommand
     {
         return pipeline->Create(
             Engine::Get()->GetGPUDevice(),
-            shader_program,
+            shader_program.Get(),
             &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
         );
     }
@@ -166,7 +168,7 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
       m_temporal_blending(
           extent,
           InternalFormat::RGBA8,
-          TemporalBlendTechnique::TECHNIQUE_3,
+          TemporalBlendTechnique::TECHNIQUE_2,
           FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
       ),
       m_has_tlas_updates { false, false }
@@ -195,11 +197,12 @@ void RTRadianceRenderer::Destroy()
     m_temporal_blending.Destroy();
 
     Engine::Get()->SafeReleaseHandle(std::move(m_shader));
-    Engine::Get()->SafeRelease(std::move(m_raytracing_pipeline));
+
+    SafeRelease(std::move(m_raytracing_pipeline));
 
     // release our owned descriptor sets
     for (auto &descriptor_set : m_descriptor_sets) {
-        Engine::Get()->SafeRelease(std::move(descriptor_set));
+        SafeRelease(std::move(descriptor_set));
     }
 
     PUSH_RENDER_COMMAND(DestroyRTRadianceRenderer, m_image_outputs.Data());
@@ -293,7 +296,7 @@ void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
 void RTRadianceRenderer::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+        auto descriptor_set = DescriptorSetRef::Construct();
 
         descriptor_set->GetOrAddDescriptor<TlasDescriptor>(0)
             ->SetElementAccelerationStructure(0, &m_tlas->GetInternalTLAS());
@@ -318,10 +321,10 @@ void RTRadianceRenderer::CreateDescriptorSets()
 
     PUSH_RENDER_COMMAND(
         CreateRTRadianceDescriptorSets,
-        m_descriptor_sets.Data(),
-        FixedArray<ImageView *, max_frames_in_flight> {
-            &m_temporal_blending.GetImageOutput(0).image_view,
-            &m_temporal_blending.GetImageOutput(1).image_view
+        m_descriptor_sets,
+        FixedArray<ImageViewRef, max_frames_in_flight> {
+            m_temporal_blending.GetImageOutput(0).image_view,
+            m_temporal_blending.GetImageOutput(1).image_view
         }
     );
 }
@@ -333,18 +336,18 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
         return;
     }
 
-    m_raytracing_pipeline.Reset(new RaytracingPipeline(
+    m_raytracing_pipeline = RaytracingPipelineRef::Construct(
         Array<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
             Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
             Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
         }
-    ));
+    );
 
     Engine::Get()->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](...) {
         PUSH_RENDER_COMMAND(
             CreateRTRadiancePipeline,
-            m_raytracing_pipeline.Get(),
+            m_raytracing_pipeline,
             m_shader->GetShaderProgram()
         );
     });

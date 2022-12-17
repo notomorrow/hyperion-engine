@@ -30,18 +30,16 @@ public:
     void Destroy();
 
     /*! \brief Add a texture to the bindless descriptor set. */
-    void AddResource(const Texture *texture);
+    void AddResource(Texture *texture);
     /*! \brief Remove the given texture from the bindless descriptor set. */
     void RemoveResource(ID<Texture> id);
     /*! \brief Mark a resource as having changed, to be queued for update. */
     void MarkResourceChanged(ID<Texture> id);
-
-    /*! \brief Get the index of the sub-descriptor for the given texture.
-     * @returns whether the texture was found or not */
-    bool GetResourceIndex(ID<Texture> id, UInt *out_index) const;
+    
+    Texture *GetResource(ID<Texture> id) const;
 
 private:
-    FlatSet<ID<Texture>> m_texture_ids;
+    FlatMap<ID<Texture>, Texture *> m_texture_ids;
     
     FixedArray<DescriptorSet *, max_frames_in_flight> m_descriptor_sets;
     std::mutex m_enqueued_resources_mutex;

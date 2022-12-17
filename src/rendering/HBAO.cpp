@@ -94,12 +94,11 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
-                ->SetElementSRV(
-                    0,
+                ->SetElementSRV(0,
                     blur_image_views[frame_index]
                         ? blur_image_views[frame_index]
                         : (temporal_blending
-                            ? &temporal_blending->GetImageOutput(frame_index).image_view
+                            ? temporal_blending->GetImageOutput(frame_index).image_view
                             : pass->GetAttachmentRef(0)->GetImageView())
                 );
         }
@@ -371,7 +370,7 @@ void HBAO::CreateBlurComputeShaders()
             descriptor_set
                 ->AddDescriptor<ImageDescriptor>(0)
                 ->SetElementSRV(0, blur_pass_index == 0
-                    ? &m_temporal_blending->GetImageOutput(frame_index).image_view
+                    ? m_temporal_blending->GetImageOutput(frame_index).image_view
                     : &m_blur_image_outputs[blur_pass_index - 1][frame_index].image_view);
 
             descriptor_set

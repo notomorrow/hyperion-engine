@@ -12,12 +12,12 @@
 namespace hyperion {
 
 template <class T, SizeType Sz>
-class HeapArray : public ContainerBase<HeapArray<T, Sz>, UInt>
+class HeapArray : public ContainerBase<HeapArray<T, Sz>, SizeType>
 {
     T *m_values;
 
 public:
-    using Base = ContainerBase<HeapArray<T, Sz>, UInt>;
+    using Base = ContainerBase<HeapArray<T, Sz>, SizeType>;
 
     using Iterator = T *;
     using ConstIterator = const T *;

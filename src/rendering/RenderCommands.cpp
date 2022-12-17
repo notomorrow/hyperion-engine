@@ -29,6 +29,10 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
 
         ++result.num_executed;
 
+#ifdef HYP_DEBUG_RENDER_COMMANDS
+        DebugLog(LogType::RenDebug, "Executing render command %s\n", typeid(*front).name());
+#endif
+
         result.result = (*front)();
         front->~RenderCommand();
 

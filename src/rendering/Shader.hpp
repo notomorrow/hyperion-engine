@@ -3,6 +3,7 @@
 
 #include <core/Base.hpp>
 #include <rendering/Bindless.hpp>
+#include <rendering/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -56,7 +57,8 @@ public:
     Shader &operator=(const Shader &) = delete;
     ~Shader();
 
-    ShaderProgram *GetShaderProgram() const { return m_shader_program.get(); }
+    const ShaderProgramRef &GetShaderProgram() const
+        { return m_shader_program; }
 
     auto &GetSubShaders() { return m_sub_shaders; }
     const auto &GetSubShaders() const { return m_sub_shaders; }
@@ -64,7 +66,7 @@ public:
     void Init();
 
 private:
-    std::unique_ptr<ShaderProgram> m_shader_program;
+    ShaderProgramRef m_shader_program;
     std::vector<SubShader> m_sub_shaders;
 };
 

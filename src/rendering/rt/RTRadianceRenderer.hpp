@@ -101,8 +101,8 @@ private:
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
     TemporalBlending m_temporal_blending;
 
-    UniquePtr<RaytracingPipeline> m_raytracing_pipeline;
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    RaytracingPipelineRef m_raytracing_pipeline;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     FixedArray<bool, max_frames_in_flight> m_has_tlas_updates;
 };
 
