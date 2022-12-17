@@ -890,11 +890,11 @@ void DynArray<T, NumInlineBytes>::Shift(SizeType count)
 template <class T, SizeType NumInlineBytes>
 auto DynArray<T, NumInlineBytes>::Erase(ConstIterator iter) -> Iterator
 {
-    const Int64 dist = iter - Begin();
+    const SizeType dist = iter - Begin();
 
     auto *buffer = GetStorage();
 
-    for (Int64 index = dist; index < Size() - 1; ++index) {
+    for (SizeType index = dist; index < Size() - 1; ++index) {
         if constexpr (std::is_move_assignable_v<T>) {
             buffer[m_start_offset + index].Get() = std::move(buffer[m_start_offset + index + 1].Get());
         } else if constexpr (std::is_move_constructible_v<T>) {
@@ -932,7 +932,7 @@ auto DynArray<T, NumInlineBytes>::EraseAt(typename DynArray::Base::KeyType index
 template <class T, SizeType NumInlineBytes>
 auto DynArray<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &value) -> Iterator
 {
-    const Int64 dist = where - Begin();
+    const SizeType dist = where - Begin();
 
     if (where == End()) {
         PushBack(std::move(value));
@@ -979,7 +979,7 @@ auto DynArray<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &v
 template <class T, SizeType NumInlineBytes>
 auto DynArray<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) -> Iterator
 {
-    const Int64 dist = where - Begin();
+    const SizeType dist = where - Begin();
 
     if (where == End()) {
         PushBack(std::move(value));

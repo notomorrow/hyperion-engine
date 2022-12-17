@@ -92,10 +92,7 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : RenderCommand
             const auto *descriptor_set = descriptor_pool.GetDescriptorSet(descriptor_set_index);
             auto *descriptor = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
 
-            descriptor->SetSubDescriptor({
-                .element_index = static_cast<UInt>(texture_index),
-                .image_view = &texture->GetImageView()
-            });
+            descriptor->SetElementSRV(texture_index, texture->GetImageView());
         }
 
         HYPERION_RETURN_OK;
@@ -146,15 +143,9 @@ struct RENDER_COMMAND(CreateMaterialDescriptors) : RenderCommand
 
             for (UInt texture_index = 0; texture_index < Material::max_textures_to_set; texture_index++) {
                 if (auto &texture = textures[texture_index]) {
-                    image_descriptor->SetSubDescriptor({
-                        .element_index = texture_index,
-                        .image_view = &texture->GetImageView()
-                    });
+                    image_descriptor->SetElementSRV(texture_index, texture->GetImageView());
                 } else {
-                    image_descriptor->SetSubDescriptor({
-                        .element_index = texture_index,
-                        .image_view = &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8()
-                    });
+                    image_descriptor->SetElementSRV(texture_index, &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8());
                 }
             }
 

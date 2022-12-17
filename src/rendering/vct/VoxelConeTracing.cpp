@@ -177,7 +177,7 @@ void VoxelConeTracing::OnRender(Frame *frame)
     auto result = renderer::Result::OK;
 
     /* put our voxel map in an optimal state to be written to */
-    m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(
+    m_voxel_image->GetImage()->GetGPUImage()->InsertBarrier(
         command_buffer,
         renderer::ResourceState::UNORDERED_ACCESS
     );
@@ -196,8 +196,8 @@ void VoxelConeTracing::OnRender(Frame *frame)
     m_scene->Render(frame);
     
     if constexpr (manual_mipmap_generation) {
-        const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
-        const auto voxel_image_extent = m_voxel_image->GetImage().GetExtent();
+        const auto num_mip_levels = m_voxel_image->GetImage()->NumMipmaps();
+        const auto voxel_image_extent = m_voxel_image->GetImage()->GetExtent();
         auto mip_extent = voxel_image_extent;
 
         for (UInt mip_level = 0; mip_level < num_mip_levels; mip_level++) {
@@ -209,7 +209,7 @@ void VoxelConeTracing::OnRender(Frame *frame)
         
             if (mip_level != 0) {
                 // put the mip into writeable state
-                m_voxel_image->GetImage().GetGPUImage()->InsertSubResourceBarrier(
+                m_voxel_image->GetImage()->GetGPUImage()->InsertSubResourceBarrier(
                     command_buffer,
                     renderer::ImageSubResource { .base_mip_level = mip_level },
                     renderer::ResourceState::UNORDERED_ACCESS
@@ -245,7 +245,7 @@ void VoxelConeTracing::OnRender(Frame *frame)
             );
 
             // put this mip into readable state
-            m_voxel_image->GetImage().GetGPUImage()->InsertSubResourceBarrier(
+            m_voxel_image->GetImage()->GetGPUImage()->InsertSubResourceBarrier(
                 command_buffer,
                 renderer::ImageSubResource { .base_mip_level = mip_level },
                 renderer::ResourceState::SHADER_RESOURCE
@@ -253,13 +253,13 @@ void VoxelConeTracing::OnRender(Frame *frame)
         }
 
         // all mip levels have been transitioned into this state
-        m_voxel_image->GetImage().GetGPUImage()->SetResourceState(
+        m_voxel_image->GetImage()->GetGPUImage()->SetResourceState(
             renderer::ResourceState::SHADER_RESOURCE
         );
     } else {
 
         /* unset our state */
-        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(
+        m_voxel_image->GetImage()->GetGPUImage()->InsertBarrier(
             command_buffer,
             renderer::ResourceState::COPY_DST
         );
@@ -268,11 +268,11 @@ void VoxelConeTracing::OnRender(Frame *frame)
         * directly call the renderer functions rather than enqueueing a command.
         */
         HYPERION_PASS_ERRORS(
-            m_voxel_image->GetImage().GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
+            m_voxel_image->GetImage()->GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
             result
         );
 
-        m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(
+        m_voxel_image->GetImage()->GetGPUImage()->InsertBarrier(
             command_buffer,
             renderer::ResourceState::SHADER_RESOURCE
         );
@@ -305,7 +305,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
     InitObject(m_voxel_image);
 
     if constexpr (manual_mipmap_generation) {
-        const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
+        const auto num_mip_levels = m_voxel_image->GetImage()->NumMipmaps();
 
         for (UInt i = 0; i < max_frames_in_flight; i++) {
             m_mips[i].Reserve(num_mip_levels);
@@ -335,7 +335,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
                 .extent = voxel_map_extent,
                 .aabb_max = vct.m_params.aabb.GetMax().ToVector4(),
                 .aabb_min = vct.m_params.aabb.GetMin().ToVector4(),
-                .num_mipmaps = vct.m_voxel_image->GetImage().NumMipmaps()
+                .num_mipmaps = vct.m_voxel_image->GetImage()->NumMipmaps()
             };
 
             vct.m_uniform_buffer.Copy(
@@ -346,15 +346,15 @@ void VoxelConeTracing::CreateImagesAndBuffers()
 
             // create image views for each mip level
             if constexpr (VoxelConeTracing::manual_mipmap_generation) {
-                const auto num_mip_levels = vct.m_voxel_image->GetImage().NumMipmaps();
+                const auto num_mip_levels = vct.m_voxel_image->GetImage()->NumMipmaps();
 
                 for (UInt i = 0; i < max_frames_in_flight; i++) {
                     for (UInt mip_level = 0; mip_level < num_mip_levels; mip_level++) {
                         HYPERION_ASSERT_RESULT(vct.m_mips[i][mip_level]->Create(
                             Engine::Get()->GetGPUDevice(),
-                            &vct.m_voxel_image->GetImage(),
+                            vct.m_voxel_image->GetImage(),
                             mip_level, 1,
-                            0, vct.m_voxel_image->GetImage().NumFaces()
+                            0, vct.m_voxel_image->GetImage()->NumFaces()
                         ));
                     }
                 }
@@ -412,7 +412,7 @@ void VoxelConeTracing::CreateDescriptors()
 {
     // create own descriptor sets
     if constexpr (manual_mipmap_generation) {
-        const auto num_mip_levels = m_voxel_image->GetImage().NumMipmaps();
+        const auto num_mip_levels = m_voxel_image->GetImage()->NumMipmaps();
 
         for (UInt i = 0; i < max_frames_in_flight; i++) {
             m_mips[i].Reserve(num_mip_levels);
@@ -426,7 +426,7 @@ void VoxelConeTracing::CreateDescriptors()
 
                 if (mip_level == 0) {
                     // first mip level -- input is the actual image
-                    mip_in->SetElementSRV(0, &m_voxel_image->GetImageView());
+                    mip_in->SetElementSRV(0, m_voxel_image->GetImageView());
                 } else {
                     mip_in->SetElementSRV(0, m_mips[i][mip_level - 1].get());
                 }
@@ -463,27 +463,24 @@ void VoxelConeTracing::CreateDescriptors()
 
             descriptor_set
                 ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(0)
-                ->SetSubDescriptor({ .element_index = 0u, .image_view = &vct.m_voxel_image->GetImageView() });
+                ->SetElementUAV(0, vct.m_voxel_image->GetImageView());
 
             descriptor_set
                 ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(1)
-                ->SetSubDescriptor({ .element_index = 0u, .buffer = &vct.m_uniform_buffer });
+                ->SetElementBuffer(0, &vct.m_uniform_buffer);
 
             descriptor_set
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(7)
-                ->SetSubDescriptor({ .element_index = 0u, .image_view = &vct.m_voxel_image->GetImageView() });
+                ->SetElementSRV(0, vct.m_voxel_image->GetImageView());
+
             descriptor_set
                 ->GetOrAddDescriptor<renderer::SamplerDescriptor>(8)
-                ->SetSubDescriptor({ .element_index = 0u, .sampler = &vct.m_voxel_image->GetSampler() });
+                ->SetElementSampler(0, vct.m_voxel_image->GetSampler());
             
             for (UInt i = 0; i < max_frames_in_flight; i++) {
                 auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
                 descriptor_set_globals->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
-                    ->SetSubDescriptor({
-                        .element_index = 0u,
-                        .image_view = &vct.m_voxel_image->GetImageView(),
-                        .sampler = &vct.m_voxel_image->GetSampler()
-                    });
+                    ->SetElementImageSamplerCombined(0, vct.m_voxel_image->GetImageView(), vct.m_voxel_image->GetSampler());
 
                 // initialize our own descriptor sets
                 if constexpr (VoxelConeTracing::manual_mipmap_generation) {
@@ -502,7 +499,7 @@ void VoxelConeTracing::CreateDescriptors()
         }
     };
 
-    RenderCommands::Push<RENDER_COMMAND(CreateVCTDescriptors)>(*this);
+    PUSH_RENDER_COMMAND(CreateVCTDescriptors, *this);
 }
 
 } // namespace hyperion::v2

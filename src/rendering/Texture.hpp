@@ -3,6 +3,9 @@
 
 #include <core/Base.hpp>
 #include <core/Handle.hpp>
+#include <core/lib/UniquePtr.hpp>
+
+#include <rendering/RenderObject.hpp>
 
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
@@ -48,39 +51,38 @@ public:
     Texture &operator=(const Texture &other) = delete;
 
     Texture(Texture &&other) noexcept;
-    // Texture &operator=(Texture &&other) noexcept;
     Texture &operator=(Texture &&other) noexcept = delete;
 
     ~Texture();
     
-    Image &GetImage() { return m_image; }
-    const Image &GetImage() const { return m_image; }
+    Image *GetImage() { return m_image.Get(); }
+    const Image *GetImage() const { return m_image.Get(); }
 
-    ImageView &GetImageView() { return m_image_view; }
-    const ImageView &GetImageView() const { return m_image_view; }
+    ImageView *GetImageView() { return m_image_view.Get(); }
+    const ImageView *GetImageView() const { return m_image_view.Get(); }
 
-    Sampler &GetSampler() { return m_sampler; }
-    const Sampler &GetSampler() const { return m_sampler; }
+    Sampler *GetSampler() { return m_sampler.Get(); }
+    const Sampler *GetSampler() const { return m_sampler.Get(); }
 
-    ImageType GetType() const { return m_image.GetType(); }
+    ImageType GetType() const { return m_image->GetType(); }
 
-    UInt NumFaces() const { return m_image.NumFaces(); }
+    UInt NumFaces() const { return m_image->NumFaces(); }
 
-    bool IsTextureCube() const { return m_image.IsTextureCube(); }
-    bool IsPanorama() const { return m_image.IsPanorama(); }
+    bool IsTextureCube() const { return m_image->IsTextureCube(); }
+    bool IsPanorama() const { return m_image->IsPanorama(); }
 
-    const Extent3D &GetExtent() const { return m_image.GetExtent(); }
+    const Extent3D &GetExtent() const { return m_image->GetExtent(); }
 
-    InternalFormat GetFormat() const { return m_image.GetTextureFormat(); }
-    FilterMode GetFilterMode() const { return m_sampler.GetFilterMode(); }
-    WrapMode GetWrapMode() const { return m_sampler.GetWrapMode(); }
+    InternalFormat GetFormat() const { return m_image->GetTextureFormat(); }
+    FilterMode GetFilterMode() const { return m_sampler->GetFilterMode(); }
+    WrapMode GetWrapMode() const { return m_sampler->GetWrapMode(); }
     
     void Init();
 
 protected:
-    Image m_image;
-    ImageView m_image_view;
-    Sampler m_sampler;
+    ImageRef m_image;
+    ImageViewRef m_image_view;
+    SamplerRef m_sampler;
 };
 
 class Texture2D : public Texture
@@ -149,10 +151,10 @@ public:
         : Texture(
               other
                 ? (other->IsTextureCube()
-                    ? other->GetImage().GetExtent()
+                    ? other->GetImage()->GetExtent()
                     : (other->IsPanorama()
-                        ? Extent3D(other->GetImage().GetExtent().width / 4, other->GetImage().GetExtent().height / 3, 1)
-                        : (other->GetImage().GetExtent() / Extent3D(6, 6, 1))))
+                        ? Extent3D(other->GetImage()->GetExtent().width / 4, other->GetImage()->GetExtent().height / 3, 1)
+                        : (other->GetImage()->GetExtent() / Extent3D(6, 6, 1))))
                 : Extent3D { 1, 1, 1 },
               other ? other->GetFormat() : InternalFormat::RGBA8,
               ImageType::TEXTURE_TYPE_CUBEMAP,
@@ -161,9 +163,9 @@ public:
               nullptr
           )
     {
-        if (other && other->GetImage().HasAssignedImageData()) {
-            m_image.EnsureCapacity(m_image.GetByteSize());
-            m_image.CopyImageData(other->GetImage().GetBytes(), other->GetImage().GetByteSize(), 0);
+        if (other && other->GetImage()->HasAssignedImageData()) {
+            m_image->EnsureCapacity(m_image->GetByteSize());
+            m_image->CopyImageData(other->GetImage()->GetBytes(), other->GetImage()->GetByteSize(), 0);
         }
 
         other.reset();
@@ -180,7 +182,7 @@ public:
             nullptr
         )
     {
-        m_image.EnsureCapacity(m_image.GetByteSize());
+        m_image->EnsureCapacity(m_image->GetByteSize());
 
         SizeType offset = 0,
             face_size = 0;
@@ -189,7 +191,7 @@ public:
             if (texture) {
                 face_size = texture->GetExtent().Size() * NumComponents(texture->GetFormat());
 
-                m_image.CopyImageData(texture->GetImage().GetBytes(), face_size, offset);
+                m_image->CopyImageData(texture->GetImage()->GetBytes(), face_size, offset);
             }
 
             texture.Reset();

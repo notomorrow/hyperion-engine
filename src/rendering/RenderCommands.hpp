@@ -119,9 +119,9 @@ public:
 
     HYP_FORCE_INLINE static Result Flush()
     {
-        // if (Count() == 0) {
-        //     HYPERION_RETURN_OK;
-        // }
+        if (Count() == 0) {
+            HYPERION_RETURN_OK;
+        }
 
         std::unique_lock lock(mtx);
 
@@ -163,18 +163,18 @@ private:
     {
         static struct Data
         {
-            alignas(T) std::byte cache[sizeof(T) * render_command_cache_size] = { };
+            ValueStorageArray<T, render_command_cache_size> cache;
             std::atomic<SizeType> counter { 0 };
 
             Data()
             {
                 // zero out cache memory
-                Memory::Set(cache, 0, sizeof(T) * render_command_cache_size);
+                Memory::Set(cache.GetRawPointer(), 0, cache.TotalSize());
 
-                SizeType index = RenderCommands::render_command_type_index.fetch_add(1);
+                const SizeType index = RenderCommands::render_command_type_index.fetch_add(1);
                 AssertThrow(index < max_render_command_types - 1);
 
-                RenderCommands::holders[index] = HolderRef { &counter, (void *)cache, sizeof(T), alignof(T) };
+                RenderCommands::holders[index] = HolderRef { &counter, cache.GetRawPointer(), sizeof(T), alignof(T) };
             }
         } data;
 
@@ -183,7 +183,7 @@ private:
         AssertThrowMsg(cache_index < render_command_cache_size,
             "Render command cache size exceeded! Too many render threads are being submitted before the requests can be fulfilled.");
 
-        return data.cache + (cache_index * sizeof(T));
+        return data.cache.data + cache_index;
     }
 
     static void Rewind();

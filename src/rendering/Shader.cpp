@@ -45,13 +45,12 @@ void ShaderGlobals::Destroy()
 
 struct RENDER_COMMAND(CreateShaderProgram) : RenderCommand
 {
-    renderer::ShaderProgram *shader_program;
+    ShaderProgramRef shader_program;
     // Array<SubShader> subshaders;
     std::vector<SubShader> subshaders;
 
     RENDER_COMMAND(CreateShaderProgram)(
-        renderer::ShaderProgram *shader_program,
-        // Array<SubShader> &&subshaders
+        const ShaderProgramRef &shader_program,
         const std::vector<SubShader> &subshaders
     ) : shader_program(shader_program),
         subshaders(subshaders)
@@ -76,9 +75,9 @@ struct RENDER_COMMAND(CreateShaderProgram) : RenderCommand
 
 struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommand
 {
-    renderer::ShaderProgram *shader_program;
+    ShaderProgramRef shader_program;
 
-    RENDER_COMMAND(DestroyShaderProgram)(renderer::ShaderProgram *shader_program)
+    RENDER_COMMAND(DestroyShaderProgram)(const ShaderProgramRef &shader_program)
         : shader_program(shader_program)
     {
     }
@@ -91,14 +90,14 @@ struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommand
 
 Shader::Shader(const std::vector<SubShader> &sub_shaders)
     : EngineComponentBase(),
-      m_shader_program(std::make_unique<ShaderProgram>()),
+      m_shader_program(ShaderProgramRef::Construct()),
       m_sub_shaders(sub_shaders)
 {
 }
 
 Shader::Shader(const CompiledShader &compiled_shader)
     : EngineComponentBase(),
-      m_shader_program(std::make_unique<ShaderProgram>())
+      m_shader_program(ShaderProgramRef::Construct())
 {
     if (compiled_shader.IsValid()) {
         for (SizeType index = 0; index < compiled_shader.modules.Size(); index++) {
@@ -120,7 +119,13 @@ Shader::Shader(const CompiledShader &compiled_shader)
 
 Shader::~Shader()
 {
-    Teardown();
+    if (IsInitCalled()) {
+        SetReady(false);
+
+        PUSH_RENDER_COMMAND(DestroyShaderProgram, m_shader_program);
+        
+        HYP_SYNC_RENDER();
+    }
 }
 
 void Shader::Init()
@@ -135,22 +140,13 @@ void Shader::Init()
         AssertThrowMsg(sub_shader.spirv.bytes.Any(), "Shader data missing");
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateShaderProgram)>(
-        m_shader_program.get(),
+    PUSH_RENDER_COMMAND(
+        CreateShaderProgram,
+        m_shader_program,
         m_sub_shaders
-        // Array<SubShader>(m_sub_shaders.data(), m_sub_shaders.size())
-        //Array<SubShader>(m_sub_shaders.data(), m_sub_shaders.data() + m_sub_shaders.size())
     );
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        RenderCommands::Push<RENDER_COMMAND(DestroyShaderProgram)>(m_shader_program.get());
-        
-        HYP_SYNC_RENDER();
-    });
 }
 
 } // namespace hyperion

@@ -29,11 +29,11 @@ public:
         out.SetProperty("filter_mode", FBOMUnsignedInt(), in_object.GetFilterMode());
         out.SetProperty("wrap_mode", FBOMUnsignedInt(), in_object.GetWrapMode());
 
-        auto num_bytes = in_object.GetImage().GetByteSize();
+        auto num_bytes = in_object.GetImage()->GetByteSize();
 
         out.SetProperty("num_bytes", FBOMUnsignedLong(), num_bytes);
 
-        if (auto *bytes = in_object.GetImage().GetBytes()) {
+        if (auto *bytes = in_object.GetImage()->GetBytes()) {
             out.SetProperty("bytes", FBOMArray(FBOMByte(), num_bytes), bytes);
         } else {
             out.SetProperty("bytes", FBOMArray(FBOMByte(), 0), nullptr);

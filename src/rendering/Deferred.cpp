@@ -261,54 +261,33 @@ void DeferredRenderer::CreateDescriptorSets()
         /* Mip chain */
         descriptor_set_globals
             ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = &m_mipmapped_results[frame_index]->GetImageView()
-            });
+            ->SetElementSRV(0, m_mipmapped_results[frame_index]->GetImageView());
 
         /* Gbuffer depth sampler */
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .sampler = m_depth_sampler.Get()
-            });
+            ->SetElementSampler(0, m_depth_sampler.Get());
 
         /* Gbuffer sampler */
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .sampler = m_sampler.Get()
-            });
+            ->SetElementSampler(0, m_sampler.Get());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEPTH_PYRAMID_RESULT)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_dpr.GetResults()[frame_index].get()
-            });
+            ->SetElementSRV(0, m_dpr.GetResults()[frame_index].get());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_AMBIENT)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_indirect_pass.GetAttachmentRef(0)->GetImageView()
-            });
+            ->SetElementSRV(0, m_indirect_pass.GetAttachmentRef(0)->GetImageView());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_DIRECT)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_direct_pass.GetAttachmentRef(0)->GetImageView()
-            });
+            ->SetElementSRV(0, m_direct_pass.GetAttachmentRef(0)->GetImageView());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_combine_pass->GetAttachmentRef(0)->GetImageView() //&m_results[frame_index]->GetImageView()
-            });
+            ->SetElementSRV(0, m_combine_pass->GetAttachmentRef(0)->GetImageView());
     }
 }
 
@@ -392,9 +371,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     if (use_ssr) { // screen space reflection
         DebugMarker marker(primary, "Screen space reflection");
 
-        Image &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
+        Image *mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
-        if (mipmapped_result.GetGPUImage()->GetResourceState() != renderer::ResourceState::UNDEFINED) {
+        if (mipmapped_result->GetGPUImage()->GetResourceState() != renderer::ResourceState::UNDEFINED) {
             m_ssr.Render(frame);
         }
     } else if (use_rt_radiance) { // rt radiance
@@ -522,24 +501,24 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
-    auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
+    auto *mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
     DebugMarker marker(primary, "Mip chain generation");
     
     // put src image in state for copying from
     src_image->GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::COPY_SRC);
     // put dst image in state for copying to
-    mipmapped_result.GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::COPY_DST);
+    mipmapped_result->GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::COPY_DST);
 
     // Blit into the mipmap chain img
-    mipmapped_result.Blit(
+    mipmapped_result->Blit(
         primary,
         src_image,
         Rect { 0, 0, src_image->GetExtent().width, src_image->GetExtent().height },
-        Rect { 0, 0, mipmapped_result.GetExtent().width, mipmapped_result.GetExtent().height }
+        Rect { 0, 0, mipmapped_result->GetExtent().width, mipmapped_result->GetExtent().height }
     );
 
-    HYPERION_ASSERT_RESULT(mipmapped_result.GenerateMipmaps(
+    HYPERION_ASSERT_RESULT(mipmapped_result->GenerateMipmaps(
         Engine::Get()->GetGPUDevice(),
         primary
     ));

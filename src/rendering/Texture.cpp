@@ -14,28 +14,31 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommand
 {
     Texture *texture;
     renderer::ResourceState initial_state;
-    renderer::Image *image;
-    renderer::ImageView *image_view;
-    renderer::Sampler *sampler;
+    ImageRef image;
+    ImageViewRef image_view;
+    SamplerRef sampler;
 
     RENDER_COMMAND(CreateTexture)(
         Texture *texture,
         renderer::ResourceState initial_state,
-        renderer::Image *image,
-        renderer::ImageView *image_view,
-        renderer::Sampler *sampler
+        const ImageRef &image,
+        const ImageViewRef &image_view,
+        const SamplerRef &sampler
     ) : texture(texture),
         initial_state(initial_state),
         image(image),
         image_view(image_view),
         sampler(sampler)
     {
+        AssertThrow(image.IsValid());
+        AssertThrow(image_view.IsValid());
+        AssertThrow(sampler.IsValid());
     }
 
     virtual Result operator()()
     {
         HYPERION_BUBBLE_ERRORS(image->Create(Engine::Get()->GetGPUDevice(), Engine::Get()->GetGPUInstance(), initial_state));
-        HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetGPUInstance()->GetDevice(), image));
+        HYPERION_BUBBLE_ERRORS(image_view->Create(Engine::Get()->GetGPUInstance()->GetDevice(), image.Get()));
         HYPERION_BUBBLE_ERRORS(sampler->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
         
         if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
@@ -49,19 +52,19 @@ struct RENDER_COMMAND(CreateTexture) : RenderCommand
 struct RENDER_COMMAND(DestroyTexture) : RenderCommand
 {
     ID<Texture> id;
-    renderer::Image *image;
-    renderer::ImageView *image_view;
-    renderer::Sampler *sampler;
+    ImageRef image;
+    ImageViewRef image_view;
+    SamplerRef sampler;
 
     RENDER_COMMAND(DestroyTexture)(
         ID<Texture> id,
-        renderer::Image *image,
-        renderer::ImageView *image_view,
-        renderer::Sampler *sampler
+        ImageRef &&image,
+        ImageViewRef &&image_view,
+        SamplerRef &&sampler
     ) : id(id),
-        image(image),
-        image_view(image_view),
-        sampler(sampler)
+        image(std::move(image)),
+        image_view(std::move(image_view)),
+        sampler(std::move(sampler))
     {
     }
 
@@ -71,9 +74,9 @@ struct RENDER_COMMAND(DestroyTexture) : RenderCommand
             Engine::Get()->GetRenderData()->textures.RemoveResource(id);
         }
 
-        HYPERION_BUBBLE_ERRORS(sampler->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image_view->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
-        HYPERION_BUBBLE_ERRORS(image->Destroy(Engine::Get()->GetGPUInstance()->GetDevice()));
+        SafeRelease(std::move(image));
+        SafeRelease(std::move(image_view));
+        SafeRelease(std::move(sampler));
 
         HYPERION_RETURN_OK;
     }
@@ -107,10 +110,11 @@ Texture::Texture(
     FilterMode filter_mode,
     WrapMode wrap_mode
 ) : EngineComponentBase(),
-    m_image(std::move(image)),
-    m_image_view(),
-    m_sampler(filter_mode, wrap_mode)
+    m_image(ImageRef::Construct(std::move(image))),
+    m_image_view(ImageViewRef::Construct()),
+    m_sampler(SamplerRef::Construct(filter_mode, wrap_mode))
 {
+    AssertThrow(m_image.GetRefCount() != 0);
 }
 
 Texture::Texture(Texture &&other) noexcept
@@ -137,14 +141,13 @@ Texture::~Texture()
     SetReady(false);
 
     if (IsInitCalled()) {
-        RenderCommands::Push<RENDER_COMMAND(DestroyTexture)>(
+        PUSH_RENDER_COMMAND(
+            DestroyTexture,
             m_id,
-            &m_image,
-            &m_image_view,
-            &m_sampler
+            std::move(m_image),
+            std::move(m_image_view),
+            std::move(m_sampler)
         );
-        
-        HYP_SYNC_RENDER();
     }
 }
 
@@ -156,12 +159,13 @@ void Texture::Init()
 
     EngineComponentBase::Init();
 
-    RenderCommands::Push<RENDER_COMMAND(CreateTexture)>(
+    PUSH_RENDER_COMMAND(
+        CreateTexture,
         this,
         renderer::ResourceState::SHADER_RESOURCE,
-        &m_image,
-        &m_image_view,
-        &m_sampler
+        m_image,
+        m_image_view,
+        m_sampler
     );
 
     SetReady(true);

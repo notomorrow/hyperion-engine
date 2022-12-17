@@ -317,7 +317,7 @@ void SSRRenderer::CreateDescriptorSets()
 
         descriptor_set // gbuffer albedo texture
             ->AddDescriptor<renderer::ImageDescriptor>(10)
-            ->SetElementSRV(0, &Engine::Get()->GetDeferredRenderer().GetMipChain(frame_index)->GetImageView());
+            ->SetElementSRV(0, Engine::Get()->GetDeferredRenderer().GetMipChain(frame_index)->GetImageView());
 
         descriptor_set // gbuffer normals texture
             ->AddDescriptor<renderer::ImageDescriptor>(11)
@@ -360,8 +360,8 @@ void SSRRenderer::CreateDescriptorSets()
     RenderCommands::Push<RENDER_COMMAND(CreateSSRDescriptors)>(
         m_descriptor_sets.Data(),
         FixedArray<renderer::ImageView *, max_frames_in_flight> {
-            use_temporal_blending ? &m_temporal_blending.GetImageOutput(0).image_view : &m_image_outputs[0].Back().image_view,
-            use_temporal_blending ? &m_temporal_blending.GetImageOutput(1).image_view : &m_image_outputs[1].Back().image_view
+            use_temporal_blending ? m_temporal_blending.GetImageOutput(0).image_view : &m_image_outputs[0].Back().image_view,
+            use_temporal_blending ? m_temporal_blending.GetImageOutput(1).image_view : &m_image_outputs[1].Back().image_view
         }
     );
 }

@@ -25,7 +25,7 @@ struct Handle
 
     static const Handle empty;
 
-    SizeType index;
+    UInt index;
 
     Handle()
         : index(0)
@@ -120,11 +120,6 @@ struct Handle
 
     bool IsValid() const
         { return index != 0; }
-
-    UInt16 GetRefCount() const
-    {
-        return index == 0 ? 0 : GetContainer<T>().GetRefCount(index);
-    }
 
     ID GetID() const
         { return { UInt(index) }; }

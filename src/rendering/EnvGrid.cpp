@@ -312,20 +312,20 @@ void EnvGrid::OnRender(Frame *frame)
         Handle<Texture> &current_cubemap_texture = current_env_probe->GetTexture();
 
         framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-        current_cubemap_texture->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+        current_cubemap_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
 
         HYPERION_PASS_ERRORS(
-            current_cubemap_texture->GetImage().Blit(command_buffer, framebuffer_image),
+            current_cubemap_texture->GetImage()->Blit(command_buffer, framebuffer_image),
             result
         );
 
         HYPERION_PASS_ERRORS(
-            current_cubemap_texture->GetImage().GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
+            current_cubemap_texture->GetImage()->GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
             result
         );
 
         framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-        current_cubemap_texture->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+        current_cubemap_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
         HYPERION_ASSERT_RESULT(result);
     }

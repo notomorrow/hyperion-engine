@@ -121,32 +121,6 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyCubemapUniformBuffers) : RenderCommand
-{
-    ID<EnvProbe> id;
-    FixedArray<UniquePtr<UniformBuffer>, 2> uniform_buffers;
-
-    RENDER_COMMAND(DestroyCubemapUniformBuffers)(ID<EnvProbe> id, FixedArray<UniquePtr<UniformBuffer>, 2> &&uniform_buffers)
-        : id(id),
-          uniform_buffers(std::move(uniform_buffers))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        auto result = Result::OK;
-
-        for (UInt i = 0; i < max_frames_in_flight; i++) {
-            HYPERION_PASS_ERRORS(
-                uniform_buffers[i]->Destroy(Engine::Get()->GetGPUDevice()),
-                result
-            );
-        }
-
-        return result;
-    }
-};
-
 #pragma endregion
 
 const Extent2D EnvProbe::cubemap_dimensions = Extent2D { 128, 128 };
@@ -255,7 +229,7 @@ void EnvProbe::Init()
         Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_texture));
         Engine::Get()->SafeReleaseHandle<Shader>(std::move(m_shader));
 
-        PUSH_RENDER_COMMAND(DestroyCubemapUniformBuffers, GetID(), std::move(m_cubemap_render_uniform_buffers));
+        SafeRelease(std::move(m_cubemap_render_uniform_buffers));
 
         HYP_SYNC_RENDER();
     });
@@ -264,7 +238,7 @@ void EnvProbe::Init()
 void EnvProbe::CreateImagesAndBuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_cubemap_render_uniform_buffers[frame_index] = UniquePtr<UniformBuffer>::Construct();
+        m_cubemap_render_uniform_buffers[frame_index] = GPUBufferRef::Construct(UniformBuffer());
     }
     
     PUSH_RENDER_COMMAND(CreateCubemapBuffers, *this);
@@ -401,16 +375,16 @@ void EnvProbe::Render(Frame *frame)
     Image *framebuffer_image = m_framebuffer->GetAttachmentRefs()[0]->GetAttachment()->GetImage();
 
     framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-    m_texture->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
-    m_texture->GetImage().Blit(command_buffer, framebuffer_image);
+    m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+    m_texture->GetImage()->Blit(command_buffer, framebuffer_image);
 
     HYPERION_PASS_ERRORS(
-        m_texture->GetImage().GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
+        m_texture->GetImage()->GenerateMipmaps(Engine::Get()->GetGPUDevice(), command_buffer),
         result
     );
 
     framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-    m_texture->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+    m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
     HYPERION_ASSERT_RESULT(result);
 }
@@ -454,9 +428,7 @@ void EnvProbe::UpdateRenderData(UInt probe_index)
 
             descriptor->SetElementSRV(
                 probe_index,
-                m_texture
-                    ? &m_texture->GetImageView()
-                    : &Engine::Get()->GetPlaceholderData().GetImageViewCube1x1R8()
+                m_texture ? m_texture->GetImageView() : &Engine::Get()->GetPlaceholderData().GetImageViewCube1x1R8()
             );
         }
     }
