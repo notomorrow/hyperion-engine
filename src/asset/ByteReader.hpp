@@ -75,9 +75,9 @@ public:
 
     virtual SizeType Position() const = 0;
     virtual SizeType Max() const = 0;
-    virtual void Skip(unsigned amount) = 0;
-    virtual void Rewind(unsigned long amount) = 0;
-    virtual void Seek(unsigned long where_to) = 0;
+    virtual void Skip(SizeType amount) = 0;
+    virtual void Rewind(SizeType amount) = 0;
+    virtual void Seek(SizeType where_to) = 0;
 
     bool Eof() const
         { return Position() >= Max(); }
@@ -108,17 +108,17 @@ public:
         return m_byte_buffer != nullptr ? m_byte_buffer->Size() : 0;
     }
 
-    virtual void Skip(unsigned amount) override
+    virtual void Skip(SizeType amount) override
     {
         m_pos += amount;
     }
 
-    virtual void Rewind(unsigned long amount) override
+    virtual void Rewind(SizeType amount) override
     {
         m_pos -= amount;
     }
 
-    virtual void Seek(unsigned long where_to) override
+    virtual void Seek(SizeType where_to) override
     {
         m_pos = where_to;
     }
@@ -203,17 +203,17 @@ public:
         return max_pos;
     }
 
-    virtual void Skip(unsigned amount) override
+    virtual void Skip(SizeType amount) override
     {
         file->seekg(pos += amount);
     }
 
-    virtual void Rewind(unsigned long amount) override
+    virtual void Rewind(SizeType amount) override
     {
         file->seekg(pos -= amount);
     }
 
-    virtual void Seek(unsigned long where_to) override
+    virtual void Seek(SizeType where_to) override
     {
         file->seekg(pos = where_to);
     }

@@ -19,7 +19,7 @@ public:
     void Push(const std::shared_ptr<AstStatement> &statement) { m_list.push_back(statement); }
     void Pop() { m_list.pop_back(); }
 
-    int GetPosition() const { return m_position; }
+    SizeType GetPosition() const { return m_position; }
     void ResetPosition() { m_position = 0; }
     void SetPosition(size_t position) { m_position = position; }
 

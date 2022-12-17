@@ -138,8 +138,13 @@ public:
     );
 
     GPUMemory();
+
     GPUMemory(const GPUMemory &other) = delete;
     GPUMemory &operator=(const GPUMemory &other) = delete;
+
+    GPUMemory(GPUMemory &&other) noexcept;
+    GPUMemory &operator=(GPUMemory &&other) = delete;
+
     ~GPUMemory();
 
     ResourceState GetResourceState() const
@@ -198,8 +203,13 @@ public:
         VmaMemoryUsage vma_usage = VMA_MEMORY_USAGE_AUTO,
         VmaAllocationCreateFlags vma_allocation_create_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
     );
+
     GPUBuffer(const GPUBuffer &other) = delete;
     GPUBuffer &operator=(const GPUBuffer &other) = delete;
+
+    GPUBuffer(GPUBuffer &&other) noexcept;
+    GPUBuffer &operator=(GPUBuffer &&other) = delete;
+
     ~GPUBuffer();
 
     bool IsCPUAccessible() const

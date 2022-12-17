@@ -17,9 +17,9 @@ using renderer::Result;
 
 struct RENDER_COMMAND(CreateProbeGridImage) : RenderCommand
 {
-    renderer::StorageImage *storage_image;
+    ImageRef storage_image;
 
-    RENDER_COMMAND(CreateProbeGridImage)(renderer::StorageImage *storage_image)
+    RENDER_COMMAND(CreateProbeGridImage)(const ImageRef &storage_image)
         : storage_image(storage_image)
     {
     }
@@ -32,10 +32,10 @@ struct RENDER_COMMAND(CreateProbeGridImage) : RenderCommand
 
 struct RENDER_COMMAND(CreateProbeGridImageView) : RenderCommand
 {
-    renderer::ImageView *image_view;
-    renderer::Image *image;
+    ImageViewRef image_view;
+    ImageRef image;
 
-    RENDER_COMMAND(CreateProbeGridImageView)(renderer::ImageView *image_view, renderer::Image *image)
+    RENDER_COMMAND(CreateProbeGridImageView)(const ImageViewRef &image_view, const ImageRef &image)
         : image_view(image_view),
           image(image)
     {
@@ -49,16 +49,16 @@ struct RENDER_COMMAND(CreateProbeGridImageView) : RenderCommand
 
 struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommand
 {
-    UniquePtr<renderer::DescriptorSet> *descriptor_sets;
-    renderer::UniformBuffer *uniform_buffer;
-    renderer::ImageView *irradiance_image_view;
-    renderer::ImageView *depth_image_view;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
+    GPUBufferRef uniform_buffer;
+    ImageViewRef irradiance_image_view;
+    ImageViewRef depth_image_view;
 
     RENDER_COMMAND(CreateProbeGridDescriptors)(
-        UniquePtr<renderer::DescriptorSet> *descriptor_sets,
-        renderer::UniformBuffer *uniform_buffer,
-        renderer::ImageView *irradiance_image_view,
-        renderer::ImageView *depth_image_view
+        const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets,
+        const GPUBufferRef &uniform_buffer,
+        const ImageViewRef &irradiance_image_view,
+        const ImageViewRef &depth_image_view
     ) : descriptor_sets(descriptor_sets),
         uniform_buffer(uniform_buffer),
         irradiance_image_view(irradiance_image_view),
@@ -83,24 +83,15 @@ struct RENDER_COMMAND(CreateProbeGridDescriptors) : RenderCommand
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<UniformBufferDescriptor>(DescriptorKey::RT_PROBE_UNIFORMS)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .buffer = uniform_buffer
-                });
+                ->SetElementBuffer(0, uniform_buffer);
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_IRRADIANCE_GRID)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = irradiance_image_view
-                });
+                ->SetElementSRV(0, irradiance_image_view);
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_DEPTH_GRID)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = depth_image_view
-                });
+                ->SetElementSRV(0, depth_image_view);
         }
 
         HYPERION_RETURN_OK;
@@ -146,10 +137,10 @@ struct RENDER_COMMAND(DestroyProbeGridDescriptors) : RenderCommand
 
 struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : RenderCommand
 {
-    renderer::UniformBuffer *uniform_buffer;
+    GPUBufferRef uniform_buffer;
     ProbeSystemUniforms uniforms;
 
-    RENDER_COMMAND(CreateProbeGridUniformBuffer)(renderer::UniformBuffer *uniform_buffer, ProbeSystemUniforms &&uniforms)
+    RENDER_COMMAND(CreateProbeGridUniformBuffer)(const GPUBufferRef &uniform_buffer, ProbeSystemUniforms &&uniforms)
         : uniform_buffer(uniform_buffer),
           uniforms(std::move(uniforms))
     {
@@ -166,10 +157,10 @@ struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : RenderCommand
 
 struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : RenderCommand
 {
-    renderer::StorageBuffer *radiance_buffer;
+    GPUBufferRef radiance_buffer;
     ProbeGridInfo grid_info;
 
-    RENDER_COMMAND(CreateProbeGridRadianceBuffer)(renderer::StorageBuffer *radiance_buffer, const ProbeGridInfo &grid_info)
+    RENDER_COMMAND(CreateProbeGridRadianceBuffer)(const GPUBufferRef &radiance_buffer, const ProbeGridInfo &grid_info)
         : radiance_buffer(radiance_buffer),
           grid_info(grid_info)
     {
@@ -186,10 +177,10 @@ struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : RenderCommand
 
 struct RENDER_COMMAND(CreateProbeGridPipeline) : RenderCommand
 {
-    renderer::RaytracingPipeline *pipeline;
-    renderer::ShaderProgram *shader_program;
+    RaytracingPipelineRef pipeline;
+    ShaderProgramRef shader_program;
 
-    RENDER_COMMAND(CreateProbeGridPipeline)(renderer::RaytracingPipeline *pipeline, renderer::ShaderProgram *shader_program)
+    RENDER_COMMAND(CreateProbeGridPipeline)(const RaytracingPipelineRef &pipeline, const ShaderProgramRef &shader_program)
         : pipeline(pipeline),
           shader_program(shader_program)
     {
@@ -199,7 +190,7 @@ struct RENDER_COMMAND(CreateProbeGridPipeline) : RenderCommand
     {
         return pipeline->Create(
             Engine::Get()->GetGPUDevice(),
-            shader_program,
+            shader_program.Get(),
             &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
         );
     }
@@ -235,12 +226,10 @@ void ProbeGrid::Init()
     for (UInt32 x = 0; x < grid.width; x++) {
         for (UInt32 y = 0; y < grid.height; y++) {
             for (UInt32 z = 0; z < grid.depth; z++) {
-                const UInt32 index = x * grid.height * grid.depth
-                     + y * grid.depth
-                     + z;
+                const UInt32 index = x * grid.height * grid.depth + y * grid.depth + z;
 
                 m_probes[index] = Probe {
-                    .position = (Vector3(Float(x), Float(y), Float(z)) - (Vector3(m_grid_info.probe_border) * 0.5f)) * m_grid_info.probe_distance
+                    (Vector3(Float(x), Float(y), Float(z)) - (Vector3(m_grid_info.probe_border) * 0.5f)) * m_grid_info.probe_distance
                 };
             }
         }
@@ -264,18 +253,18 @@ void ProbeGrid::Destroy()
 
     // release our owned descriptor sets
     for (auto &descriptor_set : m_descriptor_sets) {
-        Engine::Get()->SafeRelease(std::move(descriptor_set));
+        SafeRelease(std::move(descriptor_set));
     }
 
-    Engine::Get()->SafeRelease(std::move(m_uniform_buffer));
-    Engine::Get()->SafeRelease(std::move(m_radiance_buffer));
-    Engine::Get()->SafeRelease(std::move(m_irradiance_image));
-    Engine::Get()->SafeRelease(std::move(m_irradiance_image_view));
-    Engine::Get()->SafeRelease(std::move(m_depth_image));
-    Engine::Get()->SafeRelease(std::move(m_depth_image_view));
-    Engine::Get()->SafeRelease(std::move(m_pipeline));
+    SafeRelease(std::move(m_uniform_buffer));
+    SafeRelease(std::move(m_radiance_buffer));
+    SafeRelease(std::move(m_irradiance_image));
+    SafeRelease(std::move(m_irradiance_image_view));
+    SafeRelease(std::move(m_depth_image));
+    SafeRelease(std::move(m_depth_image_view));
+    SafeRelease(std::move(m_pipeline));
 
-    RenderCommands::Push<RENDER_COMMAND(DestroyProbeGridDescriptors)>();
+    PUSH_RENDER_COMMAND(DestroyProbeGridDescriptors);
 
     HYP_SYNC_RENDER();
 }
@@ -285,16 +274,17 @@ void ProbeGrid::CreatePipeline()
     m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("RTProbe"));
     InitObject(m_shader);
 
-    m_pipeline.Reset(new RaytracingPipeline(
+    m_pipeline = RaytracingPipelineRef::Construct(
         Array<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
             Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
             Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
         }
-    ));
+    );
 
-    RenderCommands::Push<RENDER_COMMAND(CreateProbeGridPipeline)>(
-        m_pipeline.Get(),
+    PUSH_RENDER_COMMAND(
+        CreateProbeGridPipeline,
+        m_pipeline,
         m_shader->GetShaderProgram()
     );
 }
@@ -332,10 +322,11 @@ void ProbeGrid::CreateComputePipelines()
 
 void ProbeGrid::CreateUniformBuffer()
 {
-    m_uniform_buffer.Reset(new UniformBuffer);
+    m_uniform_buffer = GPUBufferRef::Construct(UniformBuffer());
 
-    RenderCommands::Push<RENDER_COMMAND(CreateProbeGridUniformBuffer)>(
-        m_uniform_buffer.Get(),
+    PUSH_RENDER_COMMAND(
+        CreateProbeGridUniformBuffer,
+        m_uniform_buffer,
         ProbeSystemUniforms {
             .aabb_max = Vector4(m_grid_info.aabb.max, 1.0f),
             .aabb_min = Vector4(m_grid_info.aabb.min, 1.0f),
@@ -352,10 +343,11 @@ void ProbeGrid::CreateStorageBuffers()
 {
     const Extent3D probe_counts = m_grid_info.NumProbesPerDimension();
 
-    m_radiance_buffer.Reset(new StorageBuffer);
+    m_radiance_buffer = GPUBufferRef::Construct(StorageBuffer());
 
-    RenderCommands::Push<RENDER_COMMAND(CreateProbeGridRadianceBuffer)>(
-        m_radiance_buffer.Get(),
+    PUSH_RENDER_COMMAND(
+        CreateProbeGridRadianceBuffer,
+        m_radiance_buffer,
         m_grid_info
     );
 
@@ -368,9 +360,9 @@ void ProbeGrid::CreateStorageBuffers()
             1
         };
 
-        void *zeros = Memory::AllocateZeros(extent.Size() * static_cast<SizeType>(NumComponents(irradiance_format)));
+        void *zeros = Memory::AllocateZeros(extent.Size() * SizeType(NumComponents(irradiance_format)));
 
-        m_irradiance_image.Reset(new StorageImage(
+        m_irradiance_image = ImageRef::Construct(StorageImage(
             extent,
             irradiance_format,
             ImageType::TEXTURE_TYPE_2D,
@@ -379,13 +371,13 @@ void ProbeGrid::CreateStorageBuffers()
 
         Memory::DestructAndFree<void>(zeros);
 
-        RenderCommands::Push<RENDER_COMMAND(CreateProbeGridImage)>(m_irradiance_image.Get());
+        PUSH_RENDER_COMMAND(CreateProbeGridImage, m_irradiance_image);
     }
 
     { // irradiance image view
-        m_irradiance_image_view.Reset(new ImageView);
+        m_irradiance_image_view = ImageViewRef::Construct();
 
-        RenderCommands::Push<RENDER_COMMAND(CreateProbeGridImageView)>(m_irradiance_image_view.Get(), m_irradiance_image.Get());
+        PUSH_RENDER_COMMAND(CreateProbeGridImageView, m_irradiance_image_view, m_irradiance_image);
     }
 
     { // depth image
@@ -397,9 +389,9 @@ void ProbeGrid::CreateStorageBuffers()
             1
         };
 
-        void *zeros = Memory::AllocateZeros(extent.Size() * static_cast<SizeType>(NumComponents(depth_format)));
+        void *zeros = Memory::AllocateZeros(extent.Size() * SizeType(NumComponents(depth_format)));
 
-        m_depth_image.Reset(new StorageImage(
+        m_depth_image = ImageRef::Construct(StorageImage(
             extent,
             depth_format,
             ImageType::TEXTURE_TYPE_2D,
@@ -408,98 +400,69 @@ void ProbeGrid::CreateStorageBuffers()
 
         Memory::DestructAndFree<void>(zeros);
 
-        RenderCommands::Push<RENDER_COMMAND(CreateProbeGridImage)>(m_depth_image.Get());
+        PUSH_RENDER_COMMAND(CreateProbeGridImage, m_depth_image);
     }
 
     { // depth image view
-        m_depth_image_view.Reset(new ImageView);
+        m_depth_image_view = ImageViewRef::Construct();
 
-        RenderCommands::Push<RENDER_COMMAND(CreateProbeGridImageView)>(m_depth_image_view.Get(), m_depth_image.Get());
+        PUSH_RENDER_COMMAND(CreateProbeGridImageView, m_depth_image_view, m_depth_image);
     }
 }
 
 void ProbeGrid::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+        auto descriptor_set = DescriptorSetRef::Construct();
 
         descriptor_set->GetOrAddDescriptor<TlasDescriptor>(0)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .acceleration_structure = &m_tlas->GetInternalTLAS()
-            });
+            ->SetElementAccelerationStructure(0, &m_tlas->GetInternalTLAS());
 
         // mesh descriptions
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(4)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer()
-            });
+            ->SetElementBuffer(0, m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer());
         
         // materials
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(5)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = Engine::Get()->GetRenderData()->materials.GetBuffers()[frame_index].get()
-            });
+            ->SetElementBuffer(0, Engine::Get()->GetRenderData()->materials.GetBuffers()[frame_index].get());
         
         // entities
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(6)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = Engine::Get()->GetRenderData()->objects.GetBuffers()[frame_index].get()
-            });
+            ->SetElementBuffer(0, Engine::Get()->GetRenderData()->objects.GetBuffers()[frame_index].get());
 
         descriptor_set
             ->GetOrAddDescriptor<UniformBufferDescriptor>(9)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = m_uniform_buffer.Get()
-            });
+            ->SetElementBuffer(0, m_uniform_buffer.Get());
 
         descriptor_set
             ->GetOrAddDescriptor<StorageBufferDescriptor>(10)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = m_radiance_buffer.Get()
-            });
+            ->SetElementBuffer(0, m_radiance_buffer.Get());
 
         descriptor_set
             ->GetOrAddDescriptor<StorageImageDescriptor>(11)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_irradiance_image_view.Get()
-            });
+            ->SetElementUAV(0, m_irradiance_image_view.Get());
 
         descriptor_set
             ->GetOrAddDescriptor<StorageImageDescriptor>(12)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_depth_image_view.Get()
-            });
+            ->SetElementUAV(0, m_depth_image_view.Get());
 
         descriptor_set
             ->GetOrAddDescriptor<ImageDescriptor>(13)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_irradiance_image_view.Get()
-            });
+            ->SetElementSRV(0, m_irradiance_image_view.Get());
 
         descriptor_set
             ->GetOrAddDescriptor<ImageDescriptor>(14)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_depth_image_view.Get()
-            });
+            ->SetElementSRV(0, m_depth_image_view.Get());
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateProbeGridDescriptors)>(
-        m_descriptor_sets.Data(),
-        m_uniform_buffer.Get(),
-        m_irradiance_image_view.Get(),
-        m_depth_image_view.Get()
+    PUSH_RENDER_COMMAND(
+        CreateProbeGridDescriptors,
+        m_descriptor_sets,
+        m_uniform_buffer,
+        m_irradiance_image_view,
+        m_depth_image_view
     );
 }
 
@@ -522,10 +485,7 @@ void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS) {
             // update mesh descriptions buffer in descriptor set
             m_descriptor_sets[frame_index]->GetDescriptor(4)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .buffer = m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer()
-                });
+                ->SetElementBuffer(0, m_tlas->GetInternalTLAS().GetMeshDescriptionsBuffer());
         }
 
         m_has_tlas_updates[frame_index] = true;

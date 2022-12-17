@@ -20,7 +20,7 @@ struct GameCounter {
 
     void NextTick();
 
-    HYP_FORCE_INLINE static inline TimePoint Now() { return Clock::now(); }
+    HYP_FORCE_INLINE static TimePoint Now() { return Clock::now(); }
 
     TickUnit Interval(TimePoint end_time_point) const
     {

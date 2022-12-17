@@ -339,11 +339,27 @@ GPUMemory::GPUMemory()
       sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
       size(0),
       map(nullptr),
-      resource_state(ResourceState::UNDEFINED)
+      resource_state(ResourceState::UNDEFINED),
+      allocation(VK_NULL_HANDLE)
 {
     static UInt allocations = 0;
 
     m_id = allocations++;
+}
+
+GPUMemory::GPUMemory(GPUMemory &&other) noexcept
+    : m_id(other.m_id),
+      sharing_mode(other.sharing_mode),
+      size(other.size),
+      map(other.map),
+      resource_state(other.resource_state),
+      allocation(other.allocation)
+{
+    other.m_id = 0;
+    other.size = 0;
+    other.map = nullptr;
+    other.resource_state = ResourceState::UNDEFINED;
+    other.allocation = VK_NULL_HANDLE;
 }
 
 GPUMemory::~GPUMemory()
@@ -352,12 +368,12 @@ GPUMemory::~GPUMemory()
 
 void GPUMemory::Map(Device *device, void **ptr) const
 {
-    vmaMapMemory(device->GetAllocator(), this->allocation, ptr);
+    vmaMapMemory(device->GetAllocator(), allocation, ptr);
 }
 
 void GPUMemory::Unmap(Device *device) const
 {
-    vmaUnmapMemory(device->GetAllocator(), this->allocation);
+    vmaUnmapMemory(device->GetAllocator(), allocation);
     map = nullptr;
 }
 
@@ -420,9 +436,22 @@ GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags,
 {
 }
 
+GPUBuffer::GPUBuffer(GPUBuffer &&other) noexcept
+    : GPUMemory(static_cast<GPUMemory &&>(std::move(other))),
+      buffer(other.buffer),
+      usage_flags(other.usage_flags),
+      vma_usage(other.vma_usage),
+      vma_allocation_create_flags(other.vma_allocation_create_flags)
+{
+    other.buffer = VK_NULL_HANDLE;
+    other.usage_flags = 0;
+    other.vma_usage = VMA_MEMORY_USAGE_UNKNOWN;
+    other.vma_allocation_create_flags = 0;
+}
+
 GPUBuffer::~GPUBuffer()
 {
-    AssertThrowMsg(buffer == nullptr, "buffer should have been destroyed!");
+    AssertThrowMsg(buffer == VK_NULL_HANDLE, "buffer should have been destroyed!");
 }
 
 VkBufferCreateInfo GPUBuffer::GetBufferCreateInfo(Device *device) const

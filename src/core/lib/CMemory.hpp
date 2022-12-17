@@ -21,11 +21,19 @@ public:
 
     static char *CopyString(char *dest, const char *src, SizeType length = 0)
     {
+#ifdef HYP_WINDOWS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
         if (length) {
             return std::strncpy(dest, src, length);
         }
 
         return std::strcpy(dest, src);
+        
+#ifdef HYP_WINDOWS
+#undef _CRT_SECURE_NO_WARNINGS
+#endif
     }
 
     static inline SizeType StringLength(const char *str)
