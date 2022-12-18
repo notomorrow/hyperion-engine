@@ -496,6 +496,15 @@ void Entity::SetIsInScene(ID<Scene> id, bool is_in_scene)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
+bool Entity::IsVisibleInScene(ID<Scene> id) const
+{
+    const VisibilityState &parent_visibility_state = Engine::Get()->GetWorld()->GetOctree().GetVisibilityState();
+    const UInt8 visibility_cursor = Engine::Get()->GetWorld()->GetOctree().LoadVisibilityCursor();
+
+    return m_visibility_state.ValidToParent(parent_visibility_state, visibility_cursor)
+        && m_visibility_state.Get(id, visibility_cursor);
+}
+
 void Entity::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
 {
     m_renderable_attributes = renderable_attributes;

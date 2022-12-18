@@ -13,6 +13,7 @@ using renderer::DescriptorKey;
 using renderer::Rect;
 using renderer::ShaderVec2;
 using renderer::Result;
+using renderer::GPUBufferType;
 
 struct alignas(16) SSRParams
 {
@@ -48,28 +49,6 @@ struct RENDER_COMMAND(CreateSSRImageOutputs) : RenderCommand
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (auto &image_output : image_outputs[frame_index]) {
-                image_output = SSRRenderer::ImageOutput {
-                    .image = StorageImage(
-                        Extent3D(extent),
-                        InternalFormat::RGBA16F,
-                        ImageType::TEXTURE_TYPE_2D,
-                        nullptr
-                    )
-                };
-            }
-
-            radius_outputs[frame_index] = SSRRenderer::ImageOutput {
-                .image = StorageImage(
-                    Extent3D(extent),
-                    InternalFormat::R8,
-                    ImageType::TEXTURE_TYPE_2D,
-                    nullptr
-                )
-            };
-        }
-
-        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (auto &image_output : image_outputs[frame_index]) {
                 image_output.Create(Engine::Get()->GetGPUDevice());
             }
 
@@ -83,11 +62,11 @@ struct RENDER_COMMAND(CreateSSRImageOutputs) : RenderCommand
 struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommand
 {
     Extent2D extent;
-    UniquePtr<UniformBuffer> *uniform_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight> uniform_buffers;
 
     RENDER_COMMAND(CreateSSRUniformBuffer)(
         Extent2D extent,
-        UniquePtr<UniformBuffer> *uniform_buffers
+        const FixedArray<GPUBufferRef, max_frames_in_flight> &uniform_buffers
     ) : extent(extent),
         uniform_buffers(uniform_buffers)
     {
@@ -129,14 +108,14 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommand
 
 struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommand
 {
-    UniquePtr<renderer::DescriptorSet> *descriptor_sets;
-    FixedArray<renderer::ImageView *, max_frames_in_flight> image_views;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
+    FixedArray<ImageViewRef, max_frames_in_flight> image_views;
 
     RENDER_COMMAND(CreateSSRDescriptors)(
-        UniquePtr<renderer::DescriptorSet> *descriptor_sets,
-        FixedArray<renderer::ImageView *, max_frames_in_flight> &&image_views
+        const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets,
+        const FixedArray<ImageViewRef, max_frames_in_flight> &image_views
     ) : descriptor_sets(descriptor_sets),
-        image_views(std::move(image_views))
+        image_views(image_views)
     {
     }
 
@@ -164,28 +143,15 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroySSRInstance) : RenderCommand
+struct RENDER_COMMAND(RemoveSSRDescriptors) : RenderCommand
 {
-    FixedArray<SSRRenderer::ImageOutput, 4> *image_outputs;
-    SSRRenderer::ImageOutput *radius_outputs;
-
-    RENDER_COMMAND(DestroySSRInstance)(
-        FixedArray<SSRRenderer::ImageOutput, 4> *image_outputs,
-        SSRRenderer::ImageOutput *radius_outputs
-    ) : image_outputs(image_outputs),
-        radius_outputs(radius_outputs)
+    RENDER_COMMAND(RemoveSSRDescriptors)()
     {
     }
 
     virtual Result operator()()
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (UInt j = 0; j < UInt(image_outputs[frame_index].Size()); j++) {
-                image_outputs[frame_index][j].Destroy(Engine::Get()->GetGPUDevice());
-            }
-
-            radius_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice());
-
             // unset final result from the global descriptor set
             auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -201,12 +167,6 @@ struct RENDER_COMMAND(DestroySSRInstance) : RenderCommand
 
 SSRRenderer::SSRRenderer(const Extent2D &extent)
     : m_extent(extent),
-      m_temporal_blending(
-          extent,
-          InternalFormat::RGBA16F,
-          TemporalBlendTechnique::TECHNIQUE_3,
-          FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].Back().image_view, &m_image_outputs[1].Back().image_view }
-      ),
       m_is_rendered(false)
 {
 }
@@ -217,14 +177,46 @@ SSRRenderer::~SSRRenderer()
 
 void SSRRenderer::Create()
 {
-    RenderCommands::Push<RENDER_COMMAND(CreateSSRImageOutputs)>(
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (auto &image_output : m_image_outputs[frame_index]) {
+            image_output = ImageOutput {
+                RenderObjects::Make<Image>(StorageImage(
+                    Extent3D(m_extent),
+                    InternalFormat::RGBA8,
+                    ImageType::TEXTURE_TYPE_2D,
+                    nullptr
+                )),
+                RenderObjects::Make<ImageView>()
+            };
+        }
+
+        m_radius_output[frame_index] = ImageOutput {
+            RenderObjects::Make<Image>(StorageImage(
+                Extent3D(m_extent),
+                InternalFormat::R8,
+                ImageType::TEXTURE_TYPE_2D,
+                nullptr
+            )),
+            RenderObjects::Make<ImageView>()
+        };
+    }
+    
+    PUSH_RENDER_COMMAND(
+        CreateSSRImageOutputs,
         m_extent,
         m_image_outputs.Data(),
         m_radius_output.Data()
     );
 
     if (use_temporal_blending) {
-        m_temporal_blending.Create();
+        m_temporal_blending.Reset(new TemporalBlending(
+            m_extent,
+            InternalFormat::RGBA8,
+            TemporalBlendTechnique::TECHNIQUE_2,
+            FixedArray<ImageViewRef, max_frames_in_flight> { m_image_outputs[0][blur_result ? 3 : 1].image_view, m_image_outputs[1][blur_result ? 3 : 1].image_view }
+        ));
+
+        m_temporal_blending->Create();
     }
 
     CreateUniformBuffers();
@@ -241,19 +233,24 @@ void SSRRenderer::Destroy()
     m_blur_hor.Reset();
     m_blur_vert.Reset();
 
-    if (use_temporal_blending) {
-        m_temporal_blending.Destroy();
+    if (m_temporal_blending) {
+        m_temporal_blending->Destroy();
     }
-
+    
+    SafeRelease(std::move(m_descriptor_sets));
+    SafeRelease(std::move(m_uniform_buffers));
+    
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        Engine::Get()->SafeRelease(std::move(m_descriptor_sets[frame_index]));
-        Engine::Get()->SafeRelease(std::move(m_uniform_buffers[frame_index]));
+        for (UInt j = 0; j < UInt(m_image_outputs[frame_index].Size()); j++) {
+            SafeRelease(std::move(m_image_outputs[frame_index][j].image));
+            SafeRelease(std::move(m_image_outputs[frame_index][j].image_view));
+        }
+        
+        SafeRelease(std::move(m_radius_output[frame_index].image));
+        SafeRelease(std::move(m_radius_output[frame_index].image_view));
     }
 
-    RenderCommands::Push<RENDER_COMMAND(DestroySSRInstance)>(
-        m_image_outputs.Data(),
-        m_radius_output.Data()
-    );
+    PUSH_RENDER_COMMAND(RemoveSSRDescriptors);
 
     HYP_SYNC_RENDER();
 }
@@ -261,59 +258,60 @@ void SSRRenderer::Destroy()
 void SSRRenderer::CreateUniformBuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_uniform_buffers[frame_index] = UniquePtr<UniformBuffer>::Construct();
+        m_uniform_buffers[frame_index] = RenderObjects::Make<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateSSRUniformBuffer)>(
+    PUSH_RENDER_COMMAND(
+        CreateSSRUniformBuffer,
         m_extent,
-        m_uniform_buffers.Data()
+        m_uniform_buffers
     );
 }
 
 void SSRRenderer::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+        auto descriptor_set = RenderObjects::Make<DescriptorSet>();
 
         descriptor_set // 1st stage -- trace, write UVs
             ->AddDescriptor<renderer::StorageImageDescriptor>(0)
-            ->SetElementUAV(0, &m_image_outputs[frame_index][0].image_view);
+            ->SetElementUAV(0, m_image_outputs[frame_index][0].image_view);
 
         descriptor_set // 2nd stage -- sample
             ->AddDescriptor<renderer::StorageImageDescriptor>(1)
-            ->SetElementUAV(0, &m_image_outputs[frame_index][1].image_view);
+            ->SetElementUAV(0, m_image_outputs[frame_index][1].image_view);
 
         descriptor_set // 2nd stage -- write radii
             ->AddDescriptor<renderer::StorageImageDescriptor>(2)
-            ->SetElementUAV(0, &m_radius_output[frame_index].image_view);
+            ->SetElementUAV(0, m_radius_output[frame_index].image_view);
 
         descriptor_set // 3rd stage -- blur horizontal
             ->AddDescriptor<renderer::StorageImageDescriptor>(3)
-            ->SetElementUAV(0, &m_image_outputs[frame_index][2].image_view);
+            ->SetElementUAV(0, m_image_outputs[frame_index][2].image_view);
 
         descriptor_set // 3rd stage -- blur vertical
             ->AddDescriptor<renderer::StorageImageDescriptor>(4)
-            ->SetElementUAV(0, &m_image_outputs[frame_index][3].image_view);
+            ->SetElementUAV(0, m_image_outputs[frame_index][3].image_view);
 
         descriptor_set // 1st stage -- trace, write UVs
             ->AddDescriptor<renderer::ImageDescriptor>(5)
-            ->SetElementSRV(0, &m_image_outputs[frame_index][0].image_view);
+            ->SetElementSRV(0, m_image_outputs[frame_index][0].image_view);
 
         descriptor_set // 2nd stage -- sample
             ->AddDescriptor<renderer::ImageDescriptor>(6)
-            ->SetElementSRV(0, &m_image_outputs[frame_index][1].image_view);
+            ->SetElementSRV(0, m_image_outputs[frame_index][1].image_view);
 
         descriptor_set // 2nd stage -- write radii
             ->AddDescriptor<renderer::ImageDescriptor>(7)
-            ->SetElementSRV(0, &m_radius_output[frame_index].image_view);
+            ->SetElementSRV(0, m_radius_output[frame_index].image_view);
 
         descriptor_set // 3rd stage -- blur horizontal
             ->AddDescriptor<renderer::ImageDescriptor>(8)
-            ->SetElementSRV(0, &m_image_outputs[frame_index][2].image_view);
+            ->SetElementSRV(0, m_image_outputs[frame_index][2].image_view);
 
         descriptor_set // 3rd stage -- blur vertical
             ->AddDescriptor<renderer::ImageDescriptor>(9)
-            ->SetElementSRV(0, &m_image_outputs[frame_index][3].image_view);
+            ->SetElementSRV(0, m_image_outputs[frame_index][3].image_view);
 
         descriptor_set // gbuffer albedo texture
             ->AddDescriptor<renderer::ImageDescriptor>(10)
@@ -357,11 +355,12 @@ void SSRRenderer::CreateDescriptorSets()
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    RenderCommands::Push<RENDER_COMMAND(CreateSSRDescriptors)>(
-        m_descriptor_sets.Data(),
-        FixedArray<renderer::ImageView *, max_frames_in_flight> {
-            use_temporal_blending ? m_temporal_blending.GetImageOutput(0).image_view : &m_image_outputs[0].Back().image_view,
-            use_temporal_blending ? m_temporal_blending.GetImageOutput(1).image_view : &m_image_outputs[1].Back().image_view
+    PUSH_RENDER_COMMAND(
+        CreateSSRDescriptors,
+        m_descriptor_sets,
+        FixedArray {
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(0).image_view : m_image_outputs[0][blur_result ? 3 : 1].image_view,
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(1).image_view : m_image_outputs[1][blur_result ? 3 : 1].image_view
         }
     );
 }
@@ -410,7 +409,7 @@ void SSRRenderer::Render(Frame *frame)
     
     // PASS 1 -- write UVs
 
-    m_image_outputs[frame_index][0].image.GetGPUImage()
+    m_image_outputs[frame_index][0].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
     m_write_uvs->GetPipeline()->Bind(command_buffer);
@@ -420,22 +419,22 @@ void SSRRenderer::Render(Frame *frame)
         m_write_uvs->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
-        FixedArray { UInt32(Engine::Get()->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
+        FixedArray { HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) }
     );
 
     m_write_uvs->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
 
     // transition the UV image back into read state
-    m_image_outputs[frame_index][0].image.GetGPUImage()
+    m_image_outputs[frame_index][0].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
     // PASS 2 - sample textures
 
     // put sample image in writeable state
-    m_image_outputs[frame_index][1].image.GetGPUImage()
+    m_image_outputs[frame_index][1].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
     // put radius image in writeable state
-    m_radius_output[frame_index].image.GetGPUImage()
+    m_radius_output[frame_index].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
     m_sample->GetPipeline()->Bind(command_buffer);
@@ -445,65 +444,67 @@ void SSRRenderer::Render(Frame *frame)
         m_sample->GetPipeline(),
         m_descriptor_sets[frame->GetFrameIndex()].Get(),
         0,
-        FixedArray { HYP_RENDER_OBJECT_OFFSET(Scene, Engine::Get()->GetRenderState().GetScene().id.ToIndex()) }
+        FixedArray { HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) }
     );
 
     m_sample->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
 
     // transition sample image back into read state
-    m_image_outputs[frame_index][1].image.GetGPUImage()
+    m_image_outputs[frame_index][1].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
     // transition radius image back into read state
-    m_radius_output[frame_index].image.GetGPUImage()
+    m_radius_output[frame_index].image->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
-    // PASS 3 - blur image using radii in output from previous stage
+    if constexpr (blur_result) {
+        // PASS 3 - blur image using radii in output from previous stage
 
-    //put blur image in writeable state
-    m_image_outputs[frame_index][2].image.GetGPUImage()
-        ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+        //put blur image in writeable state
+        m_image_outputs[frame_index][2].image->GetGPUImage()
+            ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_blur_hor->GetPipeline()->Bind(command_buffer);
+        m_blur_hor->GetPipeline()->Bind(command_buffer);
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
-        m_blur_hor->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()].Get(),
-        0,
-        FixedArray { static_cast<UInt32>(Engine::Get()->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
-    );
+        frame->GetCommandBuffer()->BindDescriptorSet(
+            Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+            m_blur_hor->GetPipeline(),
+            m_descriptor_sets[frame->GetFrameIndex()].Get(),
+            0,
+            FixedArray { HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) }
+        );
 
-    m_blur_hor->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
+        m_blur_hor->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
 
-    // transition blur image back into read state
-    m_image_outputs[frame_index][2].image.GetGPUImage()
-        ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+        // transition blur image back into read state
+        m_image_outputs[frame_index][2].image->GetGPUImage()
+            ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
 
-    // PASS 4 - blur image vertically
+        // PASS 4 - blur image vertically
 
-    //put blur image in writeable state
-    m_image_outputs[frame_index][3].image.GetGPUImage()
-        ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+        //put blur image in writeable state
+        m_image_outputs[frame_index][3].image->GetGPUImage()
+            ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_blur_vert->GetPipeline()->Bind(command_buffer);
+        m_blur_vert->GetPipeline()->Bind(command_buffer);
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
-        m_blur_vert->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()].Get(),
-        0,
-        FixedArray { UInt32(Engine::Get()->GetRenderState().GetScene().id.ToIndex() * sizeof(SceneShaderData))}
-    );
+        frame->GetCommandBuffer()->BindDescriptorSet(
+            Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+            m_blur_vert->GetPipeline(),
+            m_descriptor_sets[frame->GetFrameIndex()].Get(),
+            0,
+            FixedArray { HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) }
+        );
 
-    m_blur_vert->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
+        m_blur_vert->GetPipeline()->Dispatch(command_buffer, Extent3D(m_extent) / Extent3D { 8, 8, 1 });
 
-    // transition blur image back into read state
-    m_image_outputs[frame_index][3].image.GetGPUImage()
-        ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+        // transition blur image back into read state
+        m_image_outputs[frame_index][3].image->GetGPUImage()
+            ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+    }
 
-    if (use_temporal_blending) {
-        m_temporal_blending.Render(frame);
+    if (use_temporal_blending && m_temporal_blending != nullptr) {
+        m_temporal_blending->Render(frame);
     }
 
     m_is_rendered = true;

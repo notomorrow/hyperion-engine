@@ -25,7 +25,8 @@ class RaytracingPipeline;
 class CommandBuffer
 {
 public:
-    enum Type {
+    enum Type
+    {
         COMMAND_BUFFER_PRIMARY,
         COMMAND_BUFFER_SECONDARY
     };
@@ -56,6 +57,9 @@ public:
     );
 
     Result SubmitSecondary(CommandBuffer *primary);
+
+    void BindVertexBuffer(const GPUBuffer *buffer);
+    void BindIndexBuffer(const GPUBuffer *buffer, DatumType datum_type = DatumType::UNSIGNED_INT);
 
     void DrawIndexed(
         UInt32 num_indices,

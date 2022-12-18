@@ -25,10 +25,10 @@ class UIRenderer
 public:
     static constexpr RenderComponentName component_name = RENDER_COMPONENT_UI;
 
-    UIRenderer(Handle<Scene> &&ui_scene);
+    UIRenderer(const Handle<Scene> &ui_scene);
     UIRenderer(const UIRenderer &other) = delete;
     UIRenderer &operator=(const UIRenderer &other) = delete;
-    ~UIRenderer();
+    virtual ~UIRenderer();
 
     void Init();
     void InitGame(); // init on game thread

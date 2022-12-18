@@ -41,34 +41,27 @@ class Mesh
 public:
     using Index = UInt32;
 
-    enum Flags : UInt {
-        MESH_FLAGS_NONE = 0,
-        MESH_FLAGS_HAS_ACCELERATION_GEOMETRY = 1
-    };
-
     static std::pair<std::vector<Vertex>, std::vector<Index>> CalculateIndices(const std::vector<Vertex> &vertices);
 
     Mesh(
         const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices,
         Topology topology,
-        const VertexAttributeSet &vertex_attributes,
-        Flags flags = MESH_FLAGS_NONE
+        const VertexAttributeSet &vertex_attributes
     );
 
     Mesh(
         const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices,
-        Topology topology = Topology::TRIANGLES,
-        Flags flags = MESH_FLAGS_NONE
+        Topology topology = Topology::TRIANGLES
     );
 
     Mesh(const Mesh &other) = delete;
     Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();
 
-    VertexBuffer *GetVertexBuffer() const { return m_vbo.get(); }
-    IndexBuffer *GetIndexBuffer() const { return m_ibo.get(); }
+    const GPUBufferRef &GetVertexBuffer() const { return m_vbo; }
+    const GPUBufferRef &GetIndexBuffer() const { return m_ibo; }
                                                                    
     const std::vector<Vertex> &GetVertices() const { return m_vertices; }
     void SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices)
@@ -84,9 +77,6 @@ public:
     const MeshAttributes &GetRenderAttributes() const { return m_mesh_attributes; }
 
     Topology GetTopology() const { return m_mesh_attributes.topology; }
-
-    Flags GetFlags() const { return m_flags; }
-    void SetFlags(Flags flags) { m_flags = flags; }
 
     std::vector<PackedVertex> BuildPackedVertices() const;
     std::vector<PackedIndex> BuildPackedIndices() const;
@@ -112,8 +102,8 @@ public:
 private:
     std::vector<float> BuildVertexBuffer();
 
-    std::unique_ptr<VertexBuffer> m_vbo;
-    std::unique_ptr<IndexBuffer> m_ibo;
+    GPUBufferRef m_vbo;
+    GPUBufferRef m_ibo;
 
     size_t m_indices_count = 0;
 
@@ -121,8 +111,6 @@ private:
 
     std::vector<Vertex> m_vertices;
     std::vector<Index> m_indices;
-    
-    Flags m_flags;
 };
 
 }

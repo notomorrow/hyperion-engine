@@ -198,11 +198,7 @@ protected:
 class GPUBuffer : public GPUMemory
 {
 public:
-    GPUBuffer(
-        VkBufferUsageFlags usage_flags,
-        VmaMemoryUsage vma_usage = VMA_MEMORY_USAGE_AUTO,
-        VmaAllocationCreateFlags vma_allocation_create_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-    );
+    GPUBuffer(GPUBufferType type);
 
     GPUBuffer(const GPUBuffer &other) = delete;
     GPUBuffer &operator=(const GPUBuffer &other) = delete;
@@ -211,6 +207,9 @@ public:
     GPUBuffer &operator=(GPUBuffer &&other) = delete;
 
     ~GPUBuffer();
+
+    GPUBufferType GetBufferType() const
+        { return type; }
 
     bool IsCPUAccessible() const
         { return vma_usage != VMA_MEMORY_USAGE_GPU_ONLY; }
@@ -297,6 +296,8 @@ private:
     VmaAllocationCreateInfo GetAllocationCreateInfo(Device *device) const;
     VkBufferCreateInfo GetBufferCreateInfo(Device *device) const;
 
+    GPUBufferType type;
+
     VkBufferUsageFlags usage_flags;
     VmaMemoryUsage vma_usage;
     VmaAllocationCreateFlags vma_allocation_create_flags;
@@ -317,7 +318,7 @@ public:
 
     void Bind(CommandBuffer *command_buffer);
 
-    DatumType GetDatumType() const          { return m_datum_type; }
+    DatumType GetDatumType() const { return m_datum_type; }
     void SetDatumType(DatumType datum_type) { m_datum_type = datum_type; }
 
 private:

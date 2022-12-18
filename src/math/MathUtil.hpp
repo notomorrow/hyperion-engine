@@ -213,15 +213,27 @@ public:
         { return Max(Max(a, b), args...); }
 
     template <class T, class IntegralType = int>
-    static constexpr IntegralType Sign(T value)
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Sign(T value)
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
+
+    template <class T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Sign(const T &a)
+    {
+        T result { };
+
+        for (SizeType i = 0; i < std::size(result.values); i++) {
+            result.values[i] = Sign<std::decay_t<decltype(T::values[0])>>(a.values[i]);
+        }
+
+        return result;
+    }
 
     template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(const T &a)
     {
-        T result{}; /* doesn't need initialization but gets rid of annoying warnings */
+        T result { }; /* doesn't need initialization but gets rid of annoying warnings */
 
-        for (int i = 0; i < std::size(result.values); i++) {
+        for (SizeType i = 0; i < std::size(result.values); i++) {
             result.values[i] = Floor<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
         }
 
@@ -231,9 +243,9 @@ public:
     template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(const T &a)
     {
-        T result{}; /* doesn't need initialization but gets rid of annoying warnings */
+        T result { }; /* doesn't need initialization but gets rid of annoying warnings */
 
-        for (int i = 0; i < std::size(result.values); i++) {
+        for (SizeType i = 0; i < std::size(result.values); i++) {
             result.values[i] = Ceil<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
         }
 

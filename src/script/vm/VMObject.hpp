@@ -81,10 +81,10 @@ public:
     Member *GetMembers() const
         { return m_members; }
 
-    Member &GetMember(int index)
+    Member &GetMember(SizeType index)
         { return m_members[index]; }
 
-    const Member &GetMember(int index) const
+    const Member &GetMember(SizeType index) const
         { return m_members[index]; }
 
     ObjectMap *GetObjectMap() const { return m_object_map; }

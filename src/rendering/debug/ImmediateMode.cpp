@@ -130,7 +130,7 @@ void ImmediateMode::Render(Frame *frame)
         const auto &draw_command = m_draw_commands[index];
 
         const ImmediateDrawShaderData shader_data {
-            draw_command.transform.GetMatrix(),
+            draw_command.transform_matrix,
             draw_command.color.Packed()
         };
 
@@ -199,7 +199,7 @@ void ImmediateMode::Sphere(const Vector3 &position, Float radius, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
-        Transform(position, radius, Quaternion::identity),
+        Transform(position, radius, Quaternion::identity).GetMatrix(),
         color
     });
 }
@@ -208,16 +208,28 @@ void ImmediateMode::Box(const Vector3 &position, const Vector3 &size, Color colo
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::BOX,
-        Transform(position, size, Quaternion::identity),
+        Transform(position, size, Quaternion::identity).GetMatrix(),
         color
     });
 }
 
-void ImmediateMode::Plane(const Vector3 &position, const Vector2 &size, Color color)
+void ImmediateMode::Plane(const FixedArray<Vector3, 4> &points, Color color)
 {
+    Vector3 x = (points[1] - points[0]).Normalize();
+    Vector3 y = (points[2] - points[0]).Normalize();
+    Vector3 z = x.Cross(y).Normalize();
+
+    const Vector3 center = points.Avg();
+
+    Matrix4 transform_matrix;
+    transform_matrix.rows[0] = Vector4(x, 0.0f);
+    transform_matrix.rows[1] = Vector4(y, 0.0f);
+    transform_matrix.rows[2] = Vector4(z, 0.0f);
+    transform_matrix.rows[3] = Vector4(center, 1.0f);
+
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::PLANE,
-        Transform(position, Vector3(size, 1.0f), Quaternion::identity),
+        transform_matrix,
         color
     });
 }
@@ -228,7 +240,7 @@ void DebugDrawCommandList::Sphere(const Vector3 &position, Float radius, Color c
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
-        Transform(position, radius, Quaternion::identity),
+        Transform(position, radius, Quaternion::identity).GetMatrix(),
         color
     });
 }
@@ -237,7 +249,7 @@ void DebugDrawCommandList::Box(const Vector3 &position, const Vector3 &size, Col
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::BOX,
-        Transform(position, size, Quaternion::identity),
+        Transform(position, size, Quaternion::identity).GetMatrix(),
         color
     });
 }
@@ -246,7 +258,7 @@ void DebugDrawCommandList::Plane(const Vector3 &position, const Vector2 &size, C
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::PLANE,
-        Transform(position, Vector3(size, 1.0f), Quaternion::identity),
+        Transform(position, Vector3(size, 1.0f), Quaternion::identity).GetMatrix(),
         color
     });
 }

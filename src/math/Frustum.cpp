@@ -1,5 +1,7 @@
 #include "Frustum.hpp"
 
+#include "scene/controllers/AabbDebugController.hpp"
+
 namespace hyperion {
 
 Frustum::Frustum()
@@ -7,7 +9,8 @@ Frustum::Frustum()
 }
 
 Frustum::Frustum(const Frustum &other)
-    : m_planes(other.m_planes)
+    : m_planes(other.m_planes),
+      m_corners(other.m_corners)
 {
 }
 
@@ -24,7 +27,7 @@ bool Frustum::ContainsAABB(const BoundingBox &aabb) const
         bool pass = false;
 
         for (const auto &corner : corners) {
-            if (plane.Dot(corner.ToVector4()) >= 0.0f) {
+            if (corner.ToVector4().Dot(plane) > 0.0f) {
                 pass = true;
                 break;
             }
@@ -44,43 +47,83 @@ Frustum &Frustum::SetFromViewProjectionMatrix(const Matrix4 &view_proj)
 {
     const Matrix4 mat = view_proj.Transposed();
     
-    m_planes[0].x = mat.values[3] - mat.values[0];
-    m_planes[0].y = mat.values[7] - mat.values[4];
-    m_planes[0].z = mat.values[11] - mat.values[8];
-    m_planes[0].w = mat.values[15] - mat.values[12];
+    m_planes[0][0] = mat[0][3] - mat[0][0];
+    m_planes[0][1] = mat[1][3] - mat[1][0];
+    m_planes[0][2] = mat[2][3] - mat[2][0];
+    m_planes[0][3] = mat[3][3] - mat[3][0];
     m_planes[0].Normalize();
 
-    m_planes[1].x = mat.values[3] + mat.values[0];
-    m_planes[1].y = mat.values[7] + mat.values[4];
-    m_planes[1].z = mat.values[11] + mat.values[8];
-    m_planes[1].w = mat.values[15] + mat.values[12];
+    m_planes[1][0] = mat[0][3] + mat[0][0];
+    m_planes[1][1] = mat[1][3] + mat[1][0];
+    m_planes[1][2] = mat[2][3] + mat[2][0];
+    m_planes[1][3] = mat[3][3] + mat[3][0];
     m_planes[1].Normalize();
 
-    m_planes[2].x = mat.values[3] + mat.values[1];
-    m_planes[2].y = mat.values[7] + mat.values[5];
-    m_planes[2].z = mat.values[11] + mat.values[9];
-    m_planes[2].w = mat.values[15] + mat.values[13];
+    m_planes[2][0] = mat[0][3] + mat[0][1];
+    m_planes[2][1] = mat[1][3] + mat[1][1];
+    m_planes[2][2] = mat[2][3] + mat[2][1];
+    m_planes[2][3] = mat[3][3] + mat[3][1];
     m_planes[2].Normalize();
 
-    m_planes[3].x = mat.values[3] - mat.values[1];
-    m_planes[3].y = mat.values[7] - mat.values[5];
-    m_planes[3].z = mat.values[11] - mat.values[9];
-    m_planes[3].w = mat.values[15] - mat.values[13];
+    m_planes[3][0] = mat[0][3] - mat[0][1];
+    m_planes[3][1] = mat[1][3] - mat[1][1];
+    m_planes[3][2] = mat[2][3] - mat[2][1];
+    m_planes[3][3] = mat[3][3] - mat[3][1];
     m_planes[3].Normalize();
 
-    m_planes[4].x = mat.values[3] - mat.values[2];
-    m_planes[4].y = mat.values[7] - mat.values[6];
-    m_planes[4].z = mat.values[11] - mat.values[10];
-    m_planes[4].w = mat.values[15] - mat.values[14];
+    m_planes[4][0] = mat[0][3] - mat[0][2];
+    m_planes[4][1] = mat[1][3] - mat[1][2];
+    m_planes[4][2] = mat[2][3] - mat[2][2];
+    m_planes[4][3] = mat[3][3] - mat[3][2];
     m_planes[4].Normalize();
 
-    m_planes[5].x = mat.values[3] + mat.values[2];
-    m_planes[5].y = mat.values[7] + mat.values[6];
-    m_planes[5].z = mat.values[11] + mat.values[10];
-    m_planes[5].w = mat.values[15] + mat.values[14];
+    m_planes[5][0] = mat[0][3] + mat[0][2];
+    m_planes[5][1] = mat[1][3] + mat[1][2];
+    m_planes[5][2] = mat[2][3] + mat[2][2];
+    m_planes[5][3] = mat[3][3] + mat[3][2];
     m_planes[5].Normalize();
 
+    const Matrix4 clip_to_world = view_proj.Inverted();
+
+    static const FixedArray<Vector3, 8> corners_ndc {
+        Vector3 { -1, -1, 0 },
+        Vector3 { -1,  1, 0 },
+        Vector3 {  1,  1, 0 },
+        Vector3 {  1, -1, 0 },
+        Vector3 { -1, -1, 1 },
+        Vector3 { -1,  1, 1 },
+        Vector3 {  1,  1, 1 },
+        Vector3 {  1, -1, 1 }
+    };
+
+    for (int i = 0; i < 8; i++) {
+        Vector4 corner = clip_to_world * Vector4(corners_ndc[i], 1.0f);
+        corner /= corner.w;
+
+        m_corners[i] = Vector3(corner);
+    }
+
     return *this;
+}
+
+Vector3 Frustum::GetIntersectionPoint(UInt plane_index_0, UInt plane_index_1, UInt plane_index_2) const
+{
+    const Vector4 planes[3] = { GetPlane(plane_index_0), GetPlane(plane_index_1), GetPlane(plane_index_2) };
+
+    //const Vector3 v1 = Vector3(planes[1]).Cross(Vector3(planes[2])) * planes[0].w;
+    //const Vector3 v2 = Vector3(planes[2]).Cross(Vector3(planes[0])) * planes[1].w;
+    //const Vector3 v3 = Vector3(planes[0]).Cross(Vector3(planes[1])) * planes[2].w;
+    
+    //const Float f = -Vector3(planes[0]).Dot(Vector3(planes[1]).Cross(Vector3(planes[2])));
+    
+   // return (v1 + v2 + v3) / f;
+
+    Vector3 bxc = Vector3(planes[1]).Cross(Vector3(planes[2]));
+    Vector3 cxa = Vector3(planes[2]).Cross(Vector3(planes[0]));
+    Vector3 axb = Vector3(planes[0]).Cross(Vector3(planes[1]));
+
+    Vector3 r = (bxc * -planes[0].w) - (cxa * planes[1].w) - (axb * planes[2].w);
+    return r * (1.0f / Vector3(planes[0]).Dot(bxc));
 }
 
 } // namespace hyperion

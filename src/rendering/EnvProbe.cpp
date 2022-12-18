@@ -238,7 +238,7 @@ void EnvProbe::Init()
 void EnvProbe::CreateImagesAndBuffers()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_cubemap_render_uniform_buffers[frame_index] = GPUBufferRef::Construct(UniformBuffer());
+        m_cubemap_render_uniform_buffers[frame_index] = RenderObjects::Make<GPUBuffer>(UniformBuffer());
     }
     
     PUSH_RENDER_COMMAND(CreateCubemapBuffers, *this);

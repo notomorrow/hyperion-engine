@@ -688,18 +688,14 @@ void Scene::Update(GameCounter::TickUnit delta)
     m_draw_collection.Reset();
 
     const RenderableAttributeSet *override_attributes = m_override_renderable_attributes.TryGet();
-
-    const Handle<Framebuffer> &framebuffer = m_camera
-        ? m_camera->GetFramebuffer()
-        : Handle<Framebuffer>::empty;
-
+    
     // update each entity
     for (auto &it : m_entities) {
         Handle<Entity> &entity = it.second;
 
         entity->Update(delta);
 
-        if (entity->IsRenderable()) {
+        if (entity->IsRenderable() && IsEntityInFrustum(entity)) {
             PushEntityToRender(entity, override_attributes);
         }
     }
@@ -707,8 +703,8 @@ void Scene::Update(GameCounter::TickUnit delta)
     if (m_parent_scene) {
         for (auto &it : m_parent_scene->GetEntities()) {
             Handle<Entity> &entity = it.second;
-            
-            if (entity->IsRenderable()) {
+
+            if (entity->IsRenderable() && IsEntityInFrustum(entity)) {
                 PushEntityToRender(entity, override_attributes);
             }
         }
@@ -758,6 +754,11 @@ void Scene::PushEntityToRender(const Handle<Entity> &entity, const RenderableAtt
     }
 
     m_draw_collection.Insert(attributes, entity->GetDrawProxy());
+}
+
+bool Scene::IsEntityInFrustum(const Handle<Entity> &entity) const
+{
+    return entity->IsVisibleInScene(GetID());
 }
 
 void Scene::Render(Frame *frame, void *push_constant_ptr, SizeType push_constant_size)

@@ -172,7 +172,7 @@ public:
     }
 
     template <class T, class ...Args>
-    static RenderObjectHandle<T> Create(Args &&... args)
+    static RenderObjectHandle<T> Make(Args &&... args)
     {
         auto &container = GetRenderObjectContainer<T>();
 
@@ -327,7 +327,7 @@ public:
     template <class ...Args>
     [[nodiscard]] static RenderObjectHandle Construct(Args &&... args)
     {
-        return RenderObjects::Create<T>(std::forward<Args>(args)...);
+        return RenderObjects::Make<T>(std::forward<Args>(args)...);
     }
 };
 

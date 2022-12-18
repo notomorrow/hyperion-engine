@@ -109,15 +109,11 @@ struct DebugMarker
 };
 
 class IndirectDrawState;
-/*
- * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
- *
- */
 
 class Engine
 {
 #ifdef HYP_DEBUG_MODE
-    static constexpr bool use_debug_layers = true;
+    static constexpr bool use_debug_layers = false;
 #else
     static constexpr bool use_debug_layers = false;
 #endif

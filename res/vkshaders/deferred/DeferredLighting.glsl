@@ -229,7 +229,7 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
             lod
         );
 
-        ibl = env_probe_sample.rgb * mix(1.0, env_probe_sample.a, float(include_shadow));
+        ibl = env_probe_sample.rgb * mix(1.0, max(0.1, env_probe_sample.a), float(include_shadow));
     }
 }
 
@@ -260,10 +260,13 @@ vec3 EvaluateEnvGridIBL(vec3 P, vec3 dir, float lod, bool include_shadow)
 
 
         vec3 vec = saturate((abs(diff) - ((extent_unpadded * 0.5) - vec3(blend))) / vec3(blend));
+        // vec /= length(vec);
 
-        if (length(vec) > 0.0) {
+        // if (length(vec) > 0.0) {
             const float max_component = max(vec.x, max(vec.y, vec.z));
+            // ivec3 neighbor_coord = ivec3(sign(vec) * sign(diff));//ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
             ivec3 neighbor_coord = ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
+            vec3 weights2 = vec3(smoothstep(0.0, max_component, vec.x), smoothstep(0.0, max_component, vec.y), smoothstep(0.0, max_component, vec.z));
 
             int next_probe_index;
 
@@ -271,9 +274,15 @@ vec3 EvaluateEnvGridIBL(vec3 P, vec3 dir, float lod, bool include_shadow)
             vec3 color_y = vec3(0.0);
             vec3 color_z = vec3(0.0);
 
-            vec3 weights = vec;
+            vec3 weights = vec;// * 0.5;//saturate(diff / (extent_unpadded * 0.5)); // vec
 
             vec3 probe_indices = vec3(0.0);
+
+            vec3 next_color = vec3(0.0);
+
+            float avg = (vec.x + vec.y + vec.z) / 3.0;
+            float edge = max_component - avg;
+
 
             next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(neighbor_coord.x, 0.0, 0.0));
             if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
@@ -299,7 +308,27 @@ vec3 EvaluateEnvGridIBL(vec3 P, vec3 dir, float lod, bool include_shadow)
 
                 ibl = mix(ibl, color_z, weight);
             }
-        }
+
+            // ibl = ibl * (1.0 - weights.x) + ibl * (1.0 - weights.y) + ibl * (1.0 - weights.z);
+            // next_color = color_x * vec.x + color_y * vec.y + color_z * vec.z;
+
+            // next_color *= (1.0 - edge);
+            // ibl = ibl + next_color;
+
+            // ibl = next_color;
+
+            // ibl = vec / max_component;
+
+            // ibl = mix(ibl, next_color, length(weights));
+
+            // ibl = vec3(neighbor_coord) / vec3(env_grid.density.xyz);
+
+            // ibl = vec3(max_component, 0.0, 0.0);
+            
+            // ibl = mix(ibl, next_color, 0.5 * length(vec));
+
+            // ibl = mix(ibl, next_color, length(weights));
+        // }
     }
 
     return ibl;
@@ -352,7 +381,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
-    // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
+    screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
 }
 #endif
@@ -365,6 +394,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_RT_RADIANCE_ENABLED);
 
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
+    rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
     reflections = mix(reflections, rt_radiance, rt_radiance.a * float(enabled));
 }
 #endif
