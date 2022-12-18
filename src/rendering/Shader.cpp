@@ -90,14 +90,14 @@ struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommand
 
 Shader::Shader(const std::vector<SubShader> &sub_shaders)
     : EngineComponentBase(),
-      m_shader_program(ShaderProgramRef::Construct()),
+      m_shader_program(RenderObjects::Make<ShaderProgram>()),
       m_sub_shaders(sub_shaders)
 {
 }
 
 Shader::Shader(const CompiledShader &compiled_shader)
     : EngineComponentBase(),
-      m_shader_program(ShaderProgramRef::Construct())
+      m_shader_program(RenderObjects::Make<ShaderProgram>())
 {
     if (compiled_shader.IsValid()) {
         for (SizeType index = 0; index < compiled_shader.modules.Size(); index++) {
@@ -121,11 +121,9 @@ Shader::~Shader()
 {
     if (IsInitCalled()) {
         SetReady(false);
-
-        PUSH_RENDER_COMMAND(DestroyShaderProgram, m_shader_program);
-        
-        HYP_SYNC_RENDER();
     }
+
+    SafeRelease(std::move(m_shader_program));
 }
 
 void Shader::Init()

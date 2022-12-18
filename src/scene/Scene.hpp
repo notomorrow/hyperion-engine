@@ -219,6 +219,8 @@ private:
 
     void PushEntityToRender(const Handle<Entity> &entity, const RenderableAttributeSet *override_attributes);
 
+    bool IsEntityInFrustum(const Handle<Entity> &entity) const;
+
     Handle<Camera> m_camera;
     NodeProxy m_root_node_proxy;
     UniquePtr<RenderEnvironment> m_environment;

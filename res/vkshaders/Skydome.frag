@@ -37,8 +37,8 @@ layout(location=5) out vec4 gbuffer_mask;
 #define MIE_SCATTER_HEIGHT 1.2e3
 #define MIE_SCATTER_DIRECTION 0.758
 
-#define NUM_STEPS_X 16
-#define NUM_STEPS_Y 16
+#define NUM_STEPS_X 8
+#define NUM_STEPS_Y 8
 
 vec2 RaySphereIntersection(vec3 r0, vec3 rd, float sr)
 {
@@ -151,18 +151,27 @@ vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
 void main()
 {
     vec3 normal = normalize(v_normal);
+    
+    const float cutoff = -0.25;
+    const vec3 sky_color_bottom = vec3(0.0);
 
-    vec3 light_direction = normalize(light.position_intensity.xyz);
-    vec3 ray_direction = normalize(v_position);
+    vec3 sky_color = sky_color_bottom;
 
-    vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
+    if (v_position.y >= cutoff) {
+        vec3 light_direction = normalize(light.position_intensity.xyz);
+        vec3 ray_direction = normalize(v_position);
 
-    // exposure
-    vec3 sky_color = atmosphere;
-    sky_color = 1.0 - exp(-1.0 * sky_color);
+        vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
 
-    // sky will not be tonemapped outside of this:
-    sky_color = Tonemap(sky_color);
+        sky_color = atmosphere;
+        // exposure
+        sky_color = 1.0 - exp(-1.0 * sky_color);
+
+        // sky will not be tonemapped outside of this:
+        sky_color = Tonemap(sky_color);
+    }
+
+    sky_color = mix(sky_color, sky_color_bottom, 1.0 - smoothstep(cutoff, 0.0, v_position.y));
 
     gbuffer_albedo = vec4(sky_color, 0.0);
 

@@ -176,6 +176,30 @@ Result CommandBuffer::SubmitSecondary(CommandBuffer *primary)
     HYPERION_RETURN_OK;
 }
 
+void CommandBuffer::BindVertexBuffer(const GPUBuffer *buffer)
+{
+    AssertThrow(buffer != nullptr);
+    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", UInt(buffer->GetBufferType()));
+    
+    const VkBuffer vertex_buffers[] = { buffer->buffer };
+    static const VkDeviceSize offsets[] = { 0 };
+
+    vkCmdBindVertexBuffers(m_command_buffer, 0, 1, vertex_buffers, offsets);
+}
+
+void CommandBuffer::BindIndexBuffer(const GPUBuffer *buffer, DatumType datum_type)
+{
+    AssertThrow(buffer != nullptr);
+    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", UInt(buffer->GetBufferType()));
+    
+    vkCmdBindIndexBuffer(
+        m_command_buffer,
+        buffer->buffer,
+        0,
+        helpers::ToVkIndexType(datum_type)
+    );
+}
+
 void CommandBuffer::DrawIndexed(
     UInt32 num_indices,
     UInt32 num_instances,

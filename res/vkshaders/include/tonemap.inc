@@ -1,6 +1,6 @@
 #define HDR 1
-#define HDR_TONEMAP_UNCHARTED 1
-//#define HDR_TONEMAP_FILMIC 1
+//#define HDR_TONEMAP_UNCHARTED 1
+#define HDR_TONEMAP_FILMIC 1
 //#define HDR_TONEMAP_UNREAL 1
 //#define HDR_TONEMAP_REINHARD 1
 
@@ -34,10 +34,12 @@ vec3 TonemapUncharted(vec3 x)
 
 vec3 TonemapFilmic(vec3 x)
 {
+    //x = 1.0 - exp(-1.0 * x);
+
     vec3 X = max(vec3(0.0), x - 0.004);
     vec3 result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
   
-    return pow(result, vec3(2.2));
+    return result;
 }
 
 vec3 TonemapUnreal(vec3 x)
@@ -64,6 +66,16 @@ vec3 TonemapReinhard(vec3 x)
     float numerator = l_old * (1.0f + (l_old / (max_white_l * max_white_l)));
     float l_new = numerator / (1.0f + l_old);
     return ChangeLuminance(x, l_new);
+}
+
+vec3 TonemapReinhardSimple(vec3 x)
+{
+    return x / (vec3(1.0) + x);
+}
+
+vec4 TonemapReinhardSimple(vec4 x)
+{
+    return vec4(x.rgb / (vec3(1.0) + x.rgb), x.a);
 }
 
 vec3 Tonemap(vec3 x) {

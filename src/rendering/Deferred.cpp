@@ -376,10 +376,6 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         if (mipmapped_result->GetGPUImage()->GetResourceState() != renderer::ResourceState::UNDEFINED) {
             m_ssr.Render(frame);
         }
-    } else if (use_rt_radiance) { // rt radiance
-        DebugMarker marker(primary, "RT Radiance");
-
-        environment->RenderRTRadiance(frame);
     }
 
     { // indirect lighting
@@ -404,6 +400,12 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_opaque_fbo->EndCapture(frame_index, primary);
     }
     // end opaque objs
+
+    if (use_rt_radiance) { // rt radiance
+        DebugMarker marker(primary, "RT Radiance");
+
+        environment->RenderRTRadiance(frame);
+    }
 
     if (use_hbao || use_hbil) {
         m_hbao->Render(frame);

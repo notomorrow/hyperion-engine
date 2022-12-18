@@ -35,7 +35,7 @@ layout(location=0) out vec4 output_color;
 #include "include/tonemap.inc"
 #include "include/PhysicalCamera.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.01
+#define HYP_CUBEMAP_AMBIENT 0.1
 
 vec3 GetCubemapCoord(uint face, vec2 uv)
 {
@@ -134,6 +134,6 @@ void main()
     output_color.a = shadow;
 
 #ifdef LIGHTING
-    output_color.rgb = Tonemap(output_color.rgb);
+    // output_color.rgb = Tonemap(output_color.rgb);
 #endif
 }

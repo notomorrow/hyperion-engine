@@ -44,7 +44,7 @@ void DebugSetOutputStream(FILE *stream) {
     debug_output_stream = stream;
 }
 
-#ifdef HYPERION_BUILD_RELEASE
+#ifndef HYP_DEBUG_MODE
 void DebugLog_(LogType type, const char *fmt, ...) {
     /* Coloured files are less that ideal */
     const int type_n = static_cast<std::underlying_type<LogType>::type>(type);

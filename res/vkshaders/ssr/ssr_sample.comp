@@ -4,24 +4,13 @@
 #include "ssr_header.inc"
 #include "../include/noise.inc"
 #include "../include/shared.inc"
+#include "../include/tonemap.inc"
 
-#define SSR_KERNEL_SIZE 8
-//#define SSR_CONE_SAMPLING
+#define SSR_CONE_SAMPLING
 
-layout(set = 0, binding = 0, rgba16f) uniform readonly image2D ssr_uv_image;
-layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D ssr_sample;
+layout(set = 0, binding = 0, rgba8) uniform readonly image2D ssr_uv_image;
+layout(set = 0, binding = 1, rgba8) uniform writeonly image2D ssr_sample;
 layout(set = 0, binding = 2, r8) uniform writeonly image2D ssr_radius;
-
-const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE]( 
-    vec2(0, 0),
-    vec2(2, -2),
-    vec2(-2, -2),
-    vec2(0, 2),
-    vec2(-2, 0),
-    vec2(0, -2),
-    vec2(2, 0),
-    vec2(2, 2)
-);
 
 float IsoscelesTriangleOpposite(float adjacent_length, float cone_theta)
 {
@@ -65,6 +54,9 @@ void main(void)
     float depth = SampleDepth(texcoord);
 
     if (depth > 0.9995) {
+        // TODO: Sky texture sample here.
+        imageStore(ssr_sample, coord, vec4(0.0));
+        imageStore(ssr_radius, coord, vec4(0.0));
         return;
     }
 
@@ -111,7 +103,7 @@ void main(void)
 
             vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_albedo_texture, hit_uv, mip_level);
 
-#if SSR_CONE_SAMPLING
+#ifdef SSR_CONE_SAMPLING
             current_reflection_sample.rgb *= vec3(gloss_multiplier);
             current_reflection_sample.a = gloss_multiplier;
 
@@ -144,6 +136,8 @@ void main(void)
 
     out_radius = accum_radius;
 
-    imageStore(ssr_sample, coord, reflection_sample);
+    // reflection_sample.rgb = Tonemap(reflection_sample.rgb);
+
+    imageStore(ssr_sample, coord, vec4(pow(reflection_sample.rgb, vec3(1.0 / 2.2)), reflection_sample.a));
     imageStore(ssr_radius, coord, vec4(out_radius / 255.0));
 }

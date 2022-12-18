@@ -424,20 +424,97 @@ void GPUMemory::Destroy()
     stats.DecMemoryUsage(size);
 }
 
+static VkBufferUsageFlags GetVkUsageFlags(GPUBufferType type)
+{
+    switch (type) {
+    case GPUBufferType::MESH_VERTEX_BUFFER:
+        return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    case GPUBufferType::MESH_INDEX_BUFFER:
+        return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    case GPUBufferType::CONSTANT_BUFFER:
+        return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    case GPUBufferType::STORAGE_BUFFER:
+        return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    case GPUBufferType::ATOMIC_COUNTER:
+        return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+          | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+          | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    case GPUBufferType::STAGING_BUFFER:
+        return VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    case GPUBufferType::INDIRECT_ARGS_BUFFER:
+        return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
+          | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    case GPUBufferType::SHADER_BINDING_TABLE:
+        return VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    case GPUBufferType::ACCELERATION_STRUCTURE_BUFFER:
+        return VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    case GPUBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER:
+        return VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    case GPUBufferType::RT_MESH_VERTEX_BUFFER:
+        return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    case GPUBufferType::RT_MESH_INDEX_BUFFER:
+        return VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    case GPUBufferType::SCRATCH_BUFFER:
+        return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    default:
+        return 0;
+    }
+}
 
-GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags,
-    VmaMemoryUsage vma_usage,
-    VmaAllocationCreateFlags vma_allocation_create_flags
-) : GPUMemory(),
-    buffer(nullptr),
-    usage_flags(usage_flags),
-    vma_usage(vma_usage),
-    vma_allocation_create_flags(vma_allocation_create_flags)
+static VmaMemoryUsage GetVkMemoryUsage(GPUBufferType type)
+{
+    switch (type) {
+    case GPUBufferType::MESH_VERTEX_BUFFER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::MESH_INDEX_BUFFER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::CONSTANT_BUFFER:
+        return VMA_MEMORY_USAGE_AUTO;
+    case GPUBufferType::STORAGE_BUFFER:
+        return VMA_MEMORY_USAGE_AUTO;
+    case GPUBufferType::ATOMIC_COUNTER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::STAGING_BUFFER:
+        return VMA_MEMORY_USAGE_CPU_ONLY;
+    case GPUBufferType::INDIRECT_ARGS_BUFFER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::SHADER_BINDING_TABLE:
+        return VMA_MEMORY_USAGE_AUTO;
+    case GPUBufferType::ACCELERATION_STRUCTURE_BUFFER:
+        return VMA_MEMORY_USAGE_AUTO;
+    case GPUBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER:
+        return VMA_MEMORY_USAGE_AUTO;
+    case GPUBufferType::RT_MESH_VERTEX_BUFFER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::RT_MESH_INDEX_BUFFER:
+        return VMA_MEMORY_USAGE_GPU_ONLY;
+    case GPUBufferType::SCRATCH_BUFFER:
+        return VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+    default:
+        return VMA_MEMORY_USAGE_UNKNOWN;
+    }
+}
+
+GPUBuffer::GPUBuffer(GPUBufferType type)
+    : GPUMemory(),
+      type(type),
+      buffer(nullptr),
+      usage_flags(GetVkUsageFlags(type)),
+      vma_usage(GetVkMemoryUsage(type)),
+      vma_allocation_create_flags(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)
 {
 }
 
 GPUBuffer::GPUBuffer(GPUBuffer &&other) noexcept
     : GPUMemory(static_cast<GPUMemory &&>(std::move(other))),
+      type(other.type),
       buffer(other.buffer),
       usage_flags(other.usage_flags),
       vma_usage(other.vma_usage),
@@ -829,10 +906,7 @@ void GPUBuffer::DebugLogBuffer(Instance *instance) const
 
 
 VertexBuffer::VertexBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::MESH_VERTEX_BUFFER)
 {
 }
 
@@ -845,10 +919,7 @@ void VertexBuffer::Bind(CommandBuffer *cmd)
 }
 
 IndexBuffer::IndexBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::MESH_INDEX_BUFFER)
 {
 }
 
@@ -863,41 +934,27 @@ void IndexBuffer::Bind(CommandBuffer *cmd)
 }
 
 UniformBuffer::UniformBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+    : GPUBuffer(GPUBufferType::CONSTANT_BUFFER)
 {
 }
 
 StorageBuffer::StorageBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+    : GPUBuffer(GPUBufferType::STORAGE_BUFFER)
 {
 }
 
 AtomicCounterBuffer::AtomicCounterBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-          | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-          | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::ATOMIC_COUNTER)
 {
 }
 
 StagingBuffer::StagingBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-          VMA_MEMORY_USAGE_CPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::STAGING_BUFFER)
 {
 }
 
 IndirectBuffer::IndirectBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
-          | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-          | VK_BUFFER_USAGE_TRANSFER_SRC_BIT /* for debug */,
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::INDIRECT_ARGS_BUFFER)
 {
 }
 
@@ -911,55 +968,33 @@ void IndirectBuffer::DispatchIndirect(CommandBuffer *command_buffer, SizeType of
 }
 
 ShaderBindingTableBuffer::ShaderBindingTableBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-      ),
+    : GPUBuffer(GPUBufferType::SHADER_BINDING_TABLE),
       region{}
 {
 }
 
 AccelerationStructureBuffer::AccelerationStructureBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-      )
+    : GPUBuffer(GPUBufferType::ACCELERATION_STRUCTURE_BUFFER)
 {
 }
 
 AccelerationStructureInstancesBuffer::AccelerationStructureInstancesBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-      )
+    : GPUBuffer(GPUBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER)
 {
 }
 
 PackedVertexStorageBuffer::PackedVertexStorageBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
-            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
-            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::RT_MESH_VERTEX_BUFFER)
 {
 }
 
 PackedIndexStorageBuffer::PackedIndexStorageBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
-            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
-            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
-          VMA_MEMORY_USAGE_GPU_ONLY
-      )
+    : GPUBuffer(GPUBufferType::RT_MESH_INDEX_BUFFER)
 {
 }
 
 ScratchBuffer::ScratchBuffer()
-    : GPUBuffer(
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE
-      )
+    : GPUBuffer(GPUBufferType::SCRATCH_BUFFER)
 {
 }
 

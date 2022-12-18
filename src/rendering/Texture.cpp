@@ -110,9 +110,9 @@ Texture::Texture(
     FilterMode filter_mode,
     WrapMode wrap_mode
 ) : EngineComponentBase(),
-    m_image(ImageRef::Construct(std::move(image))),
-    m_image_view(ImageViewRef::Construct()),
-    m_sampler(SamplerRef::Construct(filter_mode, wrap_mode))
+    m_image(RenderObjects::Make<Image>(std::move(image))),
+    m_image_view(RenderObjects::Make<ImageView>()),
+    m_sampler(RenderObjects::Make<Sampler>(filter_mode, wrap_mode))
 {
     AssertThrow(m_image.GetRefCount() != 0);
 }

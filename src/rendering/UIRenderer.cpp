@@ -69,10 +69,10 @@ struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommand
     }
 };
 
-UIRenderer::UIRenderer(Handle<Scene> &&scene)
+UIRenderer::UIRenderer(const Handle<Scene> &scene)
     : EngineComponentBase(),
       RenderComponent(),
-      m_scene(std::move(scene))
+      m_scene(scene)
 {
 }
 

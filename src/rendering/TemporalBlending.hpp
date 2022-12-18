@@ -66,7 +66,7 @@ public:
     TemporalBlending(
         const Extent2D &extent,
         TemporalBlendTechnique technique,
-        const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
+        const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
     );
 
     TemporalBlending(
@@ -80,7 +80,7 @@ public:
         const Extent2D &extent,
         InternalFormat image_format,
         TemporalBlendTechnique technique,
-        const FixedArray<ImageView *, max_frames_in_flight> &input_image_views
+        const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
     );
 
     TemporalBlending(const TemporalBlending &other) = delete;
@@ -107,7 +107,7 @@ private:
     InternalFormat m_image_format;
     TemporalBlendTechnique m_technique;
 
-    FixedArray<ImageView *, max_frames_in_flight> m_input_image_views;
+    FixedArray<ImageViewRef, max_frames_in_flight> m_input_image_views;
 
     Handle<ComputePipeline> m_perform_blending;
 

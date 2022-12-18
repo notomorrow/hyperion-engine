@@ -11,18 +11,18 @@
     #define HYP_SSR_BLUR_MULTIPLIER 30.0
 #endif
 
-layout(set = 0, binding = 1, rgba16f) uniform readonly image2D ssr_sample_image;
+layout(set = 0, binding = 1, rgba8) uniform readonly image2D ssr_sample_image;
 layout(set = 0, binding = 2, r8) uniform readonly image2D ssr_radius_image;
 layout(set = 0, binding = 6) uniform texture2D ssr_sample;
 layout(set = 0, binding = 7) uniform texture2D ssr_radius;
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
-    layout(set = 0, binding = 3, rgba16f) uniform writeonly image2D ssr_blur;
+    layout(set = 0, binding = 3, rgba8) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE ssr_sample_image
     #define HYP_SSR_PREV_TEXTURE ssr_sample
 #elif defined(HYP_SSR_BLUR_VERTICAL)
-    layout(set = 0, binding = 3, rgba16f) uniform readonly image2D ssr_blur_hor_image;
-    layout(set = 0, binding = 4, rgba16f) uniform writeonly image2D ssr_blur;
+    layout(set = 0, binding = 3, rgba8) uniform readonly image2D ssr_blur_hor_image;
+    layout(set = 0, binding = 4, rgba8) uniform writeonly image2D ssr_blur;
     layout(set = 0, binding = 8) uniform texture2D ssr_blur_hor;
     #define HYP_SSR_PREV_IMAGE ssr_blur_hor_image
     #define HYP_SSR_PREV_TEXTURE ssr_blur_hor
@@ -130,5 +130,5 @@ void main(void)
 //     reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
 // #endif
 
-    imageStore(ssr_blur, coord, reflection_sample);
+    imageStore(ssr_blur, coord, clamp(reflection_sample, vec4(0.0), vec4(1.0)));
 }

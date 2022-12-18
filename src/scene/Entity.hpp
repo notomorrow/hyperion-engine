@@ -199,6 +199,8 @@ public:
 
     void SetWorldAABB(const BoundingBox &aabb)
         { m_world_aabb = aabb; }
+
+    bool IsVisibleInScene(ID<Scene> id) const;
     
     bool IsReady() const;
 

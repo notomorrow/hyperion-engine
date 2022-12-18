@@ -37,6 +37,7 @@ struct RenderCommand_DestroySSRInstance;
 class SSRRenderer
 {
     static constexpr bool use_temporal_blending = true;
+    static constexpr bool blur_result = false;
 
 public:
     friend struct RenderCommand_CreateSSRImageOutputs;
@@ -59,19 +60,16 @@ private:
     
     struct ImageOutput
     {
-        StorageImage image;
-        ImageView image_view;
+        ImageRef image;
+        ImageViewRef image_view;
 
         void Create(Device *device)
         {
-            HYPERION_ASSERT_RESULT(image.Create(device));
-            HYPERION_ASSERT_RESULT(image_view.Create(device, &image));
-        }
+            AssertThrow(image.IsValid());
+            AssertThrow(image_view.IsValid());
 
-        void Destroy(Device *device)
-        {
-            HYPERION_ASSERT_RESULT(image.Destroy(device));
-            HYPERION_ASSERT_RESULT(image_view.Destroy(device));
+            HYPERION_ASSERT_RESULT(image->Create(device));
+            HYPERION_ASSERT_RESULT(image_view->Create(device, image));
         }
     };
 
@@ -79,15 +77,15 @@ private:
 
     FixedArray<FixedArray<ImageOutput, 4>, max_frames_in_flight> m_image_outputs;
     FixedArray<ImageOutput, max_frames_in_flight> m_radius_output;
-    FixedArray<UniquePtr<UniformBuffer>, max_frames_in_flight> m_uniform_buffers;
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<GPUBufferRef, max_frames_in_flight> m_uniform_buffers;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     
     Handle<ComputePipeline> m_write_uvs;
     Handle<ComputePipeline> m_sample;
     Handle<ComputePipeline> m_blur_hor;
     Handle<ComputePipeline> m_blur_vert;
 
-    TemporalBlending m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporal_blending;
 
     bool m_is_rendered;
 };
