@@ -9,6 +9,7 @@
 #include <math/Color.hpp>
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
+#include <math/Vector4.hpp>
 
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
@@ -50,7 +51,7 @@ enum class DebugDrawShape
 struct DebugDrawCommand
 {
     DebugDrawShape shape;
-    Transform transform;
+    Matrix4 transform_matrix;
     Color color;
 };
 
@@ -99,7 +100,7 @@ public:
     
     void Sphere(const Vector3 &position, Float radius = 1.0f, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
     void Box(const Vector3 &position, const Vector3 &size = Vector3::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
-    void Plane(const Vector3 &position, const Vector2 &size = Vector2::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Plane(const FixedArray<Vector3, 4> &points, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
 
 private:
     void UpdateDrawCommands();

@@ -18,19 +18,20 @@
 namespace hyperion::v2 {
 
 using renderer::Result;
+using renderer::GPUBufferType;
 
 struct RENDER_COMMAND(UploadMeshData) : RenderCommand
 {
     std::vector<Float> vertex_data;
     std::vector<Mesh::Index> index_data;
-    renderer::VertexBuffer *vbo;
-    renderer::IndexBuffer *ibo;
+    GPUBufferRef vbo;
+    GPUBufferRef ibo;
 
     RENDER_COMMAND(UploadMeshData)(
         const std::vector<Float> &vertex_data,
         const std::vector<Mesh::Index> &index_data,
-        renderer::VertexBuffer *vbo,
-        renderer::IndexBuffer *ibo
+        const GPUBufferRef &vbo,
+        const GPUBufferRef &ibo
     ) : vertex_data(vertex_data),
         index_data(index_data),
         vbo(vbo),
@@ -81,32 +82,6 @@ struct RENDER_COMMAND(UploadMeshData) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyMeshData) : RenderCommand
-{
-    renderer::VertexBuffer *vbo;
-    renderer::IndexBuffer *ibo;
-
-    RENDER_COMMAND(DestroyMeshData)(
-        renderer::VertexBuffer *vbo,
-        renderer::IndexBuffer *ibo
-    ) : vbo(vbo),
-        ibo(ibo)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        auto result = renderer::Result::OK;
-
-        auto *device = Engine::Get()->GetGPUDevice();
-        
-        HYPERION_PASS_ERRORS(vbo->Destroy(device), result);
-        HYPERION_PASS_ERRORS(ibo->Destroy(device), result);
-
-        return result;
-    }
-};
-
 std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
 Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 {
@@ -146,39 +121,48 @@ Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
     Topology topology,
-    const VertexAttributeSet &vertex_attributes,
-    Flags flags
+    const VertexAttributeSet &vertex_attributes
 ) : EngineComponentBase(),
-    m_vbo(std::make_unique<VertexBuffer>()),
-    m_ibo(std::make_unique<IndexBuffer>()),
+    m_vbo(RenderObjects::Make<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER)),
+    m_ibo(RenderObjects::Make<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER)),
     m_mesh_attributes {
         .vertex_attributes = vertex_attributes,
         .topology = topology
     },
     m_vertices(vertices),
-    m_indices(indices),
-    m_flags(flags)
+    m_indices(indices)
 {
 }
 
 Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
-    Topology topology,
-    Flags flags
+    Topology topology
 ) : Mesh(
         vertices,
         indices,
         topology,
-        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-        flags
+        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
     )
 {
 }
 
 Mesh::~Mesh()
 {
-    Teardown();
+    if (IsInitCalled()) {
+        SetReady(false);
+
+        DebugLog(
+            LogType::Debug,
+            "Destroy mesh with id %u\n",
+            GetID().Value()
+        );
+
+        m_indices_count = 0;
+
+        SafeRelease(std::move(m_vbo));
+        SafeRelease(std::move(m_ibo));
+    }
 }
 
 void Mesh::Init()
@@ -225,36 +209,15 @@ void Mesh::Init()
 
     m_indices_count = m_indices.size();
 
-    RenderCommands::Push<RENDER_COMMAND(UploadMeshData)>(
+    PUSH_RENDER_COMMAND(
+        UploadMeshData,
         BuildVertexBuffer(),
         m_indices,
-        m_vbo.get(),
-        m_ibo.get()
+        m_vbo,
+        m_ibo
     );
             
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        DebugLog(
-            LogType::Debug,
-            "Destroy mesh with id %u\n",
-            GetID().Value()
-        );
-
-        m_indices_count = 0;
-
-        RenderCommands::Push<RENDER_COMMAND(DestroyMeshData)>(
-            m_vbo.get(),
-            m_ibo.get()
-        );
-        
-        HYP_SYNC_RENDER();
-
-        m_vbo.reset();
-        m_ibo.reset();
-    });
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
@@ -315,10 +278,8 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 void Mesh::Render(CommandBuffer *cmd, SizeType num_instances) const
 {
-    AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
-
-    m_vbo->Bind(cmd);
-    m_ibo->Bind(cmd);
+    cmd->BindVertexBuffer(m_vbo);
+    cmd->BindIndexBuffer(m_ibo);
 
     cmd->DrawIndexed(UInt32(m_indices_count), UInt32(num_instances));
 }
@@ -329,10 +290,8 @@ void Mesh::RenderIndirect(
     UInt32 buffer_offset
 ) const
 {
-    AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
-
-    m_vbo->Bind(cmd);
-    m_ibo->Bind(cmd);
+    cmd->BindVertexBuffer(m_vbo);
+    cmd->BindIndexBuffer(m_ibo);
 
     cmd->DrawIndexedIndirect(
         indirect_buffer,

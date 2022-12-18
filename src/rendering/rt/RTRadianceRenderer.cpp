@@ -72,26 +72,14 @@ struct RENDER_COMMAND(CreateRTRadiancePipeline) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyRTRadianceRenderer) : RenderCommand
+struct RENDER_COMMAND(RemoveRTRadianceDescriptors) : RenderCommand
 {
-    RTRadianceRenderer::ImageOutput *image_outputs;
-
-    RENDER_COMMAND(DestroyRTRadianceRenderer)(RTRadianceRenderer::ImageOutput *image_outputs)
-        : image_outputs(image_outputs)
-    {
-    }
-
     virtual Result operator()()
     {
         auto result = Result::OK;
 
         // remove result image from global descriptor set
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_PASS_ERRORS(
-                image_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice()),
-                result
-            );
-
             auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
@@ -128,27 +116,13 @@ struct RENDER_COMMAND(CreateRTRadianceImageOutputs) : RenderCommand
 
 Result RTRadianceRenderer::ImageOutput::Create(Device *device)
 {
-    HYPERION_BUBBLE_ERRORS(image.Create(device));
-    HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
+    AssertThrow(image.IsValid());
+    AssertThrow(image_view.IsValid());
+
+    HYPERION_BUBBLE_ERRORS(image->Create(device));
+    HYPERION_BUBBLE_ERRORS(image_view->Create(device, image));
 
     HYPERION_RETURN_OK;
-}
-
-Result RTRadianceRenderer::ImageOutput::Destroy(Device *device)
-{
-    auto result = Result::OK;
-
-    HYPERION_PASS_ERRORS(
-        image.Destroy(device),
-        result
-    );
-
-    HYPERION_PASS_ERRORS(
-        image_view.Destroy(device),
-        result
-    );
-
-    return result;
 }
 
 RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
@@ -165,12 +139,6 @@ RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent)
               ImageType::TEXTURE_TYPE_2D
           ))
       },
-      m_temporal_blending(
-          extent,
-          InternalFormat::RGBA8,
-          TemporalBlendTechnique::TECHNIQUE_2,
-          FixedArray<ImageView *, max_frames_in_flight> { &m_image_outputs[0].image_view, &m_image_outputs[1].image_view }
-      ),
       m_has_tlas_updates { false, false }
 {
 }
@@ -194,7 +162,7 @@ void RTRadianceRenderer::Create()
 
 void RTRadianceRenderer::Destroy()
 {
-    m_temporal_blending.Destroy();
+    m_temporal_blending->Destroy();
 
     Engine::Get()->SafeReleaseHandle(std::move(m_shader));
 
@@ -204,8 +172,14 @@ void RTRadianceRenderer::Destroy()
     for (auto &descriptor_set : m_descriptor_sets) {
         SafeRelease(std::move(descriptor_set));
     }
+    
+    // remove result image from global descriptor set
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        SafeRelease(std::move(m_image_outputs[frame_index].image));
+        SafeRelease(std::move(m_image_outputs[frame_index].image_view));
+    }
 
-    PUSH_RENDER_COMMAND(DestroyRTRadianceRenderer, m_image_outputs.Data());
+    PUSH_RENDER_COMMAND(RemoveRTRadianceDescriptors);
 
     HYP_SYNC_RENDER();
 }
@@ -246,7 +220,7 @@ void RTRadianceRenderer::Render(Frame *frame)
         2
     );
 
-    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()->InsertBarrier(
+    m_image_outputs[frame->GetFrameIndex()].image->GetGPUImage()->InsertBarrier(
         frame->GetCommandBuffer(),
         ResourceState::UNORDERED_ACCESS
     );
@@ -254,15 +228,15 @@ void RTRadianceRenderer::Render(Frame *frame)
     m_raytracing_pipeline->TraceRays(
         Engine::Get()->GetGPUDevice(),
         frame->GetCommandBuffer(),
-        m_image_outputs[frame->GetFrameIndex()].image.GetExtent()
+        m_image_outputs[frame->GetFrameIndex()].image->GetExtent()
     );
 
-    m_image_outputs[frame->GetFrameIndex()].image.GetGPUImage()->InsertBarrier(
+    m_image_outputs[frame->GetFrameIndex()].image->GetGPUImage()->InsertBarrier(
         frame->GetCommandBuffer(),
         ResourceState::SHADER_RESOURCE
     );
 
-    m_temporal_blending.Render(frame);
+    m_temporal_blending->Render(frame);
 }
 
 void RTRadianceRenderer::CreateImages()
@@ -296,13 +270,13 @@ void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
 void RTRadianceRenderer::CreateDescriptorSets()
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = DescriptorSetRef::Construct();
+        auto descriptor_set = RenderObjects::Make<DescriptorSet>();
 
         descriptor_set->GetOrAddDescriptor<TlasDescriptor>(0)
             ->SetElementAccelerationStructure(0, &m_tlas->GetInternalTLAS());
 
         descriptor_set->GetOrAddDescriptor<StorageImageDescriptor>(1)
-            ->SetElementUAV(0, &m_image_outputs[frame_index].image_view);
+            ->SetElementUAV(0, m_image_outputs[frame_index].image_view);
         
         // mesh descriptions
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(2)
@@ -315,6 +289,31 @@ void RTRadianceRenderer::CreateDescriptorSets()
         // entities
         descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(4)
             ->SetElementBuffer(0, Engine::Get()->shader_globals->objects.GetBuffers()[frame_index].get());
+        
+        descriptor_set // gbuffer normals texture
+            ->AddDescriptor<ImageDescriptor>(5)
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView());
+
+        descriptor_set // gbuffer material texture
+            ->AddDescriptor<ImageDescriptor>(6)
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .GetGBufferAttachment(GBUFFER_RESOURCE_MATERIAL)->GetImageView());
+
+        descriptor_set // gbuffer albedo texture
+            ->AddDescriptor<ImageDescriptor>(7)
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
+                .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+
+        // nearest sampler
+        descriptor_set
+            ->AddDescriptor<renderer::SamplerDescriptor>(8)
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
+
+        // linear sampler
+        descriptor_set
+            ->AddDescriptor<renderer::SamplerDescriptor>(9)
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
@@ -323,8 +322,8 @@ void RTRadianceRenderer::CreateDescriptorSets()
         CreateRTRadianceDescriptorSets,
         m_descriptor_sets,
         FixedArray<ImageViewRef, max_frames_in_flight> {
-            m_temporal_blending.GetImageOutput(0).image_view,
-            m_temporal_blending.GetImageOutput(1).image_view
+            m_temporal_blending->GetImageOutput(0).image_view,
+            m_temporal_blending->GetImageOutput(1).image_view
         }
     );
 }
@@ -336,7 +335,7 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
         return;
     }
 
-    m_raytracing_pipeline = RaytracingPipelineRef::Construct(
+    m_raytracing_pipeline = RenderObjects::Make<RaytracingPipeline>(
         Array<const DescriptorSet *> {
             m_descriptor_sets[0].Get(),
             Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
@@ -355,7 +354,14 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
 
 void RTRadianceRenderer::CreateTemporalBlending()
 {
-    m_temporal_blending.Create();
+    m_temporal_blending.Reset(new TemporalBlending(
+      m_extent,
+      InternalFormat::RGBA8,
+      TemporalBlendTechnique::TECHNIQUE_3,
+      FixedArray<ImageViewRef, max_frames_in_flight> { m_image_outputs[0].image_view, m_image_outputs[1].image_view }
+    ));
+
+    m_temporal_blending->Create();
 }
 
 } // namespace hyperion::v2

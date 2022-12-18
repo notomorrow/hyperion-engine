@@ -72,11 +72,12 @@ private:
     
     struct ImageOutput
     {
-        StorageImage image;
-        ImageView image_view;
+        ImageRef image;
+        ImageViewRef image_view;
 
         ImageOutput(StorageImage &&image)
-            : image(std::move(image))
+            : image(RenderObjects::Make<Image>(std::move(image))),
+              image_view(RenderObjects::Make<ImageView>())
         {
         }
 
@@ -90,7 +91,6 @@ private:
         ~ImageOutput() = default;
 
         Result Create(Device *device);
-        Result Destroy(Device *device);
     };
 
     Extent2D m_extent;
@@ -99,7 +99,7 @@ private:
     Handle<Shader> m_shader;
 
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
-    TemporalBlending m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporal_blending;
 
     RaytracingPipelineRef m_raytracing_pipeline;
     FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;

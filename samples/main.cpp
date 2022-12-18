@@ -136,7 +136,7 @@ public:
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj"); //"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -306,12 +306,12 @@ public:
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
                 test_model.GetWorldAABB(),
-                Extent3D { 4, 2, 4 }
+                Extent3D { 1, 1, 1 }
             );
         }
 
         { // allow ui rendering
-            m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(Handle<Scene>(GetUI().GetScene()));
+            m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(GetUI().GetScene());
         }
 
         cube_obj.Scale(50.0f);
@@ -440,11 +440,13 @@ public:
             plane->SetScale(250.0f);
             plane->SetMaterial(CreateObject<Material>());
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.001f);
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.03f);
+            //plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(15.0f));
+            //plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
+            //plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            //plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
+            plane->GetMaterial()->SetFaceCullMode(FaceCullMode::NONE);
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
             plane->RebuildRenderableAttributes();
             GetScene()->AddEntity(Handle<Entity>(plane));
@@ -499,6 +501,7 @@ public:
 
         GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie").GetWorldTranslation());
 
+
         for (auto &light : m_point_lights) {
             light->SetPosition(Vector3(
                 MathUtil::Sin(light->GetID().Value() + timer) * 30.0f,
@@ -536,10 +539,6 @@ public:
         }
 
         // m_sun->SetPosition(Vector3(MathUtil::Sin(timer * 0.25f), MathUtil::Cos(timer * 0.25f), -MathUtil::Sin(timer * 0.25f)).Normalize());
-
-        if (auto house = GetScene()->GetRoot().Select("house")) {
-            //house.Rotate(Quaternion(Vector3(0, 1, 0), 0.1f * delta));
-        }
 
         #if 1 // bad performance on large meshes. need bvh
         if (GetInputManager()->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {

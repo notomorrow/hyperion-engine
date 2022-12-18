@@ -342,7 +342,7 @@ void EnvGrid::CreateShader()
 {
     m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
         "CubemapRenderer",
-        ShaderProps({ "SHADOWS" })
+        ShaderProps({ "LIGHTING", "SHADOWS" })
     ));
 
     InitObject(m_shader);

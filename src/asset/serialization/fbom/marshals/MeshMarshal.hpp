@@ -21,7 +21,6 @@ public:
     virtual FBOMResult Serialize(const Mesh &in_object, FBOMObject &out) const override
     {
         out.SetProperty("topology", FBOMUnsignedInt(), in_object.GetTopology());
-        out.SetProperty("flags", FBOMUnsignedInt(), in_object.GetFlags());
         out.SetProperty("attributes", FBOMStruct(sizeof(VertexAttributeSet)), &in_object.GetVertexAttributes());
     
         // dump vertices and indices
@@ -57,12 +56,6 @@ public:
         Topology topology = Topology::TRIANGLES;
 
         if (auto err = in.GetProperty("topology").ReadUnsignedInt(&topology)) {
-            return err;
-        }
-
-        Mesh::Flags flags;
-
-        if (auto err = in.GetProperty("flags").ReadUnsignedInt(&flags)) {
             return err;
         }
 
@@ -104,8 +97,7 @@ public:
             vertices,
             indices,
             topology,
-            vertex_attributes,
-            flags
+            vertex_attributes
         ));
 
         return { FBOMResult::FBOM_OK };

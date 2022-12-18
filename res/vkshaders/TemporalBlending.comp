@@ -9,12 +9,14 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #ifndef OUTPUT_FORMAT
     #if defined(OUTPUT_RGBA8)
         #define OUTPUT_FORMAT rgba8
+        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
     #elif defined(OUTPUT_RGBA16F)
         #define OUTPUT_FORMAT rgba16f
     #elif defined(OUTPUT_RGBA32F)
         #define OUTPUT_FORMAT rgba32f
     #else
         #define OUTPUT_FORMAT rgba8
+        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
     #endif
 #endif
 

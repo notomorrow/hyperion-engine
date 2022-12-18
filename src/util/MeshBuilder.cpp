@@ -247,8 +247,7 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transform &tran
         new_vertices,
         mesh->GetIndices(),
         mesh->GetTopology(),
-        mesh->GetVertexAttributes(),
-        mesh->GetFlags()
+        mesh->GetVertexAttributes()
     );
 }
 
@@ -286,8 +285,7 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Transform &a
         all_vertices,
         all_indices,
         a->GetTopology(),
-        merged_vertex_attributes,
-        a->GetFlags()
+        merged_vertex_attributes
     );
 }
 

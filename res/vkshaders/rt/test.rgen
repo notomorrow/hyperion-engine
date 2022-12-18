@@ -8,15 +8,23 @@
 #include "../include/defines.inc"
 #include "../include/noise.inc"
 #include "../include/packing.inc"
+#include "../include/tonemap.inc"
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 // radiance image
 layout(set = 0, binding = 1, rgba8) uniform image2D image;
 
+layout(set = 0, binding = 5) uniform texture2D gbuffer_normals_texture;
+layout(set = 0, binding = 6) uniform texture2D gbuffer_material_texture;
+layout(set = 0, binding = 7) uniform texture2D gbuffer_depth_texture;
+layout(set = 0, binding = 7) uniform sampler sampler_nearest;
+layout(set = 0, binding = 8) uniform sampler sampler_linear;
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../include/scene.inc"
 #include "../include/shared.inc"
+#include "../include/packing.inc"
 #include "../include/noise.inc"
 #include "../include/brdf.inc"
 
@@ -35,7 +43,7 @@ const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define MAX_RECURSION 2
-#define RAY_OFFSET 1.0
+#define RAY_OFFSET 3.25
 #define NUM_SAMPLES 1
 #define NUM_ACCUMULATION_SAMPLES 6
 
@@ -72,8 +80,20 @@ mat3 getNormalSpace(in vec3 normal) {
 
 void main() 
 {
+    const ivec2 resolution = imageSize(image);
+    const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
+    const vec2 uv = (vec2(storage_coord) + 0.5) / vec2(resolution);
+
     const mat4 view_inverse = inverse(scene.view);
     const mat4 projection_inverse = inverse(scene.projection);
+
+    const vec3 normal = normalize(DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, uv, 0.0)));
+    const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
+    const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
+    const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
+    const vec3 V = normalize(scene.camera_position.xyz - position);
+    const vec3 R = normalize(reflect(-V, normal));
+
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
@@ -93,111 +113,37 @@ void main()
     const float noise_direction = RandomFloat(ray_seed);//InterleavedGradientNoise(vec2(pixel_coord));
     const float temporal_rotation = temporal_rotations[scene.frame_counter % 6] / 360.0;
 
-    // TODO: Only need one ray, we can just use screen space depth/normals
+
+    vec3 direction = normal;
+
     
-    uint pixel_seed = 0xabcdef;
-    const vec2 pixel_offset = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);
+    // const float cone_angle = RoughnessToConeAngle(material_data.r);
+    // const float cone_length = payload.distance;
+    // const float radius = cone_length * tan(cone_angle);
 
-    for (int sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
-        const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + pixel_offset;
-        const vec2 uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
-        const vec2 d = uv * 2.0 - 1.0;
+    const vec3 rnd = random_pcg3d(uvec3(scene.frame_counter % 6, gl_LaunchIDEXT.xy));
+    // vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
+    vec3 scattered_direction = RandomInHemisphere(rnd, normal);//CosWeightedRandomHemisphereDirectionHammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES, normal); //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES); 
+    const float perceptual_roughness = sqrt(material_data.r);
+
+    direction = mix(normal, normalize(scattered_direction), perceptual_roughness);// normalize(normal + scattered_direction * perceptual_roughness);
+    direction = reflect(-V, direction);
+    vec3 origin = position + normal * RAY_OFFSET;
         
-        vec4 target = projection_inverse * vec4(d.x, d.y, 1.0, 1.0);
-        vec4 direction = view_inverse * vec4(normalize(target.xyz / target.w), 0);
-        vec4 origin = view_inverse * vec4(0, 0, 0, 1);
+    traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+    
+    vec3 hit_position = origin + direction * payload.distance;
+    
+    RayHit hit;
+    hit.payload = payload;
+    hit.position = hit_position;
+    hits[0] = hit;
 
-        for (int ray_index = 0; ray_index < MAX_RECURSION; ray_index++) {
-            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-
-            vec4 pos = origin + direction * payload.distance;
-            pos /= pos.w;
-
-            RayHit hit;
-            hit.payload = payload;
-            hit.position = pos.xyz;
-            hits[ray_index] = hit;
-
-            if (payload.distance < 0.0) {
-                // color += hit.payload.color;
-                break;
-            } else if (ray_index < MAX_RECURSION - 1) {
-                vec4 hit_position = origin + direction * payload.distance;
-                
-                origin.xyz = hit_position.xyz + payload.normal * RAY_OFFSET;
-
-                const float angle = (noise_direction + temporal_rotation) * HYP_FMATH_PI * 2.0;
-
-                const float cone_angle = RoughnessToConeAngle(payload.roughness);
-                const float cone_length = payload.distance;
-                const float radius = cone_length * tan(cone_angle);
-
-                // const vec3 rnd = random_pcg3d(uvec3(scene.frame_counter % 6, gl_LaunchIDEXT.xy));
-                vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
-                vec3 scattered_direction = RandomInHemisphere(rnd, payload.normal);
-                
-                
-                    //vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
-
-                
-
-
-
-                // vec3 scattered_direction = normalize(payload.normal + RandomInHemisphereCosineWeighted(rnd, payload.normal) * payload.roughness);
-                // vec3 ray_direction = reflect(normalize(origin.xyz), scattered_direction);
-
-
-                
-                // const vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));//Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES) * 0.5 + 0.5;
-                // vec3 scattered_direction = normalize(payload.normal + CosWeightedRandomHemisphereDirectionHammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES, payload.normal) * 0.01); //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);// //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES);////, RandomFloat(ray_seed));
-                // vec3 scattered_direction = ImportanceSampleGGX(rnd, payload.normal, HYP_FMATH_SQR(payload.roughness));//RandomInHemisphere(rnd, payload.normal);
-
-                // vec3 ray_dir = mix(payload.normal, scattered_direction, payload.roughness);
-                scattered_direction = normalize(payload.normal + scattered_direction * payload.roughness);
-
-                // float a = payload.roughness * payload.roughness;
-                // float theta = acos(sqrt((1.0 - rnd.y) / (1.0 + (a * a - 1.0) * rnd.y)));
-                // float phi = 2.0 * HYP_FMATH_PI * rnd.x;
-                
-                // vec3 localH = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-                // vec3 H = getNormalSpace(payload.normal) * localH;  
-
-
-
-                direction.xyz = normalize(reflect(direction.xyz, scattered_direction));
-
-                // direction.xyz = ray_direction;
-            } else {
-                color += hit.payload.color;
-                break;
-            }
-        }
+    if (payload.distance >= tmin && payload.distance < tmax) {
+        color += hit.payload.color;
     }
 
-    color /= float(NUM_SAMPLES);
-
-    const ivec2 resolution = imageSize(image);
-    const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
+    color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
     imageStore(image, storage_coord, vec4(color, 1.0));
-
-#if 0
-    const vec4 first_hit_ndc_position = scene.projection * scene.view * vec4(FIRST_HIT.position, 1.0);
-    const float first_hit_depth = FIRST_HIT.payload.distance >= 0.0
-        ? first_hit_ndc_position.z / first_hit_ndc_position.w
-        : 1.0;
-    imageStore(depth_image, storage_coord, vec4(first_hit_depth));
-
-    // calculate blur radius
-    const float cone_angle = RoughnessToConeAngle(FIRST_HIT.payload.roughness);
-    const float cone_length = payload.distance;
-    const float radius = cone_length * tan(cone_angle);
-
-    vec4 normals_roughness_weight = vec4(0.0);
-    normals_roughness_weight.xy = PackNormalVec2(payload.normal.xyz);
-    normals_roughness_weight.z = payload.roughness;
-    normals_roughness_weight.a = radius / 255.0;//FIRST_HIT.payload.roughness;//radius;
-
-    imageStore(normals_roughness_weight_image, storage_coord, normals_roughness_weight);
-#endif
 }
