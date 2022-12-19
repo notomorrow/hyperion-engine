@@ -959,15 +959,11 @@ void Engine::RenderNextFrame(Game *game)
 
     HYPERION_ASSERT_RESULT(frame->BeginCapture(GetGPUInstance()->GetDevice()));
 
-    m_world->Render(frame);
+    m_world->PreRender(frame);
 
     game->OnFrameBegin(frame);
 
-    if (auto *environment = render_state.GetScene().render_environment) {
-        if (environment->IsReady()) {
-            environment->RenderComponents(frame);
-        }
-    }
+    m_world->Render(frame);
 
     RenderDeferred(frame);
     RenderFinalPass(frame);

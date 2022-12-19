@@ -265,22 +265,6 @@ public:
         Reset(ptr);
     }
 
-    /*explicit RefCountedPtr(const T &value)
-        : Base(new typename Base::RefCountDataType)
-    {
-        Base::m_ref->template Construct<T>(value);
-        Base::m_ref->strong_count = 1u;
-        Base::m_ref->weak_count = 0u;
-    }
-
-    explicit RefCountedPtr(T &&value)
-        : Base(new typename Base::RefCountDataType)
-    {
-        Base::m_ref->template Construct<T>(std::move(value));
-        Base::m_ref->strong_count = 1u;
-        Base::m_ref->weak_count = 0u;
-    }*/
-
     // delete parent constructors
     RefCountedPtr(const Base &) = delete;
     RefCountedPtr &operator=(const Base &) = delete;
@@ -312,13 +296,13 @@ public:
     }
 
     template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
-    RefCountedPtr(const RefCountedPtr<Ty> &other) noexcept
+    RefCountedPtr(const RefCountedPtr<Ty> &other)
         : Base(static_cast<const Base &>(other))
     {
     }
     
     template <class Ty, std::enable_if_t<std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, int> = 0>
-    RefCountedPtr &operator=(const RefCountedPtr<Ty> &other) noexcept
+    RefCountedPtr &operator=(const RefCountedPtr<Ty> &other)
     {
         Base::operator=(static_cast<const Base &>(other));
 
