@@ -40,6 +40,7 @@ public:
     void Update(GameCounter::TickUnit delta);
 
     /*! \brief Perform any necessary render thread specific updates to the World. */
+    void PreRender(Frame *frame);
     void Render(Frame *frame);
 
 private:
