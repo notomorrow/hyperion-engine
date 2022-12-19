@@ -129,7 +129,7 @@ void World::Update(GameCounter::TickUnit delta)
     }
 }
 
-void World::Render(Frame *frame)
+void World::PreRender(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -137,6 +137,21 @@ void World::Render(Frame *frame)
 
     // set visibility cursor to previous Octree visibility cursor (atomic, relaxed)
     Engine::Get()->render_state.visibility_cursor = m_octree.LoadPreviousVisibilityCursor();
+}
+
+void World::Render(Frame *frame)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    for (auto &scene : m_scenes) {
+        if (!scene->GetEnvironment() || !scene->GetEnvironment()->IsReady()) {
+            continue;
+        }
+ 
+        scene->GetEnvironment()->RenderComponents(frame);
+    }
 }
 
 void World::AddScene(const Handle<Scene> &scene)
