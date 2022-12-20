@@ -346,13 +346,13 @@ public:
         m_scene->GetFogParams().start_distance = 5000.0f;
         m_scene->GetFogParams().end_distance = 40000.0f;
         
-        if (false) { // paged procedural terrain
+        if (true) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
-        if (false) { // skydome
+        if (true) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -479,14 +479,14 @@ public:
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(25.0f);
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 2.6f, 4.0f, 1.0f));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
-            //plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(15.0f));
-            //plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            //plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            plane->GetMaterial()->SetFaceCullMode(FaceCullMode::NONE);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.65f, 0.8f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.025f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
+            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.15f);
+            // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
             plane->RebuildRenderableAttributes();
             plane->CreateBLAS();
