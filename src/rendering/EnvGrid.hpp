@@ -13,7 +13,8 @@ class Entity;
 
 class EnvGrid : public RenderComponent<EnvGrid>
 {
-    static const Extent2D cubemap_dimensions;
+    static const Extent2D reflection_probe_dimensions;
+    static const Extent2D ambient_probe_dimensions;
     static const Float overlap_amount;
 
 public:
@@ -43,14 +44,20 @@ private:
     void CreateShader();
     void CreateFramebuffer();
 
+    void RenderEnvProbe(Frame *frame, Handle<Scene> &scene, Handle<EnvProbe> &probe);
+
     BoundingBox m_aabb;
     Extent3D m_density;
 
-    Handle<Scene> m_scene;
-    Handle<Shader> m_shader;
+    Handle<Scene> m_reflection_scene;
+    Handle<Scene> m_ambient_scene;
+    Handle<Shader> m_reflection_shader;
+    Handle<Shader> m_ambient_shader;
     Handle<Framebuffer> m_framebuffer;
     std::vector<std::unique_ptr<Attachment>> m_attachments;
-    Array<Handle<EnvProbe>> m_env_probes;
+
+    Handle<EnvProbe> m_reflection_probe;
+    Array<Handle<EnvProbe>> m_ambient_probes;
 
     EnvGridShaderData m_shader_data;
     UInt m_current_probe_index;

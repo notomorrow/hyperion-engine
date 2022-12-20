@@ -36,7 +36,7 @@ public:
 protected:
     Vector3 m_gravity = earth_gravity;
 
-    Array<Handle<RigidBody>> m_rigid_bodies;
+    FlatSet<Handle<RigidBody>> m_rigid_bodies;
 };
 
 template <class Adapter>
@@ -58,14 +58,17 @@ public:
     const Adapter &GetAdapter() const
         { return m_adapter; }
 
-    void AddRigidBody(Handle<RigidBody> &&rigid_body)
+    void AddRigidBody(const Handle<RigidBody> &rigid_body)
     {
         if (!rigid_body) {
             return;
         }
 
-        m_adapter.OnRigidBodyAdded(rigid_body);
-        m_rigid_bodies.PushBack(std::move(rigid_body));
+        const auto insert_result = m_rigid_bodies.Insert(rigid_body);
+
+        if (insert_result.second) {
+            m_adapter.OnRigidBodyAdded(rigid_body);
+        }
     }
 
     void RemoveRigidBody(const Handle<RigidBody> &rigid_body)

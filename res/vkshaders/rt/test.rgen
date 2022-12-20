@@ -47,7 +47,7 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 #define NUM_SAMPLES 1
 #define NUM_ACCUMULATION_SAMPLES 6
 
-void ComputeOrthonormalBasis(in vec3 normal, out vec3 bitangent, out vec3 tangent)
+void ComputeOrthonormalBasis(in vec3 normal, out vec3 tangent, out vec3 bitangent)
 {
     vec3 T;
     T = cross(normal, vec3(0.0, 1.0, 0.0));
@@ -78,6 +78,38 @@ mat3 getNormalSpace(in vec3 normal) {
    return mat3(tangent, bitangent, normal);
 }
 
+vec3 hemisphereSample_uniform(float u, float v) {
+    float phi = v * 2.0 * HYP_FMATH_PI;
+    float cosTheta = 1.0 - u;
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+ }
+vec3 CosineSampleHemisphere(float r1, float r2)
+{
+  vec3  dir;
+  float r   = sqrt(r1);
+  float phi = HYP_FMATH_PI * 2.0 * r2;
+  dir.x     = r * cos(phi);
+  dir.y     = r * sin(phi);
+  dir.z     = sqrt(max(0.0, 1.0 - dir.x * dir.x - dir.y * dir.y));
+
+  return dir;
+}
+
+vec3 ImportanceSampleGTR2(float rgh, float r1, float r2)
+{
+    float a = max(0.001, rgh);
+
+    float phi = r1 * HYP_FMATH_PI * 2.0;
+
+    float cosTheta = sqrt((1.0 - r2) / (1.0 + (a * a - 1.0) * r2));
+    float sinTheta = clamp(sqrt(1.0 - (cosTheta * cosTheta)), 0.0, 1.0);
+    float sinPhi   = sin(phi);
+    float cosPhi   = cos(phi);
+
+    return vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+}
+
 void main() 
 {
     const ivec2 resolution = imageSize(image);
@@ -91,16 +123,17 @@ void main()
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
     const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
+    const float perceptual_roughness = sqrt(material_data.r);
+
     const vec3 V = normalize(scene.camera_position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
-
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
     const float tmin = 0.001;
     const float tmax = 10000.0;
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter);
+    uint ray_seed = initRandom(gl_LaunchSizeEXT.xy, gl_LaunchIDEXT.xy, scene.frame_counter % 6);//InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 6);
 
 #define HIT_CACHE_SIZE MAX_RECURSION
 #define FIRST_HIT hits[0]
@@ -109,24 +142,20 @@ void main()
 
     vec3 color = vec3(0.0);
 
-    // const float temporal_offset = GetSpatialOffset(scene.frame_counter);
-    const float noise_direction = RandomFloat(ray_seed);//InterleavedGradientNoise(vec2(pixel_coord));
-    const float temporal_rotation = temporal_rotations[scene.frame_counter % 6] / 360.0;
-
-
     vec3 direction = normal;
 
-    
-    // const float cone_angle = RoughnessToConeAngle(material_data.r);
-    // const float cone_length = payload.distance;
-    // const float radius = cone_length * tan(cone_angle);
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(normal, tangent, bitangent);
 
-    const vec3 rnd = random_pcg3d(uvec3(scene.frame_counter % 6, gl_LaunchIDEXT.xy));
-    // vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
-    vec3 scattered_direction = RandomInHemisphere(rnd, normal);//CosWeightedRandomHemisphereDirectionHammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES, normal); //Hammersley(scene.frame_counter % NUM_ACCUMULATION_SAMPLES, NUM_ACCUMULATION_SAMPLES); 
-    const float perceptual_roughness = sqrt(material_data.r);
+    const float r1 = RandomFloat(ray_seed);
+    const float r2 = RandomFloat(ray_seed);
 
-    direction = mix(normal, normalize(scattered_direction), perceptual_roughness);// normalize(normal + scattered_direction * perceptual_roughness);
+    vec3 H = ImportanceSampleGTR2(perceptual_roughness, r1, r2);
+    H = tangent * H.x + bitangent * H.y + normal * H.z;
+
+    direction = H;
+    // direction = mix(normal, normalize(scattered_direction), perceptual_roughness);// normalize(normal + scattered_direction * perceptual_roughness);
     direction = reflect(-V, direction);
     vec3 origin = position + normal * RAY_OFFSET;
         

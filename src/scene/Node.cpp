@@ -406,7 +406,7 @@ void Node::SetEntity(Handle<Entity> &&entity)
         return;
     }
 
-    if (m_entity != nullptr) {
+    if (m_entity.IsValid()) {
         if (m_scene != nullptr) {
             m_scene->RemoveEntityInternal(m_entity);
         }
@@ -414,7 +414,9 @@ void Node::SetEntity(Handle<Entity> &&entity)
         m_entity->SetIsAttachedToNode(this, false);
     }
 
-    if (entity != nullptr) {
+    if (entity.IsValid()) {
+        const Transform entity_transform = entity->GetTransform();
+
         m_entity = std::move(entity);
 
         if (m_scene != nullptr) {
@@ -424,13 +426,15 @@ void Node::SetEntity(Handle<Entity> &&entity)
         m_entity->SetIsAttachedToNode(this, true);
 
         m_local_aabb = m_entity->GetLocalAABB();
+
+        SetWorldTransform(entity_transform);
     } else {
         m_local_aabb = BoundingBox::empty;
 
         m_entity.Reset();
-    }
 
-    UpdateWorldTransform();
+        UpdateWorldTransform();
+    }
 }
 
 void Node::UpdateWorldTransform()

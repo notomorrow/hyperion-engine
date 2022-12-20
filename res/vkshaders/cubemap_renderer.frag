@@ -134,6 +134,6 @@ void main()
     output_color.a = shadow;
 
 #ifdef LIGHTING
-    // output_color.rgb = Tonemap(output_color.rgb);
+    output_color.rgb = Tonemap(output_color.rgb);
 #endif
 }

@@ -68,17 +68,25 @@ void BoundingBox::SetExtent(const Vector3 &dimensions)
 }
 
 // https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osg/BoundingBox
-float BoundingBox::GetRadiusSquared() const
+Float BoundingBox::GetRadiusSquared() const
 {
     return 0.25f * GetExtent().LengthSquared();
 }
 
-float BoundingBox::GetRadius() const
+Float BoundingBox::GetRadius() const
 {
     return MathUtil::Sqrt(GetRadiusSquared());
 }
 
-BoundingBox &BoundingBox::operator*=(float scalar)
+BoundingBox BoundingBox::operator*(Float scalar) const
+{
+    BoundingBox other(*this);
+    other *= scalar;
+
+    return other;
+}
+
+BoundingBox &BoundingBox::operator*=(Float scalar)
 {
     if (Empty()) {
         return *this;
@@ -90,27 +98,12 @@ BoundingBox &BoundingBox::operator*=(float scalar)
     return *this;
 }
 
-BoundingBox BoundingBox::operator*(float scalar) const
-{
-    if (Empty()) {
-        return *this;
-    }
-
-    BoundingBox other;
-
-    for (const Vector3 &corner : GetCorners()) {
-        other.Extend(corner * scalar);
-    }
-
-    return other;
-}
-
-BoundingBox BoundingBox::operator/(float scalar) const
+BoundingBox BoundingBox::operator/(Float scalar) const
 {
     return BoundingBox(*this) /= scalar;
 }
 
-BoundingBox &BoundingBox::operator/=(float scalar)
+BoundingBox &BoundingBox::operator/=(Float scalar)
 {
     if (Empty()) {
         return *this;
@@ -122,14 +115,33 @@ BoundingBox &BoundingBox::operator/=(float scalar)
     return *this;
 }
 
+BoundingBox BoundingBox::operator*(const Vector3 &scale) const
+{
+    return BoundingBox(min * scale, max * scale);
+}
+
+BoundingBox &BoundingBox::operator*=(const Vector3 &scale)
+{
+    min *= scale;
+    max *= scale;
+
+    return *this;
+}
+
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
 {
     if (Empty()) {
         return *this;
     }
 
-    min = transform.GetMatrix() * min;
-    max = transform.GetMatrix() * max;
+    auto corners = GetCorners();
+
+    Clear();
+
+    for (auto &corner : corners) {
+        corner = transform.GetMatrix() * corner;
+        Extend(corner);
+    }
 
     return *this;
 }
@@ -205,7 +217,7 @@ bool BoundingBox::ContainsPoint(const Vector3 &vec) const
     return true;
 }
 
-float BoundingBox::Area() const
+Float BoundingBox::Area() const
 {
     Vector3 dimensions(max - min);
     return dimensions.x * dimensions.y * dimensions.z;

@@ -1,5 +1,6 @@
 #include <physics/bullet/Adapter.hpp>
 #include <physics/PhysicsWorld.hpp>
+#include <physics/RigidBody.hpp>
 #include <core/lib/UniquePtr.hpp>
 #include <math/Vector3.hpp>
 #include <math/Quaternion.hpp>
@@ -39,7 +40,7 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape *physic
     switch (physics_shape->GetType()) {
     case PhysicsShapeType::BOX:
         return UniquePtr<btBoxShape>::Construct(
-            ToBtVector(static_cast<BoxPhysicsShape *>(physics_shape)->GetAABB().GetExtent())
+            ToBtVector(static_cast<BoxPhysicsShape *>(physics_shape)->GetAABB().GetExtent() * 0.5f)
         );
     case PhysicsShapeType::SPHERE:
         return UniquePtr<btSphereShape>::Construct(
@@ -140,18 +141,17 @@ void BulletPhysicsAdapter::Tick(PhysicsWorldBase *world, GameCounter::TickUnitHi
 
         auto &rigid_body_transform = rigid_body->GetTransform();
         rigid_body_transform.GetTranslation() = FromBtVector(bt_transform.getOrigin());
-        rigid_body_transform.GetRotation() = FromBtQuaternion(bt_transform.getRotation());
+        rigid_body_transform.GetRotation() = FromBtQuaternion(bt_transform.getRotation()).Invert();
         rigid_body_transform.UpdateMatrix();
     }
 }
 
-void BulletPhysicsAdapter::OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
+void BulletPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody> &rigid_body)
 {
     AssertThrow(m_dynamics_world != nullptr);
 
     AssertThrow(rigid_body.IsValid());
-    AssertThrowMsg(rigid_body->GetShape() != nullptr,
-        "No PhysicsShape on RigidBody!");
+    AssertThrowMsg(rigid_body->GetShape() != nullptr, "No PhysicsShape on RigidBody!");
 
     if (!rigid_body->GetShape()->GetHandle()) {
         rigid_body->GetShape()->SetHandle(CreatePhysicsShapeHandle(rigid_body->GetShape().Get()));
@@ -171,7 +171,7 @@ void BulletPhysicsAdapter::OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
     bt_transform.setIdentity();
     bt_transform.setOrigin(ToBtVector(rigid_body->GetTransform().GetTranslation()));
     bt_transform.setRotation(ToBtQuaternion(rigid_body->GetTransform().GetRotation()));
-    internal_data->motion_state.Reset(new btDefaultMotionState(bt_transform));
+    internal_data->motion_state.Reset(new btDefaultMotionState());
 
     btRigidBody::btRigidBodyConstructionInfo construction_info(
         rigid_body->GetPhysicsMaterial().GetMass(),
@@ -181,6 +181,8 @@ void BulletPhysicsAdapter::OnRigidBodyAdded(Handle<RigidBody> &rigid_body)
     );
 
     internal_data->rigid_body.Reset(new btRigidBody(construction_info));
+    internal_data->rigid_body->setActivationState(DISABLE_DEACTIVATION);// TEMP
+    internal_data->rigid_body->setWorldTransform(bt_transform);
 
     m_dynamics_world->addRigidBody(internal_data->rigid_body.Get());
 
@@ -200,5 +202,23 @@ void BulletPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody> &rigid_bod
 
     m_dynamics_world->removeRigidBody(internal_data->rigid_body.Get());
 }
+
+void BulletPhysicsAdapter::ApplyForceToBody(const RigidBody *rigid_body, const Vector3 &force)
+{
+    if (!rigid_body) {
+        return;
+    }
+
+    AssertThrow(m_dynamics_world != nullptr);
+    
+    auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
+    AssertThrow(internal_data != nullptr);
+
+    AssertThrow(internal_data->rigid_body != nullptr);
+    
+    internal_data->rigid_body->activate();
+    internal_data->rigid_body->applyCentralForce(ToBtVector(force));
+}
+
 
 } // namespace hyperion::v2::physics

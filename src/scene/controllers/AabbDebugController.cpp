@@ -51,7 +51,7 @@ void AABBDebugController::OnAdded()
             MaterialAttributes {
                 .bucket = Bucket::BUCKET_TRANSLUCENT,
                 .fill_mode = FillMode::LINE,
-                .blend_mode = BlendMode::NORMAL,
+                .blend_mode = BlendMode::ADDITIVE,
                 .cull_faces = FaceCullMode::NONE,
                 .flags = 0x0
             }

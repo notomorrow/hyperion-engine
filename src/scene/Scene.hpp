@@ -73,10 +73,14 @@ public:
 
     void SetCamera(Handle<Camera> &&camera);
 
-    /*! \brief Add the Entity to a new Node attached to the root. */
-    bool AddEntity(Handle<Entity> &&entity);
-    /*! \brief Add the Entity to a new Node attached to the root. */
-    bool AddEntity(const Handle<Entity> &entity)
+    /*! \brief Add the Entity to a new Node attached to the root.
+     * @returns If successfully added, returns the NodeProxy which the Entity was attached to. Otherwise, returns an empty NodeProxy.
+     */
+    NodeProxy AddEntity(Handle<Entity> &&entity);
+    /*! \brief Add the Entity to a new Node attached to the root.
+     * @returns If successfully added, returns the NodeProxy which the Entity was attached to. Otherwise, returns an empty NodeProxy.
+     * */
+    NodeProxy AddEntity(const Handle<Entity> &entity)
         { return AddEntity(Handle<Entity>(entity)); }
 
     /*! \brief Remove a Node from the Scene with the given Entity */
