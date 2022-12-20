@@ -118,7 +118,7 @@ void World::Update(GameCounter::TickUnit delta)
         m_octree.CalculateVisibility(scene.Get());
     }
 
-    m_physics_world.Tick(static_cast<GameCounter::TickUnitHighPrec>(delta));
+    m_physics_world.Tick(delta);
 
     if (m_has_scene_updates.load()) {
         PerformSceneUpdates();

@@ -284,9 +284,6 @@ private:
     void EnqueueRenderUpdates();
     void UpdateOctree();
     
-    void OnAddedToPipeline(RenderGroup *pipeline);
-    void OnRemovedFromPipeline(RenderGroup *pipeline);
-    
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
     void OnMovedToOctant(Octree *octree);
@@ -321,12 +318,6 @@ private:
         RenderGroup *renderer_instance = nullptr;
         bool changed = false;
     } m_primary_renderer_instance;
-
-    /* Retains a list of pointers to RenderGroups that this Entity is used by,
-     * for easy removal when RemoveEntity() is called.
-     */
-    FlatSet<RenderGroup *> m_render_groups;
-    std::mutex m_render_instances_mutex;
 
     Matrix4 m_previous_transform_matrix;
 

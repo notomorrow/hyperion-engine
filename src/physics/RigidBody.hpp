@@ -207,6 +207,8 @@ public:
     void SetHandle(UniquePtr<void> &&handle)
         { m_handle = std::move(handle); }
 
+    void ApplyForce(const Vector3 &force);
+
 private:
     Transform m_transform;
     UniquePtr<PhysicsShape> m_shape;
