@@ -250,7 +250,7 @@ public:
         MATERIAL_KEY_CLEARCOAT              = 1 << 10,  // UNUSED
         MATERIAL_KEY_CLEARCOAT_GLOSS        = 1 << 11, // UNUSED
         MATERIAL_KEY_SUBSURFACE             = 1 << 12,  // UNUSED
-        MATERIAL_KEY_FLIP_UV                = 1 << 13,
+        MATERIAL_KEY_NORMAL_MAP_INTENSITY   = 1 << 13,
         MATERIAL_KEY_UV_SCALE               = 1 << 14,
         MATERIAL_KEY_PARALLAX_HEIGHT        = 1 << 15,
         MATERIAL_KEY_RESERVED1              = 1 << 16,
