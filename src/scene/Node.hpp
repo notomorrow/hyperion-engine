@@ -279,7 +279,7 @@ public:
     }
 
     /*! \brief @returns The local-space (model) of the node's aabb. Only includes
-     * the Entity's aabb.
+     * the Entity's aabb
      */
     const BoundingBox &GetLocalAABB() const
         { return m_local_aabb; }

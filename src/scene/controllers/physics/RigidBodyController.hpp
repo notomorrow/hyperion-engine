@@ -33,6 +33,8 @@ protected:
     UniquePtr<physics::PhysicsShape> m_shape;
     physics::PhysicsMaterial m_physics_material;
     Handle<physics::RigidBody> m_rigid_body;
+
+    Vector3 m_origin_offset;
 };
 
 } // namespace hyperion::v2

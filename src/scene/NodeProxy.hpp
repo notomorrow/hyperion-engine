@@ -89,10 +89,10 @@ struct NodeProxyChildren
     ConstIterator cend() const { return End(); }
 };
 
-class NodeProxy : AtomicRefCountedPtr<Node>
+class NodeProxy : RC<Node>
 {
 protected:
-    using Base = AtomicRefCountedPtr<Node>;
+    using Base = RC<Node>;
 
 public:
     static const NodeProxy empty;

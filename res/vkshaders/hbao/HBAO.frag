@@ -238,14 +238,14 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
                 slice_light[0] = mix(
                     slice_light[0],
-                    slice_light[0] + vec4(new_color_0) /** (NdotD.xxxx - slice_light[0])*/ * (falloffs.x),
-                    condition.x * color_weights.x
+                    slice_light[0] + vec4(new_color_0) * /*(NdotD.xxxx - slice_light[0].aaaa) **/ (falloffs.x),
+                    condition.x //* color_weights.x
                 );
 
                 slice_light[1] = mix(
                     slice_light[1],
-                    slice_light[1] + vec4(new_color_1) /** (NdotD.yyyy - slice_light[1])*/ * (falloffs.y),// * (NdotD.yyyy - slice_light[1].aaaa),
-                    condition.y * color_weights.y
+                    slice_light[1] + vec4(new_color_1) * /*(NdotD.yyyy - slice_light[1].aaaa) **/ (falloffs.y),// * (NdotD.yyyy - slice_light[1].aaaa),
+                    condition.y //* color_weights.y
                 );
 
                 slice_ao += vec2(
@@ -264,7 +264,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
     occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
 
-    light_color /= float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);
+    light_color /= max(HYP_FMATH_EPSILON, light_color.a);
     light_color *= 1.0 / (1.0 - ANGLE_BIAS);
 
     #endif
@@ -272,23 +272,13 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
 void main()
 {
-    // const uvec2 pixel_coord = gl_GlobalInvocationID.xy;
-    
-    // if (any(greaterThanEqual(pixel_coord, dimension))) {
-    //     return;
-    // }
-
-    // const vec2 uv = (vec2(pixel_coord) + 0.5) / vec2(dimension);
-
     float occlusion;
     vec3 bent_normal;
     vec4 light_color;
 
     TraceAO_New(texcoord, occlusion, bent_normal, light_color);
 
-    // vec4 next_values = vec4(light_color.rgb, occlusion);
     vec4 next_values = vec4(light_color.rgb, occlusion);
-    // vec4 next_values = vec4(light_color_2.rgb - light_color.rgb, occlusion_2 - occlusion);
     
     color_output = next_values;
 }

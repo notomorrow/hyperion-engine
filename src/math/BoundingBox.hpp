@@ -34,13 +34,15 @@ public:
     void SetCenter(const Vector3 &center);
     Vector3 GetExtent() const { return max - min; }
     void SetExtent(const Vector3 &dimensions);
-    float GetRadiusSquared() const;
-    float GetRadius() const;
+    Float GetRadiusSquared() const;
+    Float GetRadius() const;
 
-    BoundingBox operator*(float scalar) const;
-    BoundingBox &operator*=(float scalar);
-    BoundingBox operator/(float scalar) const;
-    BoundingBox &operator/=(float scalar);
+    BoundingBox operator*(Float scalar) const;
+    BoundingBox &operator*=(Float scalar);
+    BoundingBox operator/(Float scalar) const;
+    BoundingBox &operator/=(Float scalar);
+    BoundingBox operator*(const Vector3 &scale) const;
+    BoundingBox &operator*=(const Vector3 &scale);
     BoundingBox operator*(const Transform &transform) const;
     BoundingBox &operator*=(const Transform &transform);
     bool operator==(const BoundingBox &other) const
@@ -64,7 +66,7 @@ public:
     // does this AABB completely contain other?
     bool Contains(const BoundingBox &other) const;
     bool ContainsPoint(const Vector3 &vec) const;
-    float Area() const;
+    Float Area() const;
 
     HashCode GetHashCode() const
     {

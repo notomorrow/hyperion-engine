@@ -41,7 +41,7 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 5000.0
+#define IBL_INTENSITY 7500.0
 #define IRRADIANCE_MULTIPLIER 1.0
 
 layout(push_constant) uniform PushConstant
@@ -129,7 +129,7 @@ void main()
 #endif
 
 #ifdef ENV_PROBE_ENABLED
-        CalculateEnvProbeIrradiance(deferred_params, position.xyz, N, irradiance);
+        // CalculateEnvProbeIrradiance(deferred_params, position.xyz, N, irradiance);
 #endif
 
 #ifdef RT_ENABLED

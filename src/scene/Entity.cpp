@@ -98,9 +98,9 @@ Entity::Entity(
 {
     if (m_mesh) {
         m_local_aabb = m_mesh->CalculateAABB();
-
+        
         if (!m_local_aabb.Empty()) {
-            m_world_aabb = m_local_aabb * m_transform;
+            m_world_aabb = BoundingBox(m_transform.GetMatrix() * m_local_aabb.min, m_transform.GetMatrix() * m_local_aabb.max);
         } else {
             m_world_aabb = BoundingBox::empty;
         }
@@ -130,16 +130,24 @@ void Entity::Init()
     InitObject(m_shader);
     InitObject(m_material);
     InitObject(m_skeleton);
-    InitObject(m_blas);
+
+    if (Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED)) {
+        if (InitObject(m_blas)) {
+            SetFlags(InitInfo::ENTITY_FLAGS_HAS_BLAS);
+        } else if (HasFlags(InitInfo::ENTITY_FLAGS_HAS_BLAS)) {
+            CreateBLAS();
+        }
+    }
 
     // set our aabb to be the mesh aabb now that it is init
     if (InitObject(m_mesh)) {
         m_local_aabb = m_mesh->CalculateAABB();
-
+        m_world_aabb = BoundingBox::empty;
+        
         if (!m_local_aabb.Empty()) {
-            m_world_aabb = m_local_aabb * m_transform;
-        } else {
-            m_world_aabb = BoundingBox::empty;
+            for (const auto &corner : m_local_aabb.GetCorners()) {
+                m_world_aabb.Extend(m_transform.GetMatrix() * corner);
+            }
         }
 
         m_needs_octree_update = true;
@@ -149,11 +157,6 @@ void Entity::Init()
 
     SetReady(true);
 
-#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && HYP_FEATURES_ENABLE_RAYTRACING
-    if (Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED) && HasFlags(InitInfo::ENTITY_FLAGS_HAS_BLAS)) {
-       CreateBLAS();
-    }
-#endif
 
     OnTeardown([this]() {
         DebugLog(
@@ -327,11 +330,12 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
     if (IsInitCalled()) {
         if (InitObject(m_mesh)) {
             m_local_aabb = m_mesh->CalculateAABB();
-
+            m_world_aabb = BoundingBox::empty;
+            
             if (!m_local_aabb.Empty()) {
-                m_world_aabb = m_local_aabb * m_transform;
-            } else {
-                m_world_aabb = BoundingBox::empty;
+                for (const auto &corner : m_local_aabb.GetCorners()) {
+                    m_world_aabb.Extend(m_transform.GetMatrix() * corner);
+                }
             }
 
             UpdateOctree();
@@ -594,16 +598,22 @@ void Entity::SetTransform(const Transform &transform)
     m_previous_transform_matrix = m_transform.GetMatrix();
     m_transform = transform;
     m_shader_data_state |= ShaderDataState::DIRTY;
-
+    
+    m_world_aabb = BoundingBox::empty;
+    
     if (!m_local_aabb.Empty()) {
-        m_world_aabb = m_local_aabb * transform;
-    } else {
-        m_world_aabb = BoundingBox::empty;
+        for (const auto &corner : m_local_aabb.GetCorners()) {
+            m_world_aabb.Extend(m_transform.GetMatrix() * corner);
+        }
     }
 
     for (auto &it : m_controllers) {
         it.second->OnTransformUpdate(m_transform);
     }
+
+    //for (Node *node : m_nodes) {
+    //     node->SetWorldTransform(transform, false)
+   // }
 
     if (IsInitCalled()) {
         UpdateOctree();
@@ -614,28 +624,6 @@ void Entity::SetTransform(const Transform &transform)
     } else {
         m_needs_octree_update = true;
     }
-}
-
-// TODO! Investigate if we even need those 2 functions
-void Entity::OnAddedToPipeline(RenderGroup *pipeline)
-{
-    std::lock_guard guard(m_render_instances_mutex);
-
-    m_render_groups.Insert(pipeline);
-}
-
-void Entity::OnRemovedFromPipeline(RenderGroup *pipeline)
-{
-    std::lock_guard guard(m_render_instances_mutex);
-
-    if (pipeline == m_primary_renderer_instance.renderer_instance) {
-        m_primary_renderer_instance = {
-            .renderer_instance = nullptr,
-            .changed  = true
-        };
-    }
-
-    m_render_groups.Erase(pipeline);
 }
 
 void Entity::OnAddedToOctree(Octree *octree)
@@ -711,8 +699,6 @@ bool Entity::IsReady() const
 
 bool Entity::CreateBLAS()
 {
-    AssertReady();
-
     if (m_blas) {
         return true;
     }

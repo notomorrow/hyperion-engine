@@ -283,22 +283,22 @@ void Scene::SetWorld(World *world)
     }
 }
 
-bool Scene::AddEntity(Handle<Entity> &&entity)
+NodeProxy Scene::AddEntity(Handle<Entity> &&entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
 
     if (!entity) {
-        return false;
+        return NodeProxy();
     }
 
     auto node = m_root_node_proxy.AddChild(NodeProxy(
-        new Node(entity->GetName(), entity->GetTransform())
+        new Node(entity->GetName(), Transform::identity)
     ));
 
     node.SetEntity(std::move(entity));
 
-    return true;
+    return node;
 }
 
 bool Scene::RemoveEntity(ID<Entity> entity_id)

@@ -30,16 +30,14 @@ class EnvProbe
       public HasDrawProxy<STUB_CLASS(EnvProbe)>,
       public RenderResource
 {
-    static const Extent2D cubemap_dimensions;
     static const FixedArray<std::pair<Vector3, Vector3>, 6> cubemap_directions;
 
 public:
     friend struct RenderCommand_UpdateEnvProbeDrawProxy;
     friend struct RenderCommand_CreateCubemapBuffers;
     friend struct RenderCommand_DestroyCubemapRenderPass;
-
-    EnvProbe(const Handle<Scene> &parent_scene);
-    EnvProbe(const Handle<Scene> &parent_scene, const BoundingBox &aabb);
+    
+    EnvProbe(const Handle<Scene> &parent_scene, const BoundingBox &aabb, const Extent2D &dimensions);
     EnvProbe(const EnvProbe &other) = delete;
     EnvProbe &operator=(const EnvProbe &other) = delete;
     ~EnvProbe();
@@ -79,6 +77,8 @@ private:
 
     Handle<Scene> m_parent_scene;
     BoundingBox m_aabb;
+    Extent2D m_dimensions;
+
     Handle<Texture> m_texture;
     Handle<Framebuffer> m_framebuffer;
     std::vector<std::unique_ptr<Attachment>> m_attachments;

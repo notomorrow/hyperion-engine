@@ -123,8 +123,6 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : RenderCommand
 
 #pragma endregion
 
-const Extent2D EnvProbe::cubemap_dimensions = Extent2D { 128, 128 };
-
 const FixedArray<std::pair<Vector3, Vector3>, 6> EnvProbe::cubemap_directions = {
     std::make_pair(Vector3(1, 0, 0), Vector3(0, 1, 0)),
     std::make_pair(Vector3(-1, 0, 0),  Vector3(0, 1, 0)),
@@ -134,17 +132,11 @@ const FixedArray<std::pair<Vector3, Vector3>, 6> EnvProbe::cubemap_directions = 
     std::make_pair(Vector3(0, 0, -1),  Vector3(0, 1, 0)),
 };
 
-EnvProbe::EnvProbe(const Handle<Scene> &parent_scene)
-    : EngineComponentBase(),
-      m_parent_scene(parent_scene),
-      m_needs_update(true)
-{
-}
-
-EnvProbe::EnvProbe(const Handle<Scene> &parent_scene, const BoundingBox &aabb)
+EnvProbe::EnvProbe(const Handle<Scene> &parent_scene, const BoundingBox &aabb, const Extent2D &dimensions)
     : EngineComponentBase(),
       m_parent_scene(parent_scene),
       m_aabb(aabb),
+      m_dimensions(dimensions),
       m_needs_update(true)
 {
 }
@@ -175,7 +167,7 @@ void EnvProbe::Init()
     }
 
     m_texture = CreateObject<Texture>(TextureCube(
-        cubemap_dimensions,
+        m_dimensions,
         InternalFormat::RGBA8_SRGB,
         FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
@@ -258,7 +250,7 @@ void EnvProbe::CreateShader()
 void EnvProbe::CreateFramebuffer()
 {
     m_framebuffer = CreateObject<Framebuffer>(
-        cubemap_dimensions,
+        m_dimensions,
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
         6
@@ -268,7 +260,7 @@ void EnvProbe::CreateFramebuffer()
 
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImageCube>(
-            cubemap_dimensions,
+            m_dimensions,
             InternalFormat::RGBA8_SRGB,
             nullptr
         ),
@@ -286,7 +278,7 @@ void EnvProbe::CreateFramebuffer()
 
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImageCube>(
-            cubemap_dimensions,
+            m_dimensions,
             Engine::Get()->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),

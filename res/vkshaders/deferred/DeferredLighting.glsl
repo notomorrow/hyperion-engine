@@ -187,7 +187,7 @@ int GetLocalEnvProbeIndex(vec3 world_position)
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z);
+        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
 
     return probe_index_at_point;
 }
@@ -201,8 +201,7 @@ int GetLocalEnvProbeIndexOffset(vec3 world_position, vec3 offset)
 
     int offset_index = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z);
-
+        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
 
     return offset_index;
 }
@@ -233,11 +232,9 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
     }
 }
 
-vec3 EvaluateEnvGridIBL(vec3 P, vec3 dir, float lod, bool include_shadow)
+vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, bool include_shadow)
 {
     vec3 ibl = vec3(0.0);
-
-    int probe_index_at_point = GetLocalEnvProbeIndex(P);
 
     if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
         return vec3(0.0);
@@ -341,14 +338,14 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
 {
     int probe_index_at_point = GetLocalEnvProbeIndex(P);
 
-    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+    if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
         return;
     }
 
     const float lod = 5.0;
 
     if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
-        irradiance += EvaluateEnvGridIBL(P, N, lod, false) * ENV_PROBE_MULTIPLIER;
+        irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;
     }
 }
 
@@ -356,16 +353,10 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
 {
     vec3 ibl = vec3(0.0);
 
-    int probe_index_at_point = GetLocalEnvProbeIndex(P);
+    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
-    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
-        return vec3(0.0);
-    }
-
-    const float lod = float(7.0) * perceptual_roughness * (2.0 - perceptual_roughness);
-
-    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
-        ibl = EvaluateEnvGridIBL(P, R, lod, true);
+    if (bool(env_grid.enabled_indices_mask & (1 << 0))) {
+        _ApplyEnvProbeSample(0, P, R, lod, ibl, true);
     }
 
     return ibl * ENV_PROBE_MULTIPLIER;
