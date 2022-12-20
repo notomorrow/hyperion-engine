@@ -296,10 +296,10 @@ void Material::EnqueueRenderUpdates()
         .albedo = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
         .packed_params = ShaderVec4<UInt32>(
             ByteUtil::PackColorU32(Vector4(
-                GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
-                GetParameter<float>(MATERIAL_KEY_METALNESS),
-                GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
-                0.0f
+                GetParameter<Float>(MATERIAL_KEY_ROUGHNESS),
+                GetParameter<Float>(MATERIAL_KEY_METALNESS),
+                GetParameter<Float>(MATERIAL_KEY_TRANSMISSION),
+                GetParameter<Float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY)
             )),
             0, 0,
             ByteUtil::PackColorU32(Vector4(
@@ -362,6 +362,7 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_NORMAL_MAP_INTENSITY, 1.0f);
     m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
     m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.005f);
 
