@@ -397,7 +397,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
 
 void CalculateHBILIrradiance(DeferredParams deferred_params, in vec4 ssao_data, inout vec3 irradiance)
 {
-    irradiance += ssao_data.rgb * HYP_HBIL_MULTIPLIER * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
+    irradiance += pow(ssao_data.rgb, vec3(2.2)) * HYP_HBIL_MULTIPLIER * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
 }
 
 void IntegrateReflections(inout vec3 Fr, in vec3 E, in vec4 reflections)
