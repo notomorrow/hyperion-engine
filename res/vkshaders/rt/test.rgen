@@ -133,7 +133,7 @@ void main()
     const float tmin = 0.001;
     const float tmax = 10000.0;
 
-    uint ray_seed = initRandom(gl_LaunchSizeEXT.xy, gl_LaunchIDEXT.xy, scene.frame_counter % 6);//InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 6);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 6);
 
 #define HIT_CACHE_SIZE MAX_RECURSION
 #define FIRST_HIT hits[0]

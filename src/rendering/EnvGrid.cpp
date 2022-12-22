@@ -150,8 +150,8 @@ void EnvGrid::OnRemoved()
     Engine::Get()->GetWorld()->RemoveScene(m_ambient_scene->GetID());
     m_ambient_scene.Reset();
 
-    Engine::Get()->SafeReleaseHandle<Shader>(std::move(m_reflection_shader));
-    Engine::Get()->SafeReleaseHandle<Shader>(std::move(m_ambient_shader));
+    m_reflection_shader.Reset();
+    m_ambient_shader.Reset();
 
     struct RENDER_COMMAND(DestroyEnvGridFramebufferAttachments) : RenderCommand
     {

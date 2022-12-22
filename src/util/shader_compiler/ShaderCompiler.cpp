@@ -596,10 +596,10 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
     // now check that each combination is already in the bundle
     ForEachPermutation(versions, [&](const ShaderProps &properties) {
         // get hashcode of this set of properties
-        UInt64 version_hash = properties.GetHashCode().Value();
+        const HashCode properties_hash = properties.GetHashCode();
 
-        auto it = batch.compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
-            return item.version_hash == version_hash;
+        const auto it = batch.compiled_shaders.FindIf([properties_hash](const CompiledShader &item) {
+            return item.properties.GetHashCode() == properties_hash;
         });
 
         if (it == batch.compiled_shaders.End()) {
@@ -806,6 +806,7 @@ bool ShaderCompiler::LoadShaderDefinitions()
         // TODO: Maybe don't need to cache these?
         ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProps &properties) {
             CompiledShader compiled_shader;
+
             results[&bundle] = GetCompiledShader(bundle.name, properties, default_vertex_attributes, compiled_shader);
         });
     }
@@ -834,10 +835,10 @@ struct LoadedSourceFile
     UInt64 last_modified_timestamp;
     String original_source;
 
-    FilePath GetOutputFilepath(const FilePath &base_path, HashCode version_hash) const
+    FilePath GetOutputFilepath(const FilePath &base_path, const ShaderProps &properties) const
     {
         return base_path / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
-            + "_" + String::ToString(version_hash.Value()) + ".shc");
+            + "_" + String::ToString(properties.GetHashCode().Value()) + ".shc");
     }
 
     HashCode GetHashCode() const
@@ -1129,9 +1130,7 @@ bool ShaderCompiler::CompileBundle(
 
     // compile shader with each permutation of properties
     ForEachPermutation(versions, [&](const ShaderProps &properties) {
-        // get hashcode of this set of properties
-        HashCode version_hash = properties.GetHashCode();
-        CompiledShader compiled_shader { version_hash.Value() };
+        CompiledShader compiled_shader { bundle.name, properties };
 
         bool any_files_compiled = false;
 
@@ -1140,7 +1139,7 @@ bool ShaderCompiler::CompileBundle(
             
             const auto output_filepath = item.GetOutputFilepath(
                 Engine::Get()->GetAssetManager().GetBasePath(),
-                version_hash
+                properties
             );
 
             if (output_filepath.Exists()) {
@@ -1194,7 +1193,7 @@ bool ShaderCompiler::CompileBundle(
                 output_filepath.Data(),
                 variable_properties_string.Data(),
                 static_properties_string.Data(),
-                version_hash.Value()
+                properties.GetHashCode().Value()
             );
 
             ByteBuffer byte_buffer;
@@ -1213,7 +1212,7 @@ bool ShaderCompiler::CompileBundle(
                     LogType::Error,
                     "Failed to compile file %s with version hash %u!\n!",
                     item.file.path.Data(),
-                    version_hash.Value()
+                    properties.GetHashCode().Value()
                 );
 
                 out.error_messages.Concat(std::move(error_messages));
@@ -1275,19 +1274,14 @@ bool ShaderCompiler::CompileBundle(
     return true;
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(
-    const String &name
-)
+CompiledShader ShaderCompiler::GetCompiledShader(const String &name)
 {
     ShaderProps props { };
 
     return GetCompiledShader(name, props);
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(
-    const String &name,
-    const ShaderProps &versions
-)
+CompiledShader ShaderCompiler::GetCompiledShader(const String &name, const ShaderProps &versions)
 {
     CompiledShader compiled_shader;
 
@@ -1361,7 +1355,7 @@ bool ShaderCompiler::GetCompiledShader(
     // make sure we properly created it
 
     auto it = batch.compiled_shaders.FindIf([final_properties_hash](const CompiledShader &compiled_shader) {
-        return compiled_shader.version_hash == final_properties_hash.Value();
+        return compiled_shader.properties.GetHashCode() == final_properties_hash;
     });
 
     String requested_properties_string;

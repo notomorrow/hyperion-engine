@@ -129,7 +129,7 @@ public:
 
         if (flags & FBOM_OBJECT_FLAGS_EXTERNAL) {
             if constexpr (std::is_base_of_v<EngineComponentBaseBase, NormalizedType<T>>) {
-                const String class_name_lower(StringUtil::ToLower(object.GetClass().GetName()).c_str());
+                const String class_name_lower(StringUtil::ToLower(marshal.GetObjectType().name.Data()).c_str());
                 external_object_key = String(std::to_string(UInt64(out_object.GetUniqueID())).c_str()) + ".hyp" + class_name_lower;
             } else {
                 external_object_key = String(std::to_string(UInt64(out_object.GetUniqueID())).c_str()) + ".hypdata";
