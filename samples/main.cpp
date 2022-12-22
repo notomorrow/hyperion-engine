@@ -17,7 +17,6 @@
 #include <rendering/rt/AccelerationStructureBuilder.hpp>
 #include <rendering/rt/ProbeSystem.hpp>
 #include <rendering/post_fx/FXAA.hpp>
-#include <rendering/post_fx/Tonemap.hpp>
 #include <rendering/EnvGrid.hpp>
 #include <scene/controllers/AudioController.hpp>
 #include <scene/controllers/AnimationController.hpp>
@@ -106,7 +105,7 @@ public:
 
     virtual void InitRender() override
     {
-        //Engine::Get()->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
+        Engine::Get()->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
     virtual void InitGame() override

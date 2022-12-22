@@ -51,23 +51,29 @@ class Shader
       public RenderResource
 {
 public:
-    Shader(const std::vector<SubShader> &sub_shaders);
+    Shader();
     Shader(const CompiledShader &compiled_shader);
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
     ~Shader();
 
+    const CompiledShader &GetCompiledShader() const
+        { return m_compiled_shader; }
+
+    void SetCompiledShader(const CompiledShader &compiled_shader)
+        { m_compiled_shader = compiled_shader; }
+
+    void SetCompiledShader(CompiledShader &&compiled_shader)
+        { m_compiled_shader = std::move(compiled_shader); }
+
     const ShaderProgramRef &GetShaderProgram() const
         { return m_shader_program; }
-
-    auto &GetSubShaders() { return m_sub_shaders; }
-    const auto &GetSubShaders() const { return m_sub_shaders; }
 
     void Init();
 
 private:
+    CompiledShader m_compiled_shader;
     ShaderProgramRef m_shader_program;
-    std::vector<SubShader> m_sub_shaders;
 };
 
 enum class ShaderKey
