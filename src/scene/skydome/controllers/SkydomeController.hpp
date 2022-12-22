@@ -13,6 +13,8 @@ class Mesh;
 class SkydomeController : public Controller
 {
 public:
+    static constexpr const char *controller_name = "SkydomeController";
+
     SkydomeController();
     virtual ~SkydomeController() override = default;
 
@@ -22,6 +24,9 @@ public:
 
     virtual void OnDetachedFromScene(ID<Scene> id) override;
     virtual void OnAttachedToScene(ID<Scene> id) override;
+
+    virtual void Serialize(fbom::FBOMObject &out) const override;
+    virtual fbom::FBOMResult Deserialize(const fbom::FBOMObject &in) override;
 
 protected:
     Handle<Entity> m_dome;

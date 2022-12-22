@@ -182,9 +182,12 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
     reader->Read(&unique_id);
     CheckEndianness(unique_id);
 
+    std::cout << "Read unique ID " << UInt64(unique_id) << "\n";
+
     // read data location
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
     reader->Read(&object_type_location);
+    CheckEndianness(object_type_location);
 
     switch (object_type_location) {
     case FBOM_DATA_LOCATION_STATIC:
@@ -205,6 +208,8 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
         // read string of "type" - loader to use
         const FBOMType object_type = ReadObjectType(reader);
 
+        // DebugLog("Read object ")
+
         object = FBOMObject(object_type);
         // object.m_unique_id = unique_id;
 
@@ -219,6 +224,9 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
                 if (auto err = ReadObject(reader, child, root)) {
                     return err;
                 }
+
+                // // Debug sanity check
+                // AssertThrow(object.nodes->FindIf([id = child.GetUniqueID()](const auto &item) { return item.GetUniqueID() == id; }) == object.nodes->End());
 
                 object.nodes->PushBack(std::move(child));
 
@@ -264,6 +272,7 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
     case FBOM_DATA_LOCATION_EXT_REF:
     {
         const auto ref_name = ReadString(reader);
+        DebugLog(LogType::Debug, "FBOM: Ext ref: %s\n", ref_name.Data());
         
         // read object_index as u32,
         // for now this should just be zero but
@@ -289,7 +298,7 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
             }
         }
 
-        const String ref_path(FileSystem::Join(FileSystem::CurrentPath(), std::string(base_path.Data()), std::string(ref_name.Data())).data());
+        const String ref_path(FileSystem::Join(FileSystem::CurrentPath(), base_path.Data(), ref_name.Data()).data());
         const String relative_path(FileSystem::RelativePath(std::string(ref_path.Data()), FileSystem::CurrentPath()).data());
 
         { // check in cache
@@ -341,6 +350,9 @@ FBOMResult FBOMReader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
         if (auto err = ReadObject(reader, child, root)) {
             return err;
         }
+
+        // // Debug sanity check
+        // AssertThrow(root->nodes->FindIf([id = child.GetUniqueID()](const auto &item) { return item.GetUniqueID() == id; }) == root->nodes->End());
 
         root->nodes->PushBack(child);
 

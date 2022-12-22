@@ -12,6 +12,8 @@ class Engine;
 class BasicCharacterController : public Controller
 {
 public:
+    static constexpr const char *controller_name = "BasicCharacterController";
+
     BasicCharacterController();
     virtual ~BasicCharacterController() override = default;
 
@@ -21,6 +23,9 @@ public:
 
     virtual void OnDetachedFromScene(ID<Scene> id) override;
     virtual void OnAttachedToScene(ID<Scene> id) override;
+
+    virtual void Serialize(fbom::FBOMObject &out) const override;
+    virtual fbom::FBOMResult Deserialize(const fbom::FBOMObject &in) override;
 
 private:
     RayTestResults m_ray_test_results;

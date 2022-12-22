@@ -12,6 +12,8 @@ namespace hyperion::v2 {
 class AnimationController : public PlaybackController
 {
 public:
+    static constexpr const char *controller_name = "AnimationController";
+
     AnimationController();
     virtual ~AnimationController() override = default;
 
@@ -32,9 +34,6 @@ public:
 
     virtual void OnAttachedToNode(Node *node) override;
     virtual void OnDetachedFromNode(Node *node) override;
-
-    // virtual void OnDescendentAdded(Node *) override {} /* TODO: check for bones, add them */
-    // virtual void OnDescendentRemoved(Node *node) override {} /* TODO: remove any bones */
 
 private:
     bool FindSkeleton(Node *node);

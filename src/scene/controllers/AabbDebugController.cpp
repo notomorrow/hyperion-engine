@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 AABBDebugController::AABBDebugController()
-    : Controller("AABBDebugController", false)
+    : Controller(false)
 {
 }
 

@@ -96,8 +96,11 @@ public:
     Handle<Light> m_sun;
     Array<Handle<Light>> m_point_lights;
 
+    FilePath scene_export_filepath;
+
     MyGame(RefCountedPtr<Application> application)
-        : Game(application)
+        : Game(application),
+          scene_export_filepath(Engine::Get()->GetAssetManager().GetBasePath() / "export.hypnode")
     {
     }
 
@@ -110,162 +113,17 @@ public:
     {
         Game::InitGame();
 
-        if (Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI)) { // voxel cone tracing for indirect light and reflections
-            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(VoxelConeTracing::Params {
-                BoundingBox(-256.0f, 256.0f)
-            });
-        }
-        
-        m_scene->SetCamera(
-            CreateObject<Camera>(
-                70.0f,
-                1920, 1080,
-                0.5f, 30000.0f
-            )
-        );
+        m_scene->SetCamera(CreateObject<Camera>(
+            70.0f,
+            1280, 720,
+            0.5f, 30000.0f
+        ));
 
         m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
             Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
         ));
 
-        // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
-        
 
-        Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
-
-        auto batch = Engine::Get()->GetAssetManager().CreateBatch();
-        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/living_room/living_room.obj");//"San_Miguel/san-miguel-low-poly.obj");
-        batch.Add<Node>("cube", "models/cube.obj");
-        batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
-        batch.Add<Node>("grass", "models/grass/grass.obj");
-        
-        // batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
-        batch.LoadAsync();
-        auto obj_models = batch.AwaitResults();
-
-        auto zombie = obj_models["zombie"].Get<Node>();
-        auto test_model = obj_models["test_model"].Get<Node>();//Engine::Get()->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
-        auto cube_obj = obj_models["cube"].Get<Node>();
-        auto material_test_obj = obj_models["material"].Get<Node>();
-
-        /*material_test_obj.Scale(5.0f);
-        material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
-        GetScene()->GetRoot().AddChild(material_test_obj);*/
-
-        test_model.Scale(20.2f);
-
-        if (false) {
-            int i = 0;
-
-            for (auto &child : test_model.GetChildren()) {
-                if (!child) {
-                    continue;
-                }
-
-                if (auto ent = child.GetEntity()) {
-                    InitObject(ent);
-                    // ent->CreateBLAS();
-
-                    if (!ent->GetMesh()) {
-                        continue;
-                    }
-
-                    Array<Vector3> vertices;
-                    vertices.Reserve(ent->GetMesh()->GetVertices().size());
-
-                    for (auto &vertex : ent->GetMesh()->GetVertices()) {
-                        vertices.PushBack(vertex.GetPosition());
-                    }
-
-                    ent->AddController<RigidBodyController>(
-                        UniquePtr<physics::ConvexHullPhysicsShape>::Construct(vertices),
-                        physics::PhysicsMaterial { .mass = 0.0f }
-                    );
-                    ent->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
-
-                    i++;
-                }
-            }
-        }
-
-        if (true) {
-            //auto container_node = GetUI().GetScene()->GetRoot().AddChild();
-            //container_node.SetEntity(CreateObject<Entity>());
-            //container_node.GetEntity()->SetTranslation(Vector3(0.4f, 0.4f, 0.0f));
-            //container_node.GetEntity()->AddController<UIContainerController>();
-
-            //container_node.Scale(0.2f);
-
-            auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
-            btn_node.SetEntity(CreateObject<Entity>());
-            btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 0.85f, 0.0f));
-            btn_node.GetEntity()->AddController<UIButtonController>();
-
-            if (UIButtonController *controller = btn_node.GetEntity()->GetController<UIButtonController>()) {
-                controller->SetScript(Engine::Get()->GetAssetManager().Load<Script>("scripts/examples/ui_controller.hypscript"));
-            }
-
-            btn_node.Scale(0.01f);
-        }
-
-        auto cubemap = CreateObject<Texture>(TextureCube(
-            Engine::Get()->GetAssetManager().LoadMany<Texture>(
-                "textures/chapel/posx.jpg",
-                "textures/chapel/negx.jpg",
-                "textures/chapel/posy.jpg",
-                "textures/chapel/negy.jpg",
-                "textures/chapel/posz.jpg",
-                "textures/chapel/negz.jpg"
-            )
-        ));
-        cubemap->GetImage()->SetIsSRGB(true);
-        InitObject(cubemap);
-
-        if (true) { // hardware skinning
-            auto zombie_entity = zombie[0].GetEntity();
-            zombie_entity->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
-            zombie_entity->RebuildRenderableAttributes();
-            zombie_entity->SetTranslation(Vector3(0, 45, 0));
-            zombie_entity->SetScale(Vector3(4.5f));
-
-            zombie_entity->AddController<AABBDebugController>();
-
-            auto *rigid_body_controller = zombie_entity->AddController<RigidBodyController>(
-                UniquePtr<physics::BoxPhysicsShape>::Construct(zombie_entity->GetWorldAABB()),
-                physics::PhysicsMaterial { .mass = 250.0f }
-            );
-            //rigid_body_controller->GetRigidBody()->SetIsKinematic(false);
-
-            InitObject(zombie_entity);
-            zombie_entity->CreateBLAS();
-            zombie.SetName("zombie");
-
-            m_scene->GetRoot().AddChild(zombie);
-            
-            auto zomb2 = CreateObject<Entity>();
-            zomb2->SetMesh(zombie_entity->GetMesh());
-            zomb2->SetTranslation(Vector3(0, 20, 0));
-            zomb2->SetScale(Vector3(2.0f));
-            zomb2->SetShader(zombie_entity->GetShader());
-            zomb2->SetMaterial(CreateObject<Material>());//zombie_entity->GetMaterial());
-            zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 0.8f));
-            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
-            //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            //zomb2->GetMaterial()->SetIsAlphaBlended(true);
-            zomb2->SetName("FOOBAR ZOMBO");
-            // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
-            zomb2->SetSkeleton(CreateObject<Skeleton>());
-            zomb2->RebuildRenderableAttributes();
-
-            InitObject(zomb2);
-            m_scene->AddEntity(zomb2);
-        }
         
         { // adding lights to scene
             m_sun = CreateObject<Light>(DirectionalLight(
@@ -307,28 +165,222 @@ public:
             }
         }
 
-        if (false) { // adding cubemap rendering with a bounding box
-            m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
-                test_model.GetWorldAABB()
+        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
+            m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
+                BoundingBox(-300.0f, 300.0f),
+                Extent3D { 3, 2, 3 }
             );
         }
 
-        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
-            m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
-                test_model.GetWorldAABB(),
-                Extent3D { 3, 2, 3 }
+
+        if (true) { // adding shadow maps
+            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+                Handle<Light>(m_sun),
+                BoundingBox(Vector3(-300.0f, -10.0f, -300.0f), Vector3(300.0f, 100.0f, 300.0f))//test_model.GetWorldAABB()
             );
+        }
+
+        if (true) {
+            auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
+            btn_node.SetEntity(CreateObject<Entity>());
+            btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 0.85f, 0.0f));
+            btn_node.GetEntity()->AddController<UIButtonController>();
+
+            if (UIButtonController *controller = btn_node.GetEntity()->GetController<UIButtonController>()) {
+                controller->SetScript(Engine::Get()->GetAssetManager().Load<Script>("scripts/examples/ui_controller.hypscript"));
+            }
+
+            btn_node.Scale(0.01f);
         }
 
         { // allow ui rendering
             m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(GetUI().GetScene());
         }
 
+        if (scene_export_filepath.Exists()) {
+            // read file if it already exists.
+            fbom::FBOMReader reader(fbom::FBOMConfig { });
+            fbom::FBOMDeserializedObject deserialized;
+
+            DebugLog(
+                LogType::Info,
+                "Attempting to load exported scene %s...\n",
+                scene_export_filepath.Data()
+            );
+
+            if (auto err = reader.LoadFromFile(scene_export_filepath, deserialized)) {
+                DebugLog(
+                    LogType::Error,
+                    "Failed to load scene export. Message was: %s\n",
+                    err.message
+                );
+
+                HYP_BREAKPOINT;
+            } else if (auto exported_node = deserialized.Get<Node>()) {
+                Node *n = exported_node.Get();
+                std::cout << " node name " << n->GetName() << std::endl;
+
+                for (auto ch : n->GetChildren()) {
+                    std::cout << "ch : " << ch.GetName() << std::endl;
+                    std::cout << "entity : " << (ch.GetEntity() ? ch.GetEntity()->GetName() : " <no entity>") << std::endl;
+
+                    for (auto ch2 : ch.GetChildren()) {
+                        std::cout << "\tch2 : " << ch2.GetName() << std::endl;
+
+                        std::cout << "\tentity : " << (ch2.GetEntity() ? ch2.GetEntity()->GetName() : " <no entity>") << std::endl;
+                    }
+                }
+
+                m_scene->GetRoot().AddChild(exported_node);
+                Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
+
+                return;
+            }
+        }
+
+        if (true) { // skydome
+            if (auto skydome_node = m_scene->GetRoot().AddChild()) {
+                skydome_node.SetEntity(CreateObject<Entity>());
+                skydome_node.GetEntity()->AddController<SkydomeController>();
+            }
+        }
+        
+        if (Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI)) { // voxel cone tracing for indirect light and reflections
+            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(VoxelConeTracing::Params {
+                BoundingBox(-256.0f, 256.0f)
+            });
+        }
+
+        // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+        
+        
+        m_scene->GetFogParams().start_distance = 5000.0f;
+        m_scene->GetFogParams().end_distance = 40000.0f;
+
+        Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
+
+
+        auto batch = Engine::Get()->GetAssetManager().CreateBatch();
+        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+        batch.Add<Node>("house", "models/house.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("cube", "models/cube.obj");
+        batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
+        batch.Add<Node>("grass", "models/grass/grass.obj");
+        
+        // batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
+        batch.LoadAsync();
+
+        auto obj_models = batch.AwaitResults();
+        auto zombie = obj_models["zombie"].Get<Node>();
+        auto test_model = obj_models["test_model"].Get<Node>();//Engine::Get()->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
+        auto cube_obj = obj_models["cube"].Get<Node>();
+        auto material_test_obj = obj_models["material"].Get<Node>();
+
+        /*material_test_obj.Scale(5.0f);
+        material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
+        GetScene()->GetRoot().AddChild(material_test_obj);*/
+
+        test_model.Scale(0.2f);
+
+        if (false) {
+            int i = 0;
+
+            for (auto &child : test_model.GetChildren()) {
+                if (!child) {
+                    continue;
+                }
+
+                if (auto ent = child.GetEntity()) {
+                    InitObject(ent);
+                    // ent->CreateBLAS();
+
+                    if (!ent->GetMesh()) {
+                        continue;
+                    }
+
+                    Array<Vector3> vertices;
+                    vertices.Reserve(ent->GetMesh()->GetVertices().size());
+
+                    for (auto &vertex : ent->GetMesh()->GetVertices()) {
+                        vertices.PushBack(vertex.GetPosition());
+                    }
+
+                    ent->AddController<RigidBodyController>(
+                        UniquePtr<physics::ConvexHullPhysicsShape>::Construct(vertices),
+                        physics::PhysicsMaterial { .mass = 0.0f }
+                    );
+                    ent->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
+
+                    i++;
+                }
+            }
+        }
+
+        auto cubemap = CreateObject<Texture>(TextureCube(
+            Engine::Get()->GetAssetManager().LoadMany<Texture>(
+                "textures/chapel/posx.jpg",
+                "textures/chapel/negx.jpg",
+                "textures/chapel/posy.jpg",
+                "textures/chapel/negy.jpg",
+                "textures/chapel/posz.jpg",
+                "textures/chapel/negz.jpg"
+            )
+        ));
+        cubemap->GetImage()->SetIsSRGB(true);
+        InitObject(cubemap);
+
+        if (false) { // hardware skinning
+            auto zombie_entity = zombie[0].GetEntity();
+            zombie_entity->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
+            zombie_entity->RebuildRenderableAttributes();
+            zombie_entity->SetTranslation(Vector3(0, 45, 0));
+            zombie_entity->SetScale(Vector3(4.5f));
+
+            // zombie_entity->AddController<AABBDebugController>();
+
+            // auto *rigid_body_controller = zombie_entity->AddController<RigidBodyController>(
+            //     UniquePtr<physics::BoxPhysicsShape>::Construct(zombie_entity->GetWorldAABB()),
+            //     physics::PhysicsMaterial { .mass = 250.0f }
+            // );
+            //rigid_body_controller->GetRigidBody()->SetIsKinematic(false);
+
+            InitObject(zombie_entity);
+            zombie_entity->CreateBLAS();
+            zombie.SetName("zombie");
+
+            m_scene->GetRoot().AddChild(zombie);
+            
+            auto zomb2 = CreateObject<Entity>();
+            zomb2->SetMesh(zombie_entity->GetMesh());
+            zomb2->SetTranslation(Vector3(0, 20, 0));
+            zomb2->SetScale(Vector3(2.0f));
+            zomb2->SetShader(zombie_entity->GetShader());
+            zomb2->SetMaterial(CreateObject<Material>());//zombie_entity->GetMaterial());
+            zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 0.8f));
+            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
+            //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            //zomb2->GetMaterial()->SetIsAlphaBlended(true);
+            zomb2->SetName("FOOBAR ZOMBO");
+            // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
+            zomb2->SetSkeleton(CreateObject<Skeleton>());
+            zomb2->RebuildRenderableAttributes();
+
+            InitObject(zomb2);
+            m_scene->AddEntity(zomb2);
+        }
+
         cube_obj.Scale(50.0f);
 
-        auto axis_angles = Engine::Get()->GetAssetManager().Load<Node>("models/editor/axis_arrows.obj");
-        axis_angles.Scale(10.0f);
-        GetScene()->GetRoot().AddChild(axis_angles);
+        if (false) {
+            auto axis_angles = Engine::Get()->GetAssetManager().Load<Node>("models/editor/axis_arrows.obj");
+            axis_angles.Scale(10.0f);
+            GetScene()->GetRoot().AddChild(axis_angles);
+        }
         
         for (auto &child : test_model.GetChildren()) {
             if (const Handle<Entity> &entity = child.GetEntity()) {
@@ -343,87 +395,75 @@ public:
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
         
-        m_scene->GetFogParams().start_distance = 5000.0f;
-        m_scene->GetFogParams().end_distance = 40000.0f;
-        
         if (true) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
-        if (true) { // skydome
-            if (auto skydome_node = m_scene->GetRoot().AddChild()) {
-                skydome_node.SetEntity(CreateObject<Entity>());
-                skydome_node.GetEntity()->AddController<SkydomeController>();
+        if (false) { // physics
+            for (int i = 0; i < 6; i++) {
+                if (auto cube = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj")) {
+                    cube.SetName("cube " + String::ToString(i));
+                    auto cube_entity = cube[0].GetEntity();
+                    cube_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
+                    cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
+                    cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+                    cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+                    cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+                    cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+                    cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+                    cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(MathUtil::RandRange(0.0f, 1.0f), MathUtil::RandRange(0.0f, 1.0f), MathUtil::RandRange(0.0f, 1.0f), 1.0f));
+                    cube_entity->RebuildRenderableAttributes();
+
+                    cube_entity->SetScale(Vector3(3.0f));
+                    cube_entity->SetTranslation(Vector3(0, i * 40 + 50, 0));
+
+                    cube_entity->CreateBLAS();
+                    InitObject(cube_entity);
+                    m_scene->GetRoot().AddChild(cube);
+
+                    cube_entity->AddController<RigidBodyController>(
+                        UniquePtr<physics::BoxPhysicsShape>::Construct(cube_entity->GetWorldAABB()),
+                        physics::PhysicsMaterial { .mass = 1.0f }
+                    );
+                }
             }
         }
 
-        if (true) { // adding shadow maps
-            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-                Handle<Light>(m_sun),
-                test_model.GetWorldAABB()
-            );
-        }
-        
-        for (int i = 0; i < 6; i++) {
-            if (auto cube = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj")) {
-                cube.SetName("cube " + String::ToString(i));
-                auto cube_entity = cube[0].GetEntity();
-                cube_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-                cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
-                cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-                cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-                cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-                cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-                cube_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-                cube_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(MathUtil::RandRange(0.0f, 1.0f), MathUtil::RandRange(0.0f, 1.0f), MathUtil::RandRange(0.0f, 1.0f), 1.0f));
-                cube_entity->RebuildRenderableAttributes();
+        if (true) {
+            if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/sphere_hq.obj")) {
+                monkey.SetName("monkey");
+                auto monkey_entity = monkey[0].GetEntity();
+                monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+            //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.0f, 0.0f, 1.0f));
+            // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
+                monkey_entity->RebuildRenderableAttributes();
+                monkey.SetLocalTranslation(Vector3(0.0f, 50.0f, 0.0f));
+                monkey.Scale(12.0f);
+                monkey.Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(90.0f)));
+                InitObject(monkey_entity);
 
-                cube_entity->SetScale(Vector3(3.0f));
-                cube_entity->SetTranslation(Vector3(0, i * 40 + 50, 0));
-
-                cube_entity->CreateBLAS();
-                InitObject(cube_entity);
-                m_scene->GetRoot().AddChild(cube);
-
-                cube_entity->AddController<RigidBodyController>(
-                    UniquePtr<physics::BoxPhysicsShape>::Construct(cube_entity->GetWorldAABB()),
-                    physics::PhysicsMaterial { .mass = 1.0f }
+                monkey_entity->AddController<ScriptedController>(
+                    Engine::Get()->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
                 );
+
+                monkey_entity->CreateBLAS();
+                m_scene->GetRoot().AddChild(monkey);
+
+                //monkey[0].GetEntity()->AddController<RigidBodyController>(
+                //    UniquePtr<physics::BoxPhysicsShape>::Construct(monkey[0].GetWorldAABB()),
+                //    physics::PhysicsMaterial { .mass = 1.0f }
+            // );
             }
-        }
-
-        if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
-            monkey.SetName("monkey");
-            auto monkey_entity = monkey[0].GetEntity();
-            monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
-            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-            monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-           //monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-           // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            //monkey_entity->GetMaterial()->SetIsAlphaBlended(true);
-            monkey_entity->RebuildRenderableAttributes();
-            monkey.SetLocalTranslation(Vector3(0.0f, 50.0f, 0.0f));
-            monkey.Scale(6.0f);
-            InitObject(monkey_entity);
-
-            monkey_entity->AddController<ScriptedController>(
-                Engine::Get()->GetAssetManager().Load<Script>("scripts/examples/controller.hypscript")
-            );
-
-            monkey_entity->CreateBLAS();
-            m_scene->GetRoot().AddChild(monkey);
-
-            //monkey[0].GetEntity()->AddController<RigidBodyController>(
-            //    UniquePtr<physics::BoxPhysicsShape>::Construct(monkey[0].GetWorldAABB()),
-            //    physics::PhysicsMaterial { .mass = 1.0f }
-           // );
         }
 
         if (false) {
@@ -446,7 +486,7 @@ public:
 
             NodeProxy tree = Engine::Get()->GetAssetManager().Load<Node>("models/conifer/Conifer_Low.obj");
             tree.SetName("tree");
-            tree.Scale(1.0f);
+            tree.Scale(2.0f);
             if (auto needles = tree.Select("Needles")) {
                 if (needles.GetEntity() && needles.GetEntity()->GetMaterial()) {
                     needles.GetEntity()->GetMaterial()->SetFaceCullMode(FaceCullMode::NONE);
@@ -474,34 +514,34 @@ public:
             // add a plane physics shape
             auto plane = CreateObject<Entity>();
             plane->SetName("Plane entity");
-            plane->SetTranslation(Vector3(0, 12, 0));
-            plane->SetMesh(MeshBuilder::Cube());
+            plane->SetTranslation(Vector3(0, 14, 0));
+            plane->SetMesh(MeshBuilder::Quad());//Cube());
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-            plane->SetScale(25.0f);
+            plane->SetScale(Vector3(250.0f));
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.65f, 0.8f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.55f, 0.8f, 1.0f));
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.025f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
             plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.15f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.08f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            plane->SetRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
             plane->RebuildRenderableAttributes();
             plane->CreateBLAS();
             if (NodeProxy plane_node_proxy = GetScene()->AddEntity(plane)) {
-                plane->AddController<RigidBodyController>(
-                    UniquePtr<physics::BoxPhysicsShape>::Construct(plane->GetWorldAABB()),
-                    physics::PhysicsMaterial { .mass = 0.0f }
-                );
-                plane->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
+                plane_node_proxy.SetWorldRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(-90.0f)));
+                // plane->AddController<RigidBodyController>(
+                //     UniquePtr<physics::BoxPhysicsShape>::Construct(plane->GetWorldAABB()),
+                //     physics::PhysicsMaterial { .mass = 0.0f }
+                // );
+                // plane->GetController<RigidBodyController>()->GetRigidBody()->SetIsKinematic(false);
 
-                plane->AddController<AABBDebugController>();
+                // plane->AddController<AABBDebugController>();
             }
         }
 
-        if (true) { // particles test
+        if (false) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/smoke.png"),
                 .max_particles = 1024u,
@@ -542,7 +582,6 @@ public:
 
         GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
 
-
         for (auto &light : m_point_lights) {
             light->SetPosition(Vector3(
                 MathUtil::Sin(light->GetID().Value() + timer) * 30.0f,
@@ -561,22 +600,28 @@ public:
             m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.0f, -0.02f, 0.0f)).Normalize());
         }
 
-        if (GetInputManager()->IsKeyPress(KEY_C)) {
-            // add a cube
-            /*auto cube_entity = CreateObject<Entity>();
-            cube_entity->SetName("Cube entity");
-            cube_entity->SetMesh(MeshBuilder::Cube());
-            cube_entity->SetMaterial(CreateObject<Material>());
-            cube_entity->SetShader(CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Forward", ShaderProps(renderer::static_mesh_vertex_attributes))));
-            cube_entity->SetTranslation(GetScene()->GetCamera()->GetTranslation());
-            cube_entity->SetScale(Vector3(2.0f));
-            GetScene()->AddEntity(cube_entity);*/
+        if (m_export_task == nullptr || m_export_task->IsCompleted()) {
+            if (GetInputManager()->IsKeyStateChanged(KEY_C, &m_export_pressed) && m_export_pressed) {
+                m_export_task.Reset(new TaskBatch);
+                m_export_task->AddTask([export_path = scene_export_filepath, node = m_scene->GetRoot().Get()](...) {
+                    DebugLog(LogType::Info, "Begin export task, exporting to path: %s\n", export_path.Data());
 
-            auto cube = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj");
-            cube.Scale(2.0f);
-            cube.SetLocalTranslation(GetScene()->GetCamera()->GetTranslation());
-            GetScene()->GetRoot().AddChild(cube);
-            std::cout << "CUBE MESH ID : " << cube[0].GetEntity()->GetMesh()->GetID().Value() << "\n";
+                    UniquePtr<fbom::FBOMWriter> writer(new fbom::FBOMWriter);
+                    writer->Append(*node);
+
+                    FileByteWriter byte_writer(export_path.Data());
+                    auto err = writer->Emit(&byte_writer);
+                    byte_writer.Close();
+
+                    if (err.value != fbom::FBOMResult::FBOM_OK) {
+                        DebugLog(LogType::Error, "Failed to export scene: %s\n", err.message);
+                    } else {
+                        DebugLog(LogType::Info, "Finished exporting!\n");
+                    }
+                });
+
+                Engine::Get()->task_system.EnqueueBatch(m_export_task.Get());
+            }
         }
 
         // m_sun->SetPosition(Vector3(MathUtil::Sin(timer * 0.25f), MathUtil::Cos(timer * 0.25f), -MathUtil::Sin(timer * 0.25f)).Normalize());
@@ -707,6 +752,9 @@ public:
     std::unique_ptr<Node> zombie;
     GameCounter::TickUnit timer = -18.0f;
     GameCounter::TickUnit ray_cast_timer{};
+    bool m_export_pressed = false;
+    bool m_export_in_progress = false;
+    UniquePtr<TaskBatch> m_export_task;
 
 };
 } // namespace hyperion::v2
@@ -716,7 +764,7 @@ int main()
     using namespace hyperion::renderer;
 
     RefCountedPtr<Application> application(new SDLApplication("My Application"));
-    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1920, 1080));
+    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1280, 720));
     
     SystemEvent event;
 

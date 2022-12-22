@@ -2,11 +2,16 @@
 
 namespace hyperion::v2 {
 
+BasicPagingController::BasicPagingController()
+    : PagingController(Extent3D { 64, 64, 64 }, Vector3::one, 3.0f)
+{
+}
+
 BasicPagingController::BasicPagingController(
     Extent3D patch_size,
     const Vector3 &scale,
     Float max_distance
-) : PagingController("BasicPagingController", patch_size, scale, max_distance)
+) : PagingController(patch_size, scale, max_distance)
 {
 }
 

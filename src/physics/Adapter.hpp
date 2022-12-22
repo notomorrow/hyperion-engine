@@ -36,6 +36,12 @@ public:
 
     void OnRigidBodyRemoved(const Handle<RigidBody> &rigid_body)
         { GetDerivedAdapter()->DerivedAdapter::OnRigidBodRemoved(rigid_body); }
+    
+    void OnChangePhysicsShape(RigidBody *rigid_body)
+        { GetDerivedAdapter()->DerivedAdapter::ChangePhysicsShape(rigid_body); }
+    
+    void OnChangePhysicsMaterial(RigidBody *rigid_body)
+        { GetDerivedAdapter()->DerivedAdapter::OnChangePhysicsMaterial(rigid_body); }
 
     void ApplyForceToBody(const RigidBody *rigid_body, const Vector3 &force)
         { GetDerivedAdapter()->DerivedAdapter::ApplyForceToBody(rigid_body, force); }

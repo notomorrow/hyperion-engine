@@ -4,7 +4,7 @@
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <math/Vector3.hpp>
-
+#include <Types.hpp>
 
 
 namespace hyperion::v2 {
@@ -14,7 +14,7 @@ class Engine;
 class AudioSource : public EngineComponentBase<STUB_CLASS(AudioSource)>
 {
 public:
-    enum class Format
+    enum class Format : UInt
     {
         MONO8,
         MONO16,
@@ -22,7 +22,7 @@ public:
         STEREO16
     };
 
-    enum class State
+    enum class State : UInt
     {
         UNDEFINED,
         STOPPED,
@@ -30,12 +30,14 @@ public:
         PAUSED
     };
 
-    AudioSource(Format format, const unsigned char *data, size_t size, size_t freq);
+    AudioSource(Format format, const ByteBuffer &byte_buffer, SizeType freq);
     ~AudioSource();
 
     void Init();
 
     Format GetFormat() const { return m_format; }
+    SizeType GetFreq() const { return m_freq; }
+    const ByteBuffer &GetByteBuffer() const { return m_data; }
     unsigned int GetSampleLength() const { return m_sample_length; }
 
     State GetState() const;
@@ -54,8 +56,9 @@ private:
     void FindSampleLength();
 
     Format m_format;
-    Array<UByte> m_data;
+    ByteBuffer m_data;
     SizeType m_freq;
+
     unsigned int m_buffer_id;
     unsigned int m_source_id;
     unsigned int m_sample_length;

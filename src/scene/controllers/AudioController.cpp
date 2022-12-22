@@ -1,5 +1,7 @@
 #include "AudioController.hpp"
 
+#include <asset/serialization/fbom/marshals/AudioSourceMarshal.hpp>
+#include <asset/serialization/fbom/FBOMObject.hpp>
 #include <scene/Node.hpp>
 #include <math/MathUtil.hpp>
 #include <Engine.hpp>
@@ -12,7 +14,7 @@ AudioController::AudioController()
 }
 
 AudioController::AudioController(Handle<AudioSource> &&source)
-    : PlaybackController("AudioController"),
+    : PlaybackController(),
       m_source(std::move(source)),
       m_timer(0.0f)
 {
@@ -93,7 +95,26 @@ void AudioController::OnUpdate(GameCounter::TickUnit delta)
     }
     
     m_timer += delta;
+}
 
+void AudioController::Serialize(fbom::FBOMObject &out) const
+{
+    out.SetProperty("controller_name", fbom::FBOMString(), Memory::StringLength(controller_name), controller_name);
+
+    if (m_source) {
+        out.AddChild(*m_source.Get());
+    }
+}
+
+fbom::FBOMResult AudioController::Deserialize(const fbom::FBOMObject &in)
+{
+    for (auto &sub_object : *in.nodes) {
+        if (sub_object.GetType().IsOrExtends("AudioSource")) {
+            m_source = sub_object.deserialized.Get<AudioSource>();
+        }
+    }
+
+    return fbom::FBOMResult::FBOM_OK;
 }
 
 } // namespace hyperion::v2

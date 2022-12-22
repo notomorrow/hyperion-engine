@@ -1,3 +1,6 @@
+#ifndef HYP_TONEMAP_GLSL
+#define HYP_TONEMAP_GLSL
+
 #define HDR 1
 //#define HDR_TONEMAP_UNCHARTED 1
 #define HDR_TONEMAP_FILMIC 1
@@ -71,9 +74,9 @@ vec3 TonemapReinhardSimple(vec3 x)
     return x / (vec3(1.0) + x);
 }
 
-vec4 TonemapReinhardSimple(vec4 x)
+vec3 ReverseTonemapReinhardSimple(vec3 x)
 {
-    return vec4(x.rgb / (vec3(1.0) + x.rgb), x.a);
+    return x / (vec3(1.0) - x);
 }
 
 vec3 Tonemap(vec3 x) {
@@ -93,3 +96,5 @@ vec3 Tonemap(vec3 x) {
 	return x;
 #endif
 }
+
+#endif

@@ -32,9 +32,6 @@
 #include <map>
 #include <cstring>
 
-using std::memset;
-using std::memcpy;
-
 #include <asset/serialization/fbom/FBOMObject.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
 #include <asset/serialization/fbom/FBOMType.hpp>
@@ -100,17 +97,17 @@ struct FBOMStaticData
     {
     }
 
-    explicit FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMObject &object_data, Int64 offset = -1)
         : type(FBOM_STATIC_DATA_OBJECT),
           object_data(object_data),
           offset(offset),
           written(false) {}
-    explicit FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMType &type_data, Int64 offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
           offset(offset),
           written(false) {}
-    explicit FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
+    explicit FBOMStaticData(const FBOMData &data_data, Int64 offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
           offset(offset),
@@ -204,7 +201,7 @@ struct FBOMStaticData
         case FBOM_STATIC_DATA_DATA:
             return data_data.Get().GetUniqueID();
         default:
-            return UniqueID();
+            return UniqueID(0);
         }
     }
 
@@ -238,8 +235,6 @@ struct FBOMStaticData
         }
     }
 };
-
-
 
 class FBOM {
     FlatMap<String, std::unique_ptr<FBOMMarshalerBase>> marshalers;
@@ -289,7 +284,7 @@ public:
 
 struct FBOMConfig
 {
-    bool continue_on_external_load_error = true;
+    bool continue_on_external_load_error = false;
 
     String base_path;
     FlatMap<Pair<String, UInt32>, FBOMObject> external_data_cache;
@@ -315,16 +310,23 @@ public:
 
     FBOMResult LoadFromFile(const String &path, FBOMObject &out)
     {
+        DebugLog(LogType::Debug, "FBOM: Loading file %s\n", path.Data());
+
         FBOMObject root(FBOMObjectType("ROOT"));
 
         // Include our root dir as part of the path
-        const auto current_dir = FileSystem::CurrentPath();
-        const auto base_path = StringUtil::BasePath(path.Data());
+        const auto base_path = FileSystem::RelativePath(StringUtil::BasePath(path.Data()), FileSystem::CurrentPath());
         root.SetProperty("base_path", FBOMString(), base_path.size(), base_path.data());
 
-        FileByteReader reader(FileSystem::Join(base_path, std::string(FilePath(path).Basename().Data())));
+        DebugLog(LogType::Warn, "base_path: %s\n", base_path.c_str());
+
+        const auto read_path = FileSystem::Join(base_path, std::string(FilePath(path).Basename().Data()));
+
+        FileByteReader reader(read_path);
 
         if (reader.Eof()) {
+            DebugLog(LogType::Warn, "Could not open file %s\n", read_path.c_str());
+
             return { FBOMResult::FBOM_ERR, "File not open" };
         }
 
@@ -437,11 +439,18 @@ class FBOMWriter
 {
 public:
     FBOMWriter();
+
+    FBOMWriter(const FBOMWriter &other) = delete;
+    FBOMWriter &operator=(const FBOMWriter &other) = delete;
+
+    FBOMWriter(FBOMWriter &&other) noexcept;
+    FBOMWriter &operator=(FBOMWriter &&other) noexcept;
+
     ~FBOMWriter();
 
     template <class T, class Marshaler = FBOMMarshaler<T>>
     typename std::enable_if_t<!std::is_same_v<NormalizedType<T>, FBOMObject>, FBOMResult>
-    Append(const T &object)
+    Append(const T &object, FBOMObjectFlags flags = FBOM_OBJECT_FLAGS_NONE)
     {
         if (auto err = m_write_stream.m_last_result) {
             return err;
@@ -450,14 +459,7 @@ public:
         Marshaler marshal;
 
         FBOMObject base(marshal.GetObjectType());
-
-        // Set the ID of the object so we can reuse it.
-        // TODO: clean this up a bit.
-        if constexpr (std::is_base_of_v<EngineComponentBaseBase, T>) {
-            base.m_unique_id = UniqueID(object.GetID());
-        } else {
-            base.m_unique_id = UniqueID(object);
-        }
+        base.GenerateUniqueID(object, flags);
 
         if (auto err = marshal.Serialize(object, base)) {
             m_write_stream.m_last_result = err;
@@ -465,7 +467,7 @@ public:
             return err;
         }
 
-        return Append(std::move(base));
+        return Append(base);
     }
 
     FBOMResult Append(const FBOMObject &object);
@@ -474,7 +476,7 @@ public:
 private:
     FBOMResult WriteExternalObjects();
     void BuildStaticData();
-    void Prune(FBOMObject &);
+    void Prune(const FBOMObject &);
 
     FBOMResult WriteHeader(ByteWriter *out);
     FBOMResult WriteStaticDataToByteStream(ByteWriter *out);
@@ -498,7 +500,14 @@ private:
         SizeType m_static_data_offset = 0;
         FBOMResult m_last_result = FBOMResult::FBOM_OK;
 
-        FBOMDataLocation GetDataLocation(const UniqueID &unique_id, FBOMStaticData &out) const;
+        WriteStream() = default;
+        WriteStream(const WriteStream &other) = default;
+        WriteStream &operator=(const WriteStream &other) = default;
+        WriteStream(WriteStream &&other) noexcept = default;
+        WriteStream &operator=(WriteStream &&other) noexcept = default;
+        ~WriteStream() = default;
+
+        FBOMDataLocation GetDataLocation(const UniqueID &unique_id, FBOMStaticData &out_static_data, String &out_external_key) const;
         void MarkStaticDataWritten(const UniqueID &unique_id);
     } m_write_stream;
 };

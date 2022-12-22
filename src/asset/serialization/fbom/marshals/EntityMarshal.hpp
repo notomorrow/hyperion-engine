@@ -5,6 +5,7 @@
 #include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
 #include <asset/serialization/fbom/marshals/ShaderMarshal.hpp>
 #include <asset/serialization/fbom/marshals/MaterialMarshal.hpp>
+#include <asset/serialization/fbom/marshals/ControllerMarshal.hpp>
 #include <scene/Entity.hpp>
 #include <Engine.hpp>
 
@@ -23,6 +24,8 @@ public:
 
     virtual FBOMResult Serialize(const Entity &in_object, FBOMObject &out) const override
     {
+        out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
+    
         out.SetProperty("transform.translation", FBOMVec3f(), &in_object.GetTransform().GetTranslation());
         out.SetProperty("transform.rotation", FBOMQuaternion(), &in_object.GetTransform().GetRotation());
         out.SetProperty("transform.scale", FBOMVec3f(), &in_object.GetTransform().GetScale());
@@ -31,15 +34,19 @@ public:
         out.SetProperty("world_aabb", FBOMStruct(sizeof(BoundingBox)), &in_object.GetWorldAABB());
 
         if (const auto &mesh = in_object.GetMesh()) {
-            out.AddChild(*mesh, false);
+            out.AddChild(*mesh, FBOM_OBJECT_FLAGS_EXTERNAL);
         }
 
         if (const auto &shader = in_object.GetShader()) {
-            out.AddChild(*shader, false);
+            out.AddChild(*shader, FBOM_OBJECT_FLAGS_EXTERNAL);
         }
 
         if (const auto &material = in_object.GetMaterial()) {
-            out.AddChild(*material, false);
+            out.AddChild(*material, FBOM_OBJECT_FLAGS_EXTERNAL);
+        }
+
+        for (const auto &it : in_object.GetControllers()) {
+            out.AddChild(*it.second, FBOM_OBJECT_FLAGS_KEEP_UNIQUE);
         }
 
         return { FBOMResult::FBOM_OK };
@@ -48,6 +55,10 @@ public:
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
         auto entity_handle = UniquePtr<Handle<Entity>>::Construct(CreateObject<Entity>());
+
+        String name;
+        in.GetProperty("name").ReadString(name);
+        (*entity_handle)->SetName(std::move(name));
 
         { // transform
             Transform transform = Transform::identity;
@@ -92,6 +103,18 @@ public:
                 (*entity_handle)->SetShader(node.deserialized.Get<Shader>());
             } else if (node.GetType().IsOrExtends("Material")) {
                 (*entity_handle)->SetMaterial(node.deserialized.Get<Material>());
+            } else if (node.GetType().IsOrExtends("Controller")) {
+                if (auto wrapper = node.deserialized.Get<ControllerSerializationWrapper>()) {
+                    if (wrapper->controller) {
+                        (*entity_handle)->AddController(wrapper->type_id, std::move(wrapper->controller));
+                    } else {
+                        DebugLog(
+                            LogType::Warn,
+                            "Invalid controller on serialized Entity, the controller is no longer set and probably had its ownership taken by another Entity.\n"
+                            "Make sure serialized controllers have a unique ID, as they are not shared between Entities.\n"
+                        );
+                    }
+                }
             }
         }
 

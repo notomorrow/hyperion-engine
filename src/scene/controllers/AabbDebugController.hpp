@@ -13,6 +13,8 @@ class Engine;
 class AABBDebugController : public Controller
 {
 public:
+    static constexpr const char *controller_name = "AABBDebugController";
+
     AABBDebugController();
     virtual ~AABBDebugController() override = default;
     

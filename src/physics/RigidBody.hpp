@@ -182,11 +182,15 @@ public:
     const UniquePtr<PhysicsShape> &GetShape() const
         { return m_shape; }
 
+    void SetShape(UniquePtr<PhysicsShape> &&shape);
+
     PhysicsMaterial &GetPhysicsMaterial()
         { return m_physics_material; }
 
     const PhysicsMaterial &GetPhysicsMaterial() const
         { return m_physics_material; }
+
+    void SetPhysicsMaterial(const PhysicsMaterial &physics_material);
 
     bool IsKinematic() const
         { return m_is_kinematic; }

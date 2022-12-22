@@ -209,9 +209,39 @@ public:
 
     /* All controller operations should only be used from the GAME thread */
 
+    Controller *AddController(TypeID type_id, UniquePtr<Controller> &&controller)
+    {
+        AssertThrow(controller != nullptr);
+
+        if (controller->m_owner != nullptr) {
+            // Controller already has a parent. Remove it from the current parent.
+            controller->m_owner->RemoveController(type_id);
+        }
+
+        controller->m_owner = this;
+        controller->OnAdded();
+
+        for (Node *node : m_nodes) {
+            controller->OnAttachedToNode(node);
+        }
+
+        for (const ID<Scene> &id : m_scenes) {
+            controller->OnAttachedToScene(id);
+        }
+
+        controller->OnTransformUpdate(m_transform);
+
+        Controller *ptr = controller.Get();
+        m_controllers.Set(type_id, std::move(controller));
+
+        return ptr;
+    }
+
     template <class ControllerClass>
     ControllerClass *AddController(UniquePtr<ControllerClass> &&controller)
     {
+        AssertThrow(controller != nullptr);
+
         static_assert(std::is_base_of_v<Controller, ControllerClass>, "Object must be a derived class of Controller");
 
         if (controller->m_owner != nullptr) {
@@ -241,6 +271,25 @@ public:
     template <class ControllerClass, class ...Args>
     ControllerClass *AddController(Args &&... args)
         { return AddController<ControllerClass>(UniquePtr<ControllerClass>::Construct(std::forward<Args>(args)...)); }
+
+    bool RemoveController(TypeID type_id)
+    {
+        if (auto *controller = m_controllers.Get(type_id)) {
+            for (Node *node : m_nodes) {
+                controller->OnDetachedFromNode(node);
+            }
+
+            for (const ID<Scene> &id : m_scenes) {
+                controller->OnDetachedFromScene(id);
+            }
+
+            controller->OnRemoved();
+
+            return m_controllers.Remove(type_id);
+        } else {
+            return false;
+        }
+    }
 
     template <class ControllerClass>
     bool RemoveController()

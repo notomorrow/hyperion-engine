@@ -49,7 +49,7 @@ public:
         }
 
         if (const auto &entity = in_object.GetEntity()) {
-            if (auto err = out.AddChild(*entity, false)) {
+            if (auto err = out.AddChild(*entity/*, FBOM_OBJECT_FLAGS_EXTERNAL*/)) {
                 return err;
             }
         }
@@ -59,7 +59,7 @@ public:
                 continue;
             }
 
-            if (auto err = out.AddChild(*child.Get())) {
+            if (auto err = out.AddChild(*child.Get(), FBOM_OBJECT_FLAGS_KEEP_UNIQUE)) {
                 return err;
             }
         }
@@ -147,11 +147,11 @@ public:
             node_ptr->SetWorldAABB(world_aabb);
         }
 
-        for (auto &node : *in.nodes) {
-            if (node.GetType().IsOrExtends("Node")) {
-                node_ptr->AddChild(node.deserialized.Get<Node>());
-            } else if (node.GetType().IsOrExtends("Entity")) {
-                node_ptr->SetEntity(node.deserialized.Get<Entity>());
+        for (auto &sub_object : *in.nodes) {
+            if (sub_object.GetType().IsOrExtends("Node")) {
+                node_ptr->AddChild(sub_object.deserialized.Get<Node>());
+            } else if (sub_object.GetType().IsOrExtends("Entity")) {
+                node_ptr->SetEntity(sub_object.deserialized.Get<Entity>());
             }
         }
 

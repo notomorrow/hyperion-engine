@@ -13,6 +13,8 @@ class Engine;
 class UIButtonController : public UIController
 {
 public:
+    static constexpr const char *controller_name = "UIButtonController";
+
     UIButtonController();
     virtual ~UIButtonController() override = default;
     

@@ -13,6 +13,8 @@ namespace hyperion::v2 {
 class AudioController : public PlaybackController
 {
 public:
+    static constexpr const char *controller_name = "AudioController";
+
     AudioController();
     AudioController(Handle<AudioSource> &&source);
     virtual ~AudioController() override = default;
@@ -27,6 +29,9 @@ public:
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
+
+    virtual void Serialize(fbom::FBOMObject &out) const override;
+    virtual fbom::FBOMResult Deserialize(const fbom::FBOMObject &in) override;
 
 protected:
     Handle<AudioSource> m_source;

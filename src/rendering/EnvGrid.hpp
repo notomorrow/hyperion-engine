@@ -61,8 +61,6 @@ private:
 
     EnvGridShaderData m_shader_data;
     UInt m_current_probe_index;
-
-    Handle<Entity> m_entity;
 };
 
 } // namespace hyperion::v2

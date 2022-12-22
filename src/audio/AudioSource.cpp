@@ -5,16 +5,15 @@
 
 namespace hyperion::v2 {
 
-AudioSource::AudioSource(Format format, const unsigned char *data, size_t size, size_t freq)
+AudioSource::AudioSource(Format format, const ByteBuffer &byte_buffer, SizeType freq)
     : EngineComponentBase(),
       m_format(format),
+      m_data(byte_buffer),
       m_freq(freq),
       m_buffer_id(~0u),
       m_source_id(~0u),
       m_sample_length(0)
 {
-    m_data.Resize(size);
-    Memory::Copy(m_data.Data(), data, size);
 }
 
 AudioSource::~AudioSource()
@@ -56,8 +55,8 @@ void AudioSource::Init()
 
         FindSampleLength();
 
-        m_data.Clear();
-        m_data.Refit();
+        // drop reference
+        m_data = ByteBuffer();
     }
 
     OnTeardown([this](...) {

@@ -129,7 +129,7 @@ void main()
 #endif
 
 #ifdef ENV_PROBE_ENABLED
-        // CalculateEnvProbeIrradiance(deferred_params, position.xyz, N, irradiance);
+        CalculateEnvProbeIrradiance(deferred_params, position.xyz, N, irradiance);
 #endif
 
 #ifdef RT_ENABLED

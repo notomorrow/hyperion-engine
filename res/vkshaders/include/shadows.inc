@@ -17,8 +17,8 @@
 #define HYP_PENUMBRA_SAMPLES_4
 //#define HYP_PENUMBRA_SAMPLES_8
 
-//#define HYP_SHADOW_PENUMBRA 1
-#define HYP_SHADOW_VARIANCE 1
+#define HYP_SHADOW_PENUMBRA 1
+//#define HYP_SHADOW_VARIANCE 1
 
 const vec2 shadow_pcf_kernel[16] = vec2[16](
     vec2(-0.94201624, -0.39906216),
@@ -93,14 +93,6 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     aabb.min = shadow_map_data[index].aabb_min.xyz;
     aabb.max = shadow_map_data[index].aabb_max.xyz;
 
-    vec3 sphere_center;
-    float sphere_radius;
-    AABBToSphere(aabb, sphere_center, sphere_radius);
-    
-    //const vec3 aabb_extent = shadow_map_data[index].aabb_max.xyz - shadow_map_data[index].aabb_min.xyz;
-    //const vec3 aabb_center = (shadow_map_data[index].aabb_max.xyz - shadow_map_data[index].aabb_min.xyz) * 0.5;
-    //const float fade = distance(pos, aabb_center) / max(aabb_extent.x, max(aabb_extent.y, aabb_extent.z));
-
     return AABBContainsPoint(aabb, pos) ? percent_in_shadow : 1.0;
 }
 
@@ -114,12 +106,20 @@ float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float
 
 float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
 {
+    AABB aabb;
+    aabb.min = shadow_map_data[index].aabb_min.xyz;
+    aabb.max = shadow_map_data[index].aabb_max.xyz;
+
+    if (!AABBContainsPoint(aabb, pos)) {
+        return 1.0;
+    }
+
     const vec3 coord = GetShadowCoord(index, pos);
 
     const float shadow_map_depth = coord.z;
 
-    const float shadow_filter_size = 0.0005;
-    const float penumbra_filter_size = 0.005;
+    const float shadow_filter_size = 0.00008;
+    const float penumbra_filter_size = 0.0001;
     const float light_size = 3.0; // affects how quickly shadows become soft
 
     const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));

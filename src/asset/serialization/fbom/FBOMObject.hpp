@@ -39,6 +39,15 @@ struct FBOMExternalObjectInfo
         { return key.GetHashCode(); }
 };
 
+using FBOMObjectFlags = UInt;
+
+enum FBOMObjectFlagBits : FBOMObjectFlags
+{
+    FBOM_OBJECT_FLAGS_NONE = 0x0,
+    FBOM_OBJECT_FLAGS_EXTERNAL = 0x1,
+    FBOM_OBJECT_FLAGS_KEEP_UNIQUE = 0x2
+};
+
 class FBOMObject
 {
 public:
@@ -78,6 +87,8 @@ public:
     const FBOMType &GetType() const
         { return m_object_type; }
 
+    bool HasProperty(const String &key) const;
+
     const FBOMData &GetProperty(const String &key) const;
 
     void SetProperty(const String &key, const FBOMData &data);
@@ -102,39 +113,34 @@ public:
         @param object The child object to add
         @param external If true, store the child object in a separate file,
                         To be pulled in when the final object is loaded */
-    template <class T, class Marshaler = FBOMMarshaler<NormalizedType<T>>>
+    template <class T, class MarshalClass = FBOMMarshaler<NormalizedType<T>>>
     typename std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>, FBOMResult>
-    AddChild(const T &object, bool external = false)
+    AddChild(const T &object, FBOMObjectFlags flags = FBOM_OBJECT_FLAGS_NONE)
     {
-        static_assert(implementation_exists<Marshaler>,
-            "Marshal class does not exist");
+        static_assert(implementation_exists<MarshalClass>, "Marshal class does not exist");
+        static_assert(std::is_base_of_v<FBOMMarshalerBase, MarshalClass>, "Marshal class must be a derived class of FBOMMarshalBase");
 
-        static_assert(std::is_base_of_v<FBOMMarshalerBase, Marshaler>,
-            "Marshal class must be a derived class of FBOMMarshalBase");
+        MarshalClass marshal;
 
-        Marshaler marshal;
+        String external_object_key;
 
         FBOMObject out_object(marshal.GetObjectType());
-        // Set the ID of the object so we can reuse it.
-        // TODO: clean this up a bit.
-        if constexpr (std::is_base_of_v<EngineComponentBaseBase, NormalizedType<T>>) {
-            out_object.m_unique_id = UniqueID(object.GetID());
-        } else {
-            out_object.m_unique_id = UniqueID(object);
+        out_object.GenerateUniqueID(object, flags);
+
+        if (flags & FBOM_OBJECT_FLAGS_EXTERNAL) {
+            if constexpr (std::is_base_of_v<EngineComponentBaseBase, NormalizedType<T>>) {
+                const String class_name_lower(StringUtil::ToLower(object.GetClass().GetName()).c_str());
+                external_object_key = String(std::to_string(UInt64(out_object.GetUniqueID())).c_str()) + ".hyp" + class_name_lower;
+            } else {
+                external_object_key = String(std::to_string(UInt64(out_object.GetUniqueID())).c_str()) + ".hypdata";
+            }
         }
 
         auto result = marshal.Serialize(object, out_object);
 
         if (result.value != FBOMResult::FBOM_ERR) {
-            String external_object_key;
-
-            if (external) {
-                external_object_key = String::ToString(UInt64(out_object.GetUniqueID())) + ".fbom";
-            }
-
             // TODO: Check if external object already exists.
             // if it does, do not build the file again.
-
             AddChild(std::move(out_object), external_object_key);
         }
 
@@ -142,10 +148,32 @@ public:
     }
     
     UniqueID GetUniqueID() const
-        { return UniqueID(GetHashCode());  }
+        { return m_unique_id;  }
 
     HashCode GetHashCode() const;
     std::string ToString() const;
+
+    template <class T>
+    void GenerateUniqueID(const T &object, FBOMObjectFlags flags)
+    {
+        // m_unique_id = UniqueID::Generate();
+
+        // Set the ID of the object so we can reuse it.
+        // TODO: clean this up a bit.
+        if constexpr (std::is_base_of_v<EngineComponentBaseBase, NormalizedType<T>>) {
+            ID<T> id = object.GetID();
+
+            HashCode hc;
+            hc.Add(String(HandleDefinition<T>::class_name).GetHashCode());
+            hc.Add(id.value);
+
+            m_unique_id = (flags & FBOM_OBJECT_FLAGS_KEEP_UNIQUE) ? UniqueID::Generate() : UniqueID(hc);
+        } else if constexpr (HasGetHashCode<NormalizedType<T>, HashCode>::value) {
+            m_unique_id = (flags & FBOM_OBJECT_FLAGS_KEEP_UNIQUE) ? UniqueID::Generate() : UniqueID(object);
+        } else {
+            m_unique_id = UniqueID::Generate();
+        }
+    }
 
 private:
     void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);

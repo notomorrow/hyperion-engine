@@ -9,12 +9,23 @@ namespace hyperion::v2 {
 class RigidBodyController : public Controller
 {
 public:
+    static constexpr const char *controller_name = "RigidBodyController";
+
+    RigidBodyController();
+
     RigidBodyController(
         UniquePtr<physics::PhysicsShape> &&shape,
         const physics::PhysicsMaterial &physics_material
     );
 
     virtual ~RigidBodyController() override = default;
+
+    void SetPhysicsShape(UniquePtr<physics::PhysicsShape> &&shape);
+
+    const physics::PhysicsMaterial &GetPhysicsMaterial() const
+        { return m_physics_material; }
+
+    void SetPhysicsMaterial(const physics::PhysicsMaterial &physics_material);
 
     Handle<physics::RigidBody> &GetRigidBody()
         { return m_rigid_body; }

@@ -146,6 +146,8 @@ public:
     /*! \brief If the Node exists, sets the Entity attached to the Node. */
     void SetEntity(Handle<Entity> &&entity);
 
+    Node *GetParent() const;
+
     /*! \brief If the NodeProxy is not empty, and index is not out of bounds,
         returns a new NodeProxy, holding a pointer to the child of the held Node at the given index.
         If the index is out of bounds, returns an empty node proxy.

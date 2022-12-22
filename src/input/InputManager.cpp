@@ -119,11 +119,20 @@ bool InputManager::IsKeyDown(int key) const
     return false;
 }
 
-bool InputManager::IsKeyPress(int key) const
+bool InputManager::IsKeyStateChanged(int key, bool *previous_key_state)
 {
+    AssertThrow(previous_key_state != nullptr);
+
+    const bool previous_value = *previous_key_state;
+
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
-        return m_input_state.key_states[key].is_pressed.load(std::memory_order_relaxed)
-            && !m_input_state.last_key_states[key].is_pressed.load(std::memory_order_relaxed);
+        bool is_pressed = m_input_state.key_states[key].is_pressed.load(std::memory_order_relaxed);
+
+        *previous_key_state = is_pressed;
+
+        return is_pressed != previous_value;
+    } else {
+        *previous_key_state = false;
     }
 
     return false;
