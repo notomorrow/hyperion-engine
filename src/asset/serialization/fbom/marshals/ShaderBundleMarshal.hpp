@@ -20,7 +20,26 @@ public:
 
     virtual FBOMResult Serialize(const CompiledShader &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("version", FBOMUnsignedLong(), in_object.version_hash);
+        if (!in_object.IsValid()) {
+            return { FBOMResult::FBOM_ERR, "Cannot serialize invalid compiled shader instance" };
+        }
+
+        out.SetProperty("name", FBOMString(), in_object.name.Size(), in_object.name.Data());
+
+        auto properties_array = in_object.properties.ToArray();
+
+        out.SetProperty("properties.size", FBOMUnsignedInt(), UInt(properties_array.Size()));
+
+        for (SizeType index = 0; index < properties_array.Size(); index++) {
+            const ShaderProperty &item = properties_array[index];
+
+            out.SetProperty(
+                String("properties.") + String::ToString(index) + ".name",
+                FBOMString(),
+                item.name.Size(),
+                item.name.Data()
+            );
+        }
 
         for (SizeType index = 0; index < in_object.modules.Size(); index++) {
             const auto &byte_buffer = in_object.modules[index];
@@ -40,8 +59,28 @@ public:
     {
         auto compiled_shader = UniquePtr<CompiledShader>::Construct();
 
-        if (auto err = in.GetProperty("version").ReadUnsignedLong(&compiled_shader->version_hash)) {
+        String name;
+
+        if (auto err = in.GetProperty("name").ReadString(name)) {
             return err;
+        }
+
+        UInt num_properties;
+
+        if (auto err = in.GetProperty("properties.size").ReadUnsignedInt(&num_properties)) {
+            return err;
+        }
+
+        for (UInt i = 0; i < num_properties; i++) {
+            const auto param_string = String("properties.") + String::ToString(i);
+
+            String property_name;
+
+            if (auto err = in.GetProperty(param_string + ".name").ReadString(name)) {
+                continue;
+            }
+
+            compiled_shader->properties.Set(property_name);
         }
 
         for (SizeType index = 0; index < ShaderModule::Type::MAX; index++) {
@@ -52,6 +91,9 @@ public:
                     return err;
                 }
             }
+        }
+        if (!compiled_shader->IsValid()) {
+            return { FBOMResult::FBOM_ERR, "Cannot deserialize invalid compiled shader instance" };
         }
 
         out_object = std::move(compiled_shader);

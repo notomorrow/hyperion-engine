@@ -13,6 +13,10 @@ permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
 frag = deferred/DeferredCombine.frag
 vert = PostEffect.vert
 
+[FXAA]
+frag = fxaa.frag
+vert = PostEffect.vert
+
 [ObjectVisibility]
 comp = cull/object_visibility.comp
 
@@ -180,6 +184,8 @@ comp = TemporalBlending.comp
 [ImageBlurCompute]
 permute = HORIZONTAL, OUTPUT(RGBA8 RGBA16F RGBA32F)
 comp = Blur.comp
+
+
 
 # Testing
 

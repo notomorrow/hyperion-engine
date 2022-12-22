@@ -99,7 +99,7 @@ struct ShaderProperty
     {
         HashCode hc;
         hc.Add(name.GetHashCode());
-        // hashcode does not depend on is_permuation.
+        // hashcode does not depend on any other properties than name.
 
         return hc;
     }
@@ -255,6 +255,29 @@ public:
         return m_props.ToArray();
     }
 
+    String ToString() const
+    {
+        if (m_props.Any()) {
+            String str;
+
+            for (const ShaderProperty &property : *this) {
+                if (str.Empty()) {
+                    str += "[";
+                } else {
+                    str += ", ";
+                }
+
+                str += "\"" + property.name + "\"";
+            }
+
+            str += "]";
+
+            return str;
+        } else {
+            return "[]";
+        }
+    }
+
     HYP_DEF_STL_BEGIN_END(
         m_props.Begin(),
         m_props.End()
@@ -297,7 +320,8 @@ private:
 
 struct CompiledShader
 {
-    UInt64 version_hash = ~0u;
+    String name;
+    ShaderProps properties;
     HeapArray<ByteBuffer, ShaderModule::Type::MAX> modules;
 
     explicit operator bool() const
@@ -305,14 +329,12 @@ struct CompiledShader
 
     bool IsValid() const
     {
-        return version_hash != ~0u
-            && modules.Any([](const ByteBuffer &buffer) { return buffer.Size() != 0; });
+        return modules.Any([](const ByteBuffer &buffer) { return buffer.Any(); });
     }
 
     HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(version_hash);
         hc.Add(modules.GetHashCode());
 
         return hc;
@@ -370,7 +392,7 @@ public:
         }
 
         const auto version_it = it->second.compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
-            return item.version_hash == version_hash;
+            return item.properties.GetHashCode().Value() == version_hash;
         });
 
         if (version_it == it->second.compiled_shaders.End()) {

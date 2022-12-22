@@ -14,16 +14,7 @@ FXAAEffect::~FXAAEffect() = default;
 
 Handle<Shader> FXAAEffect::CreateShader()
 {
-    return CreateObject<Shader>(
-        std::vector<SubShader> {
-            SubShader{ShaderModule::Type::VERTEX, {
-                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/PostEffect.vert.spv")).ReadBytes()
-            }},
-            SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(Engine::Get()->GetAssetManager().GetBasePath().Data(), "/vkshaders/fxaa.frag.spv")).ReadBytes()
-            }}
-        }
-    );
+    return CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("FXAA"));
 }
 
 } // namespace hyperion::v2
