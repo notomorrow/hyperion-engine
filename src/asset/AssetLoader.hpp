@@ -6,6 +6,7 @@
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 #include <scene/Node.hpp>
+#include <Constants.hpp>
 
 #include <system/Debug.hpp>
 
@@ -50,6 +51,7 @@ struct LoadedAsset
     ~LoadedAsset() = default;
 };
 
+
 class AssetLoaderBase
 {
 public:
@@ -59,15 +61,37 @@ public:
 };
 
 template <class T>
+struct AssetLoadResultWrapper;
+
+
+
+template <class T, bool b>
+struct InnerTypeImpl;
+
+template <class T>
+struct InnerTypeImpl<T, true>
+{
+    using type = typename AssetLoadResultWrapper<T>::type;
+};
+
+template <class T>
+struct InnerTypeImpl<T, false>
+{
+    using type = T;
+};
+
+template <class T>
 struct AssetLoaderWrapper
 {
-    // using ResultType = std::conditional_t<std::is_base_of_v<EngineComponentBaseBase, T>, HandleBase, AtomicRefCountedPtr<void>>;
-    // using CastedType = std::conditional_t<std::is_base_of_v<EngineComponentBaseBase, T>, Handle<T>, AtomicRefCountedPtr<T>>;
+private:
 
-    static constexpr bool is_opaque_handle = has_opaque_handle_defined<T>;   //std::is_base_of_v<EngineComponentBaseBase, T>;
+public:
+    static constexpr bool is_opaque_handle = has_opaque_handle_defined<T>;
+
+    using InnerType = typename InnerTypeImpl<T, implementation_exists<AssetLoadResultWrapper<T>>>::type;
 
     using ResultType = AtomicRefCountedPtr<void>;
-    using CastedType = std::conditional_t<is_opaque_handle, Handle<T>, AtomicRefCountedPtr<T>>;
+    using CastedType = std::conditional_t<is_opaque_handle, Handle<T>, AtomicRefCountedPtr< InnerType > >;
 
     AssetLoaderBase &loader;
 
@@ -81,11 +105,11 @@ struct AssetLoaderWrapper
                     return *casted;
                 }
             } else {
-                return value.Get<ResultType>().template Cast<T>();
+                return value.Get<ResultType>().template Cast<InnerType>();
             }
         }
 
-        return CastedType();
+        return EmptyResult();
     }
 
     AssetLoaderWrapper(AssetLoaderBase &loader)
@@ -102,7 +126,7 @@ struct AssetLoaderWrapper
         out_result = loaded_asset.result;
 
         if (!loaded_asset.result) {
-            return CastedType();
+            return EmptyResult();
         }
 
         if (loaded_asset.value.template Is<UniquePtr<void>>()) {
@@ -112,23 +136,11 @@ struct AssetLoaderWrapper
         } else if (loaded_asset.value.template Is<AssetValue>()) {
 
             return ExtractAssetValue(loaded_asset.value.template Get<AssetValue>());
-            // if (as_ref_counted.template Is<ResultType>()) {
-            //     if constexpr (is_opaque_handle) {
-            //         auto casted = as_ref_counted.template Get<ResultType>().template Cast<Handle<T>>();
-
-            //         if (casted) {
-            //             return *casted;
-            //         }
-            //     } else {
-            //         return as_ref_counted.template Get<ResultType>().template Cast<T>();
-            //     }
-            // }
-
         } else {
             AssertThrowMsg(false, "Unhandled variant type!");
         }
 
-        return CastedType();
+        return EmptyResult();
     }
 
     static auto MakeCastedType(UniquePtr<void> &&ptr) -> CastedType
@@ -140,14 +152,14 @@ struct AssetLoaderWrapper
                 if (casted) {
                     return *casted;
                 }
-            } else if (auto casted = ptr.Cast<T>()) {
-                AtomicRefCountedPtr<T> ref_counted_ptr;
+            } else if (UniquePtr<InnerType> casted = ptr.Cast<InnerType>()) {
+                AtomicRefCountedPtr<InnerType> ref_counted_ptr;
                 ref_counted_ptr.Reset(casted.Release());
                 return ref_counted_ptr;
             }
         }
 
-        return CastedType();
+        return EmptyResult();
     }
 
     static auto MakeResultType(UniquePtr<void> &&ptr) -> ResultType

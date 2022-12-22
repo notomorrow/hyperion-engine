@@ -23,15 +23,13 @@ FBOMData::FBOMData(const FBOMType &type, ByteBuffer &&byte_buffer)
 }
 
 FBOMData::FBOMData(const FBOMData &other)
-    : m_unique_id(other.m_unique_id),
-      type(other.type),
+    : type(other.type),
       bytes(other.bytes)
 {
 }
 
 FBOMData &FBOMData::operator=(const FBOMData &other)
 {
-    m_unique_id = other.m_unique_id;
     type = other.type;
     bytes = other.bytes;
 
@@ -39,8 +37,7 @@ FBOMData &FBOMData::operator=(const FBOMData &other)
 }
 
 FBOMData::FBOMData(FBOMData &&other) noexcept
-    : m_unique_id(std::move(other.m_unique_id)),
-      bytes(std::move(other.bytes)),
+    : bytes(std::move(other.bytes)),
       type(std::move(other.type))
 {
     other.type = FBOMUnset();
@@ -48,7 +45,6 @@ FBOMData::FBOMData(FBOMData &&other) noexcept
 
 FBOMData &FBOMData::operator=(FBOMData &&other) noexcept
 {
-    m_unique_id = std::move(other.m_unique_id);
     bytes = std::move(other.bytes);
     type = std::move(other.type);
 

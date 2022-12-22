@@ -136,7 +136,7 @@ void main(void)
 
     out_radius = accum_radius;
 
-    // reflection_sample.rgb = Tonemap(reflection_sample.rgb);
+    reflection_sample.rgb = TonemapReinhardSimple(reflection_sample.rgb);
 
     imageStore(ssr_sample, coord, vec4(pow(reflection_sample.rgb, vec3(1.0 / 2.2)), reflection_sample.a));
     imageStore(ssr_radius, coord, vec4(out_radius / 255.0));

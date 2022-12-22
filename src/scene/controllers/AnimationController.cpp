@@ -5,7 +5,7 @@
 namespace hyperion::v2 {
 
 AnimationController::AnimationController()
-    : PlaybackController("AnimationController")
+    : PlaybackController()
 {
 }
 

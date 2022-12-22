@@ -17,17 +17,25 @@ namespace hyperion::v2 {
 class TerrainPagingController : public PagingController
 {
 public:
+    static constexpr const char *controller_name = "TerrainPagingController";
+
+    TerrainPagingController();
+
     TerrainPagingController(
         Seed seed,
         Extent3D patch_size,
         const Vector3 &scale,
         Float max_distance
     );
+
     virtual ~TerrainPagingController() override = default;
 
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
+
+    virtual void Serialize(fbom::FBOMObject &out) const override;
+    virtual fbom::FBOMResult Deserialize(const fbom::FBOMObject &in) override;
 
 protected:
     virtual void OnPatchAdded(Patch *patch) override;

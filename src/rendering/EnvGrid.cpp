@@ -9,68 +9,12 @@ namespace hyperion::v2 {
 using renderer::Image;
 using renderer::Result;
 
-class EnvGrid;
-
-class EnvGridPagingController : public PagingController
-{
-public:
-    EnvGridPagingController(
-        EnvGrid *env_grid,
-        Extent3D patch_size,
-        const Vector3 &scale,
-        Float max_distance
-    );
-    virtual ~EnvGridPagingController() override = default;
-
-    virtual void OnAdded() override;
-    virtual void OnRemoved() override;
-
-protected:
-    virtual void OnPatchAdded(Patch *patch) override;
-    virtual void OnPatchRemoved(Patch *patch) override;
-
-private:
-    EnvGrid *m_env_grid;
-};
-
-EnvGridPagingController::EnvGridPagingController(
-    EnvGrid *env_grid,
-    Extent3D patch_size,
-    const Vector3 &scale,
-    Float max_distance
-) : PagingController("EnvGridPagingController", patch_size, scale, max_distance),
-    m_env_grid(env_grid)
-{
-}
-
-void EnvGridPagingController::OnAdded()
-{
-    AssertThrow(m_env_grid != nullptr);
-
-    PagingController::OnAdded();
-}
-
-void EnvGridPagingController::OnRemoved()
-{
-    PagingController::OnRemoved();
-}
-
-void EnvGridPagingController::OnPatchAdded(Patch *patch)
-{
-    DebugLog(LogType::Info, "EnvGrid added %f, %f\n", patch->info.coord.x, patch->info.coord.y);
-}
-
-void EnvGridPagingController::OnPatchRemoved(Patch *patch)
-{
-    DebugLog(LogType::Info, "EnvGrid removed %f, %f\n", patch->info.coord.x, patch->info.coord.y);
-}
-
 const Extent2D EnvGrid::reflection_probe_dimensions = Extent2D { 128, 128 };
 const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 16, 16 };
 const Float EnvGrid::overlap_amount = 10.0f;
 
 EnvGrid::EnvGrid(const BoundingBox &aabb, const Extent3D &density)
-    : RenderComponent(2),
+    : RenderComponent(5),
       m_aabb(aabb),
       m_density(density),
       m_current_probe_index(0)
@@ -188,28 +132,10 @@ void EnvGrid::Init()
 void EnvGrid::InitGame()
 {
     Threads::AssertOnThread(THREAD_GAME);
-
-    m_entity = CreateObject<Entity>();
-    m_entity->SetName("EnvGrid Entity");
-    m_entity->AddController<EnvGridPagingController>(
-        this,
-        Extent3D(m_aabb.GetExtent() / Vector3(m_density)),
-        Vector3::one,
-        1.0f
-    );
-
-    GetParent()->GetScene()->AddEntity(m_entity);
 }
 
 void EnvGrid::OnRemoved()
 {
-    if (m_entity) {
-        m_entity->RemoveController<EnvGridPagingController>();
-
-        GetParent()->GetScene()->RemoveEntity(m_entity);
-        m_entity.Reset();
-    }
-
     if (m_reflection_probe) {
         m_reflection_probe->EnqueueUnbind();
     }

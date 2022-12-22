@@ -1,10 +1,11 @@
 #include <scene/skydome/controllers/SkydomeController.hpp>
+#include <asset/serialization/fbom/FBOMObject.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
 
 SkydomeController::SkydomeController()
-    : Controller("SkydomeController")
+    : Controller()
 {
 }
 
@@ -49,6 +50,16 @@ void SkydomeController::OnAttachedToScene(ID<Scene> id)
     if (auto scene = Handle<Scene>(id)) {
         scene->AddEntity(m_dome);
     }
+}
+
+void SkydomeController::Serialize(fbom::FBOMObject &out) const
+{
+    out.SetProperty("controller_name", fbom::FBOMString(), Memory::StringLength(controller_name), controller_name);
+}
+
+fbom::FBOMResult SkydomeController::Deserialize(const fbom::FBOMObject &in)
+{
+    return fbom::FBOMResult::FBOM_OK;
 }
 
 } // namespace hyperion::v2

@@ -46,7 +46,7 @@ struct UIEvent
 class UIController : public Controller
 {
 public:
-    UIController(const String &name, bool receives_update = true);
+    UIController(bool receives_update = true);
     virtual ~UIController() override = default;
 
     virtual void OnEvent(const UIEvent &event) = 0;

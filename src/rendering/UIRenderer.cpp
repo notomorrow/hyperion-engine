@@ -59,10 +59,7 @@ struct RENDER_COMMAND(DestroyUIDescriptors) : RenderCommand
             // set to placeholder data.
             descriptor_set
                 ->GetDescriptor(DescriptorKey::UI_TEXTURE)
-                ->SetSubDescriptor({
-                    .element_index = UInt(component_index),
-                    .image_view = &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(component_index, &Engine::Get()->GetPlaceholderData().GetImageView2D1x1R8());
         }
 
         return result;

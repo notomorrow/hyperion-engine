@@ -3,10 +3,15 @@
 
 namespace hyperion::v2 {
 
+RigidBodyController::RigidBodyController()
+    : Controller()
+{
+}
+
 RigidBodyController::RigidBodyController(
     UniquePtr<physics::PhysicsShape> &&shape,
     const physics::PhysicsMaterial &physics_material
-) : Controller("RigidBodyController"),
+) : Controller(),
     m_shape(std::move(shape)),
     m_physics_material(physics_material)
 {
@@ -59,6 +64,24 @@ void RigidBodyController::OnUpdate(GameCounter::TickUnit delta)
     Transform transform = m_rigid_body->GetTransform();
     transform.SetTranslation(transform.GetTranslation() + m_origin_offset);
     GetOwner()->SetTransform(transform);
+}
+
+void RigidBodyController::SetPhysicsShape(UniquePtr<physics::PhysicsShape> &&shape)
+{
+    if (m_rigid_body) {
+        m_rigid_body->SetShape(std::move(shape));
+    } else {
+        m_shape = std::move(shape);
+    }
+}
+
+void RigidBodyController::SetPhysicsMaterial(const physics::PhysicsMaterial &physics_material)
+{
+    m_physics_material = physics_material;
+
+    if (m_rigid_body) {
+        m_rigid_body->SetPhysicsMaterial(physics_material);
+    }
 }
 
 } // namespace hyperion::v2

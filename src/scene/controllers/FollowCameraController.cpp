@@ -1,10 +1,11 @@
 #include "FollowCameraController.hpp"
+#include <asset/serialization/fbom/FBOMObject.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
 
 BasicCharacterController::BasicCharacterController()
-    : Controller("BasicCharacterController")
+    : Controller()
 {
 }
 
@@ -79,6 +80,16 @@ void BasicCharacterController::OnUpdate(GameCounter::TickUnit)
 
         m_ray_test_results.Clear();
     }
+}
+
+void BasicCharacterController::Serialize(fbom::FBOMObject &out) const
+{
+    out.SetProperty("controller_name", fbom::FBOMString(), Memory::StringLength(controller_name), controller_name);
+}
+
+fbom::FBOMResult BasicCharacterController::Deserialize(const fbom::FBOMObject &in)
+{
+    return fbom::FBOMResult::FBOM_OK;
 }
 
 } // namespace hyperion::v2

@@ -20,6 +20,17 @@
 #include <asset/audio_loaders/WAVAudioLoader.hpp>
 #include <asset/script_loaders/ScriptLoader.hpp>
 
+#include <scene/controllers/AabbDebugController.hpp>
+#include <scene/controllers/AnimationController.hpp>
+#include <scene/controllers/AudioController.hpp>
+#include <scene/controllers/ScriptedController.hpp>
+#include <scene/controllers/paging/BasicPagingController.hpp>
+#include <scene/terrain/controllers/TerrainPagingController.hpp>
+#include <scene/controllers/FollowCameraController.hpp>
+#include <scene/skydome/controllers/SkydomeController.hpp>
+#include <scene/controllers/physics/RigidBodyController.hpp>
+#include <ui/controllers/UIButtonController.hpp>
+
 #include <Game.hpp>
 
 #include <util/MeshBuilder.hpp>
@@ -151,6 +162,7 @@ Engine *Engine::Get()
 Engine::Engine()
     : shader_globals(nullptr)
 {
+    RegisterComponents();
     RegisterDefaultAssetLoaders();
 }
 
@@ -171,6 +183,19 @@ Engine::~Engine()
     }
 
     m_instance->Destroy();
+}
+
+void Engine::RegisterComponents()
+{
+    m_components.Register<AABBDebugController>();
+    m_components.Register<TerrainPagingController>();
+    m_components.Register<SkydomeController>();
+    m_components.Register<ScriptedController>();
+    m_components.Register<BasicCharacterController>();
+    m_components.Register<AnimationController>();
+    m_components.Register<AudioController>();
+    m_components.Register<RigidBodyController>();
+    m_components.Register<BasicPagingController>();
 }
 
 void Engine::RegisterDefaultAssetLoaders()

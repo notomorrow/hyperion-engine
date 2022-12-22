@@ -4,11 +4,8 @@
 
 namespace hyperion::v2 {
 
-std::atomic<ControllerID> ControllerSet::controller_id_counter { 0 };
-
-Controller::Controller(const String &name, bool receives_update)
-    : m_name(name),
-      m_owner(nullptr),
+Controller::Controller(bool receives_update)
+    : m_owner(nullptr),
       m_receives_update(receives_update),
       m_script_valid(false)
 {

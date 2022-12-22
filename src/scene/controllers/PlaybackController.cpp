@@ -2,8 +2,8 @@
 
 namespace hyperion::v2 {
 
-PlaybackController::PlaybackController(const char *name)
-    : Controller(name),
+PlaybackController::PlaybackController()
+    : Controller(),
       m_state{}
 {
 }

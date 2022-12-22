@@ -21,7 +21,7 @@ enum class LoopMode
 class PlaybackController : public Controller
 {
 public:
-    PlaybackController(const char *name);
+    PlaybackController();
     virtual ~PlaybackController() override = default;
 
     bool IsPlaying() const

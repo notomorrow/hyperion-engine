@@ -13,6 +13,8 @@ class Engine;
 class UIContainerController : public UIController
 {
 public:
+    static constexpr const char *controller_name = "UIContainerController";
+
     UIContainerController();
     virtual ~UIContainerController() override = default;
     

@@ -25,7 +25,7 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/packing.inc"
 #include "include/tonemap.inc"
 
-#define SUN_INTENSITY 5.0
+#define SUN_INTENSITY 15.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3
@@ -153,7 +153,7 @@ void main()
     vec3 normal = normalize(v_normal);
     
     const float cutoff = -0.25;
-    const vec3 sky_color_bottom = vec3(0.0);
+    const vec3 sky_color_bottom = vec3(0.1);
 
     vec3 sky_color = sky_color_bottom;
 
@@ -164,14 +164,15 @@ void main()
         vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
 
         sky_color = atmosphere;
-        // exposure
-        sky_color = 1.0 - exp(-1.0 * sky_color);
-
-        // sky will not be tonemapped outside of this:
-        sky_color = Tonemap(sky_color);
     }
 
     sky_color = mix(sky_color, sky_color_bottom, 1.0 - smoothstep(cutoff, 0.0, v_position.y));
+
+    // exposure
+    sky_color = 1.0 - exp(-1.0 * sky_color);
+
+    // sky will not be tonemapped outside of this:
+    sky_color = Tonemap(sky_color);
 
     gbuffer_albedo = vec4(sky_color, 0.0);
 

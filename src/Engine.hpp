@@ -298,6 +298,7 @@ public:
     ObjectPool registry;
 
 private:
+    void RegisterComponents();
     void RegisterDefaultAssetLoaders();
 
     void FinalizeStop();

@@ -56,11 +56,9 @@ private:
         {
             auto &asset = (*map)[key];
 
-            asset.value.Set(
-                AssetLoaderWrapper<T>::MakeResultType(
-                    asset_manager->template Load<T>(asset.path, asset.result)
-                )
-            );
+            asset.value.Set(AssetLoaderWrapper<T>::MakeResultType(
+                asset_manager->template Load<T>(asset.path, asset.result)
+            ));
 
             if (asset.result != LoaderResult::Status::OK) {
                 asset.value.Reset();
@@ -129,8 +127,8 @@ public:
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
     void LoadAsync(UInt num_batches = MathUtil::MaxSafeValue<UInt>());
-    AssetMap AwaitResults();
-    AssetMap ForceLoad();
+    [[nodiscard]] AssetMap AwaitResults();
+    [[nodiscard]] AssetMap ForceLoad();
 
     AssetManager *asset_manager;
 
