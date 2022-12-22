@@ -3,6 +3,7 @@
 
 #include "../include/shared.inc"
 #include "../include/brdf.inc"
+#include "../include/tonemap.inc"
 
 #define DEFERRED_FLAGS_SSR_ENABLED         0x1
 #define DEFERRED_FLAGS_VCT_ENABLED         0x2
@@ -228,6 +229,8 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
             lod
         );
 
+        env_probe_sample.rgb = ReverseTonemapReinhardSimple(env_probe_sample.rgb);
+
         ibl = env_probe_sample.rgb * mix(1.0, max(0.1, env_probe_sample.a), float(include_shadow));
     }
 }
@@ -373,6 +376,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
     screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
+    screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
 }
 #endif

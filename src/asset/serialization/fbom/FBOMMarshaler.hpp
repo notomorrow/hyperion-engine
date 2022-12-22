@@ -24,7 +24,7 @@ public:
     virtual FBOMType GetObjectType() const = 0;
 
 protected:
-    virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const = 0;
+    // virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const = 0;
     virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const = 0;
 };
 
@@ -40,12 +40,12 @@ public:
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const = 0;
 
 private:
-    virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
-    {
-        auto extracted_value = in.Get<T>();
+    // virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
+    // {
+    //     auto extracted_value = in.Get<T>();
 
-        return Serialize(*extracted_value.Get(), out);
-    }
+    //     return Serialize(*extracted_value.Get(), out);
+    // }
 
     virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override
     {

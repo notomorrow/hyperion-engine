@@ -103,6 +103,28 @@ public:
     FileByteWriter(const FileByteWriter &other) = delete;
     FileByteWriter &operator=(const FileByteWriter &other) = delete;
 
+    FileByteWriter(FileByteWriter &&other) noexcept
+        : file(other.file)
+    {
+        other.file = nullptr;
+    }
+
+    FileByteWriter &operator=(FileByteWriter &&other) noexcept
+    {
+        if (std::addressof(other) == this) {
+            return *this;
+        }
+
+        if (file) {
+            delete file;
+        }
+
+        file = other.file;
+        other.file = nullptr;
+
+        return *this;
+    }
+
     ~FileByteWriter()
     {
         delete file;

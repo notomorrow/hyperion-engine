@@ -64,6 +64,9 @@ public:
     const APIInstance &GetAPIInstance() const
         { return m_api_instance; }
 
+    const SourceFile &GetSourceFile() const
+        { return m_source_file; }
+
     void Init();
 
     const ErrorList &GetErrors() const { return m_errors; }

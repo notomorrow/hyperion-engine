@@ -155,9 +155,76 @@ void ComponentContainer<ControllerType>::Update(GameCounter::TickUnit delta)
 
 } // namespace detail
 
+struct RegisteredController
+{
+    using ControllerCreateFunction = std::add_pointer_t<UniquePtr<Controller>(void)>;
+
+    TypeID type_id;
+    ANSIString name;
+    ControllerCreateFunction create_fn;
+};
+
 class ComponentRegistry
 {
 public:
+    template <class ControllerType>
+    void Register()
+    {
+        static_assert(std::is_base_of_v<Controller, ControllerType>, "ControllerType must be a controller!");
+
+        const ANSIString controller_name(ControllerType::controller_name);
+
+        const auto it = m_registered_controllers.Find(controller_name);
+
+        AssertThrowMsg(
+            it == m_registered_controllers.End(),
+            "Controller %s is already registered!",
+            controller_name.Data()
+        );
+
+        m_registered_controllers[controller_name] = RegisteredController {
+            TypeID::ForType<ControllerType>(),
+            controller_name,
+            []() -> UniquePtr<Controller> {
+                return UniquePtr<ControllerType>::Construct();
+            }
+        };
+
+        DebugLog(
+            LogType::Debug,
+            "Registered controller %s\n",
+            controller_name.Data()
+        );
+    }
+
+    bool IsRegistered(const ANSIString &controller_name) const
+    {
+        return m_registered_controllers.Contains(controller_name);
+    }
+
+    UniquePtr<Controller> CreateByName(const ANSIString &controller_name)
+    {
+        const auto it = m_registered_controllers.Find(controller_name);
+
+        AssertThrowMsg(
+            it != m_registered_controllers.End(),
+            "Controller %s is not registered!",
+            controller_name.Data()
+        );
+
+        return it->second.create_fn();
+    }
+
+    TypeID GetControllerTypeID(const ANSIString &controller_name) const
+    {
+        const auto it = m_registered_controllers.Find(controller_name);
+
+        if (it == m_registered_controllers.End()) {
+            return TypeID::ForType<void>();
+        }
+
+        return it->second.type_id;
+    }
 
     template <class ControllerType>
     void Add(Entity *entity, UniquePtr<ControllerType> &&controller)
@@ -195,6 +262,7 @@ private:
         return static_cast<detail::ComponentContainer<ControllerType> *>(m_systems.At<ControllerType>().Get());
     }
 
+    FlatMap<ANSIString, RegisteredController> m_registered_controllers;
     TypeMap<UniquePtr<detail::ComponentContainerBase>> m_systems;
 };
 

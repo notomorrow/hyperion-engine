@@ -67,7 +67,6 @@ class PagingController : public Controller
 
 public:
     PagingController(
-        const char *name,
         Extent3D patch_size,
         const Vector3 &scale,
         Float max_distance
@@ -93,7 +92,7 @@ protected:
 
     static PatchNeighbors GetNeighbors(const PatchCoord &coord);
 
-    auto FindPatch(const PatchCoord &coord) -> FlatMap<PatchCoord, std::unique_ptr<Patch>>::Iterator
+    auto FindPatch(const PatchCoord &coord) -> FlatMap<PatchCoord, UniquePtr<Patch>>::Iterator
     {
         return m_patches.Find(coord);
     }
@@ -106,21 +105,21 @@ protected:
             return nullptr;
         }
 
-        return it->second.get();
+        return it->second.Get();
     }
 
     PatchCoord WorldSpaceToCoord(const Vector3 &position) const;
     bool InRange(const Patch *patch, const PatchCoord &camera_coord) const;
     bool InRange(const PatchCoord &patch_center, const PatchCoord &camera_coord) const;
 
-    virtual std::unique_ptr<Patch> CreatePatch(const PatchInfo &info);
+    virtual UniquePtr<Patch> CreatePatch(const PatchInfo &info);
     void AddPatch(const PatchCoord &coord);
     void RemovePatch(const PatchCoord &coord);
     void EnqueuePatch(const PatchCoord &coord);
     void PushUpdate(const PatchUpdate &update);
     void InitPatch(Patch *patch);
 
-    FlatMap<PatchCoord, std::unique_ptr<Patch>> m_patches;
+    FlatMap<PatchCoord, UniquePtr<Patch>> m_patches;
     Queue<PatchUpdate> m_queue;
     FlatSet<PatchCoord> m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
     Extent3D m_patch_size;

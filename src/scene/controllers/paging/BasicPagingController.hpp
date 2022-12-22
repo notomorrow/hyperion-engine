@@ -8,11 +8,16 @@ namespace hyperion::v2 {
 class BasicPagingController : public PagingController
 {
 public:
+    static constexpr const char *controller_name = "BasicPagingController";
+
+    BasicPagingController();
+
     BasicPagingController(
         Extent3D patch_size,
         const Vector3 &scale,
         Float max_distance
     );
+
     virtual ~BasicPagingController() override = default;
 
     virtual void OnAdded() override;

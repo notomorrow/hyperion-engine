@@ -117,7 +117,7 @@ public:
 
     bool IsKeyDown(int key) const;
     bool IsKeyUp(int key) const { return !IsKeyDown(key); }
-    bool IsKeyPress(int key) const;
+    bool IsKeyStateChanged(int key, bool *previous_key_state);
     bool IsButtonDown(int btn) const;  
     bool IsButtonUp(int btn) const { return !IsButtonDown(btn); }
 

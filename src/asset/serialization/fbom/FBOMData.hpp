@@ -234,7 +234,6 @@ struct FBOMData
     }
 
 private:
-    UniqueID m_unique_id;
     ByteBuffer bytes;
     FBOMType type;
 };

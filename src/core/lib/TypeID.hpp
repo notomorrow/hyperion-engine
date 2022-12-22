@@ -44,10 +44,6 @@ public:
     template <class T>
     static const TypeID &ForType()
     {
-        // static const TypeID id = TypeID { ++type_id_counter };
-
-        // return id;
-
         return TypeIDGenerator<T>::GetID();
     }
 
@@ -91,6 +87,12 @@ public:
 
         return *this;
     }
+
+    explicit operator bool() const
+        { return value != ForType<void>().value; }
+
+    bool operator!() const
+        { return value == ForType<void>().value; }
 
     bool operator==(const TypeID &other) const { return value == other.value; }
     bool operator!=(const TypeID &other) const { return value != other.value; }

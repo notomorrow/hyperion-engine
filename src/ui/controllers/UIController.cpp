@@ -2,8 +2,8 @@
 
 namespace hyperion::v2 {
 
-UIController::UIController(const String &name, bool receives_update)
-    : Controller(name, receives_update)
+UIController::UIController(bool receives_update)
+    : Controller(receives_update)
 {
 }
 

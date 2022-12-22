@@ -85,6 +85,17 @@ FBOMObject::~FBOMObject()
     }
 }
 
+bool FBOMObject::HasProperty(const String &key) const
+{
+    auto it = properties.Find(key);
+
+    if (it == properties.End()) {
+        return false;
+    }
+
+    return true;
+}
+
 const FBOMData &FBOMObject::GetProperty(const String &key) const
 {
     auto it = properties.Find(key);
@@ -128,11 +139,19 @@ void FBOMObject::SetProperty(const String &key, const ByteBuffer &bytes)
 
 void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)
 {
-    object.SetExternalObjectInfo(FBOMExternalObjectInfo {
-        .key = external_object_key
-    });
+    object.SetExternalObjectInfo(FBOMExternalObjectInfo { external_object_key });
 
     nodes->PushBack(std::move(object));
+
+    if (object.GetType().IsOrExtends("Node")) {
+
+        FlatSet<UInt64> sub_node_ids;
+        for (auto &node : *nodes) {
+            // debug sanity check
+            auto insert_result = sub_node_ids.Insert(node.GetUniqueID());
+            AssertThrow(insert_result.second);
+        }
+    }
 }
 
 HashCode FBOMObject::GetHashCode() const

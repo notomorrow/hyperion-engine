@@ -131,6 +131,15 @@ void NodeProxy::SetEntity(Handle<Entity> &&entity)
     }
 }
 
+Node *NodeProxy::GetParent() const
+{
+    if (auto *node = Get()) {
+        return node->GetParent();
+    }
+
+    return nullptr;
+}
+
 NodeProxy NodeProxy::GetChild(SizeType index)
 {
     if (Get() && index < Get()->GetChildren().Size()) {

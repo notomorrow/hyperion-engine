@@ -30,7 +30,7 @@ public:
         // }
 
         if (in_object.GetRoot()) {
-            out.AddChild(*in_object.GetRoot().Get());
+            out.AddChild(*in_object.GetRoot().Get(), FBOM_OBJECT_FLAGS_KEEP_UNIQUE);
         }
 
         if (auto *camera = in_object.GetCamera().Get()) {

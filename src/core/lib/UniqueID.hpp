@@ -27,9 +27,14 @@ struct UniqueIDGenerator
 
 struct UniqueID
 {
+    static inline UInt64 DefaultValue()
+    {
+        return containers::detail::UniqueIDGenerator::Generate();
+    }
+
 public:
     UniqueID()
-        : value(containers::detail::UniqueIDGenerator::Generate())
+        : value(DefaultValue())
     {
     }
 
@@ -54,13 +59,13 @@ public:
     UniqueID(UniqueID &&other) noexcept
         : value(other.value)
     {
-        other.value = 0;
+        other.value = DefaultValue();
     }
 
     UniqueID &operator=(UniqueID &&other) noexcept
     {
         value = other.value;
-        other.value = 0;
+        other.value = DefaultValue();
 
         return *this;
     }
@@ -79,6 +84,14 @@ public:
 
     HashCode GetHashCode() const
         { return HashCode(value); }
+
+    static inline UniqueID Generate()
+    {
+        UniqueID id;
+        id.value = containers::detail::UniqueIDGenerator::Generate();
+
+        return id;
+    }
 
 private:
     UInt64 value;

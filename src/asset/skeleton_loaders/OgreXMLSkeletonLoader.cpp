@@ -191,9 +191,7 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
         return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
     }
 
-    auto skeleton_handle = UniquePtr<Handle<Skeleton>>::Construct(
-        CreateObject<Skeleton>()
-    );
+    auto skeleton_handle = UniquePtr<Handle<Skeleton>>::Construct(CreateObject<Skeleton>());
 
     for (const auto &item : object.bones) {
         auto bone = std::make_unique<Bone>(item.name);

@@ -6,6 +6,7 @@
 #include <core/Containers.hpp>
 #include <math/Transform.hpp>
 #include <script/Script.hpp>
+#include <asset/serialization/fbom/FBOMResult.hpp>
 #include <GameCounter.hpp>
 #include <Types.hpp>
 
@@ -15,12 +16,32 @@
 
 namespace hyperion::v2 {
 
+namespace fbom {
+class FBOMObject;
+} // namespace fbom
+
 using ControllerID = UInt;
 
 class Node;
 class Entity;
 class Scene;
 class Engine;
+class Controller;
+
+struct ControllerSerializationWrapper
+{
+    TypeID type_id;
+    UniquePtr<Controller> controller;
+};
+
+template <class T>
+struct AssetLoadResultWrapper;
+
+template <>
+struct AssetLoadResultWrapper<Controller>
+{
+    using type = ControllerSerializationWrapper;
+};
 
 class Controller
 {
@@ -50,7 +71,7 @@ protected:
     };
 
 public:
-    Controller(const String &name, bool receives_update = true);
+    Controller(bool receives_update = true);
     Controller(const Controller &other) = delete;
     Controller &operator=(const Controller &other) = delete;
 
@@ -58,9 +79,6 @@ public:
     // Controller &operator=(Controller &&other) noexcept;
 
     virtual ~Controller();
-
-    const String &GetName() const
-        { return m_name; }
 
     Entity *GetOwner() const
         { return m_owner; }
@@ -89,6 +107,9 @@ public:
     virtual void OnDetachedFromScene(ID<Scene> id) {}
     virtual void OnAttachedToScene(ID<Scene> id) {}
 
+    virtual void Serialize(fbom::FBOMObject &out) const { }// = 0;
+    virtual fbom::FBOMResult Deserialize(const fbom::FBOMObject &in) { return fbom::FBOMResult::FBOM_OK; }//= 0;
+
 protected:
     bool CreateScriptedObjects();
     virtual bool CreateScriptedMethods();
@@ -106,19 +127,7 @@ private:
 
 class ControllerSet
 {
-    using Map = FlatMap<ControllerID, UniquePtr<Controller>>;
-
-    static std::atomic<ControllerID> controller_id_counter;
-
-    template <class T>
-    static ControllerID GetControllerID()
-    {
-        static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
-
-        static const ControllerID id = ++controller_id_counter;
-
-        return id;
-    }
+    using Map = TypeMap<UniquePtr<Controller>>;
 
 public:
     using Iterator = typename Map::Iterator;
@@ -142,44 +151,58 @@ public:
 
     ~ControllerSet() = default;
     
+    void Set(TypeID type_id, UniquePtr<Controller> &&controller)
+    {
+        AssertThrow(controller != nullptr);
+
+        m_map.Set(type_id, std::move(controller));
+    }
+    
     template <class T>
     void Set(UniquePtr<T> &&controller)
     {
         AssertThrow(controller != nullptr);
 
-        const auto id = GetControllerID<T>();
+        const auto id = TypeID::ForType<T>();
 
-        m_map[id] = std::move(controller);
+        m_map.Set(id, std::move(controller));
     }
 
-    template <class T>
-    T *Get() const
+    Controller *Get(TypeID type_id) const
     {
-        const auto id = GetControllerID<T>();
-
-        const auto it = m_map.Find(id);
+        const auto it = m_map.Find(type_id);
 
         if (it == m_map.End()) {
             return nullptr;
         }
 
-        return static_cast<T *>(it->second.Get());
+        return it->second.Get();
+    }
+
+    template <class T>
+    T *Get() const
+    {
+        const auto id = TypeID::ForType<T>();
+
+        return static_cast<T *>(Get(id));
+    }
+
+    bool Has(TypeID type_id) const
+    {
+        return m_map.Find(type_id) != m_map.End();
     }
 
     template <class T>
     bool Has() const
     {
-        const auto id = GetControllerID<T>();
+        const auto id = TypeID::ForType<T>();
 
-        return m_map.Find(id) != m_map.End();
+        return Has(id);
     }
     
-    template <class T>
-    bool Remove()
+    bool Remove(TypeID type_id)
     {
-        const auto id = GetControllerID<T>();
-
-        const auto it = m_map.Find(id);
+        const auto it = m_map.Find(type_id);
 
         if (it == m_map.End()) {
             return false;
@@ -188,6 +211,14 @@ public:
         m_map.Erase(it);
 
         return true;
+    }
+    
+    template <class T>
+    bool Remove()
+    {
+        const auto id = TypeID::ForType<T>();
+
+        return Remove(id);
     }
 
     void Clear()

@@ -157,6 +157,7 @@ public:
     template <> \
     struct HandleDefinition< T > \
     { \
+        static constexpr const char *class_name = HYP_STR(T); \
         static constexpr SizeType max_size = (_max_size); \
     }
 
@@ -169,6 +170,7 @@ public:
     template <> \
     struct HandleDefinition< ns::T > \
     { \
+        static constexpr const char *class_name = HYP_STR(ns) "::" HYP_STR(T); \
         static constexpr SizeType max_size = (_max_size); \
     }
 

@@ -1,16 +1,24 @@
 #include "TerrainPagingController.hpp"
+#include <asset/serialization/fbom/FBOMObject.hpp>
 #include <rendering/Texture.hpp>
 #include <util/MeshBuilder.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
 
+TerrainPagingController::TerrainPagingController()
+    : PagingController(Extent3D { 64, 64, 64 }, Vector3::one, 3.0f),
+      m_noise_combinator(0x12345),
+      m_seed(0x12345)
+{
+}
+
 TerrainPagingController::TerrainPagingController(
     Seed seed,
     Extent3D patch_size,
     const Vector3 &scale,
     Float max_distance
-) : PagingController("TerrainPagingController", patch_size, scale, max_distance),
+) : PagingController(patch_size, scale, max_distance),
     m_noise_combinator(seed),
     m_seed(seed)
 {
@@ -40,13 +48,12 @@ void TerrainPagingController::OnAdded()
     m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
     // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
 
-    if (auto albedo_texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_albedo.png")) {
+    if (auto albedo_texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png")) {
         albedo_texture->GetImage()->SetIsSRGB(true);
         m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
     }
 
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_Normal-ogl.png"));
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/snow/snowdrift1_Roughness.png"));
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-preview.png"));
 
     InitObject(m_material);
 
@@ -260,6 +267,30 @@ void TerrainPagingController::AddEnqueuedChunks()
     DebugLog(LogType::Debug, "Added %u chunks\n", num_chunks_added);
 
     m_terrain_generation_flag.store(false);
+}
+
+void TerrainPagingController::Serialize(fbom::FBOMObject &out) const
+{
+    out.SetProperty("controller_name", fbom::FBOMString(), Memory::StringLength(controller_name), controller_name);
+
+    out.SetProperty("seed", fbom::FBOMUnsignedInt(), m_seed);
+    out.SetProperty("width", fbom::FBOMUnsignedInt(), m_patch_size.width);
+    out.SetProperty("height", fbom::FBOMUnsignedInt(), m_patch_size.height);
+    out.SetProperty("depth", fbom::FBOMUnsignedInt(), m_patch_size.depth);
+    out.SetProperty("scale", fbom::FBOMVec3f(), m_scale);
+    out.SetProperty("max_distance", fbom::FBOMFloat(), m_max_distance);
+}
+
+fbom::FBOMResult TerrainPagingController::Deserialize(const fbom::FBOMObject &in)
+{
+    in.GetProperty("seed").ReadUnsignedInt(&m_seed);
+    in.GetProperty("width").ReadUnsignedInt(&m_patch_size.width);
+    in.GetProperty("height").ReadUnsignedInt(&m_patch_size.height);
+    in.GetProperty("depth").ReadUnsignedInt(&m_patch_size.depth);
+    in.GetProperty("scale").ReadArrayElements(fbom::FBOMFloat(), 3, &m_scale);
+    in.GetProperty("max_distance").ReadFloat(&m_max_distance);
+
+    return fbom::FBOMResult::FBOM_OK;
 }
 
 } // namespace hyperion::v2

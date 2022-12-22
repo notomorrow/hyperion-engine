@@ -170,8 +170,8 @@ void BulletPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody> &rigid_body)
     btTransform bt_transform;
     bt_transform.setIdentity();
     bt_transform.setOrigin(ToBtVector(rigid_body->GetTransform().GetTranslation()));
-    bt_transform.setRotation(ToBtQuaternion(rigid_body->GetTransform().GetRotation()));
-    internal_data->motion_state.Reset(new btDefaultMotionState());
+    bt_transform.setRotation(ToBtQuaternion(Quaternion(rigid_body->GetTransform().GetRotation()).Invert()));
+    internal_data->motion_state.Reset(new btDefaultMotionState(bt_transform));
 
     btRigidBody::btRigidBodyConstructionInfo construction_info(
         rigid_body->GetPhysicsMaterial().GetMass(),
@@ -201,6 +201,54 @@ void BulletPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody> &rigid_bod
     AssertThrow(internal_data != nullptr);
 
     m_dynamics_world->removeRigidBody(internal_data->rigid_body.Get());
+}
+
+void BulletPhysicsAdapter::OnChangePhysicsShape(RigidBody *rigid_body)
+{
+    if (!rigid_body) {
+        return;
+    }
+
+    AssertThrow(m_dynamics_world != nullptr);
+    
+    auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
+    AssertThrow(internal_data != nullptr);
+
+    AssertThrow(internal_data->rigid_body != nullptr);
+
+    btVector3 local_inertia = internal_data->rigid_body->getLocalInertia();
+
+    if (rigid_body->GetShape() != nullptr && rigid_body->GetShape()->GetHandle() != nullptr) {
+        if (rigid_body->IsKinematic() && rigid_body->GetPhysicsMaterial().GetMass() != 0.0f) {
+            static_cast<btCollisionShape *>(rigid_body->GetShape()->GetHandle().Get())
+                ->calculateLocalInertia(rigid_body->GetPhysicsMaterial().GetMass(), local_inertia);
+        }
+    }
+
+    internal_data->rigid_body->setMassProps(
+        rigid_body->GetPhysicsMaterial().GetMass(),
+        local_inertia
+    );
+}
+
+void BulletPhysicsAdapter::OnChangePhysicsMaterial(RigidBody *rigid_body)
+{
+    if (!rigid_body) {
+        return;
+    }
+
+    AssertThrow(m_dynamics_world != nullptr);
+    
+    auto *internal_data = static_cast<RigidBodyInternalData *>(rigid_body->GetHandle().Get());
+    AssertThrow(internal_data != nullptr);
+
+    AssertThrow(internal_data->rigid_body != nullptr);
+
+    if (!rigid_body->GetShape()->GetHandle()) {
+        rigid_body->GetShape()->SetHandle(CreatePhysicsShapeHandle(rigid_body->GetShape().Get()));
+    }
+
+    internal_data->rigid_body->setCollisionShape(static_cast<btCollisionShape *>(rigid_body->GetShape()->GetHandle().Get()));
 }
 
 void BulletPhysicsAdapter::ApplyForceToBody(const RigidBody *rigid_body, const Vector3 &force)

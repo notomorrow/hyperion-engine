@@ -23,24 +23,24 @@ public:
     {
         out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
 
-        out.SetProperty("attributes.bucket", FBOMUnsignedInt(), static_cast<UInt32>(in_object.GetRenderAttributes().bucket));
-        out.SetProperty("attributes.flags", FBOMUnsignedInt(), static_cast<UInt32>(in_object.GetRenderAttributes().flags));
-        out.SetProperty("attributes.cull_mode", FBOMUnsignedInt(), static_cast<UInt32>(in_object.GetRenderAttributes().cull_faces));
-        out.SetProperty("attributes.fill_mode", FBOMUnsignedInt(), static_cast<UInt32>(in_object.GetRenderAttributes().fill_mode));
+        out.SetProperty("attributes.bucket", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().bucket));
+        out.SetProperty("attributes.flags", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().flags));
+        out.SetProperty("attributes.cull_mode", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().cull_faces));
+        out.SetProperty("attributes.fill_mode", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().fill_mode));
 
-        out.SetProperty("params.size", FBOMUnsignedInt(), static_cast<UInt32>(in_object.GetParameters().Size()));
+        out.SetProperty("params.size", FBOMUnsignedInt(), UInt32(in_object.GetParameters().Size()));
 
         for (SizeType i = 0; i < in_object.GetParameters().Size(); i++) {
             const auto key_value = in_object.GetParameters().KeyValueAt(i);
 
             out.SetProperty(
-                String("params.") + String::ToString(static_cast<UInt>(key_value.first)) + ".key",
+                String("params.") + String::ToString(UInt(key_value.first)) + ".key",
                 FBOMUnsignedLong(),
                 key_value.first
             );
 
             out.SetProperty(
-                String("params.") + String::ToString(static_cast<UInt>(key_value.first)) + ".type",
+                String("params.") + String::ToString(UInt(key_value.first)) + ".type",
                 FBOMUnsignedInt(),
                 key_value.second.type
             );
@@ -48,7 +48,7 @@ public:
             if (key_value.second.IsIntType()) {
                 for (UInt j = 0; j < 4; j++) {
                     out.SetProperty(
-                        String("params.") + String::ToString(static_cast<UInt>(key_value.first)) + ".values[" + String::ToString(j) + "]",
+                        String("params.") + String::ToString(UInt(key_value.first)) + ".values[" + String::ToString(j) + "]",
                         FBOMInt(),
                         key_value.second.values.int_values[j]
                     );
@@ -56,7 +56,7 @@ public:
             } else if (key_value.second.IsFloatType()) {
                 for (UInt j = 0; j < 4; j++) {
                     out.SetProperty(
-                        String("params.") + String::ToString(static_cast<UInt>(key_value.first)) + ".values[" + String::ToString(j) + "]",
+                        String("params.") + String::ToString(UInt(key_value.first)) + ".values[" + String::ToString(j) + "]",
                         FBOMFloat(),
                         key_value.second.values.float_values[j]
                     );
@@ -72,11 +72,11 @@ public:
             const auto &value = in_object.GetTextures().ValueAt(i);
 
             if (value) {
-                if (auto err = out.AddChild(*value, true)) {
+                if (auto err = out.AddChild(*value, FBOM_OBJECT_FLAGS_EXTERNAL)) {
                     return err;
                 }
 
-                texture_keys[texture_index++] = static_cast<UInt32>(key);
+                texture_keys[texture_index++] = UInt32(key);
             }
         }
 
