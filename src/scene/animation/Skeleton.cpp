@@ -1,8 +1,37 @@
 #include "Skeleton.hpp"
 #include "Bone.hpp"
 #include <Engine.hpp>
+#include <rendering/backend/RendererResult.hpp>
 
 namespace hyperion::v2 {
+
+using renderer::Result;
+
+#pragma region Render commmands
+
+struct RENDER_COMMAND(UpdateSkeletonRenderData) : RenderCommand
+{
+    ID<Skeleton> id;
+    SkeletonBoneData bone_data;
+
+    RENDER_COMMAND(UpdateSkeletonRenderData)(ID<Skeleton> id, const SkeletonBoneData &bone_data)
+        : id(id),
+          bone_data(bone_data)
+    {
+    }
+
+    virtual Result operator()() override
+    {
+        SkeletonShaderData shader_data;
+        Memory::Copy(shader_data.bones, bone_data.matrices->Data(), sizeof(Matrix4) * MathUtil::Min(std::size(shader_data.bones), bone_data.matrices->Size()));
+
+        Engine::Get()->GetRenderData()->skeletons.Set(id.ToIndex(), shader_data);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+#pragma endregion
 
 Skeleton::Skeleton()
     : EngineComponentBase(),
@@ -22,7 +51,7 @@ Skeleton::Skeleton(std::unique_ptr<Bone> &&root_bone)
 
 Skeleton::~Skeleton()
 {
-    Teardown();
+    SetReady(false);
 }
 
 void Skeleton::Init()
@@ -33,18 +62,12 @@ void Skeleton::Init()
 
     EngineComponentBase::Init();
 
-    EnqueueRenderUpdates();
+    Update(0.0166f);
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        HYP_SYNC_RENDER();
-        
-        SetReady(false);
-    });
 }
 
-void Skeleton::EnqueueRenderUpdates() const
+void Skeleton::Update(GameCounter::TickUnit)
 {
     if (!m_shader_data_state.IsDirty()) {
         return;
@@ -53,9 +76,7 @@ void Skeleton::EnqueueRenderUpdates() const
     const auto num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
-        SkeletonShaderData &shader_data = Engine::Get()->GetRenderData()->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
-
-        shader_data.bones[0] = m_root_bone->GetBoneMatrix();
+        m_bone_data.SetMatrix(0, m_root_bone->GetBoneMatrix());
 
         for (SizeType i = 1; i < num_bones; i++) {
             if (auto &descendent = m_root_bone->GetDescendents()[i - 1]) {
@@ -67,11 +88,11 @@ void Skeleton::EnqueueRenderUpdates() const
                     continue;
                 }
 
-                shader_data.bones[i] = static_cast<const Bone *>(descendent.Get())->GetBoneMatrix();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+                m_bone_data.SetMatrix(i, static_cast<const Bone *>(descendent.Get())->GetBoneMatrix());
             }
         }
 
-        Engine::Get()->GetRenderData()->skeletons.Set(m_id.value - 1, shader_data);
+        PUSH_RENDER_COMMAND(UpdateSkeletonRenderData, GetID(), m_bone_data);
     }
     
     m_shader_data_state = ShaderDataState::CLEAN;

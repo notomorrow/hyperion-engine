@@ -20,12 +20,12 @@ NodeProxyChildren::ConstIterator NodeProxyChildren::Begin() const
 
 NodeProxyChildren::Iterator NodeProxyChildren::End()
 {
-    return Iterator { const_cast<Node *>(node), node->GetChildren().Size() };
+    return Iterator { const_cast<Node *>(node), node ? node->GetChildren().Size() : 0 };
 }
 
 NodeProxyChildren::ConstIterator NodeProxyChildren::End() const
 {
-    return ConstIterator { node, node->GetChildren().Size() };
+    return ConstIterator { node, node ? node->GetChildren().Size() : 0 };
 }
 
 NodeProxy &NodeProxyChildren::Iterator::operator*()

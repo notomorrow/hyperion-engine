@@ -79,7 +79,7 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommand
             .ray_step = 4.0f,
             .num_iterations = 128.0f,
             .max_ray_distance = 100.0f,
-            .distance_bias = 0.15f,
+            .distance_bias = 1.8f,
             .offset = 0.01f,
             .eye_fade_start = 0.75f,
             .eye_fade_end = 0.98f,

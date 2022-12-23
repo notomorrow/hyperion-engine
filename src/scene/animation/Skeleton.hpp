@@ -2,16 +2,50 @@
 #define HYPERION_V2_SKELETON_H
 
 #include <core/Base.hpp>
+#include <core/lib/RefCountedPtr.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <core/lib/DynArray.hpp>
 #include <scene/animation/Animation.hpp>
-
+#include <GameCounter.hpp>
+#include <system/Debug.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
 
 class Engine;
 class Bone;
+
+struct SkeletonBoneData
+{
+    using BoneMatricesPtr = RC<FixedArray<Matrix4, 128>>;
+
+    BoneMatricesPtr matrices;
+
+    SkeletonBoneData()
+        : matrices(BoneMatricesPtr::Construct())
+    {
+    }
+
+    SkeletonBoneData(const SkeletonBoneData &other) = default;
+    SkeletonBoneData &operator=(const SkeletonBoneData &other) = default;
+    SkeletonBoneData(SkeletonBoneData &&other) noexcept = default;
+    SkeletonBoneData &operator=(SkeletonBoneData &&other) noexcept = default;
+    ~SkeletonBoneData() = default;
+
+    void SetMatrix(UInt index, const Matrix4 &matrix)
+    {
+        AssertThrow(matrices && index < matrices->Size());
+
+        (*matrices)[index] = matrix;
+    }
+
+    const Matrix4 &GetMatrix(UInt index)
+    {
+        AssertThrow(matrices && index < matrices->Size());
+
+        return (*matrices)[index];
+    }
+};
 
 class Skeleton
     : public EngineComponentBase<STUB_CLASS(Skeleton)>,
@@ -57,10 +91,12 @@ public:
     Animation *FindAnimation(const String &name, UInt *out_index) const;
     
     void Init();
-    void EnqueueRenderUpdates() const;
+    void Update(GameCounter::TickUnit delta);
 
 private:
     SizeType NumBones() const;
+
+    SkeletonBoneData m_bone_data;
     
     std::unique_ptr<Bone> m_root_bone;
     Array<std::unique_ptr<Animation>> m_animations;

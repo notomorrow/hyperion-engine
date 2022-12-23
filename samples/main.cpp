@@ -263,7 +263,7 @@ public:
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj"); //testbed/testbed.obj");//"models/concrete_house/LOD0_concrete_house_003.obj");///mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/salle_de_bain/salle_de_bain.obj"); //testbed/testbed.obj");//"models/concrete_house/LOD0_concrete_house_003.obj");///mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -295,7 +295,7 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(0.2f);
+        test_model.Scale(5.2f);
 
         if (false) {
             int i = 0;
@@ -530,8 +530,8 @@ public:
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(Vector3(250.0f));
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.75f, 1.0f, 1.0f));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.005f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.002f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
             plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
@@ -790,7 +790,7 @@ public:
                 }
             }
         }
-
+        
         if (auto character = GetScene()->GetRoot().Select("dude")) {
             character.SetWorldRotation(Quaternion::LookAt(GetScene()->GetCamera()->GetDirection() * Vector3(1.0f, 0.0f, 1.0f), GetScene()->GetCamera()->GetUpVector()));
             character.SetWorldTranslation(GetScene()->GetCamera()->GetTranslation() - (GetScene()->GetCamera()->GetUpVector() * 16.0f));
