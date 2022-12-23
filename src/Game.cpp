@@ -142,29 +142,29 @@ void Game::OnInputEvent(const SystemEvent &event)
         }
         case SystemEventType::EVENT_MOUSEMOTION:
         {
-            const auto &mouse_position = m_input_manager->GetMousePosition();
+            if (m_input_manager->GetWindow()->HasMouseFocus()) {
+                const auto &mouse_position = m_input_manager->GetMousePosition();
 
-            int mouse_x = mouse_position.x.load(),
-                mouse_y = mouse_position.y.load();
+                const Int mouse_x = mouse_position.x.load(),
+                    mouse_y = mouse_position.y.load();
 
-            float mx, my;
+                const auto extent = m_input_manager->GetWindow()->GetExtent();
 
-            const auto extent = m_input_manager->GetWindow()->GetExtent();
-
-            mx = (Float(mouse_x) - Float(extent.width) * 0.5f) / (Float(extent.width));
-            my = (Float(mouse_y) - Float(extent.height) * 0.5f) / (Float(extent.height));
-            
-            if (m_scene) {
-                if (auto *controller = m_scene->GetCamera()->GetCameraController()) {
-                    controller->PushCommand(CameraCommand {
-                        .command = CameraCommand::CAMERA_COMMAND_MAG,
-                        .mag_data = {
-                            .mouse_x = mouse_x,
-                            .mouse_y = mouse_y,
-                            .mx = mx,
-                            .my = my
-                        }
-                    });
+                const Float mx = (Float(mouse_x) - Float(extent.width) * 0.5f) / (Float(extent.width));
+                const Float my = (Float(mouse_y) - Float(extent.height) * 0.5f) / (Float(extent.height));
+                
+                if (m_scene) {
+                    if (auto *controller = m_scene->GetCamera()->GetCameraController()) {
+                        controller->PushCommand(CameraCommand {
+                            .command = CameraCommand::CAMERA_COMMAND_MAG,
+                            .mag_data = {
+                                .mouse_x = mouse_x,
+                                .mouse_y = mouse_y,
+                                .mx = mx,
+                                .my = my
+                            }
+                        });
+                    }
                 }
             }
 

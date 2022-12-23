@@ -91,6 +91,13 @@ void SDLApplicationWindow::SetMouseLocked(bool locked)
     SDL_SetRelativeMouseMode(locked ? SDL_TRUE : SDL_FALSE);
 }
 
+bool SDLApplicationWindow::HasMouseFocus() const
+{
+    const auto *focus_window = SDL_GetMouseFocus();
+
+    return focus_window == window;
+}
+
 SDLApplication::SDLApplication(const char *name)
     : Application(name)
 {

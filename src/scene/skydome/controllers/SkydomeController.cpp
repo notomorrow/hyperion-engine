@@ -15,6 +15,7 @@ void SkydomeController::OnAdded()
     m_dome = dome_node[0].GetEntity();
 
     if (m_dome) {
+        m_dome->SetFlags(Entity::InitInfo::ENTITY_FLAGS_HAS_BLAS, false);
         m_dome->SetScale(500.0f);
         
         Handle<Material> material = CreateObject<Material>();

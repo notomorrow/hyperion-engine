@@ -136,11 +136,11 @@ public:
 
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, 70.1f),
-                Color(0.0f, 0.0f, 1.0f),
-                50000.0f,
-                40.0f
+                Color(1.0f, 1.0f, 1.0f),
+                150000.0f,
+                15.0f
             )));
-            m_point_lights.PushBack(CreateObject<Light>(PointLight(
+            /*m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, -70.1f),
                 Color(1.0f, 0.0f, 0.0f),
                 10000.0f,
@@ -158,10 +158,10 @@ public:
                 Color(0.0f, 1.0f, 1.0f),
                 10000.0f,
                 40.0f
-            )));
+            )));*/
 
             for (auto &light : m_point_lights) {
-            //    m_scene->AddLight(light);
+                m_scene->AddLight(light);
             }
         }
 
@@ -263,10 +263,11 @@ public:
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj"); //testbed/testbed.obj");//"models/concrete_house/LOD0_concrete_house_003.obj");///mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
+        batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
         
         // batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
         batch.LoadAsync();
@@ -280,6 +281,19 @@ public:
         /*material_test_obj.Scale(5.0f);
         material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
         GetScene()->GetRoot().AddChild(material_test_obj);*/
+
+        if (auto dude = obj_models["dude3"].Get<Node>()) {
+            dude.SetName("dude");
+            for (auto &child : dude.GetChildren()) {
+                if (auto entity = child.GetEntity()) {
+                    if (auto *animation_controller = entity->GetController<AnimationController>()) {
+                        animation_controller->Play(1.0f, LoopMode::REPEAT);
+                    }
+                }
+            }
+        
+            GetScene()->GetRoot().AddChild(dude);
+        }
 
         test_model.Scale(0.2f);
 
@@ -516,12 +530,12 @@ public:
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(Vector3(250.0f));
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 2.75f, 4.0f, 1.0f));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.025f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.75f, 1.0f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.005f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
             plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.25f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.08f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
             plane->RebuildRenderableAttributes();
@@ -579,12 +593,16 @@ public:
 
         // GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
 
-        for (auto &light : m_point_lights) {
+        /*for (auto &light : m_point_lights) {
             light->SetPosition(Vector3(
                 MathUtil::Sin(light->GetID().Value() + timer) * 30.0f,
                 30.0f,
                 MathUtil::Cos(light->GetID().Value() + timer) * 30.0f
             ));
+        }*/
+
+        if (!m_point_lights.Empty()) {
+        //    m_point_lights.Front()->SetPosition(GetScene()->GetCamera()->GetTranslation() + GetScene()->GetCamera()->GetDirection() * 15.0f);
         }
 
         if (GetInputManager()->IsKeyDown(KEY_ARROW_LEFT)) {
@@ -715,10 +733,14 @@ public:
 
         constexpr Float speed = 0.75f;
 
+        bool moving = false;
+
         Vector3 dir;
 
         if (m_input_manager->IsKeyDown(KEY_W)) {
             dir = GetScene()->GetCamera()->GetDirection();
+
+            moving = true;
 
             GetScene()->GetCamera()->GetCameraController()->PushCommand({
                 CameraCommand::CAMERA_COMMAND_MOVEMENT,
@@ -729,6 +751,8 @@ public:
         if (m_input_manager->IsKeyDown(KEY_S)) {
             dir = GetScene()->GetCamera()->GetDirection() * -1.0f;
 
+            moving = true;
+
             GetScene()->GetCamera()->GetCameraController()->PushCommand({
                 CameraCommand::CAMERA_COMMAND_MOVEMENT,
                 { .movement_data = { CameraCommand::CAMERA_MOVEMENT_BACKWARD } }
@@ -738,6 +762,8 @@ public:
         if (m_input_manager->IsKeyDown(KEY_A)) {
             dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector()) * -1.0f;
 
+            moving = true;
+
             GetScene()->GetCamera()->GetCameraController()->PushCommand({
                 CameraCommand::CAMERA_COMMAND_MOVEMENT,
                 { .movement_data = { CameraCommand::CAMERA_MOVEMENT_LEFT } }
@@ -746,6 +772,8 @@ public:
 
         if (m_input_manager->IsKeyDown(KEY_D)) {
             dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector());
+
+            moving = true;
 
             GetScene()->GetCamera()->GetCameraController()->PushCommand({
                 CameraCommand::CAMERA_COMMAND_MOVEMENT,
@@ -759,6 +787,19 @@ public:
             if (const auto &entity = character[0].GetEntity()) {
                 if (auto *controller = entity->GetController<RigidBodyController>()) {
                     controller->GetRigidBody()->ApplyForce(dir);
+                }
+            }
+        }
+
+        if (auto character = GetScene()->GetRoot().Select("dude")) {
+            character.SetWorldRotation(Quaternion::LookAt(GetScene()->GetCamera()->GetDirection() * Vector3(1.0f, 0.0f, 1.0f), GetScene()->GetCamera()->GetUpVector()));
+            character.SetWorldTranslation(GetScene()->GetCamera()->GetTranslation() - (GetScene()->GetCamera()->GetUpVector() * 16.0f));
+
+            if (auto *animation_controller = character[0].GetEntity()->GetController<AnimationController>()) {
+                if (moving) {
+                    animation_controller->Play("Sprint", 1.0f, LoopMode::REPEAT);
+                } else {
+                    animation_controller->Stop();
                 }
             }
         }
