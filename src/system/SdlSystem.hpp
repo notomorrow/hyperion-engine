@@ -225,6 +225,7 @@ public:
     virtual Extent2D GetExtent() const = 0;
 
     virtual void SetMouseLocked(bool locked) = 0;
+    virtual bool HasMouseFocus() const = 0;
 
 #ifdef HYP_VULKAN
     virtual VkSurfaceKHR CreateVkSurface(renderer::Instance *instance) = 0;
@@ -242,14 +243,13 @@ public:
     SDLApplicationWindow(const ANSIString &title, UInt width, UInt height);
     virtual ~SDLApplicationWindow() override;
 
-    
-
     virtual void SetMousePosition(Int x, Int y) override;
     virtual MouseState GetMouseState() override;
 
     virtual Extent2D GetExtent() const override;
 
     virtual void SetMouseLocked(bool locked) override;
+    virtual bool HasMouseFocus() const override;
     
     void Initialize();
 

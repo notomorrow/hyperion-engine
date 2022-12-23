@@ -145,9 +145,9 @@ comp = vct/TemporalBlending.comp
 # RT
 
 [RTRadiance]
-rgen = rt/test.rgen
-rchit = rt/test.rchit
-rmiss = rt/test.rmiss
+rgen = rt/RTRadiance.rgen
+rchit = rt/RTRadiance.rchit
+rmiss = rt/RTRadiance.rmiss
 
 [RTProbe]
 rgen = rt/gi/gi.rgen
