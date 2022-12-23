@@ -114,6 +114,7 @@ void TLAS::Init()
             m_blas_updates_mutex.lock();
             m_blas_pending_addition.Clear();
             m_blas_updates_mutex.unlock();
+
             m_has_blas_updates.store(false);
         }
 

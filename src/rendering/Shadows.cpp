@@ -121,6 +121,38 @@ struct RENDER_COMMAND(DestroyShadowPassData) : RenderCommand
     }
 };
 
+struct RENDER_COMMAND(UpdateShadowMapRenderData) : RenderCommand
+{
+    UInt shadow_map_index;
+    Matrix4 view_matrix;
+    Matrix4 projection_matrix;
+    BoundingBox aabb;
+
+    RENDER_COMMAND(UpdateShadowMapRenderData)(UInt shadow_map_index, const Matrix4 &view_matrix, const Matrix4 &projection_matrix, const BoundingBox &aabb)
+        : shadow_map_index(shadow_map_index),
+          view_matrix(view_matrix),
+          projection_matrix(projection_matrix),
+          aabb(aabb)
+    {
+    }
+
+    virtual Result operator()() override
+    {
+        
+        Engine::Get()->GetRenderData()->shadow_maps.Set(
+            shadow_map_index,
+            {
+                .projection = projection_matrix,
+                .view = view_matrix,
+                .aabb_max = Vector4(aabb.max, 1.0f),
+                .aabb_min = Vector4(aabb.min, 1.0f)
+            }
+        );
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 #pragma endregion
 
 ShadowPass::ShadowPass()
@@ -231,22 +263,13 @@ void ShadowPass::CreateComputePipelines()
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_blur_descriptor_sets[i].AddDescriptor<ImageDescriptor>(0)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_framebuffer->GetAttachmentUsages().front()->GetImageView()
-            });
+            ->SetElementSRV(0, m_framebuffer->GetAttachmentUsages().front()->GetImageView());
 
         m_blur_descriptor_sets[i].AddDescriptor<SamplerDescriptor>(1)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerNearest()
-            });
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
 
         m_blur_descriptor_sets[i].AddDescriptor<StorageImageDescriptor>(2)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = m_shadow_map_image_view.get()
-            });
+            ->SetElementUAV(0, m_shadow_map_image_view.get());
     }
 
     RenderCommands::Push<RENDER_COMMAND(CreateShadowMapBlurDescriptorSets)>(m_blur_descriptor_sets.Data());
@@ -424,7 +447,7 @@ void ShadowRenderer::InitGame()
 
 void ShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
-    // Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(THREAD_GAME);
 
     AssertReady();
     
@@ -433,41 +456,8 @@ void ShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void ShadowRenderer::OnRender(Frame *frame)
 {
-    // Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertReady();
-
-    if (const auto &camera = m_shadow_pass.GetScene()->GetCamera()) {
-        const CameraDrawProxy &draw_proxy = camera->GetDrawProxy();
-
-        const BoundingBox aabb(
-            draw_proxy.position + draw_proxy.clip_near,
-            draw_proxy.position + draw_proxy.clip_far
-        );
-
-        Engine::Get()->GetRenderData()->shadow_maps.Set(
-            m_shadow_pass.GetShadowMapIndex(),
-            {
-                .projection = draw_proxy.projection,
-                .view = draw_proxy.view,
-                .aabb_max = Vector4(aabb.max, 1.0f),
-                .aabb_min = Vector4(aabb.min, 1.0f)
-            }
-        );
-    } else {
-        const BoundingBox &aabb = BoundingBox::empty;
-
-        Engine::Get()->GetRenderData()->shadow_maps.Set(
-            m_shadow_pass.GetShadowMapIndex(),
-            {
-                .projection = Matrix4::Identity(),
-                .view = Matrix4::Identity(),
-                .aabb_max = Vector4(aabb.max, 1.0f),
-                .aabb_min = Vector4(aabb.min, 1.0f),
-            }
-        );
-    }
-
+    Threads::AssertOnThread(THREAD_RENDER);
+    
     m_shadow_pass.Render(frame);
 }
 
@@ -507,6 +497,14 @@ void ShadowRenderer::UpdateSceneCamera()
         mins.x, maxes.x,
         mins.y, maxes.y,
         mins.z, maxes.z
+    );
+
+    PUSH_RENDER_COMMAND(
+        UpdateShadowMapRenderData,
+        GetPass().GetShadowMapIndex(),
+        camera->GetViewMatrix(),
+        camera->GetProjectionMatrix(),
+        BoundingBox(mins, maxes)
     );
 }
 

@@ -2,7 +2,11 @@
 
 namespace hyperion::v2 {
 FirstPersonCameraController::FirstPersonCameraController()
-    : PerspectiveCameraController()
+    : PerspectiveCameraController(),
+      m_mouse_x(0.0f),
+      m_mouse_y(0.0f),
+      m_prev_mouse_x(0.0f),
+      m_prev_mouse_y(0.0f)
 {
 }
 

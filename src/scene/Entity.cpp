@@ -207,10 +207,10 @@ void Entity::Update(GameCounter::TickUnit delta)
     AssertReady();
 
     if (m_skeleton && m_skeleton->IsReady()) {
-        m_skeleton->EnqueueRenderUpdates();
+        m_skeleton->Update(delta);
     }
 
-    if (m_material != nullptr && m_material->IsReady()) {
+    if (m_material && m_material->IsReady()) {
         m_material->Update();
 
         // make changes if it was updated
