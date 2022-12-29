@@ -323,6 +323,7 @@ private:
         // dynamic memory
         Storage *m_buffer;
         ValueStorageArray<ValueType, num_inline_elements> m_inline_storage;
+        ValueType *m_buffer_raw;
     };
 
 protected:

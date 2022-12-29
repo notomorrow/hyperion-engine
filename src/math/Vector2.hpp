@@ -48,10 +48,10 @@ public:
     float &GetY()          { return y; }
     Vector2 &SetY(float y) { this->y = y; return *this; }
     
-    constexpr float operator[](UInt index) const
+    constexpr float operator[](SizeType index) const
         { return values[index]; }
 
-    constexpr float &operator[](UInt index)
+    constexpr float &operator[](SizeType index)
         { return values[index]; }
 
     explicit operator bool() const

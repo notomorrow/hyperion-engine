@@ -1,27 +1,85 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="hyperion::containers::detail::DynArray&lt;hyperion::v2::ObjectShaderData,256&gt;">
-    <AlternativeType Name="hyperion::containers::detail::DynArray&lt;*,*&gt;"/>
-    
-    <DisplayString>{{ size={m_size} }}</DisplayString>
-    <DisplayString Condition="m_is_dynamic == true">Is Dynamic</DisplayString>
 
-    
-    
+  <Type Name="hyperion::ValueStorage&lt;*&gt;">
+    <DisplayString>{($T1 *)data_buffer}</DisplayString>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">m_size</Item>
-      <Item Name="[capacity]" ExcludeView="simple">m_capacity</Item>
+      <ExpandedItem>($T1 *)data_buffer</ExpandedItem>
+    </Expand>
+  </Type>
+
+
+  <Type Name="hyperion::containers::detail::DynArray&lt;*,*&gt;">
+    <DisplayString>{{ Size={m_size - m_start_offset} Dynamic={m_is_dynamic} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[Size]">(m_size - m_start_offset)</Item>
+      <Item Name="[Capacity]">m_capacity</Item>
+      <Item Name="[Dynamic]">(m_is_dynamic)</Item>
+      <Item Name="[StartOffset]">(m_start_offset)</Item>
 
       <ArrayItems Condition="m_is_dynamic == true">
-        <Size>m_size</Size>
-        <ValuePointer>m_buffer</ValuePointer>
+        <Size>(m_size - m_start_offset)</Size>
+        <ValuePointer>(m_buffer_raw + m_start_offset)</ValuePointer>
       </ArrayItems>
-
       <ArrayItems Condition="m_is_dynamic == false">
-        <Size>m_size</Size>
-        <ValuePointer>m_inline_buffer</ValuePointer>
+        <Size>(m_size - m_start_offset)</Size>
+        <ValuePointer>((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset)</ValuePointer>
       </ArrayItems>
     </Expand>
+  </Type>
 
+  <Type Name="hyperion::containers::detail::DynString&lt;*,*&gt;">
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 1">{{ {(m_buffer_raw + m_start_offset), s8} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 1">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s8} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0">{{ {(m_buffer_raw + m_start_offset), s} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s} }}</DisplayString>
+
+    <StringView Condition="$T2 == 1">(m_buffer_raw + m_start_offset), s8</StringView>
+    <StringView Condition="$T2 == 0">(m_buffer_raw + m_start_offset), s</StringView>
+
+    <Expand>
+      <Item Name="[Text]" Condition="m_is_dynamic == true">(m_buffer_raw + m_start_offset), s8</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s8</Item>
+
+      <Item Name="[Size]">(m_size - m_start_offset - 1)</Item>
+      <Item Name="[Capacity]">m_capacity</Item>
+      <Item Name="[Length]">(m_length)</Item>
+      <Item Name="[Dynamic]">(m_is_dynamic)</Item>
+      <Item Name="[StartOffset]">(m_start_offset)</Item>
+      <Item Name="[UTF8]">bool($T2)</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::detail::UniquePtr&lt;*&gt;">
+    <DisplayString>{{ {($T1 *)m_holder.value} }}</DisplayString>
+    <Expand>
+      <ExpandedItem>($T1 *)m_holder.value</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::detail::RefCountedPtr&lt;*,*&gt;">
+    <DisplayString>{{ {($T1 *)m_ref->value} }}</DisplayString>
+    <Expand>
+      <Item Name="[Strong Count]">(m_ref->strong_count)</Item>
+      <Item Name="[Weak Count]">(m_ref->weak_count)</Item>
+      <ExpandedItem>($T1 *)m_ref->value</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::containers::detail::VariantBase&lt;*,*&gt;">
+    <DisplayString>{{ TypeID={m_current_type_id} }}</DisplayString>
+    <Expand>
+      <Item Name="[Data]">m_storage.data_buffer</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::ID&lt;*&gt;">
+    <DisplayString>{{ Value={value} }}</DisplayString>
+  </Type>
+
+  <Type Name="hyperion::v2::Handle&lt;*&gt;">
+    <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
+    <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
   </Type>
 </AutoVisualizer>

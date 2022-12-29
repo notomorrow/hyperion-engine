@@ -184,7 +184,7 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
     Handle<Skeleton> skeleton;
 
     if (!model.skeleton_name.empty()) {
-        const auto skeleton_path = String((StringUtil::BasePath(model.filepath) + "/" + model.skeleton_name + ".xml").c_str());
+        const String skeleton_path((StringUtil::BasePath(model.filepath) + "/" + model.skeleton_name + ".xml").c_str());
 
         LoaderResult result;
         skeleton = state.asset_manager->Load<Skeleton>(skeleton_path, result);
@@ -239,13 +239,13 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
 
         if (skeleton) {
             entity->AddController<AnimationController>();
-            entity->SetSkeleton(std::move(skeleton));
+            entity->SetSkeleton(skeleton);
         }
         
-        auto node = std::make_unique<Node>();
-        node->SetEntity(std::move(entity));
+        NodeProxy node(new Node);
+        node.SetEntity(std::move(entity));
 
-        top->AddChild(NodeProxy(node.release()));
+        top->AddChild(std::move(node));
     }
 
     return { { LoaderResult::Status::OK }, top.Cast<void>() };

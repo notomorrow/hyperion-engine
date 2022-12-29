@@ -484,13 +484,13 @@ void Mesh::CalculateTangents()
     std::unordered_map<Index, std::vector<TangentBitangentPair>> data;
 
     for (SizeType i = 0; i < m_indices.size();) {
-        const auto count = MathUtil::Min(3, m_indices.size() - i);
+        const SizeType count = MathUtil::Min(3, m_indices.size() - i);
 
         Vertex v[3];
         Vector2 uv[3];
 
         for (UInt32 j = 0; j < count; j++) {
-            v[j]  = m_vertices[m_indices[i + j]];
+            v[j] = m_vertices[m_indices[i + j]];
             uv[j] = v[j].GetTexCoord0();
         }
 
@@ -498,18 +498,18 @@ void Mesh::CalculateTangents()
         Index i1 = m_indices[i + 1];
         Index i2 = m_indices[i + 2];
         
-        const Vector3 edge1   = v[1].GetPosition() - v[0].GetPosition();
-        const Vector3 edge2   = v[2].GetPosition() - v[0].GetPosition();
+        const Vector3 edge1 = v[1].GetPosition() - v[0].GetPosition();
+        const Vector3 edge2 = v[2].GetPosition() - v[0].GetPosition();
         const Vector2 edge1uv = uv[1] - uv[0];
         const Vector2 edge2uv = uv[2] - uv[0];
         
-        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+        const Float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
 
-        if (!MathUtil::ApproxEqual(cp, 0.0f)) {
+        if (cp != 0.0f) {
             const float mul = 1.0f / cp;
 
             const TangentBitangentPair tangent_bitangent {
-                .tangent   = ((edge1 * edge2uv.y - edge2 * edge1uv.y) * mul).Normalize(),
+                .tangent = ((edge1 * edge2uv.y - edge2 * edge1uv.y) * mul).Normalize(),
                 .bitangent = ((edge1 * edge2uv.x - edge2 * edge1uv.x) * mul).Normalize()
             };
 
@@ -525,11 +525,10 @@ void Mesh::CalculateTangents()
         const auto &tangent_bitangents = data[i];
 
         // find average
-        Vector3 average_tangent,
-                average_bitangent;
+        Vector3 average_tangent, average_bitangent;
 
         for (const auto &item : tangent_bitangents) {
-            average_tangent   += item.tangent * (1.0f / tangent_bitangents.size());
+            average_tangent += item.tangent * (1.0f / tangent_bitangents.size());
             average_bitangent += item.bitangent * (1.0f / tangent_bitangents.size());
         }
 
@@ -539,6 +538,10 @@ void Mesh::CalculateTangents()
         m_vertices[i].SetTangent(average_tangent);
         m_vertices[i].SetBitangent(average_bitangent);
     }
+    
+    m_mesh_attributes.vertex_attributes |= VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT;
+    m_mesh_attributes.vertex_attributes |= VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT;
+
 #else
     Vertex v[3];
     Vector2 uv[3];

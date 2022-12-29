@@ -219,10 +219,12 @@ public:
     template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Sign(const T &a)
     {
+        using VectorScalarType = NormalizedType<decltype(T::values[0])>;
+
         T result { };
 
         for (SizeType i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Sign<std::decay_t<decltype(T::values[0])>>(a.values[i]);
+            result.values[i] = VectorScalarType(Sign<VectorScalarType>(a.values[i]));
         }
 
         return result;
@@ -231,10 +233,12 @@ public:
     template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(const T &a)
     {
+        using VectorScalarType = NormalizedType<decltype(T::values[0])>;
+
         T result { }; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (SizeType i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Floor<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
+            result.values[i] = VectorScalarType(Floor<VectorScalarType, IntegralType>(a.values[i]));
         }
 
         return result;
@@ -243,10 +247,12 @@ public:
     template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(const T &a)
     {
+        using VectorScalarType = NormalizedType<decltype(T::values[0])>;
+
         T result { }; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (SizeType i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Ceil<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
+            result.values[i] = VectorScalarType(Ceil<VectorScalarType, IntegralType>(a.values[i]));
         }
 
         return result;
@@ -264,7 +270,7 @@ public:
     static T Fract(T a) { return a - Floor<T, T>(a); }
 
     template <class T>
-    static T Exp(T a) { std::exp(a); }
+    static T Exp(T a) { return T(std::exp(a)); }
     
     template <class T>
     static constexpr HYP_ENABLE_IF(!std::is_floating_point_v<T>, T) Abs(T a) { return std::abs(a); }

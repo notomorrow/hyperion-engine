@@ -2,6 +2,7 @@
 #define  MEMORY_BUFFER_HPP
 
 #include <system/Debug.hpp>
+#include <Types.hpp>
 
 #include <sstream>
 
@@ -10,14 +11,14 @@ namespace vm {
 
 class VMMemoryBuffer {
 public:
-    VMMemoryBuffer(size_t size = 0);
+    VMMemoryBuffer(SizeType size = 0);
     VMMemoryBuffer(const VMMemoryBuffer &other);
     ~VMMemoryBuffer();
 
     VMMemoryBuffer &operator=(const VMMemoryBuffer &other);
     bool operator==(const VMMemoryBuffer &other) const { return this == &other; }
 
-    size_t GetSize() const { return m_size; }
+    SizeType GetSize() const { return m_size; }
     void *GetBuffer() const { return m_buffer; }
 
     void GetRepresentation(
@@ -27,7 +28,7 @@ public:
     ) const;
 
 private:
-    size_t m_size;
+    SizeType m_size;
     void *m_buffer;
 };
 

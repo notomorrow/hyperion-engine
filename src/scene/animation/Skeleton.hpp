@@ -85,10 +85,16 @@ public:
     auto &GetAnimations() { return m_animations; }
     const auto &GetAnimations() const { return m_animations; }
     SizeType NumAnimations() const { return m_animations.Size(); }
-    void AddAnimation(std::unique_ptr<Animation> &&animation);
 
-    Animation *GetAnimation(SizeType index) const { return m_animations[index].get(); }
-    Animation *FindAnimation(const String &name, UInt *out_index) const;
+    void AddAnimation(Animation &&animation);
+
+    Animation &GetAnimation(SizeType index)
+        { return m_animations[index]; }
+
+    const Animation &GetAnimation(SizeType index) const
+        { return m_animations[index]; }
+
+    const Animation *FindAnimation(const String &name, UInt *out_index) const;
     
     void Init();
     void Update(GameCounter::TickUnit delta);
@@ -99,7 +105,7 @@ private:
     SkeletonBoneData m_bone_data;
     
     std::unique_ptr<Bone> m_root_bone;
-    Array<std::unique_ptr<Animation>> m_animations;
+    Array<Animation> m_animations;
 
     mutable ShaderDataState m_shader_data_state;
 };

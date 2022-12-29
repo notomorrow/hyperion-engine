@@ -597,7 +597,7 @@ inline void utf_to_str(T value, SizeType &buffer_length, char *result)
     while (buffer_length_remaining) {
         // ASCII table has the number characters in sequence from 0-9 so use the
         // ASCII value of '0' as the base
-        result[buffer_index++] = '0' + value / divisor;
+        result[buffer_index++] = char(T('0') + value / divisor);
         
         // This removes the most significant digit converting 1337 to 337 because
         // 1337 % 1000 = 337

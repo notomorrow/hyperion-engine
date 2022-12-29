@@ -321,17 +321,22 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
         return;
     }
 
-    if (m_mesh && IsInitCalled()) {
-        Engine::Get()->SafeReleaseHandle<Mesh>(std::move(m_mesh));
-    }
-
     m_mesh = std::move(mesh);
+
+    m_local_aabb = BoundingBox::empty;
+    m_world_aabb = BoundingBox::empty;
 
     if (IsInitCalled()) {
         if (InitObject(m_mesh)) {
             m_local_aabb = m_mesh->CalculateAABB();
             m_world_aabb = BoundingBox::empty;
-            
+
+            //if (m_nodes.Any()) {
+            //    for (Node *node : m_nodes) {
+            //        node->UpdateWorldTransform();
+            //    }
+            //}
+
             if (!m_local_aabb.Empty()) {
                 for (const auto &corner : m_local_aabb.GetCorners()) {
                     m_world_aabb.Extend(m_transform.GetMatrix() * corner);
@@ -525,8 +530,7 @@ void Entity::RebuildRenderableAttributes()
     );
 
     if (m_skeleton) {
-        new_renderable_attributes.mesh_attributes.vertex_attributes =
-            new_renderable_attributes.mesh_attributes.vertex_attributes | renderer::skeleton_vertex_attributes;
+        new_renderable_attributes.mesh_attributes.vertex_attributes |= renderer::skeleton_vertex_attributes;
     }
 
     new_renderable_attributes.shader_id = m_shader

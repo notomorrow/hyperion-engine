@@ -50,10 +50,10 @@ public:
     float &GetW() { return w; }
     Vector4 &SetW(float w) { this->w = w; return *this; }
     
-    constexpr float operator[](UInt index) const
+    constexpr float operator[](SizeType index) const
         { return values[index]; }
 
-    constexpr float &operator[](UInt index)
+    constexpr float &operator[](SizeType index)
         { return values[index]; }
 
     Vector4 &operator=(const Vector4 &other);
