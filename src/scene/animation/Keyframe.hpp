@@ -2,25 +2,34 @@
 #define HYPERION_V2_KEYFRAME_H
 
 #include <math/Transform.hpp>
+#include <Types.hpp>
 
 namespace hyperion::v2 {
 
-class Keyframe {
+class Keyframe
+{
 public:
     Keyframe();
-    Keyframe(const Keyframe &other);
-    Keyframe(float time, const Transform &transform);
+    Keyframe(const Keyframe &other) = default;
+    Keyframe &operator=(const Keyframe &other) = default;
+    Keyframe(Float time, const Transform &transform);
 
-    float GetTime() const { return m_time; }
-    void SetTime(float time) { m_time = time; }
+    Float GetTime() const
+        { return m_time; }
+
+    void SetTime(Float time)
+        { m_time = time; }
    
-    const Transform &GetTransform() const { return m_transform; }
-    void SetTransform(const Transform &transform) { m_transform = transform; }
+    const Transform &GetTransform() const
+        { return m_transform; }
 
-    Keyframe Blend(const Keyframe &to, float blend) const;
+    void SetTransform(const Transform &transform)
+        { m_transform = transform; }
+
+    Keyframe Blend(const Keyframe &to, Float blend) const;
 
 private:
-    float     m_time;
+    Float m_time;
     Transform m_transform;
 };
 

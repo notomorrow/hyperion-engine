@@ -1,6 +1,4 @@
 #include "AnimationController.hpp"
-#include <set>
-#include <iterator>
 
 namespace hyperion::v2 {
 
@@ -21,10 +19,12 @@ void AnimationController::OnRemoved()
 void AnimationController::OnUpdate(GameCounter::TickUnit delta)
 {
     if (IsPlaying()) {
-        if (auto *animation = GetCurrentAnimation()) {
+        if (m_skeleton && m_animation_index != ~0u) {
+            Animation &animation = m_skeleton->GetAnimation(m_animation_index);
+
             m_state.current_time += delta * m_state.speed;
 
-            if (m_state.current_time > animation->GetLength()) {
+            if (m_state.current_time > animation.GetLength()) {
                 m_state.current_time = 0.0f;
 
                 if (m_state.loop_mode == LoopMode::ONCE) {
@@ -32,7 +32,7 @@ void AnimationController::OnUpdate(GameCounter::TickUnit delta)
                 }
             }
 
-            animation->ApplyBlended(m_state.current_time, 0.5f);
+            animation.ApplyBlended(m_state.current_time, 0.5f);
         } else {
             m_state = { };
         }

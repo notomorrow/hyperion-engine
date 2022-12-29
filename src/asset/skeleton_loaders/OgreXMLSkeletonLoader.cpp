@@ -226,21 +226,21 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
     }
 
     for (const auto &animation_it : object.animations) {
-        auto animation = std::make_unique<Animation>(animation_it.name);
+        Animation animation(animation_it.name);
 
         for (const auto &track_it : animation_it.tracks) {
             AnimationTrack animation_track;
             animation_track.bone_name = track_it.bone_name;
-            animation_track.keyframes.reserve(track_it.keyframes.size());
+            animation_track.keyframes.Reserve(track_it.keyframes.size());
             
             for (const auto &keyframe_it : track_it.keyframes) {
-                animation_track.keyframes.emplace_back(
+                animation_track.keyframes.PushBack(Keyframe(
                     keyframe_it.time,
                     Transform(keyframe_it.translation, Vector3::One(), keyframe_it.rotation)
-                );
+                ));
             }
 
-            animation->AddTrack(animation_track);
+            animation.AddTrack(animation_track);
         }
 
         (*skeleton_handle)->AddAnimation(std::move(animation));

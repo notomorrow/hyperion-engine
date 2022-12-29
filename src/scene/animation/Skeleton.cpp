@@ -145,13 +145,9 @@ SizeType Skeleton::NumBones() const
     return 1 + m_root_bone->GetDescendents().Size();
 }
 
-void Skeleton::AddAnimation(std::unique_ptr<Animation> &&animation)
+void Skeleton::AddAnimation(Animation &&animation)
 {
-    if (animation == nullptr) {
-        return;
-    }
-
-    for (auto &track : animation->GetTracks()) {
+    for (auto &track : animation.GetTracks()) {
         track.bone = nullptr;
 
         if (track.bone_name.Empty()) {
@@ -172,10 +168,10 @@ void Skeleton::AddAnimation(std::unique_ptr<Animation> &&animation)
     m_animations.PushBack(std::move(animation));
 }
 
-Animation *Skeleton::FindAnimation(const String &name, UInt *out_index) const
+const Animation *Skeleton::FindAnimation(const String &name, UInt *out_index) const
 {
     const auto it = m_animations.FindIf([&name](const auto &item) {
-        return item->GetName() == name;
+        return item.GetName() == name;
     });
 
     if (it == m_animations.End()) {
@@ -186,7 +182,7 @@ Animation *Skeleton::FindAnimation(const String &name, UInt *out_index) const
         *out_index = m_animations.IndexOf(it);
     }
 
-    return it->get();
+    return it;
 }
 
 } // namespace hyperion::v2

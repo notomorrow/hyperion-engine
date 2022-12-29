@@ -418,6 +418,7 @@ void Node::SetEntity(Handle<Entity> &&entity)
         const Transform entity_transform = entity->GetTransform();
 
         m_entity = std::move(entity);
+        InitObject(m_entity);
 
         if (m_scene != nullptr) {
             m_scene->AddEntityInternal(Handle<Entity>(m_entity));
@@ -455,6 +456,10 @@ void Node::UpdateWorldTransform()
         return;
     }
 
+    if (m_entity) {
+        m_local_aabb = m_entity->GetLocalAABB();
+    }
+
     m_world_aabb = m_local_aabb * m_world_transform;
 
     for (auto &node : m_child_nodes) {
@@ -468,9 +473,22 @@ void Node::UpdateWorldTransform()
         m_parent_node->m_world_aabb.Extend(m_world_aabb);
     }
 
-    if (m_entity != nullptr) {
+    if (m_entity) {
         m_entity->SetTransform(m_world_transform);
     }
+}
+
+void Node::RefreshEntityTransform()
+{
+    m_local_aabb = BoundingBox::empty;
+
+    if (m_entity) {
+        m_local_aabb = m_entity->GetLocalAABB();
+
+        m_entity->SetTransform(m_world_transform);
+    }
+
+    m_world_aabb = m_local_aabb * m_world_transform;
 }
 
 bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const

@@ -4,49 +4,50 @@
 
 namespace hyperion::v2 {
 
-Keyframe AnimationTrack::GetKeyframe(float time) const
+Keyframe AnimationTrack::GetKeyframe(Float time) const
 {
-    int first = 0,
-        second = -1;
+    Int first = 0, second = -1;
 
-    if (keyframes.empty()) {
-        return {time, Transform()};
+    if (keyframes.Empty()) {
+        return { time, Transform() };
     }
 
-    for (int i = 0; i < static_cast<int>(keyframes.size() - 1); i++) {
-        if (MathUtil::InRange(time, {keyframes[i].GetTime(), keyframes[i + 1].GetTime()})) {
-            first  = i;
+    for (Int i = 0; i < Int(keyframes.Size() - 1); i++) {
+        if (MathUtil::InRange(time, { keyframes[i].GetTime(), keyframes[i + 1].GetTime() })) {
+            first = i;
             second = i + 1;
 
             break;
         }
     }
 
-    const auto &current = keyframes[first];
+    const Keyframe &current = keyframes[first];
 
     Transform transform = current.GetTransform();
 
     if (second > first) {
-        const auto &next = keyframes[second];
+        const Keyframe &next = keyframes[second];
 
-        const float delta = (time - current.GetTime()) / (next.GetTime() - current.GetTime());
+        const Float delta = (time - current.GetTime()) / (next.GetTime() - current.GetTime());
 
         transform.GetTranslation().Lerp(next.GetTransform().GetTranslation(), delta);
         transform.GetRotation().Slerp(next.GetTransform().GetRotation(), delta);
         transform.UpdateMatrix();
     }
 
-    return {time, transform};
+    return { time, transform };
 }
+
+Animation::Animation() = default;
 
 Animation::Animation(const String &name)
     : m_name(name)
 {
 }
 
-void Animation::Apply(float time)
+void Animation::Apply(Float time)
 {
-    for (auto &track : m_tracks) {
+    for (AnimationTrack &track : m_tracks) {
         if (track.bone == nullptr) {
             continue;
         }
@@ -56,14 +57,14 @@ void Animation::Apply(float time)
     }
 }
 
-void Animation::ApplyBlended(float time, float blend)
+void Animation::ApplyBlended(Float time, Float blend)
 {
-    for (auto &track : m_tracks) {
+    for (AnimationTrack &track : m_tracks) {
         if (track.bone == nullptr) {
             continue;
         }
 
-        if (blend <= MathUtil::epsilon<float>) {
+        if (blend <= MathUtil::epsilon<Float>) {
             track.bone->ClearPose();
         }
 

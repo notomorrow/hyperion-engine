@@ -1,6 +1,7 @@
 #include "FBXModelLoader.hpp"
 #include <Engine.hpp>
 #include <rendering/Mesh.hpp>
+#include <scene/Entity.hpp>
 #include <rendering/Material.hpp>
 #include <util/fs/FsUtil.hpp>
 
@@ -18,6 +19,7 @@ constexpr char header_string[] = "Kaydara FBX Binary  ";
 constexpr UInt8 header_bytes[] = { 0x1A, 0x00 };
 
 using FBXPropertyValue = Variant<Int16, Int32, Int64, UInt32, Float, Double, bool, String, ByteBuffer>;
+using FBXNodeID = Int64;
 
 struct FBXProperty
 {
@@ -54,6 +56,8 @@ struct FBXNode
     template <class T>
     bool GetFBXPropertyValue(UInt index, T &out) const
     {
+        out = { };
+
         if (const FBXProperty &property = GetProperty(index)) {
             if (const T *ptr = property.value.TryGet<T>()) {
                 out = *ptr;
@@ -351,9 +355,42 @@ static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXNode> &out_node
     return { };
 }
 
+
+enum FBXVertexMappingType
+{
+    INVALID_MAPPING_TYPE = 0,
+    BY_POLYGON_VERTEX,
+    BY_POLYGON,
+    BY_VERTEX
+};
+
+
+static FBXVertexMappingType GetVertexMappingType(const FBXNode &node)
+{
+    FBXVertexMappingType mapping_type = INVALID_MAPPING_TYPE;
+
+    if (node) {
+        String mapping_type_str;
+
+        if (node.GetFBXPropertyValue<String>(0, mapping_type_str)) {
+            if (mapping_type_str == "ByPolygonVertex") {
+                mapping_type = BY_POLYGON_VERTEX;
+            } else if (mapping_type_str == "ByPolygon") {
+                mapping_type = BY_POLYGON;
+            } else if (mapping_type_str.StartsWith("ByVert")) {
+                mapping_type = BY_VERTEX;
+            }
+        }
+    }
+
+    return mapping_type;
+}
+
 LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
+
+    auto top = UniquePtr<Node>::Construct();
     
     // Include our root dir as part of the path
     const auto path = String(state.filepath.c_str());
@@ -440,23 +477,50 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         FBXNode *node;
 
         Variant<
-            UniquePtr<Mesh>,
-            UniquePtr<Node>
+            Handle<Mesh>,
+            Handle<Entity>
         > data;
     };
 
-    FlatMap<Int64, FBXNodeMapping> object_mapping;
+    struct FBXConnection
+    {
+        FBXNodeID left, right;
+    };
+
+    FlatMap<FBXNodeID, FBXNodeMapping> object_mapping;
+    Array<FBXConnection> connections;
+
+    if (const auto &connections_node = root["Connections"]) {
+        for (auto &child : connections_node.children) {
+            FBXConnection connection { };
+
+            if (!child->GetFBXPropertyValue<FBXNodeID>(1, connection.left)) {
+                DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get left ID value\n");
+                continue;
+            }
+            
+            if (!child->GetFBXPropertyValue<FBXNodeID>(2, connection.right)) {
+                DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get right ID value\n");
+                continue;
+            }
+
+            connections.PushBack(connection);
+        }
+    }
 
     if (const auto &objects_node = root["Objects"]) {
         for (auto &child : objects_node.children) {
-            Int64 node_id;
-            child->GetFBXPropertyValue<Int64>(0, node_id);
+            FBXNodeID node_id;
+            child->GetFBXPropertyValue<FBXNodeID>(0, node_id);
+
+            String node_name;
+            child->GetFBXPropertyValue<String>(0, node_name);
 
             FBXNodeMapping mapping { child.Get() };
 
             if (child->name == "Geometry") {
-                std::vector<Vertex> vertices;
-                std::vector<Mesh::Index> indices;
+                Array<Vector3> model_vertices;
+                Array<Mesh::Index> model_indices;
                 VertexAttributeSet attributes;
 
                 Array<String> layer_node_names;
@@ -485,16 +549,26 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
                     const SizeType num_vertices = count / 3;
 
-                    vertices.resize(num_vertices);
+                    model_vertices.Resize(num_vertices);
 
                     for (SizeType index = 0; index < num_vertices; ++index) {
                         Vector3 position;
 
-                        for (SizeType sub_index = 0; sub_index < 3; ++sub_index) {
-                            vertices_property.array_elements[(index * 3) + sub_index].Get<Float>(&position[sub_index]);
+                        for (UInt sub_index = 0; sub_index < 3; ++sub_index) {
+                            const auto &array_elements = vertices_property.array_elements[(index * 3) + SizeType(sub_index)];
+
+                            union { Float float_value; Double double_value; };
+
+                            if (array_elements.Get<Float>(&float_value)) {
+                                position[sub_index] = float_value;
+                            } else if (array_elements.Get<Double>(&double_value)) {
+                                position[sub_index] = Float(double_value);
+                            } else {
+                                return { { LoaderResult::Status::ERR, "Invalid type for vertex position element -- must be float or double" } };
+                            }
                         }
 
-                        vertices[index].SetPosition(position);
+                        model_vertices[index] = position;
                     }
                 }
 
@@ -506,9 +580,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                         return { { LoaderResult::Status::ERR, "Not a valid triangle mesh" } };
                     }
 
-                    const SizeType num_triangles = count / 3;
-
-                    indices.resize(count);
+                    model_indices.Resize(count);
 
                     for (SizeType index = 0; index < count; ++index) {
                         Int32 i = 0;
@@ -521,14 +593,21 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                             i = (i * -1) - 1;
                         }
 
-                        if (index >= vertices.size()) {
+                        if (SizeType(i) >= model_vertices.Size()) {
                             return { { LoaderResult::Status::ERR, "Index out of range" } };
                         }
                         
-                        indices[index] = Mesh::Index(i);
+                        model_indices[index] = Mesh::Index(i);
                     }
                 }
 
+                std::vector<Vertex> vertices;
+                vertices.resize(model_indices.Size());
+
+                for (SizeType index = 0; index < model_indices.Size(); ++index) {
+                    vertices[index].SetPosition(model_vertices[model_indices[index]]);
+                }
+                
                 for (const String &name : layer_node_names) {
                     if (name == "LayerElementUV") {
                         if (const auto &uv_node = (*child)[name]["UV"]) {
@@ -537,33 +616,176 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                             const SizeType count = uv_node.GetProperty(0).array_elements.Size();
                         }
                     } else if (name == "LayerElementNormal") {
+                        const FBXVertexMappingType mapping_type = GetVertexMappingType((*child)[name]["MappingInformationType"]);
+                        
                         if (const auto &normals_node = (*child)[name]["Normals"]) {
                             attributes |= VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL;
 
-                            const SizeType count = normals_node.GetProperty(0).array_elements.Size();
+                            const FBXProperty &normals_property = normals_node.GetProperty(0);
+                            const SizeType num_normals = normals_property.array_elements.Size() / 3;
 
-                            std::cout << "Normals Size : " << normals_node.properties[0].array_elements.Size() << "\n";
+                            if (num_normals % 3 != 0) {
+                                return { { LoaderResult::Status::ERR, "Invalid normals count, must be triangulated" } };
+                            }
+
+                            for (SizeType triangle_index = 0; triangle_index < num_normals / 3; ++triangle_index) {
+                                for (SizeType normal_index = 0; normal_index < 3; ++normal_index) {
+                                    Vector3 normal;
+
+                                    for (SizeType element_index = 0; element_index < 3; ++element_index) {
+                                        const auto &array_elements = normals_property.array_elements[triangle_index * 9 + normal_index * 3 + element_index];
+
+                                        union { Float float_value; Double double_value; };
+
+                                        if (array_elements.Get<Float>(&float_value)) {
+                                            normal[element_index] = float_value;
+                                        } else if (array_elements.Get<Double>(&double_value)) {
+                                            normal[element_index] = Float(double_value);
+                                        } else {
+                                            return { { LoaderResult::Status::ERR, "Invalid type for vertex position element -- must be float or double" } };
+                                        }
+                                    }
+                                    
+                                    vertices[triangle_index * 3 + normal_index].SetNormal(normal);
+                                }
+                            }
                         }
                     }
                 }
 
-                mapping.data.Set(UniquePtr<Mesh>(new Mesh(
-                    vertices,
-                    indices,
+                auto vertices_and_indices = Mesh::CalculateIndices(vertices);
+
+                Handle<Mesh> mesh = CreateObject<Mesh>(
+                    vertices_and_indices.first,
+                    vertices_and_indices.second,
                     Topology::TRIANGLES,
                     renderer::static_mesh_vertex_attributes
-                )));
+                );
+
+                mesh->SetName(node_name);
+                mesh->CalculateTangents();
+
+                mapping.data.Set(std::move(mesh));
+            } else if (child->name == "Model") {
+                Transform transform;
+
+                for (const auto &model_child : child->children) {
+                    if (model_child->name.StartsWith("Properties")) {
+                        for (const auto &properties_child : model_child->children) {
+                            String properties_child_name;
+                            
+                            if (!properties_child->GetFBXPropertyValue<String>(0, properties_child_name)) {
+                                continue;
+                            }
+
+                            Double x, y, z;
+
+                            if (properties_child_name == "Lcl Translation") {
+                                properties_child->GetFBXPropertyValue<Double>(4, x);
+                                properties_child->GetFBXPropertyValue<Double>(5, y);
+                                properties_child->GetFBXPropertyValue<Double>(6, z);
+
+                                transform.SetTranslation(Vector3(Float(x), Float(y), Float(z)));
+                            } else if (properties_child_name == "Lcl Scaling") {
+                                properties_child->GetFBXPropertyValue<Double>(4, x);
+                                properties_child->GetFBXPropertyValue<Double>(5, y);
+                                properties_child->GetFBXPropertyValue<Double>(6, z);
+
+                                transform.SetScale(Vector3(Float(x), Float(y), Float(z)));
+                            } else if (properties_child_name == "Lcl Rotation") {
+                                properties_child->GetFBXPropertyValue<Double>(4, x);
+                                properties_child->GetFBXPropertyValue<Double>(5, y);
+                                properties_child->GetFBXPropertyValue<Double>(6, z);
+
+                                transform.SetRotation(Quaternion(Vector3(Float(x), Float(y), Float(z))));
+                            }
+                        }
+                    }
+                }
+                
+                auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+                auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
+
+                Handle<Entity> entity = CreateObject<Entity>();
+                entity->SetName(node_name);
+                entity->SetShader(shader);
+                entity->SetMaterial(material);
+                entity->SetTransform(transform);
+
+                mapping.data.Set(std::move(entity));
             }
 
             object_mapping[node_id] = std::move(mapping);
         }
     }
 
+    for (const FBXConnection &connection : connections) {
+        if (connection.left == 0) {
+            continue;
+        }
+
+        const auto left_it = object_mapping.Find(connection.left);
+
+        if (left_it == object_mapping.End()) {
+            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Left ID not found in node map\n", connection.left, connection.right);
+
+            continue;
+        }
+
+        if (!left_it->second.data.IsValid()) {
+            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Left node has no valid data\n", connection.left, connection.right);
+
+            continue;
+        }
+
+        if (auto *left_entity = left_it->second.data.TryGet<Handle<Entity>>()) {
+            if (connection.right == 0) {
+                NodeProxy sub_node(new Node);
+                sub_node.SetName((*left_entity)->GetName());
+                sub_node.SetEntity(*left_entity);
+
+                top->AddChild(sub_node);
+
+                continue;
+            }
+        }
+
+        const auto right_it = object_mapping.Find(connection.right);
+
+        if (right_it == object_mapping.End()) {
+            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Right ID not found in node map\n", connection.left, connection.right);
+
+            continue;
+        }
+
+        if (!right_it->second.data.IsValid()) {
+            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Right node has no valid data\n", connection.left, connection.right);
+
+            continue;
+        }
+
+        if (auto *left_mesh = left_it->second.data.TryGet<Handle<Mesh>>()) {
+            if (auto *right_entity = right_it->second.data.TryGet<Handle<Entity>>()) {
+                (*right_entity)->SetMesh(*left_mesh);
+                (*right_entity)->RebuildRenderableAttributes();
+
+                AssertThrow((*right_entity)->IsRenderable());
+
+                continue;
+            }
+        }
+
+        DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Unable to process connection\n", connection.left, connection.right);
+    }
+
     //if (const auto &objects_node = root["Objects"]) {
     //    objects_node.
   //  }
 //
-    return { { LoaderResult::Status::OK } /* TODO */ };
+
+    top->UpdateWorldTransform();
+
+    return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }
 
 } // namespace hyperion::v2

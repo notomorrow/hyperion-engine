@@ -25,7 +25,7 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/packing.inc"
 #include "include/tonemap.inc"
 
-#define SUN_INTENSITY 15.0
+#define SUN_INTENSITY 7.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3
@@ -148,25 +148,32 @@ vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
     return SUN_INTENSITY * (pRlh * RAYLEIGH_SCATTER_COEFF * total_rayleigh + pMie * MIE_SCATTER_COEFF * total_mie);
 }
 
+#define CUTOFF -0.25
+
 void main()
 {
     vec3 normal = normalize(v_normal);
+
+    vec3 sky_color;
     
-    const float cutoff = -0.25;
-    const vec3 sky_color_bottom = vec3(0.1);
+#ifdef CUTOFF
+    const vec3 sky_color_bottom = vec3(0.0);
 
-    vec3 sky_color = sky_color_bottom;
+    sky_color = sky_color_bottom;
 
-    if (v_position.y >= cutoff) {
+    if (v_position.y >= CUTOFF) {
+#endif
         vec3 light_direction = normalize(light.position_intensity.xyz);
         vec3 ray_direction = normalize(v_position);
 
         vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
 
         sky_color = atmosphere;
+#ifdef CUTOFF
     }
 
-    sky_color = mix(sky_color, sky_color_bottom, 1.0 - smoothstep(cutoff, 0.0, v_position.y));
+    sky_color = mix(sky_color, sky_color_bottom, 1.0 - smoothstep(CUTOFF, 0.0, v_position.y));
+#endif
 
     // exposure
     sky_color = 1.0 - exp(-1.0 * sky_color);

@@ -22,8 +22,8 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
         m_height_data.patch_info.coord.y
     );
 
-    for (int z = 0; z < m_height_data.patch_info.extent.depth; z++) {
-        for (int x = 0; x < m_height_data.patch_info.extent.width; x++) {
+    for (UInt z = 0; z < m_height_data.patch_info.extent.depth; z++) {
+        for (UInt x = 0; x < m_height_data.patch_info.extent.width; x++) {
             const Float x_offset = static_cast<Float>(x + (m_height_data.patch_info.coord.x * (m_height_data.patch_info.extent.width - 1))) / static_cast<Float>(m_height_data.patch_info.extent.width);
             const Float z_offset = static_cast<Float>(z + (m_height_data.patch_info.coord.y * (m_height_data.patch_info.extent.depth - 1))) / static_cast<Float>(m_height_data.patch_info.extent.depth);
 
@@ -92,18 +92,18 @@ std::vector<Mesh::Index> TerrainMeshBuilder::BuildIndices() const
     std::vector<Mesh::Index> indices;
     indices.resize(6 * (m_height_data.patch_info.extent.width - 1) * (m_height_data.patch_info.extent.depth - 1));
 
-    int pitch = m_height_data.patch_info.extent.width;
-    int row = 0;
+    UInt pitch = m_height_data.patch_info.extent.width;
+    UInt row = 0;
 
-    int i0 = row;
-    int i1 = row + 1;
-    int i2 = pitch + i1;
-    int i3 = pitch + row;
+    UInt i0 = row;
+    UInt i1 = row + 1;
+    UInt i2 = pitch + i1;
+    UInt i3 = pitch + row;
 
-    int i = 0;
+    UInt i = 0;
 
-    for (int z = 0; z < m_height_data.patch_info.extent.depth - 1; z++) {
-        for (int x = 0; x < m_height_data.patch_info.extent.width - 1; x++) {
+    for (UInt z = 0; z < m_height_data.patch_info.extent.depth - 1; z++) {
+        for (UInt x = 0; x < m_height_data.patch_info.extent.width - 1; x++) {
             indices[i++] = i0;
             indices[i++] = i2;
             indices[i++] = i1;

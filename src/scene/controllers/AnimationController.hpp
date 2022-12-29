@@ -21,11 +21,14 @@ public:
     virtual void Play(float speed, LoopMode loop_mode = LoopMode::ONCE) override;
     virtual void Stop() override;
 
-    Animation *GetCurrentAnimation() const
+    UInt GetCurrentAnimationIndex() const
+        { return m_animation_index; }
+
+    const Animation &GetCurrentAnimation() const
     {
         return m_skeleton && m_animation_index != ~0u
             ? m_skeleton->GetAnimation(m_animation_index)
-            : nullptr;
+            : Animation();
     }
 
     virtual void OnAdded() override;

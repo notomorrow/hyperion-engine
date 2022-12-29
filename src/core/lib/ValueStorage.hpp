@@ -52,11 +52,17 @@ struct ValueStorageArray
     const ValueStorage<T> &operator[](SizeType index) const
         { return data[index]; }
 
+    T *GetPointer()
+        { return static_cast<T *>(&data[0]); }
+
+    const T *GetPointer() const
+        { return static_cast<T *>(&data[0]); }
+
     void *GetRawPointer()
-        { return static_cast<void *>(data); }
+        { return static_cast<void *>(&data[0]); }
 
     const void *GetRawPointer() const
-        { return static_cast<const void *>(data); }
+        { return static_cast<const void *>(&data[0]); }
 
     constexpr SizeType Size() const
         { return Sz; }
@@ -70,8 +76,11 @@ struct ValueStorageArray<T, 0>
 {
     ValueStorage<char> data[1];
 
-    void *GetRawPointer() const
-        { return (void *)data; }
+    void *GetRawPointer()
+        { return static_cast<void *>(&data[0]); }
+
+    const void *GetRawPointer() const
+        { return static_cast<const void *>(&data[0]); }
 
     constexpr SizeType Size() const
         { return 0; }
@@ -80,8 +89,8 @@ struct ValueStorageArray<T, 0>
         { return 0; }
 };
 
-static_assert(sizeof(ValueStorageArray<void *, 200>) == sizeof(void *) * 200);
-static_assert(sizeof(ValueStorageArray<void *, 0>) == 1);
+static_assert(sizeof(ValueStorageArray<int, 200>) == sizeof(int) * 200);
+static_assert(sizeof(ValueStorageArray<int, 0>) == 1);
 
 } // namespace hyperion
 

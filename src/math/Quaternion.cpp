@@ -76,52 +76,25 @@ Quaternion::Quaternion(const Matrix4 &m)
         z = 0.25f * S;
         w = (m1[0] - m0[1]) / S;
     }
-
-    /*if (tr >= 0.0) {
-        s = sqrt(tr + mat[W][W]);
-        qu.w = s*0.5;
-        s = 0.5 / s;
-        qu.x = (mat[Z][Y] - mat[Y][Z]) * s;
-        qu.y = (mat[X][Z] - mat[Z][X]) * s;
-        qu.z = (mat[Y][X] - mat[X][Y]) * s;
-    } else {
-        int h = X;
-        if (mat[Y][Y] > mat[X][X]) h = Y;
-        if (mat[Z][Z] > mat[h][h]) h = Z;
-        switch (h) {
-    #define caseMacro(i,j,k,I,J,K) \
-        case I:\
-            s = sqrt((mat[I][I] - (mat[J][J]+mat[K][K])) + mat[W][W] );\
-            qu.i = s*0.5;\
-            s = 0.5 / s;\
-            qu.j = (mat[I][J] + mat[J][I]) * s;\
-            qu.k = (mat[K][I] + mat[I][K]) * s;\
-            qu.w = (mat[K][J] - mat[J][K]) * s;\
-            break
-        caseMacro(x,y,z,X,Y,Z);
-        caseMacro(y,z,x,Y,Z,X);
-        caseMacro(z,x,y,Z,X,Y);
-    #undef caseMacro
-        }
-    }
-    if (mat[W][W] != 1.0) {
-    s = 1.0/sqrt(mat[W][W]);
-    qu.w *= s; qu.x *= s; qu.y *= s; qu.z *= s; }*/
 }
 
 Quaternion::Quaternion(const Vector3 &euler)
 {
-    float c1 = cos(euler[2] * 0.5f);
-    float c2 = cos(euler[1] * 0.5f);
-    float c3 = cos(euler[0] * 0.5f);
-    float s1 = sin(euler[2] * 0.5f);
-    float s2 = sin(euler[1] * 0.5f);
-    float s3 = sin(euler[0] * 0.5f);
+    const Float x_over2 = MathUtil::DegToRad(euler.x) * 0.5f;
+    const Float y_over2 = MathUtil::DegToRad(euler.y) * 0.5f;
+    const Float z_over2 = MathUtil::DegToRad(euler.z) * 0.5f;
 
-    x = c1 * c2 * s3 - s1 * s2 * c3;
-    y = c1 * s2 * c3 + s1 * c2 * s3;
-    z = s1 * c2 * c3 - c1 * s2 * s3;
-    w = c1 * c2 * c3 + s1 * s2 * s3;
+    const Float sin_x_over2 = MathUtil::Sin(x_over2);
+    const Float cos_x_over2 = MathUtil::Cos(x_over2);
+    const Float sin_y_over2 = MathUtil::Sin(y_over2);
+    const Float cos_y_over2 = MathUtil::Cos(y_over2);
+    const Float sin_z_over2 = MathUtil::Sin(z_over2);
+    const Float cos_z_over2 = MathUtil::Cos(z_over2);
+    
+    x = cos_y_over2 * sin_x_over2 * cos_z_over2 + sin_y_over2 * cos_x_over2 * sin_z_over2;
+    y = sin_y_over2 * cos_x_over2 * cos_z_over2 - cos_y_over2 * sin_x_over2 * sin_z_over2;
+    z = cos_y_over2 * cos_x_over2 * sin_z_over2 - sin_y_over2 * sin_x_over2 * cos_z_over2;
+    w = cos_y_over2 * cos_x_over2 * cos_z_over2 + sin_y_over2 * sin_x_over2 * sin_z_over2;
 }
 
 Quaternion::Quaternion(const Vector3 &axis, float radians)

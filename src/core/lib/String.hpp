@@ -208,8 +208,13 @@ DynString<T, IsUtf8>::DynString()
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8>::DynString(const T *str)
-    : Base()
+    : Base(),
+      m_length(0)
 {
+    if (str == nullptr) {
+        return;
+    }
+
     int count;
     int len = utf::utf_strlen<T, IsUtf8>(str, &count);
 

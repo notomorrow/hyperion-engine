@@ -118,9 +118,9 @@ public:
             0.5f, 30000.0f
         ));
 
-        // m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
-        //     Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
-        // ));
+        /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
+            Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
+        ));*/
         m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
 
 
@@ -257,19 +257,19 @@ public:
         m_scene->GetFogParams().start_distance = 5000.0f;
         m_scene->GetFogParams().end_distance = 40000.0f;
 
-        Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
-
-
+        Engine::Get()->GetWorld()->AddScene(m_scene);
+        
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
-        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+        /*batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
         batch.Add<Node>("test_model", "models/salle_de_bain/salle_de_bain.obj"); //testbed/testbed.obj");//"models/concrete_house/LOD0_concrete_house_003.obj");///mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
-        batch.Add<Node>("grass", "models/grass/grass.obj");
-        batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
-        
-        // batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
+        batch.Add<Node>("grass", "models/grass/grass.obj");*/
+
+        //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
+
+        batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
         batch.LoadAsync();
 
         auto obj_models = batch.AwaitResults();
@@ -277,6 +277,8 @@ public:
         auto test_model = obj_models["test_model"].Get<Node>();//Engine::Get()->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
+        
+        GetScene()->GetRoot().AddChild(obj_models["monkey_fbx"].Get<Node>());
 
         /*material_test_obj.Scale(5.0f);
         material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
@@ -409,10 +411,10 @@ public:
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
         
-        if (false) { // paged procedural terrain
+        if (true) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
-            terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 } , Vector3(8.0f, 8.0f, 8.0f), 1.0f);
+            terrain_entity->AddController<TerrainPagingController>(0xabc, Extent3D { 256 }, Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
         if (false) { // physics
@@ -445,7 +447,7 @@ public:
             }
         }
 
-        if (true) {
+        if (false) {
             if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
@@ -591,7 +593,7 @@ public:
 
         HandleCameraMovement(delta);
 
-        // GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
+        //GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
 
         /*for (auto &light : m_point_lights) {
             light->SetPosition(Vector3(

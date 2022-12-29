@@ -24,10 +24,10 @@ Triangle::Triangle(const Triangle &other)
 
 Vertex &Triangle::Closest(const Vector3 &vec)
 {
-    float distances[3];
-    int shortest_index = 0;
+    Float distances[3];
+    UInt shortest_index = 0;
 
-    for (int i = 0; i < 3; i++) {
+    for (UInt i = 0; i < 3; i++) {
         distances[i] = m_points[i].GetPosition().DistanceSquared(vec);
 
         if (i != 0) {

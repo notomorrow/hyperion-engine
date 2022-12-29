@@ -1,14 +1,12 @@
 #include <script/vm/VMMemoryBuffer.hpp>
 
-#include <system/Debug.hpp>
-
 #include <core/Core.hpp>
 #include <sstream>
 
 namespace hyperion {
 namespace vm {
 
-VMMemoryBuffer::VMMemoryBuffer(size_t size)
+VMMemoryBuffer::VMMemoryBuffer(SizeType size)
     : m_size(size),
       m_buffer(std::malloc(size))
 {
@@ -60,7 +58,7 @@ void VMMemoryBuffer::GetRepresentation(
     }
 
     // convert all array elements to string
-    for (size_t i = 0; i < m_size; i++) {
+    for (SizeType i = 0; i < m_size; i++) {
         ss << "\\0x" << std::hex << static_cast<uint16_t>(reinterpret_cast<unsigned char *>(m_buffer)[i]) << std::dec;
     }
 }

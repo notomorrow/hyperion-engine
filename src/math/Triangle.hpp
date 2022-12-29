@@ -5,10 +5,12 @@
 #include "Transform.hpp"
 #include "Matrix4.hpp"
 
-#include <array>
+#include <core/lib/FixedArray.hpp>
+#include <Types.hpp>
 
 namespace hyperion {
-class Triangle {
+class Triangle
+{
 public:
     Triangle();
     Triangle(const Vector3 &v0, const Vector3 &v1, const Vector3 &v2);
@@ -16,11 +18,11 @@ public:
     Triangle(const Triangle &other);
     ~Triangle() = default;
 
-    Vertex &operator[](int index) { return m_points[index]; }
-    const Vertex &operator[](int index) const { return m_points[index]; }
-    Vertex &GetPoint(int index) { return operator[](index); }
-    const Vertex &GetPoint(int index) const { return operator[](index); }
-    void SetPoint(int index, const Vertex &value) { m_points[index] = value; }
+    Vertex &operator[](SizeType index) { return m_points[index]; }
+    const Vertex &operator[](SizeType index) const { return m_points[index]; }
+    Vertex &GetPoint(SizeType index) { return operator[](index); }
+    const Vertex &GetPoint(SizeType index) const { return operator[](index); }
+    void SetPoint(SizeType index, const Vertex &value) { m_points[index] = value; }
 
     Vector3 GetCenter() const
     {
@@ -32,7 +34,7 @@ public:
     // bool IntersectRay(const Ray &ray, RayTestResults &out) const;
 
 private:
-    std::array<Vertex, 3> m_points;
+    FixedArray<Vertex, 3> m_points;
 };
 } // namespace hyperion
 
