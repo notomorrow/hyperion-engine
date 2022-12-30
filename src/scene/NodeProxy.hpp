@@ -3,10 +3,9 @@
 
 #include <core/Containers.hpp>
 #include <core/ID.hpp>
-#include <scene/Entity.hpp>
+#include <core/Handle.hpp>
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
-#include <GameCounter.hpp>
 #include <Types.hpp>
 
 namespace hyperion::v2 {
@@ -14,6 +13,7 @@ namespace hyperion::v2 {
 class Engine;
 class Scene;
 class Node;
+class Entity;
 
 class NodeProxy;
 
@@ -186,6 +186,8 @@ public:
     /*! @returns The local-space translation, scale, rotation of this Node. */
     const Transform &GetLocalTransform() const;
 
+    void SetLocalTransform(const Transform &transform);
+
     /*! @returns The local-space translation of this Node. */
     const Vector3 &GetLocalTranslation() const;
 
@@ -221,6 +223,12 @@ public:
      */
     void Rotate(const Quaternion &rotation)
         { SetLocalRotation(GetLocalRotation() * rotation); }
+
+    /*! \brief Rotate the Node by multiplying the current local-space rotation by the given Euler angles.
+     * @param angles The angles to rotate this Node by
+     */
+    void Rotate(const Vector3 &angles)
+        { SetLocalRotation(GetLocalRotation() * Quaternion(angles)); }
 
     /*! @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
     const Transform &GetWorldTransform() const;

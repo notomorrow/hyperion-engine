@@ -759,7 +759,8 @@ void Scene::PushEntityToRender(const Handle<Entity> &entity, const RenderableAtt
 
 bool Scene::IsEntityInFrustum(const Handle<Entity> &entity) const
 {
-    return entity->IsVisibleInScene(GetID());
+    return entity->GetRenderableAttributes().material_attributes.bucket == BUCKET_UI
+        || entity->IsVisibleInScene(GetID());
 }
 
 void Scene::Render(Frame *frame, void *push_constant_ptr, SizeType push_constant_size)

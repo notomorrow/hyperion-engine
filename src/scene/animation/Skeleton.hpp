@@ -6,6 +6,7 @@
 #include <rendering/ShaderDataState.hpp>
 #include <core/lib/DynArray.hpp>
 #include <scene/animation/Animation.hpp>
+#include <scene/NodeProxy.hpp>
 #include <GameCounter.hpp>
 #include <system/Debug.hpp>
 #include <Types.hpp>
@@ -53,7 +54,7 @@ class Skeleton
 {
 public:
     Skeleton();
-    Skeleton(std::unique_ptr<Bone> &&root_bone);
+    Skeleton(const NodeProxy &root_bone);
     Skeleton(const Skeleton &other) = delete;
     Skeleton &operator=(const Skeleton &other) = delete;
     ~Skeleton();
@@ -78,9 +79,15 @@ public:
      * If no root bone was set on this Skeleton, nullptr is returned
      * @returns The root bone of this skeleton, or nullptr
      */
-    Bone *GetRootBone() const { return m_root_bone.get(); }
+    Bone *GetRootBone();
 
-    void SetRootBone(std::unique_ptr<Bone> &&root_bone);
+    /*! \brief Get the root Bone of this skeleton, which all nested Bones fall under.
+     * If no root bone was set on this Skeleton, nullptr is returned
+     * @returns The root bone of this skeleton, or nullptr
+     */
+    const Bone *GetRootBone() const;
+
+    void SetRootBone(const NodeProxy &root_bone);
 
     auto &GetAnimations() { return m_animations; }
     const auto &GetAnimations() const { return m_animations; }
@@ -104,7 +111,7 @@ private:
 
     SkeletonBoneData m_bone_data;
     
-    std::unique_ptr<Bone> m_root_bone;
+    NodeProxy m_root_bone;
     Array<Animation> m_animations;
 
     mutable ShaderDataState m_shader_data_state;

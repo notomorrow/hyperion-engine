@@ -165,17 +165,10 @@ public:
             }
         }
 
-        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
-            m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
-                BoundingBox(-300.0f, 300.0f),
-                Extent3D { 3, 2, 3 }
-            );
-        }
-
 
         if (true) { // adding shadow maps
             m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-                Handle<Light>(m_sun),
+                m_sun,
                 BoundingBox(Vector3(-600, -20, -600), Vector3(600, 250, 600))//test_model.GetWorldAABB()
             );
         }
@@ -238,7 +231,7 @@ public:
             }
         }
 
-        if (true) { // skydome
+        if (false) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -260,16 +253,16 @@ public:
         Engine::Get()->GetWorld()->AddScene(m_scene);
         
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
-        /*batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("house", "models/house.obj");
-        batch.Add<Node>("test_model", "models/salle_de_bain/salle_de_bain.obj"); //testbed/testbed.obj");//"models/concrete_house/LOD0_concrete_house_003.obj");///mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
-        batch.Add<Node>("grass", "models/grass/grass.obj");*/
+        batch.Add<Node>("grass", "models/grass/grass.obj");
 
         //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
 
-        batch.Add<Node>("monkey_fbx", "models/monkey.fbx");
+        batch.Add<Node>("monkey_fbx", "models/z2.fbx");
         batch.LoadAsync();
 
         auto obj_models = batch.AwaitResults();
@@ -278,7 +271,9 @@ public:
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
         
-        GetScene()->GetRoot().AddChild(obj_models["monkey_fbx"].Get<Node>());
+        auto monkey_fbx = GetScene()->GetRoot().AddChild(obj_models["monkey_fbx"].Get<Node>());
+        //monkey_fbx.Scale(0.2f);
+        monkey_fbx.Rotate(Vector3(90, 0, 0));
 
         /*material_test_obj.Scale(5.0f);
         material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
@@ -297,7 +292,14 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(5.2f);
+        test_model.Scale(0.2f);
+
+        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
+            m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
+                test_model.GetWorldAABB(),//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
+                Extent3D { 3, 2, 3 }
+            );
+        }
 
         if (false) {
             int i = 0;
@@ -414,7 +416,7 @@ public:
         if (true) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
-            terrain_entity->AddController<TerrainPagingController>(0xabc, Extent3D { 256 }, Vector3(8.0f, 8.0f, 8.0f), 1.0f);
+            terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 }, Vector3(8.0f, 8.0f, 8.0f), 1.0f);
         }
 
         if (false) { // physics
@@ -532,12 +534,12 @@ public:
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(Vector3(250.0f));
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.7f, 1.0f, 1.0f) * 0.1f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.002f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));
             plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.08f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.12f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
             plane->RebuildRenderableAttributes();

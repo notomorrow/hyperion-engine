@@ -136,32 +136,24 @@ Result StagingBufferPool::GC(Device *device)
     const auto current_time = std::time(nullptr);
 
     DebugLog(LogType::Debug, "Clean up staging buffers from pool\n");
+    
+    auto result = Result::OK;
+    SizeType num_destroyed = 0;
 
-    std::queue<std::vector<StagingBufferRecord>::iterator> to_remove;
-
-    for (auto it = m_staging_buffers.begin(); it != m_staging_buffers.end(); ++it) {
+    for (auto it = m_staging_buffers.begin(); it != m_staging_buffers.end();) {
         if (current_time - it->last_used > hold_time) {
-            to_remove.push(it);
+            ++num_destroyed;
+            
+            HYPERION_PASS_ERRORS(it->buffer->Destroy(device), result);
+
+            it = m_staging_buffers.erase(it);
+        } else {
+            ++it;
         }
     }
 
-    if (to_remove.empty()) {
-        DebugLog(
-            LogType::Debug,
-            "No staging buffers queued for removal.\n"
-        );
-    }
-
-    DebugLog(LogType::Debug, "Removing %llu staging buffers from pool\n", to_remove.size());
-
-    auto result = Result::OK;
-
-    while (!to_remove.empty()) {
-        HYPERION_PASS_ERRORS(to_remove.front()->buffer->Destroy(device), result);
-
-        m_staging_buffers.erase(to_remove.front());
-
-        to_remove.pop();
+    if (num_destroyed != 0) {
+        DebugLog(LogType::Debug, "Removed %llu staging buffers from pool\n", num_destroyed);
     }
 
     return result;

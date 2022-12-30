@@ -24,8 +24,8 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
 
     for (UInt z = 0; z < m_height_data.patch_info.extent.depth; z++) {
         for (UInt x = 0; x < m_height_data.patch_info.extent.width; x++) {
-            const Float x_offset = static_cast<Float>(x + (m_height_data.patch_info.coord.x * (m_height_data.patch_info.extent.width - 1))) / static_cast<Float>(m_height_data.patch_info.extent.width);
-            const Float z_offset = static_cast<Float>(z + (m_height_data.patch_info.coord.y * (m_height_data.patch_info.extent.depth - 1))) / static_cast<Float>(m_height_data.patch_info.extent.depth);
+            const Float x_offset = Float(x + (m_height_data.patch_info.coord.x * (m_height_data.patch_info.extent.width - 1))) / Float(m_height_data.patch_info.extent.width);
+            const Float z_offset = Float(z + (m_height_data.patch_info.coord.y * (m_height_data.patch_info.extent.depth - 1))) / Float(m_height_data.patch_info.extent.depth);
 
             const UInt index = m_height_data.GetHeightIndex(x, z);
 
@@ -76,8 +76,8 @@ std::vector<Vertex> TerrainMeshBuilder::BuildVertices() const
             position *= m_height_data.patch_info.scale;
 
             Vector2 texcoord(
-               static_cast<float>(x) / static_cast<float>(m_height_data.patch_info.extent.width),
-               static_cast<float>(z) / static_cast<float>(m_height_data.patch_info.extent.depth)
+               Float(x) / Float(m_height_data.patch_info.extent.width),
+               Float(z) / Float(m_height_data.patch_info.extent.depth)
             );
 
             vertices[i++] = Vertex(position, texcoord);

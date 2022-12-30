@@ -287,3 +287,6 @@ res/data/dump/**/*
 project/**/*
 xcode_project/**/*
 CMakeFiles/**/*
+
+glslang/**/*
+zlib/**/*

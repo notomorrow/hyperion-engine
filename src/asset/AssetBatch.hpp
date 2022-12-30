@@ -26,14 +26,10 @@ struct EnqueuedAsset
         empty container will be returned. */
     template <class T>
     auto Get() -> typename AssetLoaderWrapper<T>::CastedType
-    {
-        return AssetLoaderWrapper<T>::ExtractAssetValue(value);
-    }
+        { return AssetLoaderWrapper<T>::ExtractAssetValue(value); }
 
     explicit operator bool() const
-    {
-        return result.status == LoaderResult::Status::OK && value.IsValid();
-    }
+        { return result.status == LoaderResult::Status::OK && value.IsValid(); }
 };
 
 using AssetMap = FlatMap<String, EnqueuedAsset>;
@@ -119,9 +115,7 @@ public:
             }
         };
 
-        procs.PushBack(Functor {
-            .key = key
-        });
+        procs.PushBack(Functor { key });
     }
 
     /*! \brief Begin loading this batch asynchronously. Note that

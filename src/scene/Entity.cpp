@@ -323,28 +323,27 @@ void Entity::SetMesh(Handle<Mesh> &&mesh)
 
     m_mesh = std::move(mesh);
 
-    m_local_aabb = BoundingBox::empty;
-    m_world_aabb = BoundingBox::empty;
+    if (m_mesh) {
+        m_local_aabb = m_mesh->CalculateAABB();
+        m_world_aabb = BoundingBox::empty;
+
+        //if (m_nodes.Any()) {
+        //    for (Node *node : m_nodes) {
+        //        node->UpdateWorldTransform();
+        //    }
+        //}
+
+        if (!m_local_aabb.Empty()) {
+            for (const auto &corner : m_local_aabb.GetCorners()) {
+                m_world_aabb.Extend(m_transform.GetMatrix() * corner);
+            }
+        }
+    }
 
     if (IsInitCalled()) {
-        if (InitObject(m_mesh)) {
-            m_local_aabb = m_mesh->CalculateAABB();
-            m_world_aabb = BoundingBox::empty;
+        InitObject(m_mesh);
 
-            //if (m_nodes.Any()) {
-            //    for (Node *node : m_nodes) {
-            //        node->UpdateWorldTransform();
-            //    }
-            //}
-
-            if (!m_local_aabb.Empty()) {
-                for (const auto &corner : m_local_aabb.GetCorners()) {
-                    m_world_aabb.Extend(m_transform.GetMatrix() * corner);
-                }
-            }
-
-            UpdateOctree();
-        }
+        UpdateOctree();
     }
 
     RebuildRenderableAttributes();

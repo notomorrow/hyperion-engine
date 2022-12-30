@@ -194,7 +194,7 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
     auto skeleton_handle = UniquePtr<Handle<Skeleton>>::Construct(CreateObject<Skeleton>());
 
     for (const auto &item : object.bones) {
-        auto bone = std::make_unique<Bone>(item.name);
+        UniquePtr<Bone> bone(new Bone(item.name));
 
         bone->SetBindingTransform(Transform(
             item.binding_translation,
@@ -204,7 +204,7 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
 
         if (item.parent_name.Any()) {
             if (auto *parent_bone = (*skeleton_handle)->FindBone(item.parent_name)) {
-                parent_bone->AddChild(NodeProxy(bone.release()));
+                parent_bone->AddChild(NodeProxy(bone.Release()));
 
                 continue;
             }
@@ -221,7 +221,7 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
                 item.name.Data()
             );
         } else {
-            (*skeleton_handle)->SetRootBone(std::move(bone));
+            (*skeleton_handle)->SetRootBone(NodeProxy(bone.Release()));
         }
     }
 
