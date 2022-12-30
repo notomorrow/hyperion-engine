@@ -48,6 +48,8 @@ public:
     static constexpr bool is_utf8 = IsUtf8;
     static constexpr bool is_ansi = !is_utf8 && (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>);
 
+    static constexpr SizeType not_found = SizeType(-1);
+
     DynString();
     DynString(const DynString &other);
     DynString(const T *str);
@@ -105,7 +107,8 @@ public:
     [[nodiscard]] const typename Base::ValueType &Back() const { return Base::GetBuffer()[Base::m_size - 2]; /* for NT char */ }
 
     [[nodiscard]] bool Contains(const T &ch) const { return ch != T{0} && Base::Contains(ch); }
-    [[nodiscard]] Int FindIndex(const DynString &str) const;
+    [[nodiscard]] bool Contains(const DynString &str) const { return FindIndex(str) != not_found; }
+    [[nodiscard]] SizeType FindIndex(const DynString &str) const;
 
     [[nodiscard]] bool Empty() const { return Size() == 0; }
     [[nodiscard]] bool Any() const { return Size() != 0; }
@@ -671,6 +674,10 @@ auto DynString<T, IsUtf8>::TrimmedRight() const -> DynString
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::Substr(SizeType first, SizeType last) const -> DynString
 {
+    if (first == SizeType(-1)) {
+        return *this;
+    }
+
     last = MathUtil::Max(last, first);
 
     const auto size = Size();
@@ -763,7 +770,7 @@ auto DynString<T, IsUtf8>::StrStr(const DynString &other) const -> const T*
             continue;
         }
 
-        T *this_str = str;
+        const T *this_str = str;
 
         for (;;) {
             if (*other_str == '\0') {
@@ -782,13 +789,13 @@ auto DynString<T, IsUtf8>::StrStr(const DynString &other) const -> const T*
 }
 
 template <class T, bool IsUtf8>
-Int DynString<T, IsUtf8>::FindIndex(const DynString &other) const
+SizeType DynString<T, IsUtf8>::FindIndex(const DynString &other) const
 {
     if (auto *ptr = StrStr(other)) {
-        return static_cast<Int>(ptr - Data());
+        return static_cast<SizeType>(ptr - Data());
     }
 
-    return -1;
+    return not_found;
 }
 
 #if 0

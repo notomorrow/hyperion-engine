@@ -4,6 +4,7 @@
 #include <core/Base.hpp>
 #include <core/lib/RefCountedPtr.hpp>
 #include <rendering/ShaderDataState.hpp>
+#include <rendering/Buffers.hpp>
 #include <core/lib/DynArray.hpp>
 #include <scene/animation/Animation.hpp>
 #include <scene/NodeProxy.hpp>
@@ -18,7 +19,7 @@ class Bone;
 
 struct SkeletonBoneData
 {
-    using BoneMatricesPtr = RC<FixedArray<Matrix4, 128>>;
+    using BoneMatricesPtr = RC<FixedArray<Matrix4, SkeletonShaderData::max_bones>>;
 
     BoneMatricesPtr matrices;
 
@@ -67,13 +68,18 @@ public:
      * pointer is returned.
      */
     Bone *FindBone(const String &name);
-
+    
     /*! \brief Look up a bone with the given name/tag. If no root bone was set,
      * or the bone could not be found, nullptr is returned. Otherwise, the resulting bone
      * pointer is returned.
      */
     const Bone *FindBone(const String &name) const
         { return const_cast<Skeleton *>(this)->FindBone(name); }
+
+    /*! \brief Look up the index in the skeleton of a bone with the given name/tag. If no root bone was set,
+     * or the bone could not be found, -1 is returned. Otherwise, the index is returned.
+     */
+    UInt FindBoneIndex(const String &name) const;
 
     /*! \brief Get the root Bone of this skeleton, which all nested Bones fall under.
      * If no root bone was set on this Skeleton, nullptr is returned
@@ -89,6 +95,14 @@ public:
 
     void SetRootBone(const NodeProxy &root_bone);
 
+    NodeProxy &GetRoot()
+        { return m_root_bone; }
+
+    const NodeProxy &GetRoot() const
+        { return m_root_bone; }
+
+    SizeType NumBones() const;
+    
     auto &GetAnimations() { return m_animations; }
     const auto &GetAnimations() const { return m_animations; }
     SizeType NumAnimations() const { return m_animations.Size(); }
@@ -107,8 +121,6 @@ public:
     void Update(GameCounter::TickUnit delta);
 
 private:
-    SizeType NumBones() const;
-
     SkeletonBoneData m_bone_data;
     
     NodeProxy m_root_bone;

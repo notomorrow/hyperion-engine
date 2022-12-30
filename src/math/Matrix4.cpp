@@ -436,6 +436,18 @@ Vector4 Matrix4::operator*(const Vector4 &vec) const
     };
 }
 
+Vector3 Matrix4::ExtractTransformScale() const
+{
+    Vector3 scale;
+
+    scale.x = Vector3(GetColumn(0)).Length();
+    scale.y = Vector3(GetColumn(1)).Length();
+    scale.z = Vector3(GetColumn(2)).Length();
+
+    return scale;
+}
+
+
 Vector4 Matrix4::GetColumn(UInt index) const
 {
     return {

@@ -181,6 +181,7 @@ void main()
 
             // //find the max depth
             float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
+            //is_visible = (clip_min.z < max_depth);
             is_visible = (clip_min.z <= max_depth + 0.001);
         }
     }

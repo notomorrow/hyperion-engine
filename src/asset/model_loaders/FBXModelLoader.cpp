@@ -3,6 +3,7 @@
 #include <rendering/Mesh.hpp>
 #include <scene/Entity.hpp>
 #include <scene/animation/Bone.hpp>
+#include <scene/controllers/AnimationController.hpp>
 #include <rendering/Material.hpp>
 #include <util/fs/FsUtil.hpp>
 #include <core/lib/CMemory.hpp>
@@ -21,7 +22,7 @@ constexpr char header_string[] = "Kaydara FBX Binary  ";
 constexpr UInt8 header_bytes[] = { 0x1A, 0x00 };
 
 using FBXPropertyValue = Variant<Int16, Int32, Int64, UInt32, Float, Double, Bool, String, ByteBuffer>;
-using FBXNodeID = Int64;
+using FBXObjectID = Int64;
 
 struct FBXProperty
 {
@@ -38,13 +39,13 @@ struct FBXProperty
 
 const FBXProperty FBXProperty::empty = { };
 
-struct FBXNode
+struct FBXObject
 {
-    static const FBXNode empty;
+    static const FBXObject empty;
 
     String name;
     Array<FBXProperty> properties;
-    Array<UniquePtr<FBXNode>> children;
+    Array<UniquePtr<FBXObject>> children;
 
     const FBXProperty &GetProperty(UInt index) const
     {
@@ -71,7 +72,7 @@ struct FBXNode
         return false;
     }
 
-    const FBXNode &FindChild(const String &child_name) const
+    const FBXObject &FindChild(const String &child_name) const
     {
         for (auto &child : children) {
             if (child == nullptr) {
@@ -86,7 +87,7 @@ struct FBXNode
         return empty;
     }
 
-    const FBXNode &operator[](const String &child_name) const
+    const FBXObject &operator[](const String &child_name) const
         { return FindChild(child_name); }
 
     explicit operator bool() const
@@ -108,8 +109,8 @@ struct FBXDefinitionProperty
 
 struct FBXConnection
 {
-    FBXNodeID left;
-    FBXNodeID right;
+    FBXObjectID left;
+    FBXObjectID right;
 };
 
 struct FBXCluster
@@ -117,22 +118,99 @@ struct FBXCluster
     String name;
     Matrix4 transform;
     Matrix4 transform_link;
-    Array<Int32> bone_indices;
+    Array<Int32> vertex_indices;
     Array<Double> bone_weights;
+
+    FBXObjectID limb_id = 0;
+};
+
+struct FBXSkin
+{
+    FlatSet<FBXObjectID> cluster_ids;
+};
+
+struct FBXPoseNode
+{
+    FBXObjectID node_id = 0;
+    Matrix4 matrix;
+};
+
+struct FBXBindPose
+{
+    String name;
+    Array<FBXPoseNode> pose_nodes;
+};
+
+struct FBXMesh
+{
+    FBXObjectID skin_id = 0;
+
+    std::vector<Vertex> vertices;
+    Array<Mesh::Index> indices;
+    VertexAttributeSet attributes;
+
+    Optional<Handle<Mesh>> result;
+
+    const Handle<Mesh> &GetResultObject()
+    {
+        if (!result.HasValue()) {
+            auto vertices_and_indices = Mesh::CalculateIndices(vertices);
+
+            auto handle = CreateObject<Mesh>(
+                vertices_and_indices.first,
+                vertices_and_indices.second,
+                Topology::TRIANGLES,
+                attributes
+            );
+
+            result.Set(std::move(handle));
+        }
+        
+        return result.Get();
+    }
+};
+
+struct FBXNode
+{
+    enum class Type
+    {
+        NODE,
+        LIMB_NODE
+    };
+
+    String name;
+    Type type = Type::NODE;
+
+    FBXObjectID parent_id = 0;
+    FBXObjectID skeleton_holder_node_id = 0;
+
+    FBXObjectID mesh_id = 0;
+
+    FlatSet<FBXObjectID> child_ids;
+
+    Transform local_transform;
+
+    Matrix4 world_bind_matrix;
+    Matrix4 local_bind_matrix;
+
+    Optional<Handle<Skeleton>> skeleton;
+    //Optional<NodeProxy> node_proxy;
 };
 
 struct FBXNodeMapping
 {
-    FBXNode *node;
+    FBXObject *object;
 
     Variant<
-        Handle<Mesh>,
-        Handle<Skeleton>,
-        NodeProxy
+        FBXMesh,
+        FBXNode,
+        FBXCluster,
+        FBXSkin,
+        FBXBindPose
     > data;
 };
 
-const FBXNode FBXNode::empty = { };
+const FBXObject FBXObject::empty = { };
 
 static bool ReadMagic(ByteReader &reader)
 {
@@ -340,9 +418,9 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
     return { };
 }
 
-static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXNode> &out_node)
+static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXObject> &out)
 {
-    out_node.Reset(new FBXNode);
+    out.Reset(new FBXObject);
 
     const SizeType start_position = reader.Position();
 
@@ -361,7 +439,7 @@ static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXNode> &out_node
     ByteBuffer name_buffer;
     reader.Read(name_length, name_buffer);
 
-    out_node->name = String(name_buffer);
+    out->name = String(name_buffer);
 
     for (UInt32 index = 0; index < num_properties; ++index) {
         FBXProperty property;
@@ -372,20 +450,20 @@ static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXNode> &out_node
             return result;
         }
 
-        out_node->properties.PushBack(std::move(property));
+        out->properties.PushBack(std::move(property));
     }
 
     while (reader.Position() < end_position) {
-        UniquePtr<FBXNode> child_node;
+        UniquePtr<FBXObject> child;
 
-        LoaderResult result = ReadFBXNode(reader, child_node);
+        LoaderResult result = ReadFBXNode(reader, child);
 
         if (!result) {
             return result;
         }
 
-        if (child_node != nullptr) {
-            out_node->children.PushBack(std::move(child_node));
+        if (child != nullptr) {
+            out->children.PushBack(std::move(child));
         }
     }
     
@@ -401,14 +479,14 @@ enum FBXVertexMappingType
     BY_VERTEX
 };
 
-static FBXVertexMappingType GetVertexMappingType(const FBXNode &node)
+static FBXVertexMappingType GetVertexMappingType(const FBXObject &object)
 {
     FBXVertexMappingType mapping_type = INVALID_MAPPING_TYPE;
 
-    if (node) {
+    if (object) {
         String mapping_type_str;
 
-        if (node.GetFBXPropertyValue<String>(0, mapping_type_str)) {
+        if (object.GetFBXPropertyValue<String>(0, mapping_type_str)) {
             if (mapping_type_str == "ByPolygonVertex") {
                 mapping_type = BY_POLYGON_VERTEX;
             } else if (mapping_type_str == "ByPolygon") {
@@ -423,9 +501,9 @@ static FBXVertexMappingType GetVertexMappingType(const FBXNode &node)
 }
 
 template <class T>
-static LoaderResult ReadBinaryArray(const FBXNode &node, Array<T> &ary)
+static LoaderResult ReadBinaryArray(const FBXObject &object, Array<T> &ary)
 {
-    if (FBXProperty property = node.GetProperty(0)) {
+    if (FBXProperty property = object.GetProperty(0)) {
         ary.Resize(property.array_elements.Size());
         
         for (SizeType index = 0; index < property.array_elements.Size(); ++index) {
@@ -442,11 +520,48 @@ static LoaderResult ReadBinaryArray(const FBXNode &node, Array<T> &ary)
     return { LoaderResult::Status::OK };
 }
 
+template <class T>
+static bool GetFBXObjectInMapping(FlatMap<FBXObjectID, FBXNodeMapping> &mapping, FBXObjectID id, T *&out)
+{
+    out = nullptr;
+
+    const auto it = mapping.Find(id);
+
+    if (it == mapping.End()) {
+        return false;
+    }
+
+    if (auto *ptr = it->second.data.TryGet<T>()) {
+        out = ptr;
+
+        return true;
+    }
+
+    return false;
+}
+
+static void AddSkeletonToEntities(const Handle<Skeleton> &skeleton, Node *node)
+{
+    AssertThrow(node != nullptr);
+    
+    if (Handle<Entity> &entity = node->GetEntity()) {
+        entity->SetSkeleton(skeleton);
+        entity->AddController<AnimationController>();
+    }
+
+    for (auto &child : node->GetChildren()) {
+        if (child) {
+            AddSkeletonToEntities(skeleton, child.Get());
+        }
+    }
+}
+
 LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
 
     auto top = UniquePtr<Node>::Construct();
+    Handle<Skeleton> root_skeleton = CreateObject<Skeleton>();
     
     // Include our root dir as part of the path
     const String path(state.filepath.c_str());
@@ -466,22 +581,22 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
     UInt32 version;
     reader.Read(&version);
 
-    FBXNode root;
+    FBXObject root;
 
     do {
-        UniquePtr<FBXNode> node;
+        UniquePtr<FBXObject> object;
 
-        LoaderResult result = ReadFBXNode(reader, node);
+        LoaderResult result = ReadFBXNode(reader, object);
 
         if (!result) {
             return { result };
         }
 
-        if (node == nullptr || node->Empty()) {
+        if (object == nullptr || object->Empty()) {
             break;
         }
 
-        root.children.PushBack(std::move(node));
+        root.children.PushBack(std::move(object));
     } while (true);
 
     FlatMap<String, FBXDefinitionProperty> definitions;
@@ -506,10 +621,14 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    const auto ReadMatrix = [](const FBXNode &node) -> Matrix4 {
+    const auto ReadMatrix = [](const FBXObject &object) -> Matrix4 {
+        if (!object) {
+            return Matrix4::zeros;
+        }
+
         Matrix4 matrix = Matrix4::zeros;
 
-        if (FBXProperty matrix_property = node.GetProperty(0)) {
+        if (FBXProperty matrix_property = object.GetProperty(0)) {
             if (matrix_property.array_elements.Size() == 16) {
                 for (SizeType index = 0; index < matrix_property.array_elements.Size(); ++index) {
                     const auto &item = matrix_property.array_elements[index];
@@ -532,19 +651,157 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         return matrix;
     };
 
-    FlatMap<FBXNodeID, FBXNodeMapping> object_mapping;
+    FlatMap<FBXObjectID, FBXNodeMapping> object_mapping;
+    FlatSet<FBXObjectID> bind_pose_ids;
     Array<FBXConnection> connections;
 
-    if (const FBXNode &connections_node = root["Connections"]) {
+    const auto GetFBXObject = [&object_mapping](FBXObjectID id, auto *&out) {
+        return GetFBXObjectInMapping(object_mapping, id, out);
+    };
+
+    const auto GetSkeletonFromLimbNode = [&](const FBXNode &limb_node) -> Handle<Skeleton> {
+        if (!limb_node.skeleton_holder_node_id) {
+            return Handle<Skeleton>::empty;
+        }
+
+        FBXNode *skeleton_holder_node;
+
+        if (GetFBXObject(limb_node.skeleton_holder_node_id, skeleton_holder_node)) {
+            if (skeleton_holder_node->skeleton.HasValue()) {
+                return skeleton_holder_node->skeleton.Get();
+            }
+        }
+
+        return Handle<Skeleton>::empty;
+    };
+
+    const auto ApplyClustersToMesh = [&](FBXMesh &mesh) -> Handle<Skeleton> {
+        if (!mesh.skin_id) {
+            return Handle<Skeleton>::empty;
+        }
+
+        FBXSkin *skin;
+
+        if (!GetFBXObject(mesh.skin_id, skin)) {
+            return Handle<Skeleton>::empty;
+        }
+
+        Handle<Skeleton> skeleton = root_skeleton;
+
+        for (const FBXObjectID cluster_id : skin->cluster_ids) {
+            FBXCluster *cluster;
+
+            if (!GetFBXObject(cluster_id, cluster)) {
+                DebugLog(
+                    LogType::Warn,
+                    "Cluster with id %lld not found in mapping!\n",
+                    cluster_id
+                );
+
+                continue;
+            }
+
+            if (cluster->limb_id) {
+                FBXNode *limb_node;
+
+                if (!GetFBXObject(cluster->limb_id, limb_node)) {
+                    DebugLog(
+                        LogType::Warn,
+                        "LimbNode with id %lld not found in mapping!\n",
+                        cluster->limb_id
+                    );
+
+                    continue;
+                }
+
+#if 0
+                Handle<Skeleton> skeleton_from_limb = GetSkeletonFromLimbNode(*limb_node);
+
+                if (skeleton && skeleton_from_limb && skeleton != skeleton_from_limb) {
+                    DebugLog(
+                        LogType::Warn,
+                        "LimbNode with id %lld has Skeleton with ID #%u, but multiple skeletons are attached to the mesh!\n",
+                        cluster->limb_id,
+                        skeleton_from_limb->GetID()
+                    );
+                }
+
+                skeleton = skeleton_from_limb;
+
+                if (!skeleton) {
+                    DebugLog(
+                        LogType::Warn,
+                        "LimbNode with id %lld has no Skeleton!\n",
+                        cluster->limb_id
+                    );
+
+                    continue;
+                }
+#endif
+                
+                const UInt bone_index = skeleton->FindBoneIndex(limb_node->name);
+
+                if (bone_index == UInt(-1)) {
+                    DebugLog(
+                        LogType::Warn,
+                        "LimbNode with id %lld: Bone with name %s not found in Skeleton\n",
+                        cluster->limb_id,
+                        limb_node->name.Data()
+                    );
+
+                    continue;
+                }
+
+                for (SizeType index = 0; index < cluster->vertex_indices.Size(); ++index) {
+                    Int32 position_index = cluster->vertex_indices[index];
+
+                    if (position_index < 0) {
+                        position_index = (position_index * -1) - 1;
+                    }
+
+                    if (SizeType(position_index) >= mesh.vertices.size()) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Position index (%d) out of range of vertex count (%llu)\n",
+                            position_index,
+                            mesh.vertices.size()
+                        );
+
+                        break;
+                    }
+
+                    if (index >= cluster->bone_weights.Size()) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Index (%llu) out of range of bone weights\n",
+                            index
+                        );
+
+                        break;
+                    }
+
+                    const Double weight = cluster->bone_weights[index];
+
+                    Vertex &vertex = mesh.vertices[position_index];
+                    vertex.AddBoneIndex(Int(bone_index));
+                    vertex.AddBoneWeight(Float(weight));
+                }
+            }
+        }
+
+        return skeleton;
+    };
+
+    if (const FBXObject &connections_node = root["Connections"]) {
         for (auto &child : connections_node.children) {
             FBXConnection connection { };
 
-            if (!child->GetFBXPropertyValue<FBXNodeID>(1, connection.left)) {
+            if (!child->GetFBXPropertyValue<FBXObjectID>(1, connection.left)) {
                 DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get left ID value\n");
                 continue;
             }
             
-            if (!child->GetFBXPropertyValue<FBXNodeID>(2, connection.right)) {
+            if (!child->GetFBXPropertyValue<FBXObjectID>(2, connection.right)) {
                 DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get right ID value\n");
                 continue;
             }
@@ -553,22 +810,63 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    if (const FBXNode &objects_node = root["Objects"]) {
+    if (const FBXObject &objects_node = root["Objects"]) {
         for (auto &child : objects_node.children) {
-            FBXNodeID node_id;
-            child->GetFBXPropertyValue<FBXNodeID>(0, node_id);
+            FBXObjectID object_id;
+            child->GetFBXPropertyValue<FBXObjectID>(0, object_id);
 
             String node_name;
             child->GetFBXPropertyValue<String>(1, node_name);
 
             FBXNodeMapping mapping { child.Get() };
 
-            if (child->name == "Deformer") {
+            if (child->name == "Pose") {
+                String pose_type;
+                child->GetFBXPropertyValue(2, pose_type);
+
+                if (pose_type == "BindPose") {
+                    FBXBindPose bind_pose;
+
+                    const SizeType substr_index = node_name.FindIndex("Pose::");
+
+                    if (substr_index != String::not_found) {
+                        bind_pose.name = node_name.Substr(substr_index);
+                    } else {
+                        bind_pose.name = node_name;
+                    }
+
+                    for (auto &pose_child : child->children) {
+                        if (pose_child->name == "PoseNode") {
+                            FBXPoseNode pose;
+
+                            if (const FBXObject &node_node = pose_child->FindChild("Node")) {
+                                node_node.GetFBXPropertyValue<FBXObjectID>(0, pose.node_id);
+                            }
+                            
+                            pose.matrix = ReadMatrix(pose_child->FindChild("Matrix"));
+
+                            bind_pose.pose_nodes.PushBack(pose);
+                        }
+                    }
+
+                    mapping.data.Set(std::move(bind_pose));
+
+                    bind_pose_ids.Insert(object_id);
+                } else {
+                    DebugLog(
+                        LogType::Debug,
+                        "Unsure how to handle Pose type %s\n",
+                        pose_type.Data()
+                    );
+
+                    continue;
+                }
+            } else if (child->name == "Deformer") {
                 String deformer_type;
                 child->GetFBXPropertyValue(2, deformer_type);
 
                 if (deformer_type == "Skin") {
-                    mapping.data.Set(CreateObject<Skeleton>());
+                    mapping.data.Set(FBXSkin { });
                 } else if (deformer_type == "Cluster") {
                     FBXCluster cluster;
 
@@ -587,7 +885,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
 
                     if (const auto &indices_child = child->FindChild("Indexes")) {
-                        auto result = ReadBinaryArray<Int32>(indices_child, cluster.bone_indices);
+                        auto result = ReadBinaryArray<Int32>(indices_child, cluster.vertex_indices);
 
                         if (!result) {
                             return result;
@@ -602,10 +900,15 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                         }
                     }
 
-                    UniquePtr<Bone> bone(new Bone);
-                    bone->SetName(cluster.name);
+                    mapping.data.Set(cluster);
+                } else {
+                    DebugLog(
+                        LogType::Debug,
+                        "Unsure how to handle Deformer type %s\n",
+                        deformer_type.Data()
+                    );
 
-                    mapping.data.Set(NodeProxy(bone.Release()));
+                    continue;
                 }
             } else if (child->name == "Geometry") {
                 Array<Vector3> model_vertices;
@@ -614,7 +917,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
                 Array<String> layer_node_names;
 
-                if (const FBXNode &layer_node = (*child)["Layer"]) {
+                if (const FBXObject &layer_node = (*child)["Layer"]) {
                     for (const auto &layer_node_child : layer_node.children) {
                         if (layer_node_child->name == "LayerElement") {
                             if (const auto &layer_node_type = (*layer_node_child)["Type"]) {
@@ -628,7 +931,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
                 }
 
-                if (const FBXNode &vertices_node = (*child)["Vertices"]) {
+                if (const FBXObject &vertices_node = (*child)["Vertices"]) {
                     const FBXProperty &vertices_property = vertices_node.GetProperty(0);
                     const SizeType count = vertices_property.array_elements.Size();
 
@@ -661,7 +964,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
                 }
 
-                if (const FBXNode &indices_node = (*child)["PolygonVertexIndex"]) {
+                if (const FBXObject &indices_node = (*child)["PolygonVertexIndex"]) {
                     const FBXProperty &indices_property = indices_node.GetProperty(0);
                     const SizeType count = indices_property.array_elements.Size();
 
@@ -742,19 +1045,13 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
                 }
 
-                auto vertices_and_indices = Mesh::CalculateIndices(vertices);
+                FBXMesh mesh;
+                mesh.vertices = vertices;
+                mesh.indices = model_indices;
+                mesh.attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes;
 
-                Handle<Mesh> mesh = CreateObject<Mesh>(
-                    vertices_and_indices.first,
-                    vertices_and_indices.second,
-                    Topology::TRIANGLES,
-                    renderer::static_mesh_vertex_attributes
-                );
+                mapping.data.Set(mesh);
 
-                mesh->SetName(node_name);
-                mesh->CalculateTangents();
-
-                mapping.data.Set(std::move(mesh));
             } else if (child->name == "Model") {
                 String model_type;
                 child->GetFBXPropertyValue<String>(2, model_type);
@@ -770,14 +1067,14 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                                 continue;
                             }
 
-                            const auto ReadVector3 = [](const FBXNode &node) -> Vector3 {
+                            const auto ReadVector3 = [](const FBXObject &object) -> Vector3 {
                                 Double x, y, z;
 
-                                node.GetFBXPropertyValue<Double>(4, x);
-                                node.GetFBXPropertyValue<Double>(5, y);
-                                node.GetFBXPropertyValue<Double>(6, z);
+                                object.GetFBXPropertyValue<Double>(4, x);
+                                object.GetFBXPropertyValue<Double>(5, y);
+                                object.GetFBXPropertyValue<Double>(6, z);
 
-                                return Vector3(Float(x), Float(y), Float(z));
+                                return { Float(x), Float(y), Float(z) };
                             };
 
                             if (properties_child_name == "Lcl Translation") {
@@ -791,227 +1088,399 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
                 }
 
-                NodeProxy node(new Node);
-                node.SetName(node_name);
-                node.SetLocalTransform(transform);
-            
-                //if (model_type == "Mesh") {    
-                    auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-                    auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
+                static const FlatMap<String, FBXNode::Type> node_types = {
+                    { "Mesh", FBXNode::Type::NODE },
+                    { "LimbNode", FBXNode::Type::LIMB_NODE },
+                    { "Null", FBXNode::Type::NODE }
+                };
 
-                    Handle<Entity> entity = CreateObject<Entity>();
-                    entity->SetName(node_name);
-                    entity->SetShader(shader);
-                    entity->SetMaterial(material);
+                const auto node_type_it = node_types.Find(model_type);
 
-                    node.SetEntity(std::move(entity));
-                //} else if (model_type == "LimbNode") {
-                    
-                //} else {
-                //    return { { LoaderResult::Status::ERR, "Unparseable model type" } };
-                //}
+                const FBXNode::Type node_type = node_type_it != node_types.End()
+                    ? node_type_it->second
+                    : FBXNode::Type::NODE;
 
-                mapping.data.Set(std::move(node));
+                FBXNode node;
+                node.name = node_name;
+                node.type = node_type;
+                node.local_transform = transform;
+
+                mapping.data.Set(node);
             }
 
-            object_mapping[node_id] = std::move(mapping);
+            object_mapping[object_id] = std::move(mapping);
         }
     }
     
-    FlatMap<ID<Mesh>, ID<Skeleton>> mesh_to_skeleton;
-    FlatMap<ID<Mesh>, ID<Entity>> mesh_to_entity;
+    FBXNode root_fbx_node;
+    root_fbx_node.name = "[FBX Model Root]";
 
     for (const FBXConnection &connection : connections) {
+#define INVALID_NODE_CONNECTION(msg) \
+    { \
+        String left_type, left_name, right_type, right_name; \
+        if (left_it != object_mapping.End()) { \
+            left_it->second.object->GetFBXPropertyValue<String>(1, left_type); \
+            left_name = left_it->second.object->name.Data(); \
+        } else { \
+            left_type = "<not found>"; \
+            left_name = "<not found>"; \
+        } \
+        if (right_it != object_mapping.End()) { \
+            right_it->second.object->GetFBXPropertyValue<String>(1, right_type); \
+            right_name = right_it->second.object->name.Data(); \
+        } else { \
+            right_type = "<not found>"; \
+            right_name = "<not found>"; \
+        } \
+        \
+        DebugLog( \
+            LogType::Warn, \
+            "Invalid node connection: %s \"%s\" (%u) -> %s \"%s\" (%u)\n\t" msg "\n", \
+            left_type.Data(), \
+            left_name.Data(), \
+            connection.left, \
+            right_type.Data(), \
+            right_name.Data(), \
+            connection.right \
+        ); \
+        continue; \
+    }
+
         if (connection.left == 0) {
             continue;
         }
 
         const auto left_it = object_mapping.Find(connection.left);
+        const auto right_it = connection.right != 0 ? object_mapping.Find(connection.right) : object_mapping.End();
 
         if (left_it == object_mapping.End()) {
-            DebugLog(
-                LogType::Warn,
-                "Invalid node connection (%u -> %u): Left ID not found in node map\n",
-                connection.left,
-                connection.right
-            );
-
-            continue;
+            INVALID_NODE_CONNECTION("Left ID not found in node map");
         }
 
         if (!left_it->second.data.IsValid()) {
-#if 0
-            DebugLog(
-                LogType::Warn,
-                "Invalid node connection (%u -> %u): Left node has no valid data\n",
-                connection.left,
-                connection.right
-            );
-#endif
-
-            continue;
+            INVALID_NODE_CONNECTION("Left node has no valid data");
         }
         
         if (connection.right == 0) {
-            if (auto *left_node = left_it->second.data.TryGet<NodeProxy>()) {
-                top->AddChild(*left_node);
+            if (auto *left_node = left_it->second.data.TryGet<FBXNode>()) {
+                left_node->parent_id = 0;
+                root_fbx_node.child_ids.Insert(left_it->first);
 
                 continue;
             }
         }
 
-        const auto right_it = object_mapping.Find(connection.right);
-
         if (right_it == object_mapping.End()) {
-            DebugLog(
-                LogType::Warn,
-                "Invalid node connection (%u -> %u): Right ID not found in node map\n",
-                connection.left,
-                connection.right
-            );
-
-            continue;
+            INVALID_NODE_CONNECTION("Right ID not found in node map");
         }
 
         if (!right_it->second.data.IsValid()) {
-#if 0
-            DebugLog(
-                LogType::Warn,
-                "Invalid node connection (%u -> %u): Right node has no valid data\n",
-                connection.left,
-                connection.right
-            );
-#endif
-
-            continue;
+            INVALID_NODE_CONNECTION("Right node has no valid data");
         }
 
-        if (auto *left_mesh = left_it->second.data.TryGet<Handle<Mesh>>()) {
-            /*if (auto *right_entity = right_it->second.data.TryGet<Handle<Entity>>()) {
-                (*right_entity)->SetMesh(*left_mesh);
-                (*right_entity)->RebuildRenderableAttributes();
-
-                const auto id_it = mesh_to_entity.Find((*left_mesh)->GetID());
-
-                if (id_it != mesh_to_entity.End()) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Mesh used by multiple entities\n"
-                    );
-                } else {
-                    mesh_to_entity.Set((*left_mesh)->GetID(), (*right_entity)->GetID());
-                }
-
-                const auto skeleton_id_it = mesh_to_skeleton.Find((*left_mesh)->GetID());
-
-                if (skeleton_id_it != mesh_to_skeleton.End()) {
-                    if (Handle<Skeleton> skeleton = Handle<Skeleton>(skeleton_id_it->second)) {
-                        (*right_entity)->SetSkeleton(std::move(skeleton));
-                    }
-                }
-
-                continue;
-            }*/
-
-            if (auto *right_mesh = right_it->second.data.TryGet<NodeProxy>()) {
-                auto right_entity = right_mesh->GetEntity();
-
-                if (!right_entity) {
-                    right_entity = CreateObject<Entity>();
-                    right_mesh->SetEntity(right_entity);
-                }
-
-                right_entity->SetMesh(*left_mesh);
-                right_entity->RebuildRenderableAttributes();
-
-                const auto id_it = mesh_to_entity.Find((*left_mesh)->GetID());
-
-                if (id_it != mesh_to_entity.End()) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Mesh used by multiple entities\n"
-                    );
-                } else {
-                    mesh_to_entity.Set((*left_mesh)->GetID(), right_entity->GetID());
-                }
-
-                const auto skeleton_id_it = mesh_to_skeleton.Find((*left_mesh)->GetID());
-
-                if (skeleton_id_it != mesh_to_skeleton.End()) {
-                    if (Handle<Skeleton> skeleton = Handle<Skeleton>(skeleton_id_it->second)) {
-                        right_entity->SetSkeleton(std::move(skeleton));
-                    }
-                }
+        if (auto *left_mesh = left_it->second.data.TryGet<FBXMesh>()) {
+            if (auto *right_node = right_it->second.data.TryGet<FBXNode>()) {
+                right_node->mesh_id = left_it->first;
 
                 continue;
             }
 
-        } else if (auto *left_skeleton = left_it->second.data.TryGet<Handle<Skeleton>>()) {
-            // Connect Skeleton to a Mesh
-            if (auto *right_mesh = right_it->second.data.TryGet<Handle<Mesh>>()) {
-                const auto entity_id_it = mesh_to_entity.Find((*right_mesh)->GetID());
-
-                mesh_to_skeleton.Set((*right_mesh)->GetID(), (*left_skeleton)->GetID());
-
-                if (entity_id_it != mesh_to_entity.End()) {
-                    if (Handle<Entity> entity = Handle<Entity>(entity_id_it->second)) {
-                        entity->SetSkeleton((*left_skeleton));
-                    }
-                }
-
-                continue;
-            }
-        } else if (auto *left_node = left_it->second.data.TryGet<NodeProxy>()) {
-            if (auto *right_node = right_it->second.data.TryGet<NodeProxy>()) {
-                if ((*right_node).GetParent()) {
-                    DebugLog(LogType::Warn, "Right node already has parent, cannot add to left node\n");
+        } else if (auto *left_node = left_it->second.data.TryGet<FBXNode>()) {
+            if (auto *right_node = right_it->second.data.TryGet<FBXNode>()) {
+                if (left_node->parent_id) {
+                    DebugLog(LogType::Warn, "Left node already has parent, cannot add to right node\n");
                 } else {
-                    (*left_node).AddChild(*right_node);
+                    left_node->parent_id = right_it->first;
+                    right_node->child_ids.Insert(left_it->first);
 
                     continue;
                 }
-            } else if (auto *right_skeleton = right_it->second.data.TryGet<Handle<Skeleton>>()) {
-                if (Node *node = left_node->Get()) {
-                    if (node->GetType() == Node::Type::BONE && !node->GetParent()) {
-                        auto *bone = static_cast<Bone *>(node);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+            } else if (auto *right_cluster = right_it->second.data.TryGet<FBXCluster>()) {
+                if (left_node->type == FBXNode::Type::LIMB_NODE) {
+                    right_cluster->limb_id = left_it->first;
 
-                        bone->SetToBindingPose();
-
-                        bone->CalculateBoneRotation();
-                        bone->CalculateBoneTranslation();
-
-                        bone->StoreBindingPose();
-                        bone->ClearPose();
-
-                        bone->UpdateBoneTransform();
-
-                        (*right_skeleton)->SetRootBone(*left_node);
-
-                        continue;
-                    } else {
-                        DebugLog(LogType::Warn, "Cannot connect non-bone node to skeleton\n");
-                    }
+                    continue;
                 }
-            } else {
-                DebugLog(LogType::Debug, "Attach node to ??\n");
-                std::cout << "  node string " << right_it->second.node->name << "\n";
-                //fflush(stdout);
+            } 
+        } else if (auto *left_cluster = left_it->second.data.TryGet<FBXCluster>()) {
+            if (auto *right_skin = right_it->second.data.TryGet<FBXSkin>()) {
+                DebugLog(LogType::Debug, "Attach cluster to Skin\n");
 
-                //HYP_BREAKPOINT;
+                right_skin->cluster_ids.Insert(left_it->first);
+
+                continue;
+            }
+        } else if (auto *left_skin = left_it->second.data.TryGet<FBXSkin>()) {
+            if (auto *right_mesh = right_it->second.data.TryGet<FBXMesh>()) {
+                if (right_mesh->skin_id) {
+                    DebugLog(
+                        LogType::Warn,
+                        "FBX Mesh %lld already has a Skin attachment\n",
+                        left_it->first
+                    );
+                }
+
+                right_mesh->skin_id = left_it->first;
+
+                continue;
             }
         }
 
+        INVALID_NODE_CONNECTION("Unhandled connection type");
+
+#undef INVALID_NODE_CONNECTION
+    }
+    
+    NodeProxy root_bone(new Bone);
+    root_skeleton->SetRootBone(root_bone);
+
+    bool found_first_bone = false;
+
+    std::function<void(FBXNode::Type, FBXNode &, Node *)> BuildNodes;
+
+    BuildNodes = [&](FBXNode::Type type, FBXNode &node, Node *parent_node) {
+        AssertThrow(parent_node != nullptr);
+        
+        if (node.type != type) {
+            return;
+        }
+
+        NodeProxy node_proxy;
+
+        if (node.type == FBXNode::Type::NODE) {
+            node_proxy = NodeProxy(new Node);
+        } else if (node.type == FBXNode::Type::LIMB_NODE) {
+            Transform binding_transform;
+            binding_transform.SetTranslation(Vector3(node.local_bind_matrix.GetColumn(3)));
+            binding_transform.SetRotation(Quaternion(node.local_bind_matrix));
+            binding_transform.SetScale(node.local_bind_matrix.ExtractTransformScale());
+
+            Bone *bone = new Bone;
+            bone->SetBindingTransform(binding_transform);
+
+            node_proxy = NodeProxy(bone);
+        }
+
+        node_proxy.SetName(node.name);
+
+        if (node.mesh_id) {
+            FBXMesh *mesh;
+
+            if (GetFBXObject(node.mesh_id, mesh)) {
+                // create Entity for Mesh
+                auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD_SKINNED);
+                auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
+
+                auto entity = CreateObject<Entity>();
+                entity->SetName(node.name);
+                entity->SetShader(shader);
+                entity->SetMaterial(material);
+
+                ApplyClustersToMesh(*mesh);
+
+                entity->SetMesh(mesh->GetResultObject());
+
+                node_proxy.SetEntity(std::move(entity));
+            }
+        }
+
+        for (const FBXObjectID id : node.child_ids) {
+            if (id) {
+                FBXNode *child_node;
+
+                if (GetFBXObject(id, child_node)) {
+                    BuildNodes(type, *child_node, node_proxy.Get());
+
+                    continue;
+                }
+
+                DebugLog(
+                    LogType::Error,
+                    "Unsure how to build child object %lld\n",
+                    id
+                );
+
+                HYP_BREAKPOINT;
+            }
+        }
+
+        parent_node->AddChild(node_proxy);
+    };
+
+    auto ApplyBindPoses = [&]() {
+        for (const FBXObjectID id : bind_pose_ids) {
+            FBXBindPose *bind_pose;
+
+            if (!GetFBXObject(id, bind_pose)) {
+                DebugLog(
+                    LogType::Warn,
+                    "Not a valid bind pose node: %lld\n",
+                    id
+                );
+
+                continue;
+            }
+
+            for (const FBXPoseNode &pose_node : bind_pose->pose_nodes) {
+                FBXNode *linked_node;
+
+                if (!GetFBXObject(pose_node.node_id, linked_node)) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Linked node %lld to pose node is not valid\n",
+                        pose_node.node_id
+                    );
+
+                    continue;
+                }
+                
+                linked_node->world_bind_matrix = pose_node.matrix;
+            }
+        }
+    };
+    
+    std::function<void(FBXNode &)> ApplyLocalBindPose;
+
+    ApplyLocalBindPose = [&](FBXNode &node) {
+        node.local_bind_matrix = node.world_bind_matrix;
+
+        if (node.parent_id) {
+            FBXNode *parent_node;
+
+            if (GetFBXObject(node.parent_id, parent_node)) {
+                node.local_bind_matrix = parent_node->world_bind_matrix.Inverted() * node.local_bind_matrix;
+            }
+        }
+
+        for (const FBXObjectID id : node.child_ids) {
+            if (id) {
+                FBXNode *child_node;
+
+                if (GetFBXObject(id, child_node)) {
+                    ApplyLocalBindPose(*child_node);
+                }
+            }
+        }
+    };
+    
+    auto CalculateLocalBindPoses = [&]() {
+        for (const FBXObjectID id : bind_pose_ids) {
+            FBXBindPose *bind_pose;
+
+            if (!GetFBXObject(id, bind_pose)) {
+                DebugLog(
+                    LogType::Warn,
+                    "Not a valid bind pose node: %lld\n",
+                    id
+                );
+
+                continue;
+            }
+
+            for (const FBXPoseNode &pose_node : bind_pose->pose_nodes) {
+                FBXNode *linked_node;
+
+                if (!GetFBXObject(pose_node.node_id, linked_node)) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Linked node %lld to pose node is not valid\n",
+                        pose_node.node_id
+                    );
+
+                    continue;
+                }
+                
+                ApplyLocalBindPose(*linked_node);
+            }
+        }
+    };
+
+    ApplyBindPoses();
+    CalculateLocalBindPoses();
+
+    std::function<void(FBXNode &)> BuildLimbNodes;
+
+    BuildLimbNodes = [&](FBXNode &node) {
+        if (node.type == FBXNode::Type::LIMB_NODE) {
+            found_first_bone = true;
+
+            BuildNodes(FBXNode::Type::LIMB_NODE, node, root_bone.Get());
+        } else {
+            for (const FBXObjectID id : node.child_ids) {
+                if (id) {
+                    FBXNode *child_node;
+
+                    if (GetFBXObject(id, child_node)) {
+                        BuildLimbNodes(*child_node);
+                    }
+                }
+            }
+        }
+    };
+
 #if 0
-        DebugLog(
-            LogType::Warn,
-            "Invalid node connection (%u -> %u): Unable to process connection\n",
-            connection.left,
-            connection.right
-        );
+
+    std::function<FBXNode *(FBXNode &)> FindFirstLimbNode;
+
+    FindFirstLimbNode = [&](FBXNode &node) -> FBXNode * {
+        if (node.type == FBXNode::Type::LIMB_NODE) {
+            return &node;
+        }
+
+        for (const FBXObjectID id : node.child_ids) {
+            if (id) {
+                FBXNode *child_node;
+
+                if (GetFBXObject(id, child_node)) {
+                    if (FBXNode *limb_node = FindFirstLimbNode(*child_node)) {
+                        return limb_node;
+                    }
+                }
+            }
+        }
+
+        return nullptr;
+    };
+
 #endif
+
+    
+    // prepare limb nodes first,
+    // so the root skeleton's bones are built out before
+    // we apply clusters to each entity mesh
+    BuildLimbNodes(root_fbx_node);
+
+    for (const FBXObjectID id : root_fbx_node.child_ids) {
+        if (id) {
+            FBXNode *child_node;
+
+            if (GetFBXObject(id, child_node)) {
+                BuildNodes(FBXNode::Type::NODE, *child_node, top.Get());
+            }
+        }
+    }
+
+    if (found_first_bone) {
+        // Add Skeleton and AnimationController to Entities
+        AddSkeletonToEntities(root_skeleton, top.Get());
     }
     
     top->UpdateWorldTransform();
+
+    if (Skeleton *skeleton = root_skeleton.Get()) {
+        if (Bone *root_bone = skeleton->GetRootBone()) {
+            root_bone->SetToBindingPose();
+
+            root_bone->CalculateBoneRotation();
+            root_bone->CalculateBoneTranslation();
+
+            root_bone->StoreBindingPose();
+            root_bone->ClearPose();
+
+            root_bone->UpdateBoneTransform();
+        }
+    }
 
     return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }

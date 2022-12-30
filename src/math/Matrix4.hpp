@@ -66,6 +66,8 @@ public:
     Vector3 operator*(const Vector3 &vec) const;
     Vector4 operator*(const Vector4 &vec) const;
 
+    Vector3 ExtractTransformScale() const;
+
     Vector4 GetColumn(UInt index) const;
 
     HYP_FORCE_INLINE bool operator==(const Matrix4 &other) const

@@ -231,7 +231,7 @@ public:
             }
         }
 
-        if (false) { // skydome
+        if (true) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -254,7 +254,6 @@ public:
         
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("house", "models/house.obj");
         batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
@@ -262,7 +261,7 @@ public:
 
         //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
 
-        batch.Add<Node>("monkey_fbx", "models/z2.fbx");
+        //batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
         batch.LoadAsync();
 
         auto obj_models = batch.AwaitResults();
@@ -272,6 +271,7 @@ public:
         auto material_test_obj = obj_models["material"].Get<Node>();
         
         auto monkey_fbx = GetScene()->GetRoot().AddChild(obj_models["monkey_fbx"].Get<Node>());
+        monkey_fbx.SetName("monkey_fbx");
         //monkey_fbx.Scale(0.2f);
         monkey_fbx.Rotate(Vector3(90, 0, 0));
 
@@ -413,7 +413,7 @@ public:
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
         
-        if (true) { // paged procedural terrain
+        if (false) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
             terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 }, Vector3(8.0f, 8.0f, 8.0f), 1.0f);
@@ -523,7 +523,7 @@ public:
         }
 
 
-        if (true) {
+        if (false) {
             auto cube_model = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj");
 
             // add a plane physics shape
@@ -594,6 +594,18 @@ public:
         m_ui.Update(delta);
 
         HandleCameraMovement(delta);
+
+        if (auto fbx_node = GetScene()->GetRoot().Select("monkey_fbx")) {
+            if (auto body = fbx_node.Select("Models:Body")) {
+                if (const auto &entity = body.GetEntity()) {
+                    if (const auto &skeleton = entity->GetSkeleton()) {
+                        if (Bone *bone = skeleton->FindBone("thigh.L")) {
+                            //bone->SetLocalRotation(Quaternion(Vector3(MathUtil::RadToDeg(MathUtil::Sin(delta * 2.0f)), 0.0f, 0.0f)));
+                        }
+                    }
+                }
+            }
+        }
 
         //GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
 
