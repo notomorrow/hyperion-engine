@@ -196,6 +196,13 @@ const Transform &NodeProxy::GetLocalTransform() const
     return Transform::identity;
 }
 
+void NodeProxy::SetLocalTransform(const Transform &transform)
+{
+    if (Get()) {
+        Get()->SetLocalTransform(transform);
+    }
+}
+
 const Vector3 &NodeProxy::GetLocalTranslation() const
     { return GetLocalTransform().GetTranslation(); }
 

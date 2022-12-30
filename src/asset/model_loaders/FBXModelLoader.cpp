@@ -2,8 +2,10 @@
 #include <Engine.hpp>
 #include <rendering/Mesh.hpp>
 #include <scene/Entity.hpp>
+#include <scene/animation/Bone.hpp>
 #include <rendering/Material.hpp>
 #include <util/fs/FsUtil.hpp>
+#include <core/lib/CMemory.hpp>
 
 #include <algorithm>
 #include <stack>
@@ -18,7 +20,7 @@ namespace hyperion::v2 {
 constexpr char header_string[] = "Kaydara FBX Binary  ";
 constexpr UInt8 header_bytes[] = { 0x1A, 0x00 };
 
-using FBXPropertyValue = Variant<Int16, Int32, Int64, UInt32, Float, Double, bool, String, ByteBuffer>;
+using FBXPropertyValue = Variant<Int16, Int32, Int64, UInt32, Float, Double, Bool, String, ByteBuffer>;
 using FBXNodeID = Int64;
 
 struct FBXProperty
@@ -69,7 +71,7 @@ struct FBXNode
         return false;
     }
 
-    const FBXNode &operator[](const String &child_name) const
+    const FBXNode &FindChild(const String &child_name) const
     {
         for (auto &child : children) {
             if (child == nullptr) {
@@ -84,6 +86,9 @@ struct FBXNode
         return empty;
     }
 
+    const FBXNode &operator[](const String &child_name) const
+        { return FindChild(child_name); }
+
     explicit operator bool() const
         { return !Empty(); }
 
@@ -93,6 +98,38 @@ struct FBXNode
             && properties.Empty()
             && children.Empty();
     }
+};
+
+struct FBXDefinitionProperty
+{
+    UInt8 type;
+    String name;
+};
+
+struct FBXConnection
+{
+    FBXNodeID left;
+    FBXNodeID right;
+};
+
+struct FBXCluster
+{
+    String name;
+    Matrix4 transform;
+    Matrix4 transform_link;
+    Array<Int32> bone_indices;
+    Array<Double> bone_weights;
+};
+
+struct FBXNodeMapping
+{
+    FBXNode *node;
+
+    Variant<
+        Handle<Mesh>,
+        Handle<Skeleton>,
+        NodeProxy
+    > data;
 };
 
 const FBXNode FBXNode::empty = { };
@@ -107,7 +144,7 @@ static bool ReadMagic(ByteReader &reader)
 
     reader.Read(read_magic, sizeof(header_string));
 
-    if (std::strncmp(read_magic, header_string, sizeof(header_string)) != 0) {
+    if (Memory::StringCompare(read_magic, header_string, sizeof(header_string)) != 0) {
         return false;
     }
 
@@ -177,7 +214,7 @@ static LoaderResult ReadFBXPropertyValue(ByteReader &reader, UInt8 type, FBXProp
             UInt8 b;
             reader.Read(&b);
 
-            out_value.Set(bool(b != 0));
+            out_value.Set(Bool(b != 0));
 
             return { };
         }
@@ -364,7 +401,6 @@ enum FBXVertexMappingType
     BY_VERTEX
 };
 
-
 static FBXVertexMappingType GetVertexMappingType(const FBXNode &node)
 {
     FBXVertexMappingType mapping_type = INVALID_MAPPING_TYPE;
@@ -386,6 +422,26 @@ static FBXVertexMappingType GetVertexMappingType(const FBXNode &node)
     return mapping_type;
 }
 
+template <class T>
+static LoaderResult ReadBinaryArray(const FBXNode &node, Array<T> &ary)
+{
+    if (FBXProperty property = node.GetProperty(0)) {
+        ary.Resize(property.array_elements.Size());
+        
+        for (SizeType index = 0; index < property.array_elements.Size(); ++index) {
+            const auto &item = property.array_elements[index];
+
+            if (const auto *value_ptr = item.TryGet<T>()) {
+                ary[index] = *value_ptr;
+            } else {
+                return { LoaderResult::Status::ERR, "Type mismatch for array data" };
+            }
+        }
+    }
+
+    return { LoaderResult::Status::OK };
+}
+
 LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
@@ -393,7 +449,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
     auto top = UniquePtr<Node>::Construct();
     
     // Include our root dir as part of the path
-    const auto path = String(state.filepath.c_str());
+    const String path(state.filepath.c_str());
     const auto current_dir = FileSystem::CurrentPath();
     const auto base_path = StringUtil::BasePath(path.Data());
 
@@ -412,8 +468,6 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     FBXNode root;
 
-    //Array<UniquePtr<FBXNode>> nodes;
-
     do {
         UniquePtr<FBXNode> node;
 
@@ -429,26 +483,6 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
         root.children.PushBack(std::move(node));
     } while (true);
-
-    /*for (auto &node : nodes) {
-        std::cout << "node : " << node->name << "\n";
-
-        std::cout << "properties: \n";
-
-        for (auto &prop : node->properties) {
-            std::cout << "  " << prop.value.GetTypeID().value << "\n";
-        }
-
-        for (auto &ch : node->children) {
-            std::cout << "  child: " << ch->name << "\n";
-        }
-    }*/
-
-    struct FBXDefinitionProperty
-    {
-        UInt8 type;
-        String name;
-    };
 
     FlatMap<String, FBXDefinitionProperty> definitions;
 
@@ -472,25 +506,36 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    struct FBXNodeMapping
-    {
-        FBXNode *node;
+    const auto ReadMatrix = [](const FBXNode &node) -> Matrix4 {
+        Matrix4 matrix = Matrix4::zeros;
 
-        Variant<
-            Handle<Mesh>,
-            Handle<Entity>
-        > data;
-    };
+        if (FBXProperty matrix_property = node.GetProperty(0)) {
+            if (matrix_property.array_elements.Size() == 16) {
+                for (SizeType index = 0; index < matrix_property.array_elements.Size(); ++index) {
+                    const auto &item = matrix_property.array_elements[index];
 
-    struct FBXConnection
-    {
-        FBXNodeID left, right;
+                    if (const auto *value_double = item.TryGet<Double>()) {
+                        matrix.values[index] = Float(*value_double);
+                    } else if (const auto *value_float = item.TryGet<Float>()) {
+                        matrix.values[index] = *value_float;
+                    }
+                }
+
+            } else {
+                DebugLog(
+                    LogType::Warn,
+                    "Invalid matrix in FBX node -- invalid size\n"
+                );
+            }
+        }
+
+        return matrix;
     };
 
     FlatMap<FBXNodeID, FBXNodeMapping> object_mapping;
     Array<FBXConnection> connections;
 
-    if (const auto &connections_node = root["Connections"]) {
+    if (const FBXNode &connections_node = root["Connections"]) {
         for (auto &child : connections_node.children) {
             FBXConnection connection { };
 
@@ -508,17 +553,61 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    if (const auto &objects_node = root["Objects"]) {
+    if (const FBXNode &objects_node = root["Objects"]) {
         for (auto &child : objects_node.children) {
             FBXNodeID node_id;
             child->GetFBXPropertyValue<FBXNodeID>(0, node_id);
 
             String node_name;
-            child->GetFBXPropertyValue<String>(0, node_name);
+            child->GetFBXPropertyValue<String>(1, node_name);
 
             FBXNodeMapping mapping { child.Get() };
 
-            if (child->name == "Geometry") {
+            if (child->name == "Deformer") {
+                String deformer_type;
+                child->GetFBXPropertyValue(2, deformer_type);
+
+                if (deformer_type == "Skin") {
+                    mapping.data.Set(CreateObject<Skeleton>());
+                } else if (deformer_type == "Cluster") {
+                    FBXCluster cluster;
+
+                    const auto name_split = node_name.Split(':');
+
+                    if (name_split.Size() > 1) {
+                        cluster.name = name_split[1];
+                    }
+
+                    if (const auto &transform_child = child->FindChild("Transform")) {
+                        cluster.transform = ReadMatrix(transform_child);
+                    }
+
+                    if (const auto &transform_link_child = child->FindChild("TransformLink")) {
+                        cluster.transform_link = ReadMatrix(transform_link_child);
+                    }
+
+                    if (const auto &indices_child = child->FindChild("Indexes")) {
+                        auto result = ReadBinaryArray<Int32>(indices_child, cluster.bone_indices);
+
+                        if (!result) {
+                            return result;
+                        }
+                    }
+
+                    if (const auto &weights_child = child->FindChild("Weights")) {
+                        auto result = ReadBinaryArray<Double>(weights_child, cluster.bone_weights);
+
+                        if (!result) {
+                            return result;
+                        }
+                    }
+
+                    UniquePtr<Bone> bone(new Bone);
+                    bone->SetName(cluster.name);
+
+                    mapping.data.Set(NodeProxy(bone.Release()));
+                }
+            } else if (child->name == "Geometry") {
                 Array<Vector3> model_vertices;
                 Array<Mesh::Index> model_indices;
                 VertexAttributeSet attributes;
@@ -667,6 +756,9 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
                 mapping.data.Set(std::move(mesh));
             } else if (child->name == "Model") {
+                String model_type;
+                child->GetFBXPropertyValue<String>(2, model_type);
+                
                 Transform transform;
 
                 for (const auto &model_child : child->children) {
@@ -678,46 +770,56 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                                 continue;
                             }
 
-                            Double x, y, z;
+                            const auto ReadVector3 = [](const FBXNode &node) -> Vector3 {
+                                Double x, y, z;
+
+                                node.GetFBXPropertyValue<Double>(4, x);
+                                node.GetFBXPropertyValue<Double>(5, y);
+                                node.GetFBXPropertyValue<Double>(6, z);
+
+                                return Vector3(Float(x), Float(y), Float(z));
+                            };
 
                             if (properties_child_name == "Lcl Translation") {
-                                properties_child->GetFBXPropertyValue<Double>(4, x);
-                                properties_child->GetFBXPropertyValue<Double>(5, y);
-                                properties_child->GetFBXPropertyValue<Double>(6, z);
-
-                                transform.SetTranslation(Vector3(Float(x), Float(y), Float(z)));
+                                transform.SetTranslation(ReadVector3(*properties_child));
                             } else if (properties_child_name == "Lcl Scaling") {
-                                properties_child->GetFBXPropertyValue<Double>(4, x);
-                                properties_child->GetFBXPropertyValue<Double>(5, y);
-                                properties_child->GetFBXPropertyValue<Double>(6, z);
-
-                                transform.SetScale(Vector3(Float(x), Float(y), Float(z)));
+                                transform.SetScale(ReadVector3(*properties_child));
                             } else if (properties_child_name == "Lcl Rotation") {
-                                properties_child->GetFBXPropertyValue<Double>(4, x);
-                                properties_child->GetFBXPropertyValue<Double>(5, y);
-                                properties_child->GetFBXPropertyValue<Double>(6, z);
-
-                                transform.SetRotation(Quaternion(Vector3(Float(x), Float(y), Float(z))));
+                                transform.SetRotation(Quaternion(ReadVector3(*properties_child)));
                             }
                         }
                     }
                 }
-                
-                auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
-                auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
 
-                Handle<Entity> entity = CreateObject<Entity>();
-                entity->SetName(node_name);
-                entity->SetShader(shader);
-                entity->SetMaterial(material);
-                entity->SetTransform(transform);
+                NodeProxy node(new Node);
+                node.SetName(node_name);
+                node.SetLocalTransform(transform);
+            
+                //if (model_type == "Mesh") {    
+                    auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+                    auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
 
-                mapping.data.Set(std::move(entity));
+                    Handle<Entity> entity = CreateObject<Entity>();
+                    entity->SetName(node_name);
+                    entity->SetShader(shader);
+                    entity->SetMaterial(material);
+
+                    node.SetEntity(std::move(entity));
+                //} else if (model_type == "LimbNode") {
+                    
+                //} else {
+                //    return { { LoaderResult::Status::ERR, "Unparseable model type" } };
+                //}
+
+                mapping.data.Set(std::move(node));
             }
 
             object_mapping[node_id] = std::move(mapping);
         }
     }
+    
+    FlatMap<ID<Mesh>, ID<Skeleton>> mesh_to_skeleton;
+    FlatMap<ID<Mesh>, ID<Entity>> mesh_to_entity;
 
     for (const FBXConnection &connection : connections) {
         if (connection.left == 0) {
@@ -727,24 +829,32 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         const auto left_it = object_mapping.Find(connection.left);
 
         if (left_it == object_mapping.End()) {
-            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Left ID not found in node map\n", connection.left, connection.right);
+            DebugLog(
+                LogType::Warn,
+                "Invalid node connection (%u -> %u): Left ID not found in node map\n",
+                connection.left,
+                connection.right
+            );
 
             continue;
         }
 
         if (!left_it->second.data.IsValid()) {
-            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Left node has no valid data\n", connection.left, connection.right);
+#if 0
+            DebugLog(
+                LogType::Warn,
+                "Invalid node connection (%u -> %u): Left node has no valid data\n",
+                connection.left,
+                connection.right
+            );
+#endif
 
             continue;
         }
-
-        if (auto *left_entity = left_it->second.data.TryGet<Handle<Entity>>()) {
-            if (connection.right == 0) {
-                NodeProxy sub_node(new Node);
-                sub_node.SetName((*left_entity)->GetName());
-                sub_node.SetEntity(*left_entity);
-
-                top->AddChild(sub_node);
+        
+        if (connection.right == 0) {
+            if (auto *left_node = left_it->second.data.TryGet<NodeProxy>()) {
+                top->AddChild(*left_node);
 
                 continue;
             }
@@ -753,36 +863,154 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         const auto right_it = object_mapping.Find(connection.right);
 
         if (right_it == object_mapping.End()) {
-            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Right ID not found in node map\n", connection.left, connection.right);
+            DebugLog(
+                LogType::Warn,
+                "Invalid node connection (%u -> %u): Right ID not found in node map\n",
+                connection.left,
+                connection.right
+            );
 
             continue;
         }
 
         if (!right_it->second.data.IsValid()) {
-            DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Right node has no valid data\n", connection.left, connection.right);
+#if 0
+            DebugLog(
+                LogType::Warn,
+                "Invalid node connection (%u -> %u): Right node has no valid data\n",
+                connection.left,
+                connection.right
+            );
+#endif
 
             continue;
         }
 
         if (auto *left_mesh = left_it->second.data.TryGet<Handle<Mesh>>()) {
-            if (auto *right_entity = right_it->second.data.TryGet<Handle<Entity>>()) {
+            /*if (auto *right_entity = right_it->second.data.TryGet<Handle<Entity>>()) {
                 (*right_entity)->SetMesh(*left_mesh);
                 (*right_entity)->RebuildRenderableAttributes();
 
-                AssertThrow((*right_entity)->IsRenderable());
+                const auto id_it = mesh_to_entity.Find((*left_mesh)->GetID());
+
+                if (id_it != mesh_to_entity.End()) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Mesh used by multiple entities\n"
+                    );
+                } else {
+                    mesh_to_entity.Set((*left_mesh)->GetID(), (*right_entity)->GetID());
+                }
+
+                const auto skeleton_id_it = mesh_to_skeleton.Find((*left_mesh)->GetID());
+
+                if (skeleton_id_it != mesh_to_skeleton.End()) {
+                    if (Handle<Skeleton> skeleton = Handle<Skeleton>(skeleton_id_it->second)) {
+                        (*right_entity)->SetSkeleton(std::move(skeleton));
+                    }
+                }
+
+                continue;
+            }*/
+
+            if (auto *right_mesh = right_it->second.data.TryGet<NodeProxy>()) {
+                auto right_entity = right_mesh->GetEntity();
+
+                if (!right_entity) {
+                    right_entity = CreateObject<Entity>();
+                    right_mesh->SetEntity(right_entity);
+                }
+
+                right_entity->SetMesh(*left_mesh);
+                right_entity->RebuildRenderableAttributes();
+
+                const auto id_it = mesh_to_entity.Find((*left_mesh)->GetID());
+
+                if (id_it != mesh_to_entity.End()) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Mesh used by multiple entities\n"
+                    );
+                } else {
+                    mesh_to_entity.Set((*left_mesh)->GetID(), right_entity->GetID());
+                }
+
+                const auto skeleton_id_it = mesh_to_skeleton.Find((*left_mesh)->GetID());
+
+                if (skeleton_id_it != mesh_to_skeleton.End()) {
+                    if (Handle<Skeleton> skeleton = Handle<Skeleton>(skeleton_id_it->second)) {
+                        right_entity->SetSkeleton(std::move(skeleton));
+                    }
+                }
 
                 continue;
             }
+
+        } else if (auto *left_skeleton = left_it->second.data.TryGet<Handle<Skeleton>>()) {
+            // Connect Skeleton to a Mesh
+            if (auto *right_mesh = right_it->second.data.TryGet<Handle<Mesh>>()) {
+                const auto entity_id_it = mesh_to_entity.Find((*right_mesh)->GetID());
+
+                mesh_to_skeleton.Set((*right_mesh)->GetID(), (*left_skeleton)->GetID());
+
+                if (entity_id_it != mesh_to_entity.End()) {
+                    if (Handle<Entity> entity = Handle<Entity>(entity_id_it->second)) {
+                        entity->SetSkeleton((*left_skeleton));
+                    }
+                }
+
+                continue;
+            }
+        } else if (auto *left_node = left_it->second.data.TryGet<NodeProxy>()) {
+            if (auto *right_node = right_it->second.data.TryGet<NodeProxy>()) {
+                if ((*right_node).GetParent()) {
+                    DebugLog(LogType::Warn, "Right node already has parent, cannot add to left node\n");
+                } else {
+                    (*left_node).AddChild(*right_node);
+
+                    continue;
+                }
+            } else if (auto *right_skeleton = right_it->second.data.TryGet<Handle<Skeleton>>()) {
+                if (Node *node = left_node->Get()) {
+                    if (node->GetType() == Node::Type::BONE && !node->GetParent()) {
+                        auto *bone = static_cast<Bone *>(node);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+
+                        bone->SetToBindingPose();
+
+                        bone->CalculateBoneRotation();
+                        bone->CalculateBoneTranslation();
+
+                        bone->StoreBindingPose();
+                        bone->ClearPose();
+
+                        bone->UpdateBoneTransform();
+
+                        (*right_skeleton)->SetRootBone(*left_node);
+
+                        continue;
+                    } else {
+                        DebugLog(LogType::Warn, "Cannot connect non-bone node to skeleton\n");
+                    }
+                }
+            } else {
+                DebugLog(LogType::Debug, "Attach node to ??\n");
+                std::cout << "  node string " << right_it->second.node->name << "\n";
+                //fflush(stdout);
+
+                //HYP_BREAKPOINT;
+            }
         }
 
-        DebugLog(LogType::Warn, "Invalid node connection (%u -> %u): Unable to process connection\n", connection.left, connection.right);
+#if 0
+        DebugLog(
+            LogType::Warn,
+            "Invalid node connection (%u -> %u): Unable to process connection\n",
+            connection.left,
+            connection.right
+        );
+#endif
     }
-
-    //if (const auto &objects_node = root["Objects"]) {
-    //    objects_node.
-  //  }
-//
-
+    
     top->UpdateWorldTransform();
 
     return { { LoaderResult::Status::OK }, top.Cast<void>() };

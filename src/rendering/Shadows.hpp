@@ -49,9 +49,9 @@ public:
     Handle<Light> &GetLight() { return m_light; }
     const Handle<Light> &GetLight() const { return m_light; }
 
-    void SetLight(Handle<Light> &&light)
+    void SetLight(const Handle<Light> &light)
     {
-        m_light = std::move(light);
+        m_light = light;
 
         if (m_light.IsValid()) {
             m_light->SetShadowMapIndex(m_shadow_map_index);
@@ -85,19 +85,6 @@ public:
         if (m_light.IsValid()) {
             m_light->SetShadowMapIndex(index);
         }
-    }
-
-    ImageView *GetShadowMap() const
-    {
-        if (m_framebuffer) {
-            if (!m_framebuffer->GetAttachmentUsages().empty()) {
-                if (auto *attachment_usage = m_framebuffer->GetAttachmentUsages().front()) {
-                    return attachment_usage->GetImageView();
-                }
-            }
-        }
-
-        return nullptr;
     }
 
     void CreateShader();
@@ -134,9 +121,9 @@ class ShadowRenderer
 public:
     static constexpr RenderComponentName component_name = RENDER_COMPONENT_SHADOWS;
 
-    ShadowRenderer(Handle<Light> &&light);
-    ShadowRenderer(Handle<Light> &&light, const Vector3 &origin, float max_distance);
-    ShadowRenderer(Handle<Light> &&light, const BoundingBox &aabb);
+    ShadowRenderer(const Handle<Light> &light);
+    ShadowRenderer(const Handle<Light> &light, const Vector3 &origin, float max_distance);
+    ShadowRenderer(const Handle<Light> &light, const BoundingBox &aabb);
     ShadowRenderer(const ShadowRenderer &other) = delete;
     ShadowRenderer &operator=(const ShadowRenderer &other) = delete;
     virtual ~ShadowRenderer();

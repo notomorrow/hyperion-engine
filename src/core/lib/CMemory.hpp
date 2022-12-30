@@ -19,21 +19,26 @@ public:
         return std::memcmp(lhs, rhs, size);
     }
 
-    static char *CopyString(char *dest, const char *src, SizeType length = 0)
-    {
 #ifdef HYP_WINDOWS
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+    static Int StringCompare(const char *lhs, const char *rhs, SizeType length = 0)
+    {
+        if (length) {
+            return std::strncmp(lhs, rhs, length);
+        }
+
+        return std::strcmp(lhs, rhs);
+    }
+
+    static char *CopyString(char *dest, const char *src, SizeType length = 0)
+    {
         if (length) {
             return std::strncpy(dest, src, length);
         }
 
         return std::strcpy(dest, src);
-        
-#ifdef HYP_WINDOWS
-#undef _CRT_SECURE_NO_WARNINGS
-#endif
     }
 
     static inline SizeType StringLength(const char *str)
@@ -44,6 +49,10 @@ public:
 
         return std::strlen(str);
     }
+
+#ifdef HYP_WINDOWS
+#undef _CRT_SECURE_NO_WARNINGS
+#endif
 
     static inline void *Set(void *dest, int ch, SizeType size)
     {

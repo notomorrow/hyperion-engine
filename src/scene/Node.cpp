@@ -456,10 +456,6 @@ void Node::UpdateWorldTransform()
         return;
     }
 
-    if (m_entity) {
-        m_local_aabb = m_entity->GetLocalAABB();
-    }
-
     m_world_aabb = m_local_aabb * m_world_transform;
 
     for (auto &node : m_child_nodes) {

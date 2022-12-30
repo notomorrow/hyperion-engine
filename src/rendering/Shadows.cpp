@@ -389,28 +389,32 @@ void ShadowPass::Render(Frame *frame)
     }
 }
 
-ShadowRenderer::ShadowRenderer(Handle<Light> &&light)
-    : ShadowRenderer(std::move(light), Vector3::Zero(), 25.0f)
+ShadowRenderer::ShadowRenderer(const Handle<Light> &light)
+    : ShadowRenderer(light, Vector3::Zero(), 25.0f)
 {
 }
 
-ShadowRenderer::ShadowRenderer(Handle<Light> &&light, const BoundingBox &aabb)
-    : ShadowRenderer(std::move(light), aabb.GetCenter(), aabb.GetExtent().Max() * 0.5f)
+ShadowRenderer::ShadowRenderer(const Handle<Light> &light, const BoundingBox &aabb)
+    : ShadowRenderer(light, aabb.GetCenter(), aabb.GetExtent().Max() * 0.5f)
 {
 }
 
-ShadowRenderer::ShadowRenderer(Handle<Light> &&light, const Vector3 &origin, float max_distance)
+ShadowRenderer::ShadowRenderer(const Handle<Light> &light, const Vector3 &origin, float max_distance)
     : EngineComponentBase(),
       RenderComponent()
 {
-    m_shadow_pass.SetLight(std::move(light));
+    m_shadow_pass.SetLight(light);
     m_shadow_pass.SetOrigin(origin);
     m_shadow_pass.SetMaxDistance(max_distance);
 }
 
 ShadowRenderer::~ShadowRenderer()
 {
-    Teardown();
+    if (IsInitCalled()) {
+        SetReady(false);
+
+        m_shadow_pass.Destroy(); // flushes render queue
+    }
 }
 
 // called from render thread
@@ -427,12 +431,6 @@ void ShadowRenderer::Init()
     m_shadow_pass.Create();
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        m_shadow_pass.Destroy(); // flushes render queue
-
-        SetReady(false);
-    });
 }
 
 // called from game thread

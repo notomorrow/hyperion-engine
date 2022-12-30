@@ -182,7 +182,11 @@ vec3 CalculateRefraction(
 int GetLocalEnvProbeIndex(vec3 world_position)
 {
     vec3 diff = world_position - env_grid.center.xyz;
-    vec3 pos_clamped = ((diff + (env_grid.aabb_extent.xyz * 0.5)) / env_grid.aabb_extent.xyz);
+    vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
+
+    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
+        return -1;
+    }
 
     ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
 
@@ -196,9 +200,13 @@ int GetLocalEnvProbeIndex(vec3 world_position)
 int GetLocalEnvProbeIndexOffset(vec3 world_position, vec3 offset)
 {
     vec3 diff = world_position - env_grid.center.xyz;
-    vec3 pos_clamped = ((diff + (env_grid.aabb_extent.xyz * 0.5)) / env_grid.aabb_extent.xyz);
+    vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
 
-    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz)) + ivec3(floor(offset));//ivec3(vec3(offset) + vec3(env_grid.density.xyz) * 0.5);//ivec3(pos_clamped * vec3(env_grid.density.xyz));
+    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
+        return -1;
+    }
+
+    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz)) + ivec3(floor(offset));
 
     int offset_index = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
@@ -252,8 +260,6 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
         const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
         const vec3 diff = P - center;
 
-        // vec3 next_position = center + ((extent * 0.5) * normalize(diff));
-
         const float blend = 10.0;
 
         float probe_idx = float(probe_index_at_point);
@@ -262,9 +268,10 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
         vec3 vec = saturate((abs(diff) - ((extent_unpadded * 0.5) - vec3(blend))) / vec3(blend));
         // vec /= length(vec);
 
-        // if (length(vec) > 0.0) {
+        const float vec_length = length(vec);
+
+        if (vec_length > 0.0 && vec_length < 1.0) {
             const float max_component = max(vec.x, max(vec.y, vec.z));
-            // ivec3 neighbor_coord = ivec3(sign(vec) * sign(diff));//ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
             ivec3 neighbor_coord = ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
             vec3 weights2 = vec3(smoothstep(0.0, max_component, vec.x), smoothstep(0.0, max_component, vec.y), smoothstep(0.0, max_component, vec.z));
 
@@ -308,27 +315,7 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
 
                 ibl = mix(ibl, color_z, weight);
             }
-
-            // ibl = ibl * (1.0 - weights.x) + ibl * (1.0 - weights.y) + ibl * (1.0 - weights.z);
-            // next_color = color_x * vec.x + color_y * vec.y + color_z * vec.z;
-
-            // next_color *= (1.0 - edge);
-            // ibl = ibl + next_color;
-
-            // ibl = next_color;
-
-            // ibl = vec / max_component;
-
-            // ibl = mix(ibl, next_color, length(weights));
-
-            // ibl = vec3(neighbor_coord) / vec3(env_grid.density.xyz);
-
-            // ibl = vec3(max_component, 0.0, 0.0);
-            
-            // ibl = mix(ibl, next_color, 0.5 * length(vec));
-
-            // ibl = mix(ibl, next_color, length(weights));
-        // }
+        }
     }
 
     return ibl;
@@ -345,7 +332,7 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
         return;
     }
 
-    const float lod = 5.0;
+    const float lod = 3.0;
 
     if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
         irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;
