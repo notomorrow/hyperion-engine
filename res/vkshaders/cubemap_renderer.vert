@@ -33,16 +33,7 @@ layout (location = 7) in vec4 a_bone_indices;
 #include "include/object.inc"
 #include "include/env_probe.inc"
 
-#define HYP_ENABLE_SKINNING 1
-
-struct Skeleton {
-    mat4 bones[128];
-};
-
-layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer
-{
-    Skeleton skeleton;
-};
+#define HYP_ENABLE_SKINNING
 
 // struct EnvProbeMatrices
 // {
@@ -60,21 +51,9 @@ layout(push_constant) uniform PushConstant
     uint env_probe_index;
 };
 
-mat4 CreateSkinningMatrix()
-{
-    mat4 skinning = mat4(0.0);
-
-    int index0 = int(a_bone_indices.x);
-    skinning += a_bone_weights.x * skeleton.bones[index0];
-    int index1 = int(a_bone_indices.y);
-    skinning += a_bone_weights.y * skeleton.bones[index1];
-    int index2 = int(a_bone_indices.z);
-    skinning += a_bone_weights.z * skeleton.bones[index2];
-    int index3 = int(a_bone_indices.w);
-    skinning += a_bone_weights.w * skeleton.bones[index3];
-
-    return skinning;
-}
+#ifdef HYP_ENABLE_SKINNING
+#include "include/Skeleton.glsl"
+#endif
 
 void main() 
 {
@@ -85,9 +64,9 @@ void main()
         position = vec4((a_position * 150.0) + scene.camera_position.xyz, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix));
     } else {
-#if HYP_ENABLE_SKINNING
+#ifdef HYP_ENABLE_SKINNING
         if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
-            mat4 skinning_matrix = CreateSkinningMatrix();
+            mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
             position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
             normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
@@ -95,7 +74,7 @@ void main()
 #endif
             position = object.model_matrix * vec4(a_position, 1.0);
             normal_matrix = transpose(inverse(object.model_matrix));
-#if HYP_ENABLE_SKINNING
+#ifdef HYP_ENABLE_SKINNING
         }
 #endif
     }

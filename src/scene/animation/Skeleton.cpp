@@ -117,7 +117,7 @@ Bone *Skeleton::FindBone(const String &name)
             continue;
         }
 
-        auto *bone = static_cast<Bone *>(node.Get());  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        Bone *bone = static_cast<Bone *>(node.Get());  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
         if (bone->GetName() == name) {
             return bone;
@@ -126,7 +126,40 @@ Bone *Skeleton::FindBone(const String &name)
 
     return nullptr;
 }
-    
+
+UInt Skeleton::FindBoneIndex(const String &name) const
+{
+    if (!m_root_bone) {
+        return UInt(-1);
+    }
+
+    UInt index = 0;
+
+    if (m_root_bone.GetName() == name) {
+        return index;
+    }
+
+    for (auto &node : m_root_bone.Get()->GetDescendents()) {
+        ++index;
+
+        if (!node) {
+            continue;
+        }
+
+        if (node.Get()->GetType() != Node::Type::BONE) {
+            continue;
+        }
+
+        const Bone *bone = static_cast<const Bone *>(node.Get());  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+
+        if (bone->GetName() == name) {
+            return index;
+        }
+    }
+
+    return UInt(-1);
+}
+
 Bone *Skeleton::GetRootBone()
 {
     return static_cast<Bone *>(m_root_bone.Get());

@@ -506,6 +506,7 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProps &props) const
     }
 
     //props.Set(ShaderProperty("HYP_MAX_SHADOW_MAPS", false));
+    //props.Set(ShaderProperty("HYP_MAX_BONES", false));
 }
 
 void ShaderCompiler::ParseDefinitionSection(
