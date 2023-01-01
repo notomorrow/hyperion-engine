@@ -60,11 +60,11 @@ public:
     IndirectDrawState();
     ~IndirectDrawState();
 
-    StorageBuffer *GetInstanceBuffer(UInt frame_index) const
-        { return m_instance_buffers[frame_index].Get(); }
+    const GPUBufferRef &GetInstanceBuffer(UInt frame_index) const
+        { return m_instance_buffers[frame_index]; }
 
-    IndirectBuffer *GetIndirectBuffer(UInt frame_index) const
-        { return m_indirect_buffers[frame_index].Get(); }
+    const GPUBufferRef &GetIndirectBuffer(UInt frame_index) const
+        { return m_indirect_buffers[frame_index]; }
 
     Array<ObjectInstance> &GetInstances()
         { return m_object_instances; }
@@ -79,7 +79,7 @@ public:
         { return m_draw_commands; }
 
     Result Create();
-    Result Destroy();
+    void Destroy();
 
     void PushDrawCall(const DrawCall &draw_call, DrawCommandData &out);
     void Reset();
@@ -97,9 +97,9 @@ private:
     Array<ObjectInstance> m_object_instances;
     Array<IndirectDrawCommand> m_draw_commands;
 
-    FixedArray<UniquePtr<IndirectBuffer>, max_frames_in_flight> m_indirect_buffers;
-    FixedArray<UniquePtr<StorageBuffer>, max_frames_in_flight> m_instance_buffers;
-    FixedArray<UniquePtr<StagingBuffer>, max_frames_in_flight> m_staging_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight> m_indirect_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight> m_instance_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight> m_staging_buffers;
     FixedArray<bool, max_frames_in_flight> m_is_dirty;
     UInt32 m_num_draw_commands;
 };
@@ -133,8 +133,7 @@ private:
 
     IndirectDrawState m_indirect_draw_state;
     Handle<ComputePipeline> m_object_visibility;
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
-    FixedArray<UniformBuffer, max_frames_in_flight> m_indirect_params_buffers;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     CullData m_cached_cull_data;
     UInt8 m_cached_cull_data_updated_bits;
 };

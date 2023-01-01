@@ -286,7 +286,7 @@ void Mesh::Render(CommandBuffer *cmd, SizeType num_instances) const
 
 void Mesh::RenderIndirect(
     CommandBuffer *cmd,
-    const IndirectBuffer *indirect_buffer,
+    const GPUBuffer *indirect_buffer,
     UInt32 buffer_offset
 ) const
 {

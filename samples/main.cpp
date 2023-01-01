@@ -122,8 +122,6 @@ public:
             Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
         ));*/
         m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
-
-
         
         { // adding lights to scene
             m_sun = CreateObject<Light>(DirectionalLight(
@@ -134,13 +132,13 @@ public:
 
             m_scene->AddLight(m_sun);
 
-            m_point_lights.PushBack(CreateObject<Light>(PointLight(
+            /*m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, 70.1f),
                 Color(1.0f, 1.0f, 1.0f),
                 150000.0f,
                 15.0f
             )));
-            /*m_point_lights.PushBack(CreateObject<Light>(PointLight(
+            m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, -70.1f),
                 Color(1.0f, 0.0f, 0.0f),
                 10000.0f,
@@ -231,7 +229,7 @@ public:
             }
         }
 
-        if (true) { // skydome
+        if (false) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -261,7 +259,7 @@ public:
 
         //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
 
-        //batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
+        batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
         batch.LoadAsync();
 
         auto obj_models = batch.AwaitResults();
@@ -481,7 +479,7 @@ public:
             }
         }
 
-        if (false) {
+        if (true) {
             auto mh = Engine::Get()->GetAssetManager().Load<Node>("models/mh/mh1.obj");
             mh.SetName("mh_model");
             mh.Scale(1.0f);
@@ -521,8 +519,7 @@ public:
 
             GetScene()->GetRoot().AddChild(tree);
         }
-
-
+        
         if (false) {
             auto cube_model = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj");
 
@@ -534,7 +531,7 @@ public:
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
             plane->SetScale(Vector3(250.0f));
             plane->SetMaterial(CreateObject<Material>());
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.7f, 1.0f, 1.0f) * 0.1f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.1f, 0.3f, 1.0f));
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.002f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(2.0f));

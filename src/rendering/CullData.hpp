@@ -19,6 +19,12 @@ struct CullData
     FixedArray<const ImageView *, max_frames_in_flight> depth_pyramid_image_views;
     Extent3D depth_pyramid_dimensions;
 
+    CullData()
+        : depth_pyramid_image_views { nullptr },
+          depth_pyramid_dimensions { 1, 1, 1 }
+    {
+    }
+
     bool operator==(const CullData &other) const
     {
         return depth_pyramid_image_views[0] == other.depth_pyramid_image_views[0]
