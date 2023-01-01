@@ -57,14 +57,16 @@ struct FBOMMat4 : FBOMArray { FBOMMat4() : FBOMArray(FBOMFloat(), 16) {} };
 
 struct FBOMQuaternion : FBOMVec4f { FBOMQuaternion() : FBOMVec4f() {} };
 
-struct FBOMString : FBOMType {
+struct FBOMString : FBOMType
+{
     FBOMString() : FBOMString(0) {}
     FBOMString(SizeType length) : FBOMType("string", length) {}
 };
 
 struct FBOMBaseObjectType : FBOMType { FBOMBaseObjectType() : FBOMType("object", 0) {} };
 
-struct FBOMObjectType : FBOMType {
+struct FBOMObjectType : FBOMType
+{
     explicit FBOMObjectType(void) : FBOMObjectType("UNSET") {}
 
     FBOMObjectType(const String &name)
@@ -72,8 +74,8 @@ struct FBOMObjectType : FBOMType {
     {
     }
 
-    FBOMObjectType(const String &name, FBOMType extends)
-        : FBOMType(name, 0, &extends)
+    FBOMObjectType(const String &name, const FBOMType &extends)
+        : FBOMType(name, 0, extends)
     {
     }
 };

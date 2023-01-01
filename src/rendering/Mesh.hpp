@@ -93,7 +93,7 @@ public:
 
     void RenderIndirect(
         CommandBuffer *cmd,
-        const IndirectBuffer *indirect_buffer,
+        const GPUBuffer *indirect_buffer,
         UInt32 buffer_offset = 0
     ) const;
 

@@ -23,7 +23,6 @@ constexpr bool has_render_object_defined = implementation_exists<RenderObjectDef
 template <class T>
 class RenderObjectContainer
 {
-
 public:
     static constexpr SizeType max_size = RenderObjectDefinition<T>::max_size;
 
@@ -194,6 +193,8 @@ class RenderObjectHandle
 
     UInt index;
 
+    RenderObjectContainer<T> *_container = &RenderObjects::GetRenderObjectContainer<T>();
+
 public:
 
     static RenderObjectHandle FromIndex(UInt index)
@@ -202,7 +203,7 @@ public:
         handle.index = index;
         
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().IncRef(index - 1);
+            handle._container->IncRef(index - 1);
         }
 
         AssertThrow(handle.GetRefCount() != 0);
@@ -219,20 +220,20 @@ public:
         : index(other.index)
     {
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().IncRef(index - 1);
+            _container->IncRef(index - 1);
         }
     }
 
     RenderObjectHandle &operator=(const RenderObjectHandle &other)
     {
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().DecRef(index - 1);
+            _container->DecRef(index - 1);
         }
 
         index = other.index;
 
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().IncRef(index - 1);
+            _container->IncRef(index - 1);
         }
 
         return *this;
@@ -247,7 +248,7 @@ public:
     RenderObjectHandle &operator=(RenderObjectHandle &&other) noexcept
     {
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().DecRef(index - 1);
+            _container->DecRef(index - 1);
         }
 
         index = other.index;
@@ -259,7 +260,7 @@ public:
     ~RenderObjectHandle()
     {
         if (index != 0) {
-            RenderObjects::GetRenderObjectContainer<T>().DecRef(index - 1);
+            _container->DecRef(index - 1);
         }
     }
 
@@ -298,7 +299,7 @@ public:
 
     UInt16 GetRefCount() const
     {
-        return index == 0 ? 0 : RenderObjects::GetRenderObjectContainer<T>().GetRefCount(index - 1);
+        return index == 0 ? 0 : _container->GetRefCount(index - 1);
     }
 
     T *Get() const
@@ -306,16 +307,14 @@ public:
         if (index == 0) {
             return nullptr;
         }
-
-        return &RenderObjects::GetRenderObjectContainer<T>().Get(index - 1);
+        
+        return &_container->Get(index - 1);
     }
 
     void Reset()
     {
-        auto &container = RenderObjects::GetRenderObjectContainer<T>();  
-
         if (index != 0) {
-            container.DecRef(index - 1);
+            _container->DecRef(index - 1);
         }
 
         index = 0;

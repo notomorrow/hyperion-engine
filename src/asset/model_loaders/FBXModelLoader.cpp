@@ -1463,7 +1463,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     if (found_first_bone) {
         // Add Skeleton and AnimationController to Entities
-        AddSkeletonToEntities(root_skeleton, top.Get());
+        //AddSkeletonToEntities(root_skeleton, top.Get());
     }
     
     top->UpdateWorldTransform();

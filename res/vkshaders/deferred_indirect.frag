@@ -138,7 +138,7 @@ void main()
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
-        CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
+        // CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
@@ -168,5 +168,5 @@ void main()
         result = albedo.rgb;
     }
 
-    output_color = vec4(result.rgb, 1.0);
+    output_color = vec4(irradiance.rgb, 1.0);
 }

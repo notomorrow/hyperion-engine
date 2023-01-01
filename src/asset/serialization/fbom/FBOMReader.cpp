@@ -124,8 +124,8 @@ FBOMType FBOMReader::ReadObjectType(ByteReader *reader)
         CheckEndianness(offset);
 
         // grab from static data pool
-        AssertThrow(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_TYPE);
-        result = m_static_data_pool.at(offset).type_data;
+        AssertThrow(m_static_data_pool[offset].type == FBOMStaticData::FBOM_STATIC_DATA_TYPE);
+        result = m_static_data_pool[offset].type_data;
 
         break;
     }
@@ -152,7 +152,12 @@ FBOMResult FBOMReader::ReadData(ByteReader *reader, FBOMData &data)
         CheckEndianness(sz);
 
         ByteBuffer byte_buffer;
-        AssertThrow(reader->Read(sz, byte_buffer) == sz);
+
+        const SizeType read_count = reader->Read(sz, byte_buffer);
+
+        if (read_count != sz) {
+            return { FBOMResult::FBOM_ERR, "File is corrupted" };
+        }
 
         data = FBOMData(object_type, std::move(byte_buffer));
     } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
@@ -162,8 +167,8 @@ FBOMResult FBOMReader::ReadData(ByteReader *reader, FBOMData &data)
         CheckEndianness(offset);
 
         // grab from static data pool
-        AssertThrow(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_DATA);
-        data = m_static_data_pool.at(offset).data_data.Get();
+        AssertThrow(m_static_data_pool[offset].type == FBOMStaticData::FBOM_STATIC_DATA_DATA);
+        data = m_static_data_pool[offset].data_data.Get();
     }
 
     return FBOMResult::FBOM_OK;
@@ -182,8 +187,6 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
     reader->Read(&unique_id);
     CheckEndianness(unique_id);
 
-    std::cout << "Read unique ID " << UInt64(unique_id) << "\n";
-
     // read data location
     UInt8 object_type_location = FBOM_DATA_LOCATION_NONE;
     reader->Read(&object_type_location);
@@ -198,8 +201,8 @@ FBOMResult FBOMReader::ReadObject(ByteReader *reader, FBOMObject &object, FBOMOb
         CheckEndianness(offset);
 
         // grab from static data pool
-        AssertThrow(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_OBJECT);
-        object = m_static_data_pool.at(offset).object_data;
+        AssertThrow(m_static_data_pool[offset].type == FBOMStaticData::FBOM_STATIC_DATA_OBJECT);
+        object = m_static_data_pool[offset].object_data;
 
         return FBOMResult::FBOM_OK;
     }
@@ -380,7 +383,7 @@ FBOMResult FBOMReader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
         reader->Read(&tmp);
         CheckEndianness(tmp);
 
-        m_static_data_pool.resize(static_data_size);
+        m_static_data_pool.Resize(static_data_size);
 
         // now read each item
         //   u32 as index/offset
@@ -429,12 +432,12 @@ FBOMResult FBOMReader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
                     return err;
                 }
 
-                m_static_data_pool[offset] = FBOMStaticData(data, offset);
+                m_static_data_pool[offset] = FBOMStaticData(std::move(data), offset);
 
                 break;
             }
             default:
-                return FBOMResult(FBOMResult::FBOM_ERR, "Cannot process static data type, unknown type");
+                return { FBOMResult::FBOM_ERR, "Cannot process static data type, unknown type" };
             }
         }
 
@@ -453,7 +456,7 @@ FBOMResult FBOMReader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
         break;
     }
     default:
-        AssertThrowMsg(false, "Cannot process command %d in top level", static_cast<int>(command));
+        AssertThrowMsg(false, "Cannot process command %d in top level", static_cast<Int>(command));
 
         break;
     }

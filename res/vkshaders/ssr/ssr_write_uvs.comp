@@ -89,7 +89,7 @@ float CalculateAlpha(
     float max_dimension = Saturate(max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
     // alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
-    alpha = 1.0 - smoothstep(0.1, 0.9, max_dimension);
+    alpha = 1.0 - smoothstep(0.06, 0.95, max_dimension);
 
     // const float dp = dot(ray_direction, -scene.camera_direction.xyz);
     // alpha *= 1.0 - smoothstep(0.8, 1.0, dp);

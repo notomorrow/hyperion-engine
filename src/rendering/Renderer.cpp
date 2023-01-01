@@ -510,7 +510,7 @@ RenderAll(
                             
                             draw_call.mesh->RenderIndirect(
                                 secondary,
-                                indirect_renderer->GetDrawState().GetIndirectBuffer(frame_index),
+                                indirect_renderer->GetDrawState().GetIndirectBuffer(frame_index).Get(),
                                 draw_call.draw_command_index * sizeof(IndirectDrawCommand)
                             );
                         } else {

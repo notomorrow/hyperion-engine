@@ -24,14 +24,18 @@ struct FBOMType
     {
     }
 
-    FBOMType(const String &name, SizeType size, const FBOMType *extends = nullptr)
+    FBOMType(const String &name, SizeType size)
         : name(name),
           size(size),
           extends(nullptr)
     {
-        if (extends != nullptr) {
-            this->extends = new FBOMType(*extends);
-        }
+    }
+
+    FBOMType(const String &name, SizeType size, const FBOMType &extends)
+        : name(name),
+          size(size),
+          extends(new FBOMType(extends))
+    {
     }
 
     FBOMType(const FBOMType &other)

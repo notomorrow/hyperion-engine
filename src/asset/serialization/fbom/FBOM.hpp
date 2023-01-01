@@ -102,16 +102,37 @@ struct FBOMStaticData
           object_data(object_data),
           offset(offset),
           written(false) {}
+
     explicit FBOMStaticData(const FBOMType &type_data, Int64 offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
           offset(offset),
           written(false) {}
+
     explicit FBOMStaticData(const FBOMData &data_data, Int64 offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
           offset(offset),
           written(false) {}
+
+    explicit FBOMStaticData(FBOMObject &&object_data, Int64 offset = -1) noexcept
+        : type(FBOM_STATIC_DATA_OBJECT),
+          object_data(std::move(object_data)),
+          offset(offset),
+          written(false) {}
+
+    explicit FBOMStaticData(FBOMType &&type_data, Int64 offset = -1) noexcept
+        : type(FBOM_STATIC_DATA_TYPE),
+          type_data(std::move(type_data)),
+          offset(offset),
+          written(false) {}
+
+    explicit FBOMStaticData(FBOMData &&data_data, Int64 offset = -1) noexcept
+        : type(FBOM_STATIC_DATA_DATA),
+          data_data(std::move(data_data)),
+          offset(offset),
+          written(false) {}
+
     FBOMStaticData(const FBOMStaticData &other)
         : type(other.type),
           object_data(other.object_data),
@@ -358,7 +379,7 @@ public:
             }
         }
 
-        m_static_data_pool.clear();
+        m_static_data_pool.Clear();
         m_in_static_data = false;
 
         // expect first FBOMObject defined
@@ -422,10 +443,10 @@ private:
 
     FBOMConfig m_config;
 
-    std::vector<FBOMType> m_registered_types;
+    Array<FBOMType> m_registered_types;
 
     bool m_in_static_data;
-    std::vector<FBOMStaticData> m_static_data_pool;
+    Array<FBOMStaticData> m_static_data_pool;
 
     bool m_swap_endianness;
 };

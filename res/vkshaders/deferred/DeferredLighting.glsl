@@ -332,7 +332,7 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
         return;
     }
 
-    const float lod = 3.0;
+    const float lod = 0.0;
 
     if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
         irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;

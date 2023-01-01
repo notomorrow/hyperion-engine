@@ -82,4 +82,16 @@
     <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
     <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
   </Type>
+  <Type Name="hyperion::v2::Handle&lt;*&gt;">
+    <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
+    <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
+  </Type>
+
+  <Type Name="hyperion::v2::RenderObjectHandle&lt;*&gt;">
+    <DisplayString>{{ Index={index} }}</DisplayString>
+
+    <Expand>
+      <ExpandedItem>($T1 *)(&amp;(_container->m_data.m_values[index]))</ExpandedItem>
+    </Expand>
+  </Type>
 </AutoVisualizer>

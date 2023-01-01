@@ -25,19 +25,16 @@ constexpr bool resolution_failure = false;
 template <class T>
 using NormalizedType = std::remove_cv_t<std::decay_t<T>>;
 
-template <char ... Chars>
-using character_sequence = std::integer_sequence<char, Chars...>;
-
-template <class T, T... Chars>
-constexpr character_sequence<Chars...> MakeCharSequence(T &&) { return { }; }
-
-template <class T, std::size_t = sizeof(T)>
+template <class T, SizeType = sizeof(T)>
 std::true_type implementation_exists_impl(T *);
 
 std::false_type implementation_exists_impl(...);
 
 template <class T>
 constexpr bool implementation_exists = decltype(implementation_exists_impl(std::declval<T*>()))::value;
+
+template <class T>
+using RemoveConstPointer = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>;
 
 static HYP_FORCE_INLINE bool IsBigEndian()
 {

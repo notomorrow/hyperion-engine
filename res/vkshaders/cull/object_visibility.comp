@@ -107,7 +107,7 @@ float GetDepthAtTexel(vec2 texcoord, int mip)
 void main()
 {
     const uint id = gl_GlobalInvocationID.x;
-    const uint index = push_constants.batch_offset + id;
+    const uint index = id;//push_constants.batch_offset + id;
 
     if (id >= push_constants.num_instances) {
         return;
