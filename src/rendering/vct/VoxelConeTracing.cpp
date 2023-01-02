@@ -114,20 +114,20 @@ void VoxelConeTracing::Init()
                             .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
                         });
 
-                        // destroy owned descriptor sets, as well as individual mip imageviews
-                        if constexpr (VoxelConeTracing::manual_mipmap_generation) {
-                            for (auto &descriptor_set : vct.m_generate_mipmap_descriptor_sets[i]) {
-                                HYPERION_ASSERT_RESULT(descriptor_set->Destroy(Engine::Get()->GetGPUDevice()));
-                            }
-
-                            vct.m_generate_mipmap_descriptor_sets[i].Clear();
-
-                            for (auto &mip_image_view : vct.m_mips[i]) {
-                                HYPERION_ASSERT_RESULT(mip_image_view->Destroy(Engine::Get()->GetGPUDevice()));
-                            }
-
-                            vct.m_mips[i].Clear();
+                    // destroy owned descriptor sets, as well as individual mip imageviews
+                    if constexpr (VoxelConeTracing::manual_mipmap_generation) {
+                        for (auto &descriptor_set : vct.m_generate_mipmap_descriptor_sets[i]) {
+                            HYPERION_ASSERT_RESULT(descriptor_set->Destroy(Engine::Get()->GetGPUDevice()));
                         }
+
+                        vct.m_generate_mipmap_descriptor_sets[i].Clear();
+
+                        for (auto &mip_image_view : vct.m_mips[i]) {
+                            HYPERION_ASSERT_RESULT(mip_image_view->Destroy(Engine::Get()->GetGPUDevice()));
+                        }
+
+                        vct.m_mips[i].Clear();
+                    }
                 }
 
                 return vct.m_uniform_buffer.Destroy(Engine::Get()->GetGPUDevice());

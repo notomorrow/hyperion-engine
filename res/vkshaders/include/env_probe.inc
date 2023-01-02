@@ -65,6 +65,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 60) readonly buffer SH
     SH9 spherical_harmonics[];
 };
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
+
 #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
 

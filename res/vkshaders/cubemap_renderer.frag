@@ -36,7 +36,7 @@ layout(location=0) out vec4 output_color;
 #include "include/tonemap.inc"
 #include "include/PhysicalCamera.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.1
+#define HYP_CUBEMAP_AMBIENT 5000.0
 
 void main()
 {
@@ -85,14 +85,22 @@ void main()
 
 #ifdef LIGHTING
     output_color.rgb = albedo.rgb * (1.0 / HYP_FMATH_PI) * exposure * vec3(HYP_CUBEMAP_AMBIENT);
-    output_color.rgb += albedo.rgb * exposure * NdotL * light.position_intensity.w;
+
+    #ifdef SHADOWS
+        output_color.rgb += albedo.rgb * exposure * NdotL * light.position_intensity.w * shadow;
+    #else
+        output_color.rgb += albedo.rgb * exposure * NdotL * light.position_intensity.w;
+    #endif
 
     // output_color.rgb = albedo.rgb * NdotL + vec3(HYP_CUBEMAP_AMBIENT);
 #else
     output_color.rgb = albedo.rgb;
+
+    #ifdef SHADOWS
+        output_color.rgb *= shadow;
+    #endif
 #endif
 
-    output_color.a = shadow;
-
     output_color.rgb = TonemapReinhardSimple(output_color.rgb);
+    output_color.a = 1.0;
 }

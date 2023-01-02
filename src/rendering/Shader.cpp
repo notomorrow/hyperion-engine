@@ -5,52 +5,6 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-ShaderGlobals::ShaderGlobals()
-    : spherical_harmonics_buffer(RenderObjects::Make<GPUBuffer>(StorageBuffer()))
-{
-    
-}
-
-void ShaderGlobals::Create()
-{
-    auto *device = Engine::Get()->GetGPUDevice();
-
-    scenes.Create(device);
-    materials.Create(device);
-    objects.Create(device);
-    skeletons.Create(device);
-    lights.Create(device);
-    shadow_maps.Create(device);
-    env_probes.Create(device);
-    env_grids.Create(device);
-    immediate_draws.Create(device);
-    entity_instance_batches.Create(device);
-
-    textures.Create();
-
-    AssertThrow(spherical_harmonics_buffer.IsValid());
-    HYPERION_ASSERT_RESULT(spherical_harmonics_buffer->Create(device, sizeof(SH9Buffer) * max_env_probes));
-}
-
-void ShaderGlobals::Destroy()
-{
-    auto *device = Engine::Get()->GetGPUDevice();
-
-    SafeRelease(std::move(spherical_harmonics_buffer));
-
-    env_probes.Destroy(device);
-    env_grids.Destroy(device);
-
-    scenes.Destroy(device);
-    objects.Destroy(device);
-    materials.Destroy(device);
-    skeletons.Destroy(device);
-    lights.Destroy(device);
-    shadow_maps.Destroy(device);
-    immediate_draws.Destroy(device);
-    entity_instance_batches.Destroy(device);
-}
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(CreateShaderProgram) : RenderCommand
@@ -107,7 +61,113 @@ struct RENDER_COMMAND(DestroyShaderProgram) : RenderCommand
     }
 };
 
+struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages) : RenderCommand
+{
+    FixedArray<GlobalSphericalHarmonicsGrid::GridTexture, 9> grid_textures;
+    
+    RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages)(const FixedArray<GlobalSphericalHarmonicsGrid::GridTexture, 9> &grid_textures)
+        : grid_textures(grid_textures)
+    {
+    }
+
+    virtual Result operator()()
+    {
+        for (auto &item : grid_textures) {
+            HYPERION_BUBBLE_ERRORS(item.image->Create(Engine::Get()->GetGPUDevice()));
+            HYPERION_BUBBLE_ERRORS(item.image_view->Create(Engine::Get()->GetGPUDevice(), item.image));
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 #pragma endregion
+
+GlobalSphericalHarmonicsGrid::GlobalSphericalHarmonicsGrid()
+{
+    const UInt dimension_cube = 32;//UInt(MathUtil::Ceil(std::cbrt(max_bound_ambient_probes)));
+    const Extent3D image_dimensions { dimension_cube, dimension_cube, dimension_cube };
+
+    UByte *empty_image_bytes = new UByte[image_dimensions.Size() * sizeof(Float) * 4];
+    Memory::Set(empty_image_bytes, 0, image_dimensions.Size() * sizeof(Float) * 4);
+
+    for (auto &item : textures) {
+        item.image = RenderObjects::Make<Image>(StorageImage(
+            image_dimensions,
+            InternalFormat::RGBA16F,
+            ImageType::TEXTURE_TYPE_3D,
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            empty_image_bytes
+        ));
+
+        item.image_view = RenderObjects::Make<ImageView>();
+    }
+
+    delete[] empty_image_bytes;
+}
+
+void GlobalSphericalHarmonicsGrid::Create()
+{
+    PUSH_RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages, textures);
+}
+
+void GlobalSphericalHarmonicsGrid::Destroy()
+{
+    for (auto &item : textures) {
+        SafeRelease(std::move(item.image));
+        SafeRelease(std::move(item.image_view));
+    }
+}
+
+ShaderGlobals::ShaderGlobals()
+    : spherical_harmonics_buffer(RenderObjects::Make<GPUBuffer>(StorageBuffer()))
+{
+    
+}
+
+void ShaderGlobals::Create()
+{
+    auto *device = Engine::Get()->GetGPUDevice();
+
+    scenes.Create(device);
+    materials.Create(device);
+    objects.Create(device);
+    skeletons.Create(device);
+    lights.Create(device);
+    shadow_maps.Create(device);
+    env_probes.Create(device);
+    env_grids.Create(device);
+    immediate_draws.Create(device);
+    entity_instance_batches.Create(device);
+
+    textures.Create();
+
+    spherical_harmonics_grid.Create();
+
+    AssertThrow(spherical_harmonics_buffer.IsValid());
+    HYPERION_ASSERT_RESULT(spherical_harmonics_buffer->Create(device, sizeof(SH9Buffer) * max_env_probes));
+}
+
+void ShaderGlobals::Destroy()
+{
+    auto *device = Engine::Get()->GetGPUDevice();
+
+    SafeRelease(std::move(spherical_harmonics_buffer));
+
+    env_probes.Destroy(device);
+    env_grids.Destroy(device);
+
+    scenes.Destroy(device);
+    objects.Destroy(device);
+    materials.Destroy(device);
+    skeletons.Destroy(device);
+    lights.Destroy(device);
+    shadow_maps.Destroy(device);
+    immediate_draws.Destroy(device);
+    entity_instance_batches.Destroy(device);
+
+    spherical_harmonics_grid.Destroy();
+}
 
 Shader::Shader()
     : EngineComponentBase(),

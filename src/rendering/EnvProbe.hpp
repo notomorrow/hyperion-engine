@@ -26,6 +26,57 @@ using renderer::Attachment;
 using renderer::UniformBuffer;
 using renderer::Image;
 
+struct EnvProbeIndex
+{
+    Extent3D position;
+    Extent3D grid_size;
+
+    // defaults such that unset == ~0u
+    EnvProbeIndex()
+        : position { ~0u, ~0u, ~0u },
+          grid_size { 0, 0, 0 }
+    {
+    }
+
+    EnvProbeIndex(const Extent3D &position, const Extent3D &grid_size)
+        : position(position),
+          grid_size(grid_size)
+    {
+    }
+
+    EnvProbeIndex(const EnvProbeIndex &other) = default;
+    EnvProbeIndex &operator=(const EnvProbeIndex &other) = default;
+    EnvProbeIndex(EnvProbeIndex &&other) noexcept = default;
+    EnvProbeIndex &operator=(EnvProbeIndex &&other) noexcept = default;
+
+    ~EnvProbeIndex() = default;
+
+    UInt GetProbeIndex() const
+    {
+        return (position[0] * grid_size.height * grid_size.depth)
+            + (position[1] * grid_size.depth)
+            + position[2];
+    }
+
+    bool operator<(UInt value) const
+        { return GetProbeIndex() < value; }
+
+    bool operator==(UInt value) const
+        { return GetProbeIndex() == value; }
+
+    bool operator!=(UInt value) const
+        { return GetProbeIndex() != value; }
+
+    bool operator<(const EnvProbeIndex &other) const
+        { return GetProbeIndex() < other.GetProbeIndex(); }
+
+    bool operator==(const EnvProbeIndex &other) const
+        { return GetProbeIndex() == other.GetProbeIndex(); }
+
+    bool operator!=(const EnvProbeIndex &other) const
+        { return GetProbeIndex() != other.GetProbeIndex(); }
+};
+
 class EnvProbe
     : public EngineComponentBase<STUB_CLASS(EnvProbe)>,
       public HasDrawProxy<STUB_CLASS(EnvProbe)>,
@@ -51,6 +102,12 @@ public:
 
     bool IsAmbientProbe() const
         { return m_is_ambient_probe; }
+
+    const EnvProbeIndex &GetBoundIndex() const
+        { return m_bound_index; }
+
+    void SetBoundIndex(const EnvProbeIndex &bound_index)
+        { m_bound_index = bound_index; }
 
     const Matrix4 &GetProjectionMatrix() const
         { return m_projection_matrix; }
@@ -79,7 +136,7 @@ public:
 
     void ComputeSH(Frame *frame, const Image *image, const ImageView *image_view);
 
-    void UpdateRenderData(UInt probe_index);
+    void UpdateRenderData(const EnvProbeIndex &probe_index);
 
 private:
     void SetNeedsUpdate() { m_needs_update = true; }
@@ -116,6 +173,8 @@ private:
 
     Matrix4 m_projection_matrix;
     FixedArray<Matrix4, 6> m_view_matrices;
+
+    EnvProbeIndex m_bound_index;
 
     bool m_needs_update;
 };

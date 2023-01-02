@@ -32,6 +32,22 @@ using renderer::IndirectBuffer;
 class Engine;
 class Entity;
 
+struct GlobalSphericalHarmonicsGrid
+{
+    struct GridTexture
+    {
+        ImageRef image;
+        ImageViewRef image_view;
+    };
+
+    FixedArray<GridTexture, 9> textures;
+
+    GlobalSphericalHarmonicsGrid();
+
+    void Create();
+    void Destroy();
+};
+
 struct ShaderGlobals
 {
     ShaderGlobals();
@@ -55,6 +71,8 @@ struct ShaderGlobals
     BindlessStorage textures;
 
     GPUBufferRef spherical_harmonics_buffer;
+
+    GlobalSphericalHarmonicsGrid spherical_harmonics_grid;
 };
 
 } // namespace hyperion::v2

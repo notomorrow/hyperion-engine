@@ -403,6 +403,17 @@ void EnvProbe::CreateSHData()
 
         m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(4)
             ->SetElementBuffer<SH9Buffer>(0, Engine::Get()->shader_globals->spherical_harmonics_buffer);
+
+        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(5)
+            ->SetElementUAV(0, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[0].image_view)
+            ->SetElementUAV(1, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[1].image_view)
+            ->SetElementUAV(2, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[2].image_view)
+            ->SetElementUAV(3, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[3].image_view)
+            ->SetElementUAV(4, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[4].image_view)
+            ->SetElementUAV(5, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[5].image_view)
+            ->SetElementUAV(6, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[6].image_view)
+            ->SetElementUAV(7, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[7].image_view)
+            ->SetElementUAV(8, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[8].image_view);
     }
 
     PUSH_RENDER_COMMAND(CreateComputeSHDescriptorSets, m_compute_sh_descriptor_sets);
@@ -453,12 +464,22 @@ void EnvProbe::Update()
     //     return;
     // }
 
+#if 0
     RenderCommands::Push<RENDER_COMMAND(UpdateEnvProbeDrawProxy)>(*this, EnvProbeDrawProxy {
         .id = m_id,
         .aabb = m_aabb,
         .world_position = m_aabb.GetCenter(),
         .flags = EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
     });
+
+#else
+    m_draw_proxy = EnvProbeDrawProxy {
+        .id = m_id,
+        .aabb = m_aabb,
+        .world_position = m_aabb.GetCenter(),
+        .flags = EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
+    };
+#endif
 
     m_needs_update = false;
 }
@@ -479,13 +500,19 @@ void EnvProbe::Render(Frame *frame)
 
     auto result = renderer::Result::OK;
 
-    UInt probe_index = ~0u;
+    EnvProbeIndex probe_index;
 
     {
         const auto it = Engine::Get()->GetRenderState().bound_env_probes.Find(GetID());
 
         if (it != Engine::Get()->GetRenderState().bound_env_probes.End() && it->second.HasValue()) {
-            probe_index = it->second.Get();
+            // don't care about position in grid,
+            // set it such that the UInt value of probe_index
+            // would be the held value.
+            probe_index = EnvProbeIndex(
+                Extent3D { 0, 0, it->second.Get() },
+                Extent3D { 0, 0, 0 }
+            );
         }
     }
 
@@ -518,10 +545,33 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
 {
     AssertThrow(IsAmbientProbe());
 
+    EnvProbeIndex bound_index = m_bound_index;
+
+    AssertThrowMsg(bound_index != ~0u, "Probe not bound to an index!");
+
+    // ambient probes have +1 for their bound index, so we subtract that to get the actual index
+    bound_index.position[2] -= 1;
+
+    const UInt probe_index = bound_index.GetProbeIndex();
+    const Extent3D &grid_image_extent = Engine::Get()->shader_globals->spherical_harmonics_grid.textures[0].image->GetExtent();
+
+    AssertThrowMsg(probe_index < grid_image_extent.Size(), "Out of bounds!");
+
+    Extent3D position_in_grid {
+        probe_index % grid_image_extent.depth,
+        (probe_index / grid_image_extent.depth) % grid_image_extent.height,
+        probe_index / (grid_image_extent.height * grid_image_extent.depth)
+    };
+
     AssertThrow(image != nullptr);
     AssertThrow(image_view != nullptr);
 
-    struct alignas(128) { ShaderVec2<UInt32> cubemap_dimensions; } push_constants;
+    struct alignas(128) {
+        ShaderVec4<UInt32> probe_grid_position;
+        ShaderVec2<UInt32> cubemap_dimensions;
+    } push_constants;
+    
+    push_constants.probe_grid_position = { bound_index.position[0], bound_index.position[1], bound_index.position[2], 0 };//{ position_in_grid[0], position_in_grid[1], position_in_grid[2], 0 };
     push_constants.cubemap_dimensions = { image->GetExtent().width, image->GetExtent().height };
     
     m_compute_sh_descriptor_sets[frame->GetFrameIndex()]
@@ -564,6 +614,10 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
     Engine::Get()->shader_globals->spherical_harmonics_buffer
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
+    for (auto &texture : Engine::Get()->shader_globals->spherical_harmonics_grid.textures) {
+        texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    }
+
     frame->GetCommandBuffer()->BindDescriptorSet(
         Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
         m_finalize_sh->GetPipeline(),
@@ -579,17 +633,25 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
     m_sh_image_final->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    
+    for (auto &texture : Engine::Get()->shader_globals->spherical_harmonics_grid.textures) {
+        texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    }
 }
 
-void EnvProbe::UpdateRenderData(UInt probe_index)
+void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
 
-    // find the texture slot of this env probe (if it exists)
-    if (!IsAmbientProbe()) {
+    if (IsAmbientProbe()) {
+        AssertThrow(probe_index < max_bound_ambient_probes);
+    } else {
+        // find the texture slot of this env probe (if it exists)
         AssertThrow(probe_index < max_bound_reflection_probes);
     }
+
+    m_bound_index = probe_index;
 
     EnvProbeShaderData data {
         .face_view_matrices = {
@@ -603,7 +665,7 @@ void EnvProbe::UpdateRenderData(UInt probe_index)
         .aabb_max = Vector4(m_draw_proxy.aabb.max, 1.0f),
         .aabb_min = Vector4(m_draw_proxy.aabb.min, 1.0f),
         .world_position = Vector4(m_draw_proxy.world_position, 1.0f),
-        .texture_index = m_is_ambient_probe ? ~0u : probe_index,
+        .texture_index = m_is_ambient_probe ? ~0u : probe_index.GetProbeIndex(),
         .flags = UInt32(m_draw_proxy.flags)
     };
 
@@ -622,7 +684,7 @@ void EnvProbe::UpdateRenderData(UInt probe_index)
                 auto *descriptor = descriptor_set->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENV_PROBE_TEXTURES);
 
                 descriptor->SetElementSRV(
-                    probe_index,
+                    probe_index.GetProbeIndex(),
                     m_texture->GetImageView()
                 );
             }

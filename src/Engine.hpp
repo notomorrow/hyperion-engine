@@ -170,7 +170,6 @@ public:
         { return m_texture_format_defaults.Get(type); }
 
     Handle<RenderGroup> CreateRenderGroup(
-        const Handle<Shader> &shader,
         const RenderableAttributeSet &renderable_attributes,
         bool cache = false
     );
@@ -314,7 +313,7 @@ private:
 
     void FindTextureFormatDefaults();
 
-    void AddRenderGroupInternal(Handle<RenderGroup> &);
+    void AddRenderGroupInternal(Handle<RenderGroup> &, bool cache);
     
     UniquePtr<Instance> m_instance;
     Handle<RenderGroup> m_root_pipeline;

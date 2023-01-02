@@ -445,6 +445,10 @@ RenderAll(
     const DrawCallCollection &draw_state
 )
 {
+    if (draw_state.draw_calls.Empty()) {
+        return;
+    }
+
     const auto &scene_binding = Engine::Get()->GetRenderState().GetScene();
     const ID<Scene> scene_id = scene_binding.id;
 

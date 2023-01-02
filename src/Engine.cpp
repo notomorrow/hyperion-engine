@@ -627,6 +627,18 @@ void Engine::Initialize(RefCountedPtr<Application> application)
         descriptor_set
             ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SH9_BUFFER)
             ->SetElementBuffer(0, shader_globals->spherical_harmonics_buffer);
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SH_VOLUMES)
+            ->SetElementSRV(0, shader_globals->spherical_harmonics_grid.textures[0].image_view)
+            ->SetElementSRV(1, shader_globals->spherical_harmonics_grid.textures[1].image_view)
+            ->SetElementSRV(2, shader_globals->spherical_harmonics_grid.textures[2].image_view)
+            ->SetElementSRV(3, shader_globals->spherical_harmonics_grid.textures[3].image_view)
+            ->SetElementSRV(4, shader_globals->spherical_harmonics_grid.textures[4].image_view)
+            ->SetElementSRV(5, shader_globals->spherical_harmonics_grid.textures[5].image_view)
+            ->SetElementSRV(6, shader_globals->spherical_harmonics_grid.textures[6].image_view)
+            ->SetElementSRV(7, shader_globals->spherical_harmonics_grid.textures[7].image_view)
+            ->SetElementSRV(8, shader_globals->spherical_harmonics_grid.textures[8].image_view);
     }
 
     // add placeholder scene data
@@ -1011,8 +1023,10 @@ void Engine::RenderNextFrame(Game *game)
     GetGPUInstance()->GetFrameHandler()->NextFrame();
 }
 
-Handle<RenderGroup> Engine::CreateRenderGroup(const Handle<Shader> &shader, const RenderableAttributeSet &renderable_attributes, bool cache)
+Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &renderable_attributes, bool cache)
 {
+    Handle<Shader> shader(renderable_attributes.shader_id);
+
     if (!shader) {
         DebugLog(
             LogType::Warn,
@@ -1022,20 +1036,15 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const Handle<Shader> &shader, cons
         return Handle<RenderGroup>::empty;
     }
 
-    RenderableAttributeSet new_renderable_attributes(renderable_attributes);
-    new_renderable_attributes.shader_id = shader->GetID();
-
     // create a RenderGroup with the given params
     auto renderer_instance = CreateObject<RenderGroup>(
         Handle<Shader>(shader),
-        new_renderable_attributes
+        renderable_attributes
     );
 
-    if (cache) {
-        std::lock_guard guard(m_render_group_mapping_mutex);
+    std::lock_guard guard(m_render_group_mapping_mutex);
 
-        AddRenderGroupInternal(renderer_instance);
-    }
+    AddRenderGroupInternal(renderer_instance, cache);
 
     return renderer_instance;
 }
@@ -1096,7 +1105,7 @@ Handle<RenderGroup> Engine::FindOrCreateRenderGroup(const RenderableAttributeSet
         renderable_attributes
     );
 
-    AddRenderGroupInternal(render_group);
+    AddRenderGroupInternal(render_group, true);
 
     return render_group;
 }
@@ -1105,21 +1114,23 @@ void Engine::AddRenderGroup(Handle<RenderGroup> &render_group)
 {
     std::lock_guard guard(m_render_group_mapping_mutex);
 
-    AddRenderGroupInternal(render_group);
+    AddRenderGroupInternal(render_group, true);
 }
     
-void Engine::AddRenderGroupInternal(Handle<RenderGroup> &render_group)
+void Engine::AddRenderGroupInternal(Handle<RenderGroup> &render_group, bool cache)
 {
-    DebugLog(
-        LogType::Debug,
-        "Insert RenderGroup in mapping for renderable attribute set hash %llu\n",
-        render_group->GetRenderableAttributes().GetHashCode().Value()
-    );
+    if (cache) {
+        DebugLog(
+            LogType::Debug,
+            "Insert RenderGroup in mapping for renderable attribute set hash %llu\n",
+            render_group->GetRenderableAttributes().GetHashCode().Value()
+        );
 
-    m_render_group_mapping.Insert(
-        render_group->GetRenderableAttributes(),
-        render_group
-    );
+        m_render_group_mapping.Insert(
+            render_group->GetRenderableAttributes(),
+            render_group
+        );
+    }
 
     m_render_list_container
         .Get(render_group->GetRenderableAttributes().material_attributes.bucket)

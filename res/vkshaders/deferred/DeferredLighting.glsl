@@ -13,7 +13,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 1.0
+#define ENV_PROBE_MULTIPLIER 3.0
 
 struct DeferredParams
 {
@@ -179,16 +179,17 @@ vec3 CalculateRefraction(
 
 #include "../include/env_probe.inc"
 
-int GetLocalEnvProbeIndex(vec3 world_position)
+int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
 {
-    vec3 diff = world_position - env_grid.center.xyz;
-    vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
+    const vec3 diff = world_position - env_grid.center.xyz;
+    const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
 
     if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
+        unit_diff = ivec3(0);
         return -1;
     }
 
-    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
+    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
@@ -243,89 +244,13 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
     }
 }
 
-vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, bool include_shadow)
-{
-    vec3 ibl = vec3(0.0);
-
-    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_REFLECTION_PROBES) {
-        return vec3(0.0);
-    }
-
-    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
-        _ApplyEnvProbeSample(probe_index_at_point, P, dir, lod, ibl, include_shadow);
-
-        EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
-        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
-        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
-        const vec3 diff = P - center;
-
-        const float blend = 20.0;
-
-        float probe_idx = float(probe_index_at_point);
-
-        vec3 vec = saturate((abs(diff) - ((extent_unpadded * 0.5) - vec3(blend))) / vec3(blend));
-        // vec /= length(vec);
-
-        const float vec_length = length(vec);
-
-        if (vec_length > 0.0 && vec_length < 1.0) {
-            const float max_component = max(vec.x, max(vec.y, vec.z));
-            ivec3 neighbor_coord = ivec3(sign(vec3(step(max_component, vec.x), step(max_component, vec.y), step(max_component, vec.z))) * sign(diff));
-            vec3 weights2 = vec3(smoothstep(0.0, max_component, vec.x), smoothstep(0.0, max_component, vec.y), smoothstep(0.0, max_component, vec.z));
-
-            int next_probe_index;
-
-            vec3 color_x = vec3(0.0);
-            vec3 color_y = vec3(0.0);
-            vec3 color_z = vec3(0.0);
-
-            vec3 weights = vec;// * 0.5;//saturate(diff / (extent_unpadded * 0.5)); // vec
-
-            vec3 probe_indices = vec3(0.0);
-
-            vec3 next_color = vec3(0.0);
-
-            float avg = (vec.x + vec.y + vec.z) / 3.0;
-            float edge = max_component - avg;
-
-
-            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(neighbor_coord.x, 0.0, 0.0));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
-                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_x, include_shadow);
-
-                const float weight = weights.x * 0.5;
-
-                ibl = mix(ibl, color_x, weight);
-            }
-            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, neighbor_coord.y, 0.0));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
-                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_y, include_shadow);
-
-                const float weight = weights.y * 0.5;
-
-                ibl = mix(ibl, color_y, weight);
-            }
-            next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, 0.0, neighbor_coord.z));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
-                _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_z, include_shadow);
-
-                const float weight = weights.z * 0.5;
-
-                ibl = mix(ibl, color_z, weight);
-            }
-        }
-    }
-
-    return ibl;
-}
-
 // gives not-so accurate indirect light for the scene --
 // sample lowest mipmap of cubemap, if we have it.
 // later, replace this will spherical harmonics.
 void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
 {
-    int probe_index_at_point = GetLocalEnvProbeIndex(P);
+    ivec3 probe_position;
+    int probe_index_at_point = int(GetLocalEnvProbeIndex(P, probe_position));
 
     if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
         return;
@@ -333,14 +258,33 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
 
     const float lod = 0.0;
 
-    if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
-        uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
+    if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
+        const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
+        const vec3 texel_size = vec3(1.0) / vec3(image_size);
 
-        const SH9 sh = spherical_harmonics[probe_index];
+        EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
 
-        irradiance += SphericalHarmonicsSample(sh, N);
+        const vec3 pos_relative_to_grid = P - env_grid.center.xyz;
+        const vec3 pos_relative_to_probe = ((P - center) / (extent_unpadded)) + 0.5;
 
-        // irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;
+        vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
+        coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
+
+        SH9 sh;
+        sh.values[0] = Texture3D(sampler_linear, spherical_harmonics_volumes[0], coord);
+        sh.values[1] = Texture3D(sampler_linear, spherical_harmonics_volumes[1], coord);
+        sh.values[2] = Texture3D(sampler_linear, spherical_harmonics_volumes[2], coord);
+        sh.values[3] = Texture3D(sampler_linear, spherical_harmonics_volumes[3], coord);
+        sh.values[4] = Texture3D(sampler_linear, spherical_harmonics_volumes[4], coord);
+        sh.values[5] = Texture3D(sampler_linear, spherical_harmonics_volumes[5], coord);
+        sh.values[6] = Texture3D(sampler_linear, spherical_harmonics_volumes[6], coord);
+        sh.values[7] = Texture3D(sampler_linear, spherical_harmonics_volumes[7], coord);
+        sh.values[8] = Texture3D(sampler_linear, spherical_harmonics_volumes[8], coord);
+
+        irradiance += SphericalHarmonicsSample(sh, N) * ENV_PROBE_MULTIPLIER;
     }
 }
 
@@ -354,7 +298,7 @@ vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N,
         _ApplyEnvProbeSample(0, P, R, lod, ibl, true);
     }
 
-    return ibl * ENV_PROBE_MULTIPLIER;
+    return ibl;// * ENV_PROBE_MULTIPLIER;
 }
 
 #endif
