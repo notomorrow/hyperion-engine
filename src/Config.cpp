@@ -114,6 +114,10 @@ bool Configuration::SaveToDefinitionsFile()
     for (UInt index = CONFIG_NONE + 1; index < CONFIG_MAX; index++) {
         const Option &option = m_variables[index];
 
+        if (!option.GetIsSaved()) {
+            continue;
+        }
+
         String value_string = "false";
 
         if (option.IsValid()) {
@@ -144,27 +148,27 @@ bool Configuration::SaveToDefinitionsFile()
     return true;
 }
 
-
 void Configuration::SetToDefaultConfiguration()
 {
     m_variables = { };
 
 #ifdef HYP_DEBUG_MODE
-    m_variables[CONFIG_DEBUG_MODE] = true;
-    m_variables[CONFIG_SHADER_COMPILATION] = true;
+    m_variables[CONFIG_DEBUG_MODE] = Option(true, false);
 #endif
-    
-    m_variables[CONFIG_RT_SUPPORTED] = Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingSupported();
-    m_variables[CONFIG_RT_ENABLED] = m_variables[CONFIG_RT_SUPPORTED] && Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingEnabled();
-    m_variables[CONFIG_RT_REFLECTIONS] = m_variables[CONFIG_RT_ENABLED];
-    m_variables[CONFIG_RT_GI] = m_variables[CONFIG_RT_ENABLED];
 
-    m_variables[CONFIG_HBAO] = true;
-    m_variables[CONFIG_HBIL] = m_variables[CONFIG_HBAO] && !m_variables[CONFIG_RT_GI];
+    m_variables[CONFIG_SHADER_COMPILATION] = Option(bool(HYP_GLSLANG), false);
     
-    m_variables[CONFIG_SSR] = !m_variables[CONFIG_RT_REFLECTIONS];
-    m_variables[CONFIG_VOXEL_GI] = !m_variables[CONFIG_RT_GI];
-    m_variables[CONFIG_VOXEL_GI_SVO] = false;
+    m_variables[CONFIG_RT_SUPPORTED] = Option(Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingSupported(), false);
+    m_variables[CONFIG_RT_ENABLED] = Option(m_variables[CONFIG_RT_SUPPORTED] && Engine::Get()->GetGPUDevice()->GetFeatures().IsRaytracingEnabled(), true);
+    m_variables[CONFIG_RT_REFLECTIONS] = Option(m_variables[CONFIG_RT_ENABLED], true);
+    m_variables[CONFIG_RT_GI] = Option(m_variables[CONFIG_RT_ENABLED], true);
+
+    m_variables[CONFIG_HBAO] = Option(true, true);
+    m_variables[CONFIG_HBIL] = Option(m_variables[CONFIG_HBAO] && !m_variables[CONFIG_RT_GI], true);
+    
+    m_variables[CONFIG_SSR] = Option(!m_variables[CONFIG_RT_REFLECTIONS], true);
+    m_variables[CONFIG_VOXEL_GI] = Option(!m_variables[CONFIG_RT_GI], true);
+    m_variables[CONFIG_VOXEL_GI_SVO] = Option(false, true);
 }
 
 } // namespace hyperion::v2

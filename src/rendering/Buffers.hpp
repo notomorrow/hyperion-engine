@@ -176,7 +176,7 @@ static_assert(sizeof(SceneShaderData) == 512);
 
 struct alignas(256) EnvGridShaderData
 {
-    UInt32 probe_indices[max_bound_env_probes];
+    UInt32 probe_indices[max_bound_ambient_probes];
 
     ShaderVec4<Float> center;
     ShaderVec4<Float> extent;
@@ -190,7 +190,7 @@ struct alignas(256) EnvGridShaderData
     ShaderMat4 _pad3;
 };
 
-static_assert(sizeof(EnvGridShaderData) == 256);
+static_assert(sizeof(EnvGridShaderData) == 4352);
 
 struct alignas(256) ShadowShaderData
 {
@@ -263,6 +263,13 @@ struct LightShaderData
 
 static_assert(sizeof(LightShaderData) == 64);
 
+struct alignas(256) SH9Buffer
+{
+    ShaderVec4<Float> values[16];
+};
+
+static_assert(sizeof(SH9Buffer) == 256);
+
 /* max number of skeletons, based on size in mb */
 static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
 static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
@@ -284,8 +291,8 @@ static const SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowSha
 /* max number of env probes, based on size in mb */
 static const SizeType max_env_probes = (1ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
 static const SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
-/* max number of env grids, based on size in kb */
-static const SizeType max_env_grids = (1ull * 1024ull) / sizeof(EnvGridShaderData);
+/* max number of env grids, based on size in mb */
+static const SizeType max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvGridShaderData);
 static const SizeType max_env_grids_bytes = max_env_grids * sizeof(EnvGridShaderData);
 /* max number of immediate drawn objects, based on size in mb */
 static const SizeType max_immediate_draws = (1ull * 1024ull * 1024ull) / sizeof(ImmediateDrawShaderData);
@@ -293,6 +300,9 @@ static const SizeType max_immediate_draws_bytes = max_immediate_draws * sizeof(I
 /* max number of instance batches, based on size in mb */
 static const SizeType max_entity_instance_batches = (4ull * 1024ull * 1024ull) / sizeof(EntityInstanceBatch);
 static const SizeType max_entity_instance_batches_bytes = max_entity_instance_batches * sizeof(EntityInstanceBatch);
+
+template <class T>
+using BufferTicket = UInt;
 
 template <class Buffer, class StructType, SizeType Size>
 class ShaderData
@@ -371,6 +381,47 @@ public:
     void MarkDirty(SizeType index)
     {
         m_staging_objects_pool.Current().MarkDirty(index);
+    }
+
+    
+
+
+
+    BufferTicket<StructType> current_index = 1; // reserve first index (0)
+    Queue<BufferTicket<StructType>> free_indices;
+
+    BufferTicket<StructType> AcquireTicket()
+    {
+        if (free_indices.Any()) {
+            return free_indices.Pop();
+        }
+
+        return current_index++;
+    }
+
+    void ReleaseTicket(BufferTicket<StructType> batch_index)
+    {
+        if (batch_index == 0) {
+            return;
+        }
+
+        ResetBatch(batch_index);
+
+        free_indices.Push(batch_index);
+    }
+
+    void ResetBatch(BufferTicket<StructType> batch_index)
+    {
+        if (batch_index == 0) {
+            return;
+        }
+
+        AssertThrow(batch_index < Size);
+
+        auto &batch = Get(batch_index);
+        Memory::Set(&batch, 0, sizeof(StructType));
+
+        MarkDirty(batch_index);
     }
     
 private:

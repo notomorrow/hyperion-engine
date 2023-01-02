@@ -152,7 +152,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             }
 
             LastMaterial(library).parameters[Material::MATERIAL_KEY_ALBEDO] = ParameterDef {
-                .values = FixedArray<Float, 4> { color[0], color[1], color[2], color[3] }
+                FixedArray<Float, 4> { color[0], color[1], color[2], color[3] }
             };
 
             return;

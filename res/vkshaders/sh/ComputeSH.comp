@@ -1,0 +1,248 @@
+
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+
+#define NUM_SAMPLES_X 4
+#define NUM_SAMPLES_Y 4
+
+struct SHTile
+{
+    vec4 coeffs_weights[9];
+};
+
+#ifdef MODE_BUILD_COEFFICIENTS
+layout(local_size_x = 6, local_size_y = NUM_SAMPLES_X, local_size_z = NUM_SAMPLES_Y) in;
+#else
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+#endif
+
+#include "../include/defines.inc"
+#include "../include/shared.inc"
+#include "../include/tonemap.inc"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/env_probe.inc"
+
+layout(set = 0, binding = 0) uniform textureCube cubemap;
+layout(set = 0, binding = 1) uniform sampler sampler_linear;
+layout(set = 0, binding = 2, rgba8) uniform image2D sh_final;
+
+layout(std140, set = 0, binding = 3) buffer SHTilesBuffer {
+    SHTile sh_tiles[6 * NUM_SAMPLES_X * NUM_SAMPLES_Y];
+};
+
+layout(std140, set = 0, binding = 4) writeonly buffer SHResultBuffer {
+    vec4 sh_result[16];
+};
+
+layout(push_constant) uniform PushConstant
+{
+    uvec2 cubemap_dimensions;
+};
+
+ivec2 GetCoefficientCoord(int coefficient_index)
+{
+    return ivec2(coefficient_index / 3, coefficient_index % 3);
+}
+
+#define CURRENT_TILE sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
+
+// void AtomicSwap(int coefficient_index, uint val)
+// {
+//     ivec2 coefficient_coord = GetCoefficientCoord(coefficient_index);
+
+//     uint prev_val = 0, cur_val, new_val = val;
+//     float r = uintBitsToFloat(val);
+
+//     while ((cur_val = imageAtomicCompSwap(sh_weights, coefficient_coord, prev_val, new_val)) != prev_val) {
+//         prev_val = cur_val;
+//         float prev_color = uintBitsToFloat(cur_val);
+//         float combined = r + prev_color;
+
+//         new_val = floatBitsToUint(combined);
+//     }
+// }
+
+// void AtomicSwapRGBA8(int coefficient_index, uint val)
+// {
+//     ivec2 coefficient_coord = GetCoefficientCoord(coefficient_index);
+
+//     uint prev_val = 0, cur_val, new_val = val;
+//     vec4 rgba = UINT_TO_VEC4(val);
+
+//     while ((cur_val = imageAtomicCompSwap(sh_output, coefficient_coord, prev_val, new_val)) != prev_val) {
+//         prev_val = cur_val;
+//         vec4 prev_color = UINT_TO_VEC4(cur_val);
+//         vec4 combined = rgba + prev_color;
+
+//         new_val = VEC4_TO_UINT(combined);
+//     }
+// }
+
+vec3 MapXYSToDirection(uint face_index, vec2 uv) {
+    vec3 dir = vec3(0.0);
+
+    float u = uv.x;
+    float v = -uv.y;
+
+    // +x, -x, +y, -y, +z, -z
+    switch (face_index) {
+    case 0:
+        dir = normalize(vec3(1.0, v, -u));
+        break;
+    case 1:
+        dir = normalize(vec3(-1.0, v, u));
+        break;
+    case 2:
+        dir = normalize(vec3(u, 1.0, -v));
+        break;
+    case 3:
+        dir = normalize(vec3(u, -1.0, v));
+        break;
+    case 4:
+        dir = normalize(vec3(u, v, 1.0));
+        break;
+    case 5:
+        dir = normalize(vec3(-u, v, -1.0));
+        break;
+    }
+
+    return dir;
+}
+
+float AreaIntegral(float x, float y)
+{
+    return atan(x * y, sqrt(x * x + y * y + 1.0));
+}
+
+float TexelSolidAngle(vec2 uv)
+{
+    vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions);
+
+    float x0 = uv.x - texel_size.x;
+    float y0 = uv.y - texel_size.y;
+    float x1 = uv.x + texel_size.x;
+    float y1 = uv.y + texel_size.y;
+
+    return AreaIntegral(x0, y0) - AreaIntegral(x0, y1) - AreaIntegral(x1, y0) + AreaIntegral(x1, y1);
+}
+
+
+float[9] ProjectOntoSHBands(vec3 dir)
+{
+    float[9] sh;
+
+    // Band 0
+    sh[0] = 0.282095f;
+
+    // Band 1
+    sh[1] = 0.488603f * dir.y;
+    sh[2] = 0.488603f * dir.z;
+    sh[3] = 0.488603f * dir.x;
+
+    // Band 2
+    sh[4] = 1.092548f * dir.x * dir.y;
+    sh[5] = 1.092548f * dir.y * dir.z;
+    sh[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f);
+    sh[7] = 1.092548f * dir.x * dir.z;
+    sh[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y);
+
+    return sh;
+}
+
+float[27] ProjectOntoSH9Color(vec3 dir, vec3 color)
+{
+    float[9] bands = ProjectOntoSHBands(dir);
+    
+    float[27] sh_colors;
+
+    for(uint i = 0; i < 9; ++i) {
+        sh_colors[i * 3] = color.r * bands[i];
+        sh_colors[i * 3 + 1] = color.g * bands[i];
+        sh_colors[i * 3 + 2] = color.b * bands[i];
+    }
+
+    return sh_colors;
+}
+
+void main(void)
+{
+    const int face_index = int(gl_GlobalInvocationID.x);
+    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
+
+    if (face_index >= 6) {
+        return;
+    }
+
+#ifdef MODE_CLEAR
+    for (int i = 0; i < 9; i++) {
+        CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
+    }
+#elif defined(MODE_BUILD_COEFFICIENTS)
+    const vec2 size_per_sample = vec2(cubemap_dimensions) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+    const vec2 sample_fract = size_per_sample * vec2(sample_index);//vec2(sample_index) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+
+    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions);
+    const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
+    const vec2 sample_point = uv * 2.0 - 1.0;
+    
+    const vec3 dir = MapXYSToDirection(face_index, sample_point); 
+
+    vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
+    cubemap_sample.rgb = ReverseTonemapReinhardSimple(cubemap_sample.rgb);
+
+    float sh_values[27] = ProjectOntoSH9Color(dir, cubemap_sample.rgb);
+
+    float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
+    float weight = TexelSolidAngle(sample_point);///
+
+    for (int i = 0; i < 9; i++) {
+        vec3 sh_color = vec3(
+            sh_values[i * 3],
+            sh_values[i * 3 + 1],
+            sh_values[i * 3 + 2]
+        );
+
+        CURRENT_TILE.coeffs_weights[i] = vec4(sh_color * weight, weight);
+    }
+#elif defined(MODE_FINALIZE)
+    float total_weight = 0.0;
+
+#define SH_RESULT(i, j) (sh_result[i][j])
+
+    for (int i = 0; i < 9; i++) {
+        SH_RESULT(i, 0) = 0.0;
+        SH_RESULT(i, 1) = 0.0;
+        SH_RESULT(i, 2) = 0.0;
+        SH_RESULT(i, 3) = 1.0;
+    }
+
+    for (int face = 0; face < 6; ++face) {
+        for (int sample_x = 0; sample_x < NUM_SAMPLES_X; ++sample_x) {
+            for (int sample_y = 0; sample_y < NUM_SAMPLES_Y; ++sample_y) {
+                for (int i = 0; i < 9; i++) {
+                    const vec3 coeff = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].rgb;
+                    const float weight = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].a;
+
+                    SH_RESULT(i, 0) += coeff.r;
+                    SH_RESULT(i, 1) += coeff.g;
+                    SH_RESULT(i, 2) += coeff.b;
+
+                    total_weight += weight;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < 9; i++) {
+        vec3 result = vec3(
+            SH_RESULT(i, 0) *= (4.0 * HYP_FMATH_PI) / total_weight,
+            SH_RESULT(i, 1) *= (4.0 * HYP_FMATH_PI) / total_weight,
+            SH_RESULT(i, 2) *= (4.0 * HYP_FMATH_PI) / total_weight
+        );
+
+        imageStore(sh_final, GetCoefficientCoord(i), vec4(result, 1.0));
+    }
+#endif
+}

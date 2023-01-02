@@ -442,4 +442,32 @@ vec4 YCoCgToRGB(in vec4 ycocg)
     return vec4(r, g, b, ycocg.a);
 }
 
+vec3 GetCubemapCoord(uint face, vec2 uv)
+{
+    vec3 dir = vec3(0.0);
+
+    switch (face) {
+    case 0:
+        dir = vec3(1.0, -uv.y, -uv.x);
+        break;  // POSITIVE X
+    case 1:
+        dir = vec3(-1.0, -uv.y,  uv.x);
+        break;  // NEGATIVE X
+    case 2:
+        dir = vec3(uv.x, 1.0, uv.y);
+        break;  // POSITIVE Y
+    case 3:
+        dir = vec3(uv.x, -1.0, -uv.y);
+        break;  // NEGATIVE Y
+    case 4:
+        dir = vec3(uv.x, -uv.y, 1.0);
+        break;  // POSITIVE Z
+    case 5:
+        dir = vec3(uv.x, -uv.y, -1.0);
+        break;  // NEGATIVE Z
+    }
+
+    return dir;
+}
+
 #endif

@@ -41,6 +41,7 @@ enum OptionName
 class Option : public Variant<bool, Float, Int>
 {
     using Base = Variant<bool, Float, Int>;
+    bool m_save = true;
 
 public:
     Option()
@@ -48,18 +49,21 @@ public:
     {
     }
 
-    Option(Int int_value)
-        : Base(int_value)
+    Option(Int int_value, bool save = true)
+        : Base(int_value),
+          m_save(save)
     {
     }
 
-    Option(Float float_value)
-        : Base(float_value)
+    Option(Float float_value, bool save = true)
+        : Base(float_value),
+          m_save(save)
     {
     }
 
-    Option(bool bool_value)
-        : Base(bool_value)
+    Option(bool bool_value, bool save = true)
+        : Base(bool_value),
+          m_save(save)
     {
     }
 
@@ -177,6 +181,12 @@ public:
 
         return false;
     }
+
+    bool GetIsSaved() const
+        { return m_save; }
+
+    void SetIsSaved(bool save)
+        { m_save = save; }
 };
 
 class Configuration

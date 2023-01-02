@@ -32,6 +32,10 @@ permute = LIGHTING, SHADOWS
 frag = cubemap_renderer.frag
 vert = cubemap_renderer.vert
 
+[ComputeSH]
+permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE), MODIFY_ENV_PROBE
+comp = sh/ComputeSH.comp
+
 [Forward]
 permute = SKINNING
 frag = forward.frag
@@ -184,8 +188,6 @@ comp = TemporalBlending.comp
 [ImageBlurCompute]
 permute = HORIZONTAL, OUTPUT(RGBA8 RGBA16F RGBA32F)
 comp = Blur.comp
-
-
 
 # Testing
 

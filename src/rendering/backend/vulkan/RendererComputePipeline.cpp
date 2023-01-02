@@ -66,6 +66,23 @@ void ComputePipeline::Bind(
     Bind(command_buffer);
 }
 
+void ComputePipeline::Bind(
+    CommandBuffer *command_buffer,
+    const void *push_constants_ptr,
+    SizeType push_constants_size
+)
+{
+    AssertThrow(push_constants_size <= sizeof(push_constants));
+
+    Memory::Copy(&push_constants, push_constants_ptr, push_constants_size);
+
+    if (push_constants_size < sizeof(push_constants)) {
+        Memory::Set(&push_constants, 0, sizeof(push_constants) - push_constants_size);
+    }
+
+    Bind(command_buffer);
+}
+
 void ComputePipeline::Dispatch(
     CommandBuffer *command_buffer,
     Extent3D group_size
