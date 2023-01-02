@@ -58,22 +58,22 @@ struct RENDER_COMMAND(BindLights) : RenderCommand
 
 struct RENDER_COMMAND(BindEnvProbes) : RenderCommand
 {
-    SizeType num_env_probes;
-    ID<EnvProbe> *ids;
+    Array<Pair<ID<EnvProbe>, bool>> items;
 
-    RENDER_COMMAND(BindEnvProbes)(SizeType num_env_probes, ID<EnvProbe> *ids)
-        : num_env_probes(num_env_probes),
-          ids(ids)
+    RENDER_COMMAND(BindEnvProbes)(Array<Pair<ID<EnvProbe>, bool>> &&items)
+        : items(std::move(items))
     {
     }
 
     virtual Result operator()()
     {
-        for (SizeType i = 0; i < num_env_probes; i++) {
-            Engine::Get()->GetRenderState().BindEnvProbe(ids[i]);
+        for (const auto &item : items) {
+            if (item.second) {
+                Engine::Get()->GetRenderState().BindAmbientProbe(item.first);
+            } else {
+                Engine::Get()->GetRenderState().BindReflectionProbe(item.first);
+            }
         }
-
-        delete[] ids;
 
         HYPERION_RETURN_OK;
     }
@@ -174,19 +174,18 @@ void Scene::Init()
 
     if (m_env_probes.Any()) {
         // enqueue bind for all in bulk
+        Array<Pair<ID<EnvProbe>, bool>> items;
+            
         ID<EnvProbe> *env_probe_ids = new ID<EnvProbe>[m_env_probes.Size()];
         SizeType index = 0;
 
         for (auto &it : m_env_probes) {
-            auto &env_probe = it.second;
-            AssertThrow(InitObject(env_probe));
-
-            env_probe_ids[index++] = it.first;
+            items.PushBack({ it.first, it.second->IsAmbientProbe() });
         }
 
-        RenderCommands::Push<RENDER_COMMAND(BindEnvProbes)>(
-            index,
-            env_probe_ids
+        PUSH_RENDER_COMMAND(
+            BindEnvProbes,
+            std::move(items)
         );
     }
 

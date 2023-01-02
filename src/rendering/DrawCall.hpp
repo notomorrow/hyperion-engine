@@ -68,7 +68,7 @@ struct DrawCall
     static constexpr bool unique_per_material = !use_indexed_array_for_object_data;
 
     DrawCallID id;
-    EntityBatchIndex batch_index;
+    BufferTicket<EntityInstanceBatch> batch_index;
     SizeType draw_command_index;
 
     ID<Material> material_id;
@@ -97,7 +97,7 @@ struct DrawCallCollection
 
     ~DrawCallCollection();
 
-    void PushDrawCall(EntityBatchIndex batch_index, DrawCallID id, const EntityDrawProxy &entity);
+    void PushDrawCall(BufferTicket<EntityInstanceBatch> batch_index, DrawCallID id, const EntityDrawProxy &entity);
     DrawCall *TakeDrawCall(DrawCallID id);
     void Reset();
 };

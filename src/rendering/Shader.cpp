@@ -5,7 +5,11 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-#pragma region Render commands
+ShaderGlobals::ShaderGlobals()
+    : spherical_harmonics_buffer(RenderObjects::Make<GPUBuffer>(StorageBuffer()))
+{
+    
+}
 
 void ShaderGlobals::Create()
 {
@@ -21,16 +25,18 @@ void ShaderGlobals::Create()
     env_grids.Create(device);
     immediate_draws.Create(device);
     entity_instance_batches.Create(device);
-    cubemap_uniforms.Create(device, sizeof(CubemapUniforms));
 
     textures.Create();
+
+    AssertThrow(spherical_harmonics_buffer.IsValid());
+    HYPERION_ASSERT_RESULT(spherical_harmonics_buffer->Create(device, sizeof(SH9Buffer) * max_env_probes));
 }
 
 void ShaderGlobals::Destroy()
 {
     auto *device = Engine::Get()->GetGPUDevice();
 
-    cubemap_uniforms.Destroy(device);
+    SafeRelease(std::move(spherical_harmonics_buffer));
 
     env_probes.Destroy(device);
     env_grids.Destroy(device);
@@ -44,6 +50,8 @@ void ShaderGlobals::Destroy()
     immediate_draws.Destroy(device);
     entity_instance_batches.Destroy(device);
 }
+
+#pragma region Render commands
 
 struct RENDER_COMMAND(CreateShaderProgram) : RenderCommand
 {

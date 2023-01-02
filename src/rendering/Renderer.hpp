@@ -176,7 +176,7 @@ private:
     // (or if parallel rendering is enabled, more than the number of task threads available (usually 2))
     UInt m_command_buffer_index = 0u;
 
-    FlatMap<UInt, EntityBatchIndex> m_entity_batches;
+    FlatMap<UInt, BufferTicket<EntityInstanceBatch>> m_entity_batches;
 
     Array<EntityDrawProxy> m_draw_proxies;
 

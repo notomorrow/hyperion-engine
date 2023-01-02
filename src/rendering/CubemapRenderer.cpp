@@ -39,12 +39,12 @@ void CubemapRenderer::Init()
     }
 
     EngineComponentBase::Init();
-
-
+    
     m_env_probe = CreateObject<EnvProbe>(
         Handle<Scene>(GetParent()->GetScene()->GetID()),
         m_aabb,
-        Extent2D { 128, 128 }
+        Extent2D { 128, 128 },
+        false
     );
 
     InitObject(m_env_probe);

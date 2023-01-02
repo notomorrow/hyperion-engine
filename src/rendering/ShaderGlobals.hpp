@@ -10,6 +10,7 @@
 
 #include <math/MathUtil.hpp>
 
+#include <rendering/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -31,11 +32,9 @@ using renderer::IndirectBuffer;
 class Engine;
 class Entity;
 
-using EntityBatchIndex = UInt;
-
 struct ShaderGlobals
 {
-    ShaderGlobals() = default;
+    ShaderGlobals();
     ShaderGlobals(const ShaderGlobals &other) = delete;
     ShaderGlobals &operator=(const ShaderGlobals &other) = delete;
 
@@ -52,78 +51,10 @@ struct ShaderGlobals
     ShaderData<UniformBuffer, EnvGridShaderData, max_env_grids> env_grids;
     ShaderData<StorageBuffer, ImmediateDrawShaderData, max_immediate_draws> immediate_draws;
     ShaderData<StorageBuffer, EntityInstanceBatch, max_entity_instance_batches> entity_instance_batches;
+
     BindlessStorage textures;
 
-    UniformBuffer cubemap_uniforms;
-
-    struct EntityInstanceBatchData
-    {
-        EntityBatchIndex current_index = 1; // reserve first index (0)
-        Queue<EntityBatchIndex> free_indices;
-    } entity_instance_batch_data;
-
-    EntityBatchIndex NewEntityBatch()
-    {
-        if (entity_instance_batch_data.free_indices.Any()) {
-            return entity_instance_batch_data.free_indices.Pop();
-        }
-
-        return entity_instance_batch_data.current_index++;
-    }
-
-    void FreeEntityBatch(EntityBatchIndex batch_index)
-    {
-        if (batch_index == 0) {
-            return;
-        }
-
-        ResetBatch(batch_index);
-
-        entity_instance_batch_data.free_indices.Push(batch_index);
-    }
-
-    void ResetBatch(EntityBatchIndex batch_index)
-    {
-        if (batch_index == 0) {
-            return;
-        }
-
-        AssertThrow(batch_index < max_entity_instance_batches);
-
-        EntityInstanceBatch &batch = entity_instance_batches.Get(batch_index);
-        Memory::Set(&batch, 0, sizeof(EntityInstanceBatch));
-
-        entity_instance_batches.MarkDirty(batch_index);
-    }
-
-    bool PushEntityToBatch(EntityBatchIndex batch_index, ID<Entity> entity_id)
-    {
-        AssertThrow(batch_index < max_entity_instance_batches);
-
-        EntityInstanceBatch &batch = entity_instance_batches.Get(batch_index);
-
-        if (batch.num_entities >= max_entities_per_instance_batch) {
-            return false;
-        }
-
-        const UInt32 id_index = batch.num_entities++;
-        batch.indices[id_index] = UInt32(entity_id.ToIndex());
-        entity_instance_batches.MarkDirty(batch_index);
-
-        return true;
-    }
-
-    void SetEntityInBatch(EntityBatchIndex batch_index, SizeType id_index, ID<Entity> entity_id)
-    {
-        AssertThrow(batch_index < max_entity_instance_batches);
-        AssertThrow(id_index < max_entities_per_instance_batch);
-
-        EntityInstanceBatch &batch = entity_instance_batches.Get(batch_index);
-        batch.num_entities = MathUtil::Max(batch.num_entities, UInt32(id_index + 1));
-        batch.indices[id_index] = UInt32(entity_id.ToIndex());
-
-        entity_instance_batches.MarkDirty(batch_index);
-    }
+    GPUBufferRef spherical_harmonics_buffer;
 };
 
 } // namespace hyperion::v2

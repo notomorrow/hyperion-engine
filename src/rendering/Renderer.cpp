@@ -268,12 +268,12 @@ void RenderGroup::CollectDrawCalls(Frame *frame)
             draw_call_id = DrawCallID(draw_proxy.mesh_id);
         }
 
-        EntityBatchIndex batch_index = 0;
+        BufferTicket<EntityInstanceBatch> batch_index = 0;
 
         if (DrawCall *draw_call = previous_draw_state.TakeDrawCall(draw_call_id)) {
             // take the batch for reuse
             if ((batch_index = draw_call->batch_index)) {
-                Engine::Get()->shader_globals->ResetBatch(batch_index);
+                Engine::Get()->shader_globals->entity_instance_batches.ResetBatch(batch_index);
             }
 
             draw_call->batch_index = 0;

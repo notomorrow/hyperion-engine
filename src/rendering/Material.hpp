@@ -104,7 +104,7 @@ public:
 
         Parameter() : type(MATERIAL_PARAMETER_TYPE_NONE) {}
 
-        template <size_t Size>
+        template <SizeType Size>
         explicit Parameter(FixedArray<Float, Size> &&v)
             : Parameter(v.Data(), Size)
         {
@@ -147,7 +147,7 @@ public:
         {
         }
 
-        template <size_t Size>
+        template <SizeType Size>
         explicit Parameter(FixedArray<Int32, Size> &&v)
             : Parameter(v.Data(), Size)
         {

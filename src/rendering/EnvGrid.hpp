@@ -23,7 +23,7 @@ public:
     EnvGrid(const BoundingBox &aabb, const Extent3D &density);
     EnvGrid(const EnvGrid &other) = delete;
     EnvGrid &operator=(const EnvGrid &other) = delete;
-    ~EnvGrid();
+    virtual ~EnvGrid();
 
     const BoundingBox &GetAABB() const
         { return m_aabb; }
@@ -44,7 +44,11 @@ private:
     void CreateShader();
     void CreateFramebuffer();
 
-    void RenderEnvProbe(Frame *frame, Handle<Scene> &scene, Handle<EnvProbe> &probe);
+    void RenderEnvProbe(
+        Frame *frame,
+        Handle<Scene> &scene,
+        Handle<EnvProbe> &probe
+    );
 
     BoundingBox m_aabb;
     Extent3D m_density;

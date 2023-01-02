@@ -126,13 +126,13 @@ struct RenderState
             : scene_bindings.top();
     }
 
-    void BindEnvProbe(ID<EnvProbe> env_probe)
+    void BindReflectionProbe(ID<EnvProbe> env_probe)
     {
-        if (m_env_probe_texture_slot_counter >= max_bound_env_probes) {
+        if (m_env_probe_texture_slot_counter >= max_bound_reflection_probes) {
             DebugLog(
                 LogType::Warn,
-                "Maximum bound env probes (%u) exceeded!\n",
-                max_bound_env_probes
+                "Maximum bound reflection probes (%u) exceeded!\n",
+                max_bound_reflection_probes
             );
 
             return;
@@ -144,6 +144,11 @@ struct RenderState
     void UnbindEnvProbe(ID<EnvProbe> env_probe)
     {
         bound_env_probes.Erase(env_probe);
+    }
+
+    void BindAmbientProbe(ID<EnvProbe> env_probe)
+    {
+        bound_env_probes.Insert(env_probe, Optional<UInt>());
     }
 
     void Reset(RenderStateMask mask)

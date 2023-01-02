@@ -4,6 +4,23 @@
 
 namespace hyperion::v2 {
 
+static bool PushEntityToBatch(BufferTicket<EntityInstanceBatch> batch_index, ID<Entity> entity_id)
+{
+    AssertThrow(batch_index < max_entity_instance_batches);
+
+    EntityInstanceBatch &batch = Engine::Get()->shader_globals->entity_instance_batches.Get(batch_index);
+
+    if (batch.num_entities >= max_entities_per_instance_batch) {
+        return false;
+    }
+
+    const UInt32 id_index = batch.num_entities++;
+    batch.indices[id_index] = UInt32(entity_id.ToIndex());
+    Engine::Get()->shader_globals->entity_instance_batches.MarkDirty(batch_index);
+
+    return true;
+}
+
 DrawCallCollection::DrawCallCollection(DrawCallCollection &&other) noexcept
     : draw_calls(std::move(other.draw_calls)),
       index_map(std::move(other.index_map))
@@ -25,7 +42,7 @@ DrawCallCollection::~DrawCallCollection()
     Reset();
 }
 
-void DrawCallCollection::PushDrawCall(EntityBatchIndex batch_index, DrawCallID id, const EntityDrawProxy &entity)
+void DrawCallCollection::PushDrawCall(BufferTicket<EntityInstanceBatch> batch_index, DrawCallID id, const EntityDrawProxy &entity)
 {
     AssertThrow(entity.mesh != nullptr);
 
@@ -41,7 +58,7 @@ void DrawCallCollection::PushDrawCall(EntityBatchIndex batch_index, DrawCallID i
             DrawCall &draw_call = draw_calls[draw_call_index];
             AssertThrow(batch_index == 0 ? draw_call.batch_index != 0 : draw_call.batch_index == batch_index);
 
-            if (!Engine::Get()->shader_globals->PushEntityToBatch(draw_call.batch_index, entity.entity_id)) {
+            if (!PushEntityToBatch(draw_call.batch_index, entity.entity_id)) {
                 // filled up, continue looking in array,
                 // if all are filled, we push a new one
                 continue;
@@ -73,8 +90,9 @@ void DrawCallCollection::PushDrawCall(EntityBatchIndex batch_index, DrawCallID i
 
     draw_call.mesh = Handle<Mesh>(entity.mesh_id);
 
-    draw_call.batch_index = batch_index == 0 ? Engine::Get()->shader_globals->NewEntityBatch() : batch_index;
-    Engine::Get()->shader_globals->PushEntityToBatch(draw_call.batch_index, entity.entity_id);
+    draw_call.batch_index = batch_index == 0 ? Engine::Get()->shader_globals->entity_instance_batches.AcquireTicket() : batch_index;
+
+    PushEntityToBatch(draw_call.batch_index, entity.entity_id);
 
     draw_calls.PushBack(draw_call);
 }
@@ -108,7 +126,7 @@ void DrawCallCollection::Reset()
 {
     for (const DrawCall &draw_call : draw_calls) {
         if (draw_call.batch_index) {
-            Engine::Get()->shader_globals->FreeEntityBatch(draw_call.batch_index);
+            Engine::Get()->shader_globals->entity_instance_batches.ReleaseTicket(draw_call.batch_index);
         }
     }
 

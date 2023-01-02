@@ -220,7 +220,7 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
     EnvProbe probe = GET_GRID_PROBE(probe_index);
 
     if (probe.texture_index != ~0u) {
-        const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES - 1));
+        const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
         const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
         const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
@@ -247,7 +247,7 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
 {
     vec3 ibl = vec3(0.0);
 
-    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+    if (probe_index_at_point < 0 || probe_index_at_point >= HYP_MAX_BOUND_REFLECTION_PROBES) {
         return vec3(0.0);
     }
 
@@ -260,10 +260,9 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
         const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
         const vec3 diff = P - center;
 
-        const float blend = 10.0;
+        const float blend = 20.0;
 
         float probe_idx = float(probe_index_at_point);
-
 
         vec3 vec = saturate((abs(diff) - ((extent_unpadded * 0.5) - vec3(blend))) / vec3(blend));
         // vec /= length(vec);
@@ -292,7 +291,7 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
 
 
             next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(neighbor_coord.x, 0.0, 0.0));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
                 _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_x, include_shadow);
 
                 const float weight = weights.x * 0.5;
@@ -300,7 +299,7 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
                 ibl = mix(ibl, color_x, weight);
             }
             next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, neighbor_coord.y, 0.0));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
                 _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_y, include_shadow);
 
                 const float weight = weights.y * 0.5;
@@ -308,7 +307,7 @@ vec3 EvaluateEnvGridIBL(int probe_index_at_point, vec3 P, vec3 dir, float lod, b
                 ibl = mix(ibl, color_y, weight);
             }
             next_probe_index = GetLocalEnvProbeIndexOffset(P, vec3(0.0, 0.0, neighbor_coord.z));
-            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_ENV_PROBES) {
+            if (bool(env_grid.enabled_indices_mask & (1 << next_probe_index)) && next_probe_index >= 0 && next_probe_index < HYP_MAX_BOUND_REFLECTION_PROBES) {
                 _ApplyEnvProbeSample(next_probe_index, P, dir, lod, color_z, include_shadow);
 
                 const float weight = weights.z * 0.5;
@@ -328,14 +327,20 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
 {
     int probe_index_at_point = GetLocalEnvProbeIndex(P);
 
-    if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_ENV_PROBES) {
+    if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
         return;
     }
 
     const float lod = 0.0;
 
     if (bool(env_grid.enabled_indices_mask & (1 << probe_index_at_point))) {
-        irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;
+        uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
+
+        const SH9 sh = spherical_harmonics[probe_index];
+
+        irradiance += SphericalHarmonicsSample(sh, N);
+
+        // irradiance += EvaluateEnvGridIBL(probe_index_at_point, P, N, lod, false) * ENV_PROBE_MULTIPLIER;
     }
 }
 

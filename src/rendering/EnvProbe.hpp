@@ -7,6 +7,7 @@
 #include <rendering/Texture.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/Buffers.hpp>
+#include <rendering/Compute.hpp>
 
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererAttachment.hpp>
@@ -37,10 +38,19 @@ public:
     friend struct RenderCommand_CreateCubemapBuffers;
     friend struct RenderCommand_DestroyCubemapRenderPass;
     
-    EnvProbe(const Handle<Scene> &parent_scene, const BoundingBox &aabb, const Extent2D &dimensions);
+    EnvProbe(
+        const Handle<Scene> &parent_scene,
+        const BoundingBox &aabb,
+        const Extent2D &dimensions,
+        bool is_ambient_probe
+    );
+
     EnvProbe(const EnvProbe &other) = delete;
     EnvProbe &operator=(const EnvProbe &other) = delete;
     ~EnvProbe();
+
+    bool IsAmbientProbe() const
+        { return m_is_ambient_probe; }
 
     const Matrix4 &GetProjectionMatrix() const
         { return m_projection_matrix; }
@@ -64,7 +74,10 @@ public:
     void EnqueueBind() const;
     void EnqueueUnbind() const;
     void Update();
+
     void Render(Frame *frame);
+
+    void ComputeSH(Frame *frame, const Image *image, const ImageView *image_view);
 
     void UpdateRenderData(UInt probe_index);
 
@@ -75,9 +88,12 @@ private:
     void CreateShader();
     void CreateFramebuffer();
 
+    void CreateSHData();
+
     Handle<Scene> m_parent_scene;
     BoundingBox m_aabb;
     Extent2D m_dimensions;
+    bool m_is_ambient_probe;
 
     Handle<Texture> m_texture;
     Handle<Framebuffer> m_framebuffer;
@@ -87,6 +103,16 @@ private:
 
     CubemapUniforms m_cubemap_uniforms;
     FixedArray<GPUBufferRef, max_frames_in_flight> m_cubemap_render_uniform_buffers;
+    
+    ImageRef m_sh_image_final;
+    ImageViewRef m_sh_image_view_final;
+
+    GPUBufferRef m_sh_tiles_buffer;
+
+    Handle<ComputePipeline> m_compute_sh;
+    Handle<ComputePipeline> m_clear_sh;
+    Handle<ComputePipeline> m_finalize_sh;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_compute_sh_descriptor_sets;
 
     Matrix4 m_projection_matrix;
     FixedArray<Matrix4, 6> m_view_matrices;

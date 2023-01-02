@@ -22,6 +22,7 @@ layout(location=15) in vec2 v_cube_face_uv;
 layout(location=0) out vec4 output_color;
 
 #include "include/scene.inc"
+#include "include/shared.inc"
 #include "include/material.inc"
 #include "include/gbuffer.inc"
 #include "include/env_probe.inc"
@@ -36,34 +37,6 @@ layout(location=0) out vec4 output_color;
 #include "include/PhysicalCamera.inc"
 
 #define HYP_CUBEMAP_AMBIENT 0.1
-
-vec3 GetCubemapCoord(uint face, vec2 uv)
-{
-    vec3 dir = vec3(0.0);
-
-    switch (face) {
-    case 0:
-        dir = vec3(1.0,  -uv.y, -uv.x);
-        break;  // POSITIVE X
-    case 1:
-        dir = vec3(-1.0,  -uv.y,  uv.x);
-        break;  // NEGATIVE X
-    case 2:
-        dir = vec3(uv.x,  1.0,  uv.y);
-        break;  // POSITIVE Y
-    case 3:
-        dir = vec3(uv.x, -1.0, -uv.y);
-        break;  // NEGATIVE Y
-    case 4:
-        dir = vec3(uv.x,  -uv.y,  1.0);
-        break;  // POSITIVE Z
-    case 5:
-        dir = vec3(uv.x,  -uv.y, -1.0);
-        break;  // NEGATIVE Z
-    }
-
-    return dir;
-}
 
 void main()
 {
@@ -101,20 +74,6 @@ void main()
 #endif
 
     vec4 previous_value = vec4(0.0);
-    // float hysteresis = 0.0;
-
-
-    // EnvProbe probe = GET_GRID_PROBE(v_env_probe_index);
-
-    // if (probe.texture_index != ~0u) {
-    //     const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_ENV_PROBES - 1));
-
-    //     hysteresis = 0.65;
-
-    //     vec3 coord = GetCubemapCoord(v_cube_face_index, v_cube_face_uv);
-    //     previous_value = TextureCube(HYP_SAMPLER_LINEAR, env_probe_textures[probe_texture_index], coord);
-    //     previous_value.rgb  = pow(previous_value.rgb, vec3(1.0 / 2.2));
-    // }
 
     float shadow = 1.0;
 
@@ -127,6 +86,8 @@ void main()
 #ifdef LIGHTING
     output_color.rgb = albedo.rgb * (1.0 / HYP_FMATH_PI) * exposure * vec3(HYP_CUBEMAP_AMBIENT);
     output_color.rgb += albedo.rgb * exposure * NdotL * light.position_intensity.w;
+
+    // output_color.rgb = albedo.rgb * NdotL + vec3(HYP_CUBEMAP_AMBIENT);
 #else
     output_color.rgb = albedo.rgb;
 #endif

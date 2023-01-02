@@ -545,7 +545,7 @@ void Engine::Initialize(RefCountedPtr<Application> application)
         auto *env_probe_textures_descriptor = descriptor_set
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENV_PROBE_TEXTURES);
 
-        for (UInt env_probe_index = 0; env_probe_index < max_bound_env_probes; env_probe_index++) {
+        for (UInt env_probe_index = 0; env_probe_index < max_bound_reflection_probes; env_probe_index++) {
             env_probe_textures_descriptor->SetElementSRV(env_probe_index, &GetPlaceholderData().GetImageViewCube1x1R8());
         }
 
@@ -623,6 +623,10 @@ void Engine::Initialize(RefCountedPtr<Application> application)
                 .element_index = 0,
                 .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
             });
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SH9_BUFFER)
+            ->SetElementBuffer(0, shader_globals->spherical_harmonics_buffer);
     }
 
     // add placeholder scene data

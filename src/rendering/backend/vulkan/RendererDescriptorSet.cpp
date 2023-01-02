@@ -79,7 +79,9 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::IMMEDIATE_DRAWS,       51},
 
             {DescriptorKey::DEFERRED_LIGHTING_AMBIENT, 55},
-            {DescriptorKey::DEFERRED_LIGHTING_DIRECT,  56}
+            {DescriptorKey::DEFERRED_LIGHTING_DIRECT,  56},
+
+            {DescriptorKey::SH9_BUFFER, 60}
         }
     },
     {
