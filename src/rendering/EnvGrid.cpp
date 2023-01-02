@@ -10,11 +10,11 @@ using renderer::Image;
 using renderer::Result;
 
 const Extent2D EnvGrid::reflection_probe_dimensions = Extent2D { 128, 128 };
-const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 32, 32 };
-const Float EnvGrid::overlap_amount = 20.0f;
+const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 8, 8 };
+const Float EnvGrid::overlap_amount = 1.0f;
 
 EnvGrid::EnvGrid(const BoundingBox &aabb, const Extent3D &density)
-    : RenderComponent(),
+    : RenderComponent(3),
       m_aabb(aabb),
       m_density(density),
       m_current_probe_index(0)
@@ -217,14 +217,20 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.enabled_indices_mask = 0u;
 
     if (m_reflection_probe) {
-        m_reflection_probe->UpdateRenderData(0);
+        m_reflection_probe->UpdateRenderData(EnvProbeIndex(
+            Extent3D { 0, 0, 0 },
+            Extent3D { 0, 0, 0 }
+        ));
+
         m_shader_data.probe_indices[0] = m_reflection_probe->GetID().ToIndex();
-        m_shader_data.enabled_indices_mask |= (1 << 0);
+        m_shader_data.enabled_indices_mask |= (1u << 0u);
     }
     
     if (num_ambient_probes != 0) {
-        for (UInt index = 0; index < num_ambient_probes; index++) {
-            auto &env_probe = m_ambient_probes[index];
+        AssertThrow(m_current_probe_index < m_ambient_probes.Size());
+
+        {
+            auto &env_probe = m_ambient_probes[m_current_probe_index];
 
             const BoundingBox &probe_aabb = env_probe->GetAABB();
             const Vector3 probe_center = probe_aabb.GetCenter();
@@ -239,7 +245,18 @@ void EnvGrid::OnRender(Frame *frame)
                 + (Int(probe_diff_units.y) * Int(m_density.depth))
                 + Int(probe_diff_units.z) + 1;
 
-            if (probe_index_at_point < 0 || UInt(probe_index_at_point) >= max_bound_ambient_probes) {
+            if (probe_index_at_point > 0 && UInt(probe_index_at_point) < max_bound_ambient_probes) {
+                const EnvProbeIndex bound_index(
+                    Extent3D { UInt(probe_diff_units.x), UInt(probe_diff_units.y), UInt(probe_diff_units.z) + 1 },
+                    m_density
+                );
+
+                env_probe->UpdateRenderData(bound_index);
+
+                RenderEnvProbe(frame, m_ambient_scene, env_probe);
+                
+                m_shader_data.probe_indices[probe_index_at_point] = env_probe->GetID().ToIndex();
+            } else {
                 DebugLog(
                     LogType::Warn,
                     "Probe %u out of range of max bound env probes (index: %d, position in units: %f, %f, %f)\n",
@@ -250,13 +267,20 @@ void EnvGrid::OnRender(Frame *frame)
                     probe_diff_units.z
                 );
 
-                continue;
+                env_probe->SetBoundIndex(EnvProbeIndex());
             }
 
-            // TODO: only update if changed.
-            env_probe->UpdateRenderData(probe_index_at_point);
-            m_shader_data.probe_indices[probe_index_at_point] = env_probe->GetID().ToIndex();
-            m_shader_data.enabled_indices_mask |= (1 << probe_index_at_point);
+            m_current_probe_index = (m_current_probe_index + 1) % num_ambient_probes;
+        }
+
+            
+        for (UInt index = 0; index < num_ambient_probes; index++) {
+            const auto &env_probe = m_ambient_probes[index];
+            const EnvProbeIndex &bound_index = env_probe->GetBoundIndex();
+
+            if (bound_index.GetProbeIndex() < max_bound_ambient_probes) {
+                m_shader_data.enabled_indices_mask |= (1u << bound_index.GetProbeIndex());
+            }
         }
     }
     
@@ -265,13 +289,6 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.density = { m_density.width, m_density.height, m_density.depth, 0 };
 
     Engine::Get()->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
-
-    if (num_ambient_probes != 0) {
-        Handle<EnvProbe> &ambient_probe = m_ambient_probes[m_current_probe_index];
-        RenderEnvProbe(frame, m_ambient_scene, ambient_probe);
-
-        m_current_probe_index = (m_current_probe_index + 1) % num_ambient_probes;
-    }
 
     if (m_reflection_probe) {
         RenderEnvProbe(frame, m_reflection_scene, m_reflection_probe);
@@ -294,7 +311,7 @@ void EnvGrid::CreateShader()
 
     m_ambient_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
         "CubemapRenderer",
-        ShaderProps({ "LIGHTING" })
+        ShaderProps()
     ));
 
     InitObject(m_ambient_shader);

@@ -717,7 +717,7 @@ void Scene::Update(GameCounter::TickUnit delta)
         auto render_group_it = m_render_groups.Find(attributes);
 
         if (render_group_it == m_render_groups.End() || !render_group_it->second) {
-            Handle<RenderGroup> render_group = Engine::Get()->FindOrCreateRenderGroup(attributes);
+            Handle<RenderGroup> render_group = Engine::Get()->CreateRenderGroup(attributes);
 
             if (!render_group.IsValid()) {
                 DebugLog(LogType::Error, "Render group not valid for attribute set %llu!\n", attributes.GetHashCode().Value());
@@ -777,6 +777,7 @@ void Scene::Render(Frame *frame, void *push_constant_ptr, SizeType push_constant
     Engine::Get()->render_state.BindScene(this);
 
     // TODO: Thread safe container here
+    // TODO: If all drawables have been removed, remove the render group?
     for (auto &it : m_render_groups) {
         AssertThrow(it.first.framebuffer_id == m_camera->GetFramebuffer()->GetID());
 

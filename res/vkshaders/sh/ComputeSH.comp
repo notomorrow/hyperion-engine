@@ -36,8 +36,11 @@ layout(std140, set = 0, binding = 4) writeonly buffer SHResultBuffer {
     vec4 sh_result[16];
 };
 
+layout(set = 0, binding = 5, rgba16f) uniform image3D sh_grid_images[9];
+
 layout(push_constant) uniform PushConstant
 {
+    uvec4 probe_grid_position;
     uvec2 cubemap_dimensions;
 };
 
@@ -243,6 +246,8 @@ void main(void)
         );
 
         imageStore(sh_final, GetCoefficientCoord(i), vec4(result, 1.0));
+
+        imageStore(sh_grid_images[i], ivec3(probe_grid_position.xyz), vec4(result, 1.0));
     }
 #endif
 }

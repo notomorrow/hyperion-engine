@@ -230,7 +230,7 @@ public:
         return result;
     }
 
-    template <class T, class IntegralType = int>
+    template <class T, class IntegralType = std::conditional_t<std::is_integral_v<T>, T, int>>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(const T &a)
     {
         using VectorScalarType = NormalizedType<decltype(T::values[0])>;
@@ -244,7 +244,7 @@ public:
         return result;
     }
 
-    template <class T, class IntegralType = int>
+    template <class T, class IntegralType = std::conditional_t<std::is_integral_v<T>, T, int>>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(const T &a)
     {
         using VectorScalarType = NormalizedType<decltype(T::values[0])>;
@@ -258,11 +258,11 @@ public:
         return result;
     }
 
-    template <class T, class IntegralType = int>
+    template <class T, class IntegralType = std::conditional_t<std::is_integral_v<T>, T, int>>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Floor(T a)
         { return IntegralType(std::floor(a)); }
 
-    template <class T, class IntegralType = int>
+    template <class T, class IntegralType = std::conditional_t<std::is_integral_v<T>, T, int>>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Ceil(T a)
         { return IntegralType(std::ceil(a)); }
 
