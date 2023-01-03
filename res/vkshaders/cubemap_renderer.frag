@@ -101,6 +101,9 @@ void main()
     #endif
 #endif
 
+#ifdef TONEMAP
     output_color.rgb = TonemapReinhardSimple(output_color.rgb);
+#endif
+
     output_color.a = 1.0;
 }

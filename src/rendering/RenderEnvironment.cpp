@@ -47,7 +47,8 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
       m_probe_system({
           .aabb = {{-300.0f, -10.0f, -300.0f}, {300.0f, 400.0f, 300.0f}}
       }),
-      m_has_rt_radiance(false)
+      m_has_rt_radiance(false),
+      m_has_ddgi_probes(false)
 {
 }
 
@@ -93,6 +94,7 @@ void RenderEnvironment::Init()
         m_probe_system.Init();
 
         m_has_rt_radiance = true;
+        m_has_ddgi_probes = true;
     }
 
     {
@@ -111,11 +113,16 @@ void RenderEnvironment::Init()
 
         m_particle_system.Reset();
             
-        if (Engine::Get()->GetConfig().Get(CONFIG_RT_SUPPORTED) && m_has_rt_radiance) {
+        if (m_has_rt_radiance) {
             m_rt_radiance.Destroy();
-            m_probe_system.Destroy();
 
             m_has_rt_radiance = false;
+        }
+
+        if (m_has_ddgi_probes) {
+            m_probe_system.Destroy();
+
+            m_has_ddgi_probes = false;
         }
 
         const auto update_marker_value = m_update_marker.load();
@@ -159,6 +166,9 @@ void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
     
     if (m_has_rt_radiance) {
         m_rt_radiance.ApplyTLASUpdates(flags);
+    }
+
+    if (m_has_ddgi_probes) {
         m_probe_system.ApplyTLASUpdates(flags);
     }
 }
@@ -172,7 +182,17 @@ void RenderEnvironment::RenderRTRadiance(Frame *frame)
     
     if (m_has_rt_radiance) {
         m_rt_radiance.Render(frame);
+    }
+}
 
+void RenderEnvironment::RenderDDGIProbes(Frame *frame)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+    AssertReady();
+
+    AssertThrow(Engine::Get()->GetConfig().Get(CONFIG_RT_SUPPORTED));
+    
+    if (m_has_ddgi_probes) {
         m_probe_system.RenderProbes(frame);
         m_probe_system.ComputeIrradiance(frame);
 
@@ -237,6 +257,9 @@ void RenderEnvironment::RenderComponents(Frame *frame)
             if (m_tlas) {
                 if (m_has_rt_radiance) {
                     m_rt_radiance.Destroy();
+                }
+
+                if (m_has_ddgi_probes) {
                     m_probe_system.Destroy();
                 }
                 
@@ -245,18 +268,24 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
                 m_rt_radiance.Create();
                 m_probe_system.Init();
+
                 m_has_rt_radiance = true;
+                m_has_ddgi_probes = true;
 
                 HYP_SYNC_RENDER();
             } else {
                 if (m_has_rt_radiance) {
                     m_rt_radiance.Destroy();
-                    m_probe_system.Destroy();
+                }
 
-                    HYP_SYNC_RENDER();
+                if (m_has_ddgi_probes) {
+                    m_probe_system.Destroy();
                 }
 
                 m_has_rt_radiance = false;
+                m_has_ddgi_probes = false;
+
+                HYP_SYNC_RENDER();
             }
         }
 

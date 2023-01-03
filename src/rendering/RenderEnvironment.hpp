@@ -150,6 +150,7 @@ public:
     void Update(GameCounter::TickUnit delta);
 
     void RenderRTRadiance(Frame *frame);
+    void RenderDDGIProbes(Frame *frame);
 
     void RenderComponents(Frame *frame);
 
@@ -178,6 +179,7 @@ private:
     RTRadianceRenderer m_rt_radiance;
     ProbeGrid m_probe_system;
     bool m_has_rt_radiance;
+    bool m_has_ddgi_probes;
     Handle<TLAS> m_tlas;
 
     Float m_global_timer;

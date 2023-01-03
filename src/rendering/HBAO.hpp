@@ -76,7 +76,6 @@ private:
     FixedArray<FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight>, 2> m_blur_descriptor_sets;
 
     UniquePtr<FullScreenPass> m_hbao_pass;
-    //Handle<ComputePipeline> m_compute_hbao;
     Handle<ComputePipeline> m_blur_hor;
     Handle<ComputePipeline> m_blur_vert;
     UniquePtr<TemporalBlending> m_temporal_blending;

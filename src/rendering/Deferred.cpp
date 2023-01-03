@@ -191,9 +191,6 @@ void DeferredRenderer::Create()
 
     m_dpr.Create(depth_attachment_usage);
 
-    m_hbao.Reset(new HBAO(Engine::Get()->GetGPUInstance()->GetSwapchain()->extent));
-    m_hbao->Create();
-
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_mipmapped_results[i] = CreateObject<Texture>(Texture2D(
             mipmap_chain_extent,
@@ -205,6 +202,9 @@ void DeferredRenderer::Create()
 
         InitObject(m_mipmapped_results[i]);
     }
+
+    m_hbao.Reset(new HBAO(hbao_extent));
+    m_hbao->Create();
 
     m_ssr.Create();
     
@@ -352,6 +352,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
     const bool use_ssr = Engine::Get()->GetConfig().Get(CONFIG_SSR);
     const bool use_rt_radiance = Engine::Get()->GetConfig().Get(CONFIG_RT_REFLECTIONS);
+    const bool use_ddgi = Engine::Get()->GetConfig().Get(CONFIG_RT_GI);
     const bool use_hbao = Engine::Get()->GetConfig().Get(CONFIG_HBAO);
     const bool use_hbil = Engine::Get()->GetConfig().Get(CONFIG_HBIL);
 
@@ -361,6 +362,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     deferred_data.flags |= use_hbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
     deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
     deferred_data.flags |= use_rt_radiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
+    deferred_data.flags |= use_ddgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
     
     CollectDrawCalls(frame);
 
@@ -401,10 +403,16 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     }
     // end opaque objs
 
-    if (use_rt_radiance) { // rt radiance
+    if (use_rt_radiance) {
         DebugMarker marker(primary, "RT Radiance");
 
         environment->RenderRTRadiance(frame);
+    }
+
+    if (use_ddgi) {
+        DebugMarker marker(primary, "DDGI");
+
+        environment->RenderDDGIProbes(frame);
     }
 
     if (use_hbao || use_hbil) {

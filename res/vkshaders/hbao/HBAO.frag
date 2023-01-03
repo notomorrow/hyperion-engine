@@ -18,7 +18,7 @@ layout(location=0) out vec4 color_output;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(set = 0, binding = 0) uniform texture2D gbuffer_albedo_texture;
+layout(set = 0, binding = 0) uniform texture2D gbuffer_mip_chain;
 layout(set = 0, binding = 1) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 2) uniform texture2D gbuffer_depth_texture;
 layout(set = 0, binding = 3) uniform texture2D gbuffer_velocity_texture;
@@ -40,10 +40,10 @@ layout(push_constant) uniform PushConstant
 #include "../include/Temporal.glsl"
 
 
-#define HYP_HBAO_NUM_CIRCLES 4
+#define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 32.0
-#define HYP_HBAO_POWER 1.15
+#define HYP_HBAO_RADIUS 24.0
+#define HYP_HBAO_POWER 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
 float tan_half_fov = tan(fov_rad * 0.5);
@@ -52,10 +52,9 @@ vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scen
 vec2 inv_focal_len = vec2(1.0) / focal_len;
 vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
 
-float GetOffsets(vec2 uv)
+float GetOffsets(uvec2 pixel_coord)
 {
-    ivec2 position = ivec2(uv * vec2(dimension));
-    return 0.25 * float((position.y - position.x) & 3);
+    return 0.25 * float((int(pixel_coord.y) - int(pixel_coord.x)) & 3);
 }
 
 mat4 inv_view_proj = inverse(scene.projection * scene.view);
@@ -64,7 +63,7 @@ mat4 inv_proj = inverse(scene.projection);
 
 float GetDepth(vec2 uv)
 {
-    return Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
+    return Texture2D(sampler_nearest, gbuffer_depth_texture, uv).r;
 }
 
 vec3 GetPosition(vec2 uv, float depth)
@@ -87,7 +86,7 @@ vec3 GetPosition(vec2 uv, float depth)
 
 vec3 GetNormal(vec2 uv)
 {
-    vec3 normal = DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, uv, 0.0));
+    vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, uv));
     vec3 view_normal = (scene.view * vec4(normal, 0.0)).xyz;
 
     return view_normal;
@@ -126,17 +125,6 @@ float Falloff(float dist_sqr)
     return dist_sqr * (-1.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)) + 1.0;
 }
 
-float CalcAO(vec3 P, vec3 N, vec2 uv)
-{
-    vec3 S = GetPosition(uv, GetDepth(uv));
-
-    vec3 V = S - P;
-    float VdotV = dot(V, V);
-    float NdotV = dot(N, V) * inversesqrt(VdotV);
-
-    return Saturate(NdotV - ANGLE_BIAS) * Saturate(Falloff(VdotV));
-}
-
 void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
     uvec2 pixel_coord = clamp(uvec2(uv * vec2(dimension) - 0.5), uvec2(0), dimension - 1);
@@ -147,8 +135,8 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_offset = GetSpatialOffset(scene.frame_counter);
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
-    const float noise_offset = GetOffsets(uv);
-    const float noise_direction = RandomFloat(seed);//InterleavedGradientNoise(vec2(pixel_coord));
+    const float noise_offset = GetOffsets(pixel_coord);
+    const float noise_direction = RandomFloat(seed);
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
@@ -164,33 +152,6 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     bent_normal = vec3(0.0);
     light_color = vec4(0.0);
 
-#if 0
-    float small_scale_ao = 0.0;
-    float large_scale_ao = 0.0;
-
-    vec3 rand = vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed));
-
-    const float alpha = 2.0 * HYP_FMATH_PI / HYP_HBAO_NUM_CIRCLES;
-    for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
-        float angle = float(i) * alpha;
-
-        vec2 direction = RotateDirection(vec2(cos(angle), sin(angle)), rand.xy);
-        float ray_pixels = (rand.z * step_radius + 1.0);
-
-        small_scale_ao += CalcAO(P, N, uv + (direction * ray_pixels));
-        ray_pixels += step_radius;
-
-        for (int j = 1; j < HYP_HBAO_NUM_SLICES; j++) {
-            large_scale_ao += CalcAO(P, N, uv + (direction * ray_pixels));
-            ray_pixels += step_radius;
-        }
-    }
-
-    occlusion = (small_scale_ao) + (large_scale_ao);
-    occlusion /= float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);
-#endif
-
-#if 1
     for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
         float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
 
@@ -212,60 +173,43 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
             const float max_dimension = min(1.0, max(abs(new_uv_ndc.x), abs(new_uv_ndc.y)));
             const float fade = 1.0 - saturate(max(0.0, max_dimension - 0.95) / (1.0 - 0.98));
 
-            if (new_uv.xy == saturate(new_uv.xy)) {
-                // new_uv = Saturate(new_uv);
+            if (all(lessThan(new_uv.xy, vec2(1.0))) && all(greaterThanEqual(new_uv.xy, vec2(0.0)))) {
+                new_uv = Saturate(new_uv);
 
-                vec3 ds = GetPosition(new_uv.xy, GetDepth(new_uv.xy)) - P;
-                vec3 dt = GetPosition(new_uv.zw, GetDepth(new_uv.zw)) - P;
+                float depth_0 = GetDepth(new_uv.xy);
+                float depth_1 = GetDepth(new_uv.zw);
+
+                vec3 ds = GetPosition(new_uv.xy, depth_0) - P;
+                vec3 dt = GetPosition(new_uv.zw, depth_1) - P;
 
                 const vec2 len = vec2(length(ds), length(dt));
                 const vec2 dist = len / HYP_HBAO_RADIUS;
-                ds /= len.x;
-                dt /= len.y;
+                ds /= len.x; dt /= len.y;
 
                 const vec2 DdotD = vec2(dot(ds, ds), dot(dt, dt));
-                const vec2 NdotD = vec2(dot(ds, N), dot(dt, N));// * (1.0 / sqrt(DdotD));
-                // const vec2 VdotD = vec2(dot(ds, V), dot(dt, V));
+                const vec2 NdotD = vec2(dot(ds, N), dot(dt, N));
 
                 const vec2 H = NdotD * inversesqrt(DdotD);
 
                 const vec2 falloff = saturate(DdotD * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
 
-                const vec2 color_weights = step(0.05, dist) * fade;
                 const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
 
-                vec4 new_color_0 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.xy, 0.0);
-                const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
+                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_mip_chain, new_uv.xy);
+                // const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
 
-                vec4 new_color_1 = Texture2DLod(sampler_linear, gbuffer_albedo_texture, new_uv.zw, 0.0);
-                const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
-
-                // metallic objects do not emit diffuse light
-                new_color_0 *= 1.0 - material_0.g;
-                new_color_1 *= 1.0 - material_1.g;
+                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_mip_chain, new_uv.zw);
+                // const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
 
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 
                 slice_light[0] += (slice_light[0] + vec4(new_color_0) * (NdotD.x - ANGLE_BIAS) * (falloffs.x)) * condition.x;
                 slice_light[1] += (slice_light[1] + vec4(new_color_1) * (NdotD.y - ANGLE_BIAS) * (falloffs.y)) * condition.y;
 
-                // slice_light[0] = mix(
-                //     slice_light[0],
-                //     vec4(new_color_0) * NdotD.x,
-                //     condition.x * fade
-                // );
-                // slice_light[1] = mix(
-                //     slice_light[1],
-                //     vec4(new_color_1) * NdotD.y,
-                //     condition.y * fade
-                // );
-
-                // slice_light[0] = mix(slice_light[0], vec4(NdotD.xxx, 1.0), 1.0);
-                // slice_light[1] = mix(slice_light[1], vec4(NdotD.yyy, 1.0), 1.0);
 
                 slice_ao += vec2(
-                    ((NdotD.x - ANGLE_BIAS) * falloffs.x),//(1.0 - HYP_FMATH_SQR(dist.x)) * (NdotD.x - slice_ao.x),
-                    ((NdotD.y - ANGLE_BIAS) * falloffs.y)//(1.0 - HYP_FMATH_SQR(dist.y)) * (NdotD.y - slice_ao.y)
+                    ((NdotD.x - ANGLE_BIAS) * falloffs.x),
+                    ((NdotD.y - ANGLE_BIAS) * falloffs.y)
                 ) * condition * fade;
 
                 horizons = mix(horizons, H, condition);
@@ -281,8 +225,6 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
     light_color = light_color / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);
     light_color *= 1.0 / (1.0 - ANGLE_BIAS);
-
-    #endif
 }
 
 void main()

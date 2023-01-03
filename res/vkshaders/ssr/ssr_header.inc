@@ -13,7 +13,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 #define HYP_SSR_ROUGHNESS_MAX 1.0
 
-layout(set = 0, binding = 10) uniform texture2D gbuffer_albedo_texture;
+layout(set = 0, binding = 10) uniform texture2D gbuffer_mip_chain;
 layout(set = 0, binding = 11) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 12) uniform texture2D gbuffer_material_texture;
 layout(set = 0, binding = 13) uniform texture2D gbuffer_depth_texture;

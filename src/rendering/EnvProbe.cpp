@@ -134,28 +134,18 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateSHImages) : RenderCommand
+struct RENDER_COMMAND(CreateSHData) : RenderCommand
 {
-    ImageRef sh_image_final;
-    ImageViewRef sh_image_view_final;
-
     GPUBufferRef sh_tiles_buffer;
 
-    RENDER_COMMAND(CreateSHImages)(
-        const ImageRef &sh_image_final,
-        const ImageViewRef &sh_image_view_final,
+    RENDER_COMMAND(CreateSHData)(
         const GPUBufferRef &sh_tiles_buffer
-    ) : sh_image_final(sh_image_final),
-        sh_image_view_final(sh_image_view_final),
-        sh_tiles_buffer(sh_tiles_buffer)
+    ) : sh_tiles_buffer(sh_tiles_buffer)
     {
     }
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(sh_image_final->Create(Engine::Get()->GetGPUDevice()));
-        HYPERION_BUBBLE_ERRORS(sh_image_view_final->Create(Engine::Get()->GetGPUDevice(), sh_image_final));
-
         HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(SHTile) * 6 * 4 * 4));
 
         HYPERION_RETURN_OK;
@@ -374,15 +364,10 @@ void EnvProbe::CreateFramebuffer()
 
 void EnvProbe::CreateSHData()
 {
-    m_sh_image_final = RenderObjects::Make<Image>(StorageImage(Extent3D { 4, 4, 1 }, InternalFormat::RGBA8, ImageType::TEXTURE_TYPE_2D, nullptr));
-    m_sh_image_view_final = RenderObjects::Make<ImageView>();
-
     m_sh_tiles_buffer = RenderObjects::Make<GPUBuffer>(StorageBuffer());
     
     PUSH_RENDER_COMMAND(
-        CreateSHImages,
-        m_sh_image_final,
-        m_sh_image_view_final,
+        CreateSHData,
         m_sh_tiles_buffer
     );
 
@@ -395,16 +380,10 @@ void EnvProbe::CreateSHData()
         m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(1)
             ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
 
-        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(2)
-            ->SetElementUAV(0, m_sh_image_view_final);
-
-        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
+        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(2)
             ->SetElementBuffer(0, m_sh_tiles_buffer);
 
-        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(4)
-            ->SetElementBuffer<SH9Buffer>(0, Engine::Get()->shader_globals->spherical_harmonics_buffer);
-
-        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(5)
+        m_compute_sh_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(3)
             ->SetElementUAV(0, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[0].image_view)
             ->SetElementUAV(1, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[1].image_view)
             ->SetElementUAV(2, Engine::Get()->shader_globals->spherical_harmonics_grid.textures[2].image_view)
@@ -609,11 +588,6 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
 
     m_sh_tiles_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_sh_image_final->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    Engine::Get()->shader_globals->spherical_harmonics_buffer
-        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
     for (auto &texture : Engine::Get()->shader_globals->spherical_harmonics_grid.textures) {
         texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
     }
@@ -628,11 +602,6 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
 
     m_finalize_sh->GetPipeline()->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
     m_finalize_sh->GetPipeline()->Dispatch(frame->GetCommandBuffer(), Extent3D { 1, 1, 1 });
-    
-    Engine::Get()->shader_globals->spherical_harmonics_buffer
-        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    m_sh_image_final->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
     
     for (auto &texture : Engine::Get()->shader_globals->spherical_harmonics_grid.textures) {
         texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);

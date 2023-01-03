@@ -160,9 +160,6 @@ private:
 
     CubemapUniforms m_cubemap_uniforms;
     FixedArray<GPUBufferRef, max_frames_in_flight> m_cubemap_render_uniform_buffers;
-    
-    ImageRef m_sh_image_final;
-    ImageViewRef m_sh_image_view_final;
 
     GPUBufferRef m_sh_tiles_buffer;
 
