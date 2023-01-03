@@ -12,8 +12,8 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 3.0
+#define HYP_HBIL_MULTIPLIER 2.0
+#define ENV_PROBE_MULTIPLIER 12.0 // empirical value to match close to DDGI values
 
 struct DeferredParams
 {
@@ -244,9 +244,52 @@ void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec
     }
 }
 
-// gives not-so accurate indirect light for the scene --
-// sample lowest mipmap of cubemap, if we have it.
-// later, replace this will spherical harmonics.
+
+float[9] ProjectSHBands(vec3 N)
+{
+    float bands[9];
+
+    bands[0] = 0.282095;
+    bands[1] = -0.488603 * N.y;
+    bands[2] = 0.488603 * N.z;
+    bands[3] = -0.488603 * N.x;
+    bands[4] = 1.092548 * N.x * N.y;
+    bands[5] = -1.092548 * N.y * N.z;
+    bands[6] = 0.315392 * (3.0 * N.z * N.z - 1.0);
+    bands[7] = -1.092548 * N.x * N.z;
+    bands[8] = 0.546274 * (N.x * N.x - N.y * N.y);
+
+    return bands;
+}
+
+vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
+{
+    const float cos_a0 = HYP_FMATH_PI;
+    const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
+    const float cos_a2 = HYP_FMATH_PI * 0.25;
+
+    float bands[9] = ProjectSHBands(N);
+    bands[0] *= cos_a0;
+    bands[1] *= cos_a1;
+    bands[2] *= cos_a1;
+    bands[3] *= cos_a1;
+    bands[4] *= cos_a2;
+    bands[5] *= cos_a2;
+    bands[6] *= cos_a2;
+    bands[7] *= cos_a2;
+    bands[8] *= cos_a2;
+
+    vec3 irradiance = vec3(0.0);
+
+    for (int i = 0; i < 9; i++) {
+        irradiance += Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb * bands[i];
+    }
+
+    irradiance = max(irradiance, vec3(0.0));
+
+    return irradiance / HYP_FMATH_PI;
+}
+
 void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
 {
     ivec3 probe_position;
@@ -273,18 +316,7 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
         vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
         coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
 
-        SH9 sh;
-        sh.values[0] = Texture3D(sampler_linear, spherical_harmonics_volumes[0], coord);
-        sh.values[1] = Texture3D(sampler_linear, spherical_harmonics_volumes[1], coord);
-        sh.values[2] = Texture3D(sampler_linear, spherical_harmonics_volumes[2], coord);
-        sh.values[3] = Texture3D(sampler_linear, spherical_harmonics_volumes[3], coord);
-        sh.values[4] = Texture3D(sampler_linear, spherical_harmonics_volumes[4], coord);
-        sh.values[5] = Texture3D(sampler_linear, spherical_harmonics_volumes[5], coord);
-        sh.values[6] = Texture3D(sampler_linear, spherical_harmonics_volumes[6], coord);
-        sh.values[7] = Texture3D(sampler_linear, spherical_harmonics_volumes[7], coord);
-        sh.values[8] = Texture3D(sampler_linear, spherical_harmonics_volumes[8], coord);
-
-        irradiance += SphericalHarmonicsSample(sh, N) * ENV_PROBE_MULTIPLIER;
+        irradiance += SphericalHarmonicsSample(N, coord) * ENV_PROBE_MULTIPLIER;
     }
 }
 

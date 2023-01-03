@@ -294,61 +294,39 @@ void HBAO::CreateDescriptorSets()
 
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(0)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_ALBEDO)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredRenderer().GetMipChain(frame_index)->GetImageView());
 
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(1)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView());
 
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(2)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
 
         // motion vectors
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(3)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
         // material
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(4)
-            ->SetSubDescriptor({
-                .image_view = Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                    .GetGBufferAttachment(GBUFFER_RESOURCE_MATERIAL)->GetImageView()
-            });
+            ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_MATERIAL)->GetImageView());
 
         // nearest sampler
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(5)
-            ->SetSubDescriptor({
-                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerNearest()
-            });
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
 
         // linear sampler
         descriptor_set
             ->AddDescriptor<SamplerDescriptor>(6)
-            ->SetSubDescriptor({
-                .sampler = &Engine::Get()->GetPlaceholderData().GetSamplerLinear()
-            });
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinear());
 
         descriptor_set
             ->AddDescriptor<DynamicStorageBufferDescriptor>(7)
-            ->SetSubDescriptor({
-                .buffer = Engine::Get()->GetRenderData()->scenes.GetBuffers()[frame_index].get(),
-                .range = UInt32(sizeof(SceneShaderData))
-            });
+            ->SetElementBuffer<SceneShaderData>(0, Engine::Get()->GetRenderData()->scenes.GetBuffer(frame_index).get());
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }

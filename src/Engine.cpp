@@ -625,10 +625,6 @@ void Engine::Initialize(RefCountedPtr<Application> application)
             });
 
         descriptor_set
-            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SH9_BUFFER)
-            ->SetElementBuffer(0, shader_globals->spherical_harmonics_buffer);
-
-        descriptor_set
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SH_VOLUMES)
             ->SetElementSRV(0, shader_globals->spherical_harmonics_grid.textures[0].image_view)
             ->SetElementSRV(1, shader_globals->spherical_harmonics_grid.textures[1].image_view)

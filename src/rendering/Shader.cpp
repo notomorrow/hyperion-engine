@@ -120,7 +120,6 @@ void GlobalSphericalHarmonicsGrid::Destroy()
 }
 
 ShaderGlobals::ShaderGlobals()
-    : spherical_harmonics_buffer(RenderObjects::Make<GPUBuffer>(StorageBuffer()))
 {
     
 }
@@ -143,17 +142,12 @@ void ShaderGlobals::Create()
     textures.Create();
 
     spherical_harmonics_grid.Create();
-
-    AssertThrow(spherical_harmonics_buffer.IsValid());
-    HYPERION_ASSERT_RESULT(spherical_harmonics_buffer->Create(device, sizeof(SH9Buffer) * max_env_probes));
 }
 
 void ShaderGlobals::Destroy()
 {
     auto *device = Engine::Get()->GetGPUDevice();
-
-    SafeRelease(std::move(spherical_harmonics_buffer));
-
+    
     env_probes.Destroy(device);
     env_grids.Destroy(device);
 

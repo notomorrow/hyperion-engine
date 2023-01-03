@@ -82,7 +82,7 @@ void main()
     vec3 F = vec3(0.0);
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
-    ao = min(bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0, material.a);
+    ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
     
 #if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
     vec4 vct_specular = vec4(0.0);
@@ -138,7 +138,7 @@ void main()
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
-        // CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
+        CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 

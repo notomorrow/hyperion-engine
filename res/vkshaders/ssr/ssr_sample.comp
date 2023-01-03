@@ -101,7 +101,7 @@ void main(void)
             const float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
 #endif
 
-            vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_albedo_texture, hit_uv, mip_level);
+            vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_mip_chain, hit_uv, mip_level);
 
 #ifdef SSR_CONE_SAMPLING
             current_reflection_sample.rgb *= vec3(gloss_multiplier);

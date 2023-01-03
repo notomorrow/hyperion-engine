@@ -70,8 +70,6 @@ struct ShaderGlobals
 
     BindlessStorage textures;
 
-    GPUBufferRef spherical_harmonics_buffer;
-
     GlobalSphericalHarmonicsGrid spherical_harmonics_grid;
 };
 

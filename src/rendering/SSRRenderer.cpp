@@ -313,7 +313,7 @@ void SSRRenderer::CreateDescriptorSets()
             ->AddDescriptor<renderer::ImageDescriptor>(9)
             ->SetElementSRV(0, m_image_outputs[frame_index][3].image_view);
 
-        descriptor_set // gbuffer albedo texture
+        descriptor_set // gbuffer mip chain texture
             ->AddDescriptor<renderer::ImageDescriptor>(10)
             ->SetElementSRV(0, Engine::Get()->GetDeferredRenderer().GetMipChain(frame_index)->GetImageView());
 
@@ -327,7 +327,7 @@ void SSRRenderer::CreateDescriptorSets()
             ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                 .GetGBufferAttachment(GBUFFER_RESOURCE_MATERIAL)->GetImageView());
 
-        descriptor_set // gbuffer albedo texture
+        descriptor_set // gbuffer depth
             ->AddDescriptor<renderer::ImageDescriptor>(13)
             ->SetElementSRV(0, Engine::Get()->GetDeferredSystem().Get(BUCKET_OPAQUE)
                 .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());

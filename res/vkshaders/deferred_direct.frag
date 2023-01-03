@@ -72,7 +72,7 @@ void main()
     float shadow = 1.0;
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, texcoord);
-    ao = min(bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED) ? ssao_data.a : 1.0, material.a);
+    ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
     if (perform_lighting) {
 
@@ -118,10 +118,6 @@ void main()
         attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
         attenuation = saturate(attenuation);
     
-        // attenuation *= attenuation;
-        // attenuation = Saturate(attenuation);
-        // float attenuation = 1.0;//mix(1.0, 1.0 - min(length(light.position_intensity.xyz - position.xyz) / max(light.radius, 0.0001), 1.0), float(light.type == HYP_LIGHT_TYPE_POINT));
-
         vec4 specular = specular_lobe;
 
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
@@ -141,5 +137,5 @@ void main()
         result = albedo;
     }
 
-    output_color = vec4(result);////vec4(albedo.rgb * 0.1, 1.0);
+    output_color = vec4(result);
 }

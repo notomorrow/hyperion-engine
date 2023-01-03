@@ -32,17 +32,17 @@ bool TraceRays(
 
     const mat4 inverse_proj = inverse(scene.projection);
 
+    vec4 view_space_position;
+
     int i = 0;
 
     for (; i < ssr_params.num_iterations; i++) {
         marching_position += ray_step;
 
         hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
+        view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
 
-        float depth = SampleDepth(hit_pixel);
-
-        depth_from_screen = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, depth).z;
-        step_delta = marching_position.z - depth_from_screen;
+        step_delta = marching_position.z - view_space_position.z;
 
         intersect = step_delta > 0.0;
         num_iterations += 1.0;
@@ -59,11 +59,11 @@ bool TraceRays(
             marching_position = marching_position - ray_step * sign(step_delta);
 
             hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
-            depth_from_screen = abs(ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel)).z);
-            step_delta = abs(marching_position.z) - depth_from_screen;
+            view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
+            
+            step_delta = abs(marching_position.z) - view_space_position.z;
 
             if (abs(step_delta) < ssr_params.distance_bias) {
-                // hit_weight = smoothstep(0.1, 0.95, max(abs(hit_pixel.x), abs(hit_pixel.y)));
                 return true;
             }
         }

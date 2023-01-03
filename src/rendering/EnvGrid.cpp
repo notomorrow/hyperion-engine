@@ -10,7 +10,7 @@ using renderer::Image;
 using renderer::Result;
 
 const Extent2D EnvGrid::reflection_probe_dimensions = Extent2D { 128, 128 };
-const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 8, 8 };
+const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 16, 16 };
 const Float EnvGrid::overlap_amount = 1.0f;
 
 EnvGrid::EnvGrid(const BoundingBox &aabb, const Extent3D &density)
@@ -304,7 +304,7 @@ void EnvGrid::CreateShader()
 {
     m_reflection_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
         "CubemapRenderer",
-        ShaderProps({ "LIGHTING", "SHADOWS" })
+        ShaderProps({ "LIGHTING", "SHADOWS", "TONEMAP" })
     ));
 
     InitObject(m_reflection_shader);
