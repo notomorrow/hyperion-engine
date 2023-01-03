@@ -154,8 +154,8 @@ void main()
         Fd *= multibounce;
         Fr *= multibounce;
 
-        Fr *= exposure * IBL_INTENSITY;
-        Fd *= exposure * IBL_INTENSITY;
+        // Fr *= exposure * IBL_INTENSITY;
+        // Fd *= exposure * IBL_INTENSITY;
 
         IntegrateReflections(Fr, E, reflections);
 

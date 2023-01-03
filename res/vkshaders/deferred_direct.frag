@@ -125,7 +125,7 @@ void main()
 
         vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
 
-        direct_component.rgb *= (exposure);
+        // direct_component.rgb *= (exposure);
         result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
         result.a = attenuation;
 

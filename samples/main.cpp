@@ -105,7 +105,7 @@ public:
 
     virtual void InitRender() override
     {
-        Engine::Get()->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
+        //Engine::Get()->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
     }
 
     virtual void InitGame() override
@@ -125,9 +125,9 @@ public:
         
         { // adding lights to scene
             m_sun = CreateObject<Light>(DirectionalLight(
-                Vector3(-0.1f, 0.1f, 0.1f).Normalize(),
+                Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
                 Color(1.0f, 1.0f, 1.0f),
-                250000.0f
+                5.0f
             ));
 
             m_scene->AddLight(m_sun);
@@ -135,26 +135,26 @@ public:
             /*m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, 70.1f),
                 Color(1.0f, 1.0f, 1.0f),
-                150000.0f,
-                15.0f
+                1.0f,
+                1.0f
             )));
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.5f, 50.0f, -70.1f),
                 Color(1.0f, 0.0f, 0.0f),
-                10000.0f,
+                2.0f,
                 40.0f
             )));
             
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(40.5f, 50.0f, 40.1f),
                 Color(0.0f, 1.0f, 0.0f),
-                10000.0f,
+                2.0f,
                 40.0f
             )));
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(-40.5f, 50.0f, -40.1f),
                 Color(0.0f, 1.0f, 1.0f),
-                10000.0f,
+                1.0f,
                 40.0f
             )));*/
 
@@ -252,7 +252,7 @@ public:
         
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/cornell/cornell.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -290,11 +290,11 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(0.25f);
+        test_model.Scale(20.25f);
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
-                test_model.GetWorldAABB(),//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
+                test_model.GetWorldAABB() * 1.01f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
                 Extent3D { 16, 2, 16 }
             );
         }
@@ -618,14 +618,24 @@ public:
         //    m_point_lights.Front()->SetPosition(GetScene()->GetCamera()->GetTranslation() + GetScene()->GetCamera()->GetDirection() * 15.0f);
         }
 
+        bool sun_position_changed = false;
+
         if (GetInputManager()->IsKeyDown(KEY_ARROW_LEFT)) {
             m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.02f, 0.0f, 0.0f)).Normalize());
+            sun_position_changed = true;
         } else if (GetInputManager()->IsKeyDown(KEY_ARROW_RIGHT)) {
             m_sun->SetPosition((m_sun->GetPosition() + Vector3(-0.02f, 0.0f, 0.0f)).Normalize());
+            sun_position_changed = true;
         } else if (GetInputManager()->IsKeyDown(KEY_ARROW_UP)) {
             m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.0f, 0.02f, 0.0f)).Normalize());
+            sun_position_changed = true;
         } else if (GetInputManager()->IsKeyDown(KEY_ARROW_DOWN)) {
             m_sun->SetPosition((m_sun->GetPosition() + Vector3(0.0f, -0.02f, 0.0f)).Normalize());
+            sun_position_changed = true;
+        }
+
+        if (sun_position_changed) {
+            std::cout << "Sun position: " << m_sun->GetPosition() << "\n";
         }
 
         if (m_export_task == nullptr || m_export_task->IsCompleted()) {

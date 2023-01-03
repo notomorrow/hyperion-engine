@@ -42,8 +42,8 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 24.0
-#define HYP_HBAO_POWER 1.0
+#define HYP_HBAO_RADIUS 32.0
+#define HYP_HBAO_POWER 1.15
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
 float tan_half_fov = tan(fov_rad * 0.5);
@@ -69,19 +69,6 @@ float GetDepth(vec2 uv)
 vec3 GetPosition(vec2 uv, float depth)
 {
     return ReconstructViewSpacePositionFromDepth(inv_proj, uv, depth).xyz;
-    // const float linear_depth = LinearDepth(scene.projection, depth);
-    // const float linear_depth = ViewDepth(depth, scene.camera_near, scene.camera_far);
-    // return vec3((vec2(uv.x, 1.0 - uv.y) * uv_to_view.xy + uv_to_view.zw) * linear_depth, linear_depth);
-
-    vec4 v = inv_proj * vec4(uv * 2.0 - 1.0, depth, 1.0);
-    v /= v.w;
-    return v.xyz;
-    
-
-    // vec4 pos_world = ReconstructWorldSpacePositionFromDepth(inv_proj, inv_view, uv, depth);
-    // vec4 pos_view = scene.view * pos_world;
-    // pos_view /= pos_view.w;
-    // return pos_view.xyz;
 }
 
 vec3 GetNormal(vec2 uv)

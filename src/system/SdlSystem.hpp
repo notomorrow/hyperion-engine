@@ -54,7 +54,8 @@ enum SystemWindowEventType
     EVENT_WINDOW_MINIMIZED = SDL_WINDOWEVENT_MINIMIZED,
 };
 
-enum SystemKey {
+enum SystemKey
+{
     KEY_UNKNOWN = -1,
 
     KEY_A = 'A',
@@ -123,9 +124,9 @@ enum SystemKey {
     KEY_CAPSLOCK = 280,
 
     KEY_ARROW_RIGHT = SDL_SCANCODE_RIGHT,
-    KEY_ARROW_LEFT  = SDL_SCANCODE_LEFT,
-    KEY_ARROW_DOWN  = SDL_SCANCODE_DOWN,
-    KEY_ARROW_UP    = SDL_SCANCODE_UP,
+    KEY_ARROW_LEFT = SDL_SCANCODE_LEFT,
+    KEY_ARROW_DOWN = SDL_SCANCODE_DOWN,
+    KEY_ARROW_UP = SDL_SCANCODE_UP,
 };
 
 enum MouseButton
@@ -301,7 +302,7 @@ class SDLApplication : public Application
 {
 public:
     SDLApplication(const char *name);
-    virtual ~SDLApplication();
+    virtual ~SDLApplication() override;
 
     virtual UniquePtr<ApplicationWindow> CreateSystemWindow(const ANSIString &title, UInt width, UInt height) override;
 

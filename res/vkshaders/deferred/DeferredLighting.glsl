@@ -12,8 +12,8 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_MULTIPLIER 2.0
-#define ENV_PROBE_MULTIPLIER 12.0 // empirical value to match close to DDGI values
+#define HYP_HBIL_MULTIPLIER 1.0
+#define ENV_PROBE_MULTIPLIER 8.0
 
 struct DeferredParams
 {
@@ -316,7 +316,7 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
         vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
         coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
 
-        irradiance += SphericalHarmonicsSample(N, coord) * ENV_PROBE_MULTIPLIER;
+        irradiance += SphericalHarmonicsSample(-N, coord) * ENV_PROBE_MULTIPLIER;
     }
 }
 
