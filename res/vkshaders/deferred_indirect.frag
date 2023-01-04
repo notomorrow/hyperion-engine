@@ -177,4 +177,47 @@ void main()
     }
 
     output_color = vec4(result, 1.0);
+
+
+    
+    #ifdef ENV_PROBE_ENABLED
+
+    #define MAX_DISTANCE 300.0
+
+    const float view_depth = ReconstructViewSpacePositionFromDepth(inverse(scene.projection), texcoord, depth).z;//ViewDepth(depth, scene.camera_near, scene.camera_far);
+    const float view_depth_clamped = saturate(view_depth / MAX_DISTANCE);
+
+    vec3 uv_clipmap = vec3(texcoord, view_depth_clamped);
+
+    const float cos_a0 = HYP_FMATH_PI;
+    const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
+    const float cos_a2 = HYP_FMATH_PI * 0.25;
+
+    float bands[9] = ProjectSHBands(-N);
+    bands[0] *= cos_a0;
+    bands[1] *= cos_a1;
+    bands[2] *= cos_a1;
+    bands[3] *= cos_a1;
+    bands[4] *= cos_a2;
+    bands[5] *= cos_a2;
+    bands[6] *= cos_a2;
+    bands[7] *= cos_a2;
+    bands[8] *= cos_a2;
+
+    irradiance = vec3(0.0);
+
+    for (int i = 0; i < 9; i++) {
+        irradiance += Texture3D(sampler_linear, sh_clipmaps[i], uv_clipmap).rgb * bands[i];
+    }
+
+    irradiance = max(irradiance, vec3(0.0));
+    irradiance /= HYP_FMATH_PI;
+
+    irradiance *= 4.0;
+
+    // irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], uv_clipmap).rgb;
+
+    #endif
+
+    output_color = vec4(irradiance.rgb, 1.0);
 }
