@@ -1,0 +1,182 @@
+
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+#define SIZE_X 8
+#define SIZE_Y 8
+
+layout(local_size_x = SIZE_X, local_size_y = SIZE_Y, local_size_z = 1) in;
+
+#define MAX_DISTANCE 300.0
+
+#include "../include/defines.inc"
+#include "../include/shared.inc"
+#include "../include/tonemap.inc"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/env_probe.inc"
+#include "../include/scene.inc"
+
+layout(set = 0, binding = 0) uniform texture3D sh_grid_images[9];
+layout(set = 0, binding = 1) uniform sampler sampler_nearest;
+
+layout(set = 0, binding = 2, rgba16f) uniform image3D sh_clipmaps[9];
+
+layout(set = 0, binding = 3) uniform texture2D gbuffer_depth_texture;
+
+layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneBuffer {
+    Scene scene;
+};
+
+layout(set = 0, binding = 5) uniform EnvGridBuffer {
+    EnvGrid env_grid;
+};
+
+layout(std430, set = 0, binding = 6, row_major) readonly buffer EnvProbesBuffer {
+    EnvProbe env_probes[];
+};
+
+layout(push_constant) uniform PushConstant {
+    uvec4 clipmap_dimensions;
+};
+
+int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
+{
+    const vec3 diff = world_position - env_grid.center.xyz;
+    const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
+
+    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
+        unit_diff = ivec3(0);
+        return -1;
+    }
+
+    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
+
+    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
+
+    return probe_index_at_point;
+}
+
+mat4 inverse_projection = inverse(scene.projection);
+
+float GetViewSpaceDepth(vec2 uv, float depth)
+{
+    return ReconstructViewSpacePositionFromDepth(inverse_projection, uv, depth).z;
+}
+
+uvec3 CoordToClipmapCoord(vec2 uv, float depth)
+{
+    const float view_depth = GetViewSpaceDepth(uv, depth);
+    const float view_depth_clamped = saturate(view_depth / MAX_DISTANCE);
+
+    const vec3 pos = vec3(uv, view_depth_clamped);
+
+    return min(uvec3(pos * vec3(clipmap_dimensions.xyz) - 0.5), clipmap_dimensions.xyz - 1);
+}
+
+void SetSH9InClipmap(uvec3 position, const in SH9 sh)
+{
+    // imageStore(sh_clipmaps[0], ivec3(position), vec4(sh.values[0].xyz, sh.values[1].x));
+    // imageStore(sh_clipmaps[1], ivec3(position), vec4(sh.values[1].yz, sh.values[2].xy));
+    // imageStore(sh_clipmaps[2], ivec3(position), vec4(sh.values[2].z, sh.values[3].xyz));
+    // imageStore(sh_clipmaps[3], ivec3(position), vec4(sh.values[4].xyz, sh.values[5].x));
+    // imageStore(sh_clipmaps[4], ivec3(position), vec4(sh.values[5].yz, sh.values[6].xy));
+    // imageStore(sh_clipmaps[5], ivec3(position), vec4(sh.values[6].z, sh.values[7].xyz));
+    // imageStore(sh_clipmaps[6], ivec3(position), vec4(sh.values[8].xyz, 0.0));
+
+    imageStore(sh_clipmaps[0], ivec3(position), vec4(sh.values[0], 1.0));
+    imageStore(sh_clipmaps[1], ivec3(position), vec4(sh.values[1], 1.0));
+    imageStore(sh_clipmaps[2], ivec3(position), vec4(sh.values[2], 1.0));
+    imageStore(sh_clipmaps[3], ivec3(position), vec4(sh.values[3], 1.0));
+    imageStore(sh_clipmaps[4], ivec3(position), vec4(sh.values[4], 1.0));
+    imageStore(sh_clipmaps[5], ivec3(position), vec4(sh.values[5], 1.0));
+    imageStore(sh_clipmaps[6], ivec3(position), vec4(sh.values[6], 1.0));
+    imageStore(sh_clipmaps[7], ivec3(position), vec4(sh.values[7], 1.0));
+    imageStore(sh_clipmaps[8], ivec3(position), vec4(sh.values[8], 1.0));
+}
+
+void main(void)
+{
+    const uvec2 id = uvec2(gl_GlobalInvocationID.xy);
+
+    if (any(greaterThanEqual(id, clipmap_dimensions.xy))) {
+        return;
+    }
+
+    vec2 uv = (vec2(id) + 0.5) / vec2(clipmap_dimensions.xy);
+
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, uv).r;
+    const vec4 world_position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), uv, depth);
+    
+
+    const float view_depth = GetViewSpaceDepth(uv, depth);
+    const float view_depth_clamped = saturate(view_depth / MAX_DISTANCE);
+
+    const uvec3 output_coord = uvec3(id, uint(clamp(view_depth_clamped * float(clipmap_dimensions.z) - 0.5, 0.0, float(clipmap_dimensions.z) - 1.0)));//CoordToClipmapCoord(uv, depth);
+
+
+
+    SH9 sh;
+
+    ivec3 probe_position;
+    int probe_index_at_point = GetLocalEnvProbeIndex(world_position.xyz, probe_position);
+
+    // if (depth > 0.999) {
+    //     for (int i = 0; i < 9; i++) {
+    //         sh.values[i] = vec3(0.0);
+    //     }
+    // } else {
+    //     for (int i = 0; i < 9; i++) {
+    //         sh.values[i] = world_position.xyz;
+    //     }
+    // }
+
+    // SetSH9InClipmap(output_coord, sh);
+
+    // return;
+
+    if (probe_index_at_point >= 1 && probe_index_at_point < HYP_MAX_BOUND_AMBIENT_PROBES) {
+        if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
+            const ivec3 image_size = textureSize(sampler3D(sh_grid_images[0], sampler_nearest), 0);
+            const vec3 texel_size = vec3(1.0) / vec3(image_size);
+
+            EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+            const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+            const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+            const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+
+            const vec3 pos_relative_to_grid = world_position.xyz - env_grid.center.xyz;
+            const vec3 pos_relative_to_probe = ((world_position.xyz - center) / (extent_unpadded)) + 0.5;
+
+            vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
+            coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
+
+            uint probe_index = uint(probe_index_at_point);
+
+            for (int i = 0; i < 9; i++) {
+                sh.values[i] = Texture3D(sampler_nearest, sh_grid_images[i], coord).rgb;
+            }
+
+            SetSH9InClipmap(output_coord, sh);
+
+            return;
+        }
+    }
+
+    if (probe_index_at_point < 0) {
+        for (int i = 0; i < 9; i++) {
+            sh.values[i] = vec3(0.0, 1.0, 0.0);
+        }
+    } else {
+        for (int i = 0; i < 9; i++) {
+            sh.values[i] = vec3(1.0, 0.0, 0.0);
+        }
+    }
+
+    SetSH9InClipmap(output_coord, sh);
+}

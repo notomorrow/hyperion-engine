@@ -56,17 +56,18 @@ layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
 };
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
-layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbeBuffer
+layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbesBuffer
 {
-    EnvProbe env_probes[HYP_MAX_ENV_PROBES];
+    EnvProbe env_probes[];
 };
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
+// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture3D sh_clipmaps[9];
+
+#endif
 
 #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
-
-#endif
 
 vec4 EnvProbeSample(
     sampler samp, textureCube tex,

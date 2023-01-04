@@ -281,9 +281,9 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
 
     vec3 irradiance = vec3(0.0);
 
-    for (int i = 0; i < 9; i++) {
-        irradiance += Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb * bands[i];
-    }
+    // for (int i = 0; i < 9; i++) {
+    //     irradiance += Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb * bands[i];
+    // }
 
     irradiance = max(irradiance, vec3(0.0));
 
@@ -292,32 +292,32 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
 
 void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
 {
-    ivec3 probe_position;
-    int probe_index_at_point = int(GetLocalEnvProbeIndex(P, probe_position));
+    
 
-    if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
-        return;
-    }
+    // ivec3 probe_position;
+    // int probe_index_at_point = int(GetLocalEnvProbeIndex(P, probe_position));
 
-    const float lod = 0.0;
+    // if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+    //     return;
+    // }
 
-    if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
-        const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
-        const vec3 texel_size = vec3(1.0) / vec3(image_size);
+    // if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
+    //     const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
+    //     const vec3 texel_size = vec3(1.0) / vec3(image_size);
 
-        EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
-        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
-        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+    //     EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+    //     const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+    //     const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+    //     const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
 
-        const vec3 pos_relative_to_grid = P - env_grid.center.xyz;
-        const vec3 pos_relative_to_probe = ((P - center) / (extent_unpadded)) + 0.5;
+    //     const vec3 pos_relative_to_grid = P - env_grid.center.xyz;
+    //     const vec3 pos_relative_to_probe = ((P - center) / (extent_unpadded)) + 0.5;
 
-        vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
-        coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
+    //     vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
+    //     coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
 
-        irradiance += SphericalHarmonicsSample(-N, coord) * ENV_PROBE_MULTIPLIER;
-    }
+    //     irradiance += SphericalHarmonicsSample(-N, coord) * ENV_PROBE_MULTIPLIER;
+    // }
 }
 
 vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
