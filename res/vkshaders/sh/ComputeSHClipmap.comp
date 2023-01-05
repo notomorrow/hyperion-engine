@@ -7,8 +7,9 @@
 
 #define SIZE_X 8
 #define SIZE_Y 8
+#define SIZE_Z 8
 
-layout(local_size_x = SIZE_X, local_size_y = SIZE_Y, local_size_z = 1) in;
+layout(local_size_x = SIZE_X, local_size_y = SIZE_Y, local_size_z = SIZE_Z) in;
 
 #define MAX_DISTANCE 300.0
 
@@ -41,6 +42,7 @@ layout(std430, set = 0, binding = 6, row_major) readonly buffer EnvProbesBuffer 
 
 layout(push_constant) uniform PushConstant {
     uvec4 clipmap_dimensions;
+    vec4 cage_center_world;
 };
 
 int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
@@ -53,11 +55,23 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
         return -1;
     }
 
-    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
+    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz) - 0.5);
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
         + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
+
+    return probe_index_at_point;
+}
+
+int GetProbeIndex(uvec3 coord_in_clipmap, out ivec3 coord_in_probe_grid)
+{
+    vec3 clipmap_uv = vec3(coord_in_clipmap) / vec3(clipmap_dimensions.xyz) - vec3(0.5);
+    coord_in_probe_grid = ivec3((clipmap_uv + vec3(0.5)) * vec3(env_grid.density.xyz));
+
+    int probe_index_at_point = (coord_in_probe_grid.x * int(env_grid.density.y) * int(env_grid.density.z))
+        + (coord_in_probe_grid.y * int(env_grid.density.z))
+        + coord_in_probe_grid.z + 1 /* + 1 because the first element is always the reflection probe */;
 
     return probe_index_at_point;
 }
@@ -100,16 +114,65 @@ void SetSH9InClipmap(uvec3 position, const in SH9 sh)
     imageStore(sh_clipmaps[8], ivec3(position), vec4(sh.values[8], 1.0));
 }
 
+#define PROBE_CAGE_VIEW_RANGE 800.0
+
 void main(void)
 {
-    const uvec2 id = uvec2(gl_GlobalInvocationID.xy);
+    const uvec3 id = uvec3(gl_GlobalInvocationID.xyz);
 
-    if (any(greaterThanEqual(id, clipmap_dimensions.xy))) {
+    if (any(greaterThanEqual(id, clipmap_dimensions.xyz))) {
         return;
     }
 
-    vec2 uv = (vec2(id) + 0.5) / vec2(clipmap_dimensions.xy);
+    SH9 sh;
 
+    vec3 uv = (vec3(id) + 0.5) / vec3(clipmap_dimensions.xyz);
+
+    const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(clipmap_dimensions.xyz);
+    // vec3 world_position = scene.camera_position.xyz + ((vec3(id) - vec3(clipmap_dimensions.xyz) * 0.5) * scale) + (vec3(1.0) / (scale) * 0.5);//(((uv - 0.5) * PROBE_CAGE_VIEW_RANGE) + (vec3(1.0) / (vec3(PROBE_CAGE_VIEW_RANGE) / vec3(clipmap_dimensions.xyz)) * 0.5));
+    vec3 world_position = scene.camera_position.xyz + (((vec3(id) - vec3(clipmap_dimensions.xyz) * 0.5) * scale));// + (vec3(1.0) / (vec3(PROBE_CAGE_VIEW_RANGE) / vec3(clipmap_dimensions.xyz)) * 0.5));
+
+    ivec3 probe_position;
+    int probe_index_at_point = GetLocalEnvProbeIndex(world_position, probe_position);//GetProbeIndex(id, probe_position); 
+
+        // for (int i = 0; i < 9; i++) {
+        //     uint probe_index = uint(probe_index_at_point);
+        //     sh.values[i] = UINT_TO_VEC4(probe_index).rgb;//Texture3DTexel(sampler_nearest, sh_grid_images[i], probe_position).rgb;
+        // }
+
+        // SetSH9InClipmap(id, sh);
+
+        // return;
+
+    if (probe_index_at_point >= 1 && probe_index_at_point < HYP_MAX_BOUND_AMBIENT_PROBES) {
+        if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
+            const ivec3 image_size = textureSize(sampler3D(sh_grid_images[0], sampler_nearest), 0);
+            const vec3 texel_size = vec3(1.0) / vec3(image_size);
+
+            EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+            const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+            const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+            const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+
+            const vec3 pos_relative_to_grid = world_position.xyz - env_grid.center.xyz;
+            const vec3 pos_relative_to_probe = ((world_position.xyz - center) / (extent_unpadded)) + 0.5;
+
+            vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
+            coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
+
+            for (int i = 0; i < 9; i++) {
+                uint probe_index = uint(probe_index_at_point);
+                sh.values[i] = Texture3DTexel(sampler_nearest, sh_grid_images[i], probe_position).rgb;
+            }
+
+            SetSH9InClipmap(id, sh);
+
+            return;
+        }
+    }
+
+
+#if 0
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, uv).r;
     const vec4 world_position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), uv, depth);
     
@@ -119,9 +182,6 @@ void main(void)
 
     const uvec3 output_coord = uvec3(id, uint(clamp(view_depth_clamped * float(clipmap_dimensions.z) - 0.5, 0.0, float(clipmap_dimensions.z) - 1.0)));//CoordToClipmapCoord(uv, depth);
 
-
-
-    SH9 sh;
 
     ivec3 probe_position;
     int probe_index_at_point = GetLocalEnvProbeIndex(world_position.xyz, probe_position);
@@ -168,6 +228,8 @@ void main(void)
         }
     }
 
+#endif
+
     if (probe_index_at_point < 0) {
         for (int i = 0; i < 9; i++) {
             sh.values[i] = vec3(0.0, 1.0, 0.0);
@@ -178,5 +240,6 @@ void main(void)
         }
     }
 
-    SetSH9InClipmap(output_coord, sh);
+    SetSH9InClipmap(id, sh);
+
 }
