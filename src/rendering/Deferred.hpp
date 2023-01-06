@@ -60,12 +60,24 @@ public:
     void CreateShader();
     virtual void CreateDescriptors() override;
     virtual void Create() override;
-    virtual void Destroy() override;
     virtual void Record(UInt frame_index) override;
     virtual void Render(Frame *frame) override;
 
 private:
     const bool m_is_indirect_pass;
+};
+
+class EnvGridPass : public FullScreenPass
+{
+public:
+    EnvGridPass();
+    EnvGridPass(const EnvGridPass &other) = delete;
+    EnvGridPass &operator=(const EnvGridPass &other) = delete;
+    virtual ~EnvGridPass() override;
+
+    void CreateShader();
+    virtual void Create() override;
+    virtual void Record(UInt frame_index) override;
 };
 
 class DeferredRenderer
@@ -125,6 +137,9 @@ private:
 
     DeferredPass m_indirect_pass;
     DeferredPass m_direct_pass;
+
+    EnvGridPass m_env_grid_pass;
+
     PostProcessing m_post_processing;
     UniquePtr<HBAO> m_hbao;
     UniquePtr<TemporalAA> m_temporal_aa;
@@ -139,8 +154,6 @@ private:
 
     FixedArray<Handle<Texture>, max_frames_in_flight> m_results;
     FixedArray<Handle<Texture>, max_frames_in_flight> m_mipmapped_results;
-    UniquePtr<Sampler> m_sampler;
-    UniquePtr<Sampler> m_depth_sampler;
     
     CullData m_cull_data;
 };

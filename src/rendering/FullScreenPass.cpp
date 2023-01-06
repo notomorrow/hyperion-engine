@@ -20,9 +20,9 @@ using renderer::FillMode;
 
 struct RENDER_COMMAND(CreateCommandBuffers) : RenderCommand
 {
-    UniquePtr<renderer::CommandBuffer> *command_buffers;
+    FixedArray<CommandBufferRef, max_frames_in_flight> command_buffers;
 
-    RENDER_COMMAND(CreateCommandBuffers)(UniquePtr<renderer::CommandBuffer> *command_buffers)
+    RENDER_COMMAND(CreateCommandBuffers)(const FixedArray<CommandBufferRef, max_frames_in_flight> &command_buffers)
         : command_buffers(command_buffers)
     {
     }
@@ -120,7 +120,7 @@ void FullScreenPass::Create()
     CreatePipeline();
     CreateDescriptors();
     
-    HYP_SYNC_RENDER();
+    // HYP_SYNC_RENDER();
 }
 
 void FullScreenPass::SetShader(const Handle<Shader> &shader)
@@ -141,11 +141,11 @@ void FullScreenPass::CreateQuad()
 void FullScreenPass::CreateCommandBuffers()
 {
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_command_buffers[i] = UniquePtr<CommandBuffer>::Construct(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        m_command_buffers[i] = RenderObjects::Make<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
     }
 
     // create command buffers in render thread
-    RenderCommands::Push<RENDER_COMMAND(CreateCommandBuffers)>(m_command_buffers.Data());
+    RenderCommands::Push<RENDER_COMMAND(CreateCommandBuffers)>(m_command_buffers);
 }
 
 void FullScreenPass::CreateFramebuffer()
@@ -240,9 +240,7 @@ void FullScreenPass::Destroy()
     m_framebuffer.Reset();
     m_render_group.Reset();
 
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        Engine::Get()->SafeRelease(std::move(m_command_buffers[i]));
-    }
+    SafeRelease(std::move(m_command_buffers));
 
     RenderCommands::Push<RENDER_COMMAND(DestroyFullScreenPassAttachments)>(std::move(m_attachments));
 

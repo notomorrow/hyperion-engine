@@ -19,6 +19,9 @@ class Engine;
 struct IDBase
 {
     using ValueType = UInt;
+
+    HYP_FORCE_INLINE constexpr bool IsValid() const
+        { return bool(value); }
     
     HYP_FORCE_INLINE explicit constexpr operator ValueType() const
         { return value; }
@@ -71,7 +74,7 @@ struct ID : IDBase
     ID &operator=(const IDBase &other) = delete; // delete so we cannot assign a type's ID to a different type
     ID &operator=(const ID &other) = default;
 
-    HYP_FORCE_INLINE operator bool() const
+    HYP_FORCE_INLINE explicit operator bool() const
         { return IDBase::operator bool(); }
 
     HYP_FORCE_INLINE bool operator==(const ID &other) const

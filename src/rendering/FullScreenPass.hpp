@@ -123,7 +123,7 @@ public:
 protected:
     void CreateQuad();
 
-    FixedArray<UniquePtr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
+    FixedArray<CommandBufferRef, max_frames_in_flight> m_command_buffers;
     Handle<Framebuffer> m_framebuffer;
     Handle<Shader> m_shader;
     Handle<RenderGroup> m_render_group;

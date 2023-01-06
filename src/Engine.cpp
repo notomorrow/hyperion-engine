@@ -725,27 +725,17 @@ void Engine::Initialize(RefCountedPtr<Application> application)
         auto *descriptor_set_globals = GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = &GetPlaceholderData().GetImageView3D1x1x1R8Storage(),
-                .sampler = &GetPlaceholderData().GetSamplerLinear()
-            });
+            ->SetElementImageSamplerCombined(0, &GetPlaceholderData().GetImageView3D1x1x1R8Storage(), &GetPlaceholderData().GetSamplerLinear());
 
         // add placeholder SSR image
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_FINAL_TEXTURE)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-            });
+            ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
 
         // sparse voxel octree buffer
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SVO_BUFFER)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .buffer = GetPlaceholderData().GetOrCreateBuffer<renderer::StorageBuffer>(GetGPUDevice(), sizeof(ShaderVec2<UInt32>))
-            });
+            ->SetElementBuffer(0, GetPlaceholderData().GetOrCreateBuffer<renderer::StorageBuffer>(GetGPUDevice(), sizeof(ShaderVec2<UInt32>)));
 
         { // add placeholder gbuffer textures
             auto *gbuffer_textures = descriptor_set_globals->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
@@ -754,19 +744,13 @@ void Engine::Initialize(RefCountedPtr<Application> application)
 
             // not including depth texture here
             for (UInt attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
-                gbuffer_textures->SetSubDescriptor({
-                    .element_index = element_index,
-                    .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                gbuffer_textures->SetElementSRV(element_index, &GetPlaceholderData().GetImageView2D1x1R8());
 
                 ++element_index;
             }
 
             // add translucent bucket's albedo
-            gbuffer_textures->SetSubDescriptor({
-                .element_index = element_index,
-                .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-            });
+            gbuffer_textures->SetElementSRV(element_index, &GetPlaceholderData().GetImageView2D1x1R8());
 
             ++element_index;
         }
@@ -776,48 +760,42 @@ void Engine::Initialize(RefCountedPtr<Application> application)
             /* Depth texture */
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::GBUFFER_DEPTH)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
 
             /* Mip chain */
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
 
             /* Gbuffer depth sampler */
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .sampler = &GetPlaceholderData().GetSamplerNearest()
-                });
+                ->SetElementSampler(0, &GetPlaceholderData().GetSamplerNearest());
 
             /* Gbuffer sampler */
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .sampler = &GetPlaceholderData().GetSamplerLinear()
-                });
+                ->SetElementSampler(0, &GetPlaceholderData().GetSamplerLinear());
 
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEPTH_PYRAMID_RESULT)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_DIRECT)
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_AMBIENT)
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_IRRADIANCE_ACCUM)
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
                 
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = &GetPlaceholderData().GetImageView2D1x1R8()
-                });
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
         }
 
         { // POST FX processing placeholders
