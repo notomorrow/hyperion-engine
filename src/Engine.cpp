@@ -792,6 +792,10 @@ void Engine::Initialize(RefCountedPtr<Application> application)
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_IRRADIANCE_ACCUM)
                 ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            descriptor_set_globals
+                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_REFLECTION_PROBE)
+                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
                 
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)

@@ -18,6 +18,7 @@
 struct DeferredParams
 {
     uint flags;
+    uint reflection_probe_index;
 };
 
 struct Refraction
@@ -179,6 +180,8 @@ vec3 CalculateRefraction(
 
 #include "../include/env_probe.inc"
 
+#ifndef HYP_DEFERRED_NO_ENV_GRID
+
 int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
 {
     const vec3 diff = world_position - env_grid.center.xyz;
@@ -198,52 +201,14 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
     return probe_index_at_point;
 }
 
-int GetLocalEnvProbeIndexOffset(vec3 world_position, vec3 offset)
+void ApplyReflectionProbe(uint, vec3, vec3, float, inout vec4);
+
+void ApplyEnvGridReflection(uint local_probe_index, vec3 P, vec3 R, float lod, inout vec4 ibl)
 {
-    vec3 diff = world_position - env_grid.center.xyz;
-    vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
+    uint probe_index = GET_GRID_PROBE_INDEX(local_probe_index);
 
-    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
-        return -1;
-    }
-
-    ivec3 unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz)) + ivec3(floor(offset));
-
-    int offset_index = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
-        + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
-
-    return offset_index;
+    ApplyReflectionProbe(probe_index, P, R, lod, ibl);
 }
-
-void _ApplyEnvProbeSample(uint probe_index, vec3 P, vec3 R, float lod, inout vec3 ibl, bool include_shadow)
-{
-    EnvProbe probe = GET_GRID_PROBE(probe_index);
-
-    if (probe.texture_index != ~0u) {
-        const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
-
-        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
-        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
-        const vec3 diff = P - center;
-
-        const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
-
-        vec4 env_probe_sample = EnvProbeSample(
-            sampler_linear,
-            env_probe_textures[probe_texture_index],
-            is_parallax_corrected
-                ? EnvProbeCoordParallaxCorrected(probe, P, R)
-                : R,
-            lod
-        );
-
-        env_probe_sample.rgb = ReverseTonemapReinhardSimple(env_probe_sample.rgb);
-
-        ibl = env_probe_sample.rgb * mix(1.0, max(0.1, env_probe_sample.a), float(include_shadow));
-    }
-}
-
 
 float[9] ProjectSHBands(vec3 N)
 {
@@ -324,17 +289,56 @@ float CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N
     return 0.0;
 }
 
-vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
+vec4 CalculateEnvGridReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
 {
-    vec3 ibl = vec3(0.0);
+    vec4 ibl = vec4(0.0);
 
     const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
     if (bool(env_grid.enabled_indices_mask & (1 << 0))) {
-        _ApplyEnvProbeSample(0, P, R, lod, ibl, true);
+        ApplyEnvGridReflection(0, P, R, lod, ibl);
     }
 
-    return ibl;// * ENV_PROBE_MULTIPLIER;
+    return ibl;
+}
+
+#endif
+
+void ApplyReflectionProbe(uint probe_index, vec3 P, vec3 R, float lod, inout vec4 ibl)
+{
+    EnvProbe probe = env_probes[probe_index];
+
+    ibl = vec4(0.0);
+
+    if (probe.texture_index != ~0u) {
+        const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+
+        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
+        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+        const vec3 diff = P - center;
+
+        const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
+
+        ibl = EnvProbeSample(
+            sampler_linear,
+            env_probe_textures[probe_texture_index],
+            is_parallax_corrected
+                ? EnvProbeCoordParallaxCorrected(probe, P, R)
+                : R,
+            lod
+        );
+    }
+}
+
+vec4 CalculateReflectionProbe(DeferredParams deferred_params, uint probe_index, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
+{
+    vec4 ibl = vec4(0.0);
+
+    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+
+    ApplyReflectionProbe(probe_index, P, R, lod, ibl);
+
+    return ibl;
 }
 
 #endif

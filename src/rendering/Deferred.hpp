@@ -80,6 +80,19 @@ public:
     virtual void Record(UInt frame_index) override;
 };
 
+class ReflectionProbePass : public FullScreenPass
+{
+public:
+    ReflectionProbePass();
+    ReflectionProbePass(const ReflectionProbePass &other) = delete;
+    ReflectionProbePass &operator=(const ReflectionProbePass &other) = delete;
+    virtual ~ReflectionProbePass() override;
+
+    void CreateShader();
+    virtual void Create() override;
+    virtual void Record(UInt frame_index) override;
+};
+
 class DeferredRenderer
 {
     static const Extent2D mipmap_chain_extent;
@@ -139,6 +152,7 @@ private:
     DeferredPass m_direct_pass;
 
     EnvGridPass m_env_grid_pass;
+    ReflectionProbePass m_reflection_probe_pass;
 
     PostProcessing m_post_processing;
     UniquePtr<HBAO> m_hbao;

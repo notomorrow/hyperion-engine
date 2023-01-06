@@ -81,6 +81,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::DEFERRED_LIGHTING_AMBIENT, 55},
             {DescriptorKey::DEFERRED_LIGHTING_DIRECT,  56},
             {DescriptorKey::DEFERRED_IRRADIANCE_ACCUM, 57},
+            {DescriptorKey::DEFERRED_REFLECTION_PROBE, 58},
             
             {DescriptorKey::SH_VOLUMES, 61}
         }

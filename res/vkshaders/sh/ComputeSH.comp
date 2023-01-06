@@ -46,38 +46,6 @@ ivec2 GetCoefficientCoord(int coefficient_index)
 
 #define CURRENT_TILE sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
 
-// void AtomicSwap(int coefficient_index, uint val)
-// {
-//     ivec2 coefficient_coord = GetCoefficientCoord(coefficient_index);
-
-//     uint prev_val = 0, cur_val, new_val = val;
-//     float r = uintBitsToFloat(val);
-
-//     while ((cur_val = imageAtomicCompSwap(sh_weights, coefficient_coord, prev_val, new_val)) != prev_val) {
-//         prev_val = cur_val;
-//         float prev_color = uintBitsToFloat(cur_val);
-//         float combined = r + prev_color;
-
-//         new_val = floatBitsToUint(combined);
-//     }
-// }
-
-// void AtomicSwapRGBA8(int coefficient_index, uint val)
-// {
-//     ivec2 coefficient_coord = GetCoefficientCoord(coefficient_index);
-
-//     uint prev_val = 0, cur_val, new_val = val;
-//     vec4 rgba = UINT_TO_VEC4(val);
-
-//     while ((cur_val = imageAtomicCompSwap(sh_output, coefficient_coord, prev_val, new_val)) != prev_val) {
-//         prev_val = cur_val;
-//         vec4 prev_color = UINT_TO_VEC4(cur_val);
-//         vec4 combined = rgba + prev_color;
-
-//         new_val = VEC4_TO_UINT(combined);
-//     }
-// }
-
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
     vec3 dir = vec3(0.0);
 
@@ -125,7 +93,6 @@ float TexelSolidAngle(vec2 uv)
 
     return AreaIntegral(x0, y0) - AreaIntegral(x0, y1) - AreaIntegral(x1, y0) + AreaIntegral(x1, y1);
 }
-
 
 float[9] ProjectOntoSHBands(vec3 dir)
 {
@@ -179,7 +146,7 @@ void main(void)
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
     const vec2 size_per_sample = vec2(cubemap_dimensions) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
-    const vec2 sample_fract = size_per_sample * vec2(sample_index);//vec2(sample_index) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+    const vec2 sample_fract = size_per_sample * vec2(sample_index);
 
     const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions);
     const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
@@ -188,12 +155,11 @@ void main(void)
     const vec3 dir = MapXYSToDirection(face_index, sample_point); 
 
     vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
-    // cubemap_sample.rgb = ReverseTonemapReinhardSimple(cubemap_sample.rgb);
 
     float sh_values[27] = ProjectOntoSH9Color(dir, cubemap_sample.rgb);
 
     float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
-    float weight = TexelSolidAngle(sample_point);///
+    float weight = TexelSolidAngle(sample_point);
 
     for (int i = 0; i < 9; i++) {
         vec3 sh_color = vec3(

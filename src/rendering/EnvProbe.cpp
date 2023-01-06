@@ -10,6 +10,8 @@ struct RenderCommand_DestroyCubemapRenderPass;
 
 using renderer::Result;
 
+static const Extent2D num_tiles = { 4, 4 };
+
 struct alignas(16) SHTile
 {
     ShaderVec4<Float> coeffs_weights[9];
@@ -146,7 +148,7 @@ struct RENDER_COMMAND(CreateSHData) : RenderCommand
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(SHTile) * 6 * 4 * 4));
+        HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(SHTile) * num_tiles.Size() * 6));
 
         HYPERION_RETURN_OK;
     }
@@ -209,6 +211,17 @@ void EnvProbe::Init()
 
     EngineComponentBase::Init();
 
+    m_draw_proxy = EnvProbeDrawProxy {
+        .id = m_id,
+        .aabb = m_aabb,
+        .world_position = m_aabb.GetCenter(),
+        .flags = m_is_ambient_probe
+            ? EnvProbeFlags::ENV_PROBE_NONE
+            : EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
+    };
+
+    m_needs_update = false;
+
     const Vector3 origin = m_aabb.GetCenter();
 
     {
@@ -233,48 +246,52 @@ void EnvProbe::Init()
         ));
 
         InitObject(m_texture);
+
+        CreateShader();
+        CreateFramebuffer();
+        CreateImagesAndBuffers();
+
+        AssertThrow(m_parent_scene.IsValid());
+
+        m_scene = CreateObject<Scene>(CreateObject<Camera>(
+            90.0f,
+            -Int(m_dimensions.width), Int(m_dimensions.height),
+            0.001f, m_aabb.GetExtent().Max() * 0.5f
+        ));
+
+        m_scene->GetCamera()->SetViewMatrix(Matrix4::LookAt(Vector3(0.0f, 0.0f, 1.0f), origin, Vector3(0.0f, 1.0f, 0.0f)));
+        m_scene->GetCamera()->SetFramebuffer(m_framebuffer);
+
+        m_scene->SetName("Cubemap renderer scene");
+        m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
+            MeshAttributes { },
+            MaterialAttributes {
+                .bucket = BUCKET_INTERNAL,
+                .cull_faces = FaceCullMode::BACK
+            },
+            m_shader->GetID()
+        ));
+
+        // set ID so scene can index into env probes
+        m_scene->SetCustomID(GetID());
+        m_scene->SetParentScene(m_parent_scene);
+
+        InitObject(m_scene);
+
+        Engine::Get()->GetWorld()->AddScene(m_scene);
     }
 
-
-    // CreateShader();
-    // CreateFramebuffer();
-    // CreateImagesAndBuffers();
-
-    // m_scene = CreateObject<Scene>(CreateObject<Camera>(
-    //     90.0f,
-    //     cubemap_dimensions.width, cubemap_dimensions.height,
-    //     0.01f, 1000.0f
-    // ));
-
-    // m_scene->GetCamera()->SetViewMatrix(Matrix4::LookAt(Vector3(0.0f, 0.0f, 1.0f), origin, Vector3(0.0f, 1.0f, 0.0f)));
-    // m_scene->GetCamera()->SetFramebuffer(m_framebuffer);
-
-    // m_scene->SetName("Cubemap renderer scene");
-    // m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
-    //     MeshAttributes { },
-    //     MaterialAttributes {
-    //         .bucket = BUCKET_INTERNAL,
-    //         .cull_faces = FaceCullMode::BACK
-    //     },
-    //     m_shader->GetID()
-    // ));
-
-    // // set ID so scene can index into env probes
-    // m_scene->SetCustomID(GetID());
-    // m_scene->SetParentScene(std::move(m_parent_scene));
-
-    // InitObject(m_scene);
-    // Engine::Get()->GetWorld()->AddScene(m_scene);
-
-
     SetReady(true);
-    Update();
 
     OnTeardown([this]() {
-        // Engine::Get()->GetWorld()->RemoveScene(m_scene->GetID());
-        // m_scene.Reset();
+        if (m_scene) {
+            Engine::Get()->GetWorld()->RemoveScene(m_scene->GetID());
+            m_scene.Reset();
+        }
 
-        // PUSH_RENDER_COMMAND(DestroyCubemapRenderPass, *this);
+        if (m_framebuffer) {
+            PUSH_RENDER_COMMAND(DestroyCubemapRenderPass, *this);
+        }
 
         SetReady(false);
 
@@ -294,16 +311,15 @@ void EnvProbe::CreateImagesAndBuffers()
     }
     
     PUSH_RENDER_COMMAND(CreateCubemapBuffers, *this);
-
-    DebugLog(
-        LogType::Debug,
-        "Added cubemap uniform buffers\n"
-    );
 }
 
 void EnvProbe::CreateShader()
 {
-    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("CubemapRenderer"));
+    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
+        "CubemapRenderer",
+        ShaderProps({ "LIGHTING", "SHADOWS", "TONEMAP" })
+    ));
+
     InitObject(m_shader);
 }
 
@@ -437,28 +453,21 @@ void EnvProbe::EnqueueUnbind() const
 
 void EnvProbe::Update()
 {
+    Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
 
-    // if (!m_needs_update) {
-    //     return;
-    // }
+    if (!m_needs_update) {
+        return;
+    }
 
-#if 0
-    RenderCommands::Push<RENDER_COMMAND(UpdateEnvProbeDrawProxy)>(*this, EnvProbeDrawProxy {
+    PUSH_RENDER_COMMAND(UpdateEnvProbeDrawProxy, *this, EnvProbeDrawProxy {
         .id = m_id,
         .aabb = m_aabb,
         .world_position = m_aabb.GetCenter(),
-        .flags = EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
+        .flags = m_is_ambient_probe
+            ? EnvProbeFlags::ENV_PROBE_NONE
+            : EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
     });
-
-#else
-    m_draw_proxy = EnvProbeDrawProxy {
-        .id = m_id,
-        .aabb = m_aabb,
-        .world_position = m_aabb.GetCenter(),
-        .flags = EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
-    };
-#endif
 
     m_needs_update = false;
 }
@@ -496,12 +505,17 @@ void EnvProbe::Render(Frame *frame)
     }
 
     if (probe_index == ~0u) {
+        DebugLog(LogType::Warn, "Env Probe #%u not found in render state bound env probe IDs\n", GetID().Value());
+
         return;
     }
 
     UpdateRenderData(probe_index);
+    
+    struct alignas(128) { UInt32 env_probe_index; } push_constants;
+    push_constants.env_probe_index = GetID().ToIndex();
 
-    m_scene->Render(frame);
+    m_scene->Render(frame, &push_constants, sizeof(push_constants));
 
     Image *framebuffer_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
 
@@ -614,13 +628,22 @@ void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)
     AssertReady();
 
     if (IsAmbientProbe()) {
-        AssertThrow(probe_index < max_bound_ambient_probes);
+        if (probe_index.GetProbeIndex() >= max_bound_ambient_probes) {
+            DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound ambient probes\n", probe_index.GetProbeIndex());
+
+            return;
+        }
     } else {
-        // find the texture slot of this env probe (if it exists)
-        AssertThrow(probe_index < max_bound_reflection_probes);
+        if (probe_index.GetProbeIndex() >= max_bound_reflection_probes) {
+            DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound reflection probes\n", probe_index.GetProbeIndex());
+
+            return;
+        }
     }
 
     m_bound_index = probe_index;
+    
+    const UInt texture_slot = IsAmbientProbe() ? ~0u : m_bound_index.GetProbeIndex();
 
     EnvProbeShaderData data {
         .face_view_matrices = {
@@ -634,29 +657,31 @@ void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)
         .aabb_max = Vector4(m_draw_proxy.aabb.max, 1.0f),
         .aabb_min = Vector4(m_draw_proxy.aabb.min, 1.0f),
         .world_position = Vector4(m_draw_proxy.world_position, 1.0f),
-        .texture_index = m_is_ambient_probe ? ~0u : probe_index.GetProbeIndex(),
+        .texture_index = texture_slot,
         .flags = UInt32(m_draw_proxy.flags)
     };
 
     Engine::Get()->GetRenderData()->env_probes.Set(GetID().ToIndex(), data);
 
+    // ambient probes have no need to update texture at the binding slot.
+    if (IsAmbientProbe()) {
+        return;
+    }
+
     // update cubemap texture in array of bound env probes
-    if (probe_index != ~0u) {
-        // ambient probes only use spherical harmonics
-        if (!IsAmbientProbe()) {
-            AssertThrow(m_texture.IsValid());
+    if (texture_slot != ~0u) {
+        AssertThrow(m_texture.IsValid());
 
-            const auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
+        const auto &descriptor_pool = Engine::Get()->GetGPUInstance()->GetDescriptorPool();
 
-            for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                auto *descriptor_set = descriptor_pool.GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-                auto *descriptor = descriptor_set->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENV_PROBE_TEXTURES);
+        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            auto *descriptor_set = descriptor_pool.GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENV_PROBE_TEXTURES);
 
-                descriptor->SetElementSRV(
-                    probe_index.GetProbeIndex(),
-                    m_texture->GetImageView()
-                );
-            }
+            descriptor->SetElementSRV(
+                texture_slot,
+                m_texture->GetImageView()
+            );
         }
     }
 }
