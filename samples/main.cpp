@@ -292,10 +292,16 @@ public:
 
         test_model.Scale(0.25f);
 
-        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
+        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
                 test_model.GetWorldAABB() * 1.01f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
                 Extent3D { 16, 2, 16 }
+            );
+        }
+
+        if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
+            m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
+                test_model.GetWorldAABB()
             );
         }
 

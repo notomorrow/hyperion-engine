@@ -129,13 +129,13 @@ void EnvGrid::Init()
         Engine::Get()->GetWorld()->AddScene(m_ambient_scene);
     }
 
-    m_reflection_probe->EnqueueBind();
+    // m_reflection_probe->EnqueueBind();
 
-    for (auto &env_probe : m_ambient_probes) {
-        if (InitObject(env_probe)) {
-            env_probe->EnqueueBind();
-        }
-    }
+    // for (auto &env_probe : m_ambient_probes) {
+    //     if (InitObject(env_probe)) {
+    //         env_probe->EnqueueBind();
+    //     }
+    // }
 
     DebugLog(LogType::Info, "Created %llu total ambient EnvProbes in grid\n", num_ambient_probes);
 }
@@ -148,13 +148,13 @@ void EnvGrid::InitGame()
 
 void EnvGrid::OnRemoved()
 {
-    if (m_reflection_probe) {
-        m_reflection_probe->EnqueueUnbind();
-    }
+    // if (m_reflection_probe) {
+    //     m_reflection_probe->EnqueueUnbind();
+    // }
 
-    for (auto &env_probe : m_ambient_probes) {
-        env_probe->EnqueueUnbind();
-    }
+    // for (auto &env_probe : m_ambient_probes) {
+    //     env_probe->EnqueueUnbind();
+    // }
 
     Engine::Get()->GetWorld()->RemoveScene(m_reflection_scene->GetID());
     m_reflection_scene.Reset();
@@ -201,7 +201,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_reflection_probe->Update();
+    // m_reflection_probe->Update();
 
     for (auto &env_probe : m_ambient_probes) {
         // TODO: Just update render data in Render()
@@ -216,15 +216,15 @@ void EnvGrid::OnRender(Frame *frame)
 
     m_shader_data.enabled_indices_mask = 0u;
 
-    if (m_reflection_probe) {
-        m_reflection_probe->UpdateRenderData(EnvProbeIndex(
-            Extent3D { 0, 0, 0 },
-            Extent3D { 0, 0, 0 }
-        ));
+    // if (m_reflection_probe) {
+    //     m_reflection_probe->UpdateRenderData(EnvProbeIndex(
+    //         Extent3D { 0, 0, 0 },
+    //         Extent3D { 0, 0, 0 }
+    //     ));
 
-        m_shader_data.probe_indices[0] = m_reflection_probe->GetID().ToIndex();
-        m_shader_data.enabled_indices_mask |= (1u << 0u);
-    }
+    //     m_shader_data.probe_indices[0] = m_reflection_probe->GetID().ToIndex();
+    //     m_shader_data.enabled_indices_mask |= (1u << 0u);
+    // }
     
     if (num_ambient_probes != 0) {
         AssertThrow(m_current_probe_index < m_ambient_probes.Size());
@@ -272,7 +272,6 @@ void EnvGrid::OnRender(Frame *frame)
 
             m_current_probe_index = (m_current_probe_index + 1) % num_ambient_probes;
         }
-
             
         for (UInt index = 0; index < num_ambient_probes; index++) {
             const auto &env_probe = m_ambient_probes[index];
@@ -290,9 +289,9 @@ void EnvGrid::OnRender(Frame *frame)
 
     Engine::Get()->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
 
-    if (m_reflection_probe) {
-        RenderEnvProbe(frame, m_reflection_scene, m_reflection_probe);
-    }
+    // if (m_reflection_probe) {
+    //     RenderEnvProbe(frame, m_reflection_scene, m_reflection_probe);
+    // }
 }
 
 void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)

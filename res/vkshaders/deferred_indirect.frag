@@ -16,7 +16,8 @@ layout(location=2) out vec4 output_positions;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 57) uniform texture2D env_grid_irradiance;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 57) uniform texture2D env_grid_irradiance_texture;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 58) uniform texture2D reflection_probes_texture;
 
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
@@ -122,14 +123,16 @@ void main()
 #endif
 
 #ifdef ENV_PROBE_ENABLED
-        ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, scene.camera_position.xyz, perceptual_roughness);
+        vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
+        ibl.rgb = ReverseTonemapReinhardSimple(reflection_probes_color.rgb);
+        ibl.rgb *= reflection_probes_color.a;
 #endif
 
 #ifdef SSR_ENABLED
         CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
 #endif
 
-        irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance, texcoord).rgb * ENV_PROBE_MULTIPLIER;
+        irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
 #ifdef RT_ENABLED
         CalculateRaytracingReflection(deferred_params, texcoord, reflections);
@@ -163,8 +166,6 @@ void main()
         vec4 final_result = vec4(result, 1.0);
         ApplyFog(position.xyz, final_result);
         result = final_result.rgb;
-
-        // result = Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance, texcoord).rgb * ENV_PROBE_MULTIPLIER;
     } else {
         result = albedo.rgb;
     }

@@ -1,0 +1,49 @@
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(location=0) in vec3 v_position;
+layout(location=1) in vec2 v_texcoord;
+
+layout(location=0) out vec4 color_output;
+
+#include "../include/shared.inc"
+#include "../include/defines.inc"
+#include "../include/gbuffer.inc"
+#include "../include/scene.inc"
+#include "../include/brdf.inc"
+#include "../include/tonemap.inc"
+
+#define HYP_DEFERRED_NO_RT_RADIANCE
+#define HYP_DEFERRED_NO_SSR
+#define HYP_DEFERRED_NO_ENV_GRID
+
+#define ENV_PROBE_ENABLED
+#include "./DeferredLighting.glsl"
+#include "../include/env_probe.inc"
+
+layout(push_constant) uniform PushConstant
+{
+    DeferredParams deferred_params;
+};
+
+void main()
+{
+    vec3 irradiance = vec3(0.0);
+
+    const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
+    const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), v_texcoord, depth).xyz;
+    const vec3 V = normalize(scene.camera_position.xyz - P);
+    const vec3 R = normalize(reflect(-V, N));
+
+    const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
+    const float roughness = material.r;
+    const float perceptual_roughness = sqrt(roughness);
+
+    vec4 ibl = CalculateReflectionProbe(deferred_params, deferred_params.reflection_probe_index, P, N, R, scene.camera_position.xyz, perceptual_roughness);
+
+    color_output = ibl;
+}

@@ -29,7 +29,7 @@ CubemapRenderer::CubemapRenderer(
 
 CubemapRenderer::~CubemapRenderer()
 {
-    Teardown();
+    SetReady(false);
 }
 
 void CubemapRenderer::Init()
@@ -50,14 +50,6 @@ void CubemapRenderer::Init()
     InitObject(m_env_probe);
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        m_env_probe.Reset();
-
-        HYP_SYNC_RENDER();
-
-        SetReady(false);
-    });
 }
 
 // called from game thread

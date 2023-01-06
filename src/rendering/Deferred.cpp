@@ -247,6 +247,94 @@ void EnvGridPass::Record(UInt frame_index)
 
 // ===== Env Grid Pass End =====
 
+// ===== Reflection Probe Pass Begin =====
+
+ReflectionProbePass::ReflectionProbePass()
+    : FullScreenPass(InternalFormat::RGBA8_SRGB)
+{
+}
+
+ReflectionProbePass::~ReflectionProbePass() = default;
+
+void ReflectionProbePass::CreateShader()
+{
+    ShaderProps props { };
+    
+    CompiledShader compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
+        "ApplyReflectionProbe",
+        props
+    );
+
+    m_shader = CreateObject<Shader>(compiled_shader);
+    InitObject(m_shader);
+}
+
+void ReflectionProbePass::Create()
+{
+    CreateShader();
+    FullScreenPass::CreateQuad();
+    FullScreenPass::CreateCommandBuffers();
+    FullScreenPass::CreateFramebuffer();
+
+    RenderableAttributeSet renderable_attributes(
+        MeshAttributes {
+            .vertex_attributes = renderer::static_mesh_vertex_attributes
+        },
+        MaterialAttributes {
+            .bucket = Bucket::BUCKET_INTERNAL,
+            .fill_mode = FillMode::FILL,
+            .blend_mode = BlendMode::NORMAL
+        }
+    );
+
+    FullScreenPass::CreatePipeline(renderable_attributes);
+}
+
+void ReflectionProbePass::Record(UInt frame_index)
+{
+    auto *command_buffer = m_command_buffers[frame_index].Get();
+
+    auto record_result = command_buffer->Record(
+        Engine::Get()->GetGPUInstance()->GetDevice(),
+        m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
+        [this, frame_index](CommandBuffer *cmd) {
+            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
+            m_render_group->GetPipeline()->Bind(cmd);
+
+            const auto &scene_binding = Engine::Get()->render_state.GetScene();
+            const auto scene_index = scene_binding.id.ToIndex();
+
+            cmd->BindDescriptorSet(
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+                m_render_group->GetPipeline(),
+                DescriptorSet::global_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
+            );
+            
+            // TODO: Do for each REFLECTION PROBE in view
+            
+            cmd->BindDescriptorSet(
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+                m_render_group->GetPipeline(),
+                DescriptorSet::scene_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+                FixedArray {
+                    HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0),
+                    HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0)
+                }
+            );
+
+            m_full_screen_quad->Render(cmd);
+
+            HYPERION_RETURN_OK;
+        });
+
+    HYPERION_ASSERT_RESULT(record_result);
+}
+
+// ===== Reflection Probe Pass End =====
+
 DeferredRenderer::DeferredRenderer()
     : m_ssr(ssr_extent),
       m_indirect_pass(true),
@@ -261,6 +349,7 @@ void DeferredRenderer::Create()
     Threads::AssertOnThread(THREAD_RENDER);
     
     m_env_grid_pass.Create();
+    m_reflection_probe_pass.Create();
 
     m_post_processing.Create();
     m_indirect_pass.Create();
@@ -369,6 +458,10 @@ void DeferredRenderer::CreateDescriptorSets()
             ->SetElementSRV(0, m_env_grid_pass.GetAttachmentUsage(0)->GetImageView());
 
         descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_REFLECTION_PROBE)
+            ->SetElementSRV(0, m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
+
+        descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
             ->SetElementSRV(0, m_combine_pass->GetAttachmentUsage(0)->GetImageView());
     }
@@ -408,6 +501,7 @@ void DeferredRenderer::Destroy()
     m_combine_pass->Destroy();
 
     m_env_grid_pass.Destroy();
+    m_reflection_probe_pass.Destroy();
 
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[frame_index]));
@@ -437,11 +531,16 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const bool use_ddgi = Engine::Get()->GetConfig().Get(CONFIG_RT_GI);
     const bool use_hbao = Engine::Get()->GetConfig().Get(CONFIG_HBAO);
     const bool use_hbil = Engine::Get()->GetConfig().Get(CONFIG_HBIL);
-    const bool use_env_grid_reflections = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS);// && Engine::Get()->GetRenderState().bound_env_grid.IsValid();
     const bool use_env_grid_irradiance = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI);// && Engine::Get()->GetRenderState().bound_env_grid.IsValid();
+    const bool use_reflection_probes = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS) && Engine::Get()->GetRenderState().bound_env_probes.Any();
 
-    struct alignas(128) { UInt32 flags; } deferred_data;
-    deferred_data.flags = 0;
+    struct alignas(128) {
+        UInt32 flags;
+        UInt32 probe_index;
+    } deferred_data;
+
+    Memory::Set(&deferred_data, 0, sizeof(deferred_data));
+
     deferred_data.flags |= use_ssr && m_ssr.IsRendered() ? DEFERRED_FLAGS_SSR_ENABLED : 0;
     deferred_data.flags |= use_hbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
     deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
@@ -490,11 +589,20 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     if (use_env_grid_irradiance) { // submit env grid command buffer
         DebugMarker marker(primary, "Apply env grid");
 
-        // TODO: For each reflection grid in the frame, apply again, accumulating in the framebuffer...
-
         m_env_grid_pass.SetPushConstants(&deferred_data, sizeof(deferred_data));
         m_env_grid_pass.Record(frame_index);
         m_env_grid_pass.Render(frame);
+    }
+
+    if (use_reflection_probes) { // submit reflection probes command buffer
+        DebugMarker marker(primary, "Apply reflection probes");
+
+        // TEMP
+        deferred_data.probe_index = Engine::Get()->GetRenderState().bound_env_probes.Front().first.ToIndex();
+
+        m_reflection_probe_pass.SetPushConstants(&deferred_data, sizeof(deferred_data));
+        m_reflection_probe_pass.Record(frame_index);
+        m_reflection_probe_pass.Render(frame);
     }
 
     if (use_rt_radiance) {

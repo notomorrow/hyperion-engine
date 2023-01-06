@@ -91,8 +91,6 @@ void main()
     #else
         output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w;
     #endif
-
-    // output_color.rgb = albedo.rgb * NdotL + vec3(HYP_CUBEMAP_AMBIENT);
 #else
     output_color.rgb = albedo.rgb;
 
