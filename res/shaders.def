@@ -13,6 +13,11 @@ permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
 frag = deferred/DeferredCombine.frag
 vert = PostEffect.vert
 
+[ApplyEnvGrid]
+permute = MODE(REFLECTION IRRADIANCE)
+frag = deferred/ApplyEnvGrid.frag
+vert = deferred.vert
+
 [FXAA]
 frag = fxaa.frag
 vert = PostEffect.vert

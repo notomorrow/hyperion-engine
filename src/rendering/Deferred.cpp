@@ -20,7 +20,7 @@ const Extent2D DeferredRenderer::hbao_extent(512, 512);
 const Extent2D DeferredRenderer::ssr_extent(512, 512);
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
-    : FullScreenPass(InternalFormat::RGBA32F),
+    : FullScreenPass(InternalFormat::RGBA16F),
       m_is_indirect_pass(is_indirect_pass)
 {
 }
@@ -79,11 +79,6 @@ void DeferredPass::Create()
     );
 
     FullScreenPass::CreatePipeline(renderable_attributes);
-}
-
-void DeferredPass::Destroy()
-{
-    FullScreenPass::Destroy(); // flushes render queue
 }
 
 void DeferredPass::Record(UInt frame_index)
@@ -164,6 +159,94 @@ void DeferredPass::Render(Frame *frame)
     FullScreenPass::Render(frame);
 }
 
+// ===== Env Grid Pass Begin =====
+
+EnvGridPass::EnvGridPass()
+    : FullScreenPass(InternalFormat::RGBA8_SRGB)
+{
+}
+
+EnvGridPass::~EnvGridPass() = default;
+
+void EnvGridPass::CreateShader()
+{
+    ShaderProps props { };
+    
+    CompiledShader compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
+        "ApplyEnvGrid",
+        props
+    );
+
+    m_shader = CreateObject<Shader>(compiled_shader);
+    InitObject(m_shader);
+}
+
+void EnvGridPass::Create()
+{
+    CreateShader();
+    FullScreenPass::CreateQuad();
+    FullScreenPass::CreateCommandBuffers();
+    FullScreenPass::CreateFramebuffer();
+
+    RenderableAttributeSet renderable_attributes(
+        MeshAttributes {
+            .vertex_attributes = renderer::static_mesh_vertex_attributes
+        },
+        MaterialAttributes {
+            .bucket = Bucket::BUCKET_INTERNAL,
+            .fill_mode = FillMode::FILL,
+            .blend_mode = BlendMode::ADDITIVE
+        }
+    );
+
+    FullScreenPass::CreatePipeline(renderable_attributes);
+}
+
+void EnvGridPass::Record(UInt frame_index)
+{
+    auto *command_buffer = m_command_buffers[frame_index].Get();
+
+    auto record_result = command_buffer->Record(
+        Engine::Get()->GetGPUInstance()->GetDevice(),
+        m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
+        [this, frame_index](CommandBuffer *cmd) {
+            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
+            m_render_group->GetPipeline()->Bind(cmd);
+
+            const auto &scene_binding = Engine::Get()->render_state.GetScene();
+            const auto scene_index = scene_binding.id.ToIndex();
+
+            cmd->BindDescriptorSet(
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+                m_render_group->GetPipeline(),
+                DescriptorSet::global_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
+            );
+            
+            // TODO: Do for each env grid in view
+            
+            cmd->BindDescriptorSet(
+                Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+                m_render_group->GetPipeline(),
+                DescriptorSet::scene_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+                FixedArray {
+                    HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
+                    HYP_RENDER_OBJECT_OFFSET(Light, 0),
+                    HYP_RENDER_OBJECT_OFFSET(EnvGrid, Engine::Get()->GetRenderState().bound_env_grid.ToIndex())
+                }
+            );
+
+            m_full_screen_quad->Render(cmd);
+
+            HYPERION_RETURN_OK;
+        });
+
+    HYPERION_ASSERT_RESULT(record_result);
+}
+
+// ===== Env Grid Pass End =====
+
 DeferredRenderer::DeferredRenderer()
     : m_ssr(ssr_extent),
       m_indirect_pass(true),
@@ -176,6 +259,8 @@ DeferredRenderer::~DeferredRenderer() = default;
 void DeferredRenderer::Create()
 {
     Threads::AssertOnThread(THREAD_RENDER);
+    
+    m_env_grid_pass.Create();
 
     m_post_processing.Create();
     m_indirect_pass.Create();
@@ -207,12 +292,6 @@ void DeferredRenderer::Create()
     m_hbao->Create();
 
     m_ssr.Create();
-    
-    m_sampler = UniquePtr<Sampler>::Construct(FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
-    HYPERION_ASSERT_RESULT(m_sampler->Create(Engine::Get()->GetGPUDevice()));
-
-    m_depth_sampler = UniquePtr<Sampler>::Construct(FilterMode::TEXTURE_FILTER_NEAREST);
-    HYPERION_ASSERT_RESULT(m_depth_sampler->Create(Engine::Get()->GetGPUDevice()));
     
     m_indirect_pass.CreateDescriptors(); // no-op
     m_direct_pass.CreateDescriptors();
@@ -266,12 +345,12 @@ void DeferredRenderer::CreateDescriptorSets()
         /* Gbuffer depth sampler */
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
-            ->SetElementSampler(0, m_depth_sampler.Get());
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerNearest());
 
         /* Gbuffer sampler */
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
-            ->SetElementSampler(0, m_sampler.Get());
+            ->SetElementSampler(0, &Engine::Get()->GetPlaceholderData().GetSamplerLinearMipmap());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEPTH_PYRAMID_RESULT)
@@ -284,6 +363,10 @@ void DeferredRenderer::CreateDescriptorSets()
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_DIRECT)
             ->SetElementSRV(0, m_direct_pass.GetAttachmentUsage(0)->GetImageView());
+
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_IRRADIANCE_ACCUM)
+            ->SetElementSRV(0, m_env_grid_pass.GetAttachmentUsage(0)->GetImageView());
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
@@ -324,15 +407,14 @@ void DeferredRenderer::Destroy()
 
     m_combine_pass->Destroy();
 
+    m_env_grid_pass.Destroy();
+
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         Engine::Get()->SafeReleaseHandle<Texture>(std::move(m_mipmapped_results[frame_index]));
     }
 
     m_opaque_fbo.Reset();
     m_translucent_fbo.Reset();
-
-    Engine::Get()->SafeRelease(std::move(m_sampler));
-    Engine::Get()->SafeRelease(std::move(m_depth_sampler));
 
     m_indirect_pass.Destroy();  // flushes render queue
     m_direct_pass.Destroy();    // flushes render queue
@@ -355,6 +437,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const bool use_ddgi = Engine::Get()->GetConfig().Get(CONFIG_RT_GI);
     const bool use_hbao = Engine::Get()->GetConfig().Get(CONFIG_HBAO);
     const bool use_hbil = Engine::Get()->GetConfig().Get(CONFIG_HBIL);
+    const bool use_env_grid_reflections = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS);// && Engine::Get()->GetRenderState().bound_env_grid.IsValid();
+    const bool use_env_grid_irradiance = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI);// && Engine::Get()->GetRenderState().bound_env_grid.IsValid();
 
     struct alignas(128) { UInt32 flags; } deferred_data;
     deferred_data.flags = 0;
@@ -402,6 +486,16 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_opaque_fbo->EndCapture(frame_index, primary);
     }
     // end opaque objs
+
+    if (use_env_grid_irradiance) { // submit env grid command buffer
+        DebugMarker marker(primary, "Apply env grid");
+
+        // TODO: For each reflection grid in the frame, apply again, accumulating in the framebuffer...
+
+        m_env_grid_pass.SetPushConstants(&deferred_data, sizeof(deferred_data));
+        m_env_grid_pass.Record(frame_index);
+        m_env_grid_pass.Render(frame);
+    }
 
     if (use_rt_radiance) {
         DebugMarker marker(primary, "RT Radiance");

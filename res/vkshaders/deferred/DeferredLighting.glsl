@@ -290,13 +290,13 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
     return irradiance / HYP_FMATH_PI;
 }
 
-void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
+float CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N, inout vec3 irradiance)
 {
     ivec3 probe_position;
     int probe_index_at_point = int(GetLocalEnvProbeIndex(P, probe_position));
 
     if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
-        return;
+        return 0.0;
     }
 
     const float lod = 0.0;
@@ -316,8 +316,12 @@ void CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N,
         vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
         coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
 
-        irradiance += SphericalHarmonicsSample(-N, coord) * ENV_PROBE_MULTIPLIER;
+        irradiance += SphericalHarmonicsSample(-N, coord);
+
+        return 1.0;
     }
+
+    return 0.0;
 }
 
 vec3 CalculateEnvProbeReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)

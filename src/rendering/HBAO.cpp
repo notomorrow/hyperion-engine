@@ -15,9 +15,9 @@ using renderer::CommandBuffer;
 
 struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
 {
-    UniquePtr<DescriptorSet> *descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
-    RENDER_COMMAND(CreateHBAODescriptorSets)(UniquePtr<DescriptorSet> *descriptor_sets)
+    RENDER_COMMAND(CreateHBAODescriptorSets)(const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets)
         : descriptor_sets(descriptor_sets)
     {
     }
@@ -26,7 +26,7 @@ struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
     {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             // create our own descriptor sets
-            AssertThrow(descriptor_sets[frame_index] != nullptr);
+            AssertThrow(descriptor_sets[frame_index].IsValid());
             
             HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
                 Engine::Get()->GetGPUDevice(),
@@ -212,19 +212,17 @@ void HBAO::Destroy()
 
     m_hbao_pass->Destroy();
 
-    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        Engine::Get()->SafeRelease(std::move(m_descriptor_sets[frame_index]));
+    SafeRelease(std::move(m_descriptor_sets));
 
-        for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
-            Engine::Get()->SafeRelease(std::move(m_blur_descriptor_sets[blur_pass_index][frame_index]));
-        }
+    for (UInt blur_pass_index = 0; blur_pass_index < m_blur_descriptor_sets.Size(); blur_pass_index++) {
+        SafeRelease(std::move(m_blur_descriptor_sets[blur_pass_index]));
     }
 
-    struct RENDER_COMMAND(DestroyHBAODescriptors) : RenderCommand
+    struct RENDER_COMMAND(DestroyHBAOImageOutputs) : RenderCommand
     {
         HBAO::ImageOutput *image_outputs;
 
-        RENDER_COMMAND(DestroyHBAODescriptors)(HBAO::ImageOutput *image_outputs)
+        RENDER_COMMAND(DestroyHBAOImageOutputs)(HBAO::ImageOutput *image_outputs)
             : image_outputs(image_outputs)
         {
         }
@@ -249,7 +247,7 @@ void HBAO::Destroy()
         }
     };
 
-    PUSH_RENDER_COMMAND(DestroyHBAODescriptors, m_image_outputs.Data());
+    PUSH_RENDER_COMMAND(DestroyHBAOImageOutputs, m_image_outputs.Data());
 
     HYP_SYNC_RENDER();
 }
@@ -290,7 +288,7 @@ void HBAO::CreateDescriptorSets()
 {
     // create main descriptor sets
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+        auto descriptor_set = RenderObjects::Make<DescriptorSet>();
 
         descriptor_set
             ->AddDescriptor<ImageDescriptor>(0)
@@ -333,7 +331,7 @@ void HBAO::CreateDescriptorSets()
 
     PUSH_RENDER_COMMAND(
         CreateHBAODescriptorSets,
-        m_descriptor_sets.Data()
+        m_descriptor_sets
     );
 }
 
@@ -343,7 +341,7 @@ void HBAO::CreateBlurComputeShaders()
 
     for (UInt blur_pass_index = 0; blur_pass_index < 2; blur_pass_index++) {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto descriptor_set = UniquePtr<DescriptorSet>::Construct();
+            auto descriptor_set = RenderObjects::Make<DescriptorSet>();
 
             descriptor_set
                 ->AddDescriptor<ImageDescriptor>(0)
@@ -375,7 +373,7 @@ void HBAO::CreateBlurComputeShaders()
 
         PUSH_RENDER_COMMAND(
             CreateHBAODescriptorSets,
-            m_blur_descriptor_sets[blur_pass_index].Data()
+            m_blur_descriptor_sets[blur_pass_index]
         );
     }
 

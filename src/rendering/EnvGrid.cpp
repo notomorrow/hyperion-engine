@@ -14,7 +14,7 @@ const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 16, 16 };
 const Float EnvGrid::overlap_amount = 1.0f;
 
 EnvGrid::EnvGrid(const BoundingBox &aabb, const Extent3D &density)
-    : RenderComponent(3),
+    : RenderComponent(),
       m_aabb(aabb),
       m_density(density),
       m_current_probe_index(0)
@@ -55,8 +55,8 @@ void EnvGrid::Init()
                     AssertThrow(!m_ambient_probes[index].IsValid());
 
                     const BoundingBox env_probe_aabb(
-                        m_aabb.min + (Vector3(Float(x), Float(y), Float(z)) * (aabb_extent / Vector3(m_density))) - Vector3(overlap_amount),
-                        m_aabb.min + (Vector3(Float(x + 1), Float(y + 1), Float(z + 1)) * (aabb_extent / Vector3(m_density))) + Vector3(overlap_amount)
+                        m_aabb.min + (Vector3(Float(x), Float(y), Float(z)) * (aabb_extent / Vector3(m_density))),
+                        m_aabb.min + (Vector3(Float(x + 1), Float(y + 1), Float(z + 1)) * (aabb_extent / Vector3(m_density)))
                     );
 
                     m_ambient_probes[index] = CreateObject<EnvProbe>(
@@ -110,7 +110,7 @@ void EnvGrid::Init()
         m_ambient_scene = CreateObject<Scene>(CreateObject<Camera>(
             90.0f,
             -Int(ambient_probe_dimensions.width), Int(ambient_probe_dimensions.height),
-            0.01f, 1250.0f //((aabb_extent / Vector3(m_density)) * 0.5f).Max() + overlap_amount
+            0.01f, ((aabb_extent / Vector3(m_density)) * 0.5f).Max()
         ));
 
         m_ambient_scene->GetCamera()->SetFramebuffer(m_framebuffer);

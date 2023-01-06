@@ -72,8 +72,8 @@ private:
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
     FixedArray<FixedArray<ImageOutput, 2>, max_frames_in_flight> m_blur_image_outputs;
 
-    FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
-    FixedArray<FixedArray<UniquePtr<DescriptorSet>, max_frames_in_flight>, 2> m_blur_descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<FixedArray<DescriptorSetRef, max_frames_in_flight>, 2> m_blur_descriptor_sets;
 
     UniquePtr<FullScreenPass> m_hbao_pass;
     Handle<ComputePipeline> m_blur_hor;
