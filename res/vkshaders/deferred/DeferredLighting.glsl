@@ -18,7 +18,6 @@
 struct DeferredParams
 {
     uint flags;
-    uint reflection_probe_index;
 };
 
 struct Refraction
@@ -201,13 +200,11 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
     return probe_index_at_point;
 }
 
-void ApplyReflectionProbe(uint, vec3, vec3, float, inout vec4);
+void ApplyReflectionProbe(const in EnvProbe, vec3, vec3, float, inout vec4);
 
 void ApplyEnvGridReflection(uint local_probe_index, vec3 P, vec3 R, float lod, inout vec4 ibl)
 {
-    uint probe_index = GET_GRID_PROBE_INDEX(local_probe_index);
-
-    ApplyReflectionProbe(probe_index, P, R, lod, ibl);
+    ApplyReflectionProbe(GET_GRID_PROBE(local_probe_index), P, R, lod, ibl);
 }
 
 float[9] ProjectSHBands(vec3 N)
@@ -304,10 +301,8 @@ vec4 CalculateEnvGridReflection(DeferredParams deferred_params, vec3 P, vec3 N, 
 
 #endif
 
-void ApplyReflectionProbe(uint probe_index, vec3 P, vec3 R, float lod, inout vec4 ibl)
+void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, inout vec4 ibl)
 {
-    EnvProbe probe = env_probes[probe_index];
-
     ibl = vec4(0.0);
 
     if (probe.texture_index != ~0u) {
@@ -330,13 +325,13 @@ void ApplyReflectionProbe(uint probe_index, vec3 P, vec3 R, float lod, inout vec
     }
 }
 
-vec4 CalculateReflectionProbe(DeferredParams deferred_params, uint probe_index, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
+vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
 {
     vec4 ibl = vec4(0.0);
 
     const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
-    ApplyReflectionProbe(probe_index, P, R, lod, ibl);
+    ApplyReflectionProbe(probe, P, R, lod, ibl);
 
     return ibl;
 }

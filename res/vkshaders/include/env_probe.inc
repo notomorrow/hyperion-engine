@@ -63,7 +63,7 @@ struct SH9
     #endif
 
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
-    layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbeBuffer
+    layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbesBuffer
     {
         EnvProbe env_probes[HYP_MAX_ENV_PROBES];
     };

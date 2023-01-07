@@ -131,7 +131,6 @@ void main()
 
         // ApplyFog(position.xyz, result);
 
-
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {
         result = albedo;
