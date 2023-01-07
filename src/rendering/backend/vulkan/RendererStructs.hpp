@@ -229,9 +229,9 @@ struct Extent3D
     }
 
     explicit Extent3D(const Vector3 &extent) // NOLINT(cppcoreguidelines-pro-type-member-init)
-        : width(static_cast<UInt32>(extent.x)),
-          height(static_cast<UInt32>(extent.y)),
-          depth(static_cast<UInt32>(extent.z))
+        : width(UInt32(extent.x)),
+          height(UInt32(extent.y)),
+          depth(UInt32(extent.z))
     {
     }
 
@@ -351,16 +351,16 @@ struct Extent3D
     operator Vector3() const
     {
         return {
-            static_cast<Float>(width),
-            static_cast<Float>(height),
-            static_cast<Float>(depth)
+            Float(width),
+            Float(height),
+            Float(depth)
         };
     }
 
-    SizeType Size() const
-        { return static_cast<SizeType>(width)
-            * static_cast<SizeType>(height)
-            * static_cast<SizeType>(depth); }
+    constexpr SizeType Size() const
+        { return SizeType(width)
+            * SizeType(height)
+            * SizeType(depth); }
 };
 
 static_assert(sizeof(Extent3D) == 16);

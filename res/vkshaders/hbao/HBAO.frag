@@ -18,7 +18,7 @@ layout(location=0) out vec4 color_output;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(set = 0, binding = 0) uniform texture2D gbuffer_mip_chain;
+layout(set = 0, binding = 0) uniform texture2D gbuffer_albedo_texture;
 layout(set = 0, binding = 1) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 2) uniform texture2D gbuffer_depth_texture;
 layout(set = 0, binding = 3) uniform texture2D gbuffer_velocity_texture;
@@ -42,8 +42,8 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 32.0
-#define HYP_HBAO_POWER 1.0
+#define HYP_HBAO_RADIUS 1.1
+#define HYP_HBAO_POWER 2.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
 float tan_half_fov = tan(fov_rad * 0.5);
@@ -52,9 +52,10 @@ vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scen
 vec2 inv_focal_len = vec2(1.0) / focal_len;
 vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
 
-float GetOffsets(uvec2 pixel_coord)
+float GetOffsets(vec2 uv)
 {
-    return 0.25 * float((int(pixel_coord.y) - int(pixel_coord.x)) & 3);
+    ivec2 position = ivec2(uv * vec2(dimension));
+    return 0.25 * float((position.y - position.x) & 3);
 }
 
 mat4 inv_view_proj = inverse(scene.projection * scene.view);
@@ -101,7 +102,7 @@ vec2 RotateDirection(vec2 uv, vec2 cos_sin)
     );
 }
 
-#define ANGLE_BIAS 0.1
+#define ANGLE_BIAS 0.02
 
 // vec3 GetCameraSpaceRay(in vec3 V, in vec2 ray)
 // {
@@ -114,16 +115,16 @@ float Falloff(float dist_sqr)
 
 void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
-    uvec2 pixel_coord = clamp(uvec2(uv * vec2(dimension) - 0.5), uvec2(0), dimension - 1);
-    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 6);
+    uvec2 pixel_coord = uvec2(clamp(ivec2(uv * vec2(dimension) - 0.5), ivec2(0), ivec2(dimension) - 1));
+    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 4);
 
     const float projected_scale = float(dimension.y) / (tan_half_fov * 2.0);
 
     const float temporal_offset = GetSpatialOffset(scene.frame_counter);
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
-    const float noise_offset = GetOffsets(pixel_coord);
-    const float noise_direction = RandomFloat(seed);
+    const float noise_offset = GetOffsets(uv);
+    const float noise_direction = InterleavedGradientNoise(pixel_coord);//RandomFloat(seed);
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
@@ -182,10 +183,10 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
                 const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
 
-                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_mip_chain, new_uv.xy);
+                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
                 // const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
 
-                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_mip_chain, new_uv.zw);
+                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
                 // const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
 
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
@@ -197,7 +198,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 slice_ao += vec2(
                     ((NdotD.x - ANGLE_BIAS) * falloffs.x),
                     ((NdotD.y - ANGLE_BIAS) * falloffs.y)
-                ) * condition * fade;
+                ) * condition;
 
                 horizons = mix(horizons, H, condition);
             }

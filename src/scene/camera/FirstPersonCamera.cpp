@@ -17,7 +17,7 @@ void FirstPersonCameraController::UpdateLogic(double dt)
         m_mouse_y - m_prev_mouse_y
     );
     
-    m_mag.Lerp(m_desired_mag, mouse_blending);
+    m_mag.Lerp(m_desired_mag, 1.0f - mouse_blending);
 
     m_dir_cross_y = Vector3(m_camera->m_direction).Cross(m_camera->m_up);
 
@@ -31,28 +31,27 @@ void FirstPersonCameraController::UpdateLogic(double dt)
     m_prev_mouse_x = m_mouse_x;
     m_prev_mouse_y = m_mouse_y;
 
+    m_camera->m_next_translation += m_move_deltas * movement_speed * Float(dt);
+
     if constexpr (movement_blending > 0.0f) {
         m_move_deltas.Lerp(
             Vector3::Zero(),
             MathUtil::Clamp(
-                (1.0f / movement_blending) * static_cast<float>(dt),
+                (1.0f / movement_blending) * Float(dt),
                 0.0f,
                 1.0f
             )
         );
     } else {
-
         m_move_deltas.Lerp(
             Vector3::Zero(),
             MathUtil::Clamp(
-                1.0f * static_cast<float>(dt),
+                1.0f * Float(dt),
                 0.0f,
                 1.0f
             )
         );
     }
-
-    m_camera->m_next_translation += m_move_deltas * movement_speed * dt;
 }
 
 void FirstPersonCameraController::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)

@@ -9,9 +9,7 @@ namespace hyperion::v2 {
 using renderer::Image;
 using renderer::Result;
 
-const Extent2D EnvGrid::reflection_probe_dimensions = Extent2D { 128, 128 };
-const Extent2D EnvGrid::ambient_probe_dimensions = Extent2D { 16, 16 };
-const Float EnvGrid::overlap_amount = 1.0f;
+static const Extent2D ambient_probe_dimensions = Extent2D { 16, 16 };
 
 EnvGrid::EnvGrid(const BoundingBox &aabb, const Extent3D &density)
     : RenderComponent(),
@@ -29,15 +27,6 @@ void EnvGrid::Init()
 {
     Handle<Scene> scene(GetParent()->GetScene()->GetID());
     AssertThrow(scene.IsValid());
-
-    m_reflection_probe = CreateObject<EnvProbe>(
-        scene,
-        m_aabb,
-        reflection_probe_dimensions,
-        false
-    );
-
-    InitObject(m_reflection_probe);
 
     const SizeType num_ambient_probes = m_density.Size();
     const Vector3 aabb_extent = m_aabb.GetExtent();
@@ -84,33 +73,10 @@ void EnvGrid::Init()
     }
 
     {
-        m_reflection_scene = CreateObject<Scene>(CreateObject<Camera>(
-            90.0f,
-            -Int(reflection_probe_dimensions.width), Int(reflection_probe_dimensions.height),
-            0.01f, m_aabb.GetExtent().Max()
-        ));
-
-        m_reflection_scene->GetCamera()->SetFramebuffer(m_framebuffer);
-        m_reflection_scene->SetName("EnvGrid Reflection Probe Scene");
-        m_reflection_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
-            MeshAttributes { },
-            MaterialAttributes {
-                .bucket = BUCKET_INTERNAL,
-                .cull_faces = FaceCullMode::FRONT
-            },
-            m_reflection_shader->GetID()
-        ));
-        m_reflection_scene->SetParentScene(Handle<Scene>(GetParent()->GetScene()->GetID()));
-
-        InitObject(m_reflection_scene);
-        Engine::Get()->GetWorld()->AddScene(m_reflection_scene);
-    }
-
-    {
         m_ambient_scene = CreateObject<Scene>(CreateObject<Camera>(
             90.0f,
             -Int(ambient_probe_dimensions.width), Int(ambient_probe_dimensions.height),
-            0.01f, ((aabb_extent / Vector3(m_density)) * 0.5f).Max()
+            0.01f, (aabb_extent / Vector3(m_density)).Max() * 0.5f
         ));
 
         m_ambient_scene->GetCamera()->SetFramebuffer(m_framebuffer);
@@ -119,7 +85,8 @@ void EnvGrid::Init()
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_INTERNAL,
-                .cull_faces = FaceCullMode::FRONT
+                .cull_faces = FaceCullMode::NONE,
+                .flags = 0x0
             },
             m_ambient_shader->GetID()
         ));
@@ -128,14 +95,6 @@ void EnvGrid::Init()
         InitObject(m_ambient_scene);
         Engine::Get()->GetWorld()->AddScene(m_ambient_scene);
     }
-
-    // m_reflection_probe->EnqueueBind();
-
-    // for (auto &env_probe : m_ambient_probes) {
-    //     if (InitObject(env_probe)) {
-    //         env_probe->EnqueueBind();
-    //     }
-    // }
 
     DebugLog(LogType::Info, "Created %llu total ambient EnvProbes in grid\n", num_ambient_probes);
 }
@@ -148,21 +107,9 @@ void EnvGrid::InitGame()
 
 void EnvGrid::OnRemoved()
 {
-    // if (m_reflection_probe) {
-    //     m_reflection_probe->EnqueueUnbind();
-    // }
-
-    // for (auto &env_probe : m_ambient_probes) {
-    //     env_probe->EnqueueUnbind();
-    // }
-
-    Engine::Get()->GetWorld()->RemoveScene(m_reflection_scene->GetID());
-    m_reflection_scene.Reset();
-
     Engine::Get()->GetWorld()->RemoveScene(m_ambient_scene->GetID());
     m_ambient_scene.Reset();
-
-    m_reflection_shader.Reset();
+    
     m_ambient_shader.Reset();
 
     struct RENDER_COMMAND(DestroyEnvGridFramebufferAttachments) : RenderCommand
@@ -201,8 +148,6 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    // m_reflection_probe->Update();
-
     for (auto &env_probe : m_ambient_probes) {
         // TODO: Just update render data in Render()
         env_probe->Update();
@@ -215,16 +160,6 @@ void EnvGrid::OnRender(Frame *frame)
     const UInt num_ambient_probes = UInt(m_ambient_probes.Size());
 
     m_shader_data.enabled_indices_mask = 0u;
-
-    // if (m_reflection_probe) {
-    //     m_reflection_probe->UpdateRenderData(EnvProbeIndex(
-    //         Extent3D { 0, 0, 0 },
-    //         Extent3D { 0, 0, 0 }
-    //     ));
-
-    //     m_shader_data.probe_indices[0] = m_reflection_probe->GetID().ToIndex();
-    //     m_shader_data.enabled_indices_mask |= (1u << 0u);
-    // }
     
     if (num_ambient_probes != 0) {
         AssertThrow(m_current_probe_index < m_ambient_probes.Size());
@@ -288,10 +223,6 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.density = { m_density.width, m_density.height, m_density.depth, 0 };
 
     Engine::Get()->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
-
-    // if (m_reflection_probe) {
-    //     RenderEnvProbe(frame, m_reflection_scene, m_reflection_probe);
-    // }
 }
 
 void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
@@ -301,13 +232,6 @@ void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, Rend
 
 void EnvGrid::CreateShader()
 {
-    m_reflection_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "CubemapRenderer",
-        ShaderProps({ "LIGHTING", "SHADOWS", "TONEMAP" })
-    ));
-
-    InitObject(m_reflection_shader);
-
     m_ambient_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
         "CubemapRenderer",
         ShaderProps()
@@ -319,7 +243,7 @@ void EnvGrid::CreateShader()
 void EnvGrid::CreateFramebuffer()
 {
     m_framebuffer = CreateObject<Framebuffer>(
-        reflection_probe_dimensions,
+        ambient_probe_dimensions,
         RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
         6
@@ -329,7 +253,7 @@ void EnvGrid::CreateFramebuffer()
 
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImageCube>(
-            reflection_probe_dimensions,
+            ambient_probe_dimensions,
             InternalFormat::RGBA8_SRGB,
             nullptr
         ),
@@ -347,7 +271,7 @@ void EnvGrid::CreateFramebuffer()
 
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImageCube>(
-            reflection_probe_dimensions,
+            ambient_probe_dimensions,
             Engine::Get()->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
@@ -380,14 +304,20 @@ void EnvGrid::RenderEnvProbe(
     auto *command_buffer = frame->GetCommandBuffer();
 
     auto result = Result::OK;
-    
-    struct alignas(128) { UInt32 env_probe_index; } push_constants;
-    push_constants.env_probe_index = probe->GetID().ToIndex();
+
+    {
+        struct alignas(128) { UInt32 env_probe_index; } push_constants;
+        push_constants.env_probe_index = probe->GetID().ToIndex();
+
+        Engine::Get()->GetRenderState().SetActiveEnvProbe(probe->GetID());
+
+        scene->Render(frame, &push_constants, sizeof(push_constants));
+
+        Engine::Get()->GetRenderState().UnsetActiveEnvProbe();
+    }
     
     Image *framebuffer_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
     ImageView *framebuffer_image_view = m_framebuffer->GetAttachmentUsages()[0]->GetImageView();
-
-    scene->Render(frame, &push_constants, sizeof(push_constants));
     
     if (probe->IsAmbientProbe()) {
         probe->ComputeSH(frame, framebuffer_image, framebuffer_image_view);

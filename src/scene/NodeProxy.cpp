@@ -145,8 +145,8 @@ NodeProxy NodeProxy::GetChild(SizeType index)
     if (Get() && index < Get()->GetChildren().Size()) {
         return Get()->GetChild(index);
     }
-
-    return NodeProxy();
+    
+    return empty;
 }
 
 NodeProxy NodeProxy::Select(const char *selector) const
@@ -154,8 +154,8 @@ NodeProxy NodeProxy::Select(const char *selector) const
     if (Get()) {
         return Get()->Select(selector);
     }
-
-    return NodeProxy();
+    
+    return empty;
 }
 
 NodeProxy NodeProxy::AddChild()
@@ -164,13 +164,13 @@ NodeProxy NodeProxy::AddChild()
         return Get()->AddChild();
     }
 
-    return NodeProxy();
+    return empty;
 }
 
 NodeProxy NodeProxy::AddChild(const NodeProxy &node)
 {
     if (!Get()) {
-        return NodeProxy();
+        return node;
     }
 
     AssertThrow(node.Get() != Get());

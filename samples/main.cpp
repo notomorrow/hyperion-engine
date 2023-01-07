@@ -115,7 +115,7 @@ public:
         m_scene->SetCamera(CreateObject<Camera>(
             70.0f,
             1280, 720,
-            0.5f, 30000.0f
+            0.01f, 30000.0f
         ));
 
         /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
@@ -127,7 +127,7 @@ public:
             m_sun = CreateObject<Light>(DirectionalLight(
                 Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
                 Color(1.0f, 1.0f, 1.0f),
-                5.0f
+                3.0f
             ));
 
             m_scene->AddLight(m_sun);
@@ -163,13 +163,6 @@ public:
             }
         }
 
-
-        if (true) { // adding shadow maps
-            m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-                m_sun,
-                BoundingBox(Vector3(-600, -20, -600), Vector3(600, 250, 600))//test_model.GetWorldAABB()
-            );
-        }
 
         if (true) {
             auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
@@ -259,7 +252,7 @@ public:
 
         //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
 
-        batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
+        //batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
         batch.LoadAsync();
 
         auto obj_models = batch.AwaitResults();
@@ -276,7 +269,7 @@ public:
         /*material_test_obj.Scale(5.0f);
         material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
         GetScene()->GetRoot().AddChild(material_test_obj);*/
-
+        
         if (auto dude = obj_models["dude3"].Get<Node>()) {
             dude.SetName("dude");
             for (auto &child : dude.GetChildren()) {
@@ -290,11 +283,11 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(0.25f);
+        test_model.Scale(0.025f);
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
-                test_model.GetWorldAABB() * 1.01f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
+                test_model.GetWorldAABB() * 1.001f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
                 Extent3D { 16, 2, 16 }
             );
         }
@@ -304,6 +297,11 @@ public:
                 test_model.GetWorldAABB()
             );
         }
+        
+        m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+            m_sun,
+            test_model.GetWorldAABB()
+        );
 
         if (false) {
             int i = 0;
@@ -453,21 +451,21 @@ public:
             }
         }
 
-        if (false) {
+        if (true) {
             if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
                 monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
-                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
-                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.0f, 0.0f, 1.0f));
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.0f, 0.0f, 1.0f));
                 monkey_entity->RebuildRenderableAttributes();
-                monkey.SetLocalTranslation(Vector3(0.0f, 50.0f, 0.0f));
-                monkey.Scale(24.0f);
+                monkey.SetLocalTranslation(Vector3(0.0f, 0.0f, 0.0f));
+                monkey.Scale(0.2f);
                 monkey.Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(90.0f)));
                 InitObject(monkey_entity);
 
@@ -485,10 +483,11 @@ public:
             }
         }
 
-        if (false) {
+        if (true) {
+#if 0
             auto mh = Engine::Get()->GetAssetManager().Load<Node>("models/mh/mh1.obj");
             mh.SetName("mh_model");
-            mh.Scale(1.0f);
+            mh.Scale(0.05f);
             for (auto &mh_child : mh.GetChildren()) {
                 mh_child.SetEntity(Handle<Entity>::empty);
 
@@ -501,11 +500,11 @@ public:
                 }
             }
             GetScene()->GetRoot().AddChild(mh);
-
+#endif
 
             NodeProxy tree = Engine::Get()->GetAssetManager().Load<Node>("models/conifer/Conifer_Low.obj");
             tree.SetName("tree");
-            tree.Scale(2.0f);
+            tree.Scale(0.05f);
             if (auto needles = tree.Select("Needles")) {
                 if (needles.GetEntity() && needles.GetEntity()->GetMaterial()) {
                     needles.GetEntity()->GetMaterial()->SetFaceCullMode(FaceCullMode::NONE);
@@ -535,7 +534,7 @@ public:
             plane->SetTranslation(Vector3(0, 14, 0));
             plane->SetMesh(MeshBuilder::Quad());//Cube());
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
-            plane->SetScale(Vector3(250.0f));
+            plane->SetScale(Vector3(2.0f));
             plane->SetMaterial(CreateObject<Material>());
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.75f, 1.0f, 1.0f));
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.002f);
@@ -642,6 +641,7 @@ public:
 
         if (sun_position_changed) {
             std::cout << "Sun position: " << m_sun->GetPosition() << "\n";
+            std::cout << "Camera position " << GetScene()->GetCamera()->GetTranslation() << "\n";
         }
 
         if (m_export_task == nullptr || m_export_task->IsCompleted()) {
@@ -759,9 +759,6 @@ public:
     // not overloading; just creating a method to handle camera movement
     void HandleCameraMovement(GameCounter::TickUnit delta)
     {
-
-        constexpr Float speed = 0.75f;
-
         bool moving = false;
 
         Vector3 dir;
@@ -819,7 +816,8 @@ public:
                 }
             }
         }
-        
+
+#if 0
         if (auto character = GetScene()->GetRoot().Select("dude")) {
             character.SetWorldRotation(Quaternion::LookAt(GetScene()->GetCamera()->GetDirection() * Vector3(1.0f, 0.0f, 1.0f), GetScene()->GetCamera()->GetUpVector()));
             character.SetWorldTranslation(GetScene()->GetCamera()->GetTranslation() - (GetScene()->GetCamera()->GetUpVector() * 16.0f));
@@ -832,6 +830,7 @@ public:
                 }
             }
         }
+#endif
     }
 
     std::unique_ptr<Node> zombie;

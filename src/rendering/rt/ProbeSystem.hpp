@@ -64,7 +64,7 @@ struct ProbeGridInfo
     static constexpr Extent3D probe_border = Extent3D(2, 0, 2);
 
     BoundingBox aabb;
-    float probe_distance = 40.0f;
+    float probe_distance = 6.0f;
     UInt num_rays_per_probe = 128;
 
     const Vector3 &GetOrigin() const

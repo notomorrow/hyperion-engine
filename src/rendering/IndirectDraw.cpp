@@ -212,11 +212,11 @@ bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Frame *frame, SizeType 
     }
 
     // upload zeros to the buffer using a staging buffer.
-    if (!m_staging_buffers[frame->GetFrameIndex()].IsValid()) {
-        m_staging_buffers[frame->GetFrameIndex()] = RenderObjects::Make<GPUBuffer>(StagingBuffer());
-    } else {
+    if (m_staging_buffers[frame->GetFrameIndex()].IsValid()) {
         SafeRelease(std::move(m_staging_buffers[frame->GetFrameIndex()]));
     }
+
+    m_staging_buffers[frame->GetFrameIndex()] = RenderObjects::Make<GPUBuffer>(StagingBuffer());
 
     HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Create(
         Engine::Get()->GetGPUDevice(),

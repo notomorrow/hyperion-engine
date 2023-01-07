@@ -76,10 +76,10 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : RenderCommand
     {
         SSRParams ssr_params {
             .dimensions = Vector2(extent),
-            .ray_step = 4.0f,
+            .ray_step = 0.25f,
             .num_iterations = 128.0f,
             .max_ray_distance = 100.0f,
-            .distance_bias = 1.8f,
+            .distance_bias = 0.2f,
             .offset = 0.01f,
             .eye_fade_start = 0.75f,
             .eye_fade_end = 0.98f,

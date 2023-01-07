@@ -131,11 +131,14 @@ void main()
 
         // ApplyFog(position.xyz, result);
 
-
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
     } else {
         result = albedo;
     }
 
+#if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE)
+    output_color = vec4(0.0);
+#else
     output_color = vec4(result);
+#endif
 }

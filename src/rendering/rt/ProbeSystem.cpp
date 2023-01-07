@@ -538,7 +538,8 @@ void ProbeGrid::RenderProbes(Frame *frame)
         FixedArray {
             HYP_RENDER_OBJECT_OFFSET(Scene, Engine::Get()->render_state.GetScene().id.ToIndex()),
             HYP_RENDER_OBJECT_OFFSET(Light, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0)
+            HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0),
+            HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0)
         }
     );
 
@@ -663,12 +664,12 @@ void ProbeGrid::ComputeIrradiance(Frame *frame)
 
     m_irradiance_image->GetGPUImage()->InsertBarrier(
         frame->GetCommandBuffer(),
-        ResourceState::UNORDERED_ACCESS
+        ResourceState::SHADER_RESOURCE
     );
 
     m_depth_image->GetGPUImage()->InsertBarrier(
         frame->GetCommandBuffer(),
-        ResourceState::UNORDERED_ACCESS
+        ResourceState::SHADER_RESOURCE
     );
 }
 

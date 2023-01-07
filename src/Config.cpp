@@ -21,7 +21,12 @@ const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_HBAO, "HBAO" },
     { CONFIG_HBIL, "HBIL" },
     { CONFIG_VOXEL_GI, "VCTGlobalIllumination" },
-    { CONFIG_VOXEL_GI_SVO, "VCTGlobalIlluminationSVO" }
+    { CONFIG_VOXEL_GI_SVO, "VCTGlobalIlluminationSVO" },
+    { CONFIG_DEBUG_SSR, "DebugSSR" },
+    { CONFIG_DEBUG_HBAO, "DebugHBAO" },
+    { CONFIG_DEBUG_HBIL, "DebugHBIL" },
+    { CONFIG_DEBUG_REFLECTIONS, "DebugReflections" },
+    { CONFIG_DEBUG_IRRADIANCE, "DebugIrradiance" }
 };
 
 OptionName Configuration::StringToOptionName(const String &str)
@@ -164,11 +169,17 @@ void Configuration::SetToDefaultConfiguration()
     m_variables[CONFIG_RT_GI] = Option(m_variables[CONFIG_RT_ENABLED], true);
 
     m_variables[CONFIG_HBAO] = Option(true, true);
-    m_variables[CONFIG_HBIL] = Option(m_variables[CONFIG_HBAO] && !m_variables[CONFIG_RT_GI], true);
+    m_variables[CONFIG_HBIL] = Option(m_variables[CONFIG_HBAO], true);
     
     m_variables[CONFIG_SSR] = Option(!m_variables[CONFIG_RT_REFLECTIONS], true);
     m_variables[CONFIG_VOXEL_GI] = Option(!m_variables[CONFIG_RT_GI], true);
     m_variables[CONFIG_VOXEL_GI_SVO] = Option(false, true);
+
+    m_variables[CONFIG_DEBUG_SSR] = Option(false, true);
+    m_variables[CONFIG_DEBUG_HBAO] = Option(false, true);
+    m_variables[CONFIG_DEBUG_HBIL] = Option(false, true);
+    m_variables[CONFIG_DEBUG_REFLECTIONS] = Option(false, true);
+    m_variables[CONFIG_DEBUG_IRRADIANCE] = Option(false, true);
 }
 
 } // namespace hyperion::v2

@@ -13,10 +13,9 @@ layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out flat uint v_object_index;
-layout(location=12) out flat uint v_env_probe_index;
-layout(location=13) out flat vec3 v_env_probe_extent;
-layout(location=14) out flat uint v_cube_face_index;
-layout(location=15) out vec2 v_cube_face_uv;
+layout(location=12) out flat vec3 v_env_probe_extent;
+layout(location=13) out flat uint v_cube_face_index;
+layout(location=14) out vec2 v_cube_face_uv;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -46,9 +45,9 @@ layout (location = 7) in vec4 a_bone_indices;
 //     EnvProbeMatrices env_probe_uniforms[];
 // };
 
-layout(push_constant) uniform PushConstant
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
 {
-    uint env_probe_index;
+    EnvProbe current_env_probe;
 };
 
 #ifdef HYP_ENABLE_SKINNING
@@ -89,12 +88,11 @@ void main()
     v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
     mat4 projection_matrix = scene.projection;
-    mat4 view_matrix = env_probes[env_probe_index].face_view_matrices[gl_ViewIndex];
+    mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
 
     v_object_index = OBJECT_INDEX;
-    v_env_probe_index = env_probe_index;
 
-    v_env_probe_extent = env_probes[env_probe_index].aabb_max.xyz - env_probes[env_probe_index].aabb_min.xyz;
+    v_env_probe_extent = current_env_probe.aabb_max.xyz - current_env_probe.aabb_min.xyz;
 
     gl_Position = projection_matrix * view_matrix * position;
 

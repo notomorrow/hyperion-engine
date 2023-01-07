@@ -24,6 +24,11 @@ layout(location=0) out vec4 color_output;
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
 
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
+{
+    EnvProbe current_env_probe;
+};
+
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -43,7 +48,7 @@ void main()
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    vec4 ibl = CalculateReflectionProbe(deferred_params, deferred_params.reflection_probe_index, P, N, R, scene.camera_position.xyz, perceptual_roughness);
+    vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, scene.camera_position.xyz, perceptual_roughness);
 
     color_output = ibl;
 }

@@ -1,15 +1,15 @@
 [DeferredIndirect]
-permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED, VCT_ENABLED(SVO TEXTURE)
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, VCT_ENABLED(SVO TEXTURE)
 frag = deferred_indirect.frag
 vert = deferred.vert
 
 [DeferredDirect]
-permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED
 frag = deferred_direct.frag
 vert = deferred.vert
 
 [DeferredCombine]
-permute = SSR_ENABLED, ENV_PROBE_ENABLED, RT_ENABLED
+permute = SSR_ENABLED,  REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED
 frag = deferred/DeferredCombine.frag
 vert = PostEffect.vert
 
@@ -32,6 +32,7 @@ comp = cull/object_visibility.comp
 comp = cull/generate_depth_pyramid.comp
 
 [FinalOutput]
+permute = DEBUG(SSR)
 frag = blit.frag
 vert = blit.vert
 
@@ -41,7 +42,7 @@ frag = cubemap_renderer.frag
 vert = cubemap_renderer.vert
 
 [ComputeSH]
-permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE), MODIFY_ENV_PROBE
+permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
 comp = sh/ComputeSH.comp
 
 [Forward]

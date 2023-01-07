@@ -166,6 +166,12 @@ void main()
         vec4 final_result = vec4(result, 1.0);
         ApplyFog(position.xyz, final_result);
         result = final_result.rgb;
+
+#if defined(DEBUG_REFLECTIONS)
+        result = reflections.rgb;
+#elif defined(DEBUG_IRRADIANCE)
+        result = irradiance.rgb;
+#endif
     } else {
         result = albedo.rgb;
     }
