@@ -140,6 +140,25 @@ struct KeyValuePair : Pair<Key, Value>
         return *this;
     }
 
+    KeyValuePair(const Pair<Key, Value> &pair) : Pair<Key, Value>(pair) {}
+    KeyValuePair(Pair<Key, Value> &&pair) noexcept : Pair<Key, Value>(std::move(pair)) {}
+
+    KeyValuePair &operator=(const Pair<Key, Value> &other)
+    {
+        Pair<Key, Value>::first = other.first;
+        Pair<Key, Value>::second = other.second;
+
+        return *this;
+    }
+
+    KeyValuePair &operator=(Pair<Key, Value> &&other) noexcept
+    {
+        Pair<Key, Value>::first = std::move(other.first);
+        Pair<Key, Value>::second = std::move(other.second);
+
+        return *this;
+    }
+
     ~KeyValuePair() = default;
 
     bool operator<(const Key &key) const { return Pair<Key, Value>::first < key; }

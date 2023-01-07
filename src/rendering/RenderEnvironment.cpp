@@ -9,10 +9,10 @@ using renderer::Result;
 
 struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommand
 {
-    TypeMap<UniquePtr<RenderComponentBase>> *render_components;
+    TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> render_components;
 
-    RENDER_COMMAND(RemoveAllRenderComponents)(TypeMap<UniquePtr<RenderComponentBase>> *render_components)
-        : render_components(render_components)
+    RENDER_COMMAND(RemoveAllRenderComponents)(TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> &&render_components)
+        : render_components(std::move(render_components))
     {
     }
 
@@ -20,17 +20,21 @@ struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommand
     {
         auto result = Result::OK;
 
-        for (auto &it : *render_components) {
-            if (it.second == nullptr) {
-                result = { Result::RENDERER_ERR, "RenderComponent was null" };
+        for (auto &it : render_components) {
+            for (auto &component_tag_pair : it.second) {
+                if (component_tag_pair.second == nullptr) {
+                    DebugLog(
+                        LogType::Warn,
+                        "RenderComponent with tag %s was null, skipping...\n",
+                        component_tag_pair.first.Data()
+                    );
 
-                continue;
+                    continue;
+                }
+
+                component_tag_pair.second->ComponentRemoved();
             }
-
-            it.second->ComponentRemoved();
         }
-
-        render_components->Clear();
 
         return result;
     }
@@ -101,8 +105,11 @@ void RenderEnvironment::Init()
         std::lock_guard guard(m_render_component_mutex);
         
         for (auto &it : m_render_components_pending_addition) {
-            AssertThrow(it.second != nullptr);
-            it.second->ComponentInit();
+            for (auto &component_tag_pair : it.second) {
+                AssertThrow(component_tag_pair.second != nullptr);
+
+                component_tag_pair.second->ComponentInit();
+            }
         }
     }
 
@@ -127,7 +134,7 @@ void RenderEnvironment::Init()
 
         const auto update_marker_value = m_update_marker.load();
 
-        RenderCommands::Push<RENDER_COMMAND(RemoveAllRenderComponents)>(&m_render_components);
+        PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
 
         if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
             std::lock_guard guard(m_render_component_mutex);
@@ -152,8 +159,10 @@ void RenderEnvironment::Update(GameCounter::TickUnit delta)
 
     std::lock_guard guard(m_render_component_mutex);
 
-    for (const auto &component : m_render_components) {
-        component.second->ComponentUpdate(delta);
+    for (const auto &it : m_render_components) {
+        for (const auto &component_tag_pair : it.second) {
+            component_tag_pair.second->ComponentUpdate(delta);
+        }
     }
 }
 
@@ -211,16 +220,19 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
     m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;
 
-    const auto update_marker_value = m_update_marker.load();
-    UInt8 inverse_mask = 0;
+    const RenderEnvironmentUpdates update_marker_value = m_update_marker.load();
+    RenderEnvironmentUpdates inverse_mask = 0;
 
     if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
         inverse_mask |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
     }
 
-    for (const auto &component : m_render_components) {
-        m_next_enabled_render_components_mask |= 1u << static_cast<UInt32>(component.second->GetName());
-        component.second->ComponentRender(frame);
+    for (const auto &it : m_render_components) {
+        for (const auto &component_tag_pair : it.second) {
+            m_next_enabled_render_components_mask |= 1u << UInt32(component_tag_pair.second->GetName());
+
+            component_tag_pair.second->ComponentRender(frame);
+        }
     }
 
     // add RenderComponents AFTER rendering, so that the render scheduler can complete
@@ -232,18 +244,51 @@ void RenderEnvironment::RenderComponents(Frame *frame)
         std::lock_guard guard(m_render_component_mutex);
 
         for (auto &it : m_render_components_pending_addition) {
-            m_render_components.Set(it.first, std::move(it.second));
+            auto &items_map = it.second;
+            const auto components_it = m_render_components.Find(it.first);
+
+            if (components_it != m_render_components.End()) {
+                for (auto &items_pending_addition_it : items_map) {
+                    components_it->second.Set(items_pending_addition_it.first, std::move(items_pending_addition_it.second));
+                }
+            } else {
+                m_render_components.Set(it.first, std::move(it.second));
+            }
         }
 
         m_render_components_pending_addition.Clear();
 
         for (const auto &it : m_render_components_pending_removal) {
+            const ANSIString &tag = it.second;
+
             const auto components_it = m_render_components.Find(it.first);
 
             if (components_it != m_render_components.End()) {
-                components_it->second->ComponentRemoved();
-                m_next_enabled_render_components_mask &= ~(1u << static_cast<UInt32>(it.second));
-                m_render_components.Erase(components_it);
+                RenderComponentName component_type = RENDER_COMPONENT_INVALID;
+
+                auto &items_map = components_it->second;
+                
+                const auto item_it = items_map.Find(tag);
+
+                if (item_it != items_map.End()) {
+                    const UniquePtr<RenderComponentBase> &item = item_it->second;
+
+                    if (item != nullptr) {
+                        component_type = item->GetName();
+
+                        item->ComponentRemoved();
+                    }
+
+                    items_map.Erase(item_it);
+                }
+
+                if (items_map.Empty()) {
+                    if (component_type != RENDER_COMPONENT_INVALID) {
+                        m_next_enabled_render_components_mask &= ~(1u << UInt32(component_type));
+                    }
+
+                    m_render_components.Erase(components_it);
+                }
             }
         }
 

@@ -178,7 +178,7 @@ public:
         }
 
         { // allow ui rendering
-            m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(GetUI().GetScene());
+            m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>("UIRenderer 0", GetUI().GetScene());
         }
 
         if (scene_export_filepath.Exists()) {
@@ -230,9 +230,10 @@ public:
         }
         
         if (Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI)) { // voxel cone tracing for indirect light and reflections
-            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(VoxelConeTracing::Params {
-                BoundingBox(-256.0f, 256.0f)
-            });
+            m_scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+                "VCT Renderer 0",
+                VoxelConeTracing::Params { BoundingBox(-256.0f, 256.0f) }
+            );
         }
 
         // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
@@ -287,6 +288,7 @@ public:
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
+                "Ambient Grid 0",
                 test_model.GetWorldAABB() * 1.001f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
                 Extent3D { 16, 2, 16 }
             );
@@ -294,13 +296,14 @@ public:
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS)) {
             m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
+                "Env Probe 0",
                 test_model.GetWorldAABB()
             );
         }
         
         m_scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-            m_sun,
-            test_model.GetWorldAABB()
+            "Shadows",
+            m_sun, test_model.GetWorldAABB()
         );
 
         if (false) {
