@@ -232,7 +232,7 @@ void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, Rend
 
 void EnvGrid::CreateShader()
 {
-    m_ambient_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+    m_ambient_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(CubemapRenderer),
         ShaderProps()
     );

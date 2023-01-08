@@ -41,7 +41,7 @@ public:
         }
     };
 
-    struct Section : FlatMap<String, Value>
+    struct Section : HashMap<String, Value>
     {
     };
 
@@ -54,7 +54,7 @@ public:
     const FilePath &GetFilePath() const
         { return m_path; }
 
-    const FlatMap<String, Section> &GetSections() const
+    const HashMap<String, Section> &GetSections() const
         { return m_sections; }
 
     bool HasSection(const String &key) const
@@ -63,16 +63,13 @@ public:
     Section &GetSection(const String &key)
         { return m_sections[key]; }
 
-    const Section &GetSection(const String &key) const
-        { return m_sections.At(key); }
-
 private:
     void Parse();
 
     bool m_is_valid;
     FilePath m_path;
 
-    FlatMap<String, Section> m_sections;
+    HashMap<String, Section> m_sections;
 };
 
 } // namespace hyperion::v2

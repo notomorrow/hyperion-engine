@@ -3,6 +3,7 @@
 
 #include "Shader.hpp"
 
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
@@ -26,14 +27,14 @@ public:
     Handle<Shader> &GetShader() { return m_shader; }
     const Handle<Shader> &GetShader() const { return m_shader; }
 
-    renderer::ComputePipeline *GetPipeline() { return &m_pipeline; }
-    const renderer::ComputePipeline *GetPipeline() const { return &m_pipeline; }
+    ComputePipelineRef &GetPipeline() { return m_pipeline; }
+    const ComputePipelineRef &GetPipeline() const { return m_pipeline; }
 
     void Init();
 
 private:
-    renderer::ComputePipeline m_pipeline;
     Handle<Shader> m_shader;
+    ComputePipelineRef m_pipeline;
 };
 
 } // namespace hyperion::v2

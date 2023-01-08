@@ -5,9 +5,6 @@
 
 namespace hyperion::v2 {
 
-FixedArray<RenderObjectDeleter::DeletionQueueBase *, RenderObjectDeleter::max_queues + 1> RenderObjectDeleter::queues = { };
-std::atomic_uint16_t RenderObjectDeleter::queue_index = { 0 };
-
 
 struct RENDER_COMMAND(RemoveTextureFromBindlessStorage) : RenderCommand
 {

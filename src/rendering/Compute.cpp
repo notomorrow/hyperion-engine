@@ -3,14 +3,16 @@
 
 namespace hyperion::v2 {
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateComputeShader) : RenderCommand
 {
-    renderer::ComputePipeline *pipeline;
-    renderer::ShaderProgram *shader_program;
+    ComputePipelineRef pipeline;
+    ShaderProgramRef shader_program;
 
     RENDER_COMMAND(CreateComputeShader)(
-        renderer::ComputePipeline *pipeline,
-        renderer::ShaderProgram *shader_program
+        const ComputePipelineRef &pipeline,
+        const ShaderProgramRef &shader_program
     ) : pipeline(pipeline),
         shader_program(shader_program)
     {
@@ -26,24 +28,12 @@ struct RENDER_COMMAND(CreateComputeShader) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyComputeShader) : RenderCommand
-{
-    ComputePipeline &pipeline;
-
-    RENDER_COMMAND(DestroyComputeShader)(ComputePipeline &pipeline)
-        : pipeline(pipeline)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        return pipeline.GetPipeline()->Destroy(Engine::Get()->GetGPUDevice());
-    }
-};
+#pragma endregion
     
 ComputePipeline::ComputePipeline(Handle<Shader> &&shader)
     : EngineComponentBase(),
-      m_shader(std::move(shader))
+      m_shader(std::move(shader)),
+      m_pipeline(RenderObjects::Make<renderer::ComputePipeline>())
 {
 }
 
@@ -51,14 +41,17 @@ ComputePipeline::ComputePipeline(
     Handle<Shader> &&shader,
     const Array<const DescriptorSet *> &used_descriptor_sets
 ) : EngineComponentBase(),
-    m_pipeline(used_descriptor_sets),
-    m_shader(std::move(shader))
+    m_shader(std::move(shader)),
+    m_pipeline(RenderObjects::Make<renderer::ComputePipeline>(used_descriptor_sets))
 {
 }
 
 ComputePipeline::~ComputePipeline()
 {
-    Teardown();
+    SetReady(false);
+
+    SafeRelease(std::move(m_pipeline));
+    m_shader.Reset();
 }
 
 void ComputePipeline::Init()
@@ -68,29 +61,16 @@ void ComputePipeline::Init()
     }
 
     EngineComponentBase::Init();
-
-    InitObject(m_shader);
-
-    if (m_shader) {
-        RenderCommands::Push<RENDER_COMMAND(CreateComputeShader)>(
-            &m_pipeline,
+    
+    if (InitObject(m_shader)) {
+        PUSH_RENDER_COMMAND(
+            CreateComputeShader,
+            m_pipeline,
             m_shader->GetShaderProgram()
         );
 
-        HYP_SYNC_RENDER();
-
         SetReady(true);
     }
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        if (m_shader) {
-            RenderCommands::Push<RENDER_COMMAND(DestroyComputeShader)>(*this);
-            
-            HYP_SYNC_RENDER();
-        }
-    });
 }
 
 } // namespace hyperion::v2

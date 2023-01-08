@@ -156,7 +156,7 @@ void Voxelizer::CreateShader()
         shader_name = HYP_NAME(SVOVoxelizeWithoutGeometryShader);
     }
 
-    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(shader_name);
+    m_shader = Engine::Get()->GetShaderManager().GetOrCreate(shader_name);
     AssertThrow(InitObject(m_shader));
 }
 

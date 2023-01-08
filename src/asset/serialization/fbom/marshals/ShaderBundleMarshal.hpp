@@ -24,7 +24,9 @@ public:
             return { FBOMResult::FBOM_ERR, "Cannot serialize invalid compiled shader instance" };
         }
 
-        out.SetProperty("name", FBOMString(), in_object.name.Size(), in_object.name.Data());
+        const auto name_string = in_object.name.LookupString();
+
+        out.SetProperty("name", FBOMString(), name_string.Size(), name_string.Data());
 
         auto properties_array = in_object.properties.ToArray();
 

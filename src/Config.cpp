@@ -71,15 +71,15 @@ bool Configuration::LoadFromDefinitionsFile()
     }
 
     for (const auto &it : definitions.GetSections()) {
-        for (const auto &option_it : it.second) {
-            const OptionName option_name = StringToOptionName(option_it.first);
-            const DefinitionsFile::Value &option_value = option_it.second;
+        for (const auto &option_it : it.value) {
+            const OptionName option_name = StringToOptionName(option_it.key);
+            const DefinitionsFile::Value &option_value = option_it.value;
 
             if (option_name == CONFIG_NONE || option_name >= CONFIG_MAX) {
                 DebugLog(
                     LogType::Warn,
                     "%s: Unknown config option\n",
-                    option_it.first.Data()
+                    option_it.key.Data()
                 );
 
                 continue;
@@ -96,9 +96,9 @@ bool Configuration::LoadFromDefinitionsFile()
                     value = true;
                 } else if (option_value.GetValue().name == "false") {
                     value = false;
-                } else if (StringUtil::Parse(option_it.first.Data(), &tmp_value.i)) {
+                } else if (StringUtil::Parse(option_it.key.Data(), &tmp_value.i)) {
                     value = tmp_value.i;
-                } else if (StringUtil::Parse(option_it.first.Data(), &tmp_value.f)) {
+                } else if (StringUtil::Parse(option_it.key.Data(), &tmp_value.f)) {
                     value = tmp_value.f;
                 } else {
                     value = false;

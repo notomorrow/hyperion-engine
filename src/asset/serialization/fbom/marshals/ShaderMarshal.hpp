@@ -21,9 +21,9 @@ public:
 
     virtual FBOMResult Serialize(const Shader &in_object, FBOMObject &out) const override
     {
-        //out.AddChild(in_object.GetCompiledShader(), FBOM_OBJECT_FLAGS_EXTERNAL);
+        const auto name_string = in_object.GetCompiledShader().name.LookupString();
 
-        out.SetProperty("name", FBOMString(), in_object.GetCompiledShader().name.Size(), in_object.GetCompiledShader().name.Data());
+        out.SetProperty("name", FBOMString(), name_string.Size(), name_string.Data());
 
         auto properties_array = in_object.GetCompiledShader().properties.ToArray();
 
@@ -45,13 +45,13 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
-        auto shader = CreateObject<Shader>();
+        ANSIString name_string;
 
-        String name;
-
-        if (auto err = in.GetProperty("name").ReadString(name)) {
+        if (auto err = in.GetProperty("name").ReadString(name_string)) {
             return err;
         }
+
+        const Name name = CreateNameFromDynamicString(name_string);
 
         ShaderProps properties;
 
@@ -73,22 +73,20 @@ public:
             properties.Set(property_name);
         }
 
-        auto compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(name, properties);
+        Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(name, properties);
 
-        if (!compiled_shader.IsValid()) {
+        if (!shader.IsValid()) {
             DebugLog(
                 LogType::Error,
                 "Failed to deserialize Shader instance: The referenced compiled shader is not valid.\n"
                 "\tName: %s\n"
                 "\tProperties: %s\n",
-                name.Data(),
+                name_string.Data(),
                 properties.ToString().Data()
             );
 
             return { FBOMResult::FBOM_ERR, "Invalid compiled shader" };
         }
-
-        shader->SetCompiledShader(std::move(compiled_shader));
 
         out_object = UniquePtr<Handle<Shader>>::Construct(std::move(shader));
 

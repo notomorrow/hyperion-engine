@@ -10,7 +10,7 @@ namespace hyperion::v2::fbom {
 
 struct FBOMUnset : FBOMType { FBOMUnset() : FBOMType() {} };
 struct FBOMUnsignedInt : FBOMType { FBOMUnsignedInt() : FBOMType("u32", 4) {} };
-struct FBOMUnsignedLong : FBOMType { FBOMUnsignedLong() : FBOMType("i64", 8) {} };
+struct FBOMUnsignedLong : FBOMType { FBOMUnsignedLong() : FBOMType("u64", 8) {} };
 struct FBOMInt : FBOMType { FBOMInt() : FBOMType("i32", 4) {} };
 struct FBOMLong : FBOMType { FBOMLong() : FBOMType("i64", 8) {} };
 struct FBOMFloat : FBOMType { FBOMFloat() : FBOMType("f32", 4) {} };
@@ -79,7 +79,6 @@ struct FBOMObjectType : FBOMType
     {
     }
 };
-
 
 } // namespace hyperion::v2::fbom
 

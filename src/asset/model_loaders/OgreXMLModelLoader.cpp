@@ -215,13 +215,13 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
 
         mesh->CalculateTangents();
 
-        auto vertex_attributes = mesh->GetVertexAttributes();
 
-        Handle<Shader> shader = Engine::Get()->shader_manager.GetShader(
-            skeleton
-                ? ShaderManager::Key::BASIC_FORWARD_SKINNED
-                : ShaderManager::Key::BASIC_FORWARD
-        );
+        auto vertex_attributes = mesh->GetVertexAttributes();
+        
+        ShaderProps shader_properties(vertex_attributes);
+        shader_properties.Set("SKINNING", skeleton.IsValid());
+
+        Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), shader_properties);
 
         auto entity = CreateObject<Entity>(
             std::move(mesh),

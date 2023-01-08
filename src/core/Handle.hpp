@@ -144,6 +144,9 @@ struct Handle
         index = 0;
     }
 
+    HYP_FORCE_INLINE Name GetTypeName() const
+        { return HandleDefinition<T>::GetNameForType(); }
+
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -288,6 +291,9 @@ struct WeakHandle
 
         index = 0;
     }
+
+    HYP_FORCE_INLINE Name GetTypeName() const
+        { return HandleDefinition<T>::GetNameForType(); }
 
     HashCode GetHashCode() const
     {

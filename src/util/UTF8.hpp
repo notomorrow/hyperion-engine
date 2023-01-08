@@ -546,8 +546,8 @@ inline u8char *utf16to8(u16char *start, u16char *end, u8char *result)
     Next, call the function again, passing in the previously mentioned
     value for \ref{buffer_length}. The resulting string will be written into the provided
     param, \ref{result}, so it'll need to have \ref{buffer_length} bytes allocated to it. */
-template <class T>
-inline void utf_to_str(T value, SizeType &buffer_length, char *result)
+template <class T, class CharType>
+inline void utf_to_str(T value, SizeType &buffer_length, CharType *result)
 {
     T divisor = 1;
     bool is_negative = 0;
@@ -584,7 +584,7 @@ inline void utf_to_str(T value, SizeType &buffer_length, char *result)
 
     if (is_negative) {
         AssertThrow(buffer_length != 1);
-        result[buffer_index++] = '-';
+        result[buffer_index++] = CharType('-');
         value *= -1;
 
         --buffer_length_remaining;
@@ -597,7 +597,7 @@ inline void utf_to_str(T value, SizeType &buffer_length, char *result)
     while (buffer_length_remaining) {
         // ASCII table has the number characters in sequence from 0-9 so use the
         // ASCII value of '0' as the base
-        result[buffer_index++] = char(T('0') + value / divisor);
+        result[buffer_index++] = CharType(T('0') + value / divisor);
         
         // This removes the most significant digit converting 1337 to 337 because
         // 1337 % 1000 = 337

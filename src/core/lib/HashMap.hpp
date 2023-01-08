@@ -141,10 +141,8 @@ class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
     static constexpr SizeType initial_bucket_size = 16;
 
     template <class IteratorType>
-    static inline void AdvanceIterator(IteratorType &iter)
+    static inline void AdvanceIteratorBucket(IteratorType &iter)
     {
-        ++iter.bucket_iter.index;
-
         while (iter.bucket_iter.bucket != iter.hm->m_buckets.End() && iter.bucket_iter.index >= iter.bucket_iter.bucket->elements.Size()) {
             ++iter.bucket_iter.bucket;
             iter.bucket_iter.index = 0;
@@ -152,12 +150,11 @@ class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
     }
 
     template <class IteratorType>
-    static inline void AdvanceIteratorBucket(IteratorType &iter)
+    static inline void AdvanceIterator(IteratorType &iter)
     {
-        while (iter.bucket_iter.bucket != iter.hm->m_buckets.End() && iter.bucket_iter.index >= iter.bucket_iter.bucket->elements.Size()) {
-            ++iter.bucket_iter.bucket;
-            iter.bucket_iter.index = 0;
-        }
+        ++iter.bucket_iter.index;
+
+        AdvanceIteratorBucket(iter);
     }
 
 public:

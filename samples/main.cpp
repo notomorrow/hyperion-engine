@@ -515,16 +515,6 @@ public:
                 }
             }
 
-            for (auto &child : tree.GetChildren()) {
-                if (child.GetName() == "BlueSpruceBark") {
-                    continue;
-                }
-
-                if (child.GetEntity()) {
-                    //child.GetEntity()->SetShader(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION));
-                }
-            }
-
             GetScene()->GetRoot().AddChild(tree);
         }
         
@@ -546,7 +536,7 @@ public:
             plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.12f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            plane->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD)));
+            plane->SetShader(Handle<Shader>(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProps(plane->GetMesh()->GetVertexAttributes()))));
             plane->RebuildRenderableAttributes();
             plane->CreateBLAS();
             if (NodeProxy plane_node_proxy = GetScene()->AddEntity(plane)) {
@@ -858,41 +848,6 @@ int main()
     auto *my_game = new MyGame(application);
 
     Engine::Get()->Initialize(application);
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::BASIC_VEGETATION,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Vegetation), ShaderProps { })
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::BASIC_UI,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(UIObject), ShaderProps { })
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::DEBUG_AABB,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(DebugAABB), ShaderProps { })
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::BASIC_FORWARD,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Forward), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes))
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::BASIC_FORWARD_SKINNED,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Forward), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes, { "SKINNING" }))
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderKey::TERRAIN,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Terrain), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes))
-    );
-
-    Engine::Get()->shader_manager.SetShader(
-        ShaderManager::Key::BASIC_SKYBOX,
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Skybox), ShaderProps { })
-    );
 
     my_game->Init();
 

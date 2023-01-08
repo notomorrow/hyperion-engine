@@ -219,7 +219,7 @@ void TemporalBlending::CreateComputePipelines()
     shader_props.Set("TEMPORAL_BLEND_TECHNIQUE_" + String::ToString(Int(m_technique)));
 
     m_perform_blending = CreateObject<ComputePipeline>(
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(TemporalBlending), shader_props),
+        Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(TemporalBlending), shader_props),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

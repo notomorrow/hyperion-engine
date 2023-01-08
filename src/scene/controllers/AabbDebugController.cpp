@@ -33,12 +33,11 @@ void AABBDebugController::OnAdded()
 {
     m_aabb = GetOwner()->GetWorldAABB();
 
-    auto mesh = MeshBuilder::Cube();
-    auto vertex_attributes = mesh->GetVertexAttributes();
+    Handle<Mesh> mesh = MeshBuilder::Cube();
+    VertexAttributeSet vertex_attributes = mesh->GetVertexAttributes();
 
-    auto material = CreateObject<Material>("aabb_material");
-
-    auto shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::DEBUG_AABB);
+    Handle<Material> material = CreateObject<Material>("aabb_material");
+    Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(DebugAABB), ShaderProps(vertex_attributes));
 
     m_aabb_entity = CreateObject<Entity>(
         std::move(mesh),

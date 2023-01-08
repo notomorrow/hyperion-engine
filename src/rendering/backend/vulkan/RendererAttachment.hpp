@@ -1,6 +1,7 @@
 #ifndef HYPERION_RENDERER_ATTACHMENT_H
 #define HYPERION_RENDERER_ATTACHMENT_H
 
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
@@ -91,8 +92,8 @@ public:
 
     AttachmentUsage(
         Attachment *attachment,
-        std::unique_ptr<ImageView> &&image_view,
-        std::unique_ptr<Sampler> &&sampler,
+        ImageViewRef &&image_view,
+        SamplerRef &&sampler,
         LoadOperation load_operation = LoadOperation::CLEAR,
         StoreOperation store_operation = StoreOperation::STORE
     );
@@ -103,8 +104,8 @@ public:
 
     Attachment *GetAttachment() const { return m_attachment; }
 
-    ImageView *GetImageView() const { return m_image_view.get(); }
-    Sampler *GetSampler() const { return m_sampler.get(); }
+    const ImageViewRef &GetImageView() const { return m_image_view; }
+    const SamplerRef &GetSampler() const { return m_sampler; }
 
     LoadOperation GetLoadOperation() const { return m_load_operation; }
     StoreOperation GetStoreOperation() const { return m_store_operation; }
@@ -155,8 +156,8 @@ private:
     VkImageLayout GetIntermediateLayout() const;
 
     Attachment *m_attachment;
-    std::unique_ptr<ImageView> m_image_view;
-    std::unique_ptr<Sampler> m_sampler;
+    ImageViewRef m_image_view;
+    SamplerRef m_sampler;
     
     LoadOperation m_load_operation;
     StoreOperation m_store_operation;

@@ -10,7 +10,7 @@
 
 #include <math/MathUtil.hpp>
 
-#include <rendering/RenderObject.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>

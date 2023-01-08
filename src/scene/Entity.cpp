@@ -121,7 +121,7 @@ void Entity::Init()
     EngineComponentBase::Init();
 
     if (!m_shader) {
-        m_shader = Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
+        SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward)));
     }
 
     m_draw_proxy.entity_id = m_id;

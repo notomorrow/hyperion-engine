@@ -32,22 +32,34 @@
   <Type Name="hyperion::containers::detail::DynString&lt;*,*&gt;">
     <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 1">{{ {(m_buffer_raw + m_start_offset), s8} }}</DisplayString>
     <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 1">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s8} }}</DisplayString>
-    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0">{{ {(m_buffer_raw + m_start_offset), s} }}</DisplayString>
-    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s} }}</DisplayString>
-
-    <StringView Condition="$T2 == 1">(m_buffer_raw + m_start_offset), s8</StringView>
-    <StringView Condition="$T2 == 0">(m_buffer_raw + m_start_offset), s</StringView>
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0 &amp;&amp; is_ansi">{{ {(m_buffer_raw + m_start_offset), s} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0 &amp;&amp; is_ansi">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0 &amp;&amp; is_utf16">{{ {(m_buffer_raw + m_start_offset), su} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0 &amp;&amp; is_utf16">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), su} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0 &amp;&amp; is_utf32">{{ {(m_buffer_raw + m_start_offset), s32} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0 &amp;&amp; is_utf32">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s32} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == true &amp;&amp; $T2 == 0 &amp;&amp; is_wide">{{ {(m_buffer_raw + m_start_offset), su} }}</DisplayString>
+    <DisplayString Condition="m_is_dynamic == false &amp;&amp; $T2 == 0 &amp;&amp; is_wide">{{ {((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), su} }}</DisplayString>
 
     <Expand>
-      <Item Name="[Text]" Condition="m_is_dynamic == true">(m_buffer_raw + m_start_offset), s8</Item>
-      <Item Name="[Text]" Condition="m_is_dynamic == false">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s8</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == true &amp;&amp; is_utf8">(m_buffer_raw + m_start_offset), s8</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false &amp;&amp; is_utf8">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s8</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == true &amp;&amp; is_ansi">(m_buffer_raw + m_start_offset), s</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false &amp;&amp; is_ansi">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == true &amp;&amp; is_utf16">(m_buffer_raw + m_start_offset), su</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false &amp;&amp; is_utf16">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), su</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == true &amp;&amp; is_utf32">(m_buffer_raw + m_start_offset), s32</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false &amp;&amp; is_utf32">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), s32</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == true &amp;&amp; is_wide">(m_buffer_raw + m_start_offset), su</Item>
+      <Item Name="[Text]" Condition="m_is_dynamic == false &amp;&amp; is_wide">((($T1 *)&amp;m_inline_storage.data[0]) + m_start_offset), su</Item>
+
+      <Item Name="[Type]">string_type</Item>
 
       <Item Name="[Size]">(m_size - m_start_offset - 1)</Item>
       <Item Name="[Capacity]">m_capacity</Item>
       <Item Name="[Length]">(m_length)</Item>
       <Item Name="[Dynamic]">(m_is_dynamic)</Item>
       <Item Name="[StartOffset]">(m_start_offset)</Item>
-      <Item Name="[UTF8]">bool($T2)</Item>
     </Expand>
   </Type>
 
@@ -130,24 +142,24 @@
   </Type>
 
   <!-- Walks the whole hash map to display the name as a string! -->
-  <Type Name="hyperion::v2::Name">
+  <Type Name="hyperion::Name">
     <DisplayString>{{ ID={hash_code} }}</DisplayString>
 
     <Expand>
       <CustomListItems>
-        <Variable Name="bucket_ptr" InitialValue="((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *) &amp;(((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0]))" />
+        <Variable Name="bucket_ptr" InitialValue="((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *) &amp;(((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0]))" />
 
         <Variable Name="item_ptr" InitialValue="((hyperion::HashElement&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)nullptr)" />
         <Variable Name="item_index" InitialValue="-1" />
         <Variable Name="found" InitialValue="false"/>
 
-        <Exec Condition="((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == false">bucket_ptr = ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
-        <Exec Condition="((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == true">bucket_ptr = (((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_buffer_raw + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
+        <Exec Condition="((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == false">bucket_ptr = ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
+        <Exec Condition="((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == true">bucket_ptr = (((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_buffer_raw + ((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
 
         <Loop>
           <Exec>item_index = 0</Exec>
           <Exec>item_ptr = nullptr</Exec>
-          <Break Condition="found == true || bucket_ptr == ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_size)" />
+          <Break Condition="found == true || bucket_ptr == ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_size)" />
 
           <If Condition="bucket_ptr-&gt;elements.m_size - bucket_ptr-&gt;elements.m_start_offset > 0">
             <Loop>

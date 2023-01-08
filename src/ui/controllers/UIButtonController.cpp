@@ -40,7 +40,7 @@ void UIButtonController::OnAdded()
     );
 
     GetOwner()->SetMesh(UIText::BuildTextMesh(font_map, "HyperionEngine v0.2"));
-    GetOwner()->SetShader(Handle<Shader>(Engine::Get()->shader_manager.GetShader(ShaderManager::Key::BASIC_UI)));
+    GetOwner()->SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(UIObject)));
 
     auto mat = CreateObject<Material>();
     mat->SetBucket(Bucket::BUCKET_UI);

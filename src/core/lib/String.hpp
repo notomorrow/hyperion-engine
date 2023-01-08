@@ -22,6 +22,16 @@ namespace detail {
 /*! UTF-8 supporting dynamic string class */
 using namespace ::utf;
 
+enum StringType
+{
+    STRING_TYPE_NONE,
+    STRING_TYPE_ANSI,
+    STRING_TYPE_UTF8,
+    STRING_TYPE_UTF16,
+    STRING_TYPE_UTF32,
+    STRING_TYPE_WIDE
+};
+
 template <class T>
 using CharArray = Array<T, 64u>;
 
@@ -42,6 +52,16 @@ public:
 
     static constexpr bool is_utf8 = IsUtf8;
     static constexpr bool is_ansi = !is_utf8 && (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>);
+    static constexpr bool is_utf16 = !is_utf8 && std::is_same_v<T, utf::u16char>;
+    static constexpr bool is_utf32 = !is_utf8 && std::is_same_v<T, utf::u32char>;
+    static constexpr bool is_wide = !is_utf8 && std::is_same_v<T, wchar_t>;
+
+    static constexpr StringType string_type =
+        (is_ansi ? STRING_TYPE_ANSI :
+        (is_utf8 ? STRING_TYPE_UTF8 :
+        (is_utf16 ? STRING_TYPE_UTF16 :
+        (is_utf32 ? STRING_TYPE_UTF32 :
+        (is_wide ? STRING_TYPE_WIDE : STRING_TYPE_NONE)))));
 
     static constexpr SizeType not_found = SizeType(-1);
 
@@ -67,9 +87,18 @@ public:
     DynString operator+(const DynString &other) const;
     DynString operator+(DynString &&other) const;
     DynString operator+(T ch) const;
+    
+    template <typename = std::enable_if_t<IsUtf8, int>>
+    DynString operator+(u32char ch) const
+        { return DynString(*this) += ch; }
+    
     DynString &operator+=(const DynString &other);
     DynString &operator+=(DynString &&other);
     DynString &operator+=(T ch);
+    
+    template <typename = std::enable_if_t<IsUtf8, int>>
+    DynString &operator+=(u32char ch)
+        { Append(ch); return *this; }
 
     bool operator==(const DynString &other) const;
     bool operator==(const T *str) const;
@@ -125,12 +154,24 @@ public:
     // void Resize(typename Base::SizeType new_size)                      { Base::Resize(new_size + 1); }
 
     void Refit() { Base::Refit(); }
+
     void Append(const DynString &other);
     void Append(DynString &&other);
+    void Append(const T *str);
     void Append(T &&value);
     void Append(const T &value);
-    typename Base::ValueType &&PopBack();
-    typename Base::ValueType &&PopFront();
+    
+    template <typename = std::enable_if_t<IsUtf8, int>>
+    void Append(u32char ch)
+    {
+        char parts[4] = { '\0' };
+        utf::char32to8(ch, parts);
+
+        Append(parts);
+    }
+
+    typename Base::ValueType PopBack();
+    typename Base::ValueType PopFront();
     void Clear();
 
     bool StartsWith(const DynString &other) const;
@@ -149,7 +190,7 @@ public:
     ToString(Integral value)
     {
         SizeType result_size;
-        utf::utf_to_str(value, result_size, nullptr);
+        utf::utf_to_str<Integral, T>(value, result_size, nullptr);
 
         AssertThrow(result_size >= 1);
 
@@ -157,15 +198,15 @@ public:
 
         if constexpr (is_ansi) { // can write into memory direct without allocating any more
             result.Resize(result_size - 1); // String class automatically adds 1 for null character
-            utf::utf_to_str(value, result_size, result.Data());
+            utf::utf_to_str<Integral, T>(value, result_size, result.Data());
         } else {
             result.Reserve(result_size - 1);  // String class automatically adds 1 for null character
 
-            char *data = new char[result_size];
-            utf::utf_to_str(value, result_size, data);
+            T *data = new T[result_size];
+            utf::utf_to_str<Integral, T>(value, result_size, data);
 
             for (SizeType i = 0; i < result_size - 1; i++) {
-                result.Append(static_cast<T>(data[i]));
+                result.Append(data[i]);
             }
 
             delete[] data;
@@ -177,21 +218,21 @@ public:
     [[nodiscard]] HashCode GetHashCode() const
         { return Base::GetHashCode(); }
 
+    template <typename = std::enable_if_t<is_utf8 || is_ansi, int>>
     friend std::ostream &operator<<(std::ostream &os, const DynString &str)
     {
         os << str.Data();
 
         return os;
     }
-    
-#ifdef HYP_UTF8_WIDE
-    friend utf::utf8_ostream &operator<<(utf::utf8_ostream &os, const DynString &str)
+
+    template <typename = std::enable_if_t<is_wide, int>>
+    friend std::wostream &operator<<(std::wostream &os, const DynString &str)
     {
-        os << HYP_UTF8_TOWIDE(str.Data());
+        os << str.Data();
 
         return os;
     }
-#endif
 
 protected:
     const T *StrStr(const DynString &other) const;
@@ -512,6 +553,12 @@ void DynString<T, IsUtf8>::Append(DynString &&other)
 }
 
 template <class T, bool IsUtf8>
+void DynString<T, IsUtf8>::Append(const T *str)
+{
+    Append(DynString(str));
+}
+
+template <class T, bool IsUtf8>
 void DynString<T, IsUtf8>::Append(const T &value)
 {
     if (Size() + 2 >= Base::m_capacity) {
@@ -550,14 +597,14 @@ void DynString<T, IsUtf8>::Append(T &&value)
 }
 
 template <class T, bool IsUtf8>
-auto DynString<T, IsUtf8>::PopFront() -> typename Base::ValueType&&
+auto DynString<T, IsUtf8>::PopFront() -> typename Base::ValueType
 {
     --m_length;
     return Base::PopFront();
 }
 
 template <class T, bool IsUtf8>
-auto DynString<T, IsUtf8>::PopBack() -> typename Base::ValueType&&
+auto DynString<T, IsUtf8>::PopBack() -> typename Base::ValueType
 {
     --m_length;
     Base::PopBack(); // pop NT-char
@@ -811,17 +858,28 @@ DynString<T, IsUtf8> operator+(const T *str, const DynString<T, IsUtf8> &other)
 } // namespace detail
 } // namespace containers
 
-using String = containers::detail::DynString<char, true>;
-
-inline String operator+(const char *str, const String &other)
-{
-    return String(str) + other;
-}
 
 using CharArray = containers::detail::CharArray<char>;
 
+using String = containers::detail::DynString<char, true>;
+
 using ANSIString = containers::detail::DynString<char, false>;
 using WideString = containers::detail::DynString<wchar_t, false>;
+
+using UTF32String = containers::detail::DynString<utf::u32char, false>;
+using UTF16String = containers::detail::DynString<utf::u16char, false>;
+
+inline String operator+(const char *str, const String &other)
+    { return String(str) + other; }
+
+inline ANSIString operator+(const char *str, const ANSIString &other)
+    { return ANSIString(str) + other; }
+
+inline UTF16String operator+(const utf::u16char *str, const UTF16String &other)
+    { return UTF16String(str) + other; }
+
+inline UTF32String operator+(const utf::u32char *str, const UTF32String &other)
+    { return UTF32String(str) + other; }
 
 } // namespace hyperion
 

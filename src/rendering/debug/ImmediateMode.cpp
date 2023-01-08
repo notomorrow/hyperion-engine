@@ -57,13 +57,13 @@ void ImmediateMode::Create()
 
     RenderCommands::Push<RENDER_COMMAND(CreateImmediateModeDescriptors)>(m_descriptor_sets.Data());
 
-    m_shader = Engine::Get()->CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "DebugAABB",
+    m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
+        HYP_NAME(DebugAABB),
         ShaderProps(
             renderer::static_mesh_vertex_attributes,
             Array<String> { "IMMEDIATE_MODE" }
         )
-    ));
+    );
 
     Engine::Get()->InitObject(m_shader);
 

@@ -14,7 +14,7 @@ FXAAEffect::~FXAAEffect() = default;
 
 Handle<Shader> FXAAEffect::CreateShader()
 {
-    return Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(FXAA));
+    return Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(FXAA));
 }
 
 } // namespace hyperion::v2

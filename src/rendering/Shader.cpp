@@ -206,7 +206,6 @@ void Shader::Init()
     SetReady(true);
 }
 
-
 Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 {
     std::lock_guard guard(m_mutex);
@@ -222,7 +221,7 @@ Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definiti
     CompiledShader compiled_shader;
 
     const bool is_valid_compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        String(definition.name.LookupString()),
+        definition.name,
         definition.props,
         definition.vertex_attributes,
         compiled_shader

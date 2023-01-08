@@ -1,6 +1,8 @@
-#ifndef HYPERION_V2_RENDER_OBJECT_HPP
-#define HYPERION_V2_RENDER_OBJECT_HPP
+#ifndef HYPERION_V2_BACKEND_RENDERER_RENDER_OBJECT_HPP
+#define HYPERION_V2_BACKEND_RENDERER_RENDER_OBJECT_HPP
 
+#include <core/Core.hpp>
+#include <core/Name.hpp>
 #include <core/Containers.hpp>
 #include <core/IDCreator.hpp>
 #include <core/lib/ValueStorage.hpp>
@@ -8,11 +10,13 @@
 #include <Constants.hpp>
 #include <Types.hpp>
 
+#include <rendering/backend/RendererResult.hpp>
+
 #include <mutex>
 #include <atomic>
 
 namespace hyperion {
-namespace v2 {
+namespace renderer {
 
 template <class T>
 struct RenderObjectDefinition;
@@ -21,8 +25,18 @@ template <class T>
 constexpr bool has_render_object_defined = implementation_exists<RenderObjectDefinition<T>>;
 
 template <class T>
+static inline Name GetNameForRenderObject()
+{
+    static_assert(has_render_object_defined<T>, "T must be a render object");
+
+    return RenderObjectDefinition<T>::GetNameForType();
+}
+
+template <class T>
 class RenderObjectContainer
 {
+    using IDCreator = v2::IDCreator;
+
 public:
     static constexpr SizeType max_size = RenderObjectDefinition<T>::max_size;
 
@@ -264,6 +278,9 @@ public:
         }
     }
 
+    HYP_FORCE_INLINE Name GetTypeName() const
+        { return GetNameForRenderObject<T>(); }
+
     T *operator->() const
         { return Get(); }
 
@@ -330,21 +347,24 @@ public:
     }
 };
 
-} // namespace v2
+} // namespace renderer
 
 #define DEF_RENDER_OBJECT(T, _max_size) \
     namespace renderer { \
     class T; \
-    } \
-    \
-    namespace v2 { \
     template <> \
-    struct RenderObjectDefinition< renderer::T > \
+    struct RenderObjectDefinition< T > \
     { \
         static constexpr SizeType max_size = (_max_size); \
+        \
+        static Name GetNameForType() \
+        { \
+            static const Name name = HYP_NAME(T); \
+            return name; \
+        } \
     }; \
-    using T##Ref = RenderObjectHandle< renderer::T >; \
-    } // namespace v2
+    } \
+    using T##Ref = renderer::RenderObjectHandle< renderer::T >
 
 DEF_RENDER_OBJECT(CommandBuffer,       2048);
 DEF_RENDER_OBJECT(ShaderProgram,       2048);
@@ -354,8 +374,164 @@ DEF_RENDER_OBJECT(ImageView,           65536);
 DEF_RENDER_OBJECT(Sampler,             16384);
 DEF_RENDER_OBJECT(RaytracingPipeline,  128);
 DEF_RENDER_OBJECT(DescriptorSet,       4096);
+DEF_RENDER_OBJECT(ComputePipeline,     4096);
 
 #undef DEF_RENDER_OBJECT
+
+using RenderObjects = renderer::RenderObjects;
+
+struct RenderObjectDeleter
+{
+    static constexpr UInt initial_cycles_remaining = max_frames_in_flight + 1;
+    static constexpr SizeType max_queues = 63;
+
+    struct DeletionQueueBase
+    {
+        TypeID type_id;
+        std::atomic_uint num_items { 0 };
+        std::mutex mtx;
+
+        virtual ~DeletionQueueBase() = default;
+        virtual void Iterate() = 0;
+    };
+
+    template <class T>
+    struct DeletionQueue : DeletionQueueBase
+    {
+        Array<Pair<renderer::RenderObjectHandle<T>, UInt8>> items;
+        Queue<renderer::RenderObjectHandle<T>> to_delete;
+
+        DeletionQueue()
+        {
+            type_id = TypeID::ForType<T>();
+        }
+
+        DeletionQueue(const DeletionQueue &other) = delete;
+        DeletionQueue &operator=(const DeletionQueue &other) = delete;
+        virtual ~DeletionQueue() = default;
+
+        virtual void Iterate() override
+        {
+            if (!num_items.load()) {
+                return;
+            }
+            
+            mtx.lock();
+
+            for (auto it = items.Begin(); it != items.End();) {
+                if (--it->second == 0) {
+                    to_delete.Push(std::move(it->first));
+
+                    it = items.Erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            num_items.store(items.Size());
+
+            mtx.unlock();
+
+            while (to_delete.Any()) {
+                HYPERION_ASSERT_RESULT(to_delete.Front()->Destroy(v2::GetEngineDevice()));
+
+                to_delete.Pop();
+            }
+        }
+
+        void Push(renderer::RenderObjectHandle<T> &&handle)
+        {
+            num_items.fetch_add(1);
+
+            std::lock_guard guard(mtx);
+
+            items.PushBack({ std::move(handle), initial_cycles_remaining });
+        }
+    };
+
+    template <class T>
+    struct DeletionQueueInstance
+    {
+        DeletionQueue<T> queue;
+        UInt16 index;
+
+        DeletionQueueInstance()
+        {
+            /*const auto it = deleter.queues.FindIf([](const DeletionQueueBase *item) {
+                return item->type_id == TypeID::ForType<T>();
+            });
+
+            AssertThrowMsg(it == deleter.queues.End(), "Duplicate deletion queue added!");
+
+            deleter.queues.PushBack(&queue);*/
+
+            index = queue_index.fetch_add(1);
+
+            AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
+
+            queues[index] = &queue;
+        }
+
+        DeletionQueueInstance(const DeletionQueueInstance &other) = delete;
+        DeletionQueueInstance &operator=(const DeletionQueueInstance &other) = delete;
+        DeletionQueueInstance(DeletionQueueInstance &&other) noexcept = delete;
+        DeletionQueueInstance &operator=(DeletionQueueInstance &&other) noexcept = delete;
+
+        ~DeletionQueueInstance()
+        {
+            /*auto it = deleter.queues.Find(&queue);
+
+            AssertThrow(it != deleter.queues.End());
+
+            deleter.queues.Erase(it);*/
+
+            queues[index] = nullptr;
+        }
+    };
+
+    template <class T>
+    static DeletionQueue<T> &GetQueue()
+    {
+        static DeletionQueueInstance<T> instance;
+
+        return instance.queue;
+    }
+
+    static void Iterate()
+    {
+        DeletionQueueBase **queue = queues.Data();
+
+        while (*queue) {
+            (*queue)->Iterate();
+            ++queue;
+        }
+    }
+
+    static FixedArray<DeletionQueueBase *, max_queues + 1> queues;
+    static std::atomic_uint16_t queue_index;
+};
+
+template <class T>
+static inline void SafeRelease(renderer::RenderObjectHandle<T> &&handle)
+{
+    RenderObjectDeleter::GetQueue<T>().Push(std::move(handle));
+}
+
+template <class T, SizeType Sz>
+static inline void SafeRelease(Array<renderer::RenderObjectHandle<T>, Sz> &&handles)
+{
+    for (auto &it : handles) {
+        RenderObjectDeleter::GetQueue<T>().Push(std::move(it));
+    }
+}
+
+template <class T, SizeType Sz>
+static inline void SafeRelease(FixedArray<renderer::RenderObjectHandle<T>, Sz> &&handles)
+{
+    for (auto &it : handles) {
+        RenderObjectDeleter::GetQueue<T>().Push(std::move(it));
+    }
+}
 
 } // namespace hyperion
 

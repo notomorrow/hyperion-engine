@@ -15,7 +15,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderState.hpp>
-#include <rendering/RenderObject.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/RenderCommands.hpp>
 #include <rendering/debug/ImmediateMode.hpp>
 #include <rendering/Material.hpp>
@@ -163,8 +163,8 @@ public:
     MaterialCache &GetMaterialCache() { return m_material_cache; }
     const MaterialCache &GetMaterialCache() const { return m_material_cache; }
 
-    ShaderManagerSystem &GetShaderManagerSystem() { return m_shader_manager2; }
-    const ShaderManagerSystem &GetShaderManagerSystem() const { return m_shader_manager2; }
+    ShaderManagerSystem &GetShaderManager() { return m_shader_manager; }
+    const ShaderManagerSystem &GetShaderManager() const { return m_shader_manager; }
 
     ImmediateMode &GetImmediateMode() { return m_immediate_mode; }
     const ImmediateMode &GetImmediateMode() const { return m_immediate_mode; }
@@ -226,10 +226,8 @@ public:
 
     EngineCallbacks callbacks;
 
-    ShaderManager shader_manager;
-
     ShaderCompiler m_shader_compiler;
-    ShaderManagerSystem m_shader_manager2;
+    ShaderManagerSystem m_shader_manager;
                              
     RenderState render_state;
     

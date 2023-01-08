@@ -2,6 +2,7 @@
 #define HYPERION_V2_SHADER_COMPILER_H
 
 #include <core/Containers.hpp>
+#include <core/Name.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
@@ -320,9 +321,24 @@ private:
 
 struct CompiledShader
 {
-    String name;
+    Name name;
     ShaderProps properties;
     HeapArray<ByteBuffer, ShaderModule::Type::MAX> modules;
+
+    CompiledShader() = default;
+    CompiledShader(Name name, const ShaderProps &properties)
+        : name(name),
+          properties(properties)
+    {
+    }
+
+    CompiledShader(const CompiledShader &other) = default;
+    CompiledShader &operator=(const CompiledShader &other) = default;
+
+    CompiledShader(CompiledShader &&other) noexcept = default;
+    CompiledShader &operator=(CompiledShader &&other) noexcept = default;
+
+    ~CompiledShader() = default;
 
     explicit operator bool() const
         { return IsValid(); }
@@ -366,36 +382,36 @@ public:
     ShaderCache &operator=(ShaderCache &&other) noexcept = delete;
     ~ShaderCache() = default;
 
-    bool Get(const String &key, CompiledShaderBatch &out) const
+    bool Get(Name name, CompiledShaderBatch &out) const
     {
         std::lock_guard guard(m_mutex);
 
-        const auto it = m_compiled_shaders.Find(key);
+        const auto it = m_compiled_shaders.Find(name);
 
         if (it == m_compiled_shaders.End()) {
             return false;
         }
 
-        out = it->second;
+        out = it->value;
 
         return true;
     }
 
-    bool GetShaderInstance(const String &key, UInt64 version_hash, CompiledShader &out) const
+    bool GetShaderInstance(Name name, UInt64 version_hash, CompiledShader &out) const
     {
         std::lock_guard guard(m_mutex);
 
-        const auto it = m_compiled_shaders.Find(key);
+        const auto it = m_compiled_shaders.Find(name);
 
         if (it == m_compiled_shaders.End()) {
             return false;
         }
 
-        const auto version_it = it->second.compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
+        const auto version_it = it->value.compiled_shaders.FindIf([version_hash](const CompiledShader &item) {
             return item.properties.GetHashCode().Value() == version_hash;
         });
 
-        if (version_it == it->second.compiled_shaders.End()) {
+        if (version_it == it->value.compiled_shaders.End()) {
             return false;
         }
 
@@ -404,29 +420,29 @@ public:
         return true;
     }
 
-    void Set(const String &key, const CompiledShaderBatch &batch)
+    void Set(Name name, const CompiledShaderBatch &batch)
     {
         std::lock_guard guard(m_mutex);
 
-        m_compiled_shaders.Set(key, batch);
+        m_compiled_shaders.Set(name, batch);
     }
 
-    void Set(const String &key, CompiledShaderBatch &&batch)
+    void Set(Name name, CompiledShaderBatch &&batch)
     {
         std::lock_guard guard(m_mutex);
 
-        m_compiled_shaders.Set(key, std::move(batch));
+        m_compiled_shaders.Set(name, std::move(batch));
     }
 
-    void Remove(const String &key)
+    void Remove(Name name)
     {
         std::lock_guard guard(m_mutex);
 
-        m_compiled_shaders.Erase(key);
+        m_compiled_shaders.Erase(name);
     }
 
 private:
-    FlatMap<String, CompiledShaderBatch> m_compiled_shaders;
+    HashMap<Name, CompiledShaderBatch> m_compiled_shaders;
     mutable std::mutex m_mutex;
 };
 
@@ -471,7 +487,7 @@ public:
 
     struct Bundle // combination of shader files, .frag, .vert etc.
     {
-        String name;
+        Name name;
         FlatMap<ShaderModule::Type, SourceFile> sources;
         ShaderProps versions; // permutations
 
@@ -506,23 +522,12 @@ public:
 
     bool LoadShaderDefinitions();
 
-    CompiledShader GetCompiledShader(
-        const String &name
-    );
-
-    CompiledShader GetCompiledShader(
-        const String &name,
-        const ShaderProps &versions
-    );
-
-    CompiledShader GetCompiledShader(
-        const String &name,
-        const ShaderProps &versions,
-        const VertexAttributeSet &vertex_attributes
-    );
+    CompiledShader GetCompiledShader(Name name);
+    CompiledShader GetCompiledShader(Name name, const ShaderProps &properties);
+    CompiledShader GetCompiledShader(Name name, const ShaderProps &properties, const VertexAttributeSet &vertex_attributes);
 
     bool GetCompiledShader(
-        const String &name,
+        Name name,
         const ShaderProps &versions,
         const VertexAttributeSet &vertex_attributes,
         CompiledShader &out
@@ -556,7 +561,7 @@ private:
     );
 
     bool LoadOrCreateCompiledShaderBatch(
-        const String &name,
+        Name name,
         const ShaderProps &additional_versions,
         CompiledShaderBatch &out
     );

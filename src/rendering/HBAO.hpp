@@ -48,25 +48,10 @@ private:
     
     struct ImageOutput
     {
-        StorageImage image;
-        ImageView image_view;
-
-        ImageOutput(StorageImage &&image)
-            : image(std::move(image))
-        {
-        }
-
-        ImageOutput(const ImageOutput &other) = delete;
-        ImageOutput(ImageOutput &&other) noexcept
-            : image(std::move(other.image)),
-              image_view(std::move(other.image_view))
-        {
-        }
-
-        ~ImageOutput() = default;
+        ImageRef image;
+        ImageViewRef image_view;
 
         Result Create(Device *device);
-        Result Destroy(Device *device);
     };
 
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;

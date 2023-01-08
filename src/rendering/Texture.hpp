@@ -5,7 +5,7 @@
 #include <core/Handle.hpp>
 #include <core/lib/UniquePtr.hpp>
 
-#include <rendering/RenderObject.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>

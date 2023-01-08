@@ -515,24 +515,24 @@ void ShaderCompiler::ParseDefinitionSection(
 )
 {
     for (const auto &section_it : section) {
-        if (section_it.first == "permute") {
+        if (section_it.key == "permute") {
             // set each property
-            for (const auto &element : section_it.second.elements) {
+            for (const auto &element : section_it.value.elements) {
                 if (element.sub_elements.Any()) {
                     bundle.versions.AddValueGroup(element.name, element.sub_elements);
                 } else {
                     bundle.versions.AddPermutation(element.name);
                 }
             }
-        } else if (shader_type_names.Contains(section_it.first)) {
-            bundle.sources[shader_type_names.At(section_it.first)] = SourceFile {
-                Engine::Get()->GetAssetManager().GetBasePath() / "vkshaders" / section_it.second.GetValue().name
+        } else if (shader_type_names.Contains(section_it.key)) {
+            bundle.sources[shader_type_names.At(section_it.key)] = SourceFile {
+                Engine::Get()->GetAssetManager().GetBasePath() / "vkshaders" / section_it.value.GetValue().name
             };
         } else {
             DebugLog(
                 LogType::Warn,
                 "Unknown property in shader definition file: %s\n",
-                section_it.first.Data()
+                section_it.key.Data()
             );
         }
     }
@@ -562,7 +562,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
         DebugLog(
             LogType::Info,
             "Source file in batch %s has been modified since the batch was last compiled, recompiling...\n",
-            bundle.name.Data()
+            bundle.name.LookupString().Data()
         );
 
         batch = CompiledShaderBatch { };
@@ -639,7 +639,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
         DebugLog(
             LogType::Error,
             "Failed to load the compiled shader %s, and it could not be recompiled.\n",
-            bundle.name.Data()
+            bundle.name.LookupString().Data()
         );
 
         return false;
@@ -649,7 +649,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
 }
 
 bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
-    const String &name,
+    Name name,
     const ShaderProps &additional_versions,
     CompiledShaderBatch &out
 )
@@ -670,27 +670,29 @@ bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
         }
     }
 
-    if (!m_definitions->HasSection(name)) {
+    const String name_string(name.LookupString());
+
+    if (!m_definitions->HasSection(name_string)) {
         // not in definitions file
         DebugLog(
             LogType::Error,
             "Section %s not found in shader definitions file\n",
-            name.Data()
+            name.LookupString().Data()
         );
 
         return false;
     }
 
-    Bundle bundle { .name = name };
+    Bundle bundle { name };
 
     // get default, platform specific shader properties
     GetPlatformSpecificProperties(bundle.versions);
 
     // apply each permutable property from the definitions file
-    const auto &section = m_definitions->GetSection(name);
+    const DefinitionsFile::Section &section = m_definitions->GetSection(name_string);
     ParseDefinitionSection(section, bundle);
     
-    const FilePath output_file_path = Engine::Get()->GetAssetManager().GetBasePath() / "data/compiled_shaders" / name + ".hypshader";
+    const FilePath output_file_path = Engine::Get()->GetAssetManager().GetBasePath() / "data/compiled_shaders" / name_string + ".hypshader";
 
     // read file if it already exists.
     fbom::FBOMReader reader(fbom::FBOMConfig { });
@@ -772,10 +774,12 @@ bool ShaderCompiler::LoadShaderDefinitions()
 
     // create a bundle for each section.
     for (const auto &it : m_definitions->GetSections()) {
-        const auto &key = it.first;
-        auto &section = it.second;
+        const String &key = it.key;
+        const DefinitionsFile::Section &section = it.value;
 
-        Bundle bundle { .name = key };
+        const Name name_from_string = CreateNameFromDynamicString(ANSIString(key));
+
+        Bundle bundle { name_from_string };
 
         ParseDefinitionSection(section, bundle);
 
@@ -791,7 +795,7 @@ bool ShaderCompiler::LoadShaderDefinitions()
             DebugLog(
                 LogType::Warn,
                 "Not compiling shader bundle %s because it contains raytracing shaders and raytracing is not supported on this device.\n",
-                bundle.name.Data()
+                bundle.name.LookupString().Data()
             );
 
             continue;
@@ -819,7 +823,7 @@ bool ShaderCompiler::LoadShaderDefinitions()
             DebugLog(
                 LogType::Error,
                 "%s: Loading of compiled shader failed with version hash %llu\n",
-                it.first->name.Data(),
+                it.first->name.LookupString().Data(),
                 it.first->versions.GetHashCode().Value()
             );
         }
@@ -1074,7 +1078,7 @@ bool ShaderCompiler::CompileBundle(
         DebugLog(
             LogType::Error,
             "Too many shader permutations for shader %s (%llu)\n",
-            bundle.name.Data(),
+            bundle.name.LookupString().Data(),
             num_permutations
         );
 
@@ -1125,13 +1129,13 @@ bool ShaderCompiler::CompileBundle(
     DebugLog(
         LogType::Info,
         "Compiling shader bundle for shader %s (%llu variants)\n",
-        bundle.name.Data(),
+        bundle.name.LookupString().Data(),
         num_permutations
     );
 
     // compile shader with each permutation of properties
     ForEachPermutation(versions, [&](const ShaderProps &properties) {
-        CompiledShader compiled_shader { bundle.name, properties };
+        CompiledShader compiled_shader(bundle.name, properties);
 
         bool any_files_compiled = false;
 
@@ -1246,7 +1250,7 @@ bool ShaderCompiler::CompileBundle(
         out.compiled_shaders.PushBack(std::move(compiled_shader));
     });
 
-    const FilePath final_output_path = Engine::Get()->GetAssetManager().GetBasePath() / "data/compiled_shaders" / bundle.name + ".hypshader";
+    const FilePath final_output_path = Engine::Get()->GetAssetManager().GetBasePath() / "data/compiled_shaders" / String(bundle.name.LookupString()) + ".hypshader";
 
     FileByteWriter byte_writer(final_output_path.Data());
 
@@ -1267,7 +1271,7 @@ bool ShaderCompiler::CompileBundle(
             LogType::Info,
             "Compiled %llu new variants for shader %s to: %s\n",
             num_compiled_permutations,
-            bundle.name.Data(),
+            bundle.name.LookupString().Data(),
             final_output_path.Data()
         );
     }
@@ -1275,20 +1279,20 @@ bool ShaderCompiler::CompileBundle(
     return true;
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(const String &name)
+CompiledShader ShaderCompiler::GetCompiledShader(Name name)
 {
     ShaderProps props { };
 
     return GetCompiledShader(name, props);
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(const String &name, const ShaderProps &versions)
+CompiledShader ShaderCompiler::GetCompiledShader(Name name, const ShaderProps &properties)
 {
     CompiledShader compiled_shader;
 
     GetCompiledShader(
         name,
-        versions,
+        properties,
         VertexAttributeSet(),
         compiled_shader
     );
@@ -1296,17 +1300,13 @@ CompiledShader ShaderCompiler::GetCompiledShader(const String &name, const Shade
     return compiled_shader;
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(
-    const String &name,
-    const ShaderProps &versions,
-    const VertexAttributeSet &vertex_attributes
-)
+CompiledShader ShaderCompiler::GetCompiledShader(Name name, const ShaderProps &properties, const VertexAttributeSet &vertex_attributes)
 {
     CompiledShader compiled_shader;
 
     GetCompiledShader(
         name,
-        versions,
+        properties,
         vertex_attributes,
         compiled_shader
     );
@@ -1315,8 +1315,8 @@ CompiledShader ShaderCompiler::GetCompiledShader(
 }
 
 bool ShaderCompiler::GetCompiledShader(
-    const String &name,
-    const ShaderProps &versions,
+    Name name,
+    const ShaderProps &properties,
     const VertexAttributeSet &vertex_attributes,
     CompiledShader &out
 )
@@ -1330,7 +1330,7 @@ bool ShaderCompiler::GetCompiledShader(
         properties_with_vertex_attributes.Merge(ShaderProps(vertex_attributes));
     }
     
-    properties_with_vertex_attributes.Merge(versions);
+    properties_with_vertex_attributes.Merge(properties);
     final_properties.Merge(properties_with_vertex_attributes);
 
     const HashCode final_properties_hash = final_properties.GetHashCode();

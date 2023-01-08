@@ -295,10 +295,10 @@ void Engine::PrepareFinalPass()
     final_output_props.Set("DEBUG_REFLECTIONS", GetConfig().Get(CONFIG_DEBUG_REFLECTIONS));
     final_output_props.Set("DEBUG_IRRADIANCE", GetConfig().Get(CONFIG_DEBUG_IRRADIANCE));
 
-    auto shader = CreateObject<Shader>(m_shader_compiler.GetCompiledShader(
-        "FinalOutput",
+    auto shader = GetShaderManager().GetOrCreate(
+        HYP_NAME(FinalOutput),
         final_output_props
-    ));
+    );
 
     AssertThrow(InitObject(shader));
 
@@ -1169,6 +1169,8 @@ void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
     m_instance->GetDescriptorPool().AddPendingDescriptorSets(m_instance->GetDevice(), frame_index);
     m_instance->GetDescriptorPool().DestroyPendingDescriptorSets(m_instance->GetDevice(), frame_index);
     m_instance->GetDescriptorPool().UpdateDescriptorSets(m_instance->GetDevice(), frame_index);
+
+    RenderObjectDeleter::Iterate();
 
     m_safe_deleter.PerformEnqueuedDeletions();
 }

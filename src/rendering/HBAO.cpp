@@ -38,49 +38,13 @@ struct RENDER_COMMAND(CreateHBAODescriptorSets) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateFullScreenPass) : RenderCommand
-{
-    FullScreenPass *pass;
-
-    RENDER_COMMAND(CreateFullScreenPass)(FullScreenPass *pass)
-        : pass(pass)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        pass->Create();
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(DestroyFullScreenPass) : RenderCommand
-{
-    FullScreenPass *pass;
-
-    RENDER_COMMAND(DestroyFullScreenPass)(FullScreenPass *pass)
-        : pass(pass)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        pass->Destroy();
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
 {
-    FullScreenPass *pass;
-    TemporalBlending *temporal_blending;
-    FixedArray<ImageView *, max_frames_in_flight> blur_image_views;
+    FixedArray<ImageViewRef, max_frames_in_flight> pass_image_views;
+    FixedArray<ImageViewRef, max_frames_in_flight> blur_image_views;
 
-    RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)(FullScreenPass *pass, TemporalBlending *temporal_blending, FixedArray<ImageView *, max_frames_in_flight> &&blur_image_views)
-        : pass(pass),
-          temporal_blending(temporal_blending),
+    RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)(FixedArray<ImageViewRef, max_frames_in_flight> &&pass_image_views, FixedArray<ImageViewRef, max_frames_in_flight> &&blur_image_views)
+        : pass_image_views(std::move(pass_image_views)),
           blur_image_views(std::move(blur_image_views))
     {
     }
@@ -97,9 +61,7 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
                 ->SetElementSRV(0,
                     blur_image_views[frame_index]
                         ? blur_image_views[frame_index]
-                        : (temporal_blending
-                            ? temporal_blending->GetImageOutput(frame_index).image_view
-                            : pass->GetAttachmentUsage(0)->GetImageView())
+                        : pass_image_views[frame_index]
                 );
         }
 
@@ -111,66 +73,70 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : RenderCommand
 
 Result HBAO::ImageOutput::Create(Device *device)
 {
-    HYPERION_BUBBLE_ERRORS(image.Create(device));
-    HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
+    AssertThrow(image.IsValid());
+    AssertThrow(image_view.IsValid());
+
+    HYPERION_BUBBLE_ERRORS(image->Create(device));
+    HYPERION_BUBBLE_ERRORS(image_view->Create(device, image));
 
     HYPERION_RETURN_OK;
 }
 
-Result HBAO::ImageOutput::Destroy(Device *device)
-{
-    auto result = Result::OK;
-
-    HYPERION_PASS_ERRORS(
-        image.Destroy(device),
-        result
-    );
-
-    HYPERION_PASS_ERRORS(
-        image_view.Destroy(device),
-        result
-    );
-
-    return result;
-}
-
 HBAO::HBAO(const Extent2D &extent)
     : m_image_outputs {
-          ImageOutput(StorageImage(
-              Extent3D(extent.width, extent.height, 1),
-              InternalFormat::RGBA8,
-              ImageType::TEXTURE_TYPE_2D
-          )),
-          ImageOutput(StorageImage(
-              Extent3D(extent.width, extent.height, 1),
-              InternalFormat::RGBA8,
-              ImageType::TEXTURE_TYPE_2D
-          ))
+          ImageOutput {
+              RenderObjects::Make<Image>(StorageImage(
+                  Extent3D(extent.width, extent.height, 1),
+                  InternalFormat::RGBA8,
+                  ImageType::TEXTURE_TYPE_2D
+              )),
+              RenderObjects::Make<ImageView>()
+          },
+          ImageOutput {
+              RenderObjects::Make<Image>(StorageImage(
+                  Extent3D(extent.width, extent.height, 1),
+                  InternalFormat::RGBA8,
+                  ImageType::TEXTURE_TYPE_2D
+              )),
+              RenderObjects::Make<ImageView>()
+          }
       },
       m_blur_image_outputs {
           FixedArray<ImageOutput, 2> {
-              ImageOutput(StorageImage(
-                  Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
-                  ImageType::TEXTURE_TYPE_2D
-              )),
-              ImageOutput(StorageImage(
-                  Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
-                  ImageType::TEXTURE_TYPE_2D
-              ))
+              ImageOutput {
+                  RenderObjects::Make<Image>(StorageImage(
+                      Extent3D(extent.width, extent.height, 1),
+                      InternalFormat::RGBA8,
+                      ImageType::TEXTURE_TYPE_2D
+                  )),
+                  RenderObjects::Make<ImageView>()
+              },
+              ImageOutput {
+                  RenderObjects::Make<Image>(StorageImage(
+                      Extent3D(extent.width, extent.height, 1),
+                      InternalFormat::RGBA8,
+                      ImageType::TEXTURE_TYPE_2D
+                  )),
+                  RenderObjects::Make<ImageView>()
+              }
           },
           FixedArray<ImageOutput, 2> {
-              ImageOutput(StorageImage(
-                  Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
-                  ImageType::TEXTURE_TYPE_2D
-              )),
-              ImageOutput(StorageImage(
-                  Extent3D(extent.width, extent.height, 1),
-                  InternalFormat::RGBA8,
-                  ImageType::TEXTURE_TYPE_2D
-              ))
+              ImageOutput {
+                  RenderObjects::Make<Image>(StorageImage(
+                      Extent3D(extent.width, extent.height, 1),
+                      InternalFormat::RGBA8,
+                      ImageType::TEXTURE_TYPE_2D
+                  )),
+                  RenderObjects::Make<ImageView>()
+              },
+              ImageOutput {
+                  RenderObjects::Make<Image>(StorageImage(
+                      Extent3D(extent.width, extent.height, 1),
+                      InternalFormat::RGBA8,
+                      ImageType::TEXTURE_TYPE_2D
+                  )),
+                  RenderObjects::Make<ImageView>()
+              }
           }
       }
 {
@@ -194,11 +160,13 @@ void HBAO::Create()
 
     PUSH_RENDER_COMMAND(
         AddHBAOFinalImagesToGlobalDescriptorSet,
-        m_hbao_pass.Get(),
-        m_temporal_blending.Get(),
-        FixedArray<ImageView *, max_frames_in_flight> {
-            blur_result ? &m_blur_image_outputs[0].Back().image_view : nullptr,
-            blur_result ? &m_blur_image_outputs[1].Back().image_view : nullptr
+        FixedArray<ImageViewRef, max_frames_in_flight> {
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(0).image_view : m_hbao_pass->GetAttachmentUsage(0)->GetImageView(),
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(1).image_view : m_hbao_pass->GetAttachmentUsage(0)->GetImageView()
+        },
+        FixedArray<ImageViewRef, max_frames_in_flight> {
+            blur_result ? m_blur_image_outputs[0].Back().image_view : ImageViewRef(),
+            blur_result ? m_blur_image_outputs[1].Back().image_view : ImageViewRef()
         }
     );
 }
@@ -218,12 +186,14 @@ void HBAO::Destroy()
         SafeRelease(std::move(m_blur_descriptor_sets[blur_pass_index]));
     }
 
-    struct RENDER_COMMAND(DestroyHBAOImageOutputs) : RenderCommand
-    {
-        HBAO::ImageOutput *image_outputs;
+    for (auto &image_output : m_image_outputs) {
+        SafeRelease(std::move(image_output.image));
+        SafeRelease(std::move(image_output.image_view));
+    }
 
-        RENDER_COMMAND(DestroyHBAOImageOutputs)(HBAO::ImageOutput *image_outputs)
-            : image_outputs(image_outputs)
+    struct RENDER_COMMAND(RemoveHBAODescriptors) : RenderCommand
+    {
+        RENDER_COMMAND(RemoveHBAODescriptors)()
         {
         }
 
@@ -232,8 +202,6 @@ void HBAO::Destroy()
             auto result = Result::OK;
 
             for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                image_outputs[frame_index].Destroy(Engine::Get()->GetGPUDevice());
-
                 // unset final result from the global descriptor set
                 auto *descriptor_set_globals = Engine::Get()->GetGPUInstance()->GetDescriptorPool()
                     .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -247,21 +215,21 @@ void HBAO::Destroy()
         }
     };
 
-    PUSH_RENDER_COMMAND(DestroyHBAOImageOutputs, m_image_outputs.Data());
-
-    HYP_SYNC_RENDER();
+    PUSH_RENDER_COMMAND(RemoveHBAODescriptors);
 }
 
 void HBAO::CreateImages()
 {
     struct RENDER_COMMAND(CreateHBAOImageOutputs) : RenderCommand
     {
-        HBAO::ImageOutput *image_outputs;
-        FixedArray<HBAO::ImageOutput, 2> *blur_image_outputs;
+        FixedArray<HBAO::ImageOutput, max_frames_in_flight> image_outputs;
+        FixedArray<FixedArray<HBAO::ImageOutput, 2>, max_frames_in_flight> blur_image_outputs;
 
-        RENDER_COMMAND(CreateHBAOImageOutputs)(HBAO::ImageOutput *image_outputs, FixedArray<HBAO::ImageOutput, 2> *blur_image_outputs)
-            : image_outputs(image_outputs),
-              blur_image_outputs(blur_image_outputs)
+        RENDER_COMMAND(CreateHBAOImageOutputs)(
+            const FixedArray<HBAO::ImageOutput, max_frames_in_flight> &image_outputs,
+            const FixedArray<FixedArray<HBAO::ImageOutput, 2>, max_frames_in_flight> &blur_image_outputs
+        ) : image_outputs(image_outputs),
+            blur_image_outputs(blur_image_outputs)
         {
         }
 
@@ -281,7 +249,11 @@ void HBAO::CreateImages()
         }
     };
 
-    PUSH_RENDER_COMMAND(CreateHBAOImageOutputs, m_image_outputs.Data(), m_blur_image_outputs.Data());
+    PUSH_RENDER_COMMAND(
+        CreateHBAOImageOutputs,
+        m_image_outputs,
+        m_blur_image_outputs
+    );
 }
 
 void HBAO::CreateDescriptorSets()
@@ -347,7 +319,7 @@ void HBAO::CreateBlurComputeShaders()
                 ->AddDescriptor<ImageDescriptor>(0)
                 ->SetElementSRV(0, blur_pass_index == 0
                     ? m_temporal_blending->GetImageOutput(frame_index).image_view
-                    : &m_blur_image_outputs[blur_pass_index - 1][frame_index].image_view);
+                    : m_blur_image_outputs[blur_pass_index - 1][frame_index].image_view);
 
             descriptor_set
                 ->AddDescriptor<ImageDescriptor>(1)
@@ -366,7 +338,7 @@ void HBAO::CreateBlurComputeShaders()
             // output image
             descriptor_set
                 ->AddDescriptor<StorageImageDescriptor>(4)
-                ->SetElementUAV(0, &m_blur_image_outputs[blur_pass_index][frame_index].image_view);
+                ->SetElementUAV(0, m_blur_image_outputs[blur_pass_index][frame_index].image_view);
 
             m_blur_descriptor_sets[blur_pass_index][frame_index] = std::move(descriptor_set);
         }
@@ -378,14 +350,14 @@ void HBAO::CreateBlurComputeShaders()
     }
 
     m_blur_hor = CreateObject<ComputePipeline>(
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA8" })),
+        Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
     );
 
     InitObject(m_blur_hor);
 
     m_blur_vert = CreateObject<ComputePipeline>(
-       Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "OUTPUT_RGBA8" })),
+       Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[1][0].Get() }
     );
 
@@ -394,7 +366,7 @@ void HBAO::CreateBlurComputeShaders()
 
 void HBAO::CreatePass()
 {
-    auto hbao_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(HBAO));
+    auto hbao_shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(HBAO));
 
     Engine::Get()->InitObject(hbao_shader);
 
@@ -462,7 +434,8 @@ void HBAO::Render(Frame *frame)
                 ? m_blur_hor.Get()
                 : m_blur_vert.Get();
 
-            const auto &extent = m_blur_image_outputs[frame_index][blur_pass_index].image.GetExtent();
+            AssertThrow(m_blur_image_outputs[frame_index][blur_pass_index].image.IsValid());
+            const Extent3D &extent = m_blur_image_outputs[frame_index][blur_pass_index].image->GetExtent();
 
             struct alignas(128) {
                 ShaderVec2<UInt32> depth_texture_dimensions;
@@ -482,7 +455,7 @@ void HBAO::Render(Frame *frame)
             );
             compute_pipeline->GetPipeline()->Bind(command_buffer);
     
-            m_blur_image_outputs[frame_index][blur_pass_index].image.GetGPUImage()
+            m_blur_image_outputs[frame_index][blur_pass_index].image->GetGPUImage()
                 ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
     
             command_buffer->BindDescriptorSet(
@@ -501,7 +474,7 @@ void HBAO::Render(Frame *frame)
                 }
             );
 
-            m_blur_image_outputs[blur_pass_index][frame_index].image.GetGPUImage()
+            m_blur_image_outputs[blur_pass_index][frame_index].image->GetGPUImage()
                 ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
         }
     }

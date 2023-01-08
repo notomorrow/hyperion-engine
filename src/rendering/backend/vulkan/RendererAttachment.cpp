@@ -10,8 +10,8 @@ AttachmentUsage::AttachmentUsage(
     StoreOperation store_operation
 ) : AttachmentUsage(
         attachment,
-        std::make_unique<ImageView>(),
-        std::make_unique<Sampler>(),
+        RenderObjects::Make<ImageView>(),
+        RenderObjects::Make<Sampler>(),
         load_operation,
         store_operation
     )
@@ -20,8 +20,8 @@ AttachmentUsage::AttachmentUsage(
 
 AttachmentUsage::AttachmentUsage(
     Attachment *attachment,
-    std::unique_ptr<ImageView> &&image_view,
-    std::unique_ptr<Sampler> &&sampler,
+    ImageViewRef &&image_view,
+    SamplerRef &&sampler,
     LoadOperation load_operation,
     StoreOperation store_operation
 ) : m_attachment(attachment),
@@ -195,8 +195,8 @@ Result AttachmentUsage::Destroy(Device *device)
 {
     AssertThrow(m_is_created);
 
-    HYPERION_BUBBLE_ERRORS(m_image_view->Destroy(device));
-    HYPERION_BUBBLE_ERRORS(m_sampler->Destroy(device));
+    SafeRelease(std::move(m_image_view));
+    SafeRelease(std::move(m_sampler));
 
     m_is_created = false;
 
@@ -250,8 +250,8 @@ Result Attachment::AddAttachmentUsage(
 {
     auto attachment_usage = std::make_unique<AttachmentUsage>(
         this,
-        std::make_unique<ImageView>(),
-        std::make_unique<Sampler>(
+        RenderObjects::Make<ImageView>(),
+        RenderObjects::Make<Sampler>(
             m_image != nullptr
                 ? m_image->GetFilterMode()
                 : FilterMode::TEXTURE_FILTER_NEAREST

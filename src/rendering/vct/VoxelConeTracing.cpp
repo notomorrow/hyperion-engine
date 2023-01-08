@@ -370,14 +370,14 @@ void VoxelConeTracing::CreateImagesAndBuffers()
 void VoxelConeTracing::CreateComputePipelines()
 {
     m_clear_voxels = CreateObject<ComputePipeline>(
-        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(VCTClearVoxels))
+        Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(VCTClearVoxels))
     );
 
     InitObject(m_clear_voxels);
 
     if constexpr (manual_mipmap_generation) {
         m_generate_mipmap = CreateObject<ComputePipeline>(
-            Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(VCTGenerateMipmap)),
+            Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(VCTGenerateMipmap)),
             Array<const DescriptorSet *> { m_generate_mipmap_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
         );
 
@@ -393,7 +393,7 @@ void VoxelConeTracing::CreateShader()
         shader_name = HYP_NAME(VCTVoxelizeTextureGridWithoutGeometryShader);
     }
 
-    m_shader =  Engine::Get()->GetShaderManagerSystem().GetOrCreate(shader_name);
+    m_shader =  Engine::Get()->GetShaderManager().GetOrCreate(shader_name);
     AssertThrow(InitObject(m_shader));
 }
 

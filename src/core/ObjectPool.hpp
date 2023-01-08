@@ -4,6 +4,7 @@
 #include <core/Containers.hpp>
 #include <core/IDCreator.hpp>
 #include <core/ID.hpp>
+#include <core/Name.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>
 #include <util/Defines.hpp>
@@ -195,6 +196,12 @@ public:
     { \
         static constexpr const char *class_name = HYP_STR(T); \
         static constexpr SizeType max_size = (_max_size); \
+        \
+        static Name GetNameForType() \
+        { \
+            static const Name name = HYP_NAME(T); \
+            return name; \
+        } \
     }
 
 
@@ -208,6 +215,12 @@ public:
     { \
         static constexpr const char *class_name = HYP_STR(ns) "::" HYP_STR(T); \
         static constexpr SizeType max_size = (_max_size); \
+        \
+        static Name GetNameForType() \
+        { \
+            static const Name name = HYP_NAME(ns::T); \
+            return name; \
+        } \
     }
 
 DEF_HANDLE(Texture,                      16384);

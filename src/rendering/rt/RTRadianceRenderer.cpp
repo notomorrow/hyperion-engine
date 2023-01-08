@@ -331,7 +331,7 @@ void RTRadianceRenderer::CreateDescriptorSets()
 
 void RTRadianceRenderer::CreateRaytracingPipeline()
 {
-    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(RTRadiance));
+    m_shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(RTRadiance));
 
     if (!InitObject(m_shader)) {
         return;

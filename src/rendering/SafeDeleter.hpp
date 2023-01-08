@@ -6,7 +6,7 @@
 #include <core/lib/Pair.hpp>
 #include <core/ID.hpp>
 
-#include <rendering/RenderObject.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/Bindless.hpp>
 #include <rendering/Mesh.hpp>
@@ -42,156 +42,6 @@ enum HandleDeletionMask : HandleDeletionMaskBits
 
 constexpr UInt8 initial_cycles_remaining = UInt8(max_frames_in_flight + 1);
 
-struct RenderObjectDeleter
-{
-    static constexpr SizeType max_queues = 63;
-
-    struct DeletionQueueBase
-    {
-        TypeID type_id;
-        std::atomic_uint num_items { 0 };
-        std::mutex mtx;
-
-        virtual ~DeletionQueueBase() = default;
-        virtual void Iterate() = 0;
-    };
-
-    template <class T>
-    struct DeletionQueue : DeletionQueueBase
-    {
-        Array<Pair<RenderObjectHandle<T>, UInt8>> items;
-
-        DeletionQueue()
-        {
-            type_id = TypeID::ForType<T>();
-        }
-
-        DeletionQueue(const DeletionQueue &other) = delete;
-        DeletionQueue &operator=(const DeletionQueue &other) = delete;
-        virtual ~DeletionQueue() = default;
-
-        virtual void Iterate() override
-        {
-            if (!num_items.load()) {
-                return;
-            }
-
-            Array<RenderObjectHandle<T>> to_delete;
-
-            mtx.lock();
-
-            for (auto it = items.Begin(); it != items.End();) {
-                if (--it->second == 0) {
-                    to_delete.PushBack(std::move(it->first));
-
-                    it = items.Erase(it);
-                } else {
-                    ++it;
-                }
-            }
-
-            num_items.store(items.Size());
-
-            mtx.unlock();
-
-            for (auto &it : to_delete) {
-                HYPERION_ASSERT_RESULT(it->Destroy(GetEngineDevice()));
-            }
-        }
-
-        void Push(RenderObjectHandle<T> &&handle)
-        {
-            num_items.fetch_add(1);
-
-            std::lock_guard guard(mtx);
-
-            items.PushBack({ std::move(handle), initial_cycles_remaining });
-        }
-    };
-
-    template <class T>
-    struct DeletionQueueInstance
-    {
-        DeletionQueue<T> queue;
-        UInt16 index;
-
-        DeletionQueueInstance()
-        {
-            /*const auto it = deleter.queues.FindIf([](const DeletionQueueBase *item) {
-                return item->type_id == TypeID::ForType<T>();
-            });
-
-            AssertThrowMsg(it == deleter.queues.End(), "Duplicate deletion queue added!");
-
-            deleter.queues.PushBack(&queue);*/
-
-            index = queue_index.fetch_add(1);
-
-            AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
-
-            queues[index] = &queue;
-        }
-
-        DeletionQueueInstance(const DeletionQueueInstance &other) = delete;
-        DeletionQueueInstance &operator=(const DeletionQueueInstance &other) = delete;
-        DeletionQueueInstance(DeletionQueueInstance &&other) noexcept = delete;
-        DeletionQueueInstance &operator=(DeletionQueueInstance &&other) noexcept = delete;
-
-        ~DeletionQueueInstance()
-        {
-            /*auto it = deleter.queues.Find(&queue);
-
-            AssertThrow(it != deleter.queues.End());
-
-            deleter.queues.Erase(it);*/
-
-            queues[index] = nullptr;
-        }
-    };
-
-    template <class T>
-    static DeletionQueue<T> &GetQueue()
-    {
-        static DeletionQueueInstance<T> instance;
-
-        return instance.queue;
-    }
-
-    static void Iterate()
-    {
-        DeletionQueueBase *queue = queues.Front();
-
-        while (queue) {
-            queue->Iterate();
-            ++queue;
-        }
-    }
-
-    static FixedArray<DeletionQueueBase *, max_queues + 1> queues;
-    static std::atomic_uint16_t queue_index;
-};
-
-template <class T>
-static inline void SafeRelease(RenderObjectHandle<T> &&handle)
-{
-    RenderObjectDeleter::GetQueue<T>().Push(std::move(handle));
-}
-
-template <class T, SizeType Sz>
-static inline void SafeRelease(Array<RenderObjectHandle<T>, Sz> &&handles)
-{
-    for (auto &it : handles) {
-        RenderObjectDeleter::GetQueue<T>().Push(std::move(it));
-    }
-}
-
-template <class T, SizeType Sz>
-static inline void SafeRelease(FixedArray<RenderObjectHandle<T>, Sz> &&handles)
-{
-    for (auto &it : handles) {
-        RenderObjectDeleter::GetQueue<T>().Push(std::move(it));
-    }
-}
 
 class SafeDeleter
 {
@@ -283,21 +133,21 @@ public:
 
     
     template <class T>
-    struct RenderObjectDeletionEntry : private KeyValuePair<RenderObjectHandle<T>, UInt8>
+    struct RenderObjectDeletionEntry : private KeyValuePair<renderer::RenderObjectHandle<T>, UInt8>
     {
-        using Base = KeyValuePair<RenderObjectHandle<T>, UInt8>;
+        using Base = KeyValuePair<renderer::RenderObjectHandle<T>, UInt8>;
 
         using Base::first;
         using Base::second;
 
-        static_assert(has_render_object_defined<T>, "T must be a render object");
+        static_assert(renderer::has_render_object_defined<T>, "T must be a render object");
 
-        RenderObjectDeletionEntry(RenderObjectHandle<T> &&renderable)
+        RenderObjectDeletionEntry(renderer::RenderObjectHandle<T> &&renderable)
             : Base(std::move(renderable), initial_cycles_remaining)
         {
         }
 
-        RenderObjectDeletionEntry(const RenderObjectHandle<T> &renderable) = delete;
+        RenderObjectDeletionEntry(const renderer::RenderObjectHandle<T> &renderable) = delete;
 
         RenderObjectDeletionEntry(const RenderObjectDeletionEntry &other) = delete;
         RenderObjectDeletionEntry &operator=(const RenderObjectDeletionEntry &other) = delete;

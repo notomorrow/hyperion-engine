@@ -12,7 +12,7 @@
 
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class NameRegistry;
 
@@ -78,14 +78,12 @@ class NameRegistry
 public:
     static constexpr SizeType num_name_groups = 256;
 
-    NameRegistry()
-    {
-    }
-
+    NameRegistry() = default;
     NameRegistry(const NameRegistry &other) = delete;
     NameRegistry &operator=(const NameRegistry &other) = delete;
     NameRegistry(NameRegistry &&other) noexcept = delete;
     NameRegistry &operator=(NameRegistry &&other) noexcept = delete;
+    ~NameRegistry() = default;
 
     Name RegisterName(NameID id, const ANSIString &str)
     {
@@ -113,6 +111,13 @@ public:
         }
 
         return it->value;
+    }
+
+    HashMap<NameID, ANSIString> GetNameMapCopy() const
+    {
+        std::lock_guard guard(m_mutex);
+
+        return m_name_map;
     }
 
 private:
@@ -143,16 +148,14 @@ struct NameRegistration
         return id;
     }
 
-    template <class S>
-    static NameRegistration FromSequence()
+    template <class HashedName>
+    static NameRegistration FromHashedName(HashedName &&hashed_name)
     {
-        using Seq = typename S::Sequence;
-        
-        static constexpr NameID id = GenerateID<S>();
+        static constexpr NameID name_id = hashed_name.hash_code.Value();
 
-        Name::GetRegistry()->RegisterName(id, Seq::Data());
+        Name::GetRegistry()->RegisterName(name_id, hashed_name.data);
 
-        return NameRegistration { id };
+        return NameRegistration { name_id };
     }
     
     static NameRegistration FromDynamicString(const ANSIString &str)
@@ -165,24 +168,29 @@ struct NameRegistration
     }
 };
 
-template <auto StaticStringType>
-struct StaticName
+template <class HashedName>
+static inline Name CreateNameFromStaticString(HashedName &&hashed_name)
 {
-    using Sequence = IntegerSequenceFromString<StaticStringType>;
-};
-
-template <class S>
-static constexpr inline Name CreateNameFromStaticString()
-{
-    static const NameRegistration name_registration = NameRegistration::FromSequence<S>();
+    static const NameRegistration name_registration = NameRegistration::FromHashedName(std::forward<HashedName>(hashed_name));
 
     return Name(name_registration.id);
 }
 
 Name CreateNameFromDynamicString(const ANSIString &str);
 
-#define HYP_NAME(name) CreateNameFromStaticString<StaticName<StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>>()
+template <auto StaticStringType>
+struct HashedName
+{
+    using Sequence = IntegerSequenceFromString<StaticStringType>;
 
-} // namespace hyperion::v2
+    static constexpr HashCode hash_code = HashCode::GetHashCode(Sequence::Data());
+    static constexpr const char *data = Sequence::Data();
+};
+
+#define HYP_HASHED_NAME(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
+#define HYP_NAME(name)        ::hyperion::CreateNameFromStaticString(HYP_HASHED_NAME(name))
+#define HYP_WEAK_NAME(name)   ::hyperion::Name(HYP_HASHED_NAME(name).hash_code.Value())
+
+} // namespace hyperion
 
 #endif

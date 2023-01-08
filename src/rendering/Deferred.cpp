@@ -45,12 +45,12 @@ DeferredPass::~DeferredPass() = default;
 void DeferredPass::CreateShader()
 {
     if (m_is_indirect_pass) {
-        m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+        m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
             HYP_NAME(DeferredIndirect),
             GetDeferredShaderProps()
         );
     } else {
-        m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+        m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
             HYP_NAME(DeferredDirect),
             GetDeferredShaderProps()
         );
@@ -178,7 +178,7 @@ void EnvGridPass::CreateShader()
 {
     ShaderProps props { };
     
-    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+    m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(ApplyEnvGrid),
         props
     );
@@ -266,7 +266,7 @@ void ReflectionProbePass::CreateShader()
 {
     ShaderProps props { };
     
-    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+    m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(ApplyReflectionProbe),
         props
     );
@@ -498,14 +498,14 @@ void DeferredRenderer::CreateDescriptorSets()
 
 void DeferredRenderer::CreateCombinePass()
 {
-    auto deferred_combine_shader = Engine::Get()->CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "DeferredCombine",
+    auto shader = Engine::Get()->GetShaderManager().GetOrCreate(
+        HYP_NAME(DeferredCombine),
         GetDeferredShaderProps()
-    ));
+    );
 
-    Engine::Get()->InitObject(deferred_combine_shader);
+    Engine::Get()->InitObject(shader);
 
-    m_combine_pass.Reset(new FullScreenPass(deferred_combine_shader));
+    m_combine_pass.Reset(new FullScreenPass(shader));
     m_combine_pass->Create();
 }
 

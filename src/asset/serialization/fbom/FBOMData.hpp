@@ -77,7 +77,8 @@ struct FBOMData
     bool IsString() const { return type.IsOrExtends(FBOMString()); }
     bool IsByteBuffer() const { return type.IsOrExtends(FBOMByteBuffer()); }
 
-    FBOMResult ReadString(String &str) const
+    template <bool IsUtf8>
+    FBOMResult ReadString(containers::detail::DynString<char, IsUtf8> &str) const
     {
         FBOM_ASSERT(IsString(), "Type mismatch (expected String)");
 

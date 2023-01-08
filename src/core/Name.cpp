@@ -1,6 +1,6 @@
 #include <core/Name.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const Name Name::invalid = Name(0);
 
