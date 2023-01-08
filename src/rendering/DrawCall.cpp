@@ -51,10 +51,10 @@ void DrawCallCollection::PushDrawCall(BufferTicket<EntityInstanceBatch> batch_in
         AssertThrow(id.HasMaterial());
     }
 
-    const auto it = index_map.find(id.Value());
+    const auto it = index_map.Find(id.Value());
 
-    if (it != index_map.end()) {
-        for (const SizeType draw_call_index : it->second) {
+    if (it != index_map.End()) {
+        for (const SizeType draw_call_index : it->value) {
             DrawCall &draw_call = draw_calls[draw_call_index];
             AssertThrow(batch_index == 0 ? draw_call.batch_index != 0 : draw_call.batch_index == batch_index);
 
@@ -72,9 +72,9 @@ void DrawCallCollection::PushDrawCall(BufferTicket<EntityInstanceBatch> batch_in
         }
 
         // got here, push new item 
-        it->second.PushBack(draw_calls.Size());
+        it->value.PushBack(draw_calls.Size());
     } else {
-        index_map.insert({ id.Value(), Array<SizeType> { draw_calls.Size() } });
+        index_map.Insert(id.Value(), Array<SizeType> { draw_calls.Size() });
     }
 
     DrawCall draw_call;
@@ -99,11 +99,11 @@ void DrawCallCollection::PushDrawCall(BufferTicket<EntityInstanceBatch> batch_in
 
 DrawCall *DrawCallCollection::TakeDrawCall(DrawCallID id)
 {
-    const auto it = index_map.find(id.Value());
+    const auto it = index_map.Find(id.Value());
 
-    if (it != index_map.end()) {
-        while (it->second.Any()) {
-            DrawCall &draw_call = draw_calls[it->second.Back()];
+    if (it != index_map.End()) {
+        while (it->value.Any()) {
+            DrawCall &draw_call = draw_calls[it->value.Back()];
 
             if (draw_call.batch_index != 0) {
                 const SizeType num_remaining_entities = max_entities_per_instance_batch - draw_call.entity_id_count;
@@ -115,7 +115,7 @@ DrawCall *DrawCallCollection::TakeDrawCall(DrawCallID id)
                 }
             }
 
-            it->second.PopBack();
+            it->value.PopBack();
         }
     }
 
@@ -131,7 +131,7 @@ void DrawCallCollection::Reset()
     }
 
     draw_calls.Clear();
-    index_map.clear();
+    index_map.Clear();
 }
 
 } // namespace hyperion::v2

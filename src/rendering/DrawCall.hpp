@@ -86,7 +86,7 @@ struct DrawCall
 struct DrawCallCollection
 {
     Array<DrawCall> draw_calls;
-    std::unordered_map<UInt64 /* DrawCallID */, Array<SizeType>> index_map;
+    HashMap<UInt64 /* DrawCallID */, Array<SizeType>> index_map;
 
     DrawCallCollection() = default;
     DrawCallCollection(const DrawCallCollection &other) = delete;

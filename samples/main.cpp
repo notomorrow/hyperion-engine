@@ -846,9 +846,117 @@ public:
 };
 } // namespace hyperion::v2
 
+#include <core/Name.hpp>
+
 int main()
 {
+    auto n1 = HYP_NAME(Entity);
+    n1.hash_code;
+    AssertThrow(n1.IsValid());
+    AssertThrow(n1.LookupString() == "Entity");
+
+    //auto n2 = HYP_NAME(FooBar);
+    //AssertThrow(!n2.IsValid());
+
+    auto n3 = HYP_NAME(Mesh);
+    AssertThrow(n3.IsValid());
+    AssertThrow(n3.LookupString() == "Mesh");
+
+    FlatMap<Pair<UInt32, UInt32>, ANSIString> name_indices_used;
+    
+#if 0
+    srand(time(nullptr));
+
+    for (UInt i = 0; i < 100000; i++) {
+        ANSIString random_name;
+        for (UInt j = 0; j < 3; j++) {
+           // UInt rnd = (i + j) % 1000;
+            random_name += 'a' + ((i + j) % ('z' - 'b'));//(ANSIString::ToString(rnd));
+        }
+
+        auto rand_name = Name::GetRegistry()->RegisterName(random_name);
+
+        auto it = name_indices_used.Find({ rand_name.group_index, rand_name.slot_index });
+
+        if (it != name_indices_used.End()) {
+            AssertThrow(it->second == random_name);
+        }
+
+        name_indices_used.Insert({ rand_name.group_index, rand_name.slot_index }, std::move(random_name));
+    }
+#endif
+
+
+    constexpr auto x = HashCode::GetHashCode("foo");
     using namespace hyperion::renderer;
+    HashMap<int, float> hm;
+        hm.Set(1, 2.0f);
+        hm.Set(5, 3.0f);
+        hm.Set(12, 2343.0f);
+        hm.Insert(12, 2.0f);
+        hm.Erase(5);
+
+        auto find_it = hm.Find(5);
+
+        AssertThrow(find_it == hm.End());
+
+        find_it = hm.Find(1);
+
+        AssertThrow(find_it != hm.End());
+    
+    Profile p1([]() {
+#if 0
+        HashMap<int, float> hm;
+        hm.Set(1, 2.0f);
+        hm.Set(5, 3.0f);
+        hm.Set(12, 2343.0f);
+        hm.Insert(12, 2.0f);
+        hm.Erase(5);
+
+        auto find_it = hm.Find(5);
+
+        AssertThrow(find_it == hm.End());
+
+        find_it = hm.Find(1);
+
+        AssertThrow(find_it != hm.End());
+#endif
+
+        for (SizeType i = 0; i < 1000; i++) {
+            auto n = HYP_NAME(Entity);
+            static volatile int x = 0;
+            x += n.hash_code;
+        }
+    });
+    Profile p2([]() {
+#if 0
+        std::unordered_map<int, float> hm;
+        hm.insert_or_assign(1, 2.0f);
+        hm.insert_or_assign(5, 3.0f);
+        hm.insert_or_assign(12, 2343.0f);
+        hm.insert({ 12, 2.0f });
+        hm.erase(5);
+
+        auto find_it = hm.find(5);
+
+        AssertThrow(find_it == hm.end());
+
+        find_it = hm.find(1);
+
+        AssertThrow(find_it != hm.end());
+#endif
+
+        
+        for (SizeType i = 0; i < 1000; i++) {
+            auto n = ANSIString("Entity");
+            static volatile int y = 0;
+            y += n.Length();
+        }
+    });
+
+    auto profile_results = Profile::RunInterleved({ std::move(p1), std::move(p2) });
+
+    HYP_BREAKPOINT;
 
     RefCountedPtr<Application> application(new SDLApplication("My Application"));
     application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1280, 720));

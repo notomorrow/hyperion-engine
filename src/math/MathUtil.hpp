@@ -77,7 +77,8 @@ constexpr bool is_math_vector_v = std::is_base_of_v<T, Vector2>
    || std::is_base_of_v<T, Vector3>
    || std::is_base_of_v<T, Vector4>;
 
-class MathUtil {
+class MathUtil
+{
     static UInt64 g_seed;
 
 public:

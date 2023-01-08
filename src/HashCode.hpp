@@ -30,20 +30,21 @@ struct HashCode
 {
     using ValueType = UInt64;
 
-    HashCode()
+    constexpr HashCode()
         : hash(0)
     {
     }
 
-    HashCode(const HashCode &other)
-        : hash(other.hash)
-    {
-    }
-
-    HashCode(ValueType value)
+    constexpr HashCode(ValueType value)
         : hash(value)
     {
     }
+
+    constexpr HashCode(const HashCode &other) = default;
+    constexpr HashCode &operator=(const HashCode &other) = default;
+
+    constexpr HashCode(HashCode &&other) noexcept = default;
+    constexpr HashCode &operator=(HashCode &&other) noexcept = default;
 
     constexpr bool operator==(const HashCode &other) const { return hash == other.hash; }
     constexpr bool operator!=(const HashCode &other) const { return hash != other.hash; }
@@ -89,6 +90,18 @@ struct HashCode
     {
         HashCode hc;
         hc.Add(value);
+        return hc;
+    }
+
+    static constexpr inline HashCode GetHashCode(const char *str)
+    {
+        HashCode hc;
+
+        while (*str) {
+            hc.HashCombine(*str);
+            ++str;
+        }
+
         return hc;
     }
 

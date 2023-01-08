@@ -51,6 +51,44 @@
     </Expand>
   </Type>
 
+  <Type Name="hyperion::HashMap&lt;*,*&gt;">
+    <DisplayString>{{ Dynamic={m_buckets.m_is_dynamic} }}</DisplayString>
+
+    <Expand>
+      <CustomListItems>
+        <Variable Name="bucket_ptr" InitialValue="((hyperion::HashBucket&lt;$T1,$T2&gt; *)&amp;m_buckets.m_inline_storage.data[0])" />
+
+        <Variable Name="item_ptr" InitialValue="((hyperion::HashElement&lt;$T1,$T2&gt; *)nullptr)" />
+        <Variable Name="item_index" InitialValue="-1" />
+
+        <Exec Condition="m_buckets.m_is_dynamic == false">bucket_ptr = ((hyperion::HashBucket&lt;$T1,$T2&gt; *)&amp;m_buckets.m_inline_storage.data[0] + m_buckets.m_start_offset)</Exec>
+        <Exec Condition="m_buckets.m_is_dynamic == true">bucket_ptr = (m_buckets.m_buffer_raw + m_buckets.m_start_offset)</Exec>
+
+        <Loop>
+          <Exec>item_index = 0</Exec>
+          <Exec>item_ptr = nullptr</Exec>
+          <Break Condition="bucket_ptr == ((hyperion::HashBucket&lt;$T1,$T2&gt; *)&amp;m_buckets.m_inline_storage.data[0] + m_buckets.m_size)" />
+
+          <If Condition="bucket_ptr-&gt;elements.m_size - bucket_ptr-&gt;elements.m_start_offset > 0">
+            <Loop>
+              <Break Condition="item_index == bucket_ptr-&gt;elements.m_size - bucket_ptr-&gt;elements.m_start_offset" />
+              <Exec Condition="bucket_ptr-&gt;elements.m_is_dynamic == false">
+                item_ptr = (hyperion::HashElement&lt;$T1,$T2&gt; *)(&amp;bucket_ptr-&gt;elements.m_inline_storage.data[0] + bucket_ptr-&gt;elements.m_start_offset + item_index)
+              </Exec>
+              <Exec Condition="bucket_ptr-&gt;elements.m_is_dynamic == true">
+                item_ptr = (hyperion::HashElement&lt;$T1,$T2&gt; *)(bucket_ptr-&gt;elements.m_buffer_raw + bucket_ptr-&gt;elements.m_start_offset + item_index)
+              </Exec>
+
+              <Exec>item_index++</Exec>
+              <Item Name="[{item_ptr-&gt;key}]">item_ptr-&gt;value</Item>
+            </Loop>
+          </If>
+          <Exec>bucket_ptr++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
   <Type Name="hyperion::detail::UniquePtr&lt;*&gt;">
     <DisplayString>{{ {($T1 *)m_holder.value} }}</DisplayString>
     <Expand>

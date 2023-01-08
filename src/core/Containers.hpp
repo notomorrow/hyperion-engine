@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_CORE_CONTAINERS_H
 #define HYPERION_V2_CORE_CONTAINERS_H
 
+#include <core/lib/HashMap.hpp>
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/StaticMap.hpp>
