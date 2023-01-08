@@ -9,6 +9,7 @@
 #include <rendering/rt/ProbeSystem.hpp>
 
 #include <core/Base.hpp>
+#include <core/Name.hpp>
 #include <core/Containers.hpp>
 #include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
@@ -47,7 +48,7 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 class RenderEnvironment
     : public EngineComponentBase<STUB_CLASS(RenderEnvironment)>
 {
-    using RenderComponentPendingRemovalEntry = Pair<TypeID, ANSIString>;
+    using RenderComponentPendingRemovalEntry = Pair<TypeID, Name>;
 
 public:
     RenderEnvironment(Scene *scene);
@@ -68,7 +69,7 @@ public:
         { return m_particle_system; }
 
     template <class T>
-    void AddRenderComponent(const ANSIString &tag, UniquePtr<T> &&component)
+    void AddRenderComponent(Name name, UniquePtr<T> &&component)
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
@@ -87,10 +88,10 @@ public:
         const auto it = m_render_components_pending_addition.Find<T>();
 
         if (it != m_render_components_pending_addition.End()) {
-            it->second.Set(tag, std::move(component));
+            it->second.Set(name, std::move(component));
         } else {
-            FlatMap<ANSIString, UniquePtr<RenderComponentBase>> component_map;
-            component_map.Set(tag, std::move(component));
+            FlatMap<Name, UniquePtr<RenderComponentBase>> component_map;
+            component_map.Set(name, std::move(component));
 
             m_render_components_pending_addition.Set<T>(std::move(component_map));
         }
@@ -99,14 +100,14 @@ public:
     }
 
     template <class T, class ...Args>
-    void AddRenderComponent(const ANSIString &tag, Args &&... args)
+    void AddRenderComponent(Name name, Args &&... args)
     {
-        AddRenderComponent(tag, UniquePtr<T>::Construct(std::forward<Args>(args)...));
+        AddRenderComponent(name, UniquePtr<T>::Construct(std::forward<Args>(args)...));
     }
 
     /*! CALL FROM RENDER THREAD ONLY */
     template <class T>
-    T *GetRenderComponent(const ANSIString &tag = ANSIString::empty)
+    T *GetRenderComponent(Name name = Name::invalid)
     {
         Threads::AssertOnThread(THREAD_RENDER);
 
@@ -114,15 +115,19 @@ public:
             return nullptr;
         }
 
-        FlatMap<ANSIString, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
+        FlatMap<Name, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
 
-        const auto it = items.Find(tag);
+        if (name) {
+            const auto it = items.Find(name);
 
-        if (it == items.End()) {
-            return nullptr;
+            if (it == items.End()) {
+                return nullptr;
+            }
+
+            return static_cast<T *>(it->second.Get());
+        } else {
+            return items.Any() ? static_cast<T *>(items.Front().second.Get()) : nullptr;
         }
-
-        return static_cast<T *>(it->second.Get());
     }
 
     /*! CALL FROM RENDER THREAD ONLY */
@@ -138,14 +143,14 @@ public:
             return false;
         }
 
-        const FlatMap<ANSIString, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
+        const FlatMap<Name, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
 
         return items.Any();
     }
 
     /*! CALL FROM RENDER THREAD ONLY */
     template <class T>
-    bool HasRenderComponent(const ANSIString &tag) const
+    bool HasRenderComponent(Name name) const
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
@@ -156,16 +161,16 @@ public:
             return false;
         }
 
-        const FlatMap<ANSIString, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
+        const FlatMap<Name, UniquePtr<RenderComponentBase>> &items = m_render_components.At<T>();
 
-        return items.Contains(tag);
+        return items.Contains(name);
     }
 
-    /*! \brief Remove a RenderComponent of the given type T at index \ref{index}, or if \ref{index}
-     *   is -1, remove all items of type T.
+    /*! \brief Remove a RenderComponent of the given type T and the given name value.
+     *  If the name value is Name::invalid, then all items of the type T are removed.
      */
     template <class T>
-    void RemoveRenderComponent(const ANSIString &tag = ANSIString::empty)
+    void RemoveRenderComponent(Name name = Name::invalid)
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
@@ -174,7 +179,7 @@ public:
 
         m_render_components_pending_removal.Insert(RenderComponentPendingRemovalEntry {
             TypeID::ForType<T>(),
-            tag
+            name
         });
 
         m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS);
@@ -210,9 +215,9 @@ private:
     Queue<Handle<Entity>> m_entity_renderable_attribute_updates;
     BinarySemaphore m_entity_update_sp;
 
-    TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> m_render_components; // only touch from render thread
-    TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> m_render_components_pending_init;
-    TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> m_render_components_pending_addition;
+    TypeMap<FlatMap<Name, UniquePtr<RenderComponentBase>>> m_render_components; // only touch from render thread
+    TypeMap<FlatMap<Name, UniquePtr<RenderComponentBase>>> m_render_components_pending_init;
+    TypeMap<FlatMap<Name, UniquePtr<RenderComponentBase>>> m_render_components_pending_addition;
     FlatSet<RenderComponentPendingRemovalEntry> m_render_components_pending_removal;
     std::mutex m_render_component_mutex;
     UInt32 m_current_enabled_render_components_mask;

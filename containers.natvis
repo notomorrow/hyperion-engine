@@ -120,10 +120,6 @@
     <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
     <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
   </Type>
-  <Type Name="hyperion::v2::Handle&lt;*&gt;">
-    <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
-    <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
-  </Type>
 
   <Type Name="hyperion::v2::RenderObjectHandle&lt;*&gt;">
     <DisplayString>{{ Index={index} }}</DisplayString>
@@ -132,4 +128,49 @@
       <ExpandedItem>($T1 *)(&amp;(_container->m_data.m_values[index]))</ExpandedItem>
     </Expand>
   </Type>
+
+  <!-- Walks the whole hash map to display the name as a string! -->
+  <Type Name="hyperion::v2::Name">
+    <DisplayString>{{ ID={hash_code} }}</DisplayString>
+
+    <Expand>
+      <CustomListItems>
+        <Variable Name="bucket_ptr" InitialValue="((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *) &amp;(((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0]))" />
+
+        <Variable Name="item_ptr" InitialValue="((hyperion::HashElement&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)nullptr)" />
+        <Variable Name="item_index" InitialValue="-1" />
+        <Variable Name="found" InitialValue="false"/>
+
+        <Exec Condition="((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == false">bucket_ptr = ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
+        <Exec Condition="((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_is_dynamic == true">bucket_ptr = (((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_buffer_raw + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_start_offset)</Exec>
+
+        <Loop>
+          <Exec>item_index = 0</Exec>
+          <Exec>item_ptr = nullptr</Exec>
+          <Break Condition="found == true || bucket_ptr == ((hyperion::HashBucket&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)&amp;((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_inline_storage.data[0] + ((hyperion::v2::NameRegistry *)Name::registry.m_holder.value)-&gt;m_name_map.m_buckets.m_size)" />
+
+          <If Condition="bucket_ptr-&gt;elements.m_size - bucket_ptr-&gt;elements.m_start_offset > 0">
+            <Loop>
+              <Break Condition="item_index == bucket_ptr-&gt;elements.m_size - bucket_ptr-&gt;elements.m_start_offset" />
+              <Exec Condition="bucket_ptr-&gt;elements.m_is_dynamic == false">
+                item_ptr = (hyperion::HashElement&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)(&amp;bucket_ptr-&gt;elements.m_inline_storage.data[0] + bucket_ptr-&gt;elements.m_start_offset + item_index)
+              </Exec>
+              <Exec Condition="bucket_ptr-&gt;elements.m_is_dynamic == true">
+                item_ptr = (hyperion::HashElement&lt;unsigned __int64,hyperion::containers::detail::DynString&lt;char,0&gt; &gt; *)(bucket_ptr-&gt;elements.m_buffer_raw + bucket_ptr-&gt;elements.m_start_offset + item_index)
+              </Exec>
+
+              <Exec>item_index++</Exec>
+
+              <If Condition="item_ptr-&gt;key == hash_code">
+                <Item Name="Value">item_ptr-&gt;value</Item>
+                <Exec>found = true</Exec>
+              </If>
+            </Loop>
+          </If>
+          <Exec>bucket_ptr++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
 </AutoVisualizer>

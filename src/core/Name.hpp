@@ -3,6 +3,7 @@
 
 #include <Constants.hpp>
 #include <core/Core.hpp>
+#include <core/lib/UniquePtr.hpp>
 #include <core/lib/StaticString.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/DynArray.hpp>
@@ -25,6 +26,8 @@ struct NameInstance
 struct Name
 {
     static const Name invalid;
+
+    static UniquePtr<NameRegistry> registry;
 
     static NameRegistry *GetRegistry();
 
@@ -130,6 +133,14 @@ struct NameRegistration
 
         return id;
     }
+    
+    static UInt64 GenerateID(const ANSIString &str)
+    {
+        const HashCode hash_code = HashCode::GetHashCode(str);
+        const UInt64 id = hash_code.Value();// IsLittleEndian() ? hash_code.Value() : SwapEndianness(hash_code.Value());
+
+        return id;
+    }
 
     template <class S>
     static NameRegistration FromSequence()
@@ -142,6 +153,15 @@ struct NameRegistration
 
         return NameRegistration { id };
     }
+    
+    static NameRegistration FromDynamicString(const ANSIString &str)
+    {
+        const UInt64 id = GenerateID(str);
+
+        Name::GetRegistry()->RegisterName(id, str);
+
+        return NameRegistration { id };
+    }
 };
 
 template <auto StaticStringType>
@@ -151,14 +171,21 @@ struct StaticName
 };
 
 template <class S>
-static constexpr inline Name NameFromString()
+static constexpr inline Name CreateNameFromStaticString()
 {
     static const NameRegistration name_registration = NameRegistration::FromSequence<S>();
 
     return Name(name_registration.id);
 }
 
-#define HYP_NAME(name) NameFromString<StaticName<StaticString(HYP_STR(name))>>()
+static inline Name CreateNameFromDynamicString(const ANSIString &str)
+{
+    const NameRegistration name_registration = NameRegistration::FromDynamicString(str);
+
+    return Name(name_registration.id);
+}
+
+#define HYP_NAME(name) CreateNameFromStaticString<StaticName<StaticString(HYP_STR(name))>>()
 
 } // namespace hyperion::v2
 

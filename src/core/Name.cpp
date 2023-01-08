@@ -4,11 +4,11 @@ namespace hyperion::v2 {
 
 const Name Name::invalid = Name(0);
 
+UniquePtr<NameRegistry> Name::registry = UniquePtr<NameRegistry>::Construct();
+
 NameRegistry *Name::GetRegistry()
 {
-    static NameRegistry registry;
-
-    return &registry;
+    return registry.Get();
 }
 
 const ANSIString &Name::LookupString() const

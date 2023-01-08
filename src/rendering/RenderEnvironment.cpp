@@ -9,9 +9,9 @@ using renderer::Result;
 
 struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommand
 {
-    TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> render_components;
+    TypeMap<FlatMap<Name, UniquePtr<RenderComponentBase>>> render_components;
 
-    RENDER_COMMAND(RemoveAllRenderComponents)(TypeMap<FlatMap<ANSIString, UniquePtr<RenderComponentBase>>> &&render_components)
+    RENDER_COMMAND(RemoveAllRenderComponents)(TypeMap<FlatMap<Name, UniquePtr<RenderComponentBase>>> &&render_components)
         : render_components(std::move(render_components))
     {
     }
@@ -25,8 +25,8 @@ struct RENDER_COMMAND(RemoveAllRenderComponents) : RenderCommand
                 if (component_tag_pair.second == nullptr) {
                     DebugLog(
                         LogType::Warn,
-                        "RenderComponent with tag %s was null, skipping...\n",
-                        component_tag_pair.first.Data()
+                        "RenderComponent with name %s was null, skipping...\n",
+                        component_tag_pair.first.LookupString().Data()
                     );
 
                     continue;
@@ -259,7 +259,7 @@ void RenderEnvironment::RenderComponents(Frame *frame)
         m_render_components_pending_addition.Clear();
 
         for (const auto &it : m_render_components_pending_removal) {
-            const ANSIString &tag = it.second;
+            const Name name = it.second;
 
             const auto components_it = m_render_components.Find(it.first);
 
@@ -268,7 +268,7 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
                 auto &items_map = components_it->second;
                 
-                const auto item_it = items_map.Find(tag);
+                const auto item_it = items_map.Find(name);
 
                 if (item_it != items_map.End()) {
                     const UniquePtr<RenderComponentBase> &item = item_it->second;
