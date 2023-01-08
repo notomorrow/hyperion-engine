@@ -315,10 +315,10 @@ void EnvProbe::CreateImagesAndBuffers()
 
 void EnvProbe::CreateShader()
 {
-    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "CubemapRenderer",
+    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate({
+        HYP_NAME(CubemapRenderer),
         ShaderProps({ "LIGHTING", "SHADOWS", "TONEMAP" })
-    ));
+    });
 
     InitObject(m_shader);
 }
@@ -414,21 +414,21 @@ void EnvProbe::CreateSHData()
     PUSH_RENDER_COMMAND(CreateComputeSHDescriptorSets, m_compute_sh_descriptor_sets);
     
     m_clear_sh = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ComputeSH", {{ "MODE_CLEAR" }})),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ComputeSH), {{ "MODE_CLEAR" }}),
         Array<const DescriptorSet *> { m_compute_sh_descriptor_sets[0].Get() }
     );
 
     InitObject(m_clear_sh);
 
     m_compute_sh = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ComputeSH", {{ "MODE_BUILD_COEFFICIENTS" }})),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ComputeSH), {{ "MODE_BUILD_COEFFICIENTS" }}),
         Array<const DescriptorSet *> { m_compute_sh_descriptor_sets[0].Get() }
     );
 
     InitObject(m_compute_sh);
 
     m_finalize_sh = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ComputeSH", {{ "MODE_FINALIZE" }})),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ComputeSH), {{ "MODE_FINALIZE" }}),
         Array<const DescriptorSet *> { m_compute_sh_descriptor_sets[0].Get() }
     );
 

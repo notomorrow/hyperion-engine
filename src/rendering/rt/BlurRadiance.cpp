@@ -238,14 +238,14 @@ void BlurRadiance::CreateDescriptorSets()
 void BlurRadiance::CreateComputePipelines()
 {
     m_blur_hor = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("BlurRadianceHor")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(BlurRadianceHor)),
         Array<const DescriptorSet *> { m_descriptor_sets[0][0].Get() }
     );
 
     InitObject(m_blur_hor);
 
     m_blur_vert = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("BlurRadianceVert")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(BlurRadianceVert)),
         Array<const DescriptorSet *> { m_descriptor_sets[0][0].Get() }
     );
 

@@ -368,28 +368,28 @@ void SSRRenderer::CreateDescriptorSets()
 void SSRRenderer::CreateComputePipelines()
 {
     m_write_uvs = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRWriteUVs")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SSRWriteUVs)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     InitObject(m_write_uvs);
 
     m_sample = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRSample")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SSRSample)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     InitObject(m_sample);
 
     m_blur_hor = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurHor")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SSRBlurHor)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     InitObject(m_blur_hor);
 
     m_blur_vert = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SSRBlurVert")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SSRBlurVert)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

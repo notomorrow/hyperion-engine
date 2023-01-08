@@ -2,6 +2,8 @@
 #define HYPERION_V2_SHADER_H
 
 #include <core/Base.hpp>
+#include <core/Name.hpp>
+
 #include <rendering/Bindless.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
@@ -74,6 +76,39 @@ public:
 private:
     CompiledShader m_compiled_shader;
     ShaderProgramRef m_shader_program;
+};
+
+struct ShaderDefinition
+{
+    Name name;
+    ShaderProps props;
+    VertexAttributeSet vertex_attributes;
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(name.GetHashCode());
+        hc.Add(props.GetHashCode());
+        hc.Add(vertex_attributes.GetHashCode());
+
+        return hc;
+    }
+};
+
+class ShaderManagerSystem
+{
+public:
+    Handle<Shader> GetOrCreate(const ShaderDefinition &definition);
+
+    Handle<Shader> GetOrCreate(
+        Name name,
+        const ShaderProps &props = { },
+        VertexAttributeSet vertex_attributes = VertexAttributeSet()
+    );
+
+private:
+    HashMap<ShaderDefinition, WeakHandle<Shader>> m_map;
+    std::mutex m_mutex;
 };
 
 enum class ShaderKey

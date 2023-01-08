@@ -861,37 +861,37 @@ int main()
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::BASIC_VEGETATION,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Vegetation", ShaderProps { }))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Vegetation), ShaderProps { })
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::BASIC_UI,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("UIObject", ShaderProps { }))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(UIObject), ShaderProps { })
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::DEBUG_AABB,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("DebugAABB", ShaderProps { }))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(DebugAABB), ShaderProps { })
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::BASIC_FORWARD,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Forward", ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes)))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Forward), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes))
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::BASIC_FORWARD_SKINNED,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Forward", ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes, { "SKINNING" })))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Forward), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes, { "SKINNING" }))
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderKey::TERRAIN,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Terrain", ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes)))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Terrain), ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes))
     );
 
     Engine::Get()->shader_manager.SetShader(
         ShaderManager::Key::BASIC_SKYBOX,
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Skybox", ShaderProps { }))
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Skybox), ShaderProps { })
     );
 
     my_game->Init();

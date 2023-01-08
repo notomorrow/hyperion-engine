@@ -206,4 +206,58 @@ void Shader::Init()
     SetReady(true);
 }
 
+
+Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
+{
+    std::lock_guard guard(m_mutex);
+
+    const auto it = m_map.Find(definition);
+
+    if (it != m_map.End()) {
+        if (Handle<Shader> handle = it->value.Lock()) {
+            return handle;
+        }
+    }
+
+    CompiledShader compiled_shader;
+
+    const bool is_valid_compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
+        String(definition.name.LookupString()),
+        definition.props,
+        definition.vertex_attributes,
+        compiled_shader
+    );
+
+    if (!is_valid_compiled_shader) {
+        DebugLog(
+            LogType::Error,
+            "Failed to get compiled shader with name %s and props hash %llu.\n",
+            definition.name.LookupString().Data(),
+            definition.props.GetHashCode().Value()
+        );
+
+        return Handle<Shader>::empty;
+    }
+
+    Handle<Shader> handle = CreateObject<Shader>();
+    handle->SetCompiledShader(std::move(compiled_shader));
+
+    m_map.Set(definition, handle);
+
+    return handle;
+}
+
+Handle<Shader> ShaderManagerSystem::GetOrCreate(
+    Name name,
+    const ShaderProps &props,
+    VertexAttributeSet vertex_attributes
+)
+{
+    return GetOrCreate(ShaderDefinition {
+        name,
+        props,
+        vertex_attributes
+    });
+}
+
 } // namespace hyperion

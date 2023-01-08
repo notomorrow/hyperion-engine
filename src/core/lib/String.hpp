@@ -28,11 +28,6 @@ using CharArray = Array<T, 64u>;
 template <class T, bool IsUtf8>
 class DynString : Array<T, 64u>
 {
-#if 0
-public:
-    friend DynString operator+(const T *str, const DynString &other);
-#endif
-
 protected:
     using Base = Array<T, 64u>;
 
@@ -55,6 +50,13 @@ public:
     DynString(const T *str);
     explicit DynString(const CharArray<T> &char_array);
     explicit DynString(const ByteBuffer &byte_buffer);
+
+    template <bool OtherIsUtf8>
+    explicit DynString(const DynString<T, OtherIsUtf8> &other)
+        : DynString(other.Data())
+    {
+    }
+    
     DynString(DynString &&other) noexcept;
     ~DynString();
 

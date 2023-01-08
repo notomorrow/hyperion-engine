@@ -14,14 +14,9 @@
 
 namespace hyperion::v2 {
 
-struct Name;
 class NameRegistry;
 
-struct NameInstance
-{
-    UInt index;
-    ANSIString str;
-};
+using NameID = UInt64;
 
 struct Name
 {
@@ -31,12 +26,12 @@ struct Name
 
     static NameRegistry *GetRegistry();
 
-    UInt64 hash_code = 0;
+    NameID hash_code = 0;
 
     constexpr Name() = default;
 
-    constexpr Name(UInt64 hash_code)
-        : hash_code(hash_code)
+    constexpr Name(NameID id)
+        : hash_code(id)
     {
     }
 
@@ -44,6 +39,9 @@ struct Name
     constexpr Name &operator=(const Name &other) = default;
     constexpr Name(Name &&other) noexcept = default;
     constexpr Name &operator=(Name &&other) noexcept = default;
+
+    constexpr NameID GetID() const
+        { return hash_code; }
 
     constexpr bool IsValid() const
         { return hash_code != 0; }
@@ -70,6 +68,9 @@ struct Name
         { return hash_code >= other.hash_code; }
 
     const ANSIString &LookupString() const;
+
+    constexpr HashCode GetHashCode() const
+        { return HashCode(HashCode::ValueType(hash_code)); }
 };
 
 class NameRegistry
@@ -86,7 +87,7 @@ public:
     NameRegistry(NameRegistry &&other) noexcept = delete;
     NameRegistry &operator=(NameRegistry &&other) noexcept = delete;
 
-    Name RegisterName(UInt64 id, const ANSIString &str)
+    Name RegisterName(NameID id, const ANSIString &str)
     {
         Name name(id);
 
@@ -115,29 +116,29 @@ public:
     }
 
 private:
-    HashMap<UInt64, ANSIString> m_name_map;
+    HashMap<NameID, ANSIString> m_name_map;
     mutable std::mutex m_mutex;
 };
 
 struct NameRegistration
 {
-    UInt64 id;
+    NameID id;
     
     template <class S>
-    static constexpr UInt64 GenerateID()
+    static constexpr NameID GenerateID()
     {
         using Seq = typename S::Sequence;
         
         constexpr HashCode hash_code = HashCode::GetHashCode(Seq::Data());
-        constexpr UInt64 id = hash_code.Value();// IsLittleEndian() ? hash_code.Value() : SwapEndianness(hash_code.Value());
+        constexpr NameID id = hash_code.Value();// IsLittleEndian() ? hash_code.Value() : SwapEndianness(hash_code.Value());
 
         return id;
     }
     
-    static UInt64 GenerateID(const ANSIString &str)
+    static NameID GenerateID(const ANSIString &str)
     {
         const HashCode hash_code = HashCode::GetHashCode(str);
-        const UInt64 id = hash_code.Value();// IsLittleEndian() ? hash_code.Value() : SwapEndianness(hash_code.Value());
+        const NameID id = hash_code.Value();// IsLittleEndian() ? hash_code.Value() : SwapEndianness(hash_code.Value());
 
         return id;
     }
@@ -147,7 +148,7 @@ struct NameRegistration
     {
         using Seq = typename S::Sequence;
         
-        static constexpr UInt64 id = GenerateID<S>();
+        static constexpr NameID id = GenerateID<S>();
 
         Name::GetRegistry()->RegisterName(id, Seq::Data());
 
@@ -156,7 +157,7 @@ struct NameRegistration
     
     static NameRegistration FromDynamicString(const ANSIString &str)
     {
-        const UInt64 id = GenerateID(str);
+        const NameID id = GenerateID(str);
 
         Name::GetRegistry()->RegisterName(id, str);
 
@@ -178,14 +179,9 @@ static constexpr inline Name CreateNameFromStaticString()
     return Name(name_registration.id);
 }
 
-static inline Name CreateNameFromDynamicString(const ANSIString &str)
-{
-    const NameRegistration name_registration = NameRegistration::FromDynamicString(str);
+Name CreateNameFromDynamicString(const ANSIString &str);
 
-    return Name(name_registration.id);
-}
-
-#define HYP_NAME(name) CreateNameFromStaticString<StaticName<StaticString(HYP_STR(name))>>()
+#define HYP_NAME(name) CreateNameFromStaticString<StaticName<StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>>()
 
 } // namespace hyperion::v2
 

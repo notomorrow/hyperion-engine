@@ -44,21 +44,18 @@ DeferredPass::~DeferredPass() = default;
 
 void DeferredPass::CreateShader()
 {
-    CompiledShader compiled_shader;
-
     if (m_is_indirect_pass) {
-        compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-            "DeferredIndirect",
+        m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+            HYP_NAME(DeferredIndirect),
             GetDeferredShaderProps()
         );
     } else {
-        compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-            "DeferredDirect",
+        m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+            HYP_NAME(DeferredDirect),
             GetDeferredShaderProps()
         );
     }
 
-    m_shader = CreateObject<Shader>(compiled_shader);
     InitObject(m_shader);
 }
 
@@ -181,12 +178,11 @@ void EnvGridPass::CreateShader()
 {
     ShaderProps props { };
     
-    CompiledShader compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "ApplyEnvGrid",
+    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+        HYP_NAME(ApplyEnvGrid),
         props
     );
-
-    m_shader = CreateObject<Shader>(compiled_shader);
+    
     InitObject(m_shader);
 }
 
@@ -270,12 +266,11 @@ void ReflectionProbePass::CreateShader()
 {
     ShaderProps props { };
     
-    CompiledShader compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        "ApplyReflectionProbe",
+    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(
+        HYP_NAME(ApplyReflectionProbe),
         props
     );
-
-    m_shader = CreateObject<Shader>(compiled_shader);
+    
     InitObject(m_shader);
 }
 

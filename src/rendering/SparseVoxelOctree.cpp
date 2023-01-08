@@ -331,35 +331,35 @@ void SparseVoxelOctree::CreateDescriptors()
 void SparseVoxelOctree::CreateComputePipelines()
 {
     m_alloc_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOAllocNodes")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SVOAllocNodes)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_alloc_nodes));
 
     m_init_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOInitNodes")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SVOInitNodes)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_init_nodes));
 
     m_tag_nodes = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOTagNodes")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SVOTagNodes)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_tag_nodes));
 
     m_modify_args = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOModifyArgs")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SVOModifyArgs)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 
     AssertThrow(InitObject(m_modify_args));
 
     m_write_mipmaps = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("SVOWriteMipmaps")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(SVOWriteMipmaps)),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
     );
 

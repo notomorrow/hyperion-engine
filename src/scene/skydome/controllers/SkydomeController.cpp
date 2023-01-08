@@ -26,7 +26,7 @@ void SkydomeController::OnAdded()
         material->SetIsDepthWriteEnabled(false);
 
         m_dome->SetMaterial(std::move(material));
-        m_dome->SetShader(CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Skydome")));
+        m_dome->SetShader(Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Skydome)));
     }
 }
 

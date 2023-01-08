@@ -117,7 +117,7 @@ void DepthPyramidRenderer::Create(const AttachmentUsage *depth_attachment_usage)
     }
     // create compute pipeline for rendering depth image
     m_generate_depth_pyramid = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("GenerateDepthPyramid")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(GenerateDepthPyramid)),
         Array<const DescriptorSet *> { m_depth_pyramid_descriptor_sets[0].Front().get() } // only need to pass first to use for layout.
     );
 

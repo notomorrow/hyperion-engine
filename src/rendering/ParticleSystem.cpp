@@ -302,7 +302,7 @@ void ParticleSpawner::CreateBuffers()
 
 void ParticleSpawner::CreateShader()
 {
-    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("Particle"));
+    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(Particle));
     InitObject(m_shader);
 }
 
@@ -380,7 +380,7 @@ void ParticleSpawner::CreateRenderGroup()
 void ParticleSpawner::CreateComputePipelines()
 {
     m_update_particles = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("UpdateParticles")),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(UpdateParticles)),
         Array<const DescriptorSet *> { &m_descriptor_sets[0] }
     );
 

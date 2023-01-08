@@ -378,14 +378,14 @@ void HBAO::CreateBlurComputeShaders()
     }
 
     m_blur_hor = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA8" }))),
+        Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
     );
 
     InitObject(m_blur_hor);
 
     m_blur_vert = CreateObject<ComputePipeline>(
-        CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("ImageBlurCompute", ShaderProps({ "OUTPUT_RGBA8" }))),
+       Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[1][0].Get() }
     );
 
@@ -394,7 +394,8 @@ void HBAO::CreateBlurComputeShaders()
 
 void HBAO::CreatePass()
 {
-    auto hbao_shader = Engine::Get()->CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader("HBAO"));
+    auto hbao_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(HYP_NAME(HBAO));
+
     Engine::Get()->InitObject(hbao_shader);
 
     m_hbao_pass.Reset(new FullScreenPass(

@@ -150,14 +150,13 @@ void Voxelizer::CreateBuffers()
 
 void Voxelizer::CreateShader()
 {
-    
-    const char *shader_name = "SVOVoxelizeWithGeometryShader";
+    Name shader_name = HYP_NAME(SVOVoxelizeWithGeometryShader);
 
     if (!Engine::Get()->GetGPUDevice()->GetFeatures().SupportsGeometryShaders()) {
-        shader_name = "SVOVoxelizeWithoutGeometryShader";
+        shader_name = HYP_NAME(SVOVoxelizeWithoutGeometryShader);
     }
 
-    m_shader = CreateObject<Shader>(Engine::Get()->GetShaderCompiler().GetCompiledShader(shader_name));
+    m_shader = Engine::Get()->GetShaderManagerSystem().GetOrCreate(shader_name);
     AssertThrow(InitObject(m_shader));
 }
 
