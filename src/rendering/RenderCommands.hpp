@@ -28,9 +28,7 @@ struct RenderCommand
     virtual ~RenderCommand() = default;
 
     HYP_FORCE_INLINE Result Call()
-    {
-        return operator()();
-    }
+        { return operator()(); }
 
     virtual Result operator()() = 0;
 };
@@ -55,10 +53,11 @@ struct RenderScheduler
     {
     }
 
+    ThreadID GetOwnerThreadID() const
+        { return m_owner_thread; }
+
     void SetOwnerThreadID(ThreadID id)
-    {
-        m_owner_thread = id;
-    }
+        { m_owner_thread = id; }
 
     void Commit(RenderCommand *command);
 
@@ -76,9 +75,7 @@ private:
         SizeType object_alignment = 0;
 
         explicit operator bool() const
-        {
-            return counter_ptr != nullptr;
-        }
+            { return counter_ptr != nullptr; }
     };
 
     static constexpr SizeType max_render_command_types = 128;
@@ -97,7 +94,7 @@ public:
     template <class T, class ...Args>
     static T *Push(Args &&... args)
     {
-        std::lock_guard lock(mtx);
+        std::unique_lock lock(mtx);
         
         void *mem = Alloc<T>();
         T *ptr = new (mem) T(std::forward<Args>(args)...);

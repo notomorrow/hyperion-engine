@@ -292,7 +292,7 @@ void ShadowPass::Create()
 
     m_scene = CreateObject<Scene>(CreateObject<Camera>(m_dimensions.width, m_dimensions.height));
 
-    m_scene->SetName("Shadow scene");
+    m_scene->SetName(HYP_NAME(ShadowScene));
     m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
         MeshAttributes { },
         MaterialAttributes {

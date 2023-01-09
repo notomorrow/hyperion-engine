@@ -41,7 +41,7 @@ void TerrainPagingController::OnAdded()
         .Use<SimplexNoiseGenerator>(7, NoiseCombinator::Mode::ADDITIVE, base_height * 0.03f, 0.0f, Vector(3.125f, 3.125f, 0.0f, 0.0f) * global_terrain_noise_scale)
         .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, base_height * 0.015f, 0.0f, Vector(1.56f, 1.56f, 0.0f, 0.0f) * global_terrain_noise_scale);
 
-    m_material = CreateObject<Material>("terrain_material");
+    m_material = CreateObject<Material>(HYP_NAME(terrain_material));
 
     // m_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.2f, 0.99f, 0.5f, 1.0f));
     m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.5f);
@@ -129,9 +129,11 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
         )
     );
 
-    patch->entity->SetName(String("terrain_chunk_")
-        + String::ToString(static_cast<Int>(patch->info.coord.x))
-        + "_" + String::ToString(static_cast<Int>(patch->info.coord.y)));
+    patch->entity->SetName(CreateNameFromDynamicString(
+        ANSIString("terrain_chunk_")
+        + ANSIString::ToString(Int(patch->info.coord.x))
+        + "_" + ANSIString::ToString(Int(patch->info.coord.y))
+    ));
 
     patch->entity->SetTranslation({
         (patch->info.coord.x - 0.5f) * (Vector(patch->info.extent).Max() - 1) * m_scale.x,
@@ -283,10 +285,10 @@ void TerrainPagingController::Serialize(fbom::FBOMObject &out) const
 
 fbom::FBOMResult TerrainPagingController::Deserialize(const fbom::FBOMObject &in)
 {
-    in.GetProperty("seed").ReadUnsignedInt(&m_seed);
-    in.GetProperty("width").ReadUnsignedInt(&m_patch_size.width);
-    in.GetProperty("height").ReadUnsignedInt(&m_patch_size.height);
-    in.GetProperty("depth").ReadUnsignedInt(&m_patch_size.depth);
+    in.GetProperty("seed").ReadUInt32(&m_seed);
+    in.GetProperty("width").ReadUInt32(&m_patch_size.width);
+    in.GetProperty("height").ReadUInt32(&m_patch_size.height);
+    in.GetProperty("depth").ReadUInt32(&m_patch_size.depth);
     in.GetProperty("scale").ReadArrayElements(fbom::FBOMFloat(), 3, &m_scale);
     in.GetProperty("max_distance").ReadFloat(&m_max_distance);
 

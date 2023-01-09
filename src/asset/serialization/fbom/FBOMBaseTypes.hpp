@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_FBOM_BASE_TYPES_HPP
 #define HYPERION_V2_FBOM_BASE_TYPES_HPP
 
+#include <core/Name.hpp>
 #include <core/lib/String.hpp>
 #include <asset/serialization/fbom/FBOMType.hpp>
 #include <Types.hpp>
@@ -62,6 +63,8 @@ struct FBOMString : FBOMType
     FBOMString() : FBOMString(0) {}
     FBOMString(SizeType length) : FBOMType("string", length) {}
 };
+
+struct FBOMName : FBOMUnsignedLong { };
 
 struct FBOMBaseObjectType : FBOMType { FBOMBaseObjectType() : FBOMType("object", 0) {} };
 

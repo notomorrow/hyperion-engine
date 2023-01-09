@@ -390,7 +390,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             )
         );
 
-        entity->SetName(String(obj_mesh.tag.c_str()));
+        entity->SetName(CreateNameFromDynamicString(obj_mesh.tag.c_str()));
         
         auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
         node->SetEntity(std::move(entity));

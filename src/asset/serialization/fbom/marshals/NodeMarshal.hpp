@@ -71,7 +71,7 @@ public:
     {
         Node::Type node_type = Node::Type::NODE;
 
-        if (auto err = in.GetProperty("type").ReadUnsignedInt(&node_type)) {
+        if (auto err = in.GetProperty("type").ReadUInt32(&node_type)) {
             return err;
         }
 

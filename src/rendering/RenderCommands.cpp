@@ -21,11 +21,10 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
 
     FlushResult result { Result::OK, 0 };
 
-    SizeType count = m_num_enqueued.load(std::memory_order_relaxed);
+    SizeType index;
 
-    while (count) {
-        RenderCommand *front = m_commands.Front();
-        --count;
+    for (index = 0; index < m_commands.Size();) {
+        RenderCommand *front = m_commands[index++];
 
         ++result.num_executed;
 
@@ -36,23 +35,25 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
         result.result = (*front)();
         front->~RenderCommand();
 
-        m_commands.PopFront();
-
         // check if an error occurred
         if (!result.result) {
-            DebugLog(LogType::Error, "Error! %s\n", result.result.message);
-
-            while (m_commands.Any()) {
-                m_commands.PopFront()->~RenderCommand();
-            }
-
-            m_num_enqueued.store(count, std::memory_order_relaxed);
+            DebugLog(LogType::Error, "Render command error! %s\n", result.result.message);
 
             break;
         }
     }
 
-    m_num_enqueued.store(0, std::memory_order_relaxed);
+    if (HYP_LIKELY(index == m_commands.Size())) {
+        m_commands.Clear();
+    } else {
+        AssertThrowMsg(index < m_commands.Size(), "index is > than m_commands.Size() -- incorrect bookkeeping here");
+
+        for (const auto it = m_commands.Begin(); it != m_commands.Begin() + index;) {
+            m_commands.Erase(it);
+        }
+    }
+
+    m_num_enqueued.fetch_sub(index, std::memory_order_relaxed);
 
     return result;
 }
@@ -67,7 +68,7 @@ void RenderCommands::Rewind()
         const SizeType counter_value = p->counter_ptr->load();
 
         if (counter_value) {
-            Memory::Set(p->memory_ptr, 0x00, p->object_size * counter_value);
+            Memory::Set(p->memory_ptr, 0, p->object_size * counter_value);
 
             p->counter_ptr->store(0);
         }

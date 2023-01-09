@@ -292,10 +292,7 @@ NodeProxy Scene::AddEntity(Handle<Entity> &&entity)
         return NodeProxy();
     }
 
-    auto node = m_root_node_proxy.AddChild(NodeProxy(
-        new Node(entity->GetName(), Transform::identity)
-    ));
-
+    auto node = m_root_node_proxy.AddChild(NodeProxy(new Node));
     node.SetEntity(std::move(entity));
 
     return node;
@@ -470,9 +467,9 @@ void Scene::RemovePendingEntities()
             "Remove entity with ID #%u (with material: %s) from scene with ID #%u\n",
             found_entity->GetID().value,
             found_entity->GetMaterial()
-                ? found_entity->GetMaterial()->GetName().Data()
+                ? found_entity->GetMaterial()->GetName().LookupString().Data()
                 : " no material ",
-            m_id.value
+            GetID().value
         );
 
         if (m_tlas) {

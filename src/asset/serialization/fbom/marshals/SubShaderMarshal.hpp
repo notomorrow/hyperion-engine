@@ -35,7 +35,7 @@ public:
     {
         auto sub_shader = UniquePtr<SubShader>::Construct();
 
-        if (auto err = in.GetProperty("type").ReadUnsignedInt(&sub_shader->type)) {
+        if (auto err = in.GetProperty("type").ReadUInt32(&sub_shader->type)) {
             return err;
         }
 

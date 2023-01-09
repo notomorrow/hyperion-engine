@@ -24,13 +24,11 @@ public:
             return { FBOMResult::FBOM_ERR, "Cannot serialize invalid compiled shader instance" };
         }
 
-        const auto name_string = in_object.name.LookupString();
-
-        out.SetProperty("name", FBOMString(), name_string.Size(), name_string.Data());
+        out.SetProperty("name", FBOMName(), in_object.name);
 
         auto properties_array = in_object.properties.ToArray();
 
-        out.SetProperty("properties.size", FBOMUnsignedInt(), UInt(properties_array.Size()));
+        out.SetProperty("properties.size", FBOMData::FromUInt32(UInt32(properties_array.Size())));
 
         for (SizeType index = 0; index < properties_array.Size(); index++) {
             const ShaderProperty &item = properties_array[index];
@@ -61,15 +59,15 @@ public:
     {
         auto compiled_shader = UniquePtr<CompiledShader>::Construct();
 
-        String name;
+        Name name;
 
-        if (auto err = in.GetProperty("name").ReadString(name)) {
+        if (auto err = in.GetProperty("name").ReadName(&name)) {
             return err;
         }
 
         UInt num_properties;
 
-        if (auto err = in.GetProperty("properties.size").ReadUnsignedInt(&num_properties)) {
+        if (auto err = in.GetProperty("properties.size").ReadUInt32(&num_properties)) {
             return err;
         }
 
@@ -78,7 +76,7 @@ public:
 
             String property_name;
 
-            if (auto err = in.GetProperty(param_string + ".name").ReadString(name)) {
+            if (auto err = in.GetProperty(param_string + ".name").ReadString(property_name)) {
                 continue;
             }
 

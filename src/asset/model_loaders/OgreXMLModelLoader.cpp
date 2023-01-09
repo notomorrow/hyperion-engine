@@ -201,7 +201,7 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
             continue;
         }
 
-        Handle<Material> material = CreateObject<Material>("ogrexml_material");
+        Handle<Material> material = CreateObject<Material>(HYP_NAME(ogrexml_material));
 
         Handle<Mesh> mesh = CreateObject<Mesh>(
             model.vertices,

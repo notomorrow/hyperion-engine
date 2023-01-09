@@ -7,14 +7,14 @@
 
 namespace hyperion::renderer {
 
-enum class ImageType
+enum class ImageType : UInt32
 {
     TEXTURE_TYPE_2D = 0,
     TEXTURE_TYPE_3D = 1,
     TEXTURE_TYPE_CUBEMAP = 2
 };
 
-enum class BaseFormat
+enum class BaseFormat : UInt32
 {
     TEXTURE_FORMAT_NONE,
     TEXTURE_FORMAT_R,
@@ -28,7 +28,7 @@ enum class BaseFormat
     TEXTURE_FORMAT_DEPTH
 };
 
-enum class InternalFormat
+enum class InternalFormat : UInt32
 {
     NONE,
 
@@ -86,7 +86,7 @@ enum class InternalFormat
     DEPTH_32F
 };
 
-enum class FilterMode
+enum class FilterMode : UInt32
 {
     TEXTURE_FILTER_NEAREST,
     TEXTURE_FILTER_LINEAR,
@@ -95,7 +95,7 @@ enum class FilterMode
     TEXTURE_FILTER_MINMAX_MIPMAP
 };
 
-enum class WrapMode
+enum class WrapMode : UInt32
 {
     TEXTURE_WRAP_CLAMP_TO_EDGE,
     TEXTURE_WRAP_CLAMP_TO_BORDER,

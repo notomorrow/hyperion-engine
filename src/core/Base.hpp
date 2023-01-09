@@ -6,6 +6,7 @@
 #include <core/ObjectPool.hpp>
 #include <core/Class.hpp>
 #include <core/ID.hpp>
+#include <core/Name.hpp>
 #include <core/Handle.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/StaticString.hpp>
@@ -78,17 +79,17 @@ public:
     {
     }
 
-    EngineComponentBase(const String &name)
+    EngineComponentBase(Name name)
         : EngineComponentBase(name, InitInfo { })
     {
     }
 
     EngineComponentBase(const InitInfo &init_info)
-        : EngineComponentBase(String::empty, init_info)
+        : EngineComponentBase(Name::invalid, init_info)
     {
     }
 
-    EngineComponentBase(const String &name, const InitInfo &init_info)
+    EngineComponentBase(Name name, const InitInfo &init_info)
         : CallbackTrackable(),
           m_name(name),
           m_init_info(init_info),
@@ -138,13 +139,10 @@ public:
         { m_id = id; }
 
     /*! \brief Get assigned name of the object */
-    const String &GetName() const { return m_name; }
+    Name GetName() const { return m_name; }
 
     /*! \brief Set the assigned name of the object */
-    void SetName(const String &name) { m_name = name; }
-
-    /*! \brief Set the assigned name of the object */
-    void SetName(String &&name) { m_name = std::move(name); }
+    void SetName(Name name) { m_name = name; }
 
     bool IsInitCalled() const
         { return m_init_called.load(); }
@@ -206,7 +204,7 @@ protected:
     }
     
     ID<InnerType> m_id;
-    String m_name;
+    Name m_name;
     std::atomic_bool m_init_called;
     std::atomic_bool m_is_ready;
     InitInfo m_init_info;

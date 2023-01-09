@@ -21,9 +21,7 @@ public:
 
     virtual FBOMResult Serialize(const Shader &in_object, FBOMObject &out) const override
     {
-        const auto name_string = in_object.GetCompiledShader().name.LookupString();
-
-        out.SetProperty("name", FBOMString(), name_string.Size(), name_string.Data());
+        out.SetProperty("name", FBOMName(), in_object.GetCompiledShader().name);
 
         auto properties_array = in_object.GetCompiledShader().properties.ToArray();
 
@@ -45,19 +43,17 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
-        ANSIString name_string;
+        Name name;
 
-        if (auto err = in.GetProperty("name").ReadString(name_string)) {
+        if (auto err = in.GetProperty("name").ReadName(&name)) {
             return err;
         }
-
-        const Name name = CreateNameFromDynamicString(name_string);
 
         ShaderProps properties;
 
         UInt num_properties;
 
-        if (auto err = in.GetProperty("properties.size").ReadUnsignedInt(&num_properties)) {
+        if (auto err = in.GetProperty("properties.size").ReadUInt32(&num_properties)) {
             return err;
         }
 
@@ -79,9 +75,9 @@ public:
             DebugLog(
                 LogType::Error,
                 "Failed to deserialize Shader instance: The referenced compiled shader is not valid.\n"
-                "\tName: %s\n"
+                "\tNameID: %llu\n"
                 "\tProperties: %s\n",
-                name_string.Data(),
+                name.GetHashCode().Value(),
                 properties.ToString().Data()
             );
 

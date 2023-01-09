@@ -43,7 +43,6 @@ vec2 texcoord = v_texcoord0;
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7500.0
 #define IRRADIANCE_MULTIPLIER 1.0
 
 layout(push_constant) uniform PushConstant
@@ -122,7 +121,7 @@ void main()
         }
 #endif
 
-#ifdef ENV_PROBE_ENABLED
+#ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
         ibl.rgb = ReverseTonemapReinhardSimple(reflection_probes_color.rgb);
         ibl.rgb *= reflection_probes_color.a;

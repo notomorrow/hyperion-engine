@@ -20,9 +20,9 @@ public:
 
     virtual FBOMResult Serialize(const AudioSource &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("format", FBOMUnsignedInt(), in_object.GetFormat());
-        out.SetProperty("byte_buffer", in_object.GetByteBuffer());
-        out.SetProperty("freq", FBOMUnsignedLong(), in_object.GetFreq());
+        out.SetProperty("format", FBOMData::FromUInt32(UInt32(in_object.GetFormat())));
+        out.SetProperty("byte_buffer", FBOMData::FromByteBuffer(in_object.GetByteBuffer()));
+        out.SetProperty("freq", FBOMData::FromUInt64(in_object.GetFreq()));
 
         return { FBOMResult::FBOM_OK };
     }
@@ -37,13 +37,13 @@ public:
 
         UInt format;
 
-        if (auto err = in.GetProperty("format").ReadUnsignedInt(&format)) {
+        if (auto err = in.GetProperty("format").ReadUInt32(&format)) {
             return err;
         }
 
         SizeType freq;
 
-        if (auto err = in.GetProperty("freq").ReadUnsignedLong(&freq)) {
+        if (auto err = in.GetProperty("freq").ReadUInt64(&freq)) {
             return err;
         }
 

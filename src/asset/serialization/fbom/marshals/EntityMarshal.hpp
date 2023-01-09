@@ -24,7 +24,7 @@ public:
 
     virtual FBOMResult Serialize(const Entity &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
+        out.SetProperty("name", FBOMName(), in_object.GetName());
     
         out.SetProperty("transform.translation", FBOMVec3f(), &in_object.GetTransform().GetTranslation());
         out.SetProperty("transform.rotation", FBOMQuaternion(), &in_object.GetTransform().GetRotation());
@@ -56,9 +56,10 @@ public:
     {
         auto entity_handle = UniquePtr<Handle<Entity>>::Construct(CreateObject<Entity>());
 
-        String name;
-        in.GetProperty("name").ReadString(name);
-        (*entity_handle)->SetName(std::move(name));
+        Name name;
+        in.GetProperty("name").ReadName(&name);
+
+        (*entity_handle)->SetName(name);
 
         { // transform
             Transform transform = Transform::identity;

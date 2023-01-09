@@ -26,9 +26,12 @@ struct Name
 
     static NameRegistry *GetRegistry();
 
-    NameID hash_code = 0;
-
-    constexpr Name() = default;
+    NameID hash_code;
+    
+    Name()
+        : hash_code(0)
+    {
+    }
 
     constexpr Name(NameID id)
         : hash_code(id)

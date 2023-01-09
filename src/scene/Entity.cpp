@@ -156,14 +156,13 @@ void Entity::Init()
     RebuildRenderableAttributes();
 
     SetReady(true);
-
-
+    
     OnTeardown([this]() {
         DebugLog(
             LogType::Debug,
-            "Destroy entity with id %u, with name %s\n",
+            "Destroy entity with id %u, with name hash %llu\n",
             GetID().value,
-            GetName().Data()
+            GetName().GetHashCode().Value()
         );
 
         SetReady(false);
@@ -192,11 +191,11 @@ void Entity::Init()
         m_material.Reset();
         m_blas.Reset();
 
+        m_skeleton.Reset();
+        m_mesh.Reset();
+        m_shader.Reset();
+
         HYP_SYNC_RENDER();
-        
-        Engine::Get()->SafeReleaseHandle<Skeleton>(std::move(m_skeleton));
-        Engine::Get()->SafeReleaseHandle<Mesh>(std::move(m_mesh));
-        Engine::Get()->SafeReleaseHandle<Shader>(std::move(m_shader));
     });
 }
 

@@ -1273,7 +1273,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 auto material = Engine::Get()->GetMaterialCache().GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE });
 
                 auto entity = CreateObject<Entity>();
-                entity->SetName(node.name);
+                entity->SetName(CreateNameFromDynamicString(node.name.Data()));
                 entity->SetShader(shader);
                 entity->SetMaterial(material);
 

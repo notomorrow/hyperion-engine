@@ -55,7 +55,7 @@ public:
     {
         Topology topology = Topology::TRIANGLES;
 
-        if (auto err = in.GetProperty("topology").ReadUnsignedInt(&topology)) {
+        if (auto err = in.GetProperty("topology").ReadUInt32(&topology)) {
             return err;
         }
 

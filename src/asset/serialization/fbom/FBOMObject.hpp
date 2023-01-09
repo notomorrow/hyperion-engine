@@ -97,16 +97,16 @@ public:
     void SetProperty(const String &key, const FBOMType &type, const void *bytes);
     void SetProperty(const String &key, const ByteBuffer &bytes);
 
-    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>>>
+    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<NormalizedType<T>>>>
     void SetProperty(const String &key, const FBOMType &type, const T &value)
     {
-        SetProperty(key, type, sizeof(std::remove_reference_t<T>), &value);
+        SetProperty(key, type, sizeof(NormalizedType<T>), &value);
     }
 
-    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>>>
+    template <class T, typename = typename std::enable_if_t<!std::is_pointer_v<NormalizedType<T>>>>
     void SetProperty(const String &key, const FBOMType &type, T &&value)
     {
-        SetProperty(key, type, sizeof(std::remove_reference_t<T>), &value);
+        SetProperty(key, type, sizeof(NormalizedType<T>), &value);
     }
 
     /*! \brief Add a child object to this object node.

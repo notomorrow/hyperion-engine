@@ -23,7 +23,7 @@ public:
 
     virtual FBOMResult Serialize(const Scene &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
+        out.SetProperty("name", FBOMName(), in_object.GetName());
 
         // for (auto &node : in_object.GetRoot().GetChildren()) {
         //     out.AddChild(*node.Get());
@@ -44,9 +44,10 @@ public:
     {
         auto scene_handle = UniquePtr<Handle<Scene>>::Construct(CreateObject<Scene>(Handle<Camera>()));
 
-        String name;
-        in.GetProperty("name").ReadString(name);
-        (*scene_handle)->SetName(std::move(name));
+        Name name;
+        in.GetProperty("name").ReadName(&name);
+
+        (*scene_handle)->SetName(name);
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Node")) {

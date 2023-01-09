@@ -21,7 +21,7 @@ public:
 
     virtual FBOMResult Serialize(const Material &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("name", FBOMString(), in_object.GetName().Size(), in_object.GetName().Data());
+        out.SetProperty("name", FBOMName(), in_object.GetName());
 
         out.SetProperty("attributes.bucket", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().bucket));
         out.SetProperty("attributes.flags", FBOMUnsignedInt(), UInt32(in_object.GetRenderAttributes().flags));
@@ -91,22 +91,22 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
-        String name;
-        in.GetProperty("name").ReadString(name);
+        Name name;
+        in.GetProperty("name").ReadName(&name);
 
         MaterialAttributes attributes;
         Material::ParameterTable parameters = Material::DefaultParameters();
         Material::TextureSet textures;
 
-        in.GetProperty("attributes.bucket").ReadUnsignedInt(&attributes.bucket);
-        in.GetProperty("attributes.flags").ReadUnsignedInt(&attributes.flags);
-        in.GetProperty("attributes.cull_mode").ReadUnsignedInt(&attributes.cull_faces);
-        in.GetProperty("attributes.fill_mode").ReadUnsignedInt(&attributes.fill_mode);
+        in.GetProperty("attributes.bucket").ReadUInt32(&attributes.bucket);
+        in.GetProperty("attributes.flags").ReadUInt32(&attributes.flags);
+        in.GetProperty("attributes.cull_mode").ReadUInt32(&attributes.cull_faces);
+        in.GetProperty("attributes.fill_mode").ReadUInt32(&attributes.fill_mode);
 
-        UInt num_parameters;
+        UInt32 num_parameters;
 
         // load parameters
-        if (auto err = in.GetProperty("params.size").ReadUnsignedInt(&num_parameters)) {
+        if (auto err = in.GetProperty("params.size").ReadUInt32(&num_parameters)) {
             return err;
         }
 
@@ -120,18 +120,18 @@ public:
                 continue;
             }
 
-            if (auto err = in.GetProperty(param_string + ".key").ReadUnsignedLong(&key)) {
+            if (auto err = in.GetProperty(param_string + ".key").ReadUInt64(&key)) {
                 continue;
             }
 
-            if (auto err = in.GetProperty(param_string + ".type").ReadUnsignedInt(&param.type)) {
+            if (auto err = in.GetProperty(param_string + ".type").ReadUInt32(&param.type)) {
                 continue;
             }
 
             if (param.IsIntType()) {
                 for (UInt j = 0; j < 4; j++) {
                     in.GetProperty(param_string + ".values[" + String::ToString(j) + "]")
-                        .ReadInt(&param.values.int_values[j]);
+                        .ReadInt32(&param.values.int_values[j]);
                 }
             } else if (param.IsFloatType()) {
                 for (UInt j = 0; j < 4; j++) {
@@ -168,6 +168,10 @@ public:
         }
 
         auto material_handle = Engine::Get()->GetMaterialCache().GetOrCreate(attributes, parameters, textures);
+
+        if (name) {
+            material_handle->SetName(name);
+        }
 
         out_object = std::move(UniquePtr<Handle<Material>>::Construct(material_handle));
 

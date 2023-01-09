@@ -24,22 +24,22 @@ public:
 
     virtual FBOMResult Serialize(const Camera &in_object, FBOMObject &out) const override
     {
-        out.SetProperty("translation", FBOMVec3f(), in_object.GetTranslation());
-        out.SetProperty("direction", FBOMVec3f(), in_object.GetDirection());
-        out.SetProperty("up", FBOMVec3f(), in_object.GetUpVector());
-        out.SetProperty("view_matrix", FBOMMat4(), in_object.GetViewMatrix());
-        out.SetProperty("projection_matrix", FBOMMat4(), in_object.GetProjectionMatrix());
-        out.SetProperty("view_projection_matrix", FBOMMat4(), in_object.GetViewProjectionMatrix());
-        out.SetProperty("width", FBOMUnsignedInt(), in_object.GetWidth());
-        out.SetProperty("height", FBOMUnsignedInt(), in_object.GetHeight());
-        out.SetProperty("near", FBOMFloat(), in_object.GetNear());
-        out.SetProperty("far", FBOMFloat(), in_object.GetFar());
-        out.SetProperty("frustum", FBOMArray(FBOMVec4f(), 6), &in_object.GetFrustum().GetPlanes()[0]);
-        out.SetProperty("fov", FBOMFloat(), in_object.GetFov());
-        out.SetProperty("left", FBOMFloat(), in_object.GetLeft());
-        out.SetProperty("right", FBOMFloat(), in_object.GetRight());
-        out.SetProperty("bottom", FBOMFloat(), in_object.GetBottom());
-        out.SetProperty("top", FBOMFloat(), in_object.GetTop());
+        out.SetProperty("translation", FBOMData::FromVector3(in_object.GetTranslation()));
+        out.SetProperty("direction", FBOMData::FromVector3(in_object.GetDirection()));
+        out.SetProperty("up",FBOMData::FromVector3(in_object.GetUpVector()));
+        out.SetProperty("view_matrix", FBOMData::FromMatrix4(in_object.GetViewMatrix()));
+        out.SetProperty("projection_matrix", FBOMData::FromMatrix4(in_object.GetProjectionMatrix()));
+        out.SetProperty("view_projection_matrix", FBOMData::FromMatrix4(in_object.GetViewProjectionMatrix()));
+        out.SetProperty("width", FBOMData::FromUInt32(UInt32(in_object.GetWidth())));
+        out.SetProperty("height", FBOMData::FromUInt32(UInt32(in_object.GetHeight())));
+        out.SetProperty("near", FBOMData::FromFloat(in_object.GetNear()));
+        out.SetProperty("far", FBOMData::FromFloat(in_object.GetFar()));
+        out.SetProperty("frustum", FBOMData::FromArray(in_object.GetFrustum().GetPlanes()));
+        out.SetProperty("fov", FBOMData::FromFloat(in_object.GetFov()));
+        out.SetProperty("left", FBOMData::FromFloat(in_object.GetLeft()));
+        out.SetProperty("right", FBOMData::FromFloat(in_object.GetRight()));
+        out.SetProperty("bottom", FBOMData::FromFloat(in_object.GetBottom()));
+        out.SetProperty("top", FBOMData::FromFloat(in_object.GetTop()));
 
         // TODO: Save camera controller!
 
@@ -48,32 +48,43 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
-        Float _near, _far, fov;
-        Float left, right, bottom, top;
-        UInt32 width, height;
 
-        in.GetProperty("width").ReadUnsignedInt(&width);
-        in.GetProperty("height").ReadUnsignedInt(&height);
-        in.GetProperty("near").ReadFloat(&_near);
-        in.GetProperty("far").ReadFloat(&_far);
-        in.GetProperty("fov").ReadFloat(&fov);
-        in.GetProperty("left").ReadFloat(&left);
-        in.GetProperty("right").ReadFloat(&right);
-        in.GetProperty("bottom").ReadFloat(&bottom);
-        in.GetProperty("top").ReadFloat(&top);
+        struct CameraParams
+        {
+            Float _near, _far, fov;
+            Float left, right, bottom, top;
+            UInt32 width, height;
+        } camera_params;
+
+        Memory::Set(&camera_params, 0, sizeof(camera_params));
+
+        in.GetProperty("width").ReadUInt32(&camera_params.width);
+        in.GetProperty("height").ReadUInt32(&camera_params.height);
+        in.GetProperty("near").ReadFloat(&camera_params._near);
+        in.GetProperty("far").ReadFloat(&camera_params._far);
+        in.GetProperty("fov").ReadFloat(&camera_params.fov);
+        in.GetProperty("left").ReadFloat(&camera_params.left);
+        in.GetProperty("right").ReadFloat(&camera_params.right);
+        in.GetProperty("bottom").ReadFloat(&camera_params.bottom);
+        in.GetProperty("top").ReadFloat(&camera_params.top);
 
         UniquePtr<Handle<Camera>> camera_handle;
 
-        if (fov > MathUtil::epsilon<Float>) {
+        if (camera_params.fov > MathUtil::epsilon<Float>) {
             camera_handle = UniquePtr<Handle<Camera>>::Construct(
                 CreateObject<Camera>(
-                    fov, width, height, _near, _far
+                    camera_params.fov,
+                    camera_params.width, camera_params.height,
+                    camera_params._near, camera_params._far
                 )
             );
         } else {
             camera_handle = UniquePtr<Handle<Camera>>::Construct(
                 CreateObject<Camera>(
-                    width, height, left, right, bottom, top, _near, _far
+                    camera_params.width, camera_params.height,
+                    camera_params.left, camera_params.right,
+                    camera_params.bottom, camera_params.top,
+                    camera_params._near, camera_params._far
                 )
             );
         }
@@ -87,11 +98,10 @@ public:
             (*camera_handle)->SetTranslation(translation);
             (*camera_handle)->SetDirection(direction);
             (*camera_handle)->SetUpVector(up_vector);
-
-            Matrix4 view_matrix, projection_matrix, view_projection_matrix;
-            in.GetProperty("view_matrix").ReadAsType(FBOMMat4(), &(*camera_handle)->GetViewMatrix());
-            in.GetProperty("projection_matrix").ReadAsType(FBOMMat4(), &(*camera_handle)->GetProjectionMatrix());
-            in.GetProperty("view_projection_matrix").ReadAsType(FBOMMat4(), &(*camera_handle)->GetViewProjectionMatrix());
+            
+            in.GetProperty("view_matrix").ReadMatrix4(&(*camera_handle)->GetViewMatrix());
+            in.GetProperty("projection_matrix").ReadMatrix4(&(*camera_handle)->GetProjectionMatrix());
+            in.GetProperty("view_projection_matrix").ReadMatrix4(&(*camera_handle)->GetViewProjectionMatrix());
         }
 
         { // frustum

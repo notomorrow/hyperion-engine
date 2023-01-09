@@ -22,7 +22,7 @@ class Framebuffer;
 
 struct MaterialAttributes
 {
-    using MaterialFlags = UInt;
+    using MaterialFlags = UInt32;
 
     enum MaterialFlagBits : MaterialFlags
     {

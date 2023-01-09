@@ -206,17 +206,17 @@ public:
 
                 for (auto ch : n->GetChildren()) {
                     std::cout << "ch : " << ch.GetName() << std::endl;
-                    std::cout << "entity : " << (ch.GetEntity() ? ch.GetEntity()->GetName() : " <no entity>") << std::endl;
+                    std::cout << "entity : " << (ch.GetEntity() ? ch.GetEntity()->GetName().LookupString() : " <no entity>") << std::endl;
 
                     for (auto ch2 : ch.GetChildren()) {
                         std::cout << "\tch2 : " << ch2.GetName() << std::endl;
 
-                        std::cout << "\tentity : " << (ch2.GetEntity() ? ch2.GetEntity()->GetName() : " <no entity>") << std::endl;
+                        std::cout << "\tentity : " << (ch2.GetEntity() ? ch2.GetEntity()->GetName().LookupString() : " <no entity>") << std::endl;
                     }
                 }
 
                 m_scene->GetRoot().AddChild(exported_node);
-                Engine::Get()->GetWorld()->AddScene(Handle<Scene>(m_scene));
+                Engine::Get()->GetWorld()->AddScene(m_scene);
 
                 return;
             }
@@ -246,7 +246,7 @@ public:
         
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/salle_de_bain/salle_de_bain.obj");//"sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -284,7 +284,7 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(0.025f);
+        test_model.Scale(2.025f);
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
@@ -388,7 +388,6 @@ public:
             //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
             //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             //zomb2->GetMaterial()->SetIsAlphaBlended(true);
-            zomb2->SetName("FOOBAR ZOMBO");
             // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
             zomb2->SetSkeleton(CreateObject<Skeleton>());
             zomb2->RebuildRenderableAttributes();
@@ -523,7 +522,6 @@ public:
 
             // add a plane physics shape
             auto plane = CreateObject<Entity>();
-            plane->SetName("Plane entity");
             plane->SetTranslation(Vector3(0, 14, 0));
             plane->SetMesh(MeshBuilder::Quad());//Cube());
             plane->GetMesh()->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
@@ -834,6 +832,7 @@ public:
     UniquePtr<TaskBatch> m_export_task;
 
 };
+
 } // namespace hyperion::v2
 
 int main()

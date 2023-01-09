@@ -334,7 +334,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             }
 
             texture->GetImage()->SetIsSRGB(it.mapping.srgb);
-            texture->SetName(String(it.name.c_str()));
+            texture->SetName(CreateNameFromDynamicString(it.name.c_str()));
 
             textures.Set(it.mapping.key, std::move(texture));
         }

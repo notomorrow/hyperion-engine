@@ -255,7 +255,7 @@ Material::Material()
     ResetParameters();
 }
 
-Material::Material(const String &name, Bucket bucket)
+Material::Material(Name name, Bucket bucket)
     : EngineComponentBase(name),
       m_render_attributes { .bucket = bucket },
       m_is_dynamic(false),
@@ -265,7 +265,7 @@ Material::Material(const String &name, Bucket bucket)
 }
 
 Material::Material(
-    const String &name,
+    Name name,
     const MaterialAttributes &attributes,
     const ParameterTable &parameters,
     const TextureSet &textures
@@ -556,7 +556,7 @@ Handle<Material> MaterialCache::GetOrCreate(
     }
 
     auto handle = Engine::Get()->CreateObject<Material>(
-        String("cached_material_") + String::ToString(hc.Value()),
+        CreateNameFromDynamicString(ANSIString("cached_material_") + ANSIString::ToString(hc.Value())),
         attributes,
         parameters,
         textures

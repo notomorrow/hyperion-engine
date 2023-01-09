@@ -81,7 +81,7 @@ LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
         &data.data[0]
     ))));
 
-    (*texture)->SetName(String(StringUtil::Basename(state.filepath).c_str()));
+    (*texture)->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath).c_str()));
 
     return { { LoaderResult::Status::OK }, texture.Cast<void>() };
 }

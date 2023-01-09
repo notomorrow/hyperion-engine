@@ -262,7 +262,8 @@ void EnvProbe::Init()
         m_scene->GetCamera()->SetViewMatrix(Matrix4::LookAt(Vector3(0.0f, 0.0f, 1.0f), origin, Vector3(0.0f, 1.0f, 0.0f)));
         m_scene->GetCamera()->SetFramebuffer(m_framebuffer);
 
-        m_scene->SetName("Cubemap renderer scene");
+        m_scene->SetName(HYP_NAME(CubemapRendererScene));
+
         m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {

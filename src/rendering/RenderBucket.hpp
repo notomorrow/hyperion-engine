@@ -2,10 +2,11 @@
 #define HYPERION_V2_RENDER_BUCKET_H
 
 #include <util/Defines.hpp>
+#include <Types.hpp>
 
 namespace hyperion::v2 {
 
-enum Bucket
+enum Bucket : UInt32
 {
     BUCKET_SWAPCHAIN = 0, /* Main swapchain */
     BUCKET_INTERNAL,      /* Pre-pass / buffer items */

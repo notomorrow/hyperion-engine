@@ -18,9 +18,17 @@ struct ThreadID
     UInt value;
     StringView name;
 
-    HYP_FORCE_INLINE bool operator==(const ThreadID &other) const { return value == other.value; }
-    HYP_FORCE_INLINE bool operator!=(const ThreadID &other) const { return value != other.value; }
-    HYP_FORCE_INLINE bool operator<(const ThreadID &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
+    HYP_FORCE_INLINE bool operator==(const ThreadID &other) const
+        { return value == other.value; }
+
+    HYP_FORCE_INLINE bool operator!=(const ThreadID &other) const
+        { return value != other.value; }
+
+    HYP_FORCE_INLINE bool operator<(const ThreadID &other) const
+        { return std::tie(value, name) < std::tie(other.value, other.name); }
+
+    HYP_FORCE_INLINE UInt operator~() const
+        { return ~value; }
 };
 
 static_assert(std::is_trivially_destructible_v<ThreadID>,
@@ -152,15 +160,11 @@ bool Thread<SchedulerType, Args...>::Detach()
 template <class SchedulerType, class ...Args>
 bool Thread<SchedulerType, Args...>::Join()
 {
-    if (m_thread == nullptr) {
+    if (!CanJoin()) {
         return false;
     }
     
-    try {
-        m_thread->join();
-    } catch (...) {
-        return false;
-    }
+    m_thread->join();
 
     return true;
 }

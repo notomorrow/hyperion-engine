@@ -155,6 +155,8 @@ public:
     void Reserve(SizeType capacity);
     void Resize(SizeType new_size);
     void Refit();
+    void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
+
     void PushBack(const ValueType &value);
     void PushBack(ValueType &&value);
 
@@ -278,7 +280,6 @@ protected:
     }
 
     void ResetOffsets();
-    void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
 
     Iterator RealBegin() const { return ToValueTypePtr(GetStorage()[0]); }
     Iterator RealEnd() const { return ToValueTypePtr(GetStorage()[m_size]); }

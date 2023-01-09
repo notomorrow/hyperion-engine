@@ -80,7 +80,7 @@ void EnvGrid::Init()
         ));
 
         m_ambient_scene->GetCamera()->SetFramebuffer(m_framebuffer);
-        m_ambient_scene->SetName("EnvGrid Ambient Probe Scene");
+        m_ambient_scene->SetName(HYP_NAME(EnvGridScene));
         m_ambient_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {

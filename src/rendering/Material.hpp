@@ -89,7 +89,7 @@ public:
             int int_values[4];
         } values;
 
-        enum Type : UInt
+        enum Type : UInt32
         {
             MATERIAL_PARAMETER_TYPE_NONE,
             MATERIAL_PARAMETER_TYPE_FLOAT,
@@ -228,7 +228,8 @@ public:
         }
     };
 
-    enum State {
+    enum State
+    {
         MATERIAL_STATE_CLEAN,
         MATERIAL_STATE_DIRTY
     };
@@ -271,11 +272,11 @@ public:
 
     Material();
     Material(
-        const String &name,
+        Name name,
         Bucket bucket = Bucket::BUCKET_OPAQUE
     );
     Material(
-        const String &name,
+        Name name,
         const MaterialAttributes &attributes,
         const ParameterTable &parameters,
         const TextureSet &textures

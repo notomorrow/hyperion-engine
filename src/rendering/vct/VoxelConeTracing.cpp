@@ -43,7 +43,7 @@ void VoxelConeTracing::Init()
         CreateObject<Camera>(voxel_map_extent.width, voxel_map_extent.height)
     );
     
-    m_scene->SetName("VCT scene");
+    m_scene->SetName(HYP_NAME(VCTScene));
     m_scene->SetOverrideRenderableAttributes(RenderableAttributeSet(
         MeshAttributes { },
         MaterialAttributes {

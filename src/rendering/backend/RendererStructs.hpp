@@ -11,7 +11,7 @@
 
 namespace hyperion::renderer {
 
-enum class DatumType
+enum class DatumType : UInt32
 {
     UNSIGNED_BYTE,
     SIGNED_BYTE,
@@ -22,20 +22,20 @@ enum class DatumType
     FLOAT
 };
 
-enum class FaceCullMode : UInt
+enum class FaceCullMode : UInt32
 {
     NONE,
     BACK,
     FRONT
 };
 
-enum class FillMode : UInt
+enum class FillMode : UInt32
 {
     FILL,
     LINE
 };
 
-enum class Topology : UInt 
+enum class Topology : UInt32
 {
     TRIANGLES,
     TRIANGLE_FAN,
@@ -46,14 +46,14 @@ enum class Topology : UInt
     POINTS
 };
 
-enum class StencilMode : UInt
+enum class StencilMode : UInt32
 {
     NONE,
     FILL,
     OUTLINE
 };
 
-enum class BlendMode : UInt
+enum class BlendMode : UInt32
 {
     NONE,
     NORMAL,
