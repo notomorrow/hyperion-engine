@@ -250,7 +250,6 @@ public:
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
-        batch.Add<Node>("building", "models/building-front/building-front.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -263,7 +262,6 @@ public:
         auto obj_models = batch.AwaitResults();
         auto zombie = obj_models["zombie"].Get<Node>();
         auto test_model = obj_models["test_model"].Get<Node>();//Engine::Get()->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
-        auto building = obj_models["building"].Get<Node>();
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
         
@@ -272,9 +270,9 @@ public:
         //monkey_fbx.Scale(0.2f);
         monkey_fbx.Rotate(Vector3(90, 0, 0));
 
-        /*material_test_obj.Scale(5.0f);
-        material_test_obj.Translate(Vector3(15.0f, 20.0f, 15.0f));
-        GetScene()->GetRoot().AddChild(material_test_obj);*/
+        material_test_obj.Scale(2.0f);
+        material_test_obj.Translate(Vector3(0.0f, 4.0f, 9.0f));
+        GetScene()->GetRoot().AddChild(material_test_obj);
         
         if (auto dude = obj_models["dude3"].Get<Node>()) {
             dude.SetName("dude");
@@ -290,20 +288,12 @@ public:
         }
 
         test_model.Scale(0.025f);
-        building.Scale(1.0125f);
-
-        if (auto ent = building[0].GetEntity()) {
-            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Albedo.jpg"));
-            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Normal_LOD0.jpg"));
-            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Roughness.jpg"));
-            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_PARALLAX_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Displacement.jpg"));
-        }
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
                 HYP_NAME(AmbientGrid0),
-                test_model.GetWorldAABB() * 1.0f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
-                Extent3D { 13, 3, 13 }
+                test_model.GetWorldAABB(),//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
+                Extent3D { 17, 2, 17 }
             );
         }
 
@@ -429,7 +419,6 @@ public:
 
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
-        m_scene->GetRoot().AddChild(building);
         
         if (false) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
@@ -472,16 +461,16 @@ public:
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
                 monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.55f);
                 monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
                 monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
                 monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
                 monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
                 monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.0f, 0.0f, 1.0f));
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.2f, 0.0f, 1.0f));
                 monkey_entity->RebuildRenderableAttributes();
                 monkey.SetLocalTranslation(Vector3(0.0f, 0.0f, 0.0f));
-                monkey.Scale(2.2f);
+                monkey.Scale(1.2f);
                 monkey.Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(90.0f)));
                 InitObject(monkey_entity);
 
@@ -682,13 +671,6 @@ public:
             ray_cast_timer = 0.0f;
 
             if (auto ray_hit = GetRayHitWorld()) {
-                /*const auto &mesh_hit = triangle_mesh_results.Front();
-
-                if (auto target = m_scene->GetRoot().Select("monkey")) {
-                    target.SetLocalTranslation(mesh_hit.hitpoint);
-                    target.SetLocalRotation(Quaternion::LookAt((m_scene->GetCamera()->GetTranslation() - mesh_hit.hitpoint).Normalized(), Vector3::UnitY()));
-                }*/
-
                 const ID<Entity> entity_id { ray_hit.Get().id };
 
                 bool select_new_entity = false;

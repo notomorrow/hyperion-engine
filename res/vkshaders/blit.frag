@@ -29,14 +29,14 @@ layout(location=0) out vec4 out_color;
 
 void main()
 {
-    vec4 albedo = vec4(0.0);
-
     vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
     out_color = deferred_result;
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
 
+#ifdef TEMPORAL_AA
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, temporal_aa_result, v_texcoord0).rgb;
+#endif
 
     bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
     out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
@@ -51,9 +51,6 @@ void main()
 
     out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
 
-
-    // out_color.rgb = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, v_texcoord0));
-
 #if defined(DEBUG_SSR)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0).rgb;
     out_color.rgb = pow(out_color.rgb, vec3(2.2));
@@ -64,15 +61,9 @@ void main()
     out_color.rgb = pow(out_color.rgb, vec3(2.2));
 #endif
 
+#ifndef OUPUT_SRGB
+    //out_color.rgb = pow(out_color.rgb, vec3(1.0 / 2.2));
+#endif
+
     out_color.a = 1.0;
-    
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb;//, vec3(2.2));
-    // out_color.rgb = pow(out_color.rgb, vec3(2.2));
-
-
-    // out_color.rgb = vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0).rgb);//, vec3(2.2));
-
-
-    // out_color = vec4(SampleEffectPre(0, v_texcoord0, out_color).aaa, 1.0);
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, rt_radiance_final, v_texcoord0).rgb;//, vec3(2.2));
 }

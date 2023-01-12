@@ -13,7 +13,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 6.0
+#define ENV_PROBE_MULTIPLIER 7.0
 
 struct DeferredParams
 {
@@ -200,13 +200,6 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
     return probe_index_at_point;
 }
 
-void ApplyReflectionProbe(const in EnvProbe, vec3, vec3, float, inout vec4);
-
-void ApplyEnvGridReflection(uint local_probe_index, vec3 P, vec3 R, float lod, inout vec4 ibl)
-{
-    ApplyReflectionProbe(GET_GRID_PROBE(local_probe_index), P, R, lod, ibl);
-}
-
 float[9] ProjectSHBands(vec3 N)
 {
     float bands[9];
@@ -307,10 +300,14 @@ float CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N
         const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
 
         const vec3 pos_relative_to_grid = P - env_grid.center.xyz;
-        const vec3 pos_relative_to_probe = ((P - center) / (extent_unpadded)) + 0.5;
 
-        vec3 coord = (vec3(probe_position) + 0.5) * texel_size;
-        coord += vec3(pos_relative_to_probe - 0.5) * texel_size;
+        // + 0.5 takes it from -0.5,0.5 to 0.0,1.0
+        const vec3 pos_relative_to_probe = ((P - center) / extent) + 0.5;
+
+        // instead of using +0.5 to get center of the cell, we add pos_relative_to_probe,
+        // which has been transformed from 0.0,1.0 range. so samplers at the edge of the cell will offset by
+        // 0.0, at the middle will offset by 0.5, etc.
+        vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
 
         irradiance += SphericalHarmonicsSample(N, coord);
 
@@ -318,19 +315,6 @@ float CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N
     }
 
     return 0.0;
-}
-
-vec4 CalculateEnvGridReflection(DeferredParams deferred_params, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
-{
-    vec4 ibl = vec4(0.0);
-
-    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
-
-    if (bool(env_grid.enabled_indices_mask & (1 << 0))) {
-        ApplyEnvGridReflection(0, P, R, lod, ibl);
-    }
-
-    return ibl;
 }
 
 #endif
@@ -363,7 +347,7 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    const float lod = float(7.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 
@@ -405,9 +389,9 @@ void CalculateHBILIrradiance(DeferredParams deferred_params, in vec4 ssao_data, 
     irradiance += pow(ssao_data.rgb, vec3(2.2)) * HYP_HBIL_MULTIPLIER * float(bool(deferred_params.flags & DEFERRED_FLAGS_HBIL_ENABLED));
 }
 
-void IntegrateReflections(inout vec3 Fr, in vec3 E, in vec4 reflections)
+void IntegrateReflections(inout vec3 Fr, in vec4 reflections)
 {
-    Fr = (Fr * (1.0 - reflections.a)) + (E * reflections.rgb);
+    Fr = (Fr * (1.0 - reflections.a)) + (reflections.rgb);
 }
 
 void ApplyFog(in vec3 P, inout vec4 result)

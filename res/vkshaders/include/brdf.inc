@@ -3,6 +3,20 @@
 
 #define PI 3.14159265359
 
+vec3 ImportanceSampleGTR2(float rgh, float r1, float r2)
+{
+    float a = max(0.001, rgh);
+
+    float phi = r1 * HYP_FMATH_PI * 2.0;
+
+    float cosTheta = sqrt((1.0 - r2) / (1.0 + (a * a - 1.0) * r2));
+    float sinTheta = clamp(sqrt(1.0 - (cosTheta * cosTheta)), 0.0, 1.0);
+    float sinPhi   = sin(phi);
+    float cosPhi   = cos(phi);
+
+    return vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+}
+
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     // float a = roughness*roughness;

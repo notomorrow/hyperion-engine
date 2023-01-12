@@ -146,10 +146,8 @@ void main()
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         specular_ao *= energy_compensation;
 
-        vec3 Fr = E * ibl;
-
-        Fr *= specular_ao;
-        reflections.rgb *= specular_ao;
+        vec3 reflection_combined = (ibl.rgb * (1.0 - reflections.a)) + (reflections.rgb);
+        vec3 Fr = reflection_combined * E * specular_ao;
 
         vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
         Fd *= multibounce;
@@ -158,7 +156,7 @@ void main()
         // Fr *= exposure * IBL_INTENSITY;
         // Fd *= exposure * IBL_INTENSITY;
 
-        IntegrateReflections(Fr, E, reflections);
+        // IntegrateReflections(Fr, reflections);
 
         result = Fd + Fr;
 
@@ -167,7 +165,7 @@ void main()
         result = final_result.rgb;
 
 #if defined(DEBUG_REFLECTIONS)
-        result = reflections.rgb;
+        result = reflection_combined.rgb;
 #elif defined(DEBUG_IRRADIANCE)
         result = irradiance.rgb;
 #endif

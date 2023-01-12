@@ -120,8 +120,6 @@ void main()
 
     // gbuffer_albedo.rgb = GetTriplanarBlend(normal);
 
-    vec2 current_jitter = scene.taa_params.xy;
-    vec2 previous_jitter = scene.taa_params.zw;
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
     gbuffer_normals = EncodeNormal(normal);
