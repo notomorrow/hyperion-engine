@@ -152,7 +152,7 @@ void main(void)
     const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
     const vec2 sample_point = uv * 2.0 - 1.0;
     
-    const vec3 dir = MapXYSToDirection(face_index, sample_point); 
+    const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
     vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
 

@@ -32,7 +32,7 @@ comp = cull/object_visibility.comp
 comp = cull/generate_depth_pyramid.comp
 
 [FinalOutput]
-permute = DEBUG(SSR)
+permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB
 frag = blit.frag
 vert = blit.vert
 

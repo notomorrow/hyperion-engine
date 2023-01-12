@@ -1,6 +1,8 @@
 #ifndef HYP_SHARED_GLSL
 #define HYP_SHARED_GLSL
 
+#include "defines.inc"
+
 // HLSL Compat
 #define saturate(_x) Saturate(_x)
 #define float2 vec2
@@ -30,6 +32,18 @@ mat4 CreateRotationMatrix(vec3 axis, float angle) {
 vec3 RotateVector(vec3 v, vec3 axis, float angle) {
 	mat4 m = CreateRotationMatrix(axis, angle);
 	return (m * vec4(v, 1.0)).xyz;
+}
+
+void ComputeOrthonormalBasis(in vec3 normal, out vec3 tangent, out vec3 bitangent)
+{
+    vec3 T;
+    T = cross(normal, vec3(0.0, 1.0, 0.0));
+    T = mix(cross(normal, vec3(1.0, 0.0, 0.0)), T, step(HYP_FMATH_EPSILON, dot(T, T)));
+
+    T = normalize(T);
+
+    tangent = T;
+    bitangent = normalize(cross(normal, T));
 }
 
 vec4 Texture2D(sampler2D tex, vec2 texcoord)

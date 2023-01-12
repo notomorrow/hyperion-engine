@@ -42,43 +42,9 @@ const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
-#define RAY_OFFSET 2.0
+#define RAY_OFFSET 0.025
 #define NUM_SAMPLES 1
 #define NUM_ACCUMULATION_SAMPLES 6
-
-void ComputeOrthonormalBasis(in vec3 normal, out vec3 tangent, out vec3 bitangent)
-{
-    vec3 T;
-    T = cross(normal, vec3(0.0, 1.0, 0.0));
-    T = mix(cross(normal, vec3(1.0, 0.0, 0.0)), T, step(HYP_FMATH_EPSILON, dot(T, T)));
-
-    T = normalize(T);
-
-    tangent = T;
-    bitangent = normalize(cross(normal, T));
-}
-
-const vec2 offsets[5] = vec2[](
-    vec2(-1, -1),
-    vec2(0, -1),
-    vec2(0, 0),
-    vec2(1, 0),
-    vec2(1, 1)
-);
-
-vec3 ImportanceSampleGTR2(float rgh, float r1, float r2)
-{
-    float a = max(0.001, rgh);
-
-    float phi = r1 * HYP_FMATH_PI * 2.0;
-
-    float cosTheta = sqrt((1.0 - r2) / (1.0 + (a * a - 1.0) * r2));
-    float sinTheta = clamp(sqrt(1.0 - (cosTheta * cosTheta)), 0.0, 1.0);
-    float sinPhi   = sin(phi);
-    float cosPhi   = cos(phi);
-
-    return vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-}
 
 void main() 
 {
