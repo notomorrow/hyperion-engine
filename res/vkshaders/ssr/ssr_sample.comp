@@ -69,11 +69,11 @@ void main(void)
         roughness = clamp(roughness, 0.001, 0.999);
         const float perceptual_roughness = sqrt(roughness);
 
-        const float gloss = 1.0 - roughness;
-        const float cone_angle = RoughnessToConeAngle(roughness) * 0.5;
+        const float gloss = 1.0 - perceptual_roughness;
+        const float cone_angle = RoughnessToConeAngle(perceptual_roughness) * 0.5;
 
         const float trace_size = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
-        const float max_mip_level = 5.0;
+        const float max_mip_level = 9.0;
 
         vec2 sample_texcoord = texcoord;//+ (offset * filter_size);
         ivec2 sample_coord = ivec2(sample_texcoord * vec2(ssr_params.dimension));
@@ -133,7 +133,6 @@ void main(void)
         reflection_sample = accum_color;
 
         reflection_sample.a *= alpha;
-        // reflection_sample *= 1.0 - (roughness / 0.75);
     }
 
     out_radius = accum_radius;

@@ -44,7 +44,7 @@ void main(void)
     const vec2 texel_size = vec2(1.0) / vec2(depth_texture_dimensions);
     const float depth = Texture2D(sampler_nearest, depth_texture, texcoord).r;
 
-    const float blur_amount = 1.5;
+    const float blur_amount = 3.5;
 
     vec4 accum_sample = vec4(0.0);
     float accum_radius = 0.0;

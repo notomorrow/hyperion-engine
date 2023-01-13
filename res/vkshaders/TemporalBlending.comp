@@ -46,6 +46,16 @@ layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D blur_outpu
 #include "./include/packing.inc"
 #include "./include/shared.inc"
 #include "./include/scene.inc"
+
+// #define ADJUST_COLOR_HDR
+#define TEMPORAL_BLENDING_USE_YCoCg
+
+#if TEMPORAL_BLEND_TECHNIQUE == 0
+    #undef ADJUST_COLOR_HDR
+#elif TEMPORAL_BLEND_TECHNIQUE == 1
+    #define ADJUST_COLOR_HDR
+#endif
+
 #include "./include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -90,18 +100,16 @@ void main(void)
 
 
 #if TEMPORAL_BLEND_TECHNIQUE == 0
-    #undef ADJUST_COLOR_HDR
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
 
-    vec4 color_ycocg = RGBToYCoCg(color);
-    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
+    color.a = 1.0;
+    previous_color.a = 1.0;
 
     color = ADJUST_COLOR_IN(color);
     previous_color = ADJUST_COLOR_IN(previous_color);
 
-    // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);
-    vec4 mean = color;//color_ycocg;
-    vec4 stddev = mean * mean;
+    vec4 color_ycocg = RGBToYCoCg(color);
+    vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
 
     const float _SubpixelThreshold = 0.5;
     const float _GatherBase = 0.5;
@@ -112,38 +120,65 @@ void main(void)
     const float subpixel_motion = Saturate(_SubpixelThreshold / max(HYP_FMATH_EPSILON, texel_vel_mag));
     const float min_max_support = _GatherBase + _GatherSubpixelMotion * subpixel_motion;
 
+#ifdef TEMPORAL_BLENDING_USE_YCoCg
+    vec4 mean = color_ycocg;
+#else
+    vec4 mean = color;
+#endif
+
+    vec4 stddev = mean * mean;
+
+    const vec2 ss_offset01 = min_max_support * vec2(-texel_size.x, texel_size.y);
+    const vec2 ss_offset11 = min_max_support * vec2(texel_size.x, texel_size.y);
 
     const vec2 offsets[4] = vec2[](
-        vec2(-1.0, 0.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, -1.0),
-        vec2(0.0, 1.0)
+        -ss_offset11,// vec2(-1.0, 0.0),
+        -ss_offset01,// vec2(1.0, 0.0),
+        ss_offset01,// vec2(0.0, -1.0),
+        ss_offset11// vec2(0.0, 1.0)
     );
 
     for (int i = 0; i < 4; i++) {
-        vec4 c = /*RGBToYCoCg*/(ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, clamp(uv + (offsets[i] * texel_size), 0.0, 1.0))));
+        vec4 c = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + offsets[i]));
+
+#ifdef TEMPORAL_BLENDING_USE_YCoCg
+        c = RGBToYCoCg(c);
+#endif
+
         mean += c;
         stddev += c * c;
     }
 
     mean /= 5.0;
-    stddev = sqrt(stddev / 5.0 - (mean * mean));
-    vec4 clipped = ClipToAABB(color/*_ycocg*/, previous_color/*_ycocg*/, mean, stddev);
+    stddev = sqrt(min(stddev / 5.0 - (mean * mean), 0.0));
 
-
-    // color = TemporalLuminanceResolve((YCoCgToRGB(color_ycocg)), (YCoCgToRGB(clipped)));
+#ifdef TEMPORAL_BLENDING_USE_YCoCg
+    vec4 clipped = ClipToAABB(color_ycocg, previous_color_ycocg, mean, stddev);
+#else
+    vec4 clipped = ClipToAABB(color, previous_color, mean, stddev);
+#endif
 
     const float lum0 = color_ycocg.r;
+
+#ifdef TEMPORAL_BLENDING_USE_YCoCg
+    const float lum1 = clipped.r;
+#else
     const float lum1 = RGBToYCoCg(clipped).r;
+#endif
 
     float unbiased_diff = abs(lum0 - lum1) / max(lum0, max(lum1, 0.2));
     float unbiased_weight = 1.0 - unbiased_diff;
     float unbiased_weight_sqr = HYP_FMATH_SQR(unbiased_weight);
-    float feedback = Saturate(mix(0.88, 0.98, unbiased_weight_sqr));
+    float feedback = saturate(mix(0.96, 0.995, unbiased_weight_sqr));
 
-    color = ADJUST_COLOR_OUT(mix(color, /*YCoCgToRGB*/(clipped), feedback));
-    // color = ADJUST_COLOR_OUT(stddev);
-    // color = any(isnan(color)) ? vec4(0.0) : color;
+#ifdef TEMPORAL_BLENDING_USE_YCoCg
+    clipped = YCoCgToRGB(clipped);
+#endif
+
+    color = ADJUST_COLOR_OUT(mix(color, clipped, feedback));
+
+    color = any(isnan(color)) ? vec4(1.0, 0.0, 0.0, 1.0) : color;
+
 #elif TEMPORAL_BLEND_TECHNIQUE == 1
     color = TemporalResolve(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 

@@ -13,7 +13,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 5.0
+#define ENV_PROBE_MULTIPLIER 12.0
 
 struct DeferredParams
 {
@@ -311,7 +311,7 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = float(7.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    const float lod = float(8.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 

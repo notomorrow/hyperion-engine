@@ -42,7 +42,7 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 1.1
+#define HYP_HBAO_RADIUS 1.3
 #define HYP_HBAO_POWER 2.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
@@ -102,7 +102,7 @@ vec2 RotateDirection(vec2 uv, vec2 cos_sin)
     );
 }
 
-#define ANGLE_BIAS 0.02
+#define ANGLE_BIAS 0.0
 
 // vec3 GetCameraSpaceRay(in vec3 V, in vec2 ray)
 // {
@@ -181,13 +181,17 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
                 const vec2 falloff = saturate(DdotD * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
 
-                const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(0.9995)));
+                const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(1.0)));
 
                 vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
-                // const vec4 material_0 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.xy, 0.0);
+                const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
 
                 vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
-                // const vec4 material_1 = Texture2DLod(sampler_nearest, gbuffer_material_texture, new_uv.zw, 0.0);
+                const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
+
+                // metallic surfaces do not reflect diffuse light
+                new_color_0 *= (1.0 - material_0.g);
+                new_color_1 *= (1.0 - material_1.g);
 
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 

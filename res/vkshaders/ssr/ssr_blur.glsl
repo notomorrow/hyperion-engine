@@ -4,7 +4,7 @@
 #include "ssr_header.inc"
 
 #define HYP_SSR_MAX_BLUR_INCREMENT 6.0
-// #define HYP_SSR_USE_GAUSSIAN_BLUR 
+#define HYP_SSR_USE_GAUSSIAN_BLUR 
 
 #ifndef HYP_SSR_USE_GAUSSIAN_BLUR
     #define HYP_SSR_BLUR_MIN        0.25
