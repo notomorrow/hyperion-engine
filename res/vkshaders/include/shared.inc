@@ -12,6 +12,8 @@
 #define float3x3 mat3
 #define float4x4 mat4
 
+#define fmod(x, y) ((x) - (y) * floor((x) / (y)))
+
 float Luminance(vec3 color)
 {
     return color.r * 0.2125 + color.g * 0.715 + color.b * 0.0721;

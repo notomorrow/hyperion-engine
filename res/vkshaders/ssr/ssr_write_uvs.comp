@@ -8,8 +8,6 @@ layout(set = 0, binding = 0, rgba8) uniform writeonly image2D ssr_uvs;
 
 #include "../include/Temporal.glsl"
 
-#define SSR_JITTER_OFFSET 0.0
-
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
 bool TraceRays(
@@ -86,10 +84,10 @@ float CalculateAlpha(
 
     // Fade ray hits that approach the screen edge
     vec2 hit_pixel_ndc = hit_pixel * 2.0 - 1.0;
-    float max_dimension = Saturate(max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
-    alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
+    float max_dimension = saturate(max(abs(hit_pixel_ndc.x), abs(hit_pixel_ndc.y)));
+    // alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
 
-    // alpha = 1.0 - smoothstep(0.06, 0.95, max_dimension);
+    alpha = 1.0 - smoothstep(0.06, 0.95, max_dimension);
 
     // const float dp = dot(ray_direction, -scene.camera_direction.xyz);
     // alpha *= 1.0 - smoothstep(0.8, 1.0, dp);
@@ -134,43 +132,33 @@ void main(void)
     vec3 V = normalize(vec3(0.0) - P);
     vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
 
-#if 0
     vec3 tangent;
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
     vec3 world_space_position = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
-    vec3 ray_origin = (scene.view * vec4(world_space_position + N * 0.025, 1.0)).xyz;
+    vec3 ray_origin = P;//(scene.view * vec4(world_space_position + N, 1.0)).xyz;
     
-    // scatter the ray based on surface roughness
-    uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter % 4);
-
 #ifdef HYP_SSR_ROUGHNESS_SCATTERING
-    const float r1 = RandomFloat(ray_seed);
-    const float r2 = RandomFloat(ray_seed);
-    vec3 H = ImportanceSampleGTR2(roughness, r1, r2);
+    vec2 blue_noise_sample = vec2(
+        SampleBlueNoise(int(coord.x), int(coord.y), 0, 0),
+        SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)
+    );
+
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+
+    const vec2 rnd = vec2(fmod(blue_noise_scaled.x, 1.0), fmod(blue_noise_scaled.y, 1.0));
+    
+    vec3 V_tbn = tangent * V.x + bitangent * V.y + N * V.z;
+    
+    vec3 H = ImportanceSampleGTR2(perceptual_roughness, rnd.x, rnd.y);
+
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     vec3 ray_direction = reflect(-V, normalize((scene.view * vec4(H, 0.0))).xyz);
+
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);
-#endif
-
-#else
-
-    vec3 ray_origin = P;
-    // scatter the ray based on surface roughness
-    uint ray_seed = InitRandomSeed(InitRandomSeed(uint(coord.x), uint(coord.y)), scene.frame_counter % 4);
-
-    vec3 rnd = vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed));
-
-#ifdef HYP_SSR_ROUGHNESS_SCATTERING
-    vec3 scattered_direction = normalize(scene.view * vec4(normalize(mix(N, RandomInHemisphereCosineWeighted(rnd, N), roughness)), 0.0)).xyz;
-    vec3 ray_direction = reflect(normalize(ray_origin), scattered_direction);
-#else
-    vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);
-#endif
-
 #endif
 
     vec2 hit_pixel;
