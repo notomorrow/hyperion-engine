@@ -4,12 +4,12 @@
 #include "noise.inc"
 #include "aabb.inc"
 
-#define HYP_SHADOW_BIAS 0.0025
-//#define HYP_SHADOW_VARIABLE_BIAS 1
+#define HYP_SHADOW_BIAS 0.00001
+#define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
 
-#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.33
+#define HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION 0.03
 
 #define HYP_SHADOW_SAMPLES_4
 //#define HYP_SHADOW_SAMPLES_8
@@ -73,6 +73,29 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 
 float GetShadowVariance(uint index, vec3 pos, float NdotL)
 {
+    float bias = HYP_SHADOW_BIAS;
+
+#if HYP_SHADOW_VARIABLE_BIAS
+    bias *= tan(acos(NdotL));
+    bias = clamp(bias, 0.0, 0.01);
+#endif
+
+    const vec3 coord = GetShadowCoord(index, pos);
+    const vec4 moments = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[index], coord.xy);
+
+    float d = coord.z - moments.x;
+    float p = step(coord.z, moments.x + bias);
+    float variance = max(moments.y - moments.x * moments.x, 0.0001);
+
+    float p_max = variance / (variance + d * d);
+
+    AABB aabb;
+    aabb.min = shadow_map_data[index].aabb_min.xyz;
+    aabb.max = shadow_map_data[index].aabb_max.xyz;
+
+   return AABBContainsPoint(aabb, pos) ? max(p, p_max) : 1.0;
+
+#if 0
     const vec3 coord = GetShadowCoord(index, pos);
     const vec4 shadow_sample = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[index], coord.xy);
     const float moment = shadow_sample.r;
@@ -89,11 +112,10 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     float percent_in_shadow = variance / (variance + HYP_FMATH_SQR(d));
     percent_in_shadow = smoothstep(HYP_SHADOW_VARIANCE_LIGHT_BLEED_REDUCTION, 1.0, percent_in_shadow);
 
-    AABB aabb;
-    aabb.min = shadow_map_data[index].aabb_min.xyz;
-    aabb.max = shadow_map_data[index].aabb_max.xyz;
+    percent_in_shadow *= 1.0 - float(NdotL > 1.5708);
+    return float(acos(NdotL));
 
-    return AABBContainsPoint(aabb, pos) ? percent_in_shadow : 1.0;
+#endif
 }
 
 float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float shadow_map_coord_z)

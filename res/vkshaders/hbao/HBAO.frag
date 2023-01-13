@@ -42,7 +42,7 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 1.3
+#define HYP_HBAO_RADIUS 2.5
 #define HYP_HBAO_POWER 2.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
@@ -113,10 +113,23 @@ float Falloff(float dist_sqr)
     return dist_sqr * (-1.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)) + 1.0;
 }
 
+vec2 CalculateImpact(vec2 theta_0, vec2 theta_1, float nx, float ny)
+{
+    vec2 sin_theta_0 = sin(theta_0);
+    vec2 sin_theta_1 = sin(theta_1);
+    vec2 cos_theta_0 = cos(theta_0);
+    vec2 cos_theta_1 = cos(theta_1);
+
+    const vec2 dx = (theta_0 - sin_theta_0 * cos_theta_0) - (theta_1 - sin_theta_1 * cos_theta_1);
+    const vec2 dy = cos_theta_1 * cos_theta_1 - cos_theta_0 * cos_theta_0;
+
+    return max(nx * dx + ny * dy, vec2(0.0));
+}
+
 void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
 {
     uvec2 pixel_coord = uvec2(clamp(ivec2(uv * vec2(dimension) - 0.5), ivec2(0), ivec2(dimension) - 1));
-    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 4);
+    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
 
     const float projected_scale = float(dimension.y) / (tan_half_fov * 2.0);
 
@@ -124,13 +137,13 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
-    const float noise_direction = InterleavedGradientNoise(pixel_coord);//RandomFloat(seed);
+    const float noise_direction = RandomFloat(seed);//InterleavedGradientNoise(pixel_coord);
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
     const vec3 P = GetPosition(uv, depth);
     const vec3 N = GetNormal(uv);
-    const vec3 V = normalize(vec3(0.0) - P);
+    const vec3 V = normalize(P);
 
     const float camera_distance = P.z;
     const vec2 texel_size = vec2(1.0) / vec2(dimension);
@@ -141,12 +154,23 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     light_color = vec4(0.0);
 
     for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
-        float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
+        float angle = (float(i) + noise_direction) / float(HYP_HBAO_NUM_CIRCLES) * 2.0 * HYP_FMATH_PI;//(float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
 
         vec2 ss_ray = vec2(sin(angle), cos(angle));
-        const vec4 integral_factors = vec4(vec2(dot(N.xy, ss_ray), N.z), vec2(dot(N.xy, -ss_ray), N.z));
+        vec3 ray = normalize(vec3(ss_ray.xy * V.z, -dot(V.xy, ss_ray.xy)));
+        const float nx = dot(ray, N);
+        const float ny = -dot(N, V);
+        const float ctg_th0 = -nx/ny;
 
-        vec2 horizons = vec2(-1.0);
+        vec2 cos_max_theta = vec2(ctg_th0 * inversesqrt(ctg_th0 * ctg_th0 + 1.0));
+        vec2 max_theta = vec2(acos(cos_max_theta));
+
+        const float start_angle_delta = 0.0;
+        max_theta = vec2(max(vec2(0.0), max_theta - start_angle_delta));
+        // cos_max_theta = cos(max_theta);
+
+        // const vec4 integral_factors = vec4(vec2(dot(N.xy, ss_ray), N.z), vec2(dot(N.xy, -ss_ray), N.z));
+
         vec2 slice_ao = vec2(0.0);
         vec4 slice_light[2] = { vec4(0.0), vec4(0.0) };
 
@@ -177,34 +201,40 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 const vec2 DdotD = vec2(dot(ds, ds), dot(dt, dt));
                 const vec2 NdotD = vec2(dot(ds, N), dot(dt, N));
 
-                const vec2 H = NdotD * inversesqrt(DdotD);
+                // const vec2 H = NdotD * inversesqrt(DdotD);
+
+                const vec2 DdotV = vec2(-dot(ds, V), -dot(dt, V));
 
                 const vec2 falloff = saturate(DdotD * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
 
-                const vec2 condition = vec2(greaterThan(H, horizons)) * vec2(lessThan(dist, vec2(1.0)));
-
-                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
-                const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
-
-                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
-                const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
-
-                // metallic surfaces do not reflect diffuse light
-                new_color_0 *= (1.0 - material_0.g);
-                new_color_1 *= (1.0 - material_1.g);
-
+                const vec2 condition = vec2(greaterThan(DdotV, cos_max_theta)) * vec2(lessThan(dist, vec2(1.0)));
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 
-                slice_light[0] += (slice_light[0] + vec4(new_color_0) * (NdotD.x - ANGLE_BIAS) * (falloffs.x)) * condition.x;
-                slice_light[1] += (slice_light[1] + vec4(new_color_1) * (NdotD.y - ANGLE_BIAS) * (falloffs.y)) * condition.y;
+                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
+                // const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
 
+                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
+                // const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
+
+                // metallic surfaces do not reflect diffuse light
+                // new_color_0 *= (1.0 - material_0.g);
+                // new_color_1 *= (1.0 - material_1.g);
+
+                const vec2 theta = acos(DdotV);
+
+                const vec2 impact = CalculateImpact(min(max_theta, theta + vec2(HYP_FMATH_PI / 9.0)), theta, nx, ny);
+                const vec2 total_impact = condition * falloffs * impact;
+
+                slice_light[0] += vec4(new_color_0) * total_impact.x;
+                slice_light[1] += vec4(new_color_1) * total_impact.y;
 
                 slice_ao += vec2(
-                    ((NdotD.x - ANGLE_BIAS) * falloffs.x),
-                    ((NdotD.y - ANGLE_BIAS) * falloffs.y)
+                    (1.0 - dist.x * dist.x) * (NdotD.x - slice_ao.x),
+                    (1.0 - dist.y * dist.y) * (NdotD.y - slice_ao.y)
                 ) * condition;
 
-                horizons = mix(horizons, H, condition);
+                cos_max_theta = mix(cos_max_theta, DdotV, condition);
+                max_theta = mix(max_theta, theta, condition);
             }
         }
 

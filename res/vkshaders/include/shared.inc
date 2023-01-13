@@ -19,6 +19,8 @@ float Luminance(vec3 color)
     return color.r * 0.2125 + color.g * 0.715 + color.b * 0.0721;
 }
 
+#define AngleBetweenVectors(a, b) (acos(dot((a), (b))))
+
 mat4 CreateRotationMatrix(vec3 axis, float angle) {
     axis = normalize(axis);
     float s = sin(angle);
