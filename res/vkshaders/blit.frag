@@ -53,16 +53,12 @@ void main()
 
 #if defined(DEBUG_SSR)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0).rgb;
-    out_color.rgb = pow(out_color.rgb, vec3(2.2));
+    out_color.rgb = Tonemap(out_color.rgb);
 #elif defined(DEBUG_HBAO)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).aaa;
 #elif defined(DEBUG_HBIL)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).rgb;
     out_color.rgb = pow(out_color.rgb, vec3(2.2));
-#endif
-
-#ifndef OUPUT_SRGB
-    //out_color.rgb = pow(out_color.rgb, vec3(1.0 / 2.2));
 #endif
 
     out_color.a = 1.0;

@@ -12,8 +12,8 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 4.0
+#define HYP_HBIL_MULTIPLIER 0.85
+#define ENV_PROBE_MULTIPLIER 8.0
 
 struct DeferredParams
 {
@@ -328,8 +328,8 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
-    screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-    screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
+    // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
+    // screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
 }
 #endif

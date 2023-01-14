@@ -137,7 +137,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
-    const float noise_direction = RandomFloat(seed);//InterleavedGradientNoise(pixel_coord);
+    const float noise_direction = RandomFloat(seed);
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
@@ -176,7 +176,6 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
         for (int j = 0; j < HYP_HBAO_NUM_SLICES; j++) {
             vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
-            // uv_offset *= mix(-1.0, 1.0, float(j % 2 == 0));
 
             vec4 new_uv = uv.xyxy + vec4(uv_offset, -uv_offset);
 
@@ -211,9 +210,9 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
 
                 vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
-                // const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
-
                 vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
+
+                // const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
                 // const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
 
                 // metallic surfaces do not reflect diffuse light
@@ -231,7 +230,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
                 slice_ao += vec2(
                     (1.0 - dist.x * dist.x) * (NdotD.x - slice_ao.x),
                     (1.0 - dist.y * dist.y) * (NdotD.y - slice_ao.y)
-                ) * condition;
+                ) * condition * fade;
 
                 cos_max_theta = mix(cos_max_theta, DdotV, condition);
                 max_theta = mix(max_theta, theta, condition);
@@ -242,7 +241,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
         occlusion += slice_ao.x + slice_ao.y;
     }
 
-    occlusion = 1.0 - Saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
+    occlusion = 1.0 - saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
     occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
 
     light_color = light_color / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);
