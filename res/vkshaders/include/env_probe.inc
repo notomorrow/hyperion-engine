@@ -15,8 +15,8 @@ struct EnvProbe
 
     uint texture_index;
     uint flags;
-    uint _pad0;
-    uint _pad1;
+    float camera_near;
+    float camera_far;
 
     uvec4 _pad2;
     uvec4 _pad3;
@@ -67,6 +67,7 @@ struct SH9
     {
         EnvProbe env_probes[HYP_MAX_ENV_PROBES];
     };
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 27) uniform textureCube point_shadow_maps[HYP_MAX_BOUND_POINT_SHADOW_MAPS];
 #endif
 
 vec4 EnvProbeSample(
