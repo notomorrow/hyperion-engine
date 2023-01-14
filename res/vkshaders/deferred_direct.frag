@@ -91,6 +91,14 @@ void main()
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
 
+
+        const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
+        const float shadow_depth = TextureCube(HYP_SAMPLER_NEAREST, point_shadow_maps[0], world_to_light).r * env_probes[0].camera_far;
+        const float current_depth = length(world_to_light);
+        const float point_shadow = current_depth < env_probes[0].camera_far ? max(step(current_depth - 0.005, shadow_depth), 0.0) : 1.0;
+        shadow *= point_shadow;
+
+
         vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
@@ -110,13 +118,13 @@ void main()
         const float r = max(light.radius, HYP_FMATH_EPSILON);
         const float d = max(dist - r, 0.0);
         const float denom = 1.0 + (d / r);
-        const float cutoff = 0.001;
+        const float cutoff = 0.01;
     
-        float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-            ((1.0 / (max(HYP_FMATH_SQR(denom), HYP_FMATH_EPSILON)))) : 1.0;
+        // float attenuation = mix(1.0, 1.0 / (max(HYP_FMATH_SQR(denom), HYP_FMATH_EPSILON)), light.type == HYP_LIGHT_TYPE_POINT);
+        // attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
+        // attenuation = saturate(attenuation);
 
-        attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
-        attenuation = saturate(attenuation);
+        float attenuation = mix(1.0, pow(saturate(1.0 - dist / max(light.radius, HYP_FMATH_EPSILON)), 2.0), light.type == HYP_LIGHT_TYPE_POINT);
     
         vec4 specular = specular_lobe;
 
