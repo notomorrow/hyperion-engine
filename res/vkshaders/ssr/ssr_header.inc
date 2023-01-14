@@ -3,6 +3,22 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+#ifndef OUTPUT_FORMAT
+    #if defined(OUTPUT_RGBA8)
+        #define OUTPUT_FORMAT rgba8
+        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
+    #elif defined(OUTPUT_RGBA16F)
+        #define OUTPUT_FORMAT rgba16f
+    #elif defined(OUTPUT_RGBA32F)
+        #define OUTPUT_FORMAT rgba32f
+    #else
+        #define OUTPUT_FORMAT rgba8
+        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
+    #endif
+#endif
+
+#define UV_FORMAT rgba16f
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/defines.inc"
 #include "../include/packing.inc"
@@ -29,7 +45,7 @@ layout(std140, set = 0, binding = 16, row_major) readonly buffer SceneBuffer
 
 layout(std140, set = 0, binding = 17) uniform SSRParams
 {
-	ivec2 dimension;
+	uvec4 dimension;
 	float ray_step;
 	float num_iterations;
 	float max_ray_distance;

@@ -85,19 +85,19 @@ vert = main.vert
 comp = shadow/BlurShadowMap.comp
 
 [SSRWriteUVs]
+permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
 comp = ssr/ssr_write_uvs.comp
 
 [SSRSample]
+permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
 comp = ssr/ssr_sample.comp
 
-# [SSRBlur]
-# permute = HORIZONTAL
-# comp = ssr/ssr_blur.comp
-
 [SSRBlurHor]
+permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
 comp = ssr/ssr_blur_hor.comp
 
 [SSRBlurVert]
+permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
 comp = ssr/ssr_blur_vert.comp
 
 [UIObject]
