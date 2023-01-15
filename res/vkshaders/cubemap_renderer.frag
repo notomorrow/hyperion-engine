@@ -78,7 +78,16 @@ void main()
 #ifdef MODE_SHADOWS
     // write out distance
     const vec3 env_probe_center = (current_env_probe.aabb_max.xyz + current_env_probe.aabb_min.xyz) * 0.5;
-    output_color = vec4(distance(v_position.xyz, env_probe_center)) / current_env_probe.camera_far;
+    const float shadow_depth = distance(v_position.xyz, env_probe_center);
+
+    vec2 moments = vec2(shadow_depth, HYP_FMATH_SQR(shadow_depth));
+
+    float dx = dFdx(shadow_depth);
+    float dy = dFdy(shadow_depth);
+
+    moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
+
+    output_color = vec4(moments, 0.0, 0.0);
 #else
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
