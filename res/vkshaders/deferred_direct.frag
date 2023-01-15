@@ -35,6 +35,22 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
+// Used for point light shadows
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
+{
+    EnvProbe current_env_probe;
+};
+
+float GetSquareFalloffAttenuation(vec3 P, vec3 V, vec3 L)
+{
+    const vec3 position_to_light = P - L;
+    float distance_square = dot(position_to_light, position_to_light);
+    float inv_radius = 1.0 / light.radius;
+    float factor = distance_square * HYP_FMATH_SQR(inv_radius);
+    float smooth_factor = max(1.0 - HYP_FMATH_SQR(factor), 0.0);
+    return HYP_FMATH_SQR(smooth_factor) / max(distance_square, 1e-4);
+}
+
 void main()
 {
     vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
@@ -87,17 +103,21 @@ void main()
         const float LdotH = max(0.0001, dot(L, H));
         const float HdotV = max(0.0001, dot(H, V));
 
-        if (light.shadow_map_index != ~0u) {
+
+        if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+            const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
+            const vec2 moments = TextureCube(HYP_SAMPLER_LINEAR, point_shadow_maps[current_env_probe.texture_index], world_to_light).rg;
+            const float current_depth = length(world_to_light);
+
+            float shadow_dist = current_depth - moments.x;
+            float p = step(current_depth, moments.x);
+            float variance = max(moments.y - moments.x * moments.x, 0.0001);
+            float p_max = variance / (variance + shadow_dist * shadow_dist);
+
+            shadow = max(p, p_max);
+        } else if (light.shadow_map_index != ~0u) {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
-
-
-        const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-        const float shadow_depth = TextureCube(HYP_SAMPLER_NEAREST, point_shadow_maps[0], world_to_light).r * env_probes[0].camera_far;
-        const float current_depth = length(world_to_light);
-        const float point_shadow = current_depth < env_probes[0].camera_far ? max(step(current_depth - 0.005, shadow_depth), 0.0) : 1.0;
-        shadow *= point_shadow;
-
 
         vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
@@ -114,18 +134,17 @@ void main()
         const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
         const vec4 specular_lobe = D * G * F;
 
-        const float dist = length(light.position_intensity.xyz - position.xyz);
-        const float r = max(light.radius, HYP_FMATH_EPSILON);
-        const float d = max(dist - r, 0.0);
-        const float denom = 1.0 + (d / r);
-        const float cutoff = 0.01;
+        // const float r = max(light.radius, HYP_FMATH_EPSILON);
+        // const float d = max(dist - r, 0.0);
+        // const float denom = 1.0 + (d / r);
+        // const float cutoff = 0.05;
     
         // float attenuation = mix(1.0, 1.0 / (max(HYP_FMATH_SQR(denom), HYP_FMATH_EPSILON)), light.type == HYP_LIGHT_TYPE_POINT);
         // attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
         // attenuation = saturate(attenuation);
 
-        float attenuation = mix(1.0, pow(saturate(1.0 - dist / max(light.radius, HYP_FMATH_EPSILON)), 2.0), light.type == HYP_LIGHT_TYPE_POINT);
-    
+        const float attenuation = GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz);
+
         vec4 specular = specular_lobe;
 
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);

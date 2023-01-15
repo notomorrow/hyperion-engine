@@ -44,10 +44,11 @@ struct Light
     uint type;
     uint color_encoded;
     float radius;
+    float falloff;
     uint shadow_map_index; // ~0 == no shadow map
 
     uint _pad0, _pad1, _pad2, _pad3,
-        _pad4, _pad5, _pad6;
+        _pad4, _pad5;
 
     vec4 position_intensity; // or direction for directional lights
 };
