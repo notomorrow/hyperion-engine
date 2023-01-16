@@ -25,7 +25,7 @@ layout (location = 5) in vec3 a_bitangent;
 void main()
 {
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
-    vec4 ndc_position = scene.projection * scene.view * position;
+    vec4 ndc_position = camera.projection * camera.view * position;
 
     v_position = position.xyz;
     v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);

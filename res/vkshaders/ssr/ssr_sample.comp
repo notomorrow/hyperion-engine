@@ -40,7 +40,6 @@ void main(void)
     const vec2 ssr_image_dimensions = vec2(ssr_params.dimension.xy);
 
 	vec2 texcoord = saturate((vec2(coord) + 0.5) / ssr_image_dimensions);
-    // texcoord -= scene.taa_params.zw;
 
     vec4 uv_sample = imageLoad(ssr_uv_image, ivec2(coord));
     const vec2 uv = uv_sample.xy;
@@ -60,9 +59,9 @@ void main(void)
         return;
     }
 
-    vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth).xyz;
+    vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth).xyz;
     vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
-    vec3 V = normalize(scene.camera_position.xyz - P);
+    vec3 V = normalize(camera.position.xyz - P);
 
     if (alpha > HYP_FMATH_EPSILON) {
         roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
@@ -139,8 +138,8 @@ void main(void)
 
 
 // #ifdef OUTPUT_RGBA8
-//     reflection_sample.rgb = TonemapReinhardSimple(reflection_sample.rgb);
-//     imageStore(ssr_sample, coord, vec4(pow(reflection_sample.rgb, vec3(1.0 / 2.2)), reflection_sample.a));
+    // reflection_sample.rgb = TonemapReinhardSimple(reflection_sample.rgb);
+    // imageStore(ssr_sample, ivec2(coord), vec4(pow(reflection_sample.rgb, vec3(1.0 / 2.2)), reflection_sample.a));
 // #else
     imageStore(ssr_sample, ivec2(coord), vec4(reflection_sample));
 // #endif

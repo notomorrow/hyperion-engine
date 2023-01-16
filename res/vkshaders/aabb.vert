@@ -38,5 +38,5 @@ void main() {
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
 
-    gl_Position = scene.projection * scene.view * position;
+    gl_Position = camera.projection * camera.view * position;
 } 

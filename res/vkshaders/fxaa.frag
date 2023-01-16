@@ -22,7 +22,7 @@ void main()
     float FXAA_REDUCE_MUL = 1.0/8.0;
     float FXAA_REDUCE_MIN = 1.0/128.0;
 
-    vec2 resolution = vec2(scene.resolution_x, scene.resolution_y);
+    vec2 resolution = vec2(camera.dimensions.xy);
 
     vec3 rgbNW=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(-1.0,-1.0)/resolution)).xyz;
     vec3 rgbNE=Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result,v_texcoord0+(vec2(1.0,-1.0)/resolution)).xyz;
@@ -75,8 +75,8 @@ void main()
 #include "include/PostFXInstance.inc"
 
 
-#define TextureSize vec2(scene.resolution_x, scene.resolution_y)
-#define OutputSize vec2(scene.resolution_x, scene.resolution_y)
+#define TextureSize vec2(camera.dimensions.xy)
+#define OutputSize vec2(camera.dimensions.xy)
 
 // compatibility #defines
 #define Source gbuffer_deferred_result

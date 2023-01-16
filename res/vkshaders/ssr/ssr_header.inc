@@ -43,7 +43,12 @@ layout(std140, set = 0, binding = 16, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 17) uniform SSRParams
+layout(std140, set = 0, binding = 17, row_major) uniform CameraShaderData
+{
+	Camera camera;
+};
+
+layout(std140, set = 0, binding = 18) uniform SSRParams
 {
 	uvec4 dimension;
 	float ray_step;
@@ -57,7 +62,7 @@ layout(std140, set = 0, binding = 17) uniform SSRParams
 	float screen_edge_fade_end;
 } ssr_params;
 
-layout(std140, set = 0, binding = 18) readonly buffer BlueNoiseBuffer {
+layout(std140, set = 0, binding = 19) readonly buffer BlueNoiseBuffer {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];

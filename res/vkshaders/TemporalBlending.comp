@@ -64,7 +64,12 @@ layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
-layout(set = 0, binding = 7) uniform texture2D depth_texture;
+layout(std140, set = 0, binding = 7, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+layout(set = 0, binding = 8) uniform texture2D depth_texture;
 
 layout(push_constant) uniform PushConstant {
     uvec2 output_dimensions;
@@ -92,8 +97,8 @@ void main(void)
         velocity_texture,
         depth_texture_dimensions,
         uv,
-        scene.camera_near,
-        scene.camera_far,
+        camera.near,
+        camera.far,
         velocity,
         view_space_depth
     );

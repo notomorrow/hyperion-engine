@@ -91,9 +91,9 @@ void main()
 
     const vec3 N = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
     const float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
-    const vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
+    const vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     const vec3 P = position.xyz;
-    const vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+    const vec3 V = normalize(camera.position.xyz - position.xyz);
     const vec3 R = normalize(reflect(-V, N));
 
     vec4 result = vec4(

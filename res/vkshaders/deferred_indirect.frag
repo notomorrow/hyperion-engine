@@ -62,7 +62,7 @@ void main()
     vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
     float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     bool perform_lighting = albedo.a > 0.0;
@@ -73,7 +73,7 @@ void main()
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);
     vec3 B = normalize(bitangent.xyz);
-    vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+    vec3 V = normalize(camera.position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
     
     float ao = 1.0;
@@ -123,8 +123,8 @@ void main()
 
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
-        ibl.rgb = ReverseTonemapReinhardSimple(reflection_probes_color.rgb);
-        ibl.rgb *= reflection_probes_color.a;
+        // ibl.rgb = ReverseTonemapReinhardSimple(reflection_probes_color.rgb);
+        ibl.rgb = reflection_probes_color.rgb * reflection_probes_color.a;
 #endif
 
 #ifdef SSR_ENABLED

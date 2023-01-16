@@ -46,11 +46,11 @@ void main()
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
-    v_camera_position = scene.camera_position.xyz;
+    v_camera_position = camera.position.xyz;
     
-    v_tangent   = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
+    v_tangent = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
 	v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
-	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
+	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
     v_object_index = OBJECT_INDEX;
 
