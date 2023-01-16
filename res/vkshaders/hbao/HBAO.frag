@@ -42,8 +42,8 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 2.5
-#define HYP_HBAO_POWER 2.0
+#define HYP_HBAO_RADIUS 1.15
+#define HYP_HBAO_POWER 1.0
 
 float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
 float tan_half_fov = tan(fov_rad * 0.5);
@@ -104,10 +104,6 @@ vec2 RotateDirection(vec2 uv, vec2 cos_sin)
 
 #define ANGLE_BIAS 0.0
 
-// vec3 GetCameraSpaceRay(in vec3 V, in vec2 ray)
-// {
-//     return normalize(vec3(ray * -V.z, dot(V.xy, ray)));
-// }
 float Falloff(float dist_sqr)
 {
     return dist_sqr * (-1.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)) + 1.0;
@@ -126,7 +122,11 @@ vec2 CalculateImpact(vec2 theta_0, vec2 theta_1, float nx, float ny)
     return max(nx * dx + ny * dy, vec2(0.0));
 }
 
-void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 light_color)
+#ifdef HBIL_ENABLED
+void TraceAO_New(vec2 uv, out float occlusion, out vec4 light_color)
+#else
+void TraceAO_New(vec2 uv, out float occlusion)
+#endif
 {
     uvec2 pixel_coord = uvec2(clamp(ivec2(uv * vec2(dimension) - 0.5), ivec2(0), ivec2(dimension) - 1));
     uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
@@ -137,7 +137,7 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
-    const float noise_direction = RandomFloat(seed);
+    const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord));
     const float ray_step = fract(noise_offset + temporal_offset);
 
     const float depth = GetDepth(uv);
@@ -150,11 +150,14 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
     const float step_radius = max((projected_scale * HYP_HBAO_RADIUS) / max(camera_distance, HYP_FMATH_EPSILON), float(HYP_HBAO_NUM_SLICES)) / float(HYP_HBAO_NUM_SLICES + 1);
 
     occlusion = 0.0;
-    bent_normal = vec3(0.0);
+
+#ifdef HBIL_ENABLED
     light_color = vec4(0.0);
+#endif
 
     for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
-        float angle = (float(i) + noise_direction) / float(HYP_HBAO_NUM_CIRCLES) * 2.0 * HYP_FMATH_PI;//(float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
+        // float angle = (float(i) + noise_direction) / float(HYP_HBAO_NUM_CIRCLES) * 2.0 * HYP_FMATH_PI;//(float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
+        float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
 
         vec2 ss_ray = vec2(sin(angle), cos(angle));
         vec3 ray = normalize(vec3(ss_ray.xy * V.z, -dot(V.xy, ss_ray.xy)));
@@ -167,12 +170,15 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
         const float start_angle_delta = 0.0;
         max_theta = vec2(max(vec2(0.0), max_theta - start_angle_delta));
-        // cos_max_theta = cos(max_theta);
+        cos_max_theta = cos(max_theta);
 
         // const vec4 integral_factors = vec4(vec2(dot(N.xy, ss_ray), N.z), vec2(dot(N.xy, -ss_ray), N.z));
 
         vec2 slice_ao = vec2(0.0);
+
+#ifdef HBIL_ENABLED
         vec4 slice_light[2] = { vec4(0.0), vec4(0.0) };
+#endif
 
         for (int j = 0; j < HYP_HBAO_NUM_SLICES; j++) {
             vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
@@ -204,28 +210,28 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
 
                 const vec2 DdotV = vec2(-dot(ds, V), -dot(dt, V));
 
-                const vec2 falloff = saturate(DdotD * (2.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)));
-
                 const vec2 condition = vec2(greaterThan(DdotV, cos_max_theta)) * vec2(lessThan(dist, vec2(1.0)));
                 vec2 falloffs = saturate(vec2(Falloff(DdotD.x), Falloff(DdotD.y)));
-
-                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
-                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
-
-                // const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
-                // const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
-
-                // metallic surfaces do not reflect diffuse light
-                // new_color_0 *= (1.0 - material_0.g);
-                // new_color_1 *= (1.0 - material_1.g);
 
                 const vec2 theta = acos(DdotV);
 
                 const vec2 impact = CalculateImpact(min(max_theta, theta + vec2(HYP_FMATH_PI / 9.0)), theta, nx, ny);
                 const vec2 total_impact = condition * falloffs * impact;
 
+#ifdef HBIL_ENABLED
+                vec4 new_color_0 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.xy);
+                vec4 new_color_1 = Texture2D(sampler_linear, gbuffer_albedo_texture, new_uv.zw);
+
+                const vec4 material_0 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.xy);
+                const vec4 material_1 = Texture2D(sampler_nearest, gbuffer_material_texture, new_uv.zw);
+
+                // metallic surfaces do not reflect diffuse light
+                new_color_0 *= (1.0 - material_0.g);
+                new_color_1 *= (1.0 - material_1.g);
+
                 slice_light[0] += vec4(new_color_0) * total_impact.x;
                 slice_light[1] += vec4(new_color_1) * total_impact.y;
+#endif
 
                 slice_ao += vec2(
                     (1.0 - dist.x * dist.x) * (NdotD.x - slice_ao.x),
@@ -237,27 +243,39 @@ void TraceAO_New(vec2 uv, out float occlusion, out vec3 bent_normal, out vec4 li
             }
         }
 
+#ifdef HBIL_ENABLED
         light_color += slice_light[0] + slice_light[1];
+#endif
+
         occlusion += slice_ao.x + slice_ao.y;
     }
 
     occlusion = 1.0 - saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
     occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
 
+#ifdef HBIL_ENABLED
     light_color = light_color / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES);
     light_color *= 1.0 / (1.0 - ANGLE_BIAS);
+#endif
 }
 
 void main()
 {
+    vec4 values;
     float occlusion;
-    vec3 bent_normal;
+
+#ifdef HBIL_ENABLED
     vec4 light_color;
 
-    TraceAO_New(texcoord, occlusion, bent_normal, light_color);
+    TraceAO_New(texcoord, occlusion, light_color);
 
-    vec4 next_values = vec4(light_color.rgb, occlusion);
-    next_values.rgb = pow(next_values.rgb, vec3(1.0 / 2.2));
+    values = vec4(light_color.rgb, occlusion);
+    values.rgb = pow(values.rgb, vec3(1.0 / 2.2));
+#else
+    TraceAO_New(texcoord, occlusion);
 
-    color_output = next_values;
+    values = vec4(occlusion);
+#endif
+
+    color_output = values;
 }

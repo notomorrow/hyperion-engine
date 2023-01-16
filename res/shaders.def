@@ -1,15 +1,15 @@
 [DeferredIndirect]
-permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, VCT_ENABLED(SVO TEXTURE)
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, VCT_ENABLED(SVO TEXTURE), HBIL_ENABLED, HBAO_EABLED
 frag = deferred_indirect.frag
 vert = deferred.vert
 
 [DeferredDirect]
-permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, HBIL_ENABLED, HBAO_EABLED
 frag = deferred_direct.frag
 vert = deferred.vert
 
 [DeferredCombine]
-permute = SSR_ENABLED,  REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED
+permute = SSR_ENABLED,  REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, HBIL_ENABLED, HBAO_EABLED
 frag = deferred/DeferredCombine.frag
 vert = PostEffect.vert
 
@@ -67,6 +67,7 @@ frag = Terrain.frag
 vert = main.vert
 
 [HBAO]
+permute = HBIL_ENABLED
 frag = hbao/HBAO.frag
 vert = PostEffect.vert
 

@@ -139,7 +139,9 @@ void main()
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
+#ifdef HBIL_ENABLED
         CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
+#endif
 
         vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
 
