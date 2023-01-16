@@ -30,10 +30,10 @@ void main()
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
 
-    mat4 view_matrix = scene.view;
+    mat4 view_matrix = camera.view;
     view_matrix[3] = vec4(0.0, 0.0, 0.0, 1.0);
 
     v_object_index = OBJECT_INDEX;
 
-    gl_Position = scene.projection * view_matrix * position;
+    gl_Position = camera.projection * view_matrix * position;
 } 

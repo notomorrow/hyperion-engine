@@ -40,15 +40,16 @@ void main()
 
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
-    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), v_texcoord, depth).xyz;
-    const vec3 V = normalize(scene.camera_position.xyz - P);
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
+    const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
 
     const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, scene.camera_position.xyz, perceptual_roughness);
+    vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
+    ibl.a = saturate(ibl.a);
 
     color_output = ibl;
 }

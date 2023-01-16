@@ -2,40 +2,30 @@
 
 struct Scene
 {
+    vec4 aabb_max;
+    vec4 aabb_min;
+    vec4 fog_params;
+
+    float global_timer;
+    uint frame_counter;
+    uint enabled_render_components_mask;
+    float _pad;
+};
+
+struct Camera
+{
     mat4 view;
     mat4 projection;
     mat4 previous_view;
 
-    vec4 camera_position;
-    vec4 camera_direction;
-    vec4 camera_up;
+    uvec4 dimensions;
+    vec4 position;
+    vec4 direction;
 
-    float camera_near;
-    float camera_far;
-    float camera_fov;
+    float near;
+    float far;
+    float fov;
     float _pad0;
-    
-    uint environment_texture_index;
-    uint environment_texture_usage;
-    uint resolution_x;
-    uint resolution_y;
-    
-    vec4 aabb_max;
-    vec4 aabb_min;
-
-    float global_timer;
-    uint frame_counter;
-    uint custom_index;
-    uint enabled_render_components_mask;
-
-    vec4 taa_params;
-    vec4 fog_params;
-
-    vec4 _pad2;
-    vec4 _pad3;
-
-    mat4 _pad4;
-    mat4 _pad5;
 };
 
 struct Light
@@ -74,6 +64,11 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
 layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
 {
     Light light;
+};
+
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 4, row_major) uniform CameraShaderData
+{
+    Camera camera;
 };
 
 layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform texture2D shadow_maps[];

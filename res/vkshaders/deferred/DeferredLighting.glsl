@@ -146,7 +146,7 @@ vec3 CalculateRefraction(
     Refraction refraction;
     RefractionSolidSphere(P, N, V, eta_ir, refraction);
 
-    vec4 refraction_pos = scene.projection * scene.view * vec4(refraction.position, 1.0);
+    vec4 refraction_pos = camera.projection * camera.view * vec4(refraction.position, 1.0);
     refraction_pos /= refraction_pos.w;
 
     vec2 refraction_texcoord = refraction_pos.xy * 0.5 + 0.5;
@@ -328,6 +328,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
     vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
+    screen_space_reflections.a = saturate(screen_space_reflections.a);
     // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
     // screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
     reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a * float(enabled)/* * float(depth < 0.995)*/);
@@ -343,7 +344,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
 
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
     rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
-    reflections = mix(reflections, rt_radiance, rt_radiance.a * float(enabled));
+    reflections = mix(reflections, rt_radiance, min(rt_radiance.a * float(enabled), 1.0));
 }
 #endif
 #endif
@@ -360,7 +361,7 @@ void IntegrateReflections(inout vec3 Fr, in vec4 reflections)
 
 void ApplyFog(in vec3 P, inout vec4 result)
 {
-    result = CalculateFogLinear(result, unpackUnorm4x8(uint(scene.fog_params.x)), P, scene.camera_position.xyz, scene.fog_params.y, scene.fog_params.z);
+    result = CalculateFogLinear(result, unpackUnorm4x8(uint(scene.fog_params.x)), P, camera.position.xyz, scene.fog_params.y, scene.fog_params.z);
 }
 
 #endif

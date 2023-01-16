@@ -144,7 +144,7 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
     const float penumbra_filter_size = 0.0001;
     const float light_size = 3.0; // affects how quickly shadows become soft
 
-    const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
+    const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(camera.dimensions.xy) - 0.5);
 
     float total_blocker_depth = 0.0;
     float num_blockers = 0.0;

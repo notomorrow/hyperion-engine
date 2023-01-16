@@ -31,6 +31,12 @@ layout(std140, set = 0, binding = 7, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
+layout(std140, set = 0, binding = 8, row_major) readonly buffer CameraShaderData
+{
+    Camera camera;
+};
+
+
 layout(push_constant) uniform PushConstant
 {
     uvec2 dimension;
@@ -45,10 +51,10 @@ layout(push_constant) uniform PushConstant
 #define HYP_HBAO_RADIUS 1.15
 #define HYP_HBAO_POWER 1.0
 
-float fov_rad = HYP_FMATH_DEG2RAD(scene.camera_fov);
+float fov_rad = HYP_FMATH_DEG2RAD(camera.fov);
 float tan_half_fov = tan(fov_rad * 0.5);
 float inv_tan_half_fov = 1.0 / tan_half_fov;
-vec2 focal_len = vec2(inv_tan_half_fov * (float(scene.resolution_y) / float(scene.resolution_x)), inv_tan_half_fov);
+vec2 focal_len = vec2(inv_tan_half_fov * (float(camera.dimensions.y) / float(camera.dimensions.x)), inv_tan_half_fov);
 vec2 inv_focal_len = vec2(1.0) / focal_len;
 vec4 uv_to_view = vec4(2.0 * inv_focal_len.x, 2.0 * inv_focal_len.y, -1.0 * inv_focal_len.x, -1.0 * inv_focal_len.y);
 
@@ -58,9 +64,9 @@ float GetOffsets(vec2 uv)
     return 0.25 * float((position.y - position.x) & 3);
 }
 
-mat4 inv_view_proj = inverse(scene.projection * scene.view);
-mat4 inv_view = inverse(scene.view);
-mat4 inv_proj = inverse(scene.projection);
+mat4 inv_view_proj = inverse(camera.projection * camera.view);
+mat4 inv_view = inverse(camera.view);
+mat4 inv_proj = inverse(camera.projection);
 
 float GetDepth(vec2 uv)
 {
@@ -75,7 +81,7 @@ vec3 GetPosition(vec2 uv, float depth)
 vec3 GetNormal(vec2 uv)
 {
     vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, uv));
-    vec3 view_normal = (scene.view * vec4(normal, 0.0)).xyz;
+    vec3 view_normal = (camera.view * vec4(normal, 0.0)).xyz;
 
     return view_normal;
 }

@@ -52,8 +52,8 @@ void main()
     const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
     const vec2 uv = (vec2(storage_coord) + 0.5) / vec2(resolution);
 
-    const mat4 view_inverse = inverse(scene.view);
-    const mat4 projection_inverse = inverse(scene.projection);
+    const mat4 view_inverse = inverse(camera.view);
+    const mat4 projection_inverse = inverse(camera.projection);
 
     const vec3 normal = normalize(DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, uv, 0.0)));
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
@@ -61,7 +61,7 @@ void main()
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
     const float perceptual_roughness = sqrt(material_data.r);
 
-    const vec3 V = normalize(scene.camera_position.xyz - position);
+    const vec3 V = normalize(camera.position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
 
     const uint flags = gl_RayFlagsOpaqueEXT;

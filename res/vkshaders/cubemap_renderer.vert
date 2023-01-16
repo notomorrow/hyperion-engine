@@ -60,7 +60,7 @@ void main()
     mat4 normal_matrix;
 
     if (object.bucket == HYP_OBJECT_BUCKET_SKYBOX) {
-        position = vec4((a_position * 150.0) + scene.camera_position.xyz, 1.0);
+        position = vec4((a_position * 150.0) + camera.position.xyz, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix));
     } else {
 #ifdef HYP_ENABLE_SKINNING
@@ -81,13 +81,13 @@ void main()
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
-    v_camera_position = scene.camera_position.xyz;
+    v_camera_position = camera.position.xyz;
 
     v_tangent = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
     v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
     v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
-    mat4 projection_matrix = scene.projection;
+    mat4 projection_matrix = camera.projection;
     mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
 
     v_object_index = OBJECT_INDEX;

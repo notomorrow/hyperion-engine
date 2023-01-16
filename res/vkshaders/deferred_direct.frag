@@ -62,7 +62,7 @@ void main()
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
 
     float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
-    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
+    vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     vec4 material = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
 
     const float roughness = material.r;
@@ -78,7 +78,7 @@ void main()
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);
     vec3 B = normalize(bitangent.xyz);
-    vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+    vec3 V = normalize(camera.position.xyz - position.xyz);
 
     float NdotV = max(0.0001, dot(N, V));
  

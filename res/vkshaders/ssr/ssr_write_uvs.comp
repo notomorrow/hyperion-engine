@@ -29,7 +29,7 @@ bool TraceRays(
     float depth_from_screen;
     float step_delta;
 
-    const mat4 inverse_proj = inverse(scene.projection);
+    const mat4 inverse_proj = inverse(camera.projection);
 
     vec4 view_space_position;
 
@@ -38,7 +38,7 @@ bool TraceRays(
     for (; i < ssr_params.num_iterations; i++) {
         marching_position += ray_step;
 
-        hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
+        hit_pixel = GetProjectedPositionFromView(camera.projection, marching_position);
         view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
 
         step_delta = marching_position.z - view_space_position.z;
@@ -57,7 +57,7 @@ bool TraceRays(
             ray_step *= 0.5;
             marching_position = marching_position - ray_step * sign(step_delta);
 
-            hit_pixel = GetProjectedPositionFromView(scene.projection, marching_position);
+            hit_pixel = GetProjectedPositionFromView(camera.projection, marching_position);
             view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
             
             step_delta = abs(marching_position.z) - view_space_position.z;
@@ -90,16 +90,6 @@ float CalculateAlpha(
 
     alpha = 1.0 - smoothstep(0.06, 0.95, max_dimension);
 
-    // const float dp = dot(ray_direction, -scene.camera_direction.xyz);
-    // alpha *= 1.0 - smoothstep(0.8, 1.0, dp);
-
-    // Fade ray hits base on how much they face the camera
-    // float eye_direction = clamp(ray_direction.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
-    // alpha *= 1.0 - (eye_direction - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start);
-
-    // Fade ray hits based on distance from ray origin
-    // alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
-
     return alpha;
 }
 
@@ -112,10 +102,9 @@ void main(void)
     }
 
     vec2 texcoord = saturate((vec2(coord) + 0.5) / vec2(ssr_params.dimension.xy));
-    // texcoord -= scene.taa_params.xy;
 
-    const mat4 inverse_proj = inverse(scene.projection);
-    const mat4 inverse_view = inverse(scene.view);
+    const mat4 inverse_proj = inverse(camera.projection);
+    const mat4 inverse_view = inverse(camera.view);
 
     const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
     const float perceptual_roughness = sqrt(roughness);
@@ -131,18 +120,16 @@ void main(void)
 
     vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     vec3 V = normalize(vec3(0.0) - P);
-    vec3 view_space_normal = normalize((scene.view * vec4(N, 0.0)).xyz);
+    vec3 view_space_normal = normalize((camera.view * vec4(N, 0.0)).xyz);
 
     vec3 tangent;
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
     vec3 world_space_position = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
-    vec3 ray_origin = P;//(scene.view * vec4(world_space_position + N, 1.0)).xyz;
+    vec3 ray_origin = P;
     
 #ifdef HYP_SSR_ROUGHNESS_SCATTERING
-    // uint ray_seed = InitRandomSeed(InitRandomSeed(coord.x, coord.y), scene.frame_counter % 256);
-
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 0),
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)
@@ -150,14 +137,11 @@ void main(void)
 
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
-
-    // const vec3 view_world = normalize(world_space_position - scene.camera_position.xyz);
-    // const vec3 view_tangent = tangent * view_world.x + bitangent * view_world.y + N * view_world.z;
     
     vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
-    vec3 ray_direction = reflect(-V, normalize((scene.view * vec4(H, 0.0)).xyz));
+    vec3 ray_direction = reflect(-V, normalize((camera.view * vec4(H, 0.0)).xyz));
 
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);
@@ -173,8 +157,6 @@ void main(void)
     float dist = distance(ray_origin, hit_point);
 
     float alpha = CalculateAlpha(num_iterations, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
-
-    // hit_pixel -= scene.taa_params.xy;
 
     alpha *= float(hit_pixel == saturate(hit_pixel));
     hit_pixel *= float(alpha > HYP_FMATH_EPSILON);

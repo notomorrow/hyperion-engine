@@ -33,7 +33,7 @@ void main()
 
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
-    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), v_texcoord, depth).xyz;
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
     float weight = CalculateEnvProbeIrradiance(deferred_params, P, N, irradiance);
 

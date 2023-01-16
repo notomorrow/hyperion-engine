@@ -28,6 +28,11 @@ layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
     Scene scene;
 };
 
+layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
 void main()
 {
     const int instance_id = gl_InstanceIndex;
@@ -49,7 +54,7 @@ void main()
 
     const vec4 position_world = instance.position;
 
-    const vec3 lookat_dir = normalize(scene.camera_position.xyz - position_world.xyz);
+    const vec3 lookat_dir = normalize(camera.position.xyz - position_world.xyz);
     const vec3 lookat_z = lookat_dir;
     const vec3 lookat_x = normalize(cross(vec3(0.0, 1.0, 0.0), lookat_dir));
     const vec3 lookat_y = normalize(cross(lookat_dir, lookat_x));
@@ -66,5 +71,5 @@ void main()
 
     v_color = unpackUnorm4x8(instance.color_packed);
 
-    gl_Position = scene.projection * scene.view * position;
+    gl_Position = camera.projection * camera.view * position;
 } 
