@@ -53,17 +53,17 @@ float GetSquareFalloffAttenuation(vec3 P, vec3 V, vec3 L)
 
 void main()
 {
-    vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
-    vec4 normal = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);
+    vec4 normal = vec4(DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord)), 1.0);
 
-    vec4 tangents_buffer = SampleGBuffer(gbuffer_tangents_texture, texcoord);
+    vec4 tangents_buffer = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_tangents_texture, texcoord);
 
     vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
 
-    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(scene.projection), inverse(scene.view), texcoord, depth);
-    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
+    vec4 material = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;
@@ -103,7 +103,6 @@ void main()
         const float LdotH = max(0.0001, dot(L, H));
         const float HdotV = max(0.0001, dot(H, V));
 
-
         if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
             const vec2 moments = TextureCube(HYP_SAMPLER_LINEAR, point_shadow_maps[current_env_probe.texture_index], world_to_light).rg;
@@ -134,16 +133,9 @@ void main()
         const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
         const vec4 specular_lobe = D * G * F;
 
-        // const float r = max(light.radius, HYP_FMATH_EPSILON);
-        // const float d = max(dist - r, 0.0);
-        // const float denom = 1.0 + (d / r);
-        // const float cutoff = 0.05;
-    
-        // float attenuation = mix(1.0, 1.0 / (max(HYP_FMATH_SQR(denom), HYP_FMATH_EPSILON)), light.type == HYP_LIGHT_TYPE_POINT);
-        // attenuation = mix(1.0, (attenuation - cutoff) / (1.0 - cutoff), light.type == HYP_LIGHT_TYPE_POINT);
-        // attenuation = saturate(attenuation);
-
-        const float attenuation = GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz);
+        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+            ? GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz)
+            : 1.0;
 
         vec4 specular = specular_lobe;
 
