@@ -20,14 +20,14 @@ InputManager::~InputManager()
 
 void InputManager::CheckEvent(SystemEvent *event)
 {
-    //Threads::AssertOnThread(THREAD_INPUT);
+    Threads::AssertOnThread(THREAD_INPUT);
 
     switch (event->GetType()) {
         case SystemEventType::EVENT_KEYDOWN:
-            KeyDown(event->GetKeyCode());
+            KeyDown(event->GetNormalizedKeyCode());
             break;
         case SystemEventType::EVENT_KEYUP:
-            KeyUp(event->GetKeyCode());
+            KeyUp(event->GetNormalizedKeyCode());
             break;
         case SystemEventType::EVENT_MOUSEBUTTON_DOWN:
             MouseButtonDown(event->GetMouseButton());
@@ -93,11 +93,6 @@ void InputManager::UpdateWindowSize()
 void InputManager::SetKey(int key, bool pressed)
 {
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
-        /* Set all letters to uppercase */
-        if (key >= 'a' && key <= 'z') {
-            key = 'A' + (key - 'a');
-        }
-
         const bool prev_value = m_input_state.key_states[key].is_pressed.exchange(pressed, std::memory_order_relaxed);
         m_input_state.last_key_states[key].is_pressed.store(prev_value, std::memory_order_relaxed);
     }

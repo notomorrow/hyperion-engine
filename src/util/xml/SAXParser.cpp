@@ -8,7 +8,7 @@ SAXParser::SAXParser(SAXHandler *handler)
 {
 }
 
-SAXParser::Result SAXParser::Parse(const std::string &filepath)
+SAXParser::Result SAXParser::Parse(const FilePath &filepath)
 {
     BufferedReader<2048> reader(filepath);
 

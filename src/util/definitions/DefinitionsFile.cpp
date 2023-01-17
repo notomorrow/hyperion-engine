@@ -1,4 +1,5 @@
 #include <util/definitions/DefinitionsFile.hpp>
+#include <asset/BufferedByteReader.hpp>
 #include <system/Debug.hpp>
 
 namespace hyperion::v2 {
@@ -8,7 +9,7 @@ const DefinitionsFile::Element DefinitionsFile::Element::empty = { };
 DefinitionsFile::DefinitionsFile(const FilePath &path)
     : m_path(path),
       m_is_valid(false)
-{
+{ 
     Parse();
 }
 
@@ -16,129 +17,133 @@ void DefinitionsFile::Parse()
 {
     m_is_valid = false;
 
-    if (auto reader = m_path.Open()) {
-        m_is_valid = true;
+    Reader reader;
 
-        Array<Pair<String, Section>> sections;
+    if (!m_path.Open(reader)) {
+        return;
+    }
+    
+    m_is_valid = true;
 
-        auto lines = reader.ReadAllLines();
+    Array<Pair<String, Section>> sections;
 
-        for (const auto &line : lines) {
-            const auto line_trimmed = line.TrimmedLeft();
+    auto lines = reader.ReadAllLines();
 
-            if (line_trimmed.Empty()) {
-                continue;
+    for (const auto &line : lines) {
+        const auto line_trimmed = line.TrimmedLeft();
+
+        if (line_trimmed.Empty()) {
+            continue;
+        }
+
+        // comment
+        if (line_trimmed.GetChar(0) == '#') {
+            continue;
+        }
+
+        // section block
+        if (line_trimmed.GetChar(0) == '[') {
+            String section_name;
+
+            for (SizeType index = 1; index < line_trimmed.Length() && line_trimmed.GetChar(index) != ']'; index++) {
+                section_name += line_trimmed.GetChar(index);
             }
 
-            // comment
-            if (line_trimmed.GetChar(0) == '#') {
-                continue;
-            }
-
-            // section block
-            if (line_trimmed.GetChar(0) == '[') {
-                String section_name;
-
-                for (SizeType index = 1; index < line_trimmed.Length() && line_trimmed.GetChar(index) != ']'; index++) {
-                    section_name += line_trimmed.GetChar(index);
-                }
-
-                if (section_name.Empty()) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Empty section name\n"
-                    );
-                }
-
-                sections.PushBack(Pair { std::move(section_name), Section { } });
-
-                continue;
-            }
-
-            // key, value pair in block
-            auto split = line_trimmed.Split('=');
-
-            for (auto &part : split) {
-                part = part.Trimmed();
-            }
-
-            if (split.Size() < 2) {
+            if (section_name.Empty()) {
                 DebugLog(
                     LogType::Warn,
-                    "Line is not in required format (key = value):\n\t%s\n",
-                    line_trimmed.Data()
+                    "Empty section name\n"
                 );
-
-                continue;
             }
 
-            if (sections.Empty()) {
-                // no section defined; add a default one
-                sections.PushBack(Pair { String("default"), Section { } });
-            }
+            sections.PushBack(Pair { std::move(section_name), Section { } });
 
-            const String &key = split[0];
+            continue;
+        }
 
-            // split value by commas
-            Value value;
+        // key, value pair in block
+        auto split = line_trimmed.Split('=');
 
-            for (auto &item : split[1].Split(',')) {
-                String item_trimmed = item.Trimmed();
+        for (auto &part : split) {
+            part = part.Trimmed();
+        }
 
-                Element element;
+        if (split.Size() < 2) {
+            DebugLog(
+                LogType::Warn,
+                "Line is not in required format (key = value):\n\t%s\n",
+                line_trimmed.Data()
+            );
 
-                for (SizeType index = 0; index < item_trimmed.Size(); index++) {
-                    if (std::isspace(item_trimmed[index])) {
-                        continue;
-                    }
+            continue;
+        }
 
-                    // read sub-elements
-                    if (item_trimmed[index] == '(') {
-                        ++index;
+        if (sections.Empty()) {
+            // no section defined; add a default one
+            sections.PushBack(Pair { String("default"), Section { } });
+        }
 
-                        String working_name;
+        const String &key = split[0];
 
-                        while (index < item_trimmed.Size()) {
-                            if (std::isspace(item_trimmed[index])) {
-                                if (working_name.Any()) {
-                                    element.sub_elements.PushBack(std::move(working_name));
-                                }
+        // split value by commas
+        Value value;
 
-                                ++index;
-                                continue;
-                            }
+        for (auto &item : split[1].Split(',')) {
+            String item_trimmed = item.Trimmed();
 
-                            if (item_trimmed[index] == ')') {
-                                ++index;
-                                break;
-                            }
+            Element element;
 
-                            working_name += item_trimmed[index];
-
-                            ++index;
-                        }
-
-                        if (working_name.Any()) {
-                            element.sub_elements.PushBack(std::move(working_name));
-                        }
-
-                        break;
-                    } else {
-                        element.name += item_trimmed[index];
-                    }
+            for (SizeType index = 0; index < item_trimmed.Size(); index++) {
+                if (std::isspace(item_trimmed[index])) {
+                    continue;
                 }
 
-                value.elements.PushBack(std::move(element));
+                // read sub-elements
+                if (item_trimmed[index] == '(') {
+                    ++index;
+
+                    String working_name;
+
+                    while (index < item_trimmed.Size()) {
+                        if (std::isspace(item_trimmed[index])) {
+                            if (working_name.Any()) {
+                                element.sub_elements.PushBack(std::move(working_name));
+                            }
+
+                            ++index;
+                            continue;
+                        }
+
+                        if (item_trimmed[index] == ')') {
+                            ++index;
+                            break;
+                        }
+
+                        working_name += item_trimmed[index];
+
+                        ++index;
+                    }
+
+                    if (working_name.Any()) {
+                        element.sub_elements.PushBack(std::move(working_name));
+                    }
+
+                    break;
+                } else {
+                    element.name += item_trimmed[index];
+                }
             }
 
-            sections.Back().second[key] = std::move(value);
+            value.elements.PushBack(std::move(element));
         }
 
-        m_sections.Clear();
+        sections.Back().second[key] = std::move(value);
+    }
 
-        for (auto &item : sections) {
-            m_sections[item.first] = std::move(item.second);
-        }
+    m_sections.Clear();
+
+    for (auto &item : sections) {
+        m_sections[item.first] = std::move(item.second);
     }
 }
 

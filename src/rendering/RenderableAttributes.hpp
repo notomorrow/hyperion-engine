@@ -116,28 +116,17 @@ struct RenderableAttributeSet
     MeshAttributes mesh_attributes;
     MaterialAttributes material_attributes;
     StencilState stencil_state { };
-
-    // auto ToTuple() const
-    // {
-    //     return std::tie(
-    //         bucket,
-    //         shader_id,
-    //         vertex_attributes,
-    //         topology,
-    //         fill_mode,
-    //         cull_faces,
-    //         flags,
-    //         stencil_state
-    //     );
-    // }
+    UInt32 override_flags;
 
     RenderableAttributeSet(
         const MeshAttributes &mesh_attributes = { },
         const MaterialAttributes &material_attributes = { },
-        ID<Shader> shader_id = Shader::empty_id
+        ID<Shader> shader_id = Shader::empty_id,
+        UInt32 override_flags = 0
     ) : mesh_attributes(mesh_attributes),
         material_attributes(material_attributes),
-        shader_id(shader_id)
+        shader_id(shader_id),
+        override_flags(override_flags)
     {
     }
 
@@ -147,29 +136,14 @@ struct RenderableAttributeSet
     RenderableAttributeSet &operator=(RenderableAttributeSet &&other) noexcept = default;
     ~RenderableAttributeSet() = default;
 
-    auto ToTuple() const
-    {
-        return std::make_tuple(
-            shader_id,
-            framebuffer_id,
-            mesh_attributes,
-            material_attributes,
-            stencil_state
-        );
-    }
-
     bool operator==(const RenderableAttributeSet &other) const
     {
-        /*return shader_id == other.shader_id
-            && mesh_attributes == other.mesh_attributes
-            && material_attributes == other.material_attributes
-            && stencil_state == other.stencil_state;*/
         return GetHashCode() == other.GetHashCode();
     }
 
     bool operator<(const RenderableAttributeSet &other) const
     {
-         return GetHashCode().Value() < other.GetHashCode().Value();//ToTuple() < other.ToTuple();
+         return GetHashCode().Value() < other.GetHashCode().Value();
     }
 
     HashCode GetHashCode() const
@@ -180,6 +154,7 @@ struct RenderableAttributeSet
         hc.Add(mesh_attributes.GetHashCode());
         hc.Add(material_attributes.GetHashCode());
         hc.Add(stencil_state.GetHashCode());
+        hc.Add(override_flags);
 
         return hc;
     }

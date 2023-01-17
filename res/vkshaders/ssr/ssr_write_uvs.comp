@@ -8,7 +8,7 @@ layout(set = 0, binding = 0, rgba8) uniform writeonly image2D ssr_uvs;
 #include "../include/Temporal.glsl"
 
 #define SSR_JITTER_OFFSET 0.0
-#define MAX_ROUGHNESS 0.75
+#define MAX_ROUGHNESS 0.65
 
 vec2 scene_resolution = vec2(ssr_params.dimension);
 

@@ -1,7 +1,8 @@
 #include <script/ScriptBindings.hpp>
 #include <script/ScriptBindingDef.hpp>
-
 #include <script/vm/VMMemoryBuffer.hpp>
+
+#include <asset/BufferedByteReader.hpp>
 
 #include <ui/controllers/UIController.hpp>
 
@@ -719,7 +720,17 @@ static HYP_SCRIPT_FUNCTION(LoadModule)
     }
 
     if (dyn_module == nullptr) {
-        if (auto reader = path.Open()) {
+        Reader reader;
+
+        if (!path.Open(reader)) {
+            DebugLog(
+                LogType::Error,
+                "Failed to load module %s: Failed to open path\n",
+                path.Data()
+            );
+
+            HYP_SCRIPT_RETURN_NULL();
+        } else {
             const ByteBuffer byte_buffer = reader.ReadBytes();
 
             SourceFile source_file(str->GetData(), reader.Max());
@@ -744,14 +755,6 @@ static HYP_SCRIPT_FUNCTION(LoadModule)
 
             dyn_module->ptr = std::move(script);
             params.handler->state->m_dyn_modules.Insert(hash_code, Weak<DynModule>(dyn_module));
-        } else {
-            DebugLog(
-                LogType::Error,
-                "Failed to load module %s: Failed to open path\n",
-                path.Data()
-            );
-
-            HYP_SCRIPT_RETURN_NULL();
         }
     } else {
         DebugLog(

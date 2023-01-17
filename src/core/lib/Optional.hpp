@@ -124,6 +124,9 @@ public:
         }
     }
 
+    explicit operator bool() const
+        { return m_has_value; }
+
     T *TryGet()
     {
         if (m_has_value) {

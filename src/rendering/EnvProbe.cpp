@@ -81,32 +81,6 @@ struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateCubemapBuffers) : RenderCommand
-{
-    EnvProbe &env_probe;
-
-    RENDER_COMMAND(CreateCubemapBuffers)(EnvProbe &env_probe)
-        : env_probe(env_probe)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        auto result = Result::OK;
-
-        for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_PASS_ERRORS(
-                env_probe.m_cubemap_render_uniform_buffers[frame_index]->Create(Engine::Get()->GetGPUDevice(), sizeof(CubemapUniforms)),
-                result
-            );
-
-            env_probe.m_cubemap_render_uniform_buffers[frame_index]->Copy(Engine::Get()->GetGPUDevice(), sizeof(CubemapUniforms), &env_probe.m_cubemap_uniforms);
-        }
-
-        return result;
-    }
-};
-
 struct RENDER_COMMAND(DestroyCubemapRenderPass) : RenderCommand
 {
     EnvProbe &env_probe;
@@ -194,7 +168,8 @@ EnvProbe::EnvProbe(
     m_aabb(aabb),
     m_dimensions(dimensions),
     m_is_ambient_probe(is_ambient_probe),
-    m_needs_update(true)
+    m_needs_update { true },
+    m_is_rendered { false }
 {
 }
 
@@ -219,8 +194,6 @@ void EnvProbe::Init()
             ? EnvProbeFlags::ENV_PROBE_NONE
             : EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
     };
-
-    m_needs_update = false;
 
     const Vector3 origin = m_aabb.GetCenter();
 
@@ -249,7 +222,6 @@ void EnvProbe::Init()
 
         CreateShader();
         CreateFramebuffer();
-        CreateImagesAndBuffers();
 
         AssertThrow(m_parent_scene.IsValid());
 
@@ -299,19 +271,8 @@ void EnvProbe::Init()
         m_texture.Reset();
         m_shader.Reset();
 
-        SafeRelease(std::move(m_cubemap_render_uniform_buffers));
-
         HYP_SYNC_RENDER();
     });
-}
-
-void EnvProbe::CreateImagesAndBuffers()
-{
-    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_cubemap_render_uniform_buffers[frame_index] = RenderObjects::Make<GPUBuffer>(UniformBuffer());
-    }
-    
-    PUSH_RENDER_COMMAND(CreateCubemapBuffers, *this);
 }
 
 void EnvProbe::CreateShader()
@@ -457,7 +418,29 @@ void EnvProbe::Update()
     Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
 
-    if (!m_needs_update) {
+    bool needs_update = NeedsUpdate();
+
+    Octree const *octree = nullptr;
+
+    if (!m_is_rendered.load(std::memory_order_acquire)) {
+        if (!needs_update) {
+            SetNeedsUpdate(true);
+        }
+    } else if (Engine::Get()->GetWorld()->GetOctree().GetNearestOctant(m_aabb.GetCenter(), octree)) {
+        AssertThrow(octree != nullptr);
+
+        const HashCode octant_hash = octree->GetNodesHash();
+
+        if (m_octant_hash_code != octant_hash) {
+            SetNeedsUpdate(true);
+
+            needs_update = true;
+
+            m_octant_hash_code = octant_hash;
+        }
+    }
+
+    if (!needs_update) {
         return;
     }
 
@@ -469,8 +452,6 @@ void EnvProbe::Update()
             ? EnvProbeFlags::ENV_PROBE_NONE
             : EnvProbeFlags::ENV_PROBE_PARALLAX_CORRECTED
     });
-
-    m_needs_update = false;
 }
 
 void EnvProbe::Render(Frame *frame)
@@ -534,6 +515,8 @@ void EnvProbe::Render(Frame *frame)
 
     framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
     m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+
+    m_is_rendered.store(true, std::memory_order_release);
 
     HYPERION_ASSERT_RESULT(result);
 }
@@ -624,6 +607,8 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
     for (auto &texture : Engine::Get()->shader_globals->spherical_harmonics_grid.textures) {
         texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
     }
+    
+    m_is_rendered.store(true, std::memory_order_release);
 }
 
 void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)

@@ -3,11 +3,11 @@
 
 #include <asset/AssetBatch.hpp>
 #include <asset/AssetLoader.hpp>
+#include <util/fs/FsUtil.hpp>
 #include <scene/Node.hpp>
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
-#include <util/fs/FsUtil.hpp>
 #include <util/Defines.hpp>
 #include <Threads.hpp>
 #include <Constants.hpp>
@@ -20,6 +20,7 @@
 #include <thread>
 #include <algorithm>
 #include <type_traits>
+#include <asset/BufferedByteReader.hpp>
 
 namespace hyperion::v2 {
 
@@ -203,13 +204,9 @@ public:
         const auto paths = GetTryFilepaths(filepath, original_filepath);
 
         for (const auto &path : paths) {
-            LoaderState state {
-                .asset_manager = &asset_manager,
-                .filepath = path.Data(),
-                .stream = path.Open()
-            };
+            BufferedReader<HYP_READER_DEFAULT_BUFFER_SIZE> reader;
 
-            if (!state.stream.IsOpen()) {
+            if (!path.Open(reader)) {
                 // could not open... try next path
                 DebugLog(
                     LogType::Warn,
@@ -219,6 +216,12 @@ public:
 
                 continue;
             }
+
+            LoaderState state {
+                &asset_manager,
+                path.Data(),
+                std::move(reader)
+            };
 
             asset = LoadAsset(state);
 

@@ -45,10 +45,13 @@ struct ComponentInitInfo<STUB_CLASS(Entity)>
     {
         ENTITY_FLAGS_NONE = 0x0,
         ENTITY_FLAGS_RAY_TESTS_ENABLED = 0x1,
-        ENTITY_FLAGS_HAS_BLAS = 0x2
+        ENTITY_FLAGS_HAS_BLAS = 0x2,
+        ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING = 0x4
     };
 
-    ComponentFlags flags = ENTITY_FLAGS_RAY_TESTS_ENABLED | ENTITY_FLAGS_HAS_BLAS;
+    ComponentFlags flags = ENTITY_FLAGS_RAY_TESTS_ENABLED
+        | ENTITY_FLAGS_HAS_BLAS
+        | ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING;
 };
 
 class Entity :
@@ -77,7 +80,11 @@ public:
         Handle<Shader> &&shader,
         Handle<Material> &&material,
         const RenderableAttributeSet &renderable_attributes,
-        const InitInfo &init_info = { }
+        const InitInfo &init_info = {
+            InitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED
+            | InitInfo::Flags::ENTITY_FLAGS_HAS_BLAS
+            | InitInfo::Flags::ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING
+        }
     );
 
     Entity(const Entity &other) = delete;

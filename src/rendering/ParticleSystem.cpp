@@ -547,8 +547,8 @@ void ParticleSystem::Render(Frame *frame)
 {
     AssertReady();
 
-    const auto frame_index = frame->GetFrameIndex();
-    const auto scene_index = Engine::Get()->render_state.GetScene().id.ToIndex();
+    const UInt frame_index = frame->GetFrameIndex();
+    const UInt scene_index = Engine::Get()->render_state.GetScene().id.ToIndex();
 
     FixedArray<UInt, num_async_rendering_command_buffers> command_buffers_recorded_states { };
     
@@ -556,7 +556,7 @@ void ParticleSystem::Render(Frame *frame)
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
     Engine::Get()->task_system.ParallelForEach(
-        TaskPriority::HIGH,
+        TASK_PRIORITY_HIGH,
         m_particle_spawners.GetItems(),
         [this, &command_buffers_recorded_states, frame_index, scene_index](const Handle<ParticleSpawner> &particle_spawner, UInt index, UInt batch_index) {
             auto *pipeline = particle_spawner->GetRenderGroup()->GetPipeline();

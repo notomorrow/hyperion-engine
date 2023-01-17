@@ -1,5 +1,6 @@
 #include <util/shader_compiler/ShaderCompiler.hpp>
 #include <asset/ByteWriter.hpp>
+#include <asset/BufferedByteReader.hpp>
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/ShaderBundleMarshal.hpp>
 #include <math/MathUtil.hpp>
@@ -1022,9 +1023,10 @@ bool ShaderCompiler::CompileBundle(
 
     for (auto &it : bundle.sources) {
         const FilePath filepath = it.second.path;
-        auto source_stream = filepath.Open();
 
-        if (!source_stream.IsOpen()) {
+        Reader reader;
+
+        if (!filepath.Open(reader)) {
             // could not open file!
             DebugLog(
                 LogType::Error,
@@ -1035,7 +1037,7 @@ bool ShaderCompiler::CompileBundle(
             return false;
         }
 
-        ByteBuffer byte_buffer = source_stream.ReadBytes();
+        ByteBuffer byte_buffer = reader.ReadBytes();
 
         String source_string = String(byte_buffer);
         ProcessResult result = ProcessShaderSource(source_string);
@@ -1150,7 +1152,9 @@ bool ShaderCompiler::CompileBundle(
             if (output_filepath.Exists()) {
                 // file exists and is older than the original source file; no need to build
                 if (output_filepath.LastModifiedTimestamp() >= item.last_modified_timestamp) {
-                    if (auto stream = output_filepath.Open()) {
+                    Reader reader;
+
+                    if (output_filepath.Open(reader)) {
                         DebugLog(
                             LogType::Info,
                             "Shader source (%s) has not been modified since binary was generated. Reusing shader binary at path: %s\n\tProperties: [%s]\n",
@@ -1159,17 +1163,17 @@ bool ShaderCompiler::CompileBundle(
                             GetPropertiesString(properties).Data()
                         );
 
-                        compiled_shader.modules[item.type] = stream.ReadBytes();
+                        compiled_shader.modules[item.type] = reader.ReadBytes();
 
                         continue;
-                    } else {
-                        DebugLog(
-                            LogType::Warn,
-                            "File %s seems valid for reuse but could not be opened. Attempting to rebuild...\n\tProperties: [%s]\n",
-                            output_filepath.Data(),
-                            GetPropertiesString(properties).Data()
-                        );
                     }
+
+                    DebugLog(
+                        LogType::Warn,
+                        "File %s seems valid for reuse but could not be opened. Attempting to rebuild...\n\tProperties: [%s]\n",
+                        output_filepath.Data(),
+                        GetPropertiesString(properties).Data()
+                    );
                 }
             }
 

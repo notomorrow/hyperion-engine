@@ -2,6 +2,7 @@
 #define SAXParser_H
 
 #include <asset/BufferedByteReader.hpp>
+#include <util/fs/FsUtil.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -14,7 +15,8 @@ namespace xml {
 
 using AttributeMap = std::map<std::string, std::string>;
 
-class SAXHandler {
+class SAXHandler
+{
 public:
     SAXHandler() {}
     virtual ~SAXHandler() {}
@@ -25,17 +27,19 @@ public:
     virtual void Comment(const std::string &comment) = 0;
 };
 
-class SAXParser {
+class SAXParser
+{
 public:
-    struct Result {
+    struct Result
+    {
         enum {
             SAX_OK = 0,
             SAX_ERR = 1
         } result;
 
-        std::string message;
+        ANSIString message;
 
-        Result(decltype(result) result = SAX_OK, const std::string &message = "")
+        Result(decltype(result) result = SAX_OK, const ANSIString &message = ANSIString::empty)
             : result(result),
               message(message)
         {
@@ -48,7 +52,7 @@ public:
     };
 
     SAXParser(SAXHandler *handler);
-    Result Parse(const std::string &filepath);
+    Result Parse(const FilePath &filepath);
     Result Parse(BufferedReader<2048> *reader);
 
 private:

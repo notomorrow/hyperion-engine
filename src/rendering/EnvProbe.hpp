@@ -86,7 +86,6 @@ class EnvProbe
 
 public:
     friend struct RenderCommand_UpdateEnvProbeDrawProxy;
-    friend struct RenderCommand_CreateCubemapBuffers;
     friend struct RenderCommand_DestroyCubemapRenderPass;
     
     EnvProbe(
@@ -119,13 +118,19 @@ public:
         { return m_aabb; }
 
     void SetAABB(const BoundingBox &aabb)
-        { m_aabb = aabb; SetNeedsUpdate(); }
+        { m_aabb = aabb; SetNeedsUpdate(true); }
 
     Handle<Texture> &GetTexture()
         { return m_texture; }
 
     const Handle<Texture> &GetTexture() const
         { return m_texture; }
+
+    void SetNeedsUpdate(bool needs_update)
+        { m_needs_update.store(needs_update, std::memory_order_release); }
+
+    bool NeedsUpdate() const
+        { return m_needs_update.load(std::memory_order_acquire); }
 
     void Init();
     void EnqueueBind() const;
@@ -137,11 +142,8 @@ public:
     void ComputeSH(Frame *frame, const Image *image, const ImageView *image_view);
 
     void UpdateRenderData(const EnvProbeIndex &probe_index);
-
+    
 private:
-    void SetNeedsUpdate() { m_needs_update = true; }
-
-    void CreateImagesAndBuffers();
     void CreateShader();
     void CreateFramebuffer();
 
@@ -158,9 +160,6 @@ private:
     Handle<Shader> m_shader;
     Handle<Scene> m_scene;
 
-    CubemapUniforms m_cubemap_uniforms;
-    FixedArray<GPUBufferRef, max_frames_in_flight> m_cubemap_render_uniform_buffers;
-
     GPUBufferRef m_sh_tiles_buffer;
 
     Handle<ComputePipeline> m_compute_sh;
@@ -173,7 +172,9 @@ private:
 
     EnvProbeIndex m_bound_index;
 
-    bool m_needs_update;
+    std::atomic_bool m_needs_update;
+    std::atomic_bool m_is_rendered;
+    HashCode m_octant_hash_code;
 };
 
 } // namespace hyperion::v2

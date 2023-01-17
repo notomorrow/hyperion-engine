@@ -69,7 +69,7 @@ public:
 
     struct Octant
     {
-        std::unique_ptr<Octree> octree;
+        UniquePtr<Octree> octree;
         BoundingBox aabb;
     };
 
@@ -77,6 +77,24 @@ public:
     {
         Entity *entity;
         BoundingBox aabb;
+
+        HashCode GetHashCode() const
+        {
+            HashCode hc;
+
+            hc.Add(aabb.GetHashCode());
+
+            if (entity) {
+                hc.Add(entity->GetID().GetHashCode());
+                hc.Add(entity->GetTransform().GetHashCode());
+
+                // use .GetID() instead of ->GetID(), because they may not be set
+                hc.Add(entity->GetMesh().GetID().GetHashCode());
+                hc.Add(entity->GetMaterial().GetID().GetHashCode());
+            }
+
+            return hc;
+        }
     };
 
     struct Root
@@ -111,20 +129,29 @@ public:
     Octree &operator=(Octree &&other) noexcept = delete;
     ~Octree();
 
-    const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    const VisibilityState &GetVisibilityState() const
+        { return m_visibility_state; }
 
-    BoundingBox &GetAABB() { return m_aabb; }
-    const BoundingBox &GetAABB() const { return m_aabb; }
+    BoundingBox &GetAABB()
+        { return m_aabb; }
 
+    const BoundingBox &GetAABB() const
+        { return m_aabb; }
+
+    /*! \brief Get a hashcode of all entities currently in this Octant (child octants affect this too) */
+    HashCode GetNodesHash() const
+        { return m_nodes_hash; }
+        
     void Clear();
     Result Insert(Entity *entity);
     Result Remove(Entity *entity);
     Result Update(Entity *entity);
     Result Rebuild(const BoundingBox &new_aabb);
 
-    void CollectEntities(std::vector<Entity *> &out) const;
-    void CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Entity *> &out) const;
-    bool GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> &out) const;
+    void CollectEntities(Array<Entity *> &out) const;
+    void CollectEntitiesInRange(const Vector3 &position, float radius, Array<Entity *> &out) const;
+    bool GetNearestOctants(const Vector3 &position, FixedArray<Octree *, 8> &out) const;
+    bool GetNearestOctant(const Vector3 &position, Octree const *&out) const;
 
     void NextVisibilityState();
     void CalculateVisibility(Scene *scene);
@@ -134,26 +161,25 @@ public:
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
 private:
-    void ClearInternal(std::vector<Node> &out_nodes);
-    void Clear(std::vector<Node> &out_nodes);
-    Result Move(Entity *entity, const std::vector<Node>::iterator *it = nullptr);
+    void ResetNodesHash();
+    void RebuildNodesHash();
+
+    void ClearInternal(Array<Node> &out_nodes);
+    void Clear(Array<Node> &out_nodes);
+    Result Move(Entity *entity, const Array<Node>::Iterator *it = nullptr);
 
     void ForceVisibilityStates();
     void CopyVisibilityState(const VisibilityState &visibility_state);
 
     auto FindNode(Entity *entity)
     {
-        return std::find_if(
-            m_nodes.begin(),
-            m_nodes.end(),
-            [entity](const Node &node) {
-                return node.entity == entity;
-            }
-        );
+        return m_nodes.FindIf([entity](const Node &item) {
+            return item.entity == entity;
+        });
     }
 
     bool IsRoot() const { return m_parent == nullptr; }
-    bool Empty() const { return m_nodes.empty(); }
+    bool Empty() const { return m_nodes.Empty(); }
     Root *GetRoot() const { return m_root; }
     
     void SetParent(Octree *parent);
@@ -174,10 +200,11 @@ private:
     /* Called from entity - remove the pointer */
     void OnEntityRemoved(Entity *entity);
     
-    std::vector<Node>      m_nodes;
+    Array<Node>            m_nodes;
+    HashCode               m_nodes_hash;
     Octree                *m_parent;
     BoundingBox            m_aabb;
-    std::array<Octant, 8>  m_octants;
+    FixedArray<Octant, 8>  m_octants;
     bool                   m_is_divided;
     Root                  *m_root;
     VisibilityState        m_visibility_state;

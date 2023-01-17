@@ -25,7 +25,6 @@ class Instance;
 } // namespace renderer
 
 using renderer::Extent2D;
-using v2::FilePath;
 
 enum SystemEventType
 {
@@ -54,7 +53,9 @@ enum SystemWindowEventType
     EVENT_WINDOW_MINIMIZED = SDL_WINDOWEVENT_MINIMIZED,
 };
 
-enum SystemKey
+using KeyCode = UInt16;
+
+enum SystemKey : KeyCode
 {
     KEY_UNKNOWN = -1,
 
@@ -179,7 +180,25 @@ public:
         return (SystemWindowEventType)sdl_event.window.event;
     }
 
-    UInt16 GetKeyCode() const { return sdl_event.key.keysym.sym; }
+    KeyCode GetKeyCode() const
+        { return sdl_event.key.keysym.sym; }
+
+    /*! \brief For any characters a-z, returns the uppercase version.
+     *  Otherwise, the result from GetKeyCode() is returned.
+     */
+    KeyCode GetNormalizedKeyCode() const
+    {
+        KeyCode key = GetKeyCode();
+        
+        /* Set all letters to uppercase */
+        if (key >= 'a' && key <= 'z') {
+            key = 'A' + (key - 'a');
+        }
+
+        return key;
+    }
+
+
     UInt8 GetMouseButton() const { return sdl_event.button.button; }
     void GetMouseWheel(int *x, int *y) const { *x = sdl_event.wheel.x; *y = sdl_event.wheel.y; }
     UInt32 GetWindowId() const { return sdl_event.window.windowID; }
@@ -311,6 +330,7 @@ public:
 #ifdef HYP_VULKAN
     virtual bool GetVkExtensions(Array<const char *> &out_extensions) const override;
 #endif
+
 };
 
 } // namespace hyperion

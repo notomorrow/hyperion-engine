@@ -35,7 +35,7 @@ layout(location=0) out vec4 output_color;
 #include "include/tonemap.inc"
 #include "include/PhysicalCamera.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.15
+#define HYP_CUBEMAP_AMBIENT 0.45
 
 void main()
 {
@@ -50,7 +50,6 @@ void main()
     vec4 albedo = CURRENT_MATERIAL.albedo;
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-    albedo *= (1.0 - metalness);
 
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
 
@@ -63,6 +62,8 @@ void main()
 
         albedo *= albedo_texture;
     }
+
+    albedo.rgb *= (1.0 - metalness);
 
 #if defined(LIGHTING) || defined(SHADOWS)
     vec3 L = light.position_intensity.xyz;

@@ -317,7 +317,7 @@ static LoaderResult ReadFBXPropertyValue(ByteReader &reader, UInt8 type, FBXProp
             return { };
         }
     default:
-        return { LoaderResult::Status::ERR, "Invalid property type" };
+        return { LoaderResult::Status::ERR, ANSIString("Invalid property type '") + ANSIString::ToString(Int(type)) + "'" };
     }
 }
 
@@ -356,6 +356,8 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
     } else {
         // array -- can be zlib compressed
 
+        const UInt8 array_held_type = type - ('a' - 'A');
+
         UInt32 num_elements;
         reader.Read(&num_elements);
 
@@ -371,7 +373,7 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
 
 #ifdef HYP_ZLIB
             unsigned long compressed_size(length);
-            unsigned long decompressed_size(PrimitiveSize(type - ('a' - 'A')) * num_elements);
+            unsigned long decompressed_size(PrimitiveSize(array_held_type) * num_elements);
 
             ByteBuffer decompressed_buffer(decompressed_size);
 
@@ -391,7 +393,7 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
             for (UInt32 index = 0; index < num_elements; ++index) {
                 FBXPropertyValue value;
 
-                LoaderResult result = ReadFBXPropertyValue(memory_reader, type - ('a' - 'A'), value);
+                LoaderResult result = ReadFBXPropertyValue(memory_reader, array_held_type, value);
                 
                 if (!result) {
                     return result;
@@ -404,7 +406,7 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
             for (UInt32 index = 0; index < num_elements; ++index) {
                 FBXPropertyValue value;
                 
-                LoaderResult result = ReadFBXPropertyValue(reader, type - ('a' - 'A'), value);
+                LoaderResult result = ReadFBXPropertyValue(reader, array_held_type, value);
                 
                 if (!result) {
                     return result;
@@ -418,20 +420,30 @@ static LoaderResult ReadFBXProperty(ByteReader &reader, FBXProperty &out_propert
     return { };
 }
 
-static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXObject> &out)
+using FBXVersion = UInt32;
+
+static UInt64 ReadFBXOffset(ByteReader &reader, FBXVersion version)
+{
+    if (version >= 7500) {
+        UInt64 value;
+        reader.Read(&value);
+
+        return value;
+    } else {
+        UInt32 value;
+        reader.Read(&value);
+
+        return UInt64(value);
+    }
+}
+
+static LoaderResult ReadFBXNode(ByteReader &reader, FBXVersion version, UniquePtr<FBXObject> &out)
 {
     out.Reset(new FBXObject);
 
-    const SizeType start_position = reader.Position();
-
-    UInt32 end_position;
-    reader.Read(&end_position);
-
-    UInt32 num_properties;
-    reader.Read(&num_properties);
-
-    UInt32 property_list_length;
-    reader.Read(&property_list_length);
+    UInt64 end_position = ReadFBXOffset(reader, version);
+    UInt64 num_properties = ReadFBXOffset(reader, version);
+    UInt64 property_list_length = ReadFBXOffset(reader, version);
 
     UInt8 name_length;
     reader.Read(&name_length);
@@ -450,13 +462,15 @@ static LoaderResult ReadFBXNode(ByteReader &reader, UniquePtr<FBXObject> &out)
             return result;
         }
 
-        out->properties.PushBack(std::move(property));
+        if (property) {
+            out->properties.PushBack(std::move(property));
+        }
     }
 
     while (reader.Position() < end_position) {
         UniquePtr<FBXObject> child;
 
-        LoaderResult result = ReadFBXNode(reader, child);
+        LoaderResult result = ReadFBXNode(reader, version, child);
 
         if (!result) {
             return result;
@@ -578,15 +592,15 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         return { { LoaderResult::Status::ERR, "Invalid magic header" } };
     }
 
-    UInt32 version;
-    reader.Read(&version);
+    FBXVersion version;
+    reader.Read<UInt32>(&version);
 
     FBXObject root;
 
     do {
         UniquePtr<FBXObject> object;
 
-        LoaderResult result = ReadFBXNode(reader, object);
+        LoaderResult result = ReadFBXNode(reader, version, object);
 
         if (!result) {
             return { result };
@@ -1300,8 +1314,6 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     "Unsure how to build child object %lld\n",
                     id
                 );
-
-                HYP_BREAKPOINT;
             }
         }
 

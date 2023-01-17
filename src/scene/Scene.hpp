@@ -262,7 +262,7 @@ private:
     bool m_is_non_world_scene;
 
     EntityDrawCollection m_draw_collection;
-    FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;
+    HashMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;
     Optional<RenderableAttributeSet> m_override_renderable_attributes;
 
     IDBase m_custom_id;

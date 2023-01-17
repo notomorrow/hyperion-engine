@@ -1,6 +1,7 @@
-#include "FsUtil.hpp"
+#include <util/fs/FsUtil.hpp>
 #include <util/Defines.hpp>
 #include <system/Debug.hpp>
+#include <asset/BufferedByteReader.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -18,11 +19,10 @@
     #include <unistd.h>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 std::mutex FileSystem::mtx = std::mutex();
 Array<FilePath> FileSystem::filepaths = { };
-
 
 void FileSystem::PushDirectory(const FilePath &path)
 {
@@ -108,9 +108,15 @@ UInt64 FilePath::LastModifiedTimestamp() const
 #endif
 }
 
-BufferedReader<2048> FilePath::Open() const
+bool FilePath::Open(BufferedReader<HYP_READER_DEFAULT_BUFFER_SIZE> &out) const
 {
-    return BufferedReader<2048>(Data());
+    if (!Exists()) {
+        return false;
+    }
+
+    out = BufferedReader<HYP_READER_DEFAULT_BUFFER_SIZE>(*this);
+
+    return true;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

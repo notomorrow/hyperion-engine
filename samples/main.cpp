@@ -59,6 +59,8 @@
 
 #include <util/MeshBuilder.hpp>
 
+#include <asset/BufferedByteReader.hpp>
+
 #include "util/Profile.hpp"
 
 /* Standard library */
@@ -82,6 +84,8 @@
 #include <util/UTF8.hpp>
 
 #include <util/shader_compiler/ShaderCompiler.hpp>
+
+#include "scene/controllers/AabbDebugController.hpp"
 
 using namespace hyperion;
 using namespace hyperion::v2;
@@ -118,9 +122,9 @@ public:
             0.01f, 30000.0f
         ));
 
-        /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
-            Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
-        ));*/
+        //m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
+       //     Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
+        //));
         m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
         
         { // adding lights to scene
@@ -238,7 +242,6 @@ public:
 
         // m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
         
-        
         m_scene->GetFogParams().start_distance = 5000.0f;
         m_scene->GetFogParams().end_distance = 40000.0f;
 
@@ -246,7 +249,8 @@ public:
         
         auto batch = Engine::Get()->GetAssetManager().CreateBatch();
         batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/salle_de_bain/salle_de_bain.obj");//"sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("test_model", "models/sponza/sponza.obj");//"mideval/p3d_medieval_enterable_bld-13.obj");//"San_Miguel/san-miguel-low-poly.obj");
+        batch.Add<Node>("building", "models/building-front/building-front.obj");
         batch.Add<Node>("cube", "models/cube.obj");
         batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch.Add<Node>("grass", "models/grass/grass.obj");
@@ -259,6 +263,7 @@ public:
         auto obj_models = batch.AwaitResults();
         auto zombie = obj_models["zombie"].Get<Node>();
         auto test_model = obj_models["test_model"].Get<Node>();//Engine::Get()->GetAssetManager().Load<Node>("../data/dump2/sponza.fbom");
+        auto building = obj_models["building"].Get<Node>();
         auto cube_obj = obj_models["cube"].Get<Node>();
         auto material_test_obj = obj_models["material"].Get<Node>();
         
@@ -284,13 +289,21 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-        test_model.Scale(2.025f);
+        test_model.Scale(0.025f);
+        building.Scale(1.0125f);
+
+        if (auto ent = building[0].GetEntity()) {
+            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Albedo.jpg"));
+            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Normal_LOD0.jpg"));
+            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Roughness.jpg"));
+            ent->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_PARALLAX_MAP, Engine::Get()->GetAssetManager().Load<Texture>("models/building-front/wmcqaaodw_2K_Displacement.jpg"));
+        }
 
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
                 HYP_NAME(AmbientGrid0),
-                test_model.GetWorldAABB() * 1.001f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
-                Extent3D { 16, 2, 16 }
+                test_model.GetWorldAABB() * 1.0f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
+                Extent3D { 13, 3, 13 }
             );
         }
 
@@ -416,6 +429,7 @@ public:
 
         // add sponza model
         m_scene->GetRoot().AddChild(test_model);
+        m_scene->GetRoot().AddChild(building);
         
         if (false) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
@@ -453,7 +467,7 @@ public:
             }
         }
 
-        if (true) {
+        if (false) {
             if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
@@ -467,7 +481,7 @@ public:
                 monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.0f, 0.0f, 1.0f));
                 monkey_entity->RebuildRenderableAttributes();
                 monkey.SetLocalTranslation(Vector3(0.0f, 0.0f, 0.0f));
-                monkey.Scale(0.2f);
+                monkey.Scale(2.2f);
                 monkey.Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(90.0f)));
                 InitObject(monkey_entity);
 
@@ -580,6 +594,8 @@ public:
         Engine::Get()->render_state.UnbindScene();
     }
 
+    Handle<Entity> selected_entity;
+
     virtual void Logic(GameCounter::TickUnit delta) override
     {
         timer += delta;
@@ -600,7 +616,7 @@ public:
             }
         }
 
-        //GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("zombie")[0].GetWorldTranslation());
+        //GetScene()->GetCamera()->SetTarget(GetScene()->GetRoot().Select("monkey")[0].GetWorldTranslation());
 
         /*for (auto &light : m_point_lights) {
             light->SetPosition(Vector3(
@@ -661,30 +677,68 @@ public:
 
         // m_sun->SetPosition(Vector3(MathUtil::Sin(timer * 0.25f), MathUtil::Cos(timer * 0.25f), -MathUtil::Sin(timer * 0.25f)).Normalize());
 
-        #if 1 // bad performance on large meshes. need bvh
+        #if 1// bad performance on large meshes. need bvh
         if (GetInputManager()->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
             ray_cast_timer = 0.0f;
-            const auto &mouse_position = GetInputManager()->GetMousePosition();
 
-            const Int mouse_x = mouse_position.GetX();
-            const Int mouse_y = mouse_position.GetY();
+            if (auto ray_hit = GetRayHitWorld()) {
+                /*const auto &mesh_hit = triangle_mesh_results.Front();
 
-            const auto mouse_world = m_scene->GetCamera()->TransformScreenToWorld(
-                Vector2(
-                    mouse_x / Float(GetInputManager()->GetWindow()->GetExtent().width),
-                    mouse_y / Float(GetInputManager()->GetWindow()->GetExtent().height)
-                )
-            );
+                if (auto target = m_scene->GetRoot().Select("monkey")) {
+                    target.SetLocalTranslation(mesh_hit.hitpoint);
+                    target.SetLocalRotation(Quaternion::LookAt((m_scene->GetCamera()->GetTranslation() - mesh_hit.hitpoint).Normalized(), Vector3::UnitY()));
+                }*/
 
-            auto ray_direction = mouse_world.Normalized() * -1.0f;
+                const ID<Entity> entity_id { ray_hit.Get().id };
 
-            // std::cout << "ray direction: " << ray_direction << "\n";
+                bool select_new_entity = false;
 
-            Ray ray { m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction) };
-            RayTestResults results;
+                if (selected_entity && selected_entity->GetID() != entity_id) {
+                    selected_entity->RemoveController<AABBDebugController>();
 
-            if (Engine::Get()->GetWorld()->GetOctree().TestRay(ray, results)) {
-                // std::cout << "hit with aabb : " << results.Front().hitpoint << "\n";
+                    select_new_entity = true;
+                } else if (!selected_entity) {
+                    select_new_entity = true;
+                }
+
+                if (select_new_entity) {
+                    if (auto entity = Handle<Entity>(entity_id)) {
+                        entity->AddController<AABBDebugController>();
+
+                        selected_entity = entity;
+                    }
+                }
+            }
+        } else {
+            ray_cast_timer += delta;
+        }
+        #endif
+    }
+
+    Optional<RayHit> GetRayHitWorld(bool precise = false) const
+    {
+        const auto &mouse_position = GetInputManager()->GetMousePosition();
+
+        const Int mouse_x = mouse_position.GetX();
+        const Int mouse_y = mouse_position.GetY();
+
+        const auto mouse_world = m_scene->GetCamera()->TransformScreenToWorld(
+            Vector2(
+                mouse_x / Float(GetInputManager()->GetWindow()->GetExtent().width),
+                mouse_y / Float(GetInputManager()->GetWindow()->GetExtent().height)
+            )
+        );
+
+        auto ray_direction = mouse_world.Normalized();
+
+        // std::cout << "ray direction: " << ray_direction << "\n";
+
+        Ray ray { m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction) };
+        RayTestResults results;
+
+        if (Engine::Get()->GetWorld()->GetOctree().TestRay(ray, results)) {
+
+            if (precise) {
                 RayTestResults triangle_mesh_results;
 
                 for (const auto &hit : results) {
@@ -692,8 +746,6 @@ public:
                     Handle<Entity> entity(ID<Entity> { hit.id });
 
                     if (entity) {
-                        // entity->AddController<AABBDebugController>();
-
                         if (auto &mesh = entity->GetMesh()) {
                             ray.TestTriangleList(
                                 mesh->GetVertices(),
@@ -707,27 +759,58 @@ public:
                 }
 
                 if (!triangle_mesh_results.Empty()) {
-                    const auto &mesh_hit = triangle_mesh_results.Front();
-
-                    if (auto target = m_scene->GetRoot().Select("monkey")) {
-                        target.SetLocalTranslation(mesh_hit.hitpoint);
-                        target.SetLocalRotation(Quaternion::LookAt((m_scene->GetCamera()->GetTranslation() - mesh_hit.hitpoint).Normalized(), Vector3::UnitY()));
-                    }
+                    return triangle_mesh_results.Front();
                 }
+            } else {
+                return results.Front();
             }
-        } else {
-            ray_cast_timer += delta;
         }
-        #endif
+
+        return { };
     }
+
+    HashMap<ANSIString, Handle<Mesh>> cached_meshes;
 
     virtual void OnInputEvent(const SystemEvent &event) override
     {
         Game::OnInputEvent(event);
 
+        if (event.GetType() == SystemEventType::EVENT_KEYDOWN) {
+            if (event.GetNormalizedKeyCode() == KEY_M) {
+                Vector3 box_position = GetScene()->GetCamera()->GetTranslation() + GetScene()->GetCamera()->GetDirection() * 5.0f;
+
+                if (auto hit_world = GetRayHitWorld()) {
+                    box_position = hit_world.Get().hitpoint;
+                }
+
+                auto box_entity = CreateObject<Entity>();
+                box_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING, false);
+
+                auto box_mesh = cached_meshes["Cube"];
+
+                if (!box_mesh) {
+                    box_mesh = MeshBuilder::Cube();
+                    cached_meshes["Cube"] = box_mesh;
+                }
+
+                Material::ParameterTable material_parameters = Material::DefaultParameters();
+                material_parameters.Set(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+                material_parameters.Set(Material::MATERIAL_KEY_METALNESS, 0.01f);
+                
+                box_entity->SetMesh(box_mesh);
+                box_entity->SetMaterial(Engine::Get()->GetMaterialCache().GetOrCreate({ }, material_parameters));
+                box_entity->SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProps(box_mesh->GetVertexAttributes())));
+                box_entity->SetTranslation(box_position);
+
+                GetScene()->AddEntity(box_entity);
+            }
+        }
+
         if (event.GetType() == SystemEventType::EVENT_FILE_DROP) {
             if (const FilePath *path = event.GetEventData().TryGet<FilePath>()) {
-                if (auto reader = path->Open()) {
+                Reader reader;
+
+                if (path->Open(reader)) {
 
                     auto batch = Engine::Get()->GetAssetManager().CreateBatch();
                     batch.Add<Node>("dropped_object", *path);

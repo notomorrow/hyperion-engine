@@ -33,7 +33,7 @@ struct TaskBatch
     /*! \brief The priority / pool lane for which to place
      * all of the threads in this batch into
      */
-    TaskPriority priority = TaskPriority::MEDIUM;
+    TaskPriority priority = TASK_PRIORITY_MEDIUM;
 
     /* Number of tasks must remain constant from creation of the TaskBatch,
      * to completion. */
@@ -76,8 +76,7 @@ struct TaskBatch
 
 class TaskSystem
 {
-    static constexpr UInt target_ticks_per_second = 4096; // For base priority. Second priority is this number << 2, so 65536
-    static constexpr UInt num_threads_per_pool = 2;
+    static constexpr UInt num_threads_per_pool = 4;
     
     struct TaskThreadPool
     {
@@ -95,7 +94,7 @@ public:
             for (auto &it : pool.threads) {
                 AssertThrow(THREAD_TASK & mask);
 
-                it.Reset(new TaskThread(Threads::thread_ids.At(static_cast<ThreadName>(mask)), target_ticks_per_second << (2 * priority_value)));
+                it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask))));
                 mask <<= 1;
             }
 
@@ -126,6 +125,7 @@ public:
         for (auto &pool : m_pools) {
             for (auto &it : pool.threads) {
                 AssertThrow(it != nullptr);
+
                 it->Stop();
                 it->Join();
             }
@@ -133,15 +133,16 @@ public:
     }
 
     TaskThreadPool &GetPool(TaskPriority priority)
-        { return m_pools[static_cast<UInt>(priority)]; }
+        { return m_pools[UInt(priority)]; }
 
     template <class Task>
-    TaskRef ScheduleTask(Task &&task, TaskPriority priority = TaskPriority::MEDIUM)
+    TaskRef ScheduleTask(Task &&task, TaskPriority priority = TASK_PRIORITY_MEDIUM)
     {
-        auto &pool = GetPool(priority);
+        TaskThreadPool &pool = GetPool(priority);
 
-        const auto cycle = pool.cycle.load(std::memory_order_relaxed);
-        auto &task_thread = pool.threads[cycle];
+        const UInt cycle = pool.cycle.load(std::memory_order_relaxed);
+
+        UniquePtr<TaskThread> &task_thread = pool.threads[cycle];
 
         const auto task_id = task_thread->ScheduleTask(std::forward<Task>(task));
 
@@ -159,11 +160,12 @@ public:
     TaskBatch *EnqueueBatch(TaskBatch *batch)
     {
         AssertThrow(batch != nullptr);
+
         batch->num_completed.store(0u, std::memory_order_relaxed);
         batch->num_enqueued = 0u;
         batch->task_refs.Resize(batch->tasks.Size());
 
-        const auto &current_thread_id = Threads::CurrentThreadID();
+        const ThreadID &current_thread_id = Threads::CurrentThreadID();
         const bool in_task_thread = Threads::IsThreadInMask(current_thread_id, THREAD_TASK);
 
         if (in_task_thread) {
@@ -176,8 +178,8 @@ public:
             return batch;
         }
 
-        auto &pool = GetPool(batch->priority);
-        const UInt num_threads_in_pool = static_cast<UInt>(pool.threads.Size());
+        TaskThreadPool &pool = GetPool(batch->priority);
+        const UInt num_threads_in_pool = UInt(pool.threads.Size());
 
         // AssertThrow(!in_task_thread || pool.threads.Contains());
 
@@ -257,7 +259,7 @@ public:
         results.Resize(batch->task_refs.Size());
 
         for (SizeType i = 0; i < batch->task_refs.Size(); i++) {
-            auto &task_ref = batch->task_refs[i];
+            const TaskRef &task_ref = batch->task_refs[i];
 
             if (task_ref.runner == nullptr) {
                 continue;
@@ -330,7 +332,7 @@ public:
     template <class Container, class Lambda>
     HYP_FORCE_INLINE void ParallelForEach(Container &&items, Lambda &&lambda)
     {
-        constexpr auto priority = TaskPriority::MEDIUM;
+        constexpr auto priority = TASK_PRIORITY_MEDIUM;
         const auto &pool = GetPool(priority);
 
         ParallelForEach(
@@ -348,7 +350,7 @@ public:
 
 private:
 
-    FixedArray<TaskThreadPool, 2> m_pools;
+    FixedArray<TaskThreadPool, TASK_PRIORITY_MAX> m_pools;
 
     Array<TaskBatch *> m_running_batches;
 };

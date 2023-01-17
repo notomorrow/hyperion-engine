@@ -136,7 +136,7 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
     AssertThrow(m_construction_info.shader != nullptr);
     AssertThrow(!m_construction_info.fbos.empty());
 
-    const uint32_t width  = m_construction_info.fbos[0]->GetWidth();
+    const uint32_t width = m_construction_info.fbos[0]->GetWidth();
     const uint32_t height = m_construction_info.fbos[0]->GetHeight();
 
     SetScissor(0, 0, width, height);
@@ -221,7 +221,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
         rasterizer.lineWidth = 1.0f; //2.5f; // have to set VK_DYNAMIC_STATE_LINE_WIDTH and wideLines feature to use any non-1.0 value
         break;
-    case FillMode::FILL:
+    case FillMode::FILL: // fallthrough
     default:
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;

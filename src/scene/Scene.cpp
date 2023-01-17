@@ -586,9 +586,9 @@ bool Scene::AddEnvProbe(const Handle<EnvProbe> &env_probe)
         return false;
     }
 
-    auto insert_result = m_env_probes.Insert(env_probe->GetID(), env_probe);
+    const auto insert_result = m_env_probes.Insert(env_probe->GetID(), env_probe);
     
-    auto it = insert_result.first;
+    const auto it = insert_result.first;
     const bool was_inserted = insert_result.second;
 
     if (!was_inserted) {
@@ -606,7 +606,7 @@ bool Scene::RemoveEnvProbe(ID<EnvProbe> id)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    auto it = m_env_probes.Find(id);
+    const auto it = m_env_probes.Find(id);
 
     if (it == m_env_probes.End()) {
         return false;
@@ -663,6 +663,32 @@ void Scene::Update(GameCounter::TickUnit delta)
         }
     }
 
+    m_draw_collection.Reset();
+
+    const RenderableAttributeSet *override_attributes = m_override_renderable_attributes.TryGet();
+    const UInt32 override_flags = override_attributes ? override_attributes->override_flags : 0;
+    
+    // update each entity
+    for (auto &it : m_entities) {
+        Handle<Entity> &entity = it.second;
+
+        entity->Update(delta);
+
+        if ((!override_flags || entity->HasFlags(override_flags)) && entity->IsRenderable() && IsEntityInFrustum(entity)) {
+            PushEntityToRender(entity, override_attributes);
+        }
+    }
+
+    if (m_parent_scene) {
+        for (auto &it : m_parent_scene->GetEntities()) {
+            Handle<Entity> &entity = it.second;
+
+            if ((!override_flags || entity->HasFlags(override_flags)) && entity->IsRenderable() && IsEntityInFrustum(entity)) {
+                PushEntityToRender(entity, override_attributes);
+            }
+        }
+    }
+
     if (IsWorldScene()) {
         // update render environment
         m_environment->Update(delta);
@@ -682,38 +708,13 @@ void Scene::Update(GameCounter::TickUnit delta)
         }
     }
 
-    m_draw_collection.Reset();
-
-    const RenderableAttributeSet *override_attributes = m_override_renderable_attributes.TryGet();
-    
-    // update each entity
-    for (auto &it : m_entities) {
-        Handle<Entity> &entity = it.second;
-
-        entity->Update(delta);
-
-        if (entity->IsRenderable() && IsEntityInFrustum(entity)) {
-            PushEntityToRender(entity, override_attributes);
-        }
-    }
-
-    if (m_parent_scene) {
-        for (auto &it : m_parent_scene->GetEntities()) {
-            Handle<Entity> &entity = it.second;
-
-            if (entity->IsRenderable() && IsEntityInFrustum(entity)) {
-                PushEntityToRender(entity, override_attributes);
-            }
-        }
-    }
-
     for (auto &it : m_draw_collection) {
         const RenderableAttributeSet &attributes = it.first;
         Array<EntityDrawProxy> &draw_proxies = it.second;
 
         auto render_group_it = m_render_groups.Find(attributes);
 
-        if (render_group_it == m_render_groups.End() || !render_group_it->second) {
+        if (render_group_it == m_render_groups.End() || !render_group_it->value) {
             Handle<RenderGroup> render_group = Engine::Get()->CreateRenderGroup(attributes);
 
             if (!render_group.IsValid()) {
@@ -728,7 +729,7 @@ void Scene::Update(GameCounter::TickUnit delta)
             render_group_it = insert_result.first;
         }
         
-        PUSH_RENDER_COMMAND(UpdateRenderGroupDrawables, render_group_it->second.Get(), std::move(draw_proxies));
+        PUSH_RENDER_COMMAND(UpdateRenderGroupDrawables, render_group_it->value.Get(), std::move(draw_proxies));
     }
 }
 
@@ -776,13 +777,13 @@ void Scene::Render(Frame *frame, void *push_constant_ptr, SizeType push_constant
     // TODO: Thread safe container here
     // TODO: If all drawables have been removed, remove the render group?
     for (auto &it : m_render_groups) {
-        AssertThrow(it.first.framebuffer_id == m_camera->GetFramebuffer()->GetID());
+        AssertThrow(it.key.framebuffer_id == m_camera->GetFramebuffer()->GetID());
 
         if (push_constant_ptr && push_constant_size) {
-            it.second->GetPipeline()->SetPushConstants(push_constant_ptr, push_constant_size);
+            it.value->GetPipeline()->SetPushConstants(push_constant_ptr, push_constant_size);
         }
 
-        it.second->Render(frame);
+        it.value->Render(frame);
     }
 
     Engine::Get()->GetRenderState().UnbindScene();

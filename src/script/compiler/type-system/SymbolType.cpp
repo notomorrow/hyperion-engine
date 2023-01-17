@@ -433,16 +433,20 @@ bool SymbolType::IsGeneric() const
         return true;
     }
 
-    const SymbolType *top = this;
+    if (GetTypeClass() == TYPE_GENERIC) {
+        return true;
+    }
 
-    do {
+    SymbolTypePtr_t top = GetBaseType();
+
+    while (top != nullptr) {
         if (top->GetTypeClass() == TYPE_GENERIC) {
             return true;
         }
 
-        top = top->GetBaseType().get();
-    } while (top != nullptr);
-
+        top = top->GetBaseType();
+    }
+    
     return false;
 }
 

@@ -14,8 +14,6 @@
 
 namespace hyperion::compiler {
 
-using v2::FileSystem;
-
 AstModuleImportPart::AstModuleImportPart(
     const std::string &left,
     const std::vector<std::shared_ptr<AstModuleImportPart>> &right_parts,

@@ -5,6 +5,8 @@
 #include <map>
 #include <fstream>
 
+#include <Types.hpp>
+
 #define ACE_ENABLE_LAZY_DECLARATIONS 0
 #define ACE_ANY_ONLY_FUNCTION_PARAMATERS 0
 #define ACE_ALLOW_IDENTIFIERS_OTHER_MODULES 0
@@ -16,8 +18,8 @@
 namespace hyperion::compiler {
 
 struct Config {
-    static const int max_data_members;
-    static const std::string global_module_name;
+    static const SizeType max_data_members;
+    static const char *global_module_name;
     /** Store strings, functions, etc.... at
         the top of the program, or load them at the point they're needed */
     static bool use_static_objects;

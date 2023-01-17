@@ -4,16 +4,20 @@
 #include <core/Containers.hpp>
 #include <util/Defines.hpp>
 #include <util/StringUtil.hpp>
-#include <asset/BufferedByteReader.hpp>
 
 #include <string>
 #include <cstring>
 #include <array>
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class FilePath;
+
+template <SizeType BufferSize>
+class BufferedReader;
+
+using Reader = BufferedReader<HYP_READER_DEFAULT_BUFFER_SIZE>;
 
 class FileSystem
 {
@@ -160,7 +164,7 @@ public:
         return FilePath(StringUtil::BasePath(Data()).c_str());
     }
 
-    BufferedReader<2048> Open() const;
+    bool Open(BufferedReader<HYP_READER_DEFAULT_BUFFER_SIZE> &out) const;
 
     static inline FilePath Current()
     {
@@ -181,6 +185,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

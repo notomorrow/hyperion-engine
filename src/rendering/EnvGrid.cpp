@@ -76,7 +76,7 @@ void EnvGrid::Init()
         m_ambient_scene = CreateObject<Scene>(CreateObject<Camera>(
             90.0f,
             -Int(ambient_probe_dimensions.width), Int(ambient_probe_dimensions.height),
-            0.01f, (aabb_extent / Vector3(m_density)).Max() * 0.5f
+            0.015f, 250.0f//(m_aabb / Vector3(m_density)).GetExtent().Max()
         ));
 
         m_ambient_scene->GetCamera()->SetFramebuffer(m_framebuffer);
@@ -85,10 +85,10 @@ void EnvGrid::Init()
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_INTERNAL,
-                .cull_faces = FaceCullMode::NONE,
-                .flags = 0x0
+                .cull_faces = FaceCullMode::BACK
             },
-            m_ambient_shader->GetID()
+            m_ambient_shader->GetID(),
+            Entity::InitInfo::ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING // override flags -- require this flag to be set
         ));
         m_ambient_scene->SetParentScene(Handle<Scene>(GetParent()->GetScene()->GetID()));
 
@@ -164,8 +164,23 @@ void EnvGrid::OnRender(Frame *frame)
     if (num_ambient_probes != 0) {
         AssertThrow(m_current_probe_index < m_ambient_probes.Size());
 
-        {
-            auto &env_probe = m_ambient_probes[m_current_probe_index];
+        // Find a probe that needs to be updated
+        UInt found_index = UInt(-1);
+
+        for (UInt offset = 0; offset < m_ambient_probes.Size(); ++offset) {
+            const UInt index = (offset + m_current_probe_index) % m_ambient_probes.Size();
+
+            if (const Handle<EnvProbe> &env_probe = m_ambient_probes[index]) {
+                if (env_probe->NeedsUpdate()) {
+                    found_index = index;
+
+                    break;
+                }
+            }
+        }
+
+        if (found_index != UInt(-1)) {
+            auto &env_probe = m_ambient_probes[found_index];
 
             const BoundingBox &probe_aabb = env_probe->GetAABB();
             const Vector3 probe_center = probe_aabb.GetCenter();
@@ -189,6 +204,8 @@ void EnvGrid::OnRender(Frame *frame)
                 env_probe->UpdateRenderData(bound_index);
 
                 RenderEnvProbe(frame, m_ambient_scene, env_probe);
+
+                env_probe->SetNeedsUpdate(false);
                 
                 m_shader_data.probe_indices[probe_index_at_point] = env_probe->GetID().ToIndex();
             } else {
@@ -205,7 +222,7 @@ void EnvGrid::OnRender(Frame *frame)
                 env_probe->SetBoundIndex(EnvProbeIndex());
             }
 
-            m_current_probe_index = (m_current_probe_index + 1) % num_ambient_probes;
+            m_current_probe_index = (found_index + 1) % num_ambient_probes;
         }
             
         for (UInt index = 0; index < num_ambient_probes; index++) {

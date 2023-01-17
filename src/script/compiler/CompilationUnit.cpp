@@ -52,7 +52,7 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     }
 
     // mangle the type name
-    const size_t len = type_ptr->GetName().length();
+    const SizeType len = type_ptr->GetName().length();
 
     AssertThrow(type_ptr->GetMembers().size() < hyperion::compiler::Config::max_data_members);
 
@@ -60,9 +60,7 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     StaticTypeInfo st;
     st.m_size = type_ptr->GetMembers().size();
     st.m_names = names;
-    st.m_name = new char[len + 1];
-    st.m_name[len] = '\0';
-    std::strcpy(st.m_name, type_ptr->GetName().c_str());
+    st.m_name = type_ptr->GetName().c_str();
 
     int id;
 
@@ -75,8 +73,6 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     } else {
         id = found_id;
     }
-
-    delete[] st.m_name;
 
     type_ptr->SetId(id);
 }

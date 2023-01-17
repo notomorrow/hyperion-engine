@@ -8,6 +8,7 @@
 #include <Util.hpp>
 #include <util/Defines.hpp>
 #include <util/StringUtil.hpp>
+#include <util/fs/FsUtil.hpp>
 #include <core/Core.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>
@@ -20,21 +21,28 @@
 #include <mutex>
 
 namespace hyperion {
-template <SizeType BufferSize, class Byte = UByte>
+
+template <SizeType BufferSize>
 class BufferedReader
 {
 public:
-    static_assert(sizeof(Byte) == 1);
+    using Byte = UByte;
 
-    BufferedReader(const std::string &filepath, std::streampos begin = 0)
-        : filepath(filepath),
-          file(nullptr)
+    BufferedReader()
+        : file(nullptr)
     {
-        file = new std::ifstream(filepath, std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
+    }
+
+    BufferedReader(const FilePath &filepath)
+        : filepath(filepath),
+          file(nullptr),
+          pos(0),
+          max_pos(0)
+    {
+        file = new std::ifstream(filepath.Data(), std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
 
         max_pos = file->tellg();
-        file->seekg(begin);
-        pos = file->tellg();
+        Seek(0);
     }
 
     BufferedReader(const BufferedReader &other) = delete;
@@ -63,13 +71,13 @@ public:
         }
 
         filepath = std::move(other.filepath);
-        max_pos = std::move(other.max_pos),
-        pos = std::move(other.max_pos);
-        file = std::move(other.file);
+        max_pos = other.max_pos;
+        pos = other.pos;
+        file = other.file;
         buffer = std::move(other.buffer);
 
-        other.file    = nullptr;
-        other.pos     = 0;
+        other.file = nullptr;
+        other.pos = 0;
         other.max_pos = 0;
 
         return *this;
@@ -86,12 +94,12 @@ public:
     explicit operator bool() const
         { return IsOpen(); }
 
-    const std::string &GetFilepath() const
+    const FilePath &GetFilepath() const
         { return filepath; }
 
     /*! \brief Returns a boolean indicating whether or not the file could be opened without issue */
     bool IsOpen() const
-        { return file->good(); }
+        { return file != nullptr && file->good(); }
 
     SizeType Position() const
         { return pos; }
@@ -100,7 +108,7 @@ public:
         { return max_pos; }
 
     bool Eof() const
-        { return pos >= max_pos; }
+        { return file == nullptr || pos >= max_pos; }
 
     void Rewind(unsigned long amount)
     {
@@ -110,8 +118,8 @@ public:
             pos -= amount;
         }
 
-        if (!Eof()) {
-            file->seekg(pos -= amount);
+        if (file != nullptr) {
+            file->seekg(pos);
         }
     }
 
@@ -119,7 +127,7 @@ public:
     {
         pos += amount;
 
-        if (!Eof()) {
+        if (file != nullptr) {
             file->seekg(pos);
         }
     }
@@ -128,20 +136,18 @@ public:
     {
         pos = where_to;
 
-        if (!Eof()) {
+        if (file != nullptr) {
             file->seekg(pos);
         }
     }
 
     void Close()
     {
-        if (file == nullptr) {
-            return;
-        }
-
-        file->close();
-
         pos = max_pos; // eof
+
+        if (file != nullptr) {
+            file->close();
+        }
     }
 
     /*! \brief Reads the next \ref{count} bytes from the file and returns a ByteBuffer.
@@ -149,7 +155,7 @@ public:
     ByteBuffer ReadBytes(SizeType count)
     {
         if (Eof()) {
-            return {};
+            return { };
         }
 
         const SizeType remaining = max_pos - pos;
@@ -168,7 +174,7 @@ public:
     ByteBuffer ReadBytes()
     {
         if (Eof()) {
-            return {};
+            return { };
         }
 
         const SizeType remaining = max_pos - pos;
@@ -267,6 +273,10 @@ public:
     template <class LambdaFunction>
     void ReadLines(LambdaFunction &&func, bool buffered = true)
     {
+        if (Eof()) {
+            return;
+        }
+
         if (!buffered) { // not buffered, do it in one pass
             auto all_bytes = ReadBytes();
 
@@ -332,10 +342,10 @@ public:
     }
 
 private:
-    std::string filepath;
+    FilePath filepath;
     std::ifstream *file;
-    std::streampos pos;
-    std::streampos max_pos;
+    SizeType pos;
+    SizeType max_pos;
     std::array<Byte, BufferSize> buffer{};
 
     SizeType Read()
@@ -371,8 +381,6 @@ private:
         return count;
     }
 };
-
-using Reader = BufferedReader<2048>;
 
 } // namespace hyperion
 

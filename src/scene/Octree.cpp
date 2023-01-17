@@ -57,7 +57,7 @@ Octree::~Octree()
         delete m_root;
     }
 
-    AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
+    AssertThrowMsg(m_nodes.Empty(), "Expected nodes to be emptied before octree destructor");
 }
 
 void Octree::SetParent(Octree *parent)
@@ -82,7 +82,7 @@ bool Octree::EmptyDeep(int depth, UInt8 octant_mask) const
     }
 
     if (depth != 0) {
-        return std::all_of(m_octants.begin(), m_octants.end(), [depth, octant_mask](const Octant &octant) {
+        return m_octants.Every([depth, octant_mask](const Octant &octant) {
             if (octant_mask & (1u << octant.octree->m_index)) {
                 return octant.octree->EmptyDeep(depth - 1);
             }
@@ -98,15 +98,15 @@ void Octree::InitOctants()
 {
     const Vector3 divided_aabb_dimensions = m_aabb.GetExtent() / 2.0f;
 
-    for (int x = 0; x < 2; x++) {
-        for (int y = 0; y < 2; y++) {
-            for (int z = 0; z < 2; z++) {
-                int index = 4 * x + 2 * y + z;
+    for (UInt x = 0; x < 2; x++) {
+        for (UInt y = 0; y < 2; y++) {
+            for (UInt z = 0; z < 2; z++) {
+                const UInt index = 4 * x + 2 * y + z;
 
                 m_octants[index] = {
                     .aabb = BoundingBox(
-                        m_aabb.GetMin() + divided_aabb_dimensions * Vector3(float(x), float(y), float(z)),
-                        m_aabb.GetMin() + divided_aabb_dimensions * (Vector3(float(x), float(y), float(z)) + Vector3(1.0f))
+                        m_aabb.GetMin() + divided_aabb_dimensions * Vector3(Float(x), Float(y), Float(z)),
+                        m_aabb.GetMin() + divided_aabb_dimensions * (Vector3(Float(x), Float(y), Float(z)) + Vector3(1.0f))
                     )
                 };
             }
@@ -118,15 +118,15 @@ void Octree::Divide()
 {
     AssertThrow(!m_is_divided);
 
-    for (SizeType i = 0; i < m_octants.size(); i++) {
+    for (SizeType i = 0; i < m_octants.Size(); i++) {
         auto &octant = m_octants[i];
 
         AssertThrow(octant.octree == nullptr);
 
-        octant.octree.reset(new Octree(this, octant.aabb, static_cast<UInt8>(i)));
+        octant.octree.Reset(new Octree(this, octant.aabb, UInt8(i)));
 
         if (m_root != nullptr) {
-            m_root->events.on_insert_octant(octant.octree.get(), nullptr);
+            m_root->events.on_insert_octant(octant.octree.Get(), nullptr);
         }
     }
 
@@ -136,7 +136,7 @@ void Octree::Divide()
 void Octree::Undivide()
 {
     AssertThrow(m_is_divided);
-    AssertThrowMsg(m_nodes.empty(), "Undivide() should be called on octrees with no remaining nodes");
+    AssertThrowMsg(m_nodes.Empty(), "Undivide() should be called on octrees with no remaining nodes");
 
     for (auto &octant : m_octants) {
         AssertThrow(octant.octree != nullptr);
@@ -146,10 +146,10 @@ void Octree::Undivide()
         }
         
         if (m_root != nullptr) {
-            m_root->events.on_remove_octant(octant.octree.get(), nullptr);
+            m_root->events.on_remove_octant(octant.octree.Get(), nullptr);
         }
 
-        octant.octree.reset();
+        octant.octree.Reset();
     }
 
     m_is_divided = false;
@@ -168,7 +168,7 @@ void Octree::CollapseParents()
         for (const Octant &octant : iteration->m_octants) {
             AssertThrow(octant.octree != nullptr);
 
-            if (octant.octree.get() == highest_empty) {
+            if (octant.octree.Get() == highest_empty) {
                 /* Do not perform a check on our node, as we've already
                  * checked it by going up the chain.
                  * As `iter` becomes the parent of this node we're currently working with,
@@ -194,12 +194,12 @@ undivide:
 
 void Octree::Clear()
 {
-    std::vector<Node> nodes;
+    Array<Node> nodes;
 
     Clear(nodes);
 }
 
-void Octree::Clear(std::vector<Node> &out_nodes)
+void Octree::Clear(Array<Node> &out_nodes)
 {
     ClearInternal(out_nodes);
 
@@ -208,7 +208,7 @@ void Octree::Clear(std::vector<Node> &out_nodes)
     }
 }
 
-void Octree::ClearInternal(std::vector<Node> &out_nodes)
+void Octree::ClearInternal(Array<Node> &out_nodes)
 {
     for (auto &node : m_nodes) {
         node.entity->OnRemovedFromOctree(this);
@@ -221,10 +221,10 @@ void Octree::ClearInternal(std::vector<Node> &out_nodes)
             }
         }
 
-        out_nodes.push_back(std::move(node));
+        out_nodes.PushBack(std::move(node));
     }
 
-    m_nodes.clear();
+    m_nodes.Clear();
 
     if (!m_is_divided) {
         return;
@@ -241,7 +241,7 @@ Octree::Result Octree::Insert(Entity *entity)
 {
     AssertThrow(entity != nullptr);
 
-    const auto &entity_aabb = entity->GetWorldAABB();
+    const BoundingBox &entity_aabb = entity->GetWorldAABB();
 
     if (!m_aabb.Contains(entity_aabb)) {
         auto rebuild_result = RebuildExtendInternal(entity_aabb);
@@ -277,7 +277,7 @@ Octree::Result Octree::Insert(Entity *entity)
 
 Octree::Result Octree::InsertInternal(Entity *entity)
 {
-    m_nodes.push_back(Node {
+    m_nodes.PushBack(Node {
         .entity = entity,
         .aabb = entity->GetWorldAABB()
     });
@@ -290,6 +290,8 @@ Octree::Result Octree::InsertInternal(Entity *entity)
     }
 
     entity->OnAddedToOctree(this);
+
+    RebuildNodesHash();
 
     return {};
 }
@@ -323,7 +325,7 @@ Octree::Result Octree::RemoveInternal(Entity *entity)
 {
     const auto it = FindNode(entity);
 
-    if (it == m_nodes.end()) {
+    if (it == m_nodes.End()) {
         if (m_is_divided) {
             for (auto &octant : m_octants) {
                 AssertThrow(octant.octree != nullptr);
@@ -344,9 +346,10 @@ Octree::Result Octree::RemoveInternal(Entity *entity)
 
     entity->OnRemovedFromOctree(this);
 
-    m_nodes.erase(it);
+    m_nodes.Erase(it);
+    RebuildNodesHash();
 
-    if (!m_is_divided && m_nodes.empty()) {
+    if (!m_is_divided && m_nodes.Empty()) {
         Octree *last_empty_parent = nullptr;
 
         if (Octree *parent = m_parent) {
@@ -375,9 +378,9 @@ Octree::Result Octree::RemoveInternal(Entity *entity)
     return {};
 }
 
-Octree::Result Octree::Move(Entity *entity, const std::vector<Node>::iterator *it)
+Octree::Result Octree::Move(Entity *entity, const Array<Node>::Iterator *it)
 {
-    const auto &new_aabb = entity->GetWorldAABB();
+    const BoundingBox &new_aabb = entity->GetWorldAABB();
 
     const bool is_root = IsRoot();
     const bool contains = m_aabb.Contains(new_aabb);
@@ -427,9 +430,10 @@ Octree::Result Octree::Move(Entity *entity, const std::vector<Node>::iterator *i
                         m_root->node_to_octree.erase(entity);
                     }
 
-                    m_nodes.erase(*it);
-                }
+                    m_nodes.Erase(*it);
 
+                    RebuildNodesHash();
+                }
 
                 inserted = bool(parent->Move(entity));
 
@@ -482,9 +486,11 @@ Octree::Result Octree::Move(Entity *entity, const std::vector<Node>::iterator *i
                         m_root->node_to_octree.erase(entity);
                     }
 
-                    m_nodes.erase(*it);
-                }
+                    m_nodes.Erase(*it);
 
+                    RebuildNodesHash();
+                }
+                
                 if (!m_is_divided) {
                     Divide();
                 }
@@ -507,7 +513,7 @@ Octree::Result Octree::Move(Entity *entity, const std::vector<Node>::iterator *i
         // force this octant to be visible to prevent flickering
         CopyVisibilityState(Engine::Get()->GetWorld()->GetOctree().GetVisibilityState());
 
-        m_nodes.push_back(Node {
+        m_nodes.PushBack(Node {
             .entity = entity,
             .aabb = entity->GetWorldAABB()
         });
@@ -521,6 +527,8 @@ Octree::Result Octree::Move(Entity *entity, const std::vector<Node>::iterator *i
 
         entity->OnMovedToOctant(this);
     }
+
+    RebuildNodesHash();
     
     return {};
 }
@@ -531,14 +539,14 @@ Octree::Result Octree::Update(Entity *entity)
         const auto it = m_root->node_to_octree.find(entity);
 
         if (it == m_root->node_to_octree.end()) {
-            return {Result::OCTREE_ERR, "Object not found in node map!"};
+            return { Result::OCTREE_ERR, "Object not found in node map!" };
         }
 
-        if (auto *octree = it->second) {
+        if (Octree *octree = it->second) {
             return octree->UpdateInternal(entity);
         }
 
-        return {Result::OCTREE_ERR, "Object has no octree in node map!"};
+        return { Result::OCTREE_ERR, "Object has no octree in node map!" };
     }
 
     return UpdateInternal(entity);
@@ -548,9 +556,9 @@ Octree::Result Octree::UpdateInternal(Entity *entity)
 {
     const auto it = FindNode(entity);
 
-    if (it == m_nodes.end()) {
+    if (it == m_nodes.End()) {
         if (m_is_divided) {
-            for (auto &octant : m_octants) {
+            for (Octant &octant : m_octants) {
                 AssertThrow(octant.octree != nullptr);
 
                 if (octant.octree->UpdateInternal(entity)) {
@@ -559,15 +567,15 @@ Octree::Result Octree::UpdateInternal(Entity *entity)
             }
         }
 
-        return {Result::OCTREE_ERR, "Could not update in any sub octants"};
+        return { Result::OCTREE_ERR, "Could not update in any sub octants" };
     }
 
-    const auto &new_aabb = entity->GetWorldAABB();
-    const auto &old_aabb = it->aabb;
+    const BoundingBox &new_aabb = entity->GetWorldAABB();
+    const BoundingBox &old_aabb = it->aabb;
 
     if (new_aabb == old_aabb) {
         /* AABB has not changed - no need to update */
-        return {};
+        return { };
     }
 
     /* AABB has changed to we remove it from this octree and either:
@@ -582,7 +590,7 @@ Octree::Result Octree::Rebuild(const BoundingBox &new_aabb)
 {
     DebugLog(LogType::Debug, "Rebuild octree\n");
 
-    std::vector<Node> new_nodes;
+    Array<Node> new_nodes;
     Clear(new_nodes);
 
     m_aabb = new_aabb;
@@ -653,16 +661,16 @@ void Octree::CopyVisibilityState(const VisibilityState &visibility_state)
     // m_visibility_state.bits.fetch_or(visibility_state.bits.load(std::memory_order_relaxed), std::memory_order_relaxed);
 }
 
-void Octree::CollectEntities(std::vector<Entity *> &out) const
+void Octree::CollectEntities(Array<Entity *> &out) const
 {
-    out.reserve(out.size() + m_nodes.size());
+    out.Reserve(out.Size() + m_nodes.Size());
 
     for (auto &node : m_nodes) {
-        out.push_back(node.entity);
+        out.PushBack(node.entity);
     }
 
     if (m_is_divided) {
-        for (auto &octant : m_octants) {
+        for (const Octant &octant : m_octants) {
             AssertThrow(octant.octree != nullptr);
 
             octant.octree->CollectEntities(out);
@@ -670,7 +678,7 @@ void Octree::CollectEntities(std::vector<Entity *> &out) const
     }
 }
 
-void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Entity *> &out) const
+void Octree::CollectEntitiesInRange(const Vector3 &position, Float radius, Array<Entity *> &out) const
 {
     const BoundingBox inclusion_aabb(position - radius, position + radius);
 
@@ -678,16 +686,16 @@ void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::
         return;
     }
 
-    out.reserve(out.size() + m_nodes.size());
+    out.Reserve(out.Size() + m_nodes.Size());
 
     for (auto &node : m_nodes) {
         if (inclusion_aabb.Intersects(node.aabb)) {
-            out.push_back(node.entity);
+            out.PushBack(node.entity);
         }
     }
 
     if (m_is_divided) {
-        for (auto &octant : m_octants) {
+        for (const Octant &octant : m_octants) {
             AssertThrow(octant.octree != nullptr);
 
             octant.octree->CollectEntitiesInRange(position, radius, out);
@@ -695,7 +703,7 @@ void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::
     }
 }
 
-bool Octree::GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> &out) const
+bool Octree::GetNearestOctants(const Vector3 &position, FixedArray<Octree *, 8> &out) const
 {
     if (!m_aabb.ContainsPoint(position)) {
         return false;
@@ -713,9 +721,30 @@ bool Octree::GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> 
         }
     }
 
-    for (SizeType i = 0; i < m_octants.size(); i++) {
-        out[i] = m_octants[i].octree.get();
+    for (SizeType i = 0; i < m_octants.Size(); i++) {
+        out[i] = m_octants[i].octree.Get();
     }
+
+    return true;
+}
+
+bool Octree::GetNearestOctant(const Vector3 &position, Octree const *&out) const
+{
+    if (!m_aabb.ContainsPoint(position)) {
+        return false;
+    }
+
+    if (m_is_divided) {
+        for (auto &octant : m_octants) {
+            AssertThrow(octant.octree != nullptr);
+
+            if (octant.octree->GetNearestOctant(position, out)) {
+                return true;
+            }
+        }
+    }
+
+    out = this;
 
     return true;
 }
@@ -809,6 +838,32 @@ void Octree::OnEntityRemoved(Entity *entity)
     }
 }
 
+void Octree::ResetNodesHash()
+{
+    m_nodes_hash = { 0 };
+}
+
+void Octree::RebuildNodesHash()
+{
+    ResetNodesHash();
+
+    if (m_parent) {
+        m_nodes_hash.Add(m_parent->GetNodesHash());
+    }
+
+    for (const Node &item : m_nodes) {
+        m_nodes_hash.Add(item.GetHashCode());
+    }
+
+    if (m_is_divided) {
+        for (const Octant &octant : m_octants) {
+            AssertThrow(octant.octree != nullptr);
+
+            octant.octree->RebuildNodesHash();
+        }
+    }
+}
+
 bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
 {
     bool has_hit = false;
@@ -828,7 +883,7 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
             if (ray.TestAABB(
                 node.aabb,
                 node.entity->GetID().value,
-                static_cast<void *>(node.entity),
+                (void *)node.entity,
                 out_results
             )) {
                 has_hit = true;

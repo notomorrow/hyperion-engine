@@ -271,6 +271,8 @@
 #define HYP_LIKELY(cond) cond
 #define HYP_UNLIKELY(cond) cond
 
+#define HYP_READER_DEFAULT_BUFFER_SIZE 2048
+
 //testing, to remove
 //#define HYP_FEATURES_BINDLESS_TEXTURES 0
 //#undef HYP_FEATURES_ENABLE_RAYTRACING

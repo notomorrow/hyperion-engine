@@ -3,29 +3,36 @@
 
 #include <script/compiler/emit/NamesPair.hpp>
 
+#include <core/lib/String.hpp>
+
+#include <Types.hpp>
+
 #include <string>
 #include <vector>
 
 namespace hyperion::compiler {
 
-struct StaticFunction {
-    uint32_t m_addr;
-    uint8_t m_nargs;
-    uint8_t m_flags;
+struct StaticFunction
+{
+    UInt32 m_addr;
+    UInt8 m_nargs;
+    UInt8 m_flags;
 };
 
-struct StaticTypeInfo {
-    uint8_t m_size;
-    char *m_name;
+struct StaticTypeInfo
+{
+    UInt8 m_size;
+    ANSIString m_name;
     std::vector<NamesPair_t> m_names;
 };
 
-struct StaticObject {
+struct StaticObject
+{
     int m_id;
 
     /*union*/ struct {
         int lbl;
-        char *str;
+        ANSIString str;
         StaticFunction func;
         StaticTypeInfo type_info;
     } m_value;

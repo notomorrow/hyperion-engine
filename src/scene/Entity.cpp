@@ -299,7 +299,7 @@ void Entity::UpdateOctree()
     AssertReady();
 
     if (Octree *octree = m_octree) {
-        const auto update_result = octree->Update(this);
+        const Octree::Result update_result = octree->Update(this);
 
         if (!update_result) {
             DebugLog(

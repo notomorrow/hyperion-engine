@@ -139,6 +139,7 @@ template <class KeyType, class ValueType>
 class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
 {
     static constexpr SizeType initial_bucket_size = 16;
+    static constexpr Double load_factor = 0.75;
 
     template <class IteratorType>
     static inline void AdvanceIteratorBucket(IteratorType &iter)
@@ -316,6 +317,8 @@ public:
     ConstIterator cend() const { return End(); }
 
 private:
+    void CheckAndRebuildBuckets();
+
     HashBucket<KeyType, ValueType> *GetBucketForHash(HashCode::ValueType hash);
     const HashBucket<KeyType, ValueType> *GetBucketForHash(HashCode::ValueType hash) const;
 
@@ -391,6 +394,29 @@ const HashBucket<KeyType, ValueType> *HashMap<KeyType, ValueType>::GetBucketForH
 #endif
 
     return &m_buckets[hash % m_buckets.Size()];
+}
+
+template <class KeyType, class ValueType>
+void HashMap<KeyType, ValueType>::CheckAndRebuildBuckets()
+{
+#if 0 // TODO
+    SizeType total_elements = 0;
+
+    for (const auto &bucket : m_buckets) {
+        total_elements += bucket.Size();
+    }
+
+    const Double current_load_factor = Double(total_elements) / Double(m_buckets.Size());
+
+    // TODO: Calculate # of buckets such that load factor is not exceeded
+
+    if (current_load_factor > load_factor) {
+        const Double load_factor_div = current_load_factor / load_factor;
+
+
+        Array<HashBucket<KeyType, ValueType>> new_buckets;
+    }
+#endif
 }
 
 template <class KeyType, class ValueType>
@@ -489,6 +515,8 @@ void HashMap<KeyType, ValueType>::SetElement(HashElement<KeyType, ValueType> &&e
 template <class KeyType, class ValueType>
 auto HashMap<KeyType, ValueType>::InsertElement(HashElement<KeyType, ValueType> &&element) -> InsertResult
 {
+    CheckAndRebuildBuckets();
+
     HashBucket<KeyType, ValueType> *bucket = GetBucketForHash(element.hash_code);
 
     auto bucket_it = bucket->Find(element.hash_code);

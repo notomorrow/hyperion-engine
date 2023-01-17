@@ -1,7 +1,7 @@
 [Default]
 DebugMode = true
 ShaderCompilation = true
-RTSupported = false
+RTSupported = true
 RTEnabled = false
 RTReflections = false
 RTGlobalIllumination = false
@@ -17,4 +17,4 @@ DebugSSR = false
 DebugHBAO = false
 DebugHBIL = false
 DebugReflections = false
-DebugIrradiance = false
+DebugIrradiance = true

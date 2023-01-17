@@ -20,7 +20,6 @@ struct LoaderState
     AssetManager *asset_manager;
     std::string filepath;
     BufferedReader<HYP_LOADER_BUFFER_SIZE> stream;
-    ; // deprecated
 };
 
 struct LoaderResult
@@ -35,7 +34,7 @@ struct LoaderResult
     };
 
     Status status = Status::OK;
-    std::string message;
+    ANSIString message;
 
     operator bool() const { return status == Status::OK; }
     bool operator==(Status status) const { return this->status == status; }

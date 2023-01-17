@@ -48,9 +48,9 @@ void AABBDebugController::OnAdded()
                 .vertex_attributes = vertex_attributes
             },
             MaterialAttributes {
-                .bucket = Bucket::BUCKET_TRANSLUCENT,
+                .bucket = Bucket::BUCKET_OPAQUE,
                 .fill_mode = FillMode::LINE,
-                .blend_mode = BlendMode::ADDITIVE,
+                .blend_mode = BlendMode::NORMAL,
                 .cull_faces = FaceCullMode::NONE,
                 .flags = 0x0
             }

@@ -1,5 +1,5 @@
-#ifndef MODULE_HPP
-#define MODULE_HPP
+#ifndef HYPERION_COMPILER_MODULE_HPP
+#define HYPERION_COMPILER_MODULE_HPP
 
 #include <script/compiler/Scope.hpp>
 #include <script/SourceLocation.hpp>
@@ -19,24 +19,31 @@ namespace hyperion::compiler {
 class Module
 {
 public:
-    Module(const std::string &name,
-        const SourceLocation &location);
+    Module(
+        const std::string &name,
+        const SourceLocation &location
+    );
+
     Module(const Module &other) = delete;
 
     const std::string &GetName() const
         { return m_name; }
+
     const SourceLocation &GetLocation() const
         { return m_location; }
     
     const std::unordered_set<std::string> &GetScanPaths() const
         { return m_scan_paths; }
+
     void AddScanPath(const std::string &path)
         { m_scan_paths.insert(path); }
 
     TreeNode<Module*> *GetImportTreeLink()
         { return m_tree_link; }
+
     const TreeNode<Module*> *GetImportTreeLink() const
         { return m_tree_link; }
+
     void SetImportTreeLink(TreeNode<Module*> *tree_link)
         { m_tree_link = tree_link; }
 
