@@ -153,9 +153,6 @@ vert = vct/voxelize.vert
 frag = vct/voxelize.frag
 vert = vct/voxelize.vert
 
-[VCTTemporalBlending]
-comp = vct/TemporalBlending.comp
-
 # RT
 
 [RTRadiance]

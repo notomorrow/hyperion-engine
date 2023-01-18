@@ -14,7 +14,7 @@ struct Object
     vec4 world_aabb_min;
 
     uint entity_index;
-    uint scene_index;
+    uint _unused;
     uint material_index;
     uint skeleton_index;
 

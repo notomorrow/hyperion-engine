@@ -256,6 +256,8 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
     irradiance = SphericalHarmonics(sph, N);
     irradiance = max(irradiance, vec3(0.0));
 
+    return irradiance;
+
     // const float cos_a0 = HYP_FMATH_PI;
     // const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
     // const float cos_a2 = HYP_FMATH_PI * 0.25;
