@@ -76,12 +76,13 @@ void EnvGrid::Init()
         m_camera = CreateObject<Camera>(
             90.0f,
             -Int(ambient_probe_dimensions.width), Int(ambient_probe_dimensions.height),
-            0.15f, (m_aabb * (Vector3::one / Vector3(m_density))).GetRadius() + 0.15f//(Vector3(m_aabb.GetRadius()) / Vector3(m_density)).Max()////
+            0.15f, (m_aabb * (Vector3::one / Vector3(m_density))).GetRadius() + 0.15f
         );
 
         m_camera->SetFramebuffer(m_framebuffer);
-
         InitObject(m_camera);
+
+        m_render_list.SetCamera(m_camera);
     }
 
     DebugLog(LogType::Info, "Created %llu total ambient EnvProbes in grid\n", num_ambient_probes);
@@ -142,13 +143,14 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
     GetParent()->GetScene()->CollectEntities(
         m_render_list,
         m_camera,
+        Bitset((1 << BUCKET_OPAQUE)),
         RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_INTERNAL,
-                .cull_faces = FaceCullMode::BACK
+                .cull_faces = FaceCullMode::NONE
             },
-            m_ambient_shader.GetID(),
+            m_ambient_shader->GetCompiledShader().GetDefinition(),
             Entity::InitInfo::ENTITY_FLAGS_INCLUDE_IN_INDIRECT_LIGHTING // override flags -- require this flag to be set
         ),
         true // skip frustum culling
@@ -259,7 +261,7 @@ void EnvGrid::CreateShader()
 {
     m_ambient_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(CubemapRenderer),
-        ShaderProps({ "MODE_AMBIENT" })
+        ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_AMBIENT" })
     );
 
     InitObject(m_ambient_shader);
@@ -274,48 +276,29 @@ void EnvGrid::CreateFramebuffer()
         6
     );
 
-    AttachmentUsage *attachment_usage;
-
-    m_attachments.push_back(std::make_unique<Attachment>(
-        std::make_unique<renderer::FramebufferImageCube>(
+    m_framebuffer->AddAttachment(
+        0,
+        RenderObjects::Make<Image>(renderer::FramebufferImageCube(
             ambient_probe_dimensions,
             InternalFormat::RGBA8_SRGB,
             nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentUsage(
-        Engine::Get()->GetGPUInstance()->GetDevice(),
+        )),
+        RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
+        renderer::StoreOperation::STORE
+    );
 
-    m_framebuffer->AddAttachmentUsage(attachment_usage);
-
-    m_attachments.push_back(std::make_unique<Attachment>(
-        std::make_unique<renderer::FramebufferImageCube>(
+    m_framebuffer->AddAttachment(
+        1,
+        RenderObjects::Make<Image>(renderer::FramebufferImageCube(
             ambient_probe_dimensions,
             Engine::Get()->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentUsage(
-        Engine::Get()->GetGPUInstance()->GetDevice(),
+        )),
+        RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
-
-    m_framebuffer->AddAttachmentUsage(attachment_usage);
-
-    // attachment should be created in render thread?
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
-    }
+        renderer::StoreOperation::STORE
+    );
 
     InitObject(m_framebuffer);
 }
@@ -334,9 +317,22 @@ void EnvGrid::RenderEnvProbe(
         push_constants.env_probe_index = probe->GetID().ToIndex();
 
         Engine::Get()->GetRenderState().SetActiveEnvProbe(probe->GetID());
+        Engine::Get()->GetRenderState().BindScene(GetParent()->GetScene());
 
-        GetParent()->GetScene()->Render(frame, m_camera, m_render_list, &push_constants, sizeof(push_constants));
+        m_render_list.CollectDrawCalls(
+            frame,
+            Bitset((1 << BUCKET_OPAQUE)),
+            nullptr
+        );
 
+        m_render_list.ExecuteDrawCalls(
+            frame,
+            Bitset((1 << BUCKET_OPAQUE)),
+            nullptr,
+            &push_constants
+        );
+
+        Engine::Get()->GetRenderState().UnbindScene();
         Engine::Get()->GetRenderState().UnsetActiveEnvProbe();
     }
     

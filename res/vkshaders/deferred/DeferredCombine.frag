@@ -15,15 +15,22 @@ layout(location=0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
+#include "../include/shadows.inc"
 // #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 55) uniform texture2D deferred_indirect_lighting;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 56) uniform texture2D deferred_direct_lighting;
 
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
-#define HYP_DEFERRED_NO_SSR // temp
-#define HYP_DEFERRED_NO_ENV_PROBE // temp
+// #define HYP_DEFERRED_NO_ENV_PROBE // temp
 #include "./DeferredLighting.glsl"
+#include "../include/env_probe.inc"
+
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
+{
+    EnvProbe current_env_probe;
+};
 
 layout(push_constant) uniform DeferredCombineData
 {
@@ -67,20 +74,11 @@ void RefractionSolidSphere(
 
 void main()
 {
-    // const uvec2 index = gl_GlobalInvocationID.xy;
-
-    // if (any(greaterThanEqual(index, image_dimensions))) {
-    //     return;
-    // }
-
-    // const vec2 texcoord = vec2(index) / vec2(image_dimensions - 1);
-
     vec4 indirect_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
     indirect_lighting.a = 1.0;
 
-    vec4 direct_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_direct_lighting, texcoord);
-
     vec4 forward_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
+    vec3 albedo = forward_result.rgb;
 
     vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord);
     const float roughness = material.r;
@@ -96,57 +94,129 @@ void main()
     const vec3 V = normalize(camera.position.xyz - position.xyz);
     const vec3 R = normalize(reflect(-V, N));
 
-    vec4 result = vec4(
-        (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
-        1.0
-    );
+    const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
-    if (transmission > 0.0) {
+    vec3 L = light.position_intensity.xyz;
+    L -= position.xyz * float(min(light.type, 1));
+    L = normalize(L);
+
+    const vec3 H = normalize(L + V);
+    const float NdotL = max(0.0001, dot(N, L));
+    const float NdotH = max(0.0001, dot(N, H));
+    const float LdotH = max(0.0001, dot(L, H));
+    const float HdotV = max(0.0001, dot(H, V));
+
+    // vec4 result = vec4(
+    //     (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
+    //     1.0
+    // );
+
+    vec4 result = indirect_lighting;
+
+    vec4 forward_lit_result = vec4(0.0, 0.0, 0.0, forward_result.a);
+
+    if (bool(object_mask & 0x02)) {
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
         const vec3 F0 = CalculateF0(forward_result.rgb, metalness);
-        const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
+        vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
 
-        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
-        const vec3 E = mix(dfg.xxx, dfg.yyy, F0);
+        vec3 Ft = vec3(0.0);
+        vec3 Fr = vec3(0.0);
+        vec3 Fd = vec3(0.0);
 
-        vec3 Ft = CalculateRefraction(
-            image_dimensions,
-            P, N, V,
-            texcoord,
-            F0, E,
-            transmission, roughness,
-            result, forward_result,
-            vec3(ao)
-        );
+        vec3 irradiance = vec3(0.0);
+        vec4 ibl = vec4(0.0);
+        vec4 reflections = vec4(0.0);
 
-        vec3 Fd = forward_result.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (1.0 * ao/* diffuse BRDF */);
+        { // irradiance
+            const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
+
+            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 E = CalculateE(F0, dfg);
+            const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+
+            Ft = CalculateRefraction(
+                image_dimensions,
+                P, N, V,
+                texcoord,
+                F0, E,
+                transmission, roughness,
+                result, forward_result,
+                vec3(ao)
+            );
+
+    #ifdef ENV_GRID_ENABLED
+            CalculateEnvProbeIrradiance(deferred_params, P, N, irradiance);
+    #endif
+
+            Fd = forward_result.rgb * irradiance * (1.0 - E) * ao;
+
+    #ifdef REFLECTION_PROBE_ENABLED
+            // ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
+            ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
+            ibl.a = saturate(ibl.a);
+    #endif
+
+    #ifdef SSR_ENABLED
+            CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
+    #endif
+
+            vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+            specular_ao *= energy_compensation;
+
+            vec3 reflection_combined = (ibl.rgb * (1.0 - reflections.a)) + (reflections.rgb);
+            Fr = reflection_combined * E * specular_ao;
+        }
+
+        Ft *= transmission;
         Fd *= (1.0 - transmission);
 
+        forward_lit_result.rgb += Ft + Fd;
 
-        vec3 ibl = vec3(0.0);
+        { // direct lighting
+            float shadow = 1.0;
 
-// #ifdef ENV_PROBE_ENABLED
-//         ibl = CalculateEnvProbeReflection(deferred_params, position.xyz, N, R, perceptual_roughness);
-// #endif
+            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+                shadow = GetShadow(light.shadow_map_index, P, texcoord, NdotL);
+            }
 
-        vec3 Fr = E * ibl;
-        
+            vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb;
 
-        // TODO: Specular highlight, irradiance...
+            const float D = CalculateDistributionTerm(roughness, NdotH);
+            const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+            const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
-        result.rgb = Ft + Fd + Fr;
+            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 E = CalculateE(F0, dfg);
+            const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-    } else {
-        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
+            const vec3 diffuse_color = CalculateDiffuseColor(albedo, metalness);
+            const vec3 specular_lobe = D * G * F;
+
+            vec3 specular = specular_lobe;
+
+            const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+                ? GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz, light.radius)
+                : 1.0;
+
+            vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
+            vec3 diffuse = diffuse_lobe;
+            diffuse *= (1.0 - transmission);
+
+            vec3 direct_component = diffuse + specular * energy_compensation;
+
+            // direct_component.rgb *= (exposure);
+            Fr += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
+        }
+
+        forward_lit_result.rgb += Fr;
+
+        result.rgb = (forward_lit_result.rgb * forward_lit_result.a) + (result.rgb * (1.0 - forward_lit_result.a));
+    } else {//if (bool(object_mask & 0x04)) {
+        result.rgb += forward_result.rgb * forward_result.a;
     }
 
     result.a = 1.0;
-    
-    // result = vec4(forward_result.a, 0.0, 0.0, 1.0);
-
-    // TODO: Do post FX combine here instead of in blit.frag
-    
-    // imageStore(combined_result, ivec2(index), result);
 
     color_output = result;
 }

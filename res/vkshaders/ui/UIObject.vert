@@ -10,12 +10,12 @@ layout (location = 1) out vec3 v_screen_space_position;
 layout (location = 2) out vec2 v_texcoord0;
 layout (location = 3) out flat uint v_object_index;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
+HYP_ATTRIBUTE(0) vec3 a_position;
+HYP_ATTRIBUTE(1) vec3 a_normal;
+HYP_ATTRIBUTE(2) vec2 a_texcoord0;
+HYP_ATTRIBUTE(3) vec2 a_texcoord1;
+HYP_ATTRIBUTE(4) vec3 a_tangent;
+HYP_ATTRIBUTE(5) vec3 a_bitangent;
 
 #include "../include/scene.inc"
 

@@ -234,31 +234,8 @@ void RenderGroup::CollectDrawCalls(Frame *frame)
 
     DrawCallCollection previous_draw_state = std::move(m_draw_state);
 
-    const auto &scene_binding = Engine::Get()->render_state.GetScene();
-    const ID<Scene> scene_id = scene_binding.id;
-
-    // check visibility state
-    const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.material_attributes.bucket);
-    const UInt8 visibility_cursor = Engine::Get()->render_state.visibility_cursor;
-    const VisibilityStateSnapshot &octree_visibility_state_snapshot = Engine::Get()->GetWorld()->GetOctree().GetVisibilityState().snapshots[visibility_cursor];
-
     for (EntityDrawProxy &draw_proxy : m_draw_proxies) {
-
-        if (draw_proxy.mesh == nullptr) {
-            continue;
-        }
-
-        /*if (perform_culling) {
-            const auto &snapshot = entity->GetVisibilityState().snapshots[visibility_cursor];
-
-            if (!snapshot.ValidToParent(octree_visibility_state_snapshot)) {
-                continue;
-            }
-
-            if (!snapshot.Get(scene_id)) {
-                continue;
-            }
-        }*/
+        AssertThrow(draw_proxy.mesh_id.IsValid());
 
         DrawCallID draw_call_id;
 
@@ -290,6 +267,8 @@ void RenderGroup::CollectDrawCalls(Frame *frame)
         m_indirect_renderer.GetDrawState().PushDrawCall(draw_call, draw_command_data);
         draw_call.draw_command_index = draw_command_data.draw_command_index;
     }
+
+    m_draw_proxies.Clear();
 }
 
 void RenderGroup::CollectDrawCalls(Frame *frame, const CullData &cull_data)
@@ -443,7 +422,8 @@ RenderAll(
     renderer::GraphicsPipeline *pipeline,
     IndirectRenderer *indirect_renderer,
     Array<Array<DrawCall>> &divided_draw_calls,
-    const DrawCallCollection &draw_state
+    const DrawCallCollection &draw_state,
+    const RenderResourceManager &render_resources
 )
 {
     if (draw_state.draw_calls.Empty()) {
@@ -476,7 +456,7 @@ RenderAll(
         TASK_PRIORITY_HIGH,
         num_batches,
         divided_draw_calls,
-        [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index](const Array<DrawCall> &draw_calls, UInt index, UInt) {
+        [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index, &render_resources](const Array<DrawCall> &draw_calls, UInt index, UInt) {
             if (draw_calls.Empty()) {
                 return;
             }
@@ -506,6 +486,11 @@ RenderAll(
                             draw_call.skeleton_id.ToIndex(),
                             draw_call.material_id.ToIndex()
                         );
+
+#ifdef HYP_DEBUG_MODE
+                        AssertThrowMsg(render_resources.IsUsed(draw_call.mesh_id), "Mesh ID not in used resource map; dangling pointer is possible!");
+                        AssertThrowMsg(render_resources.IsUsed(draw_call.material_id), "Material ID not in used resource map; dangling pointer is possible!");
+#endif
 
                         if constexpr (IsIndirect) {
 #ifdef HYP_DEBUG_MODE
@@ -538,7 +523,7 @@ RenderAll(
             ->SubmitSecondary(frame->GetCommandBuffer());
     }
 
-    command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % static_cast<UInt>(command_buffers.Size());
+    command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % UInt(command_buffers.Size());
 }
 
 void RenderGroup::PerformRendering(Frame *frame)
@@ -557,7 +542,8 @@ void RenderGroup::PerformRendering(Frame *frame)
         m_pipeline.get(),
         &m_indirect_renderer,
         m_divided_draw_calls,
-        m_draw_state
+        m_draw_state,
+        m_render_resources
     );
 }
 
@@ -577,7 +563,8 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
         m_pipeline.get(),
         &m_indirect_renderer,
         m_divided_draw_calls,
-        m_draw_state
+        m_draw_state,
+        m_render_resources
     );
 }
 
@@ -588,10 +575,49 @@ void RenderGroup::Render(Frame *frame)
     PerformRendering(frame);
 }
 
+void RenderGroup::SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    m_draw_proxies = draw_proxies;
+
+    UpdateDrawableLifetimes();
+}
+
 void RenderGroup::SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies)
 {
     Threads::AssertOnThread(THREAD_RENDER);
+
     m_draw_proxies = std::move(draw_proxies);
+
+    UpdateDrawableLifetimes();
+}
+
+void RenderGroup::UpdateDrawableLifetimes()
+{
+    RenderResourceManager previous_resources = std::move(m_render_resources);
+
+    // prevent these objects from going out of scope while rendering is happening
+    // register any used objects from the drawable / draw call here
+    for (const EntityDrawProxy &draw_proxy : m_draw_proxies) {
+        m_render_resources.SetIsUsed(
+            draw_proxy.mesh_id,
+            previous_resources.TakeResourceUsage(draw_proxy.mesh_id),
+            true
+        );
+
+        m_render_resources.SetIsUsed(
+            draw_proxy.material_id,
+            previous_resources.TakeResourceUsage(draw_proxy.material_id),
+            true
+        );
+
+        m_render_resources.SetIsUsed(
+            draw_proxy.skeleton_id,
+            previous_resources.TakeResourceUsage(draw_proxy.skeleton_id),
+            true
+        );
+    }
 }
 
 // Proxied methods

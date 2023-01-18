@@ -7,14 +7,14 @@ layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
 layout(location=3) out flat uint v_object_index;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
-layout (location = 6) in vec4 a_bone_weights;
-layout (location = 7) in vec4 a_bone_indices;
+HYP_ATTRIBUTE(0) vec3 a_position;
+HYP_ATTRIBUTE(1) vec3 a_normal;
+HYP_ATTRIBUTE(2) vec2 a_texcoord0;
+HYP_ATTRIBUTE(3) vec2 a_texcoord1;
+HYP_ATTRIBUTE(4) vec3 a_tangent;
+HYP_ATTRIBUTE(5) vec3 a_bitangent;
+HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
+HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #include "include/scene.inc"
 

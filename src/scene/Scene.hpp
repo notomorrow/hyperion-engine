@@ -74,6 +74,12 @@ public:
 
     void SetCamera(Handle<Camera> &&camera);
 
+    RenderList &GetRenderList()
+        { return m_render_list; }
+
+    const RenderList &GetRenderList() const
+        { return m_render_list; }
+
     /*! \brief Add the Entity to a new Node attached to the root.
      * @returns If successfully added, returns the NodeProxy which the Entity was attached to. Otherwise, returns an empty NodeProxy.
      */
@@ -178,17 +184,17 @@ public:
     void CollectEntities(
         RenderList &render_list, 
         const Handle<Camera> &camera,
+        const Bitset &bucket_bits,
         Optional<RenderableAttributeSet> override_attributes = { },
         bool skip_frustum_culling = false
-    );
+    ) const;
 
-    void Render(
-        Frame *frame,
+    void CollectEntities(
+        RenderList &render_list, 
         const Handle<Camera> &camera,
-        const RenderList &render_list,
-        const void *push_constant_ptr = nullptr,
-        SizeType push_constant_size = 0
-    );
+        Optional<RenderableAttributeSet> override_attributes = { },
+        bool skip_frustum_culling = false
+    ) const;
 
 private:
     // World only calls
@@ -202,6 +208,8 @@ private:
     bool IsEntityInFrustum(const Handle<Entity> &entity, ID<Camera> camera_id) const;
 
     Handle<Camera> m_camera;
+    RenderList m_render_list;
+
     NodeProxy m_root_node_proxy;
     UniquePtr<RenderEnvironment> m_environment;
     World *m_world;
@@ -218,7 +226,7 @@ private:
     FlatSet<ID<Entity>> m_entities_pending_removal;
     FlatSet<Handle<Entity>> m_entities_pending_addition;
 
-    // TODO: Move to RenderEnvironment
+
     Handle<TLAS> m_tlas;
 
     Matrix4 m_last_view_projection_matrix;

@@ -42,9 +42,6 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
-
-
 void main()
 {
     vec3 view_vector = normalize(v_camera_position - v_position);
@@ -57,10 +54,12 @@ void main()
     vec3 reflection_vector = reflect(view_vector, normal);
     
     gbuffer_albedo = CURRENT_MATERIAL.albedo;
+    gbuffer_albedo.a = 1.0;
     
     float ao  = 1.0;
     float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
+    float transmission = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_TRANSMISSION);
     
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
     
@@ -91,7 +90,7 @@ void main()
     // gbuffer_albedo.rgb = vec3(0.5, 0.8, 0.35) * 0.15;
 
     // lerp to rock based on slope
-    gbuffer_albedo.rgb = mix(gbuffer_albedo.rgb, vec3(0.11), 1.0 - smoothstep(0.45, 0.65, abs(dot(normal, vec3(0.0, 1.0, 0.0)))));
+    // gbuffer_albedo.rgb = mix(gbuffer_albedo.rgb, vec3(0.11), 1.0 - smoothstep(0.45, 0.65, abs(dot(normal, vec3(0.0, 1.0, 0.0)))));
 
     // gbuffer_albedo.a = 0.0;// no lighting for now
 
@@ -123,7 +122,7 @@ void main()
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(roughness, metalness, 0.0, ao);
+    gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object) | OBJECT_MASK_TERRAIN);

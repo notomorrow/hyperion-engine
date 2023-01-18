@@ -224,9 +224,9 @@ struct RENDER_COMMAND(DestroyMaterialDescriptors) : RenderCommand
                 continue;
             }
 
-            if (descriptor_pool.IsCreated()) { // creating at runtime, after descriptor sets all created
-                HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Destroy(Engine::Get()->GetGPUDevice()));
-            }
+            // if (descriptor_pool.IsCreated()) { // creating at runtime, after descriptor sets all created
+            //     HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Destroy(Engine::Get()->GetGPUDevice()));
+            // }
 
             descriptor_pool.RemoveDescriptorSet(descriptor_sets[frame_index]);
             descriptor_sets[frame_index] = nullptr;
@@ -255,7 +255,7 @@ Material::ParameterTable Material::DefaultParameters()
     parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
     parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
-    parameters.Set(MATERIAL_KEY_NORMAL_MAP_INTENSITY, 1.0f);
+    parameters.Set(MATERIAL_KEY_NORMAL_MAP_INTENSITY, 8.0f);
     parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
     parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.05f);
 
@@ -397,19 +397,16 @@ void Material::EnqueueRenderUpdates()
                 GetParameter<Float>(MATERIAL_KEY_TRANSMISSION),
                 GetParameter<Float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY)
             )),
-            0, 0,
-            ByteUtil::PackColorU32(Vector4(
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f
-            ))
+            ByteUtil::PackColorU32(Vector4()),
+            ByteUtil::PackColorU32(Vector4()),
+            ByteUtil::PackColorU32(Vector4())
         ),
         .uv_scale = GetParameter<Vector2>(MATERIAL_KEY_UV_SCALE),
         .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
     };
 
-    RenderCommands::Push<RENDER_COMMAND(UpdateMaterialRenderData)>(
+    PUSH_RENDER_COMMAND(
+        UpdateMaterialRenderData,
         m_id,
         shader_data,
         num_bound_textures,

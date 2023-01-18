@@ -142,14 +142,16 @@ public:
     // render non-indirect (collects draw calls, then renders)
     void Render(Frame *frame);
 
+    void SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies);
     void SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies);
 
     RendererProxy GetProxy()
         { return RendererProxy(this); }
 
 private:
+    void UpdateDrawableLifetimes();
+
     void BindDescriptorSets(
-        
         CommandBuffer *command_buffer,
         UInt scene_index
     );
@@ -181,6 +183,7 @@ private:
     Array<EntityDrawProxy> m_draw_proxies;
 
     DrawCallCollection m_draw_state;
+    RenderResourceManager m_render_resources;
 };
 
 } // namespace hyperion::v2

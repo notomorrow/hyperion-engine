@@ -101,8 +101,9 @@ void UIRenderer::Init()
     AssertThrow(m_scene->GetCamera().IsValid());
 
     m_scene->GetCamera()->SetFramebuffer(m_framebuffer);
-
     InitObject(m_scene);
+
+    m_render_list.SetCamera(m_scene->GetCamera());
 
     SetReady(true);
 }
@@ -145,7 +146,21 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void UIRenderer::OnRender(Frame *frame)
 {
-    m_scene->Render(frame, m_scene->GetCamera(), m_render_list);
+    Engine::Get()->GetRenderState().BindScene(m_scene.Get());
+
+    m_render_list.CollectDrawCalls(
+        frame,
+        Bitset((1 << BUCKET_UI)),
+        nullptr
+    );
+
+    m_render_list.ExecuteDrawCalls(
+        frame,
+        Bitset((1 << BUCKET_UI)),
+        nullptr
+    );
+
+    Engine::Get()->GetRenderState().UnbindScene();
 }
 
 } // namespace hyperion::v2

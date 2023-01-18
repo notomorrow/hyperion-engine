@@ -257,7 +257,7 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ //InternalFormat::R11G11B10F,
+            std::array{ //InternalFormat::RG16,
                         InternalFormat::RGBA16F,
                         InternalFormat::RGBA32F,
                         InternalFormat::RGBA8 },
@@ -290,11 +290,19 @@ void Engine::PrepareFinalPass()
 
     ShaderProps final_output_props;
     final_output_props.Set("TEMPORAL_AA", GetConfig().Get(CONFIG_TEMPORAL_AA));
-    final_output_props.Set("DEBUG_SSR", GetConfig().Get(CONFIG_DEBUG_SSR));
-    final_output_props.Set("DEBUG_HBAO", GetConfig().Get(CONFIG_DEBUG_HBAO));
-    final_output_props.Set("DEBUG_HBIL", GetConfig().Get(CONFIG_DEBUG_HBIL));
-    final_output_props.Set("DEBUG_REFLECTIONS", GetConfig().Get(CONFIG_DEBUG_REFLECTIONS));
-    final_output_props.Set("DEBUG_IRRADIANCE", GetConfig().Get(CONFIG_DEBUG_IRRADIANCE));
+
+    if (GetConfig().Get(CONFIG_DEBUG_SSR)) {
+        final_output_props.Set("DEBUG_SSR");
+    } else if (GetConfig().Get(CONFIG_DEBUG_HBAO)) {
+        final_output_props.Set("DEBUG_HBAO");
+    } else if (GetConfig().Get(CONFIG_DEBUG_HBIL)) {
+        final_output_props.Set("DEBUG_HBIL");
+    } else if (GetConfig().Get(CONFIG_DEBUG_REFLECTIONS)) {
+        final_output_props.Set("DEBUG_REFLECTIONS");
+    } else if (GetConfig().Get(CONFIG_DEBUG_IRRADIANCE)) {
+        final_output_props.Set("DEBUG_IRRADIANCE");
+    }
+
     final_output_props.Set("OUTPUT_SRGB", renderer::IsSRGBFormat(m_instance->swapchain->image_format));
 
     auto shader = GetShaderManager().GetOrCreate(
@@ -307,20 +315,20 @@ void Engine::PrepareFinalPass()
     UInt iteration = 0;
 
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
+        RenderObjects::Make<Image>(renderer::FramebufferImage2D(
             m_instance->swapchain->extent,
             m_instance->swapchain->image_format,
             nullptr
-        ),
+        )),
         renderer::RenderPassStage::PRESENT
     ));
 
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
+        RenderObjects::Make<Image>(renderer::FramebufferImage2D(
             m_instance->swapchain->extent,
             m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
-        ),
+        )),
         renderer::RenderPassStage::PRESENT
     ));
     
@@ -328,7 +336,7 @@ void Engine::PrepareFinalPass()
         HYPERION_ASSERT_RESULT(attachment->Create(m_instance->GetDevice()));
     }
 
-    for (VkImage img : m_instance->swapchain->images) {
+    for (renderer::PlatformImage img : m_instance->swapchain->images) {
         auto fbo = CreateObject<Framebuffer>(
             m_instance->swapchain->extent,
             renderer::RenderPassStage::PRESENT,
@@ -883,12 +891,12 @@ void Engine::Initialize(RefCountedPtr<Application> application)
     m_running.store(true);
 
     PrepareFinalPass();
+
+    Compile();
 }
 
 void Engine::Compile()
 {
-    Threads::AssertOnThread(THREAD_MAIN);
-
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         /* Finalize env probes */
         shader_globals->env_probes.UpdateBuffer(m_instance->GetDevice(), i);
@@ -1035,11 +1043,11 @@ void Engine::RenderNextFrame(Game *game)
 
 Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &renderable_attributes)
 {
-    Handle<Shader> shader(renderable_attributes.shader_id);
+    Handle<Shader> shader = GetShaderManager().GetOrCreate(renderable_attributes.shader_def);
 
     if (!shader) {
         DebugLog(
-            LogType::Warn,
+            LogType::Error,
             "Shader is empty; Cannot create RenderGroup.\n"
         );
 
@@ -1048,8 +1056,14 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
 
     // create a RenderGroup with the given params
     auto renderer_instance = CreateObject<RenderGroup>(
-        Handle<Shader>(shader),
+        std::move(shader),
         renderable_attributes
+    );
+
+    DebugLog(
+        LogType::Debug,
+        "Created RenderGroup for RenderableAttributeSet with hash %llu\n",
+        renderable_attributes.GetHashCode().Value()
     );
 
     std::lock_guard guard(m_render_group_mapping_mutex);
@@ -1067,7 +1081,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
 {
     if (!shader) {
         DebugLog(
-            LogType::Warn,
+            LogType::Error,
             "Shader is empty; Cannot create RenderGroup.\n"
         );
 
@@ -1075,7 +1089,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
     }
 
     RenderableAttributeSet new_renderable_attributes(renderable_attributes);
-    new_renderable_attributes.shader_id = shader->GetID();
+    new_renderable_attributes.shader_def = shader->GetCompiledShader().GetDefinition();
 
     auto &render_list_bucket = m_render_list_container.Get(new_renderable_attributes.material_attributes.bucket);
 

@@ -45,7 +45,6 @@ struct RENDER_COMMAND(UpdateEntityRenderData) : RenderCommand
                 .world_aabb_max = Vector4(draw_proxy.bounding_box.max, 1.0f),
                 .world_aabb_min = Vector4(draw_proxy.bounding_box.min, 1.0f),
                 .entity_index = draw_proxy.entity_id.ToIndex(),
-                .scene_index = draw_proxy.scene_id.ToIndex(),
                 .material_index = draw_proxy.material_id.ToIndex(),
                 .skeleton_index = draw_proxy.skeleton_id.ToIndex(),
                 .bucket = UInt32(draw_proxy.bucket),
@@ -120,9 +119,9 @@ void Entity::Init()
 
     EngineComponentBase::Init();
 
-    if (!m_shader) {
-        SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward)));
-    }
+    // if (!m_shader) {
+    //     SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward)));
+    // }
 
     m_draw_proxy.entity_id = m_id;
     m_previous_transform_matrix = m_transform.GetMatrix();
@@ -264,19 +263,13 @@ void Entity::EnqueueRenderUpdates()
         ? m_mesh->GetID()
         : Mesh::empty_id;
 
-    const ID<Scene> scene_id = m_scenes.Any()
-        ? m_scenes.Front() // TODO: Review this.
-        : Scene::empty_id;
-
     EntityDrawProxy draw_proxy {
-        .mesh = m_mesh.Get(),
-        .material = m_material.Get(),
         .entity_id = m_id,
-        .scene_id = scene_id,
         .mesh_id = mesh_id,
         .material_id = material_id,
         .skeleton_id = skeleton_id,
         .bounding_box = m_world_aabb,
+        .mesh = m_mesh.Get(),
         .bucket = m_renderable_attributes.material_attributes.bucket
     };
 
@@ -385,7 +378,7 @@ void Entity::SetShader(Handle<Shader> &&shader)
         }
 
         RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-        new_renderable_attributes.shader_id = m_shader->GetID();
+        new_renderable_attributes.shader_def = m_shader->GetCompiledShader().GetDefinition();
         SetRenderableAttributes(new_renderable_attributes);
     } else {
         RebuildRenderableAttributes();
@@ -531,9 +524,37 @@ void Entity::RebuildRenderableAttributes()
         new_renderable_attributes.mesh_attributes.vertex_attributes |= renderer::skeleton_vertex_attributes;
     }
 
-    new_renderable_attributes.shader_id = m_shader
-        ? m_shader->GetID()
-        : Shader::empty_id;
+    if (m_shader && m_mesh) {
+        const VertexAttributeSet shader_vertex_attributes = m_shader->GetCompiledShader().GetProperties().GetRequiredVertexAttributes();
+
+        if (shader_vertex_attributes != new_renderable_attributes.mesh_attributes.vertex_attributes) {
+            ShaderProps modified_shader_properties(m_shader->GetCompiledShader().GetProperties());
+            modified_shader_properties.SetRequiredVertexAttributes(new_renderable_attributes.mesh_attributes.vertex_attributes);
+
+            DebugLog(
+                LogType::Debug,
+                "Entity #%u vertex attributes do not match shader #%u vertex attributes, grabbing new shader\n",
+                GetID().Value(),
+                m_shader->GetID().Value()
+            );
+
+            m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
+                m_shader->GetName(),
+                modified_shader_properties
+            );
+
+            InitObject(m_shader);
+
+            AssertThrowMsg(
+                m_shader.IsValid(),
+                "Invalid shader after grabbing new one because vertex attributes did not match requirements!"
+            );
+        }
+
+        new_renderable_attributes.shader_def = m_shader->GetCompiledShader().GetDefinition();
+    } else {
+        new_renderable_attributes.shader_def = { };
+    }
 
     SetRenderableAttributes(new_renderable_attributes);
 }

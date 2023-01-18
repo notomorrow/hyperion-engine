@@ -92,6 +92,7 @@ void Scene::Init()
     EngineComponentBase::Init();
 
     InitObject(m_camera);
+    m_render_list.SetCamera(m_camera);
 
     if (IsWorldScene()) {
         if (!m_tlas) {
@@ -202,8 +203,9 @@ void Scene::Init()
 void Scene::SetCamera(Handle<Camera> &&camera)
 {
     m_camera = std::move(camera);
-
     InitObject(m_camera);
+
+    m_render_list.SetCamera(m_camera);
 }
 
 void Scene::SetWorld(World *world)
@@ -638,32 +640,6 @@ void Scene::Update(GameCounter::TickUnit delta)
         light->SetIsVisible(camera_id, is_light_in_frustum);
     }
 
-    m_draw_collection.Reset();
-
-    const RenderableAttributeSet *override_attributes = m_override_renderable_attributes.TryGet();
-    const UInt32 override_flags = override_attributes ? override_attributes->override_flags : 0;
-    
-    // update each entity
-    for (auto &it : m_entities) {
-        Handle<Entity> &entity = it.second;
-
-        entity->Update(delta);
-
-        if ((!override_flags || entity->HasFlags(override_flags)) && entity->IsRenderable() && IsEntityInFrustum(entity)) {
-            PushEntityToRender(entity, override_attributes);
-        }
-    }
-
-    if (m_parent_scene) {
-        for (auto &it : m_parent_scene->GetEntities()) {
-            Handle<Entity> &entity = it.second;
-
-            if ((!override_flags || entity->HasFlags(override_flags)) && entity->IsRenderable() && IsEntityInFrustum(entity)) {
-                PushEntityToRender(entity, override_attributes);
-            }
-        }
-    }
-
     if (IsWorldScene()) {
         // update render environment
         m_environment->Update(delta);
@@ -694,13 +670,15 @@ void Scene::Update(GameCounter::TickUnit delta)
 void Scene::CollectEntities(
     RenderList &render_list,
     const Handle<Camera> &camera,
+    const Bitset &bucket_bits,
     Optional<RenderableAttributeSet> override_attributes,
     bool skip_frustum_culling
-)
+) const
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    render_list.m_draw_collection.Reset();
+    // clear out existing entities before populating
+    render_list.ClearEntities();
 
     if (!camera) {
         return;
@@ -709,10 +687,46 @@ void Scene::CollectEntities(
     const ID<Camera> camera_id = camera->GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
+    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->override_flags : 0;
     
     // push all entities to render if they are visible to the given camera
     for (auto &it : m_entities) {
-        Handle<Entity> &entity = it.second;
+        const Handle<Entity> &entity = it.second;
+
+        if (
+            entity->IsRenderable()
+            && bucket_bits.Test(entity->GetRenderableAttributes().material_attributes.bucket)
+            && (skip_frustum_culling || IsEntityInFrustum(entity, camera_id))
+        ) {
+            render_list.PushEntityToRender(camera, entity, override_attributes_ptr);
+        }
+    }
+}
+
+void Scene::CollectEntities(
+    RenderList &render_list,
+    const Handle<Camera> &camera,
+    Optional<RenderableAttributeSet> override_attributes,
+    bool skip_frustum_culling
+) const
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    // clear out existing entities before populating
+    render_list.ClearEntities();
+
+    if (!camera) {
+        return;
+    }
+
+    const ID<Camera> camera_id = camera->GetID();
+
+    RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
+    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->override_flags : 0;
+    
+    // push all entities to render if they are visible to the given camera
+    for (auto &it : m_entities) {
+        const Handle<Entity> &entity = it.second;
 
         if (entity->IsRenderable() && (skip_frustum_culling || IsEntityInFrustum(entity, camera_id))) {
             render_list.PushEntityToRender(camera, entity, override_attributes_ptr);
@@ -728,49 +742,6 @@ bool Scene::IsEntityInFrustum(const Handle<Entity> &entity, ID<Camera> camera_id
 
     return entity->GetRenderableAttributes().material_attributes.bucket == BUCKET_UI
         || entity->IsVisibleToCamera(camera_id);
-}
-
-void Scene::Render(
-    Frame *frame,
-    const Handle<Camera> &camera,
-    const RenderList &render_list,
-    const void *push_constant_ptr,
-    SizeType push_constant_size
-)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    AssertThrowMsg(camera.IsValid(), "Cannot render with invalid Camera");
-    AssertThrowMsg(camera->GetFramebuffer().IsValid(), "Camera has no Framebuffer is attached");
-
-    CommandBuffer *command_buffer = frame->GetCommandBuffer();
-    const UInt frame_index = frame->GetFrameIndex();
-
-    camera->GetFramebuffer()->BeginCapture(frame_index, command_buffer);
-
-    Engine::Get()->GetRenderState().BindScene(this);
-    Engine::Get()->GetRenderState().BindCamera(camera.Get());
-
-    // TODO: Thread safe container here. This is written from game thread, read from render thread...
-    // TODO: If all drawables have been removed, remove the render group?
-
-    for (const auto &it : render_list.m_render_groups) {
-        AssertThrowMsg(
-            it.first.framebuffer_id == camera->GetFramebuffer()->GetID(),
-            "Given Camera's Framebuffer ID does not match RenderList item framebuffer ID -- invalid data passed?"
-        );
-
-        if (push_constant_ptr && push_constant_size) {
-            it.second->GetPipeline()->SetPushConstants(push_constant_ptr, push_constant_size);
-        }
-
-        it.second->Render(frame);
-    }
-
-    Engine::Get()->GetRenderState().UnbindCamera();
-    Engine::Get()->GetRenderState().UnbindScene();
-
-    camera->GetFramebuffer()->EndCapture(frame_index, command_buffer);
 }
 
 void Scene::EnqueueRenderUpdates()

@@ -53,6 +53,8 @@ void Voxelizer::Init()
 
     InitObject(m_camera);
 
+    m_render_list.SetCamera(m_camera);
+
     OnTeardown([this]() {
         m_camera.Reset();
         m_render_list.Reset();
@@ -239,7 +241,7 @@ void Voxelizer::ResizeFragmentListBuffer(Frame *)
     descriptor_set->ApplyUpdates(Engine::Get()->GetGPUInstance()->GetDevice());
 }
 
-void Voxelizer::RenderFragmentList(Frame *frame, Scene *scene, bool count_mode)
+void Voxelizer::RenderFragmentList(Frame *frame, const Scene *scene, bool count_mode)
 {
     AssertThrow(scene != nullptr);
 
@@ -256,7 +258,22 @@ void Voxelizer::RenderFragmentList(Frame *frame, Scene *scene, bool count_mode)
         push_constants.grid_size = voxel_map_size;
         push_constants.count_mode = UInt32(count_mode);
         
-        scene->Render(&temp_frame, m_camera, m_render_list, &push_constants, sizeof(push_constants));
+        Engine::Get()->GetRenderState().BindScene(scene);
+
+        m_render_list.CollectDrawCalls(
+            frame,
+            Bitset((1 << BUCKET_OPAQUE)),
+            nullptr
+        );
+
+        m_render_list.ExecuteDrawCalls(
+            &temp_frame,
+            Bitset(1 << BUCKET_OPAQUE),
+            nullptr,
+            &push_constants
+        );
+
+        Engine::Get()->GetRenderState().UnbindScene();
 
         HYPERION_RETURN_OK;
     });
@@ -264,7 +281,7 @@ void Voxelizer::RenderFragmentList(Frame *frame, Scene *scene, bool count_mode)
     HYPERION_ASSERT_RESULT(single_time_commands.Execute(Engine::Get()->GetGPUDevice()));
 }
 
-void Voxelizer::CollectEntities(Scene *scene)
+void Voxelizer::CollectEntities(const Scene *scene)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -282,7 +299,7 @@ void Voxelizer::CollectEntities(Scene *scene)
                 .cull_faces = FaceCullMode::NONE,
                 .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
             },
-            m_shader->GetID()
+            m_shader->GetCompiledShader().GetDefinition()
         ),
         true // skip culling
     );
@@ -299,7 +316,7 @@ void Voxelizer::Update(GameCounter::TickUnit delta)
     m_camera->Update(delta);
 }
 
-void Voxelizer::Render(Frame *frame, Scene *scene)
+void Voxelizer::Render(Frame *frame, const Scene *scene)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 

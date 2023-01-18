@@ -77,9 +77,10 @@ void World::PerformSceneUpdates()
         }
 
         scene->SetWorld(nullptr);
+        
+        m_render_list_container.RemoveScene(scene.Get());
 
         m_scenes.Erase(it);
-        m_render_lists.Erase(it->GetID());
     }
 
     m_scenes_pending_removal.Clear();
@@ -91,7 +92,8 @@ void World::PerformSceneUpdates()
 
         scene->SetWorld(this);
 
-        m_render_lists.Insert({ scene.GetID(), RenderList { } });
+        m_render_list_container.AddScene(scene.Get());
+
         m_scenes.Insert(std::move(scene));
     }
 
@@ -115,9 +117,9 @@ void World::Update(GameCounter::TickUnit delta)
     }
 
     for (Handle<Scene> &scene : m_scenes) {
-        RenderList &render_list = m_render_lists[scene->GetID()];
-
         scene->Update(delta);
+
+        RenderList &render_list = m_render_list_container.GetRenderListForScene(scene->GetID());
 
         scene->CollectEntities(render_list, scene->GetCamera());
         render_list.UpdateRenderGroups();
@@ -140,6 +142,7 @@ void World::Render(Frame *frame)
 
     AssertReady();
 
+    // TODO: Thread safe list for scenes
     for (auto &scene : m_scenes) {
         if (!scene->GetEnvironment() || !scene->GetEnvironment()->IsReady()) {
             continue;

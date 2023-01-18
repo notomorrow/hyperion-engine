@@ -171,7 +171,7 @@ void ShadowPass::CreateShader()
 {
     m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(Shadows),
-        ShaderProps(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes)
+        ShaderProps(renderer::static_mesh_vertex_attributes)
     );
 
     InitObject(m_shader);
@@ -190,11 +190,11 @@ void ShadowPass::CreateFramebuffer()
 
     { // depth, depth^2 texture (for variance shadow map)
         m_attachments.PushBack(std::make_unique<Attachment>(
-            std::make_unique<renderer::FramebufferImage2D>(
+            RenderObjects::Make<Image>(renderer::FramebufferImage2D(
                 m_dimensions,
                 InternalFormat::RG32F,
                 FilterMode::TEXTURE_FILTER_NEAREST
-            ),
+            )),
             RenderPassStage::SHADER
         ));
 
@@ -210,11 +210,11 @@ void ShadowPass::CreateFramebuffer()
 
     { // standard depth texture
         m_attachments.PushBack(std::make_unique<Attachment>(
-            std::make_unique<renderer::FramebufferImage2D>(
+            RenderObjects::Make<Image>(renderer::FramebufferImage2D(
                 m_dimensions,
                 Engine::Get()->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
-            ),
+            )),
             RenderPassStage::SHADER
         ));
 
@@ -298,6 +298,8 @@ void ShadowPass::Create()
         m_camera->SetFramebuffer(m_framebuffer);
 
         InitObject(m_camera);
+
+        m_render_list.SetCamera(m_camera);
     }
 
     CreateCommandBuffers();
@@ -334,11 +336,21 @@ void ShadowPass::Render(Frame *frame)
 
     AssertThrow(m_parent_scene.IsValid());
 
-    m_parent_scene->Render(
+    Engine::Get()->GetRenderState().BindScene(m_parent_scene.Get());
+
+    m_render_list.CollectDrawCalls(
         frame,
-        m_camera,
-        m_render_list
+        Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
+        nullptr
     );
+
+    m_render_list.ExecuteDrawCalls(
+        frame,
+        Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
+        nullptr
+    );
+
+    Engine::Get()->GetRenderState().UnbindScene();
 
     if (m_shadow_mode == ShadowMode::VSM) {
         // blur the image using compute shader
@@ -428,13 +440,14 @@ void ShadowMapRenderer::OnUpdate(GameCounter::TickUnit delta)
     GetParent()->GetScene()->CollectEntities(
         m_shadow_pass->GetRenderList(),
         m_shadow_pass->GetCamera(),
+        Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
         RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_SHADOW,
                 .cull_faces = FaceCullMode::FRONT
             },
-            m_shadow_pass->GetShader()->GetID()
+            m_shadow_pass->GetShader()->GetCompiledShader().GetDefinition()
         ),
         true // temp
     );

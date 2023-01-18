@@ -92,7 +92,6 @@ struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : RenderCommand
     {
         // update m_draw_proxy on render thread.
         env_probe.m_draw_proxy = draw_proxy;
-
         env_probe.m_view_matrices = CreateCubemapMatrices(env_probe.GetAABB());
 
         HYPERION_RETURN_OK;
@@ -248,8 +247,12 @@ void EnvProbe::Init()
             m_camera->SetFramebuffer(m_framebuffer);
 
             InitObject(m_camera);
+
+            m_render_list.SetCamera(m_camera);
         }
     }
+
+    SetNeedsUpdate(false);
 
     SetReady(true);
 
@@ -276,14 +279,14 @@ void EnvProbe::CreateShader()
     case EnvProbeType::ENV_PROBE_TYPE_REFLECTION:
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate({
             HYP_NAME(CubemapRenderer),
-            ShaderProps({ "MODE_REFLECTION" })
+            ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_REFLECTION" })
         });
 
         break;
     case EnvProbeType::ENV_PROBE_TYPE_SHADOW:
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate({
             HYP_NAME(CubemapRenderer),
-            ShaderProps({ "MODE_SHADOWS" })
+            ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_SHADOWS" })
         });
 
         break;
@@ -310,49 +313,29 @@ void EnvProbe::CreateFramebuffer()
         color_attachment_format = shadow_map_format;
     }
 
-    AttachmentUsage *attachment_usage;
-
-    // shadows only use depth texture
-    m_attachments.push_back(std::make_unique<Attachment>(
-        std::make_unique<renderer::FramebufferImageCube>(
+    m_framebuffer->AddAttachment(
+        0,
+        RenderObjects::Make<Image>(renderer::FramebufferImageCube(
             m_dimensions,
             color_attachment_format,
             nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentUsage(
-        Engine::Get()->GetGPUInstance()->GetDevice(),
+        )),
+        RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
+        renderer::StoreOperation::STORE
+    );
 
-    m_framebuffer->AddAttachmentUsage(attachment_usage);
-
-    m_attachments.push_back(std::make_unique<Attachment>(
-        std::make_unique<renderer::FramebufferImageCube>(
+    m_framebuffer->AddAttachment(
+        1,
+        RenderObjects::Make<Image>(renderer::FramebufferImageCube(
             m_dimensions,
             Engine::Get()->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentUsage(
-        Engine::Get()->GetGPUInstance()->GetDevice(),
+        )),
+        RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
-
-    m_framebuffer->AddAttachmentUsage(attachment_usage);
-
-    // attachment should be created in render thread?
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(Engine::Get()->GetGPUInstance()->GetDevice()));
-    }
+        renderer::StoreOperation::STORE
+    );
 
     InitObject(m_framebuffer);
 }
@@ -450,6 +433,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     if (!m_is_rendered.load(std::memory_order_acquire)) {
         if (!needs_update) {
             SetNeedsUpdate(true);
+
+            needs_update = true;
         }
     } else if (Engine::Get()->GetWorld()->GetOctree().GetNearestOctant(m_aabb.GetCenter(), octree)) {
         AssertThrow(octree != nullptr);
@@ -469,8 +454,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
         return;
     }
 
-    // Ambient probes do not use their own
-    // render list
+    // Ambient probes do not use their own render list,
+    // instead they are attached to a grid which shares one
     if (!IsAmbientProbe()) {
         AssertThrow(m_camera.IsValid());
         AssertThrow(m_shader.IsValid());
@@ -480,6 +465,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
         m_parent_scene->CollectEntities(
             m_render_list,
             m_camera,
+            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
             RenderableAttributeSet(
                 MeshAttributes { },
                 MaterialAttributes {
@@ -488,7 +474,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                         ? FaceCullMode::FRONT
                         : FaceCullMode::BACK
                 },
-                m_shader->GetID()
+                m_shader->GetCompiledShader().GetDefinition()
             ),
             true // skip frustum culling
         );
@@ -567,9 +553,20 @@ void EnvProbe::Render(Frame *frame)
 
     {
         Engine::Get()->GetRenderState().SetActiveEnvProbe(GetID());
+        Engine::Get()->GetRenderState().BindScene(m_parent_scene.Get());
 
-        m_parent_scene->Render(frame, m_camera, m_render_list);
+        m_render_list.CollectDrawCalls(
+            frame,
+            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
+            nullptr
+        );
 
+        m_render_list.ExecuteDrawCalls(
+            frame,
+            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
+        );
+
+        Engine::Get()->GetRenderState().UnbindScene();
         Engine::Get()->GetRenderState().UnsetActiveEnvProbe();
     }
 

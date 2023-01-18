@@ -74,6 +74,7 @@
 #include <cmath>
 #include <thread>
 #include <list>
+#include <iomanip>
 
 #include "rendering/RenderEnvironment.hpp"
 #include "rendering/CubemapRenderer.hpp"
@@ -126,16 +127,29 @@ public:
        //     Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
         //));
         m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+
+        {
+            m_sun = CreateObject<Entity>();
+            m_sun->SetName(HYP_NAME(Sun));
+            m_sun->AddController<LightController>(CreateObject<Light>(DirectionalLight(
+                Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
+                Color(1.0f, 0.7f, 0.4f),
+                15.0f
+            )));
+            m_sun->SetTranslation(Vector3(-0.105425f, 0.988823f, 0.105425f));
+            m_sun->AddController<ShadowMapController>();
+            GetScene()->AddEntity(m_sun);
+        }
         
-        { // adding lights to scene
+        if (true) { // adding lights to scene
 
             // m_scene->AddLight(m_sun);
 
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.0f, 1.0f, 0.0f),
-                Color(0.0f, 1.0f, 0.0f),
-                15.0f,
-                20.35f
+                Color(1.0f, 1.0f, 1.0f),
+                2.0f,
+                7.35f
             )));
             // m_point_lights.PushBack(CreateObject<Light>(PointLight(
             //     Vector3(-2.0f, 0.75f, 0.0f),
@@ -151,20 +165,7 @@ public:
             }
         }
 
-        {
-            m_sun = CreateObject<Entity>();
-            m_sun->SetName(HYP_NAME(Sun));
-            m_sun->AddController<LightController>(CreateObject<Light>(DirectionalLight(
-                Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
-                Color(1.0f, 1.0f, 1.0f),
-                5.0f
-            )));
-            m_sun->SetTranslation(Vector3(-0.105425f, 0.988823f, 0.105425f));
-            m_sun->AddController<ShadowMapController>();
-            GetScene()->AddEntity(m_sun);
-        }
-
-        if (true) {
+        if (false) {
             auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
             btn_node.SetEntity(CreateObject<Entity>());
             btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 0.85f, 0.0f));
@@ -222,7 +223,7 @@ public:
             }
         }
 
-        if (false) { // skydome
+        if (true) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -288,8 +289,8 @@ public:
         if (Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             m_scene->GetEnvironment()->AddRenderComponent<EnvGrid>(
                 HYP_NAME(AmbientGrid0),
-                test_model.GetWorldAABB() * 1.15f,//BoundingBox(Vector3(-100.0f, -10.0f, -100.0f), Vector3(100.0f, 100.0f, 100.0f)),
-                Extent3D { 17, 2, 17 }
+                test_model.GetWorldAABB() * 1.01f,
+                Extent3D { 12, 3, 12 }
             );
         }
 
@@ -342,37 +343,41 @@ public:
 
         if (false) { // hardware skinning
             auto zombie_entity = zombie[0].GetEntity();
-            // zombie_entity->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-            // zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-            // zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
-            // zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
-            // zombie_entity->RebuildRenderableAttributes();
-            // zombie_entity->SetTranslation(Vector3(0, 1, 0));
-            // zombie_entity->SetScale(Vector3(0.25f));
 
-            // InitObject(zombie_entity);
-            // zombie_entity->CreateBLAS();
-            // zombie.SetName("zombie");
+            if (auto *animation_controller = zombie_entity->GetController<AnimationController>()) {
+                animation_controller->Play(1.0f, LoopMode::REPEAT);
+            }
 
-            // m_scene->GetRoot().AddChild(zombie);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+            zombie_entity->RebuildRenderableAttributes();
+            zombie_entity->SetTranslation(Vector3(0, 1, 0));
+            zombie_entity->SetScale(Vector3(0.25f));
+
+            InitObject(zombie_entity);
+            zombie_entity->CreateBLAS();
+            zombie.SetName("zombie");
+
+            m_scene->GetRoot().AddChild(zombie);
             
-            auto zomb2 = CreateObject<Entity>();
-            zomb2->SetMesh(zombie_entity->GetMesh());
-            zomb2->SetTranslation(Vector3(0, 20, 0));
-            zomb2->SetScale(Vector3(2.0f));
-            zomb2->SetShader(zombie_entity->GetShader());
-            zomb2->SetMaterial(CreateObject<Material>());//zombie_entity->GetMaterial());
-            zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 0.8f));
-            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
-            //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            //zomb2->GetMaterial()->SetIsAlphaBlended(true);
-            // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
-            zomb2->SetSkeleton(CreateObject<Skeleton>());
-            zomb2->RebuildRenderableAttributes();
+            // auto zomb2 = CreateObject<Entity>();
+            // zomb2->SetMesh(zombie_entity->GetMesh());
+            // zomb2->SetTranslation(Vector3(0, 20, 0));
+            // zomb2->SetScale(Vector3(2.0f));
+            // zomb2->SetShader(zombie_entity->GetShader());
+            // zomb2->SetMaterial(CreateObject<Material>());//zombie_entity->GetMaterial());
+            // zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 0.8f));
+            // //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_TRANSMISSION, 0.95f);
+            // //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
+            // //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+            // //zomb2->GetMaterial()->SetIsAlphaBlended(true);
+            // // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
+            // zomb2->SetSkeleton(CreateObject<Skeleton>());
+            // zomb2->RebuildRenderableAttributes();
 
-            InitObject(zomb2);
-            m_scene->AddEntity(zomb2);
+            // InitObject(zomb2);
+            // m_scene->AddEntity(zomb2);
         }
 
         cube_obj.Scale(50.0f);
@@ -399,7 +404,7 @@ public:
         if (false) { // paged procedural terrain
             auto terrain_entity = CreateObject<Entity>();
             GetScene()->AddEntity(terrain_entity);
-            terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 }, Vector3(8.0f, 8.0f, 8.0f), 1.0f);
+            terrain_entity->AddController<TerrainPagingController>(0xBEEF, Extent3D { 256 }, Vector3(0.5f), 1.0f);
         }
 
         if (false) { // physics
@@ -432,18 +437,20 @@ public:
             }
         }
 
-        if (false) {
+        if (true) {
             if (auto monkey = Engine::Get()->GetAssetManager().Load<Node>("models/monkey/monkey.obj")) {
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
                 monkey_entity->SetFlags(Entity::InitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED, false);
-                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.001f);
-                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
-                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
-                monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
+                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
+                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+                // monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_TRANSMISSION, 0.95f);
+                // monkey_entity->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, Handle<Texture>());
+                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, Handle<Texture>());
+                // monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, Handle<Texture>());
                 monkey_entity->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture>());
-                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 0.2f, 0.0f, 1.0f));
+                monkey_entity->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 1.0f));
                 monkey_entity->RebuildRenderableAttributes();
                 monkey.SetLocalTranslation(Vector3(0.0f, 0.0f, 0.0f));
                 monkey.Scale(1.2f);
@@ -496,7 +503,7 @@ public:
             GetScene()->GetRoot().AddChild(tree);
         }
         
-        if (true) {
+        if (false) {
             auto cube_model = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj");
 
             // add a plane physics shape
@@ -508,15 +515,15 @@ public:
             plane->SetMaterial(CreateObject<Material>());
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
-            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
+            plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vector2(8.0f));
             // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/water.jpg"));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png"));
+            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
+            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-normal.png"));
             // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_PARALLAX_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/forest-floor-unity/forest_floor_Height.png"));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/forest-floor-unity/forest_floor_Metallic.psd"));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_AO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
-            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/grimy/grimy-metal-roughness.png"));
+            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-metal.png"));
+            plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_AO_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
+            // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-roughness.png"));
             // plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.08f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
             plane->SetShader(Handle<Shader>(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProps(plane->GetMesh()->GetVertexAttributes()))));
@@ -534,12 +541,12 @@ public:
             }
         }
 
-        if (true) { // particles test
+        if (false) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
-                .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/smoke.png"),
+                .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/spark.png"),
                 .max_particles = 1024u,
-                .origin = Vector3(0.0f, 0.1f, 0.0f),
-                .lifespan = 8.0f
+                .origin = Vector3(0.0f, 4.1f, 0.0f),
+                .lifespan = 1.0f
             });
 
             InitObject(particle_spawner);
@@ -652,10 +659,15 @@ public:
 
                 if (select_new_entity) {
                     if (auto entity = Handle<Entity>(entity_id)) {
-                        entity->AddController<AABBDebugController>();
+                        // entity->AddController<AABBDebugController>();
 
                         selected_entity = entity;
                     }
+                }
+
+                if (auto monkey_node = GetScene()->GetRoot().Select("monkey")) {
+                    monkey_node.SetWorldTranslation(ray_hit.Get().hitpoint);
+                    monkey_node.SetWorldRotation(Quaternion::LookAt(GetScene()->GetCamera()->GetTranslation() - ray_hit.Get().hitpoint, Vector3::UnitY()));
                 }
             }
         } else {
@@ -870,7 +882,7 @@ public:
 int main()
 {
     using namespace hyperion::renderer;
-    
+
     RefCountedPtr<Application> application(new SDLApplication("My Application"));
     application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1280, 720));
     
@@ -882,7 +894,7 @@ int main()
 
     my_game->Init();
 
-    Engine::Get()->Compile();
+    // Engine::Get()->Compile();
     
     Engine::Get()->game_thread.Start(my_game);
 
@@ -904,7 +916,7 @@ int main()
             DebugLog(
                 LogType::Debug,
                 "Render FPS: %f\n",
-                1.0f / (delta_time_accum / static_cast<float>(num_frames))
+                1.0f / (delta_time_accum / Float(num_frames))
             );
 
             DebugLog(

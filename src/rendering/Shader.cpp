@@ -209,38 +209,72 @@ void Shader::Init()
 
 Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 {
+    const auto EnsureContainsProperties = [](const ShaderProps &expected, const ShaderProps &received) -> bool
+    {
+        if (!received.HasRequiredVertexAttributes(expected.GetRequiredVertexAttributes())) {
+            return false;
+        }
+
+        for (const ShaderProperty &property : expected.GetPropertySet()) {
+            if (!received.Has(property)) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     std::lock_guard guard(m_mutex);
+
+    DebugLog(
+        LogType::Debug,
+        "Lock ShaderManager for ShaderDefinition with hash %llu\n",
+        definition.GetHashCode().Value()
+    );
 
     const auto it = m_map.Find(definition);
 
     if (it != m_map.End()) {
         if (Handle<Shader> handle = it->value.Lock()) {
-            return handle;
+            if (EnsureContainsProperties(definition.GetProperties(), handle->GetCompiledShader().GetProperties())) {
+                return handle;
+            } else {
+                DebugLog(
+                    LogType::Error,
+                    "Loaded shader from cache (Name: %s, Properties: %s) does not contain the requested properties!\n\tRequested: %s\n",
+                    definition.GetName().LookupString().Data(),
+                    handle->GetCompiledShader().GetProperties().ToString().Data(),
+                    definition.GetProperties().ToString().Data()
+                );
+
+                // remove bad value from cache
+                m_map.Erase(it);
+            }
         }
     }
 
     CompiledShader compiled_shader;
 
     const bool is_valid_compiled_shader = Engine::Get()->GetShaderCompiler().GetCompiledShader(
-        definition.name,
-        definition.props,
-        definition.vertex_attributes,
+        definition.GetName(),
+        definition.GetProperties(),
         compiled_shader
     );
-
-    if (!is_valid_compiled_shader) {
-        DebugLog(
-            LogType::Error,
-            "Failed to get compiled shader with name %s and props hash %llu.\n",
-            definition.name.LookupString().Data(),
-            definition.props.GetHashCode().Value()
-        );
-
-        return Handle<Shader>::empty;
-    }
+    
+    AssertThrowMsg(
+        is_valid_compiled_shader,
+        "Failed to get compiled shader with name %s and props hash %llu!\n",
+        definition.GetName().LookupString().Data(),
+        definition.GetProperties().GetHashCode().Value()
+    );
 
     Handle<Shader> handle = CreateObject<Shader>();
+    handle->SetName(definition.GetName());
     handle->SetCompiledShader(std::move(compiled_shader));
+
+#ifdef HYP_DEBUG_MODE
+    AssertThrow(EnsureContainsProperties(definition.GetProperties(), handle->GetCompiledShader().GetDefinition().GetProperties()));
+#endif
 
     m_map.Set(definition, handle);
 
@@ -249,14 +283,12 @@ Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definiti
 
 Handle<Shader> ShaderManagerSystem::GetOrCreate(
     Name name,
-    const ShaderProps &props,
-    VertexAttributeSet vertex_attributes
+    const ShaderProps &props
 )
 {
     return GetOrCreate(ShaderDefinition {
         name,
-        props,
-        vertex_attributes
+        props
     });
 }
 

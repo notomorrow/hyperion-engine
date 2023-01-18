@@ -103,7 +103,7 @@ struct ObjectShaderData
     ShaderVec4<Float> world_aabb_min;
 
     UInt32 entity_index;
-    UInt32 scene_index;
+    UInt32 _unused;
     UInt32 material_index;
     UInt32 skeleton_index;
 
@@ -162,6 +162,7 @@ struct alignas(16) CameraShaderData
     ShaderVec4<UInt32> dimensions;
     ShaderVec4<Float> camera_position;
     ShaderVec4<Float> camera_direction;
+    ShaderVec4<Float> jitter;
     
     Float camera_near;
     Float camera_far;
@@ -169,7 +170,7 @@ struct alignas(16) CameraShaderData
     Float _pad0;
 };
 
-static_assert(sizeof(CameraShaderData) == 256);
+static_assert(sizeof(CameraShaderData) == 272);
 
 struct alignas(256) EnvGridShaderData
 {

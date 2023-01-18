@@ -67,8 +67,12 @@ void main() {
 	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
-    v_position_ndc = camera.projection * camera.view * position;
-    v_previous_position_ndc = camera.projection * camera.previous_view * previous_position;
+    mat4 jitter_matrix = mat4(1.0);
+    jitter_matrix[3][0] += camera.jitter.x;
+    jitter_matrix[3][1] += camera.jitter.y;
+
+    v_position_ndc = (jitter_matrix * camera.projection) * camera.view * position;
+    v_previous_position_ndc = (jitter_matrix * camera.projection) * camera.previous_view * previous_position;
 
     v_object_index = OBJECT_INDEX;
 
