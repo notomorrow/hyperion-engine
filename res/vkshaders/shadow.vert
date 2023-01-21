@@ -13,14 +13,18 @@ layout(location=8) out mat3 v_tbn_matrix;
 layout(location=12) out vec3 v_view_space_position;
 layout(location=13) out flat uint v_object_index;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
-layout (location = 6) in vec4 a_bone_weights;
-layout (location = 7) in vec4 a_bone_indices;
+HYP_ATTRIBUTE(0) vec3 a_position;
+HYP_ATTRIBUTE(1) vec3 a_normal;
+HYP_ATTRIBUTE(2) vec2 a_texcoord0;
+HYP_ATTRIBUTE(3) vec3 a_texcoord1;
+HYP_ATTRIBUTE(4) vec3 a_tangent;
+HYP_ATTRIBUTE(5) vec3 a_bitangent;
+HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
+HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
+
+#if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
+    #define VERTEX_SKINNING_ENABLED
+#endif
 
 #include "include/scene.inc"
 
@@ -34,12 +38,17 @@ void main()
     vec4 position;
     mat4 normal_matrix;
     
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
+#ifdef VERTEX_SKINNING_ENABLED
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
+    {
         mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    } else {
+    }
+    else
+#endif
+    {
         position = object.model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
     }
