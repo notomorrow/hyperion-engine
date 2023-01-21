@@ -17,14 +17,18 @@ layout(location=12) out flat vec3 v_env_probe_extent;
 layout(location=13) out flat uint v_cube_face_index;
 layout(location=14) out vec2 v_cube_face_uv;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
-layout (location = 6) in vec4 a_bone_weights;
-layout (location = 7) in vec4 a_bone_indices;
+HYP_ATTRIBUTE(0) vec3 a_position;
+HYP_ATTRIBUTE(1) vec3 a_normal;
+HYP_ATTRIBUTE(2) vec2 a_texcoord0;
+HYP_ATTRIBUTE(3) vec2 a_texcoord1;
+HYP_ATTRIBUTE(4) vec3 a_tangent;
+HYP_ATTRIBUTE(5) vec3 a_bitangent;
+HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
+HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
+
+#if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
+    #define VERTEX_SKINNING_ENABLED
+#endif
 
 #include "include/scene.inc"
 
@@ -34,23 +38,12 @@ layout (location = 7) in vec4 a_bone_indices;
 
 #define HYP_ENABLE_SKINNING
 
-// struct EnvProbeMatrices
-// {
-//     mat4 projection_matrices[6];
-//     mat4 view_matrices[6];
-// };
-
-// layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 20, row_major) readonly buffer EnvProbeMatricesBuffer
-// {
-//     EnvProbeMatrices env_probe_uniforms[];
-// };
-
 layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
 {
     EnvProbe current_env_probe;
 };
 
-#ifdef HYP_ENABLE_SKINNING
+#ifdef VERTEX_SKINNING_ENABLED
 #include "include/Skeleton.glsl"
 #endif
 
@@ -63,7 +56,7 @@ void main()
         position = vec4((a_position * 150.0) + camera.position.xyz, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix));
     } else {
-#ifdef HYP_ENABLE_SKINNING
+#ifdef VERTEX_SKINNING_ENABLED
         if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
             mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
@@ -73,7 +66,7 @@ void main()
 #endif
             position = object.model_matrix * vec4(a_position, 1.0);
             normal_matrix = transpose(inverse(object.model_matrix));
-#ifdef HYP_ENABLE_SKINNING
+#ifdef VERTEX_SKINNING_ENABLED
         }
 #endif
     }
