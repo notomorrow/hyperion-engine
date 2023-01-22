@@ -28,6 +28,8 @@ layout(push_constant) uniform PushConstants
     vec2 camera_near_far;
 };
 
+// #define ADJUST_COLOR_HDR
+
 #include "include/Temporal.glsl"
 
 void main()
@@ -103,7 +105,7 @@ void main()
 
 #endif
 
-    result = any(isnan(result)) ? vec4(0.0) : result;
+    result = any(isnan(result)) ? vec4(1.0, 0.0, 0.0, 1.0) : result;
 
     imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimensions - 1)), result);
 }

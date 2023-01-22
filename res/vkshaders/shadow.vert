@@ -31,7 +31,9 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 #define HYP_INSTANCING
 #include "include/object.inc"
 
+#ifdef VERTEX_SKINNING_ENABLED
 #include "include/Skeleton.glsl"
+#endif
 
 void main()
 {

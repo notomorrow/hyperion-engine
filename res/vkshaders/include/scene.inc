@@ -21,6 +21,7 @@ struct Camera
     uvec4 dimensions;
     vec4 position;
     vec4 direction;
+    vec4 jitter;
 
     float near;
     float far;
