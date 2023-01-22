@@ -22,9 +22,9 @@ layout(location=0) out vec4 output_shadow;
 
 void main()
 {
-    if (bool(GET_OBJECT_BUCKET(object) & OBJECT_MASK_SKY)) {
-        discard;
-    }
+    // if (bool(GET_OBJECT_BUCKET(object) & OBJECT_MASK_SKY)) {
+    //     discard;
+    // }
 
 #if defined(HYP_SHADOW_SAMPLE_ALBEDO) && HYP_SHADOW_SAMPLE_ALBEDO
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
