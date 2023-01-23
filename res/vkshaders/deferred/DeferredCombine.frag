@@ -67,18 +67,10 @@ void RefractionSolidSphere(
 
 void main()
 {
-    // const uvec2 index = gl_GlobalInvocationID.xy;
-
-    // if (any(greaterThanEqual(index, image_dimensions))) {
-    //     return;
-    // }
-
-    // const vec2 texcoord = vec2(index) / vec2(image_dimensions - 1);
-
     vec4 indirect_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
     indirect_lighting.a = 1.0;
 
-    vec4 direct_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_direct_lighting, texcoord);
+    // vec4 direct_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_direct_lighting, texcoord);
 
     vec4 forward_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
 
@@ -96,10 +88,12 @@ void main()
     const vec3 V = normalize(camera.position.xyz - position.xyz);
     const vec3 R = normalize(reflect(-V, N));
 
-    vec4 result = vec4(
-        (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
-        1.0
-    );
+    // vec4 result = vec4(
+    //     (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
+    //     1.0
+    // );
+
+    vec4 result = indirect_lighting;
 
     if (transmission > 0.0) {
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
@@ -141,12 +135,6 @@ void main()
     }
 
     result.a = 1.0;
-    
-    // result = vec4(forward_result.a, 0.0, 0.0, 1.0);
-
-    // TODO: Do post FX combine here instead of in blit.frag
-    
-    // imageStore(combined_result, ivec2(index), result);
 
     color_output = result;
 }
