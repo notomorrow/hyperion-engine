@@ -41,16 +41,6 @@ layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly 
     EnvProbe current_env_probe;
 };
 
-float GetSquareFalloffAttenuation(vec3 P, vec3 V, vec3 L)
-{
-    const vec3 position_to_light = P - L;
-    float distance_square = dot(position_to_light, position_to_light);
-    float inv_radius = 1.0 / light.radius;
-    float factor = distance_square * HYP_FMATH_SQR(inv_radius);
-    float smooth_factor = max(1.0 - HYP_FMATH_SQR(factor), 0.0);
-    return HYP_FMATH_SQR(smooth_factor) / max(distance_square, 1e-4);
-}
-
 void main()
 {
     vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);
@@ -134,7 +124,7 @@ void main()
         const vec4 specular_lobe = D * G * F;
 
         const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz)
+            ? GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz, light.radius)
             : 1.0;
 
         vec4 specular = specular_lobe;
@@ -142,7 +132,7 @@ void main()
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
         vec4 diffuse = diffuse_lobe;
 
-        vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
+        vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
 
         // direct_component.rgb *= (exposure);
         result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);

@@ -20,9 +20,8 @@ layout(location=0) out vec4 color_output;
 #define HYP_DEFERRED_NO_SSR
 #define HYP_DEFERRED_NO_ENV_GRID
 
-#define ENV_PROBE_ENABLED
-#include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
+#include "./DeferredLighting.glsl"
 
 layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
 {

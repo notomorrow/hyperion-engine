@@ -85,11 +85,10 @@ void main()
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP)) {
         normals_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
+        normals_texture.xy *= normal_map_intensity;
+        normals_texture.xyz = normalize(normals_texture.xyz);
 
-        const vec3 surface_normal = normal;
-
-        normal = normalize(v_tbn_matrix * normals_texture.rgb);
-        normal = mix(surface_normal, normal, normal_map_intensity);
+        normal = normalize(v_tbn_matrix * normals_texture.xyz);
     }
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP)) {

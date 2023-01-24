@@ -3,6 +3,16 @@
 
 #define PI 3.14159265359
 
+float GetSquareFalloffAttenuation(vec3 P, vec3 V, vec3 L, float radius)
+{
+    const vec3 position_to_light = P - L;
+    float distance_square = dot(position_to_light, position_to_light);
+    float inv_radius = 1.0 / radius;
+    float factor = distance_square * HYP_FMATH_SQR(inv_radius);
+    float smooth_factor = max(1.0 - HYP_FMATH_SQR(factor), 0.0);
+    return HYP_FMATH_SQR(smooth_factor) / max(distance_square, 1e-4);
+}
+
 vec3 ImportanceSampleGTR2(float rgh, float r1, float r2)
 {
     float a = max(0.001, rgh);

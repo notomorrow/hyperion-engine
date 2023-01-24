@@ -41,10 +41,6 @@ vec2 texcoord = v_texcoord0;
     #include "include/vct/cone_trace.inc"
 #endif
 
-/* Begin main shader program */
-
-#define IRRADIANCE_MULTIPLIER 1.0
-
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -123,7 +119,6 @@ void main()
 
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
-        // ibl.rgb = ReverseTonemapReinhardSimple(reflection_probes_color.rgb);
         ibl.rgb = reflection_probes_color.rgb * reflection_probes_color.a;
 #endif
 
@@ -143,7 +138,7 @@ void main()
         CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 #endif
 
-        vec3 Fd = diffuse_color.rgb * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - E) * ao;
+        vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
 
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         specular_ao *= energy_compensation;

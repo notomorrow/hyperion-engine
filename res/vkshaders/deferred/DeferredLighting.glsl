@@ -12,8 +12,8 @@
 #define DEFERRED_FLAGS_HBIL_ENABLED        0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
-#define HYP_HBIL_MULTIPLIER 1.5
-#define ENV_PROBE_MULTIPLIER 2.0
+#define HYP_HBIL_MULTIPLIER 1.0
+#define ENV_PROBE_MULTIPLIER 1.0
 
 struct DeferredParams
 {
@@ -123,6 +123,23 @@ void RefractionSolidSphere(
 
 #ifndef HYP_DEFERRED_NO_REFRACTION
 
+// Compute attenuated light as it travels through a volume.
+vec3 ApplyVolumeAttenuation(vec3 radiance, float transmission_distance, vec3 attenuation_color, float attenuation_distance)
+{
+    if (attenuation_distance == 0.0)
+    {
+        // Attenuation distance is +∞ (which we indicate by zero), i.e. the transmitted color is not attenuated at all.
+        return radiance;
+    }
+    else
+    {
+        // Compute light attenuation using Beer's law.
+        vec3 attenuation_coefficient = -log(attenuation_color) / attenuation_distance;
+        vec3 transmittance = exp(-attenuation_coefficient * transmission_distance); // Beer's law
+        return transmittance * radiance;
+    }
+}
+
 vec3 CalculateRefraction(
     uvec2 image_dimensions,
     vec3 P, vec3 N, vec3 V, vec2 texcoord,
@@ -151,22 +168,15 @@ vec3 CalculateRefraction(
 
     vec2 refraction_texcoord = refraction_pos.xy * 0.5 + 0.5;
 
-    // float perceptual_roughness = sqrt(roughness);
-    // perceptual_roughness = mix(perceptual_roughness, 0.0, Saturate(eta_ir * 3.0 - 2.0));
-
     const float lod = ApplyIORToRoughness(IOR, roughness) * log2(float(max_dimension));
 
-    vec3 Fd = translucent_color.rgb * (1.0 /*irradiance*/) * (1.0 - E) * (brdf);
-    Fd *= (1.0 - transmission);
-
-    const float texel_size = 1.0 / float(max_dimension);
+    float absorption = 0.1; // TODO: material parameter
+    vec3 T = min(vec3(1.0), exp(-absorption * refraction.direction));
 
     vec3 Ft = Texture2DLod(sampler_linear, gbuffer_mip_chain, refraction_texcoord, lod).rgb;
-
     Ft *= translucent_color.rgb;
     Ft *= 1.0 - E;
-    // Ft *= absorption;
-    Ft *= transmission;
+    Ft *= T;
 
     return Ft;
 }
@@ -175,7 +185,6 @@ vec3 CalculateRefraction(
 
 
 #ifndef HYP_DEFERRED_NO_ENV_PROBE
-#ifdef ENV_PROBE_ENABLED
 
 #include "../include/env_probe.inc"
 
@@ -356,7 +365,6 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
     return ibl;
 }
 
-#endif
 #endif
 
 #ifndef HYP_DEFERRED_NO_SSR

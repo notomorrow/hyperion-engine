@@ -29,20 +29,21 @@ layout(location=0) out vec4 out_color;
 
 void main()
 {
-    vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0);
-    out_color = deferred_result;
-
-    out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
+    out_color = vec4(0.0, 0.0, 0.0, 1.0);
 
 #ifdef TEMPORAL_AA
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, temporal_aa_result, v_texcoord0).rgb;
+#else
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb;
 #endif
+
+    out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
 
     bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
     out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
 
     // blend in UI.
-    vec4 ui_color = Texture2D(HYP_SAMPLER_NEAREST, ui_texture, v_texcoord0);
+    vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
 
     out_color = vec4(
         (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
@@ -61,5 +62,8 @@ void main()
     out_color.rgb = pow(out_color.rgb, vec3(2.2));
 #endif
 
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_normals_texture, v_texcoord0).rgb;
+
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, v_texcoord0).rgb;
     out_color.a = 1.0;
 }

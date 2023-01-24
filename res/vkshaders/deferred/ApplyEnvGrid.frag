@@ -18,7 +18,6 @@ layout(location=0) out vec4 color_output;
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 #define HYP_DEFERRED_NO_SSR // temp
 
-#define ENV_PROBE_ENABLED
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
 
