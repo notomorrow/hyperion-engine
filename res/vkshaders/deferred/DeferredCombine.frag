@@ -94,6 +94,7 @@ void main()
     const vec3 V = normalize(camera.position.xyz - position.xyz);
     const vec3 R = normalize(reflect(-V, N));
 
+    const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
     vec3 L = light.position_intensity.xyz;
     L -= position.xyz * float(min(light.type, 1));
@@ -114,7 +115,7 @@ void main()
 
     vec4 forward_lit_result = vec4(0.0, 0.0, 0.0, forward_result.a);
 
-    if (forward_result.a > 0.0) {
+    if (bool(object_mask & 0x02)) {
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
         const vec3 F0 = CalculateF0(forward_result.rgb, metalness);
         vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
@@ -209,9 +210,11 @@ void main()
         }
 
         forward_lit_result.rgb += Fr;
-    }
 
-    result.rgb = (forward_lit_result.rgb * forward_lit_result.a) + (result.rgb * (1.0 - forward_lit_result.a));
+        result.rgb = (forward_lit_result.rgb * forward_lit_result.a) + (result.rgb * (1.0 - forward_lit_result.a));
+    } else {//if (bool(object_mask & 0x04)) {
+        result.rgb += forward_result.rgb * forward_result.a;
+    }
 
     result.a = 1.0;
 

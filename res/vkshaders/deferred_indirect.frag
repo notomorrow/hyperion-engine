@@ -162,7 +162,7 @@ void main()
         result = final_result.rgb;
 
 #if defined(DEBUG_REFLECTIONS)
-        result = reflection_combined.rgb;
+        result = ibl.rgb;
 #elif defined(DEBUG_IRRADIANCE)
         result = irradiance.rgb;
 #endif

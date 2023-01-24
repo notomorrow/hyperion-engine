@@ -52,9 +52,10 @@ void main()
 
     ParticleShaderData instance = instances[instance_id];
 
-    const vec4 position_world = instance.position;
+    const vec4 particle_position_world = instance.position;
+    position.xyz *= particle_position_world.w;
 
-    const vec3 lookat_dir = normalize(camera.position.xyz - position_world.xyz);
+    const vec3 lookat_dir = normalize(camera.position.xyz - particle_position_world.xyz);
     const vec3 lookat_z = lookat_dir;
     const vec3 lookat_x = normalize(cross(vec3(0.0, 1.0, 0.0), lookat_dir));
     const vec3 lookat_y = normalize(cross(lookat_dir, lookat_x));
@@ -67,7 +68,7 @@ void main()
     };
 
     position = lookat_matrix * position;
-    position.xyz += position_world.xyz;
+    position.xyz += particle_position_world.xyz;
 
     v_color = unpackUnorm4x8(instance.color_packed);
 

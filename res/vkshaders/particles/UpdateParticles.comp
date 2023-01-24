@@ -121,15 +121,14 @@ void main()
     // reset the particle if lifetime has expired
     float is_alive = step(0.0, particle.lifetime);
     particle.position.xyz = mix(starting_position, next_position, is_alive);
-    particle.position.a = 0.001;//mix(starting_scale, next_scale, is_alive);
+    particle.position.a = mix(starting_scale, next_scale, is_alive);
     particle.velocity.xyz = mix(starting_velocity, particle.velocity.xyz - (vec3(0, 9.81, 0) * push_constants.delta_time * has_gravity), is_alive);
     particle.velocity.a = mix(starting_final_scale, final_scale, is_alive);
     particle.lifetime = mix(starting_lifetime, particle.lifetime - push_constants.delta_time, is_alive);
 
     const bool fade_alpha = false;
     const float alpha = mix(1.0, lifetime_ratio, float(fade_alpha));
-    particle.color_packed = packUnorm4x8(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
-
+    particle.color_packed = VEC4_TO_UINT(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
 
     // for depth-buffer based collisions:
     // get particle position in screen space,
@@ -140,6 +139,8 @@ void main()
     // if there is a collision, push the particle in the direction of the gbuffers' normal
 
     vec4 particle_position_ndc = camera.projection * camera.view * vec4(particle.position.xyz, 1.0);
+    particle_position_ndc /= particle_position_ndc.w;
+
     vec2 particle_uv = particle_position_ndc.xy * 0.5 + 0.5;
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, particle_uv).r;
@@ -149,9 +150,9 @@ void main()
 
     if (distance(position_world_space.xyz, particle.position.xyz) <= 1.0) {
         // has collision
-        const vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, particle_uv)).xyz;
+        const vec3 normal = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, particle_uv)).xyz);
 
-        particle.velocity.xyz = reflect(normal, particle.velocity.xyz);
+        particle.velocity.xyz = reflect(normal, normalize(particle.velocity.xyz));
     }
 
 
