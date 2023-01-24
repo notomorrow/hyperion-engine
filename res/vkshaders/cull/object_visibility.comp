@@ -142,7 +142,7 @@ void main()
 
     is_visible = skip_check;
 
-    if (all(bvec2(!skip_check, push_constants.scene_id))) {
+    if (!skip_check) {
         // get view/proj matrices from scene.
         mat4 view = camera.view;
         mat4 proj = camera.projection;

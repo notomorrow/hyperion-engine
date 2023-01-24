@@ -8,6 +8,13 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 #include "../include/shared.inc"
 #include "../include/defines.inc"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/scene.inc"
+#include "../include/object.inc"
+#include "../include/packing.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 #include "./Particle.glsl"
 
 #define HYP_PARTICLE_NOISE_MAP_EXTENT 128
@@ -34,6 +41,20 @@ layout(set = 0, binding = 2) buffer NoiseBuffer
 {
     float noise_values[HYP_PARTICLE_NOISE_MAP_SIZE];
 };
+
+layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
+{
+    Scene scene;
+};
+
+layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+layout(set = 0, binding = 8) uniform sampler sampler_nearest;
+layout(set = 0, binding = 9) uniform texture2D gbuffer_normals_texture;
+layout(set = 0, binding = 10) uniform texture2D gbuffer_depth_texture;
 
 layout(push_constant) uniform ParticleSpawnerData
 {
@@ -75,7 +96,7 @@ void main()
 
     vec3 next_position = particle.position.xyz + (particle.velocity.xyz * push_constants.delta_time);
 
-    float has_gravity = 0.0;
+    float has_gravity = 1.0;
 
     vec3 noise_value = GetNoiseValue();
     vec3 random_direction = normalize(noise_value);
@@ -93,18 +114,46 @@ void main()
 
     const float current_scale = particle.position.a;
     const float final_scale = particle.velocity.a;
-    const float starting_scale = clamp(1.0 + (noise_value.z * push_constants.randomness), 0.01, 5.0);
+    const float starting_scale = push_constants.origin.a;//clamp(1.0 + (noise_value.z * push_constants.randomness), 0.01, 5.0);
     const float starting_final_scale = starting_scale * ((noise_value.y + 1.0) * push_constants.randomness);
     const float next_scale = mix(current_scale, final_scale, lifetime_ratio);
 
     // reset the particle if lifetime has expired
     float is_alive = step(0.0, particle.lifetime);
     particle.position.xyz = mix(starting_position, next_position, is_alive);
-    particle.position.a = mix(starting_scale, next_scale, is_alive);
+    particle.position.a = 0.001;//mix(starting_scale, next_scale, is_alive);
     particle.velocity.xyz = mix(starting_velocity, particle.velocity.xyz - (vec3(0, 9.81, 0) * push_constants.delta_time * has_gravity), is_alive);
     particle.velocity.a = mix(starting_final_scale, final_scale, is_alive);
     particle.lifetime = mix(starting_lifetime, particle.lifetime - push_constants.delta_time, is_alive);
-    particle.color_packed = packUnorm4x8(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, lifetime_ratio), is_alive));
+
+    const bool fade_alpha = false;
+    const float alpha = mix(1.0, lifetime_ratio, float(fade_alpha));
+    particle.color_packed = packUnorm4x8(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
+
+
+    // for depth-buffer based collisions:
+    // get particle position in screen space,
+    // sample the depth texture at that point,
+    // convert to a world space position,
+    // check distance between particle position and that world space position,
+    // if within a certain threshold, then we have a collision.
+    // if there is a collision, push the particle in the direction of the gbuffers' normal
+
+    vec4 particle_position_ndc = camera.projection * camera.view * vec4(particle.position.xyz, 1.0);
+    vec2 particle_uv = particle_position_ndc.xy * 0.5 + 0.5;
+
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, particle_uv).r;
+
+    vec4 position_world_space = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), particle_uv, depth);
+    position_world_space /= position_world_space.w;
+
+    if (distance(position_world_space.xyz, particle.position.xyz) <= 1.0) {
+        // has collision
+        const vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, particle_uv)).xyz;
+
+        particle.velocity.xyz = reflect(normal, particle.velocity.xyz);
+    }
+
 
     instances[index] = particle;
 
