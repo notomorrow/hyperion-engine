@@ -2,6 +2,7 @@
 #define HYPERION_V2_LIB_REF_COUNTED_PTR_HPP
 
 #include <util/Defines.hpp>
+#include <core/lib/ValueStorage.hpp>
 #include <core/lib/TypeID.hpp>
 #include <core/lib/CMemory.hpp>
 #include <Types.hpp>
@@ -92,7 +93,7 @@ protected:
         : m_ref(other.m_ref)
     {
         if (m_ref) {
-            ++m_ref->strong_count;
+            IncRefCount();
         }
     }
 
@@ -107,7 +108,7 @@ protected:
         m_ref = other.m_ref;
 
         if (m_ref) {
-            ++m_ref->strong_count;
+            IncRefCount();
         }
 
         return *this;
@@ -193,7 +194,7 @@ public:
         rc.m_ref = m_ref;
 
         if (m_ref) {
-            ++m_ref->strong_count;
+            IncRefCount();
         }
 
         return rc;
@@ -203,6 +204,17 @@ protected:
     explicit RefCountedPtrBase(RefCountDataType *ref)
         : m_ref(ref)
     {
+    }
+
+    void IncRefCount()
+    {
+        AssertThrow(m_ref != nullptr);
+
+        if constexpr (std::is_integral_v<CountType>) {
+            ++m_ref->strong_count;
+        } else {
+            m_ref->strong_count.fetch_add(1u, std::memory_order_relaxed);
+        }
     }
 
     void DropRefCount()
@@ -727,6 +739,154 @@ public:
     }
 };
 
+template <class T, class CountType = UInt>
+class RefCountedRef
+{
+    struct Data
+    {
+        ValueStorage<T> storage;
+        CountType count { 0 };
+
+        template <class ...Args>
+        void Construct(Args &&... args)
+        {
+            storage.Construct(std::forward<Args>(args)...);
+        }
+
+        void Destruct()
+        {
+            storage.Destruct();
+        }
+
+        void IncRef()
+        {
+            if constexpr (std::is_integral_v<CountType>) {
+                ++count;
+            } else {
+                count.fetch_add(1u, std::memory_order_relaxed);
+            }
+        }
+
+        bool DecRef()
+        {
+            SizeType remaining = 0;
+
+            if constexpr (std::is_integral_v<CountType>) {
+                remaining = count--;
+            } else {
+                remaining = count.fetch_sub(1u);
+            }
+
+            if (remaining == 1) {
+                Destruct();
+
+                return true;
+            }
+
+            return false;
+        }
+    };
+
+    Data *m_data;
+
+public:
+
+    template <class ...Args>
+    RefCountedRef(Args &&... args)
+        : m_data(new Data)
+    {
+        m_data->IncRef();
+        m_data->Construct(std::forward<Args>(args)...);
+    }
+
+    RefCountedRef(const RefCountedRef &other)
+        : m_data(other.m_data)
+    {
+        if (m_data) {
+            m_data->IncRef();
+        }
+    }
+
+    RefCountedRef &operator=(const RefCountedRef &other) noexcept
+    {
+        if (m_data) {
+            if (m_data->DecRef()) {
+                delete m_data;
+            }
+
+            m_data = nullptr;
+        }
+
+        m_data = other.m_data;
+
+        if (m_data) {
+            m_data->IncRef();
+        }
+
+        return *this;
+    }
+
+
+    RefCountedRef(RefCountedRef &&other) noexcept
+        : m_data(other.m_data)
+    {
+        other.m_data = nullptr;
+    }
+
+    RefCountedRef &operator=(RefCountedRef &&other) noexcept
+    {
+        if (m_data) {
+            if (m_data->DecRef()) {
+                delete m_data;
+            }
+
+            m_data = nullptr;
+        }
+
+        std::swap(m_data, other.m_data);
+
+        return *this;
+    }
+
+    ~RefCountedRef()
+    {
+        if (m_data) {
+            if (m_data->DecRef()) {
+                delete m_data;
+            }
+        }
+    }
+
+    T &Get()
+    {
+        AssertThrow(m_data != nullptr);
+        
+        return m_data->storage.Get();
+    }
+
+    const T &Get() const
+    {
+        AssertThrow(m_data != nullptr);
+        
+        return m_data->storage.Get();
+    }
+
+    bool IsValid() const
+        { return m_data != nullptr; }
+
+    bool operator==(const RefCountedRef &other) const
+        { return m_data == other.m_data; }
+
+    bool operator!=(const RefCountedRef &other) const
+        { return m_data != other.m_data; }
+
+    bool operator==(std::nullptr_t) const
+        { return !IsValid(); }
+
+    bool operator!=(std::nullptr_t) const
+        { return IsValid(); }
+};
+
 } // namespace detail
 
 template <class T>
@@ -740,7 +900,10 @@ template <class T, class CountType = std::atomic<UInt>>
 using Weak = detail::WeakRefCountedPtr<T, CountType>; 
 
 template <class T, class CountType = std::atomic<UInt>>
-using RC = detail::RefCountedPtr<T, CountType>; 
+using RC = detail::RefCountedPtr<T, CountType>;
+
+template <class T, class CountType = std::atomic<UInt>>
+using Ref = detail::RefCountedRef<T, CountType>;
 
 } // namespace hyperion
 

@@ -63,7 +63,7 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 
     float bias = HYP_SHADOW_BIAS;
 
-#if HYP_SHADOW_VARIABLE_BIAS
+#if defined(HYP_SHADOW_VARIABLE_BIAS) && HYP_SHADOW_VARIABLE_BIAS
     bias *= tan(acos(NdotL));
     bias = clamp(bias, 0.0, 0.01);
 #endif
@@ -93,7 +93,7 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     aabb.min = shadow_map_data[index].aabb_min.xyz;
     aabb.max = shadow_map_data[index].aabb_max.xyz;
 
-   return AABBContainsPoint(aabb, pos) ? max(p, p_max) : 1.0;
+    return AABBContainsPoint(aabb, pos) ? max(p, p_max) : 1.0;
 
 #if 0
     const vec3 coord = GetShadowCoord(index, pos);

@@ -22,13 +22,13 @@ layout(location=4) in flat uint g_object_index;
 #define HYP_VCT_MODE HYP_VCT_MODE_SVO
 #include "../include/voxel/shared.inc"
 
-layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0) buffer AtomicCounter {
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 72) buffer AtomicCounter {
     uint counter;
 };
 
 struct Fragment { uint x; uint y; };
 
-layout(std430, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 1) writeonly buffer FragmentListBuffer {
+layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 73) writeonly buffer FragmentListBuffer {
     Fragment fragments[];
 };
 
