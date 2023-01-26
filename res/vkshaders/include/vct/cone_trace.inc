@@ -2,23 +2,44 @@
 #define CONE_TRACE_GLSL
 
 #include "shared.inc"
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
+#include "../noise.inc"
 
 #define VCT_DIFFUSE_MAX_DIST          1.0
-#define VCT_DIFFUSE_RATIO(roughness)  10.0
-#define VCT_SPECULAR_MAX_DIST         0.35
+#define VCT_DIFFUSE_RATIO(roughness)  2.0
+#define VCT_SPECULAR_MAX_DIST         0.6
 
 #define VCT_SPECULAR_RATIO(roughness) RoughnessToConeAngle(roughness)
 
-#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.015)
+#define VCT_OFFSET_ORIGIN(normal)     vec3(normal * 0.01)
+
+const float DIFFUSE_CONE_APERTURE_16 = 0.872665;
+
+const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
+    vec3( 0.57735,   0.57735,   0.57735  ),
+    vec3( 0.57735,  -0.57735,  -0.57735  ),
+    vec3(-0.57735,   0.57735,  -0.57735  ),
+    vec3(-0.57735,  -0.57735,   0.57735  ),
+    vec3(-0.903007, -0.182696, -0.388844 ),
+    vec3(-0.903007,  0.182696,  0.388844 ),
+    vec3( 0.903007, -0.182696,  0.388844 ),
+    vec3( 0.903007,  0.182696, -0.388844 ),
+    vec3(-0.388844, -0.903007, -0.182696 ),
+    vec3( 0.388844, -0.903007,  0.182696 ),
+    vec3( 0.388844,  0.903007, -0.182696 ),
+    vec3(-0.388844,  0.903007,  0.182696 ),
+    vec3(-0.182696, -0.388844, -0.903007 ),
+    vec3( 0.182696,  0.388844, -0.903007 ),
+    vec3(-0.182696,  0.388844,  0.903007 ),
+    vec3( 0.182696, -0.388844,  0.903007 )
+};
 
 #if HYP_VCT_MODE == HYP_VCT_MODE_TEXTURE
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
     vec4 FetchVoxel(vec3 position, float lod)
     {
         vec4 rgba = textureLod(voxel_image, clamp(position, vec3(0.0), vec3(1.0)), lod);
-        //rgba.rgb = pow(rgba.rgb, vec3(2.2));
+        rgba.rgb = pow(rgba.rgb, vec3(2.2));
         return rgba;
     }
 
@@ -28,28 +49,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_im
 
     const float uVolumeDimension = 1024.0;
     #define VCT_ORIGIN_OFFSET 0.4
-
-    const int DIFFUSE_CONE_COUNT_16 = 16;
-    const float DIFFUSE_CONE_APERTURE_16 = 0.872665;
-
-    const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
-        vec3( 0.57735,   0.57735,   0.57735  ),
-        vec3( 0.57735,  -0.57735,  -0.57735  ),
-        vec3(-0.57735,   0.57735,  -0.57735  ),
-        vec3(-0.57735,  -0.57735,   0.57735  ),
-        vec3(-0.903007, -0.182696, -0.388844 ),
-        vec3(-0.903007,  0.182696,  0.388844 ),
-        vec3( 0.903007, -0.182696,  0.388844 ),
-        vec3( 0.903007,  0.182696, -0.388844 ),
-        vec3(-0.388844, -0.903007, -0.182696 ),
-        vec3( 0.388844, -0.903007,  0.182696 ),
-        vec3( 0.388844,  0.903007, -0.182696 ),
-        vec3(-0.388844,  0.903007,  0.182696 ),
-        vec3(-0.182696, -0.388844, -0.903007 ),
-        vec3( 0.182696,  0.388844, -0.903007 ),
-        vec3(-0.182696,  0.388844,  0.903007 ),
-        vec3( 0.182696, -0.388844,  0.903007 )
-    };
 
     vec4 SampleSVO(vec3 position, float lod)
     {
@@ -93,34 +92,47 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
 
     vec4 accum = vec4(0.0);
     vec3 sample_pos = origin;
-    float dist = min_diameter;
+    float dist = 0.0;
+    float diameter = max(min_diameter, dist * ratio);
 
     while (dist < max_dist && accum.a < 1.0) {
-        float diameter = max(min_diameter, ratio * dist);
         float lod = log2(diameter * min_diameter_inv);
 
         sample_pos = origin + dir * dist;
 
         vec4 voxel_color = FetchVoxel(sample_pos, lod);
-        voxel_color.rgb *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
+        // voxel_color *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
 
         float weight = (1.0 - accum.a);
         accum += voxel_color * weight;
-        dist += diameter;
+
+        const float prev_dist = dist;
+        dist += max(diameter, min_diameter);
+        diameter = dist * ratio;
     }
 
     return accum;
+}
+
+const float diffuse_aperture = 2.0 * tan(DIFFUSE_CONE_APERTURE_16 * 0.5);
+
+vec4 GetVoxelColorAtPosition(vec3 P)
+{
+    return FetchVoxel(VctWorldToTexCoord(P), 0.0);
 }
 
 vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
 {
     const vec3 normal_offset = VCT_OFFSET_ORIGIN(N);
 
-    const vec3 storage_coord = VctStoragePosition(VctWorldToAABB(P));
-    const vec3 voxel_coord = vec3(storage_coord) / vec3(vct_params.extent.xyz - vec3(1.0));
+    const vec3 voxel_coord = VctWorldToTexCoord(P);
+    
     const float greatest_extent = vct_greatest_extent;
 
     vec4 result = vec4(0.0);
+
+    uvec2 pixel_coord = uvec2(v_texcoord0 * vec2(camera.dimensions.xy) - 0.5);
+    uint _seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
 
     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, N, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
@@ -129,16 +141,35 @@ vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
 
     return result / 4.0;
+
+    // for (int i = 0; i < 16; i++) {
+    //     vec3 dir = RandomInHemisphere(vec3(RandomFloat(_seed), RandomFloat(_seed), RandomFloat(_seed)), N);
+    //     float cos_theta = dot(N, dir);
+    //     result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, dir, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * cos_theta;
+    // }   
+
+    // return result / 16.0; 
+
+
+    // for (int i = 0; i < 16; i++) {
+    //     float cos_theta = dot(N, DIFFUSE_CONE_DIRECTIONS_16[i]);
+
+    //     if (cos_theta > 0.0) {
+    //         result += ConeTrace(1.0 / greatest_extent, voxel_coord + normal_offset, DIFFUSE_CONE_DIRECTIONS_16[i], diffuse_aperture, VCT_DIFFUSE_MAX_DIST) * cos_theta;
+    //     }
+    // }
+
+    // return result / 16.0;
 }
 
 vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
 {
-    if (roughness >= 1.0) {
-        return vec4(0.0);
-    }
+    // if (roughness >= 1.0) {
+    //     return vec4(0.0);
+    // }
 
-    const vec3 storage_coord = VctStoragePosition(VctWorldToAABB(P));
-    const vec3 voxel_coord = vec3(storage_coord) / vec3(vct_params.extent.xyz - vec3(1.0));
+    const vec3 voxel_coord = VctWorldToTexCoord(P);
+    
     const float greatest_extent = vct_greatest_extent;
 
     vec4 result = vec4(0.0);

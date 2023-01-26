@@ -37,7 +37,7 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 
-#ifdef VCT_ENABLED_TEXTURE
+#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
     #include "include/vct/cone_trace.inc"
 #endif
 
@@ -102,10 +102,16 @@ void main()
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
+#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
 #ifdef VCT_ENABLED_TEXTURE
-        if (IsRenderComponentEnabled(HYP_RENDER_COMPONENT_VCT)) {
-            vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
+        #define VCT_RENDER_COMPONENT_INDEX HYP_RENDER_COMPONENT_VCT
+#else
+        #define VCT_RENDER_COMPONENT_INDEX HYP_RENDER_COMPONENT_SVO
+#endif
+
+        if (IsRenderComponentEnabled(VCT_RENDER_COMPONENT_INDEX)) {
+            vct_specular = ConeTraceSpecular(position.xyz, N, R, 0.01);
+            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, perceptual_roughness);
 
 #if HYP_VCT_INDIRECT_ENABLED
             irradiance = vct_diffuse.rgb;
@@ -162,7 +168,7 @@ void main()
         result = final_result.rgb;
 
 #if defined(DEBUG_REFLECTIONS)
-        result = ibl.rgb;
+        result = reflections.rgb;
 #elif defined(DEBUG_IRRADIANCE)
         result = irradiance.rgb;
 #endif

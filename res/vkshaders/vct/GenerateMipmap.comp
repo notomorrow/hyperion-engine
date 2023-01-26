@@ -24,6 +24,13 @@ vec4 GetVoxelAtTexel(vec3 texcoord, ivec3 offset)
     const vec3 offset_coord = texcoord + (vec3(offset) * (vec3(1.0) / prev_mip_dimensions.xyz));
 
     return Texture3DLod(voxel_map_sampler, mip_in, offset_coord, 0.0);
+
+    // const ivec3 texel_position = clamp(ivec3(texcoord * vec3(mip_dimensions.xyz) - 0.5), ivec3(0), ivec3(mip_dimensions.xyz) - 1);
+
+
+    // ivec3 offset_coord = texel_position + offset;
+
+    // return Texture3DTexel(voxel_map_sampler, mip_in, offset_coord);
 }
 
 void main()
@@ -34,16 +41,10 @@ void main()
         return;
     }
 
-    const vec3 texcoord = vec3(coord) / vec3(mip_dimensions.xyz - uvec3(1.0));
+    const vec3 texcoord = (vec3(coord) + 0.5) / vec3(mip_dimensions.xyz);
 
     vec4 color = GetVoxelAtTexel(texcoord, ivec3(0));
     vec4 final_color = color;
-
-    // if (mip_level == 0) {
-    //    vec4 temporal_blending_value = Texture3D(voxel_map_sampler, temporal_blending, texcoord);
-        // final_color.rgb = mix(temporal_blending_value.rgb, color.rgb, temporal_blending_value.a);
-     //   final_color.rgb = temporal_blending_value.rgb;
-    // }
 
     imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1.0)), final_color);
 }
