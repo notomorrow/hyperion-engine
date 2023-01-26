@@ -5,6 +5,7 @@
 #include <core/ID.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderableAttributes.hpp>
+#include <rendering/DrawCall.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -73,7 +74,13 @@ public:
     void SetEntityList(const RenderableAttributeSet &attributes, EntityList &&entities);
 
     FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList();
+    const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList() const;
+
     FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType);
+    const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType) const;
+
+
+    RenderResourceManager m_render_side_resources;// temp
 
 private:
     static ThreadType GetThreadType();
@@ -138,7 +145,7 @@ public:
     void SetCamera(const Handle<Camera> &camera)
         { m_camera = camera; }
 
-    const RC<EntityDrawCollection> &GetEntityCollection() const
+    const Ref<EntityDrawCollection> &GetEntityCollection() const
         { return m_draw_collection; }
 
     void ClearEntities();
@@ -196,7 +203,7 @@ public:
 
 private:
     Handle<Camera> m_camera;
-    RC<EntityDrawCollection> m_draw_collection;
+    Ref<EntityDrawCollection> m_draw_collection;
     FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;
 };
 

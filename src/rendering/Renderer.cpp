@@ -488,8 +488,8 @@ RenderAll(
                         );
 
 #ifdef HYP_DEBUG_MODE
-                        AssertThrowMsg(render_resources.IsUsed(draw_call.mesh_id), "Mesh ID not in used resource map; dangling pointer is possible!");
-                        AssertThrowMsg(render_resources.IsUsed(draw_call.material_id), "Material ID not in used resource map; dangling pointer is possible!");
+                        // AssertThrowMsg(render_resources.IsUsed(draw_call.mesh_id), "Mesh ID not in used resource map; dangling pointer is possible!");
+                        // AssertThrowMsg(render_resources.IsUsed(draw_call.material_id), "Material ID not in used resource map; dangling pointer is possible!");
 #endif
 
                         if constexpr (IsIndirect) {
@@ -581,7 +581,7 @@ void RenderGroup::SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies)
 
     m_draw_proxies = draw_proxies;
 
-    UpdateDrawableLifetimes();
+    // UpdateDrawableLifetimes();
 }
 
 void RenderGroup::SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies)
@@ -590,7 +590,7 @@ void RenderGroup::SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies)
 
     m_draw_proxies = std::move(draw_proxies);
 
-    UpdateDrawableLifetimes();
+    // UpdateDrawableLifetimes();
 }
 
 void RenderGroup::UpdateDrawableLifetimes()

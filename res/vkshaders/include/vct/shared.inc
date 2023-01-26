@@ -11,33 +11,32 @@
         #define HYP_VCT_MODE HYP_VCT_MODE_SVO
     #elif defined(VCT_ENABLED_TEXTURE)
         #define HYP_VCT_MODE HYP_VCT_MODE_TEXTURE
-    #else
-        #error No VCT mode defined
     #endif
 #endif
 
 vec3 vct_aabb_center = (vct_params.aabb_max.xyz + vct_params.aabb_min.xyz) * 0.5;
 vec3 vct_aabb_extent = vct_params.aabb_max.xyz - vct_params.aabb_min.xyz;
 float vct_aabb_greatest_extent = max(vct_aabb_extent.x, max(vct_aabb_extent.y, vct_aabb_extent.z));
-uint vct_greatest_extent = max(vct_params.extent.x, max(vct_params.extent.y, vct_params.extent.z));
+uint vct_greatest_extent = max(vct_params.dimensions.x, max(vct_params.dimensions.y, vct_params.dimensions.z));
 
 #define VOXEL_GRID_SCALE 1.0
 
+// returns vec3 so it can be interpolated
 vec3 VctStoragePosition(vec3 scaled_position)
 {
-    const vec3 image_size = vec3(vct_params.extent.xyz);
+    const vec3 image_size = vec3(vct_params.dimensions.xyz);
 
-    return vec3((scaled_position * 0.5 + 0.5) * (image_size - vec3(1.0)));
-}
-
-vec3 VctAABBToWorld(vec3 scaled_position)
-{
-    return ((scaled_position * 2.0 - 1.0) * vct_aabb_extent) + vct_aabb_center;
+    return clamp(scaled_position * image_size - 0.5, vec3(0), vec3(image_size) - 1.0);
 }
 
 vec3 VctWorldToAABB(vec3 world_position)
 {
-    return ((world_position - vct_aabb_center) / vct_aabb_extent);
+    return ((world_position - vct_aabb_center) / vct_aabb_extent) + 0.5;
+}
+
+vec3 VctWorldToTexCoord(vec3 world_position)
+{
+    return VctWorldToAABB(world_position);
 }
 
 
@@ -45,24 +44,19 @@ vec3 VctWorldToAABB(vec3 world_position)
 
 vec3 ScaleToAABB(vec3 aabb_max, vec3 aabb_min, vec3 world_position)
 {
-    vec3 extent3 = aabb_max - aabb_min;
-    float extent = max(extent3.x, max(extent3.y, extent3.z)) * 0.5;
-    float inv_extent = 1.0 / extent;
+    vec3 extent = aabb_max - aabb_min;
     vec3 center = (aabb_max + aabb_min) * 0.5;
+    // float extent = max(extent3.x, max(extent3.y, extent3.z)) * 0.5;
+    // float inv_extent = 1.0 / extent;
     
-    return (world_position - center) * inv_extent;
+    // return (world_position - center) * inv_extent;
+
+    return ((world_position - center) / extent) + 0.5;
 }
 
 vec3 OffsetVoxelPosition(vec3 voxel_position)
 {
     return (voxel_position + vec3(1.0)) * vec3(0.5);
-}
-
-vec3 ToVoxelPosition(vec3 aabb_max, vec3 aabb_min, vec3 world_position, float grid_size)
-{
-    vec3 voxel_pos = OffsetVoxelPosition(ScaleToAABB(aabb_max, aabb_min, world_position));
-    
-    return clamp(vec3(voxel_pos * grid_size), vec3(0.0), vec3(grid_size - 1.0));
 }
 
 vec4 RGBA8ToVec4(uint val)

@@ -3,16 +3,12 @@
 
 #include "../defines.inc"
 
-layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 1) uniform VctParams
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 71) uniform VctParams
 {
-    uvec4 extent;
+    vec4 extent;
     vec4 aabb_max;
     vec4 aabb_min;
-    uint num_mipmaps;
-
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
+    uvec4 dimensions;
 } vct_params;
 
 #endif

@@ -13,12 +13,12 @@ namespace hyperion::v2 {
 
 struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : RenderCommand
 {
-    RC<EntityDrawCollection> collection;
+    Ref<EntityDrawCollection> collection;
     RenderableAttributeSet attributes;
     EntityDrawCollection::EntityList entity_list;
 
     RENDER_COMMAND(UpdateDrawCollectionRenderSide)(
-        const RC<EntityDrawCollection> &collection,
+        const Ref<EntityDrawCollection> &collection,
         const RenderableAttributeSet &attributes,
         EntityDrawCollection::EntityList &&entity_list
     ) : collection(collection),
@@ -29,7 +29,32 @@ struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : RenderCommand
 
     virtual Result operator()()
     {
-        collection->SetEntityList(attributes, std::move(entity_list));
+        RenderResourceManager previous_resources = std::move(collection.Get().m_render_side_resources);
+
+        // prevent these objects from going out of scope while rendering is happening
+        for (const EntityDrawProxy &draw_proxy : entity_list.drawables) {
+            collection.Get().m_render_side_resources.SetIsUsed(
+                draw_proxy.mesh_id,
+                previous_resources.TakeResourceUsage(draw_proxy.mesh_id),
+                true
+            );
+
+            collection.Get().m_render_side_resources.SetIsUsed(
+                draw_proxy.material_id,
+                previous_resources.TakeResourceUsage(draw_proxy.material_id),
+                true
+            );
+
+            collection.Get().m_render_side_resources.SetIsUsed(
+                draw_proxy.skeleton_id,
+                previous_resources.TakeResourceUsage(draw_proxy.skeleton_id),
+                true
+            );
+        }
+
+        collection.Get().SetEntityList(attributes, std::move(entity_list));
+
+        // once previous_resources goes out of scope, non-used handles are discarded
 
         HYPERION_RETURN_OK;
     }
@@ -54,7 +79,23 @@ FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PA
     return m_lists[UInt(thread_type)];
 }
 
+const FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList() const
+{
+    const ThreadType thread_type = GetThreadType();
+
+    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+
+    return m_lists[UInt(thread_type)];
+}
+
 FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type)
+{
+    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+
+    return m_lists[UInt(thread_type)];
+}
+
+const FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type) const
 {
     AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
@@ -84,29 +125,27 @@ void EntityDrawCollection::ClearEntities()
 
 
 RenderList::RenderList()
-    : m_draw_collection(new EntityDrawCollection)
 {
 }
 
 RenderList::RenderList(const Handle<Camera> &camera)
-    : m_camera(camera),
-      m_draw_collection(new EntityDrawCollection)
+    : m_camera(camera)
 {
 }
 
 void RenderList::ClearEntities()
 {
-    AssertThrow(m_draw_collection != nullptr);
+    AssertThrow(m_draw_collection.IsValid());
 
-    m_draw_collection->ClearEntities();
+    m_draw_collection.Get().ClearEntities();
 }
 
 void RenderList::UpdateRenderGroups()
 {
     Threads::AssertOnThread(THREAD_GAME);
-    AssertThrow(m_draw_collection != nullptr);
+    AssertThrow(m_draw_collection.IsValid());
 
-    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(EntityDrawCollection::THREAD_TYPE_GAME)) {
+    for (auto &collection_per_pass_type : m_draw_collection.Get().GetEntityList(EntityDrawCollection::THREAD_TYPE_GAME)) {
         for (auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
             EntityDrawCollection::EntityList &entity_list = it.second;
@@ -151,7 +190,7 @@ void RenderList::PushEntityToRender(
 )
 {
     Threads::AssertOnThread(THREAD_GAME);
-    AssertThrow(m_draw_collection != nullptr);
+    AssertThrow(m_draw_collection.IsValid());
 
     AssertThrow(entity.IsValid());
     AssertThrow(entity->IsRenderable());
@@ -191,7 +230,7 @@ void RenderList::PushEntityToRender(
         attributes.stencil_state = override_attributes->stencil_state;
     }
 
-    m_draw_collection->Insert(attributes, entity->GetDrawProxy());
+    m_draw_collection.Get().Insert(attributes, entity->GetDrawProxy());
 }
 
 void RenderList::CollectDrawCalls(
@@ -210,7 +249,7 @@ void RenderList::CollectDrawCalls(
         }
     }
 
-    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(EntityDrawCollection::THREAD_TYPE_RENDER)) {
+    for (auto &collection_per_pass_type : m_draw_collection.Get().GetEntityList(EntityDrawCollection::THREAD_TYPE_RENDER)) {
         for (auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
             EntityDrawCollection::EntityList &entity_list = it.second;
@@ -286,7 +325,7 @@ void RenderList::ExecuteDrawCalls(
 {
     Threads::AssertOnThread(THREAD_RENDER);
     
-    AssertThrow(m_draw_collection != nullptr);
+    AssertThrow(m_draw_collection.IsValid());
 
     AssertThrowMsg(camera.IsValid(), "Cannot render with invalid Camera");
 
@@ -315,10 +354,10 @@ void RenderList::ExecuteDrawCalls(
 
     Engine::Get()->GetRenderState().BindCamera(camera.Get());
 
-    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(EntityDrawCollection::THREAD_TYPE_RENDER)) {
-        for (auto &it : collection_per_pass_type) {
+    for (const auto &collection_per_pass_type : m_draw_collection.Get().GetEntityList(EntityDrawCollection::THREAD_TYPE_RENDER)) {
+        for (const auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
-            EntityDrawCollection::EntityList &entity_list = it.second;
+            const EntityDrawCollection::EntityList &entity_list = it.second;
 
             const Bucket bucket = bucket_bits.Test(UInt(attributes.material_attributes.bucket)) ? attributes.material_attributes.bucket : BUCKET_INVALID;
 
@@ -356,11 +395,11 @@ void RenderList::ExecuteDrawCalls(
 
 void RenderList::Reset()
 {
-    AssertThrow(m_draw_collection != nullptr);
+    AssertThrow(m_draw_collection.IsValid());
     // Threads::AssertOnThread(THREAD_GAME);
 
     // perform full clear
-    *m_draw_collection = { };
+    m_draw_collection.Get() = { };
 }
 
 } // namespace hyperion::v2

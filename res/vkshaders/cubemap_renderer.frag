@@ -91,7 +91,7 @@ void main()
 #else
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-    albedo *= (1.0 - metalness);
+    // albedo *= (1.0 - metalness);
 
 #if defined(LIGHTING) || defined(SHADOWS)
     vec3 L = light.position_intensity.xyz;
