@@ -114,6 +114,17 @@ void Light::Init()
 
     EngineComponentBase::Init();
 
+    m_draw_proxy = LightDrawProxy {
+        .id = m_id,
+        .type = m_type,
+        .color = m_color,
+        .radius = m_radius,
+        .falloff = m_falloff,
+        .shadow_map_index = m_shadow_map_index,
+        .position_intensity = Vector4(m_position, m_intensity),
+        .visibility_bits = m_visibility_bits.to_ullong()
+    };
+
     EnqueueRenderUpdates();
 
     SetReady(true);

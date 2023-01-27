@@ -935,7 +935,6 @@ int main()
     }
 
     delete my_game;
-    delete Engine::Get();
 
     return 0;
 }

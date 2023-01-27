@@ -245,6 +245,10 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
 
 float GetShadow(uint index, vec3 position, vec2 texcoord, float NdotL)
 {
+    if (index >= HYP_MAX_SHADOW_MAPS) {
+        return 1.0;
+    }
+
 #if HYP_SHADOW_PENUMBRA
     return GetShadowContactHardened(index, position, texcoord, NdotL);
 #elif HYP_SHADOW_VARIANCE

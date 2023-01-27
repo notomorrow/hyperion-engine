@@ -39,6 +39,15 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb)
 
 #pragma region Render commands
 
+Result RENDER_COMMAND(UpdateEnvProbeDrawProxy)::operator()()
+{
+    // update m_draw_proxy on render thread.
+    env_probe.m_draw_proxy = draw_proxy;
+    env_probe.m_view_matrices = CreateCubemapMatrices(env_probe.GetAABB());
+
+    HYPERION_RETURN_OK;
+}
+
 struct RENDER_COMMAND(BindEnvProbe) : RenderCommand
 {
     EnvProbeType env_probe_type;
@@ -72,27 +81,6 @@ struct RENDER_COMMAND(UnbindEnvProbe) : RenderCommand
     virtual Result operator()()
     {
         Engine::Get()->GetRenderState().UnbindEnvProbe(env_probe_type, id);
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : RenderCommand
-{
-    EnvProbe &env_probe;
-    EnvProbeDrawProxy draw_proxy;
-
-    RENDER_COMMAND(UpdateEnvProbeDrawProxy)(EnvProbe &env_probe, EnvProbeDrawProxy &&draw_proxy)
-        : env_probe(env_probe),
-          draw_proxy(std::move(draw_proxy))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        // update m_draw_proxy on render thread.
-        env_probe.m_draw_proxy = draw_proxy;
-        env_probe.m_view_matrices = CreateCubemapMatrices(env_probe.GetAABB());
 
         HYPERION_RETURN_OK;
     }
@@ -178,7 +166,7 @@ EnvProbe::EnvProbe(
     m_env_probe_type(env_probe_type),
     m_camera_near(0.001f),
     m_camera_far(aabb.GetRadius()),
-    m_needs_update { true },
+    m_needs_update { 0x1 | 0x2 },
     m_is_rendered { false }
 {
 }
@@ -252,7 +240,7 @@ void EnvProbe::Init()
         }
     }
 
-    SetNeedsUpdate(false);
+    //SetNeedsUpdate(false);
 
     SetReady(true);
 
@@ -426,16 +414,20 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     
     // Check if octree has changes, and we need to re-render.
 
-    bool needs_update = NeedsUpdate();
+    const UInt8 update_bits = m_needs_update.load(std::memory_order_acquire);
+    bool needs_update = update_bits & 0x1;
+    bool needs_render = update_bits & 0x2;
+
+    const bool is_rendered = m_is_rendered.load(std::memory_order_acquire);
 
     Octree const *octree = nullptr;
 
-    if (!m_is_rendered.load(std::memory_order_acquire)) {
-        if (!needs_update) {
-            SetNeedsUpdate(true);
+    if (!is_rendered) {
+        //if (!needs_update) {
+        //    SetNeedsUpdate(true);
 
-            needs_update = true;
-        }
+        //    needs_update = true;
+        //}
     } else if (Engine::Get()->GetWorld()->GetOctree().GetNearestOctant(m_aabb.GetCenter(), octree)) {
         AssertThrow(octree != nullptr);
 
@@ -491,6 +483,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
         .flags = (IsReflectionProbe() ? ENV_PROBE_FLAGS_PARALLAX_CORRECTED : ENV_PROBE_FLAGS_NONE)
             | (IsShadowProbe() ? ENV_PROBE_FLAGS_SHADOW : ENV_PROBE_FLAGS_NONE)
     });
+    
+    SetNeedsUpdate(false);
 }
 
 void EnvProbe::Render(Frame *frame)
@@ -500,6 +494,10 @@ void EnvProbe::Render(Frame *frame)
 
     if (IsAmbientProbe()) {
         return;
+    }
+
+    if (!NeedsRender()) {
+    //    return;
     }
 
     AssertThrow(m_texture.IsValid());
@@ -554,6 +552,7 @@ void EnvProbe::Render(Frame *frame)
     {
         Engine::Get()->GetRenderState().SetActiveEnvProbe(GetID());
         Engine::Get()->GetRenderState().BindScene(m_parent_scene.Get());
+        Engine::Get()->GetRenderState().BindCamera(m_camera.Get());
 
         m_render_list.CollectDrawCalls(
             frame,
@@ -566,6 +565,7 @@ void EnvProbe::Render(Frame *frame)
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
         );
 
+        Engine::Get()->GetRenderState().UnbindCamera();
         Engine::Get()->GetRenderState().UnbindScene();
         Engine::Get()->GetRenderState().UnsetActiveEnvProbe();
     }
@@ -588,6 +588,8 @@ void EnvProbe::Render(Frame *frame)
     m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
     m_is_rendered.store(true, std::memory_order_release);
+
+    SetNeedsRender(false);
 
     HYPERION_ASSERT_RESULT(result);
 }

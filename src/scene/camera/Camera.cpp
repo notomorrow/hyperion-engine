@@ -29,7 +29,7 @@ struct RENDER_COMMAND(UpdateCameraDrawProxy) : RenderCommand
         shader_data.view             = draw_proxy.view;
         shader_data.projection       = draw_proxy.projection;
         shader_data.previous_view    = draw_proxy.previous_view;
-        shader_data.dimensions       = { draw_proxy.dimensions.width, draw_proxy.dimensions.height, 0, 0 };
+        shader_data.dimensions       = { draw_proxy.dimensions.width, draw_proxy.dimensions.height, 0, 1 };
         shader_data.camera_position  = draw_proxy.position.ToVector4();
         shader_data.camera_direction = draw_proxy.direction.ToVector4();
         shader_data.camera_near      = draw_proxy.clip_near;
@@ -156,6 +156,22 @@ void Camera::Init()
     }
 
     EngineComponentBase::Init();
+
+    //AssertThrowMsg(m_width > 0 && m_width < 100000 && m_width > 0 && m_height < 100000, "Invalid camera size");
+
+    m_draw_proxy = CameraDrawProxy {
+        .view = m_view_mat,
+        .projection = m_proj_mat,
+        .previous_view = m_previous_view_matrix,
+        .position = m_translation,
+        .direction = m_direction,
+        .up = m_up,
+        .dimensions = Extent2D { UInt(MathUtil::Abs(m_width)), UInt(MathUtil::Abs(m_height)) },
+        .clip_near = m_near,
+        .clip_far = m_far,
+        .fov = m_fov,
+        .frustum = m_frustum
+    };
 
     InitObject(m_framebuffer);
 
@@ -347,7 +363,7 @@ void Camera::Update(GameCounter::TickUnit dt)
             .position = m_translation,
             .direction = m_direction,
             .up = m_up,
-            .dimensions = Extent2D { UInt(m_width), UInt(m_height) },
+            .dimensions = Extent2D { UInt(MathUtil::Abs(m_width)), UInt(MathUtil::Abs(m_height)) },
             .clip_near = m_near,
             .clip_far = m_far,
             .fov = m_fov,

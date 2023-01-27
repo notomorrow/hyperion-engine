@@ -9,6 +9,7 @@
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/Compute.hpp>
+#include <rendering/RenderCommands.hpp>
 
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererAttachment.hpp>
@@ -35,6 +36,22 @@ enum EnvProbeType : UInt
     ENV_PROBE_TYPE_SHADOW,
 
     ENV_PROBE_TYPE_MAX
+};
+
+class EnvProbe;
+
+struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : RenderCommand
+{
+    EnvProbe &env_probe;
+    EnvProbeDrawProxy draw_proxy;
+
+    RENDER_COMMAND(UpdateEnvProbeDrawProxy)(EnvProbe &env_probe, EnvProbeDrawProxy &&draw_proxy)
+        : env_probe(env_probe),
+          draw_proxy(std::move(draw_proxy))
+    {
+    }
+
+    virtual Result operator()() override;
 };
 
 struct EnvProbeIndex
@@ -144,11 +161,43 @@ public:
     const Handle<Texture> &GetTexture() const
         { return m_texture; }
 
+    // also sets render needed
     void SetNeedsUpdate(bool needs_update)
-        { m_needs_update.store(needs_update, std::memory_order_release); }
+    {
+        if (needs_update) {
+            m_needs_update.store(0x1 | 0x2, std::memory_order_release);
+        } else {
+            m_needs_update.fetch_and(~0x1, std::memory_order_acq_rel);
+        }
+    }
+
+    void SetNeedsUpdate(bool needs_update, bool needs_render)
+    {
+        if (needs_update) {
+            m_needs_update.store(0x1 | (needs_render ? 0x2 : 0x0), std::memory_order_release);
+        } else {
+            m_needs_update.store(needs_render ? 0x2 : 0x0, std::memory_order_release);
+        }
+    }
+
+    void SetNeedsRender(bool needs_render)
+    {
+        
+        if (needs_render) {
+            m_needs_update.fetch_or(0x2, std::memory_order_acq_rel);
+        } else {
+            m_needs_update.fetch_and(~0x2, std::memory_order_acq_rel);
+        }
+    }
+
+    bool NeedsUpdateOrRender() const
+        { return m_needs_update.load(std::memory_order_acquire); }
 
     bool NeedsUpdate() const
-        { return m_needs_update.load(std::memory_order_acquire); }
+        { return m_needs_update.load(std::memory_order_acquire) & 0x1; }
+
+    bool NeedsRender() const
+        { return m_needs_update.load(std::memory_order_acquire) & 0x2; }
 
     void Init();
     void EnqueueBind() const;
@@ -194,7 +243,7 @@ private:
 
     EnvProbeIndex m_bound_index;
 
-    std::atomic_bool m_needs_update;
+    std::atomic<UInt8> m_needs_update;
     std::atomic_bool m_is_rendered;
     HashCode m_octant_hash_code;
 };

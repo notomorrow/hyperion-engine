@@ -885,7 +885,7 @@ struct LoadedSourceFile
     FilePath GetOutputFilepath(const FilePath &base_path, const ShaderProps &properties) const
     {
         return base_path / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
-            + "_" + String::ToString(properties.GetHashCode().Value()) + ".shc");
+            + "_" + String::ToString(properties.GetHashCode().Value()) + ".spirv");
     }
 
     HashCode GetHashCode() const

@@ -138,6 +138,8 @@ struct RenderState
         if (scene == nullptr) {
             scene_bindings.push(RenderBinding<Scene>::empty);
         } else {
+            AssertThrow(scene->GetID().ToIndex() < max_scenes);
+
             scene_bindings.push(RenderBinding<Scene> {
                 scene->GetID(),
                 scene->GetEnvironment(),
@@ -149,7 +151,9 @@ struct RenderState
 
     void UnbindScene()
     {
-        scene_bindings.pop();
+        if (!scene_bindings.empty()) {
+            scene_bindings.pop();
+        }
     }
 
     const RenderBinding<Scene> &GetScene() const
@@ -164,6 +168,8 @@ struct RenderState
         if (camera == nullptr) {
             camera_bindings.push(RenderBinding<Camera>::empty);
         } else {
+            AssertThrow(camera->GetID().ToIndex() < max_cameras);
+
             camera_bindings.push(RenderBinding<Camera> {
                 camera->GetID(),
                 camera->GetDrawProxy()
@@ -173,7 +179,9 @@ struct RenderState
 
     void UnbindCamera()
     {
-        camera_bindings.pop();
+        if (!camera_bindings.empty()) {
+            camera_bindings.pop();
+        }
     }
 
     const RenderBinding<Camera> &GetCamera() const

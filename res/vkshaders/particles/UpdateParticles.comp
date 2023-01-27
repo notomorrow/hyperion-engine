@@ -28,8 +28,6 @@ struct IndirectDrawCommand
     uint first_index;
     int vertex_offset;
     uint first_instance;
-
-    HYP_PAD_STRUCT_HERE(float, 7);
 };
 
 layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
@@ -128,8 +126,10 @@ void main()
 
     const bool fade_alpha = false;
     const float alpha = mix(1.0, lifetime_ratio, float(fade_alpha));
-    particle.color_packed = VEC4_TO_UINT(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
+    particle.color_5packed = VEC4_TO_UINT(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
 
+
+#if 0
     // for depth-buffer based collisions:
     // get particle position in screen space,
     // sample the depth texture at that point,
@@ -154,6 +154,8 @@ void main()
 
         particle.velocity.xyz = reflect(normal, normalize(particle.velocity.xyz));
     }
+
+#endif
 
 
     instances[index] = particle;

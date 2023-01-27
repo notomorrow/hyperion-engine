@@ -601,6 +601,8 @@ void RenderGroup::SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies)
 
 void RenderGroup::UpdateDrawableLifetimes()
 {
+    // TODO! Optimize : It eats at frame rate quite a bit
+
     RenderResourceManager previous_resources = std::move(m_render_resources);
 
     // prevent these objects from going out of scope while rendering is happening

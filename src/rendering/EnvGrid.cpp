@@ -159,7 +159,6 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
     m_render_list.UpdateRenderGroups();
 
     for (auto &env_probe : m_ambient_probes) {
-        // TODO: Just update render data in Render()
         env_probe->Update(delta);
     }
 }
@@ -181,7 +180,7 @@ void EnvGrid::OnRender(Frame *frame)
             const UInt index = (offset + m_current_probe_index) % m_ambient_probes.Size();
 
             if (const Handle<EnvProbe> &env_probe = m_ambient_probes[index]) {
-                if (env_probe->NeedsUpdate()) {
+                if (env_probe->NeedsUpdateOrRender()) {
                     found_index = index;
 
                     break;
@@ -215,7 +214,7 @@ void EnvGrid::OnRender(Frame *frame)
 
                 RenderEnvProbe(frame, env_probe);
     
-                env_probe->SetNeedsUpdate(false);
+                env_probe->SetNeedsRender(false);
                 
                 m_shader_data.probe_indices[probe_index_at_point] = env_probe->GetID().ToIndex();
             } else {
