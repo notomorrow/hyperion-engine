@@ -13,10 +13,6 @@
 
 #include <atomic>
 
-#define HYP_NUM_TASK_THREADS_2
-//#define HYP_NUM_TASK_THREADS_4
-//#define HYP_NUM_TASK_THREADS_8
-
 namespace hyperion::v2 {
 
 struct TaskRef
@@ -181,33 +177,37 @@ public:
         TaskThreadPool &pool = GetPool(batch->priority);
         const UInt num_threads_in_pool = UInt(pool.threads.Size());
 
-        // AssertThrow(!in_task_thread || pool.threads.Contains());
-
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
 
-            auto cycle = pool.cycle.load(std::memory_order_relaxed);
+            UInt cycle = pool.cycle.load(std::memory_order_relaxed);
 
             TaskThread *task_thread = nullptr;
             UInt num_spins = 0;
             bool was_busy = false;
 
+            const UInt max_spins = num_threads_in_pool;
+
             // if we are currently on a task thread we need to move to the next task thread in the pool
             // if we selected the current task thread. otherwise we will have a deadlock.
             // this does require that there are > 1 task thread in the pool.
             do {
-                if (num_spins >= num_threads_in_pool) {
-                    DebugLog(
-                        LogType::Warn,
-                        "On task thread %s: All other task threads busy while enqueing a batch from within another task thread! "
-                        "The task will instead be executed inline on the current task thread."
-                        "\n\tReduce usage of batching within batches?\n",
-                        current_thread_id.name.Data()
-                    );
+                if (num_spins >= 1) {
+                    DebugLog(LogType::Warn, "Task thread %s: %u spins\n", current_thread_id.name.Data(), num_spins);
 
-                    was_busy = true;
+                    if (num_spins >= max_spins) {
+                        DebugLog(
+                            LogType::Warn,
+                            "On task thread %s: All other task threads busy while enqueing a batch from within another task thread! "
+                            "The task will instead be executed inline on the current task thread."
+                            "\n\tReduce usage of batching within batches?\n",
+                            current_thread_id.name.Data()
+                        );
 
-                    break;
+                        was_busy = true;
+
+                        break;
+                    }
                 }
 
                 task_thread = pool.threads[cycle].Get();

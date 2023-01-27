@@ -223,9 +223,9 @@ void RenderGroup::Init()
     }));
 }
 
-void RenderGroup::CollectDrawCalls(Frame *frame)
+void RenderGroup::CollectDrawCalls()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
 
     AssertReady();
 
@@ -271,13 +271,19 @@ void RenderGroup::CollectDrawCalls(Frame *frame)
     m_draw_proxies.Clear();
 }
 
-void RenderGroup::CollectDrawCalls(Frame *frame, const CullData &cull_data)
+void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_data)
 {
-    CollectDrawCalls(frame);
+    if (!use_draw_indirect) {
+        return;
+    }
+
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertThrow(cull_data != nullptr);
 
     m_indirect_renderer.ExecuteCullShaderInBatches(
         frame,
-        cull_data
+        *cull_data
     );
 }
 
@@ -571,13 +577,13 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
 void RenderGroup::Render(Frame *frame)
 {
     // perform all ops in one batch
-    CollectDrawCalls(frame);
+    CollectDrawCalls();
     PerformRendering(frame);
 }
 
 void RenderGroup::SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
 
     m_draw_proxies = draw_proxies;
 
@@ -586,7 +592,7 @@ void RenderGroup::SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies)
 
 void RenderGroup::SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
 
     m_draw_proxies = std::move(draw_proxies);
 

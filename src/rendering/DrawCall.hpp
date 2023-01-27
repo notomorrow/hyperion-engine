@@ -38,15 +38,15 @@ struct ResourceUsageTypeMap { };
 
 template <>
 struct ResourceUsageTypeMap<Mesh>
-    { enum { Value = RESOURCE_USAGE_TYPE_MESH }; };
+    { enum { value = RESOURCE_USAGE_TYPE_MESH }; };
 
 template <>
 struct ResourceUsageTypeMap<Material>
-    { enum { Value = RESOURCE_USAGE_TYPE_MATERIAL }; };
+    { enum { value = RESOURCE_USAGE_TYPE_MATERIAL }; };
 
 template <>
 struct ResourceUsageTypeMap<Skeleton>
-    { enum { Value = RESOURCE_USAGE_TYPE_SKELETON }; };
+    { enum { value = RESOURCE_USAGE_TYPE_SKELETON }; };
 
 // holds a handle for any resource needed in
 // rendering, so that objects like meshes and materials
@@ -66,19 +66,20 @@ private:
 
         Handle<T> TakeUsage(ID<T> id)
         {
-            auto it = handles.Find(id);
-
-            if (it != handles.End()) {
-                usage_bits.Set(id.Value(), false);
-
-                return std::move(it->value);
+            if (!usage_bits.Test(id.Value())) {
+                return Handle<T>::empty;
             }
 
-            return Handle<T>::empty;
+            auto it = handles.Find(id);
+            AssertThrow(it != handles.End());
+
+            usage_bits.Set(id.Value(), false);
+
+            return std::move(it->value);
         }
     };
 
-    FixedArray<UniquePtr<ResourceUsageMapBase>, RESOURCE_USAGE_TYPE_MAX> resource_usage_maps;
+    FixedArray<UniquePtr<ResourceUsageMapBase>, RESOURCE_USAGE_TYPE_MAX> m_resource_usage_maps;
 
 public:
 
@@ -92,13 +93,13 @@ public:
     template <class T>
     ResourceUsageMap<T> *GetResourceUsageMap()
     {
-        ResourceUsageMapBase *ptr = resource_usage_maps[ResourceUsageTypeMap<T>::Value].Get();
+        ResourceUsageMapBase *ptr = m_resource_usage_maps[ResourceUsageTypeMap<T>::value].Get();
 
         if (ptr == nullptr) {
             // UniquePtr of derived class
-            resource_usage_maps[ResourceUsageTypeMap<T>::Value] = UniquePtr<ResourceUsageMap<T>>::Construct();
+            m_resource_usage_maps[ResourceUsageTypeMap<T>::value] = UniquePtr<ResourceUsageMap<T>>::Construct();
 
-            ptr = resource_usage_maps[ResourceUsageTypeMap<T>::Value].Get();
+            ptr = m_resource_usage_maps[ResourceUsageTypeMap<T>::value].Get();
         }
 
         return static_cast<ResourceUsageMap<T> *>(ptr);
@@ -107,6 +108,10 @@ public:
     template <class T>
     Handle<T> TakeResourceUsage(ID<T> id)
     {
+        if (!id) {
+            return Handle<T>::empty;
+        }
+
         ResourceUsageMap<T> *ptr = GetResourceUsageMap<T>();
 
         return ptr->TakeUsage(id);
@@ -115,6 +120,10 @@ public:
     template <class T>
     void SetIsUsed(ID<T> id, Handle<T> &&handle, bool is_used)
     {
+        if (!id) {
+            return;
+        }
+
         ResourceUsageMap<T> *ptr = GetResourceUsageMap<T>();
 
         if (is_used != ptr->usage_bits.Test(id.Value())) {
@@ -122,6 +131,14 @@ public:
 
             if (is_used) {
                 if (!handle) {
+                    DebugLog(
+                        LogType::Debug,
+                        "Alloc Handle %s (ID: #%u) in thread: %s\n",
+                        handle.GetClassNameString(),
+                        id.Value(),
+                        Threads::CurrentThreadID().name.Data()
+                    );
+
                     handle = Handle<T>(id);
                 }
 
@@ -135,13 +152,17 @@ public:
     template <class T>
     void SetIsUsed(ID<T> id, bool is_used)
     {
-        SetIsUsed<T>(id, Handle<T>::empty, is_used);
+        SetIsUsed<T>(id, Handle<T>(), is_used);
     }
 
     template <class T>
     bool IsUsed(ID<T> id) const
     {
-        const ResourceUsageMap<T> *ptr = static_cast<const ResourceUsageMap<T> *>(resource_usage_maps[ResourceUsageTypeMap<T>::Value].Get());
+        if (!id) {
+            return false;
+        }
+
+        const ResourceUsageMap<T> *ptr = static_cast<const ResourceUsageMap<T> *>(m_resource_usage_maps[ResourceUsageTypeMap<T>::value].Get());
 
         if (ptr == nullptr) {
             return false;

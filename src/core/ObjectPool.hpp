@@ -197,6 +197,11 @@ public:
         static constexpr const char *class_name = HYP_STR(T); \
         static constexpr SizeType max_size = (_max_size); \
         \
+        static constexpr const char *GetClassNameString() \
+        { \
+            return class_name; \
+        } \
+        \
         static Name GetNameForType() \
         { \
             static const Name name = HYP_NAME(T); \

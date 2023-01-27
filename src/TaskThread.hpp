@@ -59,9 +59,10 @@ protected:
 #endif
 
         while (IsRunning()) {
-            const bool was_free = m_task_queue.Empty();
-
             m_scheduler.WaitForTasks(m_task_queue);
+
+            const bool was_free = m_task_queue.Empty();
+            m_is_free.store(was_free);
             
             // do not execute within lock
             while (m_task_queue.Any()) {
@@ -71,7 +72,7 @@ protected:
             const bool is_free = m_task_queue.Empty();
             
             if (is_free != was_free) {
-                m_is_free.store(is_free);
+                m_is_free.store(true);
             }
         }
     }

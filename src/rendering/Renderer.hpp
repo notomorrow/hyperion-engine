@@ -47,6 +47,7 @@ class Mesh;
 class Material;
 class Skeleton;
 class Entity;
+class RenderList;
 
 /*! \brief Represents a handle to a graphics pipeline,
     which can be used for doing standalone drawing without requiring
@@ -89,6 +90,7 @@ class RenderGroup
     friend class Engine;
     friend class Entity;
     friend class RendererProxy;
+    friend class RenderList;
 
 public:
     RenderGroup(
@@ -120,17 +122,23 @@ public:
     
     void Init();
 
-    /*! \brief Collect drawable objects, must only be used with non-indirect rendering!
-     */
-    void CollectDrawCalls(Frame *frame);
+    void SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies);
+    void SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies);
 
+    // render non-indirect (collects draw calls, then renders)
+    void Render(Frame *frame);
+
+    RendererProxy GetProxy()
+        { return RendererProxy(this); }
+
+private:
     /*! \brief Collect drawable objects, then run the culling compute shader
      * to mark any occluded objects as such. Must be used with indirect rendering.
+     * If nullptr is provided for cull_data, no occlusion culling will happen.
      */
-    void CollectDrawCalls(
-        Frame *frame,
-        const CullData &cull_data
-    );
+    void CollectDrawCalls();
+
+    void PerformOcclusionCulling(Frame *frame, const CullData *cull_data);
 
     /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
     void PerformRendering(Frame *frame);
@@ -139,16 +147,6 @@ public:
      * using CollectDrawCalls(). */
     void PerformRenderingIndirect(Frame *frame);
 
-    // render non-indirect (collects draw calls, then renders)
-    void Render(Frame *frame);
-
-    void SetDrawProxies(const Array<EntityDrawProxy> &draw_proxies);
-    void SetDrawProxies(Array<EntityDrawProxy> &&draw_proxies);
-
-    RendererProxy GetProxy()
-        { return RendererProxy(this); }
-
-private:
     void UpdateDrawableLifetimes();
 
     void BindDescriptorSets(

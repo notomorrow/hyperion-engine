@@ -412,6 +412,8 @@ void IndirectRenderer::Destroy()
 
 void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &cull_data)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+
     auto *command_buffer = frame->GetCommandBuffer();
     const UInt frame_index = frame->GetFrameIndex();
 

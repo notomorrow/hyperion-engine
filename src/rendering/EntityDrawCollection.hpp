@@ -66,12 +66,13 @@ public:
     {
         Array<EntityDrawProxy> drawables;
         Handle<RenderGroup> render_group;
+        RenderResourceManager render_side_resources;
     };
 
     void Insert(const RenderableAttributeSet &attributes, const EntityDrawProxy &entity);
     void ClearEntities();
 
-    void SetEntityList(const RenderableAttributeSet &attributes, EntityList &&entities);
+    void SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entities);
 
     FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList();
     const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList() const;
@@ -79,8 +80,8 @@ public:
     FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType);
     const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType) const;
 
+    HashCode CalculateCombinedAttributesHashCode() const;
 
-    RenderResourceManager m_render_side_resources;// temp
 
 private:
     static ThreadType GetThreadType();
@@ -205,6 +206,7 @@ private:
     Handle<Camera> m_camera;
     Ref<EntityDrawCollection> m_draw_collection;
     FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_groups;
+    HashCode m_combined_attributes_hash_code;
 };
 
 } // namespace hyperion::v2
