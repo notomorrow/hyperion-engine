@@ -77,7 +77,7 @@ struct alignas(256) CubemapUniforms
 
 static_assert(sizeof(CubemapUniforms) % 256 == 0);
 
-struct SkeletonShaderData
+struct alignas(256) SkeletonShaderData
 {
     static constexpr SizeType max_bones = 256;
 
@@ -92,7 +92,7 @@ enum EntityGPUDataFlags : UInt32
     ENTITY_GPU_FLAG_HAS_SKELETON = 0x1
 };
 
-struct ObjectShaderData
+struct alignas(256) ObjectShaderData
 {
     ShaderMat4 model_matrix;
     ShaderMat4 previous_model_matrix;
@@ -140,7 +140,7 @@ struct MaterialShaderData
 
 static_assert(sizeof(MaterialShaderData) == 128);
 
-struct alignas(16) SceneShaderData
+struct SceneShaderData
 {
     ShaderVec4<Float> aabb_max;
     ShaderVec4<Float> aabb_min;
@@ -149,11 +149,14 @@ struct alignas(16) SceneShaderData
     Float global_timer;
     UInt32 frame_counter;
     UInt32 enabled_render_components_mask;
+    Float _pad0;
+
+    HYP_PAD_STRUCT_HERE(UInt8, 64 + 128);
 };
 
-static_assert(sizeof(SceneShaderData) == 64);
+static_assert(sizeof(SceneShaderData) == 256);
 
-struct alignas(16) CameraShaderData
+struct alignas(256) CameraShaderData
 {
     ShaderMat4 view;
     ShaderMat4 projection;
@@ -170,7 +173,7 @@ struct alignas(16) CameraShaderData
     Float _pad0;
 };
 
-static_assert(sizeof(CameraShaderData) == 272);
+static_assert(sizeof(CameraShaderData) == 512);
 
 struct alignas(256) EnvGridShaderData
 {
@@ -196,6 +199,8 @@ struct alignas(256) ShadowShaderData
     ShaderMat4 view;
     ShaderVec4<Float> aabb_max;
     ShaderVec4<Float> aabb_min;
+
+    HYP_PAD_STRUCT_HERE(UByte, 256 - (64 + 64 + 16 + 16));
 };
 
 static_assert(sizeof(ShadowShaderData) == 256);
@@ -246,18 +251,23 @@ struct alignas(16) ObjectInstance
 
 static_assert(sizeof(ObjectInstance) == 16);
 
-struct LightShaderData
+struct alignas(64) LightShaderData
 {
     UInt32 light_id;
     UInt32 light_type;
     UInt32 color_packed;
     Float radius;
+    // 16
+
     Float falloff;
     UInt32 shadow_map_index;
-
-    HYP_PAD_STRUCT_HERE(UInt32, 6);
+    HYP_PAD_STRUCT_HERE(UInt32, 2);
+    // 32
 
     ShaderVec4<Float> position_intensity;
+    // 48
+
+    HYP_PAD_STRUCT_HERE(UByte, 64 - 48);
 };
 
 static_assert(sizeof(LightShaderData) == 64);
@@ -301,7 +311,7 @@ static const SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
 static const SizeType max_shadow_maps = (4ull * 1024ull) / sizeof(ShadowShaderData);
 static const SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 /* max number of env probes, based on size in mb */
-static const SizeType max_env_probes = (1ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
+static const SizeType max_env_probes = (8ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
 static const SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
 /* max number of env grids, based on size in mb */
 static const SizeType max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvGridShaderData);

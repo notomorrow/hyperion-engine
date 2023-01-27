@@ -9,7 +9,11 @@ struct Scene
     float global_timer;
     uint frame_counter;
     uint enabled_render_components_mask;
-    float _pad;
+    float _pad0;
+
+    mat4 _pad1;
+    mat4 _pad2;
+    mat4 _pad3;
 };
 
 struct Camera
@@ -27,6 +31,12 @@ struct Camera
     float far;
     float fov;
     float _pad0;
+
+    vec4 _pad1; vec4 _pad2; vec4 _pad3;
+
+    mat4 _pad4;
+    mat4 _pad5;
+    mat4 _pad6;
 };
 
 struct Light
@@ -35,13 +45,14 @@ struct Light
     uint type;
     uint color_encoded;
     float radius;
+
     float falloff;
     uint shadow_map_index; // ~0 == no shadow map
-
-    uint _pad0, _pad1, _pad2, _pad3,
-        _pad4, _pad5;
+    uint _pad0, _pad1;
 
     vec4 position_intensity; // or direction for directional lights
+
+    vec4 _pad2; vec4 _pad3; vec4 _pad4;
 };
 
 struct ShadowMap

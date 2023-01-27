@@ -153,7 +153,9 @@ void DeferredPass::Record(UInt frame_index)
 
                     UInt shadow_probe_index = 0;
 
-                    if (light.type == LightType::POINT) {
+                    if (light.type == LightType::POINT && light.shadow_map_index != ~0u) {
+                        AssertThrow(light.shadow_map_index < max_shadow_maps);
+
                         shadow_probe_index = light.shadow_map_index;
                     }
 
@@ -590,7 +592,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     deferred_data.flags |= use_ddgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
     
     CollectDrawCalls(frame);
-
+    
     if (do_particles) {
         UpdateParticles(frame, environment);
     }
@@ -660,9 +662,10 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_hbao->Render(frame);
     }
     
+    auto &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer();
+    
     m_post_processing.RenderPre(frame);
 
-    auto &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer();
 
     { // deferred lighting on opaque objects
         DebugMarker marker(primary, "Deferred shading");
@@ -730,6 +733,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_combine_pass->End(frame);
     }
 
+
     { // render depth pyramid
         m_dpr.Render(frame);
         // update culling info now that depth pyramid has been rendered
@@ -740,9 +744,6 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     Image *src_image = deferred_pass_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
 
     GenerateMipChain(frame, src_image);
-
-    // put src image in state for reading
-    src_image->GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::SHADER_RESOURCE);
 
     m_post_processing.RenderPost(frame);
 
@@ -778,6 +779,9 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
         Engine::Get()->GetGPUDevice(),
         primary
     ));
+
+    // put src image in state for reading
+    src_image->GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::SHADER_RESOURCE);
 }
 
 void DeferredRenderer::CollectDrawCalls(Frame *frame)

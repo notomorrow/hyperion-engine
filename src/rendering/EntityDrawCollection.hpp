@@ -6,6 +6,7 @@
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/DrawCall.hpp>
+#include <rendering/CullData.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -21,8 +22,6 @@ class Scene;
 class Camera;
 class Entity;
 class RenderGroup;
-class World;
-class CullData;
 
 enum PassType : UInt
 {
@@ -52,8 +51,6 @@ constexpr PassType BucketToPassType(Bucket bucket)
 class EntityDrawCollection
 {
 public:
-    friend class World;
-
     enum ThreadType : UInt
     {
         THREAD_TYPE_INVALID = UInt(-1),
@@ -130,8 +127,6 @@ struct RenderListQuery
 class RenderList
 {
 public:
-    friend class World;
-
     RenderList();
     RenderList(const Handle<Camera> &camera);
     RenderList(const RenderList &other) = default;

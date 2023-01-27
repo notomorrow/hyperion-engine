@@ -64,7 +64,7 @@ void main()
     bool perform_lighting = albedo.a > 0.0;
     
     vec3 albedo_linear = albedo.rgb;
-	vec3 result = vec3(0.0);
+    vec3 result = vec3(0.0);
 
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);

@@ -9,7 +9,7 @@
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 8) uniform texture2D effects_pre_stack[HYP_MAX_EFFECTS_PER_SLOT];
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 9) uniform texture2D effects_post_stack[HYP_MAX_EFFECTS_PER_SLOT];
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 10) uniform PostProcessingData {
+layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 10) uniform PostProcessingData {
     uvec2 effect_counts;
     uvec2 last_enabled_indices;
     uvec2 masks;

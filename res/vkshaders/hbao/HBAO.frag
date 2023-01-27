@@ -31,7 +31,7 @@ layout(std140, set = 0, binding = 7, row_major) readonly buffer SceneBuffer
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 8, row_major) readonly buffer CameraShaderData
+layout(std140, set = 0, binding = 8, row_major) uniform CameraShaderData
 {
     Camera camera;
 };

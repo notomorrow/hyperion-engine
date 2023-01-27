@@ -36,7 +36,7 @@ layout(push_constant) uniform PushConstant
 };
 
 // Used for point light shadows
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
 {
     EnvProbe current_env_probe;
 };
@@ -93,7 +93,10 @@ void main()
         const float LdotH = max(0.0001, dot(L, H));
         const float HdotV = max(0.0001, dot(H, V));
 
-        if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+        const bool light_has_shadow_map = light.shadow_map_index != ~0u;
+        const bool probe_has_texture = current_env_probe.texture_index != ~0u;
+
+        if (light.type == HYP_LIGHT_TYPE_POINT && light_has_shadow_map && probe_has_texture) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
             const vec2 moments = TextureCube(HYP_SAMPLER_LINEAR, point_shadow_maps[current_env_probe.texture_index], world_to_light).rg;
             const float current_depth = length(world_to_light);
@@ -104,7 +107,7 @@ void main()
             float p_max = variance / (variance + shadow_dist * shadow_dist);
 
             shadow = max(p, p_max);
-        } else if (light.shadow_map_index != ~0u) {
+        } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light_has_shadow_map) {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
 

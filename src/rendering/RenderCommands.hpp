@@ -23,6 +23,12 @@ using renderer::Result;
 #define RENDER_COMMAND(name) RenderCommand_##name
 #define PUSH_RENDER_COMMAND(name, ...) RenderCommands::Push< RENDER_COMMAND(name) >(__VA_ARGS__)
 
+#define EXEC_RENDER_COMMAND_INLINE(name, ...) \
+    { \
+        Threads::AssertOnThread(THREAD_RENDER); \
+        RENDER_COMMAND(name) _command(__VA_ARGS__)(); \
+    }
+
 struct RenderCommand
 {
     virtual ~RenderCommand() = default;
@@ -67,14 +73,11 @@ struct RenderScheduler
 class RenderCommands
 {
 private:
-    struct HolderRef
+    struct RenderCommandHolder
     {
-        std::atomic<SizeType> *counter_ptr = nullptr;
         void *memory_ptr = nullptr;
-        SizeType object_size = 0;
-        SizeType object_alignment = 0;
 
-        virtual ~HolderRef() = default;
+        virtual ~RenderCommandHolder() = default;
 
         virtual void Clear() = 0;
     };
@@ -83,7 +86,7 @@ private:
     static constexpr SizeType render_command_cache_size = 4096;
 
     // last item must always evaluate to false, same way null terminated char strings work
-    static FixedArray<HolderRef *, max_render_command_types> holders;
+    static FixedArray<RenderCommandHolder *, max_render_command_types> holders;
     static std::atomic<SizeType> render_command_type_index;
 
     static std::mutex mtx;
@@ -161,11 +164,9 @@ private:
     {
         using RenderCommandStorageArray = Array<ValueStorage<T>, render_command_cache_size * sizeof(T)>;
 
-        struct Data;
-
-        struct HolderRefT : HolderRef
+        struct RenderCommandHolderDerived : RenderCommandHolder
         {
-            virtual ~HolderRefT() override = default;
+            virtual ~RenderCommandHolderDerived() override = default;
 
             virtual void Clear() override
             {
@@ -173,15 +174,13 @@ private:
             }
         };
 
-        static struct Data
+        struct Data
         {
-            HolderRefT holder;
+            RenderCommandHolderDerived holder;
             RenderCommandStorageArray commands;
-            std::atomic<SizeType> counter { 0 };
 
             Data()
             {
-                // holder = { &counter, &commands, sizeof(T), alignof(T) };
                 holder.memory_ptr = &commands;
 
                 const SizeType command_type_index = RenderCommands::render_command_type_index.fetch_add(1);
@@ -189,20 +188,34 @@ private:
 
                 RenderCommands::holders[command_type_index] = &holder;
             }
-        } data;
+        };
 
-        const SizeType command_index = data.commands.Size();//data.counter.fetch_add(1);
+        static Data data;
+
+#ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
+        DebugLog(
+            LogType::Warn,
+            "Alloc render command (size: %llu/%llu, in function: %s)\n",
+            data.commands.Size() + 1,
+            render_command_cache_size,
+            HYP_DEBUG_FUNC
+        );
+#endif
+
+        const SizeType command_index = data.commands.Size();
         data.commands.PushBack({ });
 
-        if (command_index > render_command_cache_size) {
+        if (command_index >= render_command_cache_size) {
             DebugLog(
                 LogType::Warn,
-                "Render command count greater than budgeted size\n"
+                "Render command count greater than budgeted size! (size: %llu/%llu, in function: %s)\n",
+                data.commands.Size(),
+                render_command_cache_size,
+                HYP_DEBUG_FUNC
             );
-        }
 
-        // AssertThrowMsg(cache_index < render_command_cache_size,
-        //     "Render command cache size exceeded! Too many render threads are being submitted before the requests can be fulfilled.");
+            HYP_BREAKPOINT;
+        }
 
         return data.commands.Data() + command_index;
     }

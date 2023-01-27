@@ -1026,6 +1026,9 @@ void Engine::RenderNextFrame(Game *game)
 
     if (!frame_result) {
         m_crash_handler.HandleGPUCrash(frame_result);
+
+        m_is_render_loop_active = false;
+        m_running.store(false);
     }
 
     auto *frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
@@ -1049,6 +1052,9 @@ void Engine::RenderNextFrame(Game *game)
 
     if (!frame_result) {
         m_crash_handler.HandleGPUCrash(frame_result);
+
+        m_is_render_loop_active = false;
+        m_running.store(false);
     }
 
     game->OnFrameEnd(frame);

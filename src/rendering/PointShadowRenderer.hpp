@@ -32,7 +32,7 @@ public:
     PointShadowRenderer(const Handle<Light> &light, const Extent2D &extent);
     PointShadowRenderer(const PointShadowRenderer &other) = delete;
     PointShadowRenderer &operator=(const PointShadowRenderer &other) = delete;
-    ~PointShadowRenderer();
+    virtual ~PointShadowRenderer() override;
 
     void Init();
     void InitGame(); // init on game thread

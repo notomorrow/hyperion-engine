@@ -90,7 +90,7 @@ void PointShadowRenderer::OnRender(Frame *frame)
             m_last_visibility_state = true;
         }
 
-        if (m_env_probe->NeedsUpdate()) {
+        if (m_env_probe->NeedsRender()) {
             m_env_probe->Render(frame);
         } else {
             std::cout << "Skip render point light shadows because it doesnt need update\n";

@@ -2,16 +2,16 @@
 
 namespace hyperion::v2 {
 
-FixedArray<RenderCommands::HolderRef *, RenderCommands::max_render_command_types> RenderCommands::holders = { };
+FixedArray<RenderCommands::RenderCommandHolder *, RenderCommands::max_render_command_types> RenderCommands::holders = { };
 std::atomic<SizeType> RenderCommands::render_command_type_index = { 0 };
 RenderScheduler RenderCommands::scheduler = { };
 
 std::mutex RenderCommands::mtx = std::mutex();
 std::condition_variable RenderCommands::flushed_cv = std::condition_variable();
 
-void RenderScheduler::Commit(RenderCommand *ptr)
+void RenderScheduler::Commit(RenderCommand *command)
 {
-    m_commands.PushBack(ptr);
+    m_commands.PushBack(command);
     m_num_enqueued.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -22,13 +22,14 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
     FlushResult result { Result::OK, 0 };
 
     SizeType index = 0;
+    const SizeType num_commands = m_commands.Size();
 
-    while (index < m_commands.Size()) {
+    while (index < num_commands) {
         RenderCommand *front = m_commands[index++];
 
         ++result.num_executed;
 
-#ifdef HYP_DEBUG_RENDER_COMMANDS
+#ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
         DebugLog(LogType::RenDebug, "Executing render command %s\n", typeid(*front).name());
 #endif
 
@@ -43,14 +44,18 @@ RenderScheduler::FlushResult RenderScheduler::Flush()
         }
     }
 
-    if (HYP_LIKELY(index == m_commands.Size())) {
+    if (HYP_LIKELY(index == num_commands)) {
         m_commands.Clear();
     } else {
-        AssertThrowMsg(index < m_commands.Size(), "index is > than m_commands.Size() -- incorrect bookkeeping here");
+        AssertThrowMsg(index < num_commands, "index is > than m_commands.Size() -- incorrect bookkeeping here");
 
-        for (const auto it = m_commands.Begin(); it != m_commands.Begin() + index;) {
-            m_commands.Erase(it);
+        const SizeType erase_to_index = index;
+
+        for (SizeType i = 0; i < erase_to_index; i++) {
+            m_commands.PopFront();
         }
+
+        m_commands.Refit();
     }
 
     m_num_enqueued.fetch_sub(index, std::memory_order_relaxed);
@@ -62,20 +67,12 @@ void RenderCommands::Rewind()
 {
     // all items in the cache must have had destructor called on them already.
 
-    HolderRef **p = holders.Data();
+    RenderCommandHolder **pp = holders.Data();
 
-    while (*p) {
-        // const SizeType counter_value = p->counter_ptr->load();
+    while (*pp) {
+        (*pp)->Clear();
 
-        // if (counter_value) {
-        //     Memory::Set(p->memory_ptr, 0, p->object_size * counter_value);
-            
-        //     p->counter_ptr->store(0);
-        // }
-
-        (*p)->Clear();
-
-        ++p;
+        ++pp;
     }
 }
 

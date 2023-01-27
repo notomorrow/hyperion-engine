@@ -21,7 +21,6 @@ struct EnvProbe
     uvec4 _pad2;
     uvec4 _pad3;
     uvec4 _pad4;
-    
     uvec4 _pad5;
 };
 
@@ -50,7 +49,7 @@ struct SH9
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     #ifndef HYP_DEFERRED_NO_ENV_GRID
-        layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
+        layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
         {
             EnvGrid env_grid;
         };

@@ -137,13 +137,11 @@ static bool ResizeBuffer(
         current_buffer_size = buffers[frame_index]->size;
 
         if (new_buffer_size > current_buffer_size) {
-            HYPERION_ASSERT_RESULT(buffers[frame_index]->Destroy(Engine::Get()->GetGPUDevice()));
+            SafeRelease(std::move(buffers[frame_index]));
 
             needs_create = true;
         }
     } else {
-        buffers[frame_index] = RenderObjects::Make<GPUBuffer>(BufferType());
-
         needs_create = true;
     }
 
@@ -151,6 +149,8 @@ static bool ResizeBuffer(
         if constexpr (IndirectDrawState::use_next_pow2_size) {
             new_buffer_size = MathUtil::NextPowerOf2(new_buffer_size);
         }
+
+        buffers[frame_index] = RenderObjects::Make<GPUBuffer>(BufferType());
 
         DebugLog(
             LogType::Debug,

@@ -46,7 +46,7 @@ layout(location=0) out vec4 output_color;
     #include "include/shadows.inc"
 #endif
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
 {
     EnvProbe current_env_probe;
 };
@@ -56,8 +56,8 @@ void main()
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
 
-    vec4 view_position = camera.view * vec4(v_position, 1.0);
-    view_position /= view_position.w;
+    // vec4 view_position = camera.view * vec4(v_position, 1.0);
+    // view_position.xyz /= view_position.w;
 
     const float min_extent = min(abs(v_env_probe_extent.x), min(abs(v_env_probe_extent.y), abs(v_env_probe_extent.z))) * 0.5;
 
@@ -106,7 +106,7 @@ void main()
     float shadow = 1.0;
 
 #ifdef SHADOWS
-    if (light.shadow_map_index != ~0u) {
+    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
         shadow = GetShadowStandard(light.shadow_map_index, v_position.xyz, vec2(0.0), NdotL);
     }
 #endif
