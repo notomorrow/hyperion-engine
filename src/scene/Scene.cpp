@@ -688,7 +688,7 @@ void Scene::CollectEntities(
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
     const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->override_flags : 0;
-    
+
     // push all entities to render if they are visible to the given camera
     for (auto &it : m_entities) {
         const Handle<Entity> &entity = it.second;

@@ -278,7 +278,7 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE Name GetTypeName() const
+    HYP_FORCE_INLINE static Name GetTypeName()
         { return GetNameForRenderObject<T>(); }
 
     T *operator->() const

@@ -152,8 +152,11 @@ struct Handle
         index = 0;
     }
 
-    HYP_FORCE_INLINE Name GetTypeName() const
+    HYP_FORCE_INLINE static Name GetTypeName()
         { return HandleDefinition<T>::GetNameForType(); }
+
+    HYP_FORCE_INLINE static constexpr const char *GetClassNameString()
+        { return HandleDefinition<T>::GetClassNameString(); }
 
     HashCode GetHashCode() const
     {
@@ -300,8 +303,11 @@ struct WeakHandle
         index = 0;
     }
 
-    HYP_FORCE_INLINE Name GetTypeName() const
+    HYP_FORCE_INLINE static Name GetTypeName()
         { return HandleDefinition<T>::GetNameForType(); }
+
+    HYP_FORCE_INLINE static constexpr const char *GetClassNameString()
+        { return HandleDefinition<T>::GetClassNameString(); }
 
     HashCode GetHashCode() const
     {

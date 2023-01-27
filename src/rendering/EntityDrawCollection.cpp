@@ -29,30 +29,7 @@ struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : RenderCommand
 
     virtual Result operator()()
     {
-        RenderResourceManager previous_resources = std::move(collection.Get().m_render_side_resources);
-
-        // prevent these objects from going out of scope while rendering is happening
-        for (const EntityDrawProxy &draw_proxy : entity_list.drawables) {
-            collection.Get().m_render_side_resources.SetIsUsed(
-                draw_proxy.mesh_id,
-                previous_resources.TakeResourceUsage(draw_proxy.mesh_id),
-                true
-            );
-
-            collection.Get().m_render_side_resources.SetIsUsed(
-                draw_proxy.material_id,
-                previous_resources.TakeResourceUsage(draw_proxy.material_id),
-                true
-            );
-
-            collection.Get().m_render_side_resources.SetIsUsed(
-                draw_proxy.skeleton_id,
-                previous_resources.TakeResourceUsage(draw_proxy.skeleton_id),
-                true
-            );
-        }
-
-        collection.Get().SetEntityList(attributes, std::move(entity_list));
+        collection.Get().SetRenderSideList(attributes, std::move(entity_list));
 
         // once previous_resources goes out of scope, non-used handles are discarded
 
@@ -107,9 +84,65 @@ void EntityDrawCollection::Insert(const RenderableAttributeSet &attributes, cons
     GetEntityList(THREAD_TYPE_GAME)[BucketToPassType(attributes.material_attributes.bucket)][attributes].drawables.PushBack(entity);
 }
 
-void EntityDrawCollection::SetEntityList(const RenderableAttributeSet &attributes, EntityList &&entity_list)
+void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entity_list)
 {
-    GetEntityList()[BucketToPassType(attributes.material_attributes.bucket)].Set(attributes, std::move(entity_list));
+    auto &mapping = GetEntityList()[BucketToPassType(attributes.material_attributes.bucket)];
+
+    // TODO...
+    // Rather than recreate new render side resources,
+    // could we reuse the same object, using bitwise xor on the bitset
+    // to track IDs? Then jus iterate through bits in that and cross reference
+    // them with bits in the new one, and drop any references that are in that?
+
+    auto it = mapping.Find(attributes);
+
+    if (it != mapping.End()) {
+        RenderResourceManager previous_resources = std::move(it->second.render_side_resources);
+
+        // prevent these objects from going out of scope while rendering is happening
+        for (const EntityDrawProxy &draw_proxy : entity_list.drawables) {
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.mesh_id,
+                previous_resources.TakeResourceUsage(draw_proxy.mesh_id),
+                true
+            );
+
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.material_id,
+                previous_resources.TakeResourceUsage(draw_proxy.material_id),
+                true
+            );
+
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.skeleton_id,
+                previous_resources.TakeResourceUsage(draw_proxy.skeleton_id),
+                true
+            );
+        }
+
+        it->second = std::move(entity_list);
+    } else {
+        // prevent these objects from going out of scope while rendering is happening
+        for (const EntityDrawProxy &draw_proxy : entity_list.drawables) {
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.mesh_id,
+                true
+            );
+
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.material_id,
+                true
+            );
+
+            entity_list.render_side_resources.SetIsUsed(
+                draw_proxy.skeleton_id,
+                true
+            );
+        }
+
+        mapping.Set(attributes, std::move(entity_list));
+    }
+
 }
 
 void EntityDrawCollection::ClearEntities()
@@ -121,6 +154,19 @@ void EntityDrawCollection::ClearEntities()
             it.second.drawables.Clear();
         }
     }
+}
+
+HashCode EntityDrawCollection::CalculateCombinedAttributesHashCode() const
+{
+    HashCode hc;
+
+    for (auto &collection_per_pass_type : GetEntityList()) {
+        for (auto &it : collection_per_pass_type) {
+            hc.Add(it.first.GetHashCode());
+        }
+    }
+
+    return hc;
 }
 
 
@@ -145,12 +191,31 @@ void RenderList::UpdateRenderGroups()
     Threads::AssertOnThread(THREAD_GAME);
     AssertThrow(m_draw_collection.IsValid());
 
+    using IteratorType = FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
+
+    Array<IteratorType> iterators;
+    Array<Pair<RenderableAttributeSet, Handle<RenderGroup>>> added_render_groups;
+
     for (auto &collection_per_pass_type : m_draw_collection.Get().GetEntityList(EntityDrawCollection::THREAD_TYPE_GAME)) {
         for (auto &it : collection_per_pass_type) {
-            const RenderableAttributeSet &attributes = it.first;
-            EntityDrawCollection::EntityList &entity_list = it.second;
+            iterators.PushBack(&it);
+        }
+    }
 
-            if (!entity_list.render_group.IsValid()) {
+    added_render_groups.Resize(iterators.Size());
+
+    Engine::Get()->task_system.ParallelForEach(TASK_PRIORITY_HIGH, iterators, [this, &added_render_groups](IteratorType it, UInt index, UInt) {
+        const RenderableAttributeSet &attributes = it->first;
+        EntityDrawCollection::EntityList &entity_list = it->second;
+
+        if (!entity_list.render_group.IsValid()) {
+            if (added_render_groups[index].second.IsValid()) {
+#ifdef HYP_DEBUG_MODE
+                AssertThrowMsg(attributes == added_render_groups[index].first, "Attributes to not match with assigned index of %u", index);
+#endif
+
+                entity_list.render_group = added_render_groups[index].second;
+            } else {
                 auto render_group_it = m_render_groups.Find(attributes);
 
                 if (render_group_it == m_render_groups.End() || !render_group_it->second) {
@@ -159,26 +224,34 @@ void RenderList::UpdateRenderGroups()
                     if (!render_group.IsValid()) {
                         DebugLog(LogType::Error, "Render group not valid for attribute set %llu!\n", attributes.GetHashCode().Value());
 
-                        continue;
+                        return;//continue;
                     }
 
                     InitObject(render_group);
 
-                    auto insert_result = m_render_groups.Set(attributes, std::move(render_group));
-                    AssertThrow(insert_result.second);
+                    // auto insert_result = m_render_groups.Set(attributes, std::move(render_group));
+                    // AssertThrow(insert_result.second);
 
-                    render_group_it = insert_result.first;
+                    entity_list.render_group = render_group;
+
+                    added_render_groups[index] = { attributes, std::move(render_group) };
+                } else {
+                    entity_list.render_group = render_group_it->second;
                 }
-
-                entity_list.render_group = render_group_it->second;
             }
+        }
 
-            PUSH_RENDER_COMMAND(
-                UpdateDrawCollectionRenderSide,
-                m_draw_collection,
-                attributes,
-                std::move(entity_list)
-            );
+        PUSH_RENDER_COMMAND(
+            UpdateDrawCollectionRenderSide,
+            m_draw_collection,
+            attributes,
+            std::move(entity_list)
+        );
+    });
+
+    for (auto &it : added_render_groups) {
+        if (it.second.IsValid()) {
+            m_render_groups.Set(it.first, std::move(it.second));
         }
     }
 }
@@ -241,34 +314,36 @@ void RenderList::CollectDrawCalls(
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    FixedArray<UInt, PASS_TYPE_MAX> pass_indices { UInt(-1) };
+    using IteratorType = FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
 
-    for (UInt bucket_index = 0, pass_index = 0; bucket_index < BUCKET_MAX; bucket_index++) {
-        if (bucket_bits.Test(bucket_index)) {
-            pass_indices[pass_index++] = UInt(BucketToPassType(Bucket(bucket_index)));
-        }
-    }
+    Array<IteratorType> iterators;
 
     for (auto &collection_per_pass_type : m_draw_collection.Get().GetEntityList(EntityDrawCollection::THREAD_TYPE_RENDER)) {
         for (auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
-            EntityDrawCollection::EntityList &entity_list = it.second;
 
             const Bucket bucket = bucket_bits.Test(UInt(attributes.material_attributes.bucket)) ? attributes.material_attributes.bucket : BUCKET_INVALID;
 
             if (bucket == BUCKET_INVALID) {
-                continue;
+                return;
             }
 
-            AssertThrow(entity_list.render_group.IsValid());
+            iterators.PushBack(&it);
+        }
+    }
 
-            entity_list.render_group->SetDrawProxies(entity_list.drawables);
+    Engine::Get()->task_system.ParallelForEach(TASK_PRIORITY_HIGH, iterators, [&bucket_bits, cull_data](IteratorType it, UInt index, UInt) {
+        EntityDrawCollection::EntityList &entity_list = it->second;
 
-            if (use_draw_indirect && cull_data != nullptr) {
-                entity_list.render_group->CollectDrawCalls(frame, *cull_data);
-            } else {
-                entity_list.render_group->CollectDrawCalls(frame);
-            }
+        AssertThrow(entity_list.render_group.IsValid());
+
+        entity_list.render_group->SetDrawProxies(entity_list.drawables);
+        entity_list.render_group->CollectDrawCalls();
+    });
+
+    if (use_draw_indirect && cull_data != nullptr) {
+        for (SizeType index = 0; index < iterators.Size(); index++) {
+            (*iterators[index]).second.render_group->PerformOcclusionCulling(frame, cull_data);
         }
     }
 }
@@ -281,7 +356,7 @@ void RenderList::ExecuteDrawCalls(
 ) const
 {
     AssertThrow(m_camera.IsValid());
-    AssertThrowMsg(m_camera->GetFramebuffer().IsValid(), "Camera has no Framebuffer is attached");
+    AssertThrowMsg(m_camera->GetFramebuffer().IsValid(), "Camera has no Framebuffer attached");
 
     ExecuteDrawCalls(frame, m_camera, m_camera->GetFramebuffer(), bucket_bits, cull_data, push_constant);
 }
@@ -295,7 +370,6 @@ void RenderList::ExecuteDrawCalls(
 ) const
 {
     AssertThrow(m_camera.IsValid());
-    // AssertThrowMsg(framebuffer.IsValid(), "Invalid Framebuffer");
 
     ExecuteDrawCalls(frame, m_camera, framebuffer, bucket_bits, cull_data, push_constant);
 }
