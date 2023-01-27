@@ -28,7 +28,7 @@ void SkydomeController::OnAdded()
         m_dome->SetMaterial(std::move(material));
         m_dome->SetShader(Engine::Get()->GetShaderManager().GetOrCreate(
             HYP_NAME(Skydome),
-            ShaderProps(renderer::static_mesh_vertex_attributes)
+            ShaderProperties(renderer::static_mesh_vertex_attributes)
         ));
     }
 }

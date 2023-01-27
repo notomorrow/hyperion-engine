@@ -288,7 +288,7 @@ void Engine::PrepareFinalPass()
     m_full_screen_quad = MeshBuilder::Quad();
     AssertThrow(InitObject(m_full_screen_quad));
 
-    ShaderProps final_output_props;
+    ShaderProperties final_output_props;
     final_output_props.Set("TEMPORAL_AA", GetConfig().Get(CONFIG_TEMPORAL_AA));
 
     if (GetConfig().Get(CONFIG_DEBUG_SSR)) {
@@ -1084,8 +1084,9 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
 
     DebugLog(
         LogType::Debug,
-        "Created RenderGroup for RenderableAttributeSet with hash %llu\n",
-        renderable_attributes.GetHashCode().Value()
+        "Created RenderGroup for RenderableAttributeSet with hash %llu from thread %s\n",
+        renderable_attributes.GetHashCode().Value(),
+        Threads::CurrentThreadID().name.Data()
     );
 
     std::lock_guard guard(m_render_group_mapping_mutex);

@@ -53,6 +53,7 @@
 
 #define HYP_SYNC_RENDER() \
     do { \
+        Threads::AssertOnThread(~THREAD_TASK, "Waiting on render thread from task threads is disabled as it may cause a deadlock."); \
         HYPERION_ASSERT_RESULT(RenderCommands::FlushOrWait()); \
     } while (0)
 

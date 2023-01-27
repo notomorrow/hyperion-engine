@@ -28,14 +28,6 @@
 
 namespace hyperion::v2 {
 
-enum TaskPriority : UInt
-{
-    TASK_PRIORITY_MEDIUM = 0,
-    TASK_PRIORITY_HIGH = 1,
-
-    TASK_PRIORITY_MAX
-};
-
 struct TaskID
 {
     UInt value { 0 };
@@ -65,7 +57,6 @@ struct Task
 
     TaskID id;
     Function fn;
-    TaskPriority priority = TASK_PRIORITY_MEDIUM;
 
     constexpr static TaskID empty_id = TaskID { 0 };
 
@@ -80,21 +71,17 @@ struct Task
     Task &operator=(const Task &other) = delete;
     Task(Task &&other) noexcept
         : id(other.id),
-          fn(std::move(other.fn)),
-          priority(other.priority)
+          fn(std::move(other.fn))
     {
         other.id = {};
-        other.priority = TASK_PRIORITY_MEDIUM;
     }
 
     Task &operator=(Task &&other) noexcept
     {
         id = other.id;
         fn = std::move(other.fn);
-        priority = other.priority;
 
         other.id = {};
-        other.priority = TASK_PRIORITY_MEDIUM;
 
         return *this;
     }

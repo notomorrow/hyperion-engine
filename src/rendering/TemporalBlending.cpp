@@ -215,7 +215,7 @@ void TemporalBlending::CreateDescriptorSets()
 
 void TemporalBlending::CreateComputePipelines()
 {
-    ShaderProps shader_properties;
+    ShaderProperties shader_properties;
 
     switch (m_image_format) {
     case InternalFormat::RGBA8:

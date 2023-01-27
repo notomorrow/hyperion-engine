@@ -1,3 +1,4 @@
+#include <core/lib/DynArray.hpp>
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/Renderer.hpp>
@@ -47,7 +48,7 @@ EntityDrawCollection::ThreadType EntityDrawCollection::GetThreadType()
         : (thread_id == THREAD_RENDER ? THREAD_TYPE_RENDER : THREAD_TYPE_INVALID);
 }
 
-FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList()
+FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList()
 {
     const ThreadType thread_type = GetThreadType();
 
@@ -56,7 +57,7 @@ FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PA
     return m_lists[UInt(thread_type)];
 }
 
-const FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList() const
+const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList() const
 {
     const ThreadType thread_type = GetThreadType();
 
@@ -65,14 +66,14 @@ const FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityLis
     return m_lists[UInt(thread_type)];
 }
 
-FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type)
+FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type)
 {
     AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
     return m_lists[UInt(thread_type)];
 }
 
-const FixedArray<FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type) const
+const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type) const
 {
     AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
@@ -142,7 +143,6 @@ void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attri
 
         mapping.Set(attributes, std::move(entity_list));
     }
-
 }
 
 void EntityDrawCollection::ClearEntities()
@@ -191,7 +191,7 @@ void RenderList::UpdateRenderGroups()
     Threads::AssertOnThread(THREAD_GAME);
     AssertThrow(m_draw_collection.IsValid());
 
-    using IteratorType = FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
+    using IteratorType = ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
 
     Array<IteratorType> iterators;
     Array<Pair<RenderableAttributeSet, Handle<RenderGroup>>> added_render_groups;
@@ -204,7 +204,7 @@ void RenderList::UpdateRenderGroups()
 
     added_render_groups.Resize(iterators.Size());
 
-    Engine::Get()->task_system.ParallelForEach(TASK_PRIORITY_HIGH, iterators, [this, &added_render_groups](IteratorType it, UInt index, UInt) {
+    Engine::Get()->task_system.ParallelForEach(THREAD_POOL_GENERIC, iterators, [this, &added_render_groups](IteratorType it, UInt index, UInt) {
         const RenderableAttributeSet &attributes = it->first;
         EntityDrawCollection::EntityList &entity_list = it->second;
 
@@ -224,13 +224,14 @@ void RenderList::UpdateRenderGroups()
                     if (!render_group.IsValid()) {
                         DebugLog(LogType::Error, "Render group not valid for attribute set %llu!\n", attributes.GetHashCode().Value());
 
-                        return;//continue;
+                        return;
                     }
 
-                    InitObject(render_group);
+                    // NOTE: Do not call InitObject with render_group.
+                    // It may attempt to sync with the render thread, which is
+                    // disallowed from task threads.
 
-                    // auto insert_result = m_render_groups.Set(attributes, std::move(render_group));
-                    // AssertThrow(insert_result.second);
+                    InitObject(render_group);
 
                     entity_list.render_group = render_group;
 
@@ -250,8 +251,11 @@ void RenderList::UpdateRenderGroups()
     });
 
     for (auto &it : added_render_groups) {
-        if (it.second.IsValid()) {
-            m_render_groups.Set(it.first, std::move(it.second));
+        const RenderableAttributeSet &attributes = it.first;
+        Handle<RenderGroup> &render_group = it.second;
+
+        if (render_group.IsValid()) {
+            m_render_groups.Set(attributes, std::move(render_group));
         }
     }
 }
@@ -314,7 +318,7 @@ void RenderList::CollectDrawCalls(
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    using IteratorType = FlatMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
+    using IteratorType = ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
 
     Array<IteratorType> iterators;
 
@@ -332,13 +336,14 @@ void RenderList::CollectDrawCalls(
         }
     }
 
-    Engine::Get()->task_system.ParallelForEach(TASK_PRIORITY_HIGH, iterators, [&bucket_bits, cull_data](IteratorType it, UInt index, UInt) {
+    Engine::Get()->task_system.ParallelForEach(THREAD_POOL_RENDER, iterators, [](IteratorType it, UInt, UInt) {
         EntityDrawCollection::EntityList &entity_list = it->second;
+        Handle<RenderGroup> &render_group = entity_list.render_group;
 
-        AssertThrow(entity_list.render_group.IsValid());
+        AssertThrow(render_group.IsValid());
 
-        entity_list.render_group->SetDrawProxies(entity_list.drawables);
-        entity_list.render_group->CollectDrawCalls();
+        render_group->SetDrawProxies(entity_list.drawables);
+        render_group->CollectDrawCalls();
     });
 
     if (use_draw_indirect && cull_data != nullptr) {

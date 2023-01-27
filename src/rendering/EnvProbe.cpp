@@ -267,14 +267,14 @@ void EnvProbe::CreateShader()
     case EnvProbeType::ENV_PROBE_TYPE_REFLECTION:
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate({
             HYP_NAME(CubemapRenderer),
-            ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_REFLECTION" })
+            ShaderProperties(renderer::static_mesh_vertex_attributes, { "MODE_REFLECTION" })
         });
 
         break;
     case EnvProbeType::ENV_PROBE_TYPE_SHADOW:
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate({
             HYP_NAME(CubemapRenderer),
-            ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_SHADOWS" })
+            ShaderProperties(renderer::static_mesh_vertex_attributes, { "MODE_SHADOWS" })
         });
 
         break;

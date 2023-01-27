@@ -576,7 +576,7 @@ void ParticleSystem::Render(Frame *frame)
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
     Engine::Get()->task_system.ParallelForEach(
-        TASK_PRIORITY_HIGH,
+        THREAD_POOL_RENDER,
         m_particle_spawners.GetItems(),
         [this, &command_buffers_recorded_states, frame_index](const Handle<ParticleSpawner> &particle_spawner, UInt index, UInt batch_index) {
             auto *pipeline = particle_spawner->GetRenderGroup()->GetPipeline();

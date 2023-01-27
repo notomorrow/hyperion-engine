@@ -209,7 +209,7 @@ void Shader::Init()
 
 Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 {
-    const auto EnsureContainsProperties = [](const ShaderProps &expected, const ShaderProps &received) -> bool
+    const auto EnsureContainsProperties = [](const ShaderProperties &expected, const ShaderProperties &received) -> bool
     {
         if (!received.HasRequiredVertexAttributes(expected.GetRequiredVertexAttributes())) {
             return false;
@@ -224,13 +224,14 @@ Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definiti
         return true;
     };
 
-    std::lock_guard guard(m_mutex);
-
     DebugLog(
         LogType::Debug,
-        "Lock ShaderManager for ShaderDefinition with hash %llu\n",
-        definition.GetHashCode().Value()
+        "Locking ShaderManager for ShaderDefinition with hash %llu from thread %s\n",
+        definition.GetHashCode().Value(),
+        Threads::CurrentThreadID().name.Data()
     );
+
+    std::lock_guard guard(m_mutex);
 
     const auto it = m_map.Find(definition);
 
@@ -283,7 +284,7 @@ Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definiti
 
 Handle<Shader> ShaderManagerSystem::GetOrCreate(
     Name name,
-    const ShaderProps &props
+    const ShaderProperties &props
 )
 {
     return GetOrCreate(ShaderDefinition {

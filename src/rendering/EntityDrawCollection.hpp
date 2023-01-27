@@ -1,7 +1,8 @@
 #ifndef HYPERION_V2_ENTITY_DRAW_COLLECTION_HPP
 #define HYPERION_V2_ENTITY_DRAW_COLLECTION_HPP
 
-#include <core/Containers.hpp>
+#include <core/lib/ArrayMap.hpp>
+#include <core/lib/FlatMap.hpp>
 #include <core/ID.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderableAttributes.hpp>
@@ -71,11 +72,11 @@ public:
 
     void SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entities);
 
-    FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList();
-    const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList() const;
+    FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList();
+    const FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList() const;
 
-    FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType);
-    const FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType) const;
+    FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType);
+    const FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList(ThreadType) const;
 
     HashCode CalculateCombinedAttributesHashCode() const;
 
@@ -83,7 +84,7 @@ public:
 private:
     static ThreadType GetThreadType();
 
-    FixedArray<FixedArray<FlatMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX>, THREAD_TYPE_MAX> m_lists;
+    FixedArray<FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX>, THREAD_TYPE_MAX> m_lists;
 };
 
 struct PushConstantData

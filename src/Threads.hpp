@@ -39,8 +39,8 @@ class Threads
 public:
     static const FlatMap<ThreadName, ThreadID> thread_ids;
 
-    static void AssertOnThread(ThreadMask mask);
-    static void AssertOnThread(const ThreadID &thread_id);
+    static void AssertOnThread(ThreadMask mask, const char *message = nullptr);
+    static void AssertOnThread(const ThreadID &thread_id, const char *message = nullptr);
     static bool IsThreadInMask(const ThreadID &thread_id, ThreadMask mask);
     static bool IsOnThread(ThreadMask mask);
     static bool IsOnThread(const ThreadID &thread_id);
