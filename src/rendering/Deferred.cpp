@@ -21,26 +21,26 @@ const InternalFormat DeferredRenderer::mip_chain_format = InternalFormat::R10G10
 const Extent2D DeferredRenderer::hbao_extent(512, 512);
 const Extent2D DeferredRenderer::ssr_extent(512, 512);
 
-static ShaderProps GetDeferredShaderProps()
+static ShaderProperties GetDeferredShaderProperties()
 {
-    ShaderProps props;
-    props.Set("RT_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED));
-    props.Set("SSR_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_SSR));
-    props.Set("REFLECTION_PROBE_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS));
-    props.Set("ENV_GRID_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI));
-    props.Set("VCT_ENABLED_TEXTURE", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI));
-    props.Set("VCT_ENABLED_SVO", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI_SVO));
-    props.Set("HBIL_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_HBIL));
-    props.Set("HBAO_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_HBAO));
+    ShaderProperties properties;
+    properties.Set("RT_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_RT_ENABLED));
+    properties.Set("SSR_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_SSR));
+    properties.Set("REFLECTION_PROBE_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS));
+    properties.Set("ENV_GRID_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_GI));
+    properties.Set("VCT_ENABLED_TEXTURE", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI));
+    properties.Set("VCT_ENABLED_SVO", Engine::Get()->GetConfig().Get(CONFIG_VOXEL_GI_SVO));
+    properties.Set("HBIL_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_HBIL));
+    properties.Set("HBAO_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_HBAO));
 
 
     if (Engine::Get()->GetConfig().Get(CONFIG_DEBUG_REFLECTIONS)) {
-        props.Set("DEBUG_REFLECTIONS");
+        properties.Set("DEBUG_REFLECTIONS");
     } else if (Engine::Get()->GetConfig().Get(CONFIG_DEBUG_IRRADIANCE)) {
-        props.Set("DEBUG_IRRADIANCE");
+        properties.Set("DEBUG_IRRADIANCE");
     }
 
-    return props;
+    return properties;
 }
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
@@ -56,12 +56,12 @@ void DeferredPass::CreateShader()
     if (m_is_indirect_pass) {
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
             HYP_NAME(DeferredIndirect),
-            GetDeferredShaderProps()
+            GetDeferredShaderProperties()
         );
     } else {
         m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
             HYP_NAME(DeferredDirect),
-            GetDeferredShaderProps()
+            GetDeferredShaderProperties()
         );
     }
 
@@ -199,11 +199,11 @@ EnvGridPass::~EnvGridPass() = default;
 
 void EnvGridPass::CreateShader()
 {
-    ShaderProps props { };
+    ShaderProperties properties { };
     
     m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(ApplyEnvGrid),
-        props
+        properties
     );
     
     InitObject(m_shader);
@@ -288,11 +288,11 @@ ReflectionProbePass::~ReflectionProbePass() = default;
 
 void ReflectionProbePass::CreateShader()
 {
-    ShaderProps props { };
+    ShaderProperties properties { };
     
     m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(ApplyReflectionProbe),
-        props
+        properties
     );
     
     InitObject(m_shader);
@@ -524,7 +524,7 @@ void DeferredRenderer::CreateCombinePass()
 {
     auto shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(DeferredCombine),
-        GetDeferredShaderProps()
+        GetDeferredShaderProperties()
     );
 
     Engine::Get()->InitObject(shader);

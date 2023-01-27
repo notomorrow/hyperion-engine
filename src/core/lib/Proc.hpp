@@ -131,7 +131,7 @@ struct ProcBase { };
 template <class ReturnType, class ...Args>
 struct Proc : detail::ProcBase
 {
-    static constexpr UInt inline_storage_size_bytes = 512u;
+    static constexpr UInt inline_storage_size_bytes = 256;
 
     using FunctorDataType = detail::ProcFunctorInternal<inline_storage_size_bytes, ReturnType, Args...>;
 

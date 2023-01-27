@@ -442,7 +442,7 @@ RenderAll(
     const UInt frame_index = frame->GetFrameIndex();
 
     const auto num_batches = use_parallel_rendering
-        ? MathUtil::Min(UInt(Engine::Get()->task_system.GetPool(TASK_PRIORITY_HIGH).threads.Size()), num_async_rendering_command_buffers)
+        ? MathUtil::Min(UInt(Engine::Get()->task_system.GetPool(THREAD_POOL_RENDER).threads.Size()), num_async_rendering_command_buffers)
         : 1u;
     
     GetDividedDrawCalls(
@@ -459,7 +459,7 @@ RenderAll(
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
     Engine::Get()->task_system.ParallelForEach(
-        TASK_PRIORITY_HIGH,
+        THREAD_POOL_RENDER,
         num_batches,
         divided_draw_calls,
         [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index, &render_resources](const Array<DrawCall> &draw_calls, UInt index, UInt) {

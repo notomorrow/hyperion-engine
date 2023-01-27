@@ -62,8 +62,6 @@ public:
 
     InsertResult Set(const Key &key, const Value &value);
     InsertResult Set(const Key &key, Value &&value);
-    InsertResult Set(Iterator iter, const Value &value);
-    InsertResult Set(Iterator iter, Value &&value);
 
     template <class ...Args>
     InsertResult Emplace(const Key &key, Args &&... args)
@@ -252,30 +250,6 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     lower_bound->second = std::forward<Value>(value);
 
     return InsertResult { lower_bound, true};
-}
-
-template <class Key, class Value>
-auto FlatMap<Key, Value>::Set(Iterator iter, const Value &value) -> InsertResult
-{
-    if (iter != End()) {
-        iter->second = value;
-
-        return InsertResult { iter, false };
-    }
-
-    return InsertResult { iter, true };
-}
-
-template <class Key, class Value>
-auto FlatMap<Key, Value>::Set(Iterator iter, Value &&value) -> InsertResult
-{
-    if (iter != End()) {
-        iter->second = std::forward<Value>(value);
-
-        return InsertResult { iter, false };
-    }
-
-    return InsertResult { iter, true };
 }
 
 template <class Key, class Value>

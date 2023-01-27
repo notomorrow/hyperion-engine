@@ -21,15 +21,23 @@ struct TaskRef
     TaskID id;
 };
 
+enum TaskThreadPoolName : UInt
+{
+    THREAD_POOL_GENERIC = 0,
+    THREAD_POOL_RENDER = 1,
+
+    THREAD_POOL_MAX
+};
+
 struct TaskBatch
 {
     std::atomic<UInt> num_completed;
-    UInt num_enqueued;
+    UInt num_enqueued = 0;
 
     /*! \brief The priority / pool lane for which to place
      * all of the threads in this batch into
      */
-    TaskPriority priority = TASK_PRIORITY_MEDIUM;
+    TaskThreadPoolName pool = THREAD_POOL_GENERIC;
 
     /* Number of tasks must remain constant from creation of the TaskBatch,
      * to completion. */
@@ -128,11 +136,11 @@ public:
         }
     }
 
-    TaskThreadPool &GetPool(TaskPriority priority)
+    TaskThreadPool &GetPool(TaskThreadPoolName priority)
         { return m_pools[UInt(priority)]; }
 
     template <class Task>
-    TaskRef ScheduleTask(Task &&task, TaskPriority priority = TASK_PRIORITY_MEDIUM)
+    TaskRef ScheduleTask(Task &&task, TaskThreadPoolName priority = THREAD_POOL_GENERIC)
     {
         TaskThreadPool &pool = GetPool(priority);
 
@@ -174,8 +182,10 @@ public:
             return batch;
         }
 
-        TaskThreadPool &pool = GetPool(batch->priority);
+        TaskThreadPool &pool = GetPool(batch->pool);
+
         const UInt num_threads_in_pool = UInt(pool.threads.Size());
+        const UInt max_spins = num_threads_in_pool;
 
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
@@ -185,9 +195,7 @@ public:
             TaskThread *task_thread = nullptr;
             UInt num_spins = 0;
             bool was_busy = false;
-
-            const UInt max_spins = num_threads_in_pool;
-
+            
             // if we are currently on a task thread we need to move to the next task thread in the pool
             // if we selected the current task thread. otherwise we will have a deadlock.
             // this does require that there are > 1 task thread in the pool.
@@ -227,7 +235,7 @@ public:
                 continue;
             }
 
-            const auto task_id = task_thread->ScheduleTask(std::move(task), &batch->num_completed);
+            const TaskID task_id = task_thread->ScheduleTask(std::move(task), &batch->num_completed);
 
             ++batch->num_enqueued;
 
@@ -275,7 +283,7 @@ public:
      *  The tasks will be split evenly into \ref{batches} batches.
         The lambda will be called with (item, index) for each item. */
     template <class Container, class Lambda>
-    void ParallelForEach(TaskPriority priority, UInt num_batches, Container &&items, Lambda &&lambda)
+    void ParallelForEach(TaskThreadPoolName pool, UInt num_batches, Container &&items, Lambda &&lambda)
     {
         const UInt num_items = UInt(items.Size());
 
@@ -287,7 +295,8 @@ public:
         num_batches = MathUtil::Min(num_batches, num_items);
 
         TaskBatch batch;
-        batch.priority = priority;
+        batch.pool = pool;
+
         const UInt items_per_batch = num_items / num_batches;
 
         for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
@@ -314,7 +323,7 @@ public:
      *  The tasks will be split evenly into groups, based on the number of threads in the pool for the given priority.
         The lambda will be called with (item, index) for each item. */
     template <class Container, class Lambda>
-    HYP_FORCE_INLINE void ParallelForEach(TaskPriority priority, Container &&items, Lambda &&lambda)
+    HYP_FORCE_INLINE void ParallelForEach(TaskThreadPoolName priority, Container &&items, Lambda &&lambda)
     {
         const auto &pool = GetPool(priority);
 
@@ -332,7 +341,7 @@ public:
     template <class Container, class Lambda>
     HYP_FORCE_INLINE void ParallelForEach(Container &&items, Lambda &&lambda)
     {
-        constexpr auto priority = TASK_PRIORITY_MEDIUM;
+        constexpr auto priority = THREAD_POOL_GENERIC;
         const auto &pool = GetPool(priority);
 
         ParallelForEach(
@@ -350,7 +359,7 @@ public:
 
 private:
 
-    FixedArray<TaskThreadPool, TASK_PRIORITY_MAX> m_pools;
+    FixedArray<TaskThreadPool, THREAD_POOL_MAX> m_pools;
 
     Array<TaskBatch *> m_running_batches;
 };

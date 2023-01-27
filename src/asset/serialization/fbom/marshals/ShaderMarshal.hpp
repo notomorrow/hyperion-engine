@@ -61,7 +61,7 @@ public:
         VertexAttributeSet optional_vertex_attributes;
         in.GetProperty("optional_vertex_attributes").ReadUInt64(&optional_vertex_attributes.flag_mask);
 
-        ShaderProps properties;
+        ShaderProperties properties;
         properties.SetRequiredVertexAttributes(required_vertex_attributes);
         properties.SetOptionalVertexAttributes(optional_vertex_attributes);
 

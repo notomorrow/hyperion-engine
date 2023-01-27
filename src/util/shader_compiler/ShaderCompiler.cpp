@@ -158,7 +158,7 @@ static ByteBuffer CompileToSPIRV(
     ShaderLanguage language,
     const char *source,
     const char *filename,
-    const ShaderProps &properties,
+    const ShaderProperties &properties,
     Array<String> &error_messages
 )
 {
@@ -349,7 +349,7 @@ static ByteBuffer CompileToSPIRV(
     ShaderModule::Type type,
     ShaderLanguage language,
     const char *source, const char *filename,
-    const ShaderProps &properties,
+    const ShaderProperties &properties,
     Array<String> &error_messages
 )
 {
@@ -374,8 +374,8 @@ static const FlatMap<String, ShaderModule::Type> shader_type_names = {
 };
 
 static void ForEachPermutation(
-    const ShaderProps &versions,
-    Proc<void, const ShaderProps &> callback
+    const ShaderProperties &versions,
+    Proc<void, const ShaderProperties &> callback
 )
 {
     Array<ShaderProperty> variable_properties;
@@ -461,7 +461,7 @@ static void ForEachPermutation(
     );
 
     for (UInt combination_index = 0; combination_index < UInt(all_combinations.Size()); combination_index++) {
-        ShaderProps combination_properties(all_combinations[combination_index]);
+        ShaderProperties combination_properties(all_combinations[combination_index]);
 
         DebugLog(
             LogType::Debug,
@@ -493,38 +493,38 @@ ShaderCompiler::~ShaderCompiler()
     }
 }
 
-void ShaderCompiler::GetPlatformSpecificProperties(ShaderProps &props) const
+void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties) const
 {
 #if defined(HYP_VULKAN) && HYP_VULKAN
-    props.Set(ShaderProperty("HYP_VULKAN", false));
+    properties.Set(ShaderProperty("HYP_VULKAN", false));
 
     constexpr UInt vulkan_version = HYP_VULKAN_API_VERSION;
     
     switch (vulkan_version) {
     case VK_API_VERSION_1_1:
-        props.Set(ShaderProperty("HYP_VULKAN_1_1", false));
+        properties.Set(ShaderProperty("HYP_VULKAN_1_1", false));
         break;
     case VK_API_VERSION_1_2:
-        props.Set(ShaderProperty("HYP_VULKAN_1_2", false));
+        properties.Set(ShaderProperty("HYP_VULKAN_1_2", false));
         break;
 #ifdef VK_API_VERSION_1_3
     case VK_API_VERSION_1_3:
-        props.Set(ShaderProperty("HYP_VULKAN_1_3", false));
+        properties.Set(ShaderProperty("HYP_VULKAN_1_3", false));
         break;
 #endif
     default:
         break;
     }
 #elif defined(HYP_DX12) && HYP_DX12
-    props.Set(ShaderProperty("DX12", false));
+    properties.Set(ShaderProperty("DX12", false));
 #endif
 
     if (Engine::Get()->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
-        props.Set(ShaderProperty("HYP_FEATURES_BINDLESS_TEXTURES", false));
+        properties.Set(ShaderProperty("HYP_FEATURES_BINDLESS_TEXTURES", false));
     }
 
     if (use_indexed_array_for_object_data) {
-        props.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
+        properties.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
     }
 
     //props.Set(ShaderProperty("HYP_MAX_SHADOW_MAPS", false));
@@ -562,7 +562,7 @@ void ShaderCompiler::ParseDefinitionSection(
 
 bool ShaderCompiler::HandleCompiledShaderBatch(
     Bundle &bundle,
-    const ShaderProps &additional_versions,
+    const ShaderProperties &additional_versions,
     const FilePath &output_file_path,
     CompiledShaderBatch &batch
 )
@@ -592,14 +592,14 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
         return CompileBundle(bundle, additional_versions, batch);
     }
 
-    Array<ShaderProps> missing_variants;
-    Array<ShaderProps> found_variants;
+    Array<ShaderProperties> missing_variants;
+    Array<ShaderProperties> found_variants;
     bool requested_found = false;
 
     {
         // grab each defined property, and iterate over each combination
         // now check that each combination is already in the bundle
-        ForEachPermutation(bundle.versions, [&](const ShaderProps &properties) {
+        ForEachPermutation(bundle.versions, [&](const ShaderProperties &properties) {
             // get hashcode of this set of properties
             const HashCode properties_hash = properties.GetHashCode();
 
@@ -631,7 +631,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
         {
             SizeType index = 0;
 
-            for (const ShaderProps &missing_shader_properties : missing_variants) {
+            for (const ShaderProperties &missing_shader_properties : missing_variants) {
                 missing_variants_string += String::ToString(missing_shader_properties.GetHashCode().Value()) + " - " + missing_shader_properties.ToString();
 
                 if (index != missing_variants.Size() - 1) {
@@ -646,7 +646,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
         {
             SizeType index = 0;
 
-            for (const ShaderProps &found_shader_properties : found_variants) {
+            for (const ShaderProperties &found_shader_properties : found_variants) {
                 found_variants_string += String::ToString(found_shader_properties.GetHashCode().Value()) + " - " + found_shader_properties.ToString();
 
                 if (index != found_variants.Size() - 1) {
@@ -688,7 +688,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
 
 bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
     Name name,
-    const ShaderProps &properties,
+    const ShaderProperties &properties,
     CompiledShaderBatch &out
 )
 {
@@ -847,11 +847,11 @@ bool ShaderCompiler::LoadShaderDefinitions()
     //     }
 
     //     if (default_vertex_attributes) {
-    //         bundle.versions.Merge(ShaderProps(default_vertex_attributes));
+    //         bundle.versions.Merge(ShaderProperties(default_vertex_attributes));
     //     }
 
     //     // TODO: Maybe don't need to cache these?
-    //     ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProps &properties) {
+    //     ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProperties &properties) {
     //         CompiledShader compiled_shader;
 
     //         results[&bundle] = GetCompiledShader(bundle.name, properties, compiled_shader);
@@ -882,7 +882,7 @@ struct LoadedSourceFile
     UInt64 last_modified_timestamp;
     String original_source;
 
-    FilePath GetOutputFilepath(const FilePath &base_path, const ShaderProps &properties) const
+    FilePath GetOutputFilepath(const FilePath &base_path, const ShaderProperties &properties) const
     {
         return base_path / "data/compiled_shaders/tmp" / (FilePath(file.path).Basename()
             + "_" + String::ToString(properties.GetHashCode().Value()) + ".spirv");
@@ -1045,7 +1045,7 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
 
 bool ShaderCompiler::CompileBundle(
     Bundle &bundle,
-    const ShaderProps &additional_versions,
+    const ShaderProperties &additional_versions,
     CompiledShaderBatch &out
 )
 {
@@ -1116,7 +1116,7 @@ bool ShaderCompiler::CompileBundle(
     SizeType num_compiled_permutations = 0;
 
     // grab each defined property, and iterate over each combination
-    ShaderProps final_versions;
+    ShaderProperties final_versions;
     final_versions.Merge(bundle.versions);
 
     // for (const auto &required_attribute : required_vertex_attributes) {
@@ -1185,7 +1185,7 @@ bool ShaderCompiler::CompileBundle(
     bundle.versions = final_versions;
 
     // compile shader with each permutation of properties
-    ForEachPermutation(final_versions, [&](const ShaderProps &properties) {
+    ForEachPermutation(final_versions, [&](const ShaderProperties &properties) {
         CompiledShader compiled_shader(bundle.name, properties);
 
         bool any_files_compiled = false;
@@ -1334,12 +1334,12 @@ bool ShaderCompiler::CompileBundle(
 
 CompiledShader ShaderCompiler::GetCompiledShader(Name name)
 {
-    ShaderProps props { };
+    ShaderProperties properties { };
 
-    return GetCompiledShader(name, props);
+    return GetCompiledShader(name, properties);
 }
 
-CompiledShader ShaderCompiler::GetCompiledShader(Name name, const ShaderProps &properties)
+CompiledShader ShaderCompiler::GetCompiledShader(Name name, const ShaderProperties &properties)
 {
     CompiledShader compiled_shader;
 
@@ -1354,11 +1354,11 @@ CompiledShader ShaderCompiler::GetCompiledShader(Name name, const ShaderProps &p
 
 bool ShaderCompiler::GetCompiledShader(
     Name name,
-    const ShaderProps &properties,
+    const ShaderProperties &properties,
     CompiledShader &out
 )
 {
-    ShaderProps final_properties;
+    ShaderProperties final_properties;
     GetPlatformSpecificProperties(final_properties);
     final_properties.Merge(properties);
 

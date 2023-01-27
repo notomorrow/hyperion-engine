@@ -59,7 +59,7 @@ void ImmediateMode::Create()
 
     // m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
     //     HYP_NAME(DebugAABB),
-    //     ShaderProps(
+    //     ShaderProperties(
     //         renderer::static_mesh_vertex_attributes,
     //         Array<String> { "IMMEDIATE_MODE" }
     //     )

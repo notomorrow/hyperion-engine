@@ -398,7 +398,7 @@ void IndirectRenderer::Create()
 
     InitObject(m_object_visibility);
     
-    HYP_SYNC_RENDER();
+    //HYP_SYNC_RENDER();
 }
 
 void IndirectRenderer::Destroy()

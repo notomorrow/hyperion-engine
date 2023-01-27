@@ -218,7 +218,7 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
 
         auto vertex_attributes = mesh->GetVertexAttributes();
         
-        ShaderProps shader_properties(vertex_attributes);
+        ShaderProperties shader_properties(vertex_attributes);
         shader_properties.Set("SKINNING", skeleton.IsValid());
 
         Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), shader_properties);

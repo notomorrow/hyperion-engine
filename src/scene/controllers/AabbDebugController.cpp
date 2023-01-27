@@ -36,7 +36,7 @@ void AABBDebugController::OnAdded()
     Handle<Mesh> mesh = MeshBuilder::Cube();
     VertexAttributeSet vertex_attributes = mesh->GetVertexAttributes();
 
-    const ShaderProps shader_properties(vertex_attributes);
+    const ShaderProperties shader_properties(vertex_attributes);
 
     Material::ParameterTable material_parameters = Material::DefaultParameters();
     material_parameters.Set(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Color(1.0f, 0.0f, 0.0f, 1.0f)));

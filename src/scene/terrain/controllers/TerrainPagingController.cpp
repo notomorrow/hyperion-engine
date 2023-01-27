@@ -114,7 +114,7 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
 
     const VertexAttributeSet vertex_attributes = renderer::static_mesh_vertex_attributes;
     
-    Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Terrain), ShaderProps(vertex_attributes));
+    Handle<Shader> shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Terrain), ShaderProperties(vertex_attributes));
     AssertThrow(shader.IsValid());
 
     patch->entity = CreateObject<Entity>(

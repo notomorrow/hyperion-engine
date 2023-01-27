@@ -334,14 +334,14 @@ void HBAO::CreateBlurComputeShaders()
     }
 
     m_blur_hor = CreateObject<ComputePipeline>(
-        Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "HORIZONTAL", "OUTPUT_RGBA8" })),
+        Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProperties({ "HORIZONTAL", "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[0][0].Get() }
     );
 
     InitObject(m_blur_hor);
 
     m_blur_vert = CreateObject<ComputePipeline>(
-       Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProps({ "OUTPUT_RGBA8" })),
+       Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(ImageBlurCompute), ShaderProperties({ "OUTPUT_RGBA8" })),
         Array<const DescriptorSet *> { m_blur_descriptor_sets[1][0].Get() }
     );
 
@@ -350,7 +350,7 @@ void HBAO::CreateBlurComputeShaders()
 
 void HBAO::CreatePass()
 {
-    ShaderProps shader_properties;
+    ShaderProperties shader_properties;
     shader_properties.Set("HBIL_ENABLED", Engine::Get()->GetConfig().Get(CONFIG_HBIL));
 
     Handle<Shader> hbao_shader = Engine::Get()->GetShaderManager().GetOrCreate(

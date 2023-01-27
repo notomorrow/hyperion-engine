@@ -260,7 +260,7 @@ void EnvGrid::CreateShader()
 {
     m_ambient_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(CubemapRenderer),
-        ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_AMBIENT" })
+        ShaderProperties(renderer::static_mesh_vertex_attributes, { "MODE_AMBIENT" })
     );
 
     InitObject(m_ambient_shader);

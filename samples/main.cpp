@@ -528,7 +528,7 @@ public:
             // plane->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, Engine::Get()->GetAssetManager().Load<Texture>("textures/bamboo_wood/bamboo-wood-semigloss-roughness.png"));
             // plane->GetMaterial()->SetParameter(Material::MATERIAL_KEY_NORMAL_MAP_INTENSITY, 0.08f);
             // plane->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            plane->SetShader(Handle<Shader>(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProps(plane->GetMesh()->GetVertexAttributes()))));
+            plane->SetShader(Handle<Shader>(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProperties(plane->GetMesh()->GetVertexAttributes()))));
             plane->RebuildRenderableAttributes();
             plane->CreateBLAS();
             if (NodeProxy plane_node_proxy = GetScene()->AddEntity(plane)) {
@@ -762,7 +762,7 @@ public:
                 
                 box_entity->SetMesh(box_mesh);
                 box_entity->SetMaterial(Engine::Get()->GetMaterialCache().GetOrCreate({ }, material_parameters));
-                box_entity->SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProps(box_mesh->GetVertexAttributes())));
+                box_entity->SetShader(Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(Forward), ShaderProperties(box_mesh->GetVertexAttributes())));
                 box_entity->SetTranslation(box_position);
 
                 GetScene()->AddEntity(box_entity);
@@ -919,12 +919,6 @@ int main()
                 LogType::Debug,
                 "Render FPS: %f\n",
                 1.0f / (delta_time_accum / Float(num_frames))
-            );
-
-            DebugLog(
-                LogType::Debug,
-                "Number of RenderGroups: %llu\n",
-                Engine::Get()->GetRenderGroupMapping().Size()
             );
 
             delta_time_accum = 0.0f;

@@ -30,7 +30,7 @@ void Threads::SetThreadID(const ThreadID &id)
 #endif
 }
 
-void Threads::AssertOnThread(ThreadMask mask)
+void Threads::AssertOnThread(ThreadMask mask, const char *message)
 {
 #ifdef HYP_ENABLE_THREAD_ASSERTIONS
 #ifdef HYP_ENABLE_THREAD_ID
@@ -38,10 +38,11 @@ void Threads::AssertOnThread(ThreadMask mask)
 
     AssertThrowMsg(
         (mask & current.value),
-        "Expected current thread to be in mask %u, but got %u (%s)",
+        "Expected current thread to be in mask %u, but got %u (%s). Message: %s",
         mask,
         current.value,
-        current.name.Data()
+        current.name.Data(),
+        message ? message : "(no message)"
     );
 
 #else
@@ -53,7 +54,7 @@ void Threads::AssertOnThread(ThreadMask mask)
 #endif
 }
 
-void Threads::AssertOnThread(const ThreadID &thread_id)
+void Threads::AssertOnThread(const ThreadID &thread_id, const char *message)
 {
 #ifdef HYP_ENABLE_THREAD_ASSERTIONS
 #ifdef HYP_ENABLE_THREAD_ID
@@ -61,11 +62,12 @@ void Threads::AssertOnThread(const ThreadID &thread_id)
 
     AssertThrowMsg(
         thread_id == current,
-        "Expected current thread to be %u (%s), but got %u (%s)",
+        "Expected current thread to be %u (%s), but got %u (%s). Message: %s",
         thread_id.value,
         thread_id.name.Data(),
         current.value,
-        current.name.Data()
+        current.name.Data(),
+        message ? message : "(no message)"
     );
 #else
     DebugLog(

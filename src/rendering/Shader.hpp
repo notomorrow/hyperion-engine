@@ -85,7 +85,7 @@ public:
 
     Handle<Shader> GetOrCreate(
         Name name,
-        const ShaderProps &props = { }
+        const ShaderProperties &props = { }
     );
 
 private:

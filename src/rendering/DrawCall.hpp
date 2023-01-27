@@ -131,14 +131,6 @@ public:
 
             if (is_used) {
                 if (!handle) {
-                    DebugLog(
-                        LogType::Debug,
-                        "Alloc Handle %s (ID: #%u) in thread: %s\n",
-                        handle.GetClassNameString(),
-                        id.Value(),
-                        Threads::CurrentThreadID().name.Data()
-                    );
-
                     handle = Handle<T>(id);
                 }
 

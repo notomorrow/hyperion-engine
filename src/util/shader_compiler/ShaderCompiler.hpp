@@ -194,28 +194,28 @@ struct ShaderProperty
     }
 };
 
-class ShaderProps
+class ShaderProperties
 {
     friend class ShaderCompiler;
 
 public:
-    ShaderProps() = default;
+    ShaderProperties() = default;
 
-    ShaderProps(const Array<String> &props)
+    ShaderProperties(const Array<String> &props)
     {
         for (const String &prop_key : props) {
             m_props.Insert(ShaderProperty(prop_key, true)); // default to permutable
         }
     }
 
-    ShaderProps(const Array<ShaderProperty> &props)
+    ShaderProperties(const Array<ShaderProperty> &props)
     {
         for (const ShaderProperty &property : props) {
             Set(property);
         }
     }
 
-    ShaderProps(const VertexAttributeSet &vertex_attributes, const Array<String> &props)
+    ShaderProperties(const VertexAttributeSet &vertex_attributes, const Array<String> &props)
         : m_required_vertex_attributes(vertex_attributes)
     {
         for (const String &prop_key : props) {
@@ -223,21 +223,21 @@ public:
         }
     }
 
-    ShaderProps(const VertexAttributeSet &vertex_attributes)
-        : ShaderProps(vertex_attributes, { })
+    ShaderProperties(const VertexAttributeSet &vertex_attributes)
+        : ShaderProperties(vertex_attributes, { })
     {
     }
 
-    ShaderProps(const ShaderProps &other) = default;
-    ShaderProps &operator=(const ShaderProps &other) = default;
-    ShaderProps(ShaderProps &&other) noexcept = default;
-    ShaderProps &operator=(ShaderProps &&other) = default;
-    ~ShaderProps() = default;
+    ShaderProperties(const ShaderProperties &other) = default;
+    ShaderProperties &operator=(const ShaderProperties &other) = default;
+    ShaderProperties(ShaderProperties &&other) noexcept = default;
+    ShaderProperties &operator=(ShaderProperties &&other) = default;
+    ~ShaderProperties() = default;
 
-    bool operator==(const ShaderProps &other) const
+    bool operator==(const ShaderProperties &other) const
         { return m_props == other.m_props; }
 
-    bool operator!=(const ShaderProps &other) const
+    bool operator!=(const ShaderProperties &other) const
         { return m_props == other.m_props; }
 
     bool Any() const
@@ -269,7 +269,7 @@ public:
         return true;
     }
 
-    ShaderProps &Set(const ShaderProperty &property, bool enabled = true)
+    ShaderProperties &Set(const ShaderProperty &property, bool enabled = true)
     {
         if (property.IsVertexAttribute()) {
             VertexAttribute::Type type;
@@ -298,6 +298,8 @@ public:
                 } else {
                     m_required_vertex_attributes &= ~type;
                 }
+
+                m_needs_hash_code_recalculation = true;
             }
         } else {
             const auto it = m_props.Find(property);
@@ -305,12 +307,20 @@ public:
             if (enabled) {
                 if (it == m_props.End()) {
                     m_props.Insert(property);
+
+                    m_needs_hash_code_recalculation = true;
                 } else {
-                    *it = property;
+                    if (*it != property) {
+                        *it = property;
+
+                        m_needs_hash_code_recalculation = true;
+                    }
                 }
             } else {
                 if (it != m_props.End()) {
                     m_props.Erase(it);
+
+                    m_needs_hash_code_recalculation = true;
                 }
             }
         }
@@ -318,13 +328,13 @@ public:
         return *this;
     }
 
-    ShaderProps &Set(const String &name, bool enabled = true)
+    ShaderProperties &Set(const String &name, bool enabled = true)
     {
         return Set(ShaderProperty(name, true), enabled);
     }
 
     /*! \brief Applies \ref{other} properties onto this set */
-    void Merge(const ShaderProps &other)
+    void Merge(const ShaderProperties &other)
     {
         for (const ShaderProperty &property : other.m_props) {
             Set(property);
@@ -332,6 +342,8 @@ public:
 
         m_required_vertex_attributes |= other.m_required_vertex_attributes;
         m_optional_vertex_attributes |= other.m_optional_vertex_attributes;
+
+        m_needs_hash_code_recalculation = true;
     }
 
     const FlatSet<ShaderProperty> &GetPropertySet() const
@@ -347,6 +359,8 @@ public:
     {
         m_required_vertex_attributes = vertex_attributes;
         m_optional_vertex_attributes = m_optional_vertex_attributes & ~m_required_vertex_attributes;
+
+        m_needs_hash_code_recalculation = true;
     }
 
     void SetOptionalVertexAttributes(VertexAttributeSet vertex_attributes)
@@ -356,16 +370,6 @@ public:
 
     SizeType Size() const
         { return m_props.Size(); }
-
-    HashCode GetHashCode() const
-    {
-        HashCode hc;
-
-        hc.Add(m_required_vertex_attributes.GetHashCode());
-        hc.Add(m_props.GetHashCode());
-
-        return hc;
-    }
 
     Array<ShaderProperty> ToArray() const
     {
@@ -379,10 +383,6 @@ public:
         for (const VertexAttribute &attribute : GetRequiredVertexAttributes().BuildAttributes()) {
             property_names.PushBack(String("HYP_ATTRIBUTE_") + attribute.name);
         }
-
-        // for (const VertexAttribute &attribute : GetOptionalVertexAttributes().BuildAttributes()) {
-        //     property_names.PushBack(String("HYP_ATTRIBUTE_") + attribute.name);
-        // }
 
         for (const ShaderProperty &property : GetPropertySet()) {
             property_names.PushBack(property.name);
@@ -404,9 +404,45 @@ public:
         return properties_string;
     }
 
-private:
+    HashCode GetHashCode() const
+    {
+        if (m_needs_hash_code_recalculation) {
+            RecalculateHashCode();
 
-    ShaderProps &AddPermutation(const String &key)
+            m_needs_hash_code_recalculation = false;
+        }
+
+        return m_cached_hash_code;
+    }
+
+    HashCode GetPropertySetHashCode() const
+    {
+        if (m_needs_hash_code_recalculation) {
+            RecalculateHashCode();
+
+            m_needs_hash_code_recalculation = false;
+        }
+
+        return m_cached_property_set_hash_code;
+    }
+
+private:
+    void RecalculateHashCode() const
+    {
+        HashCode hc;
+
+        // NOTE: Intentionally left out m_optional_vertex_attributes,
+        // as they do not impact the final instantiated version of the shader properties.
+
+        m_cached_property_set_hash_code = m_props.GetHashCode();
+
+        hc.Add(m_required_vertex_attributes.GetHashCode());
+        hc.Add(m_cached_property_set_hash_code);
+
+        m_cached_hash_code = hc;
+    }
+
+    ShaderProperties &AddPermutation(const String &key)
     {
         ShaderProperty shader_property(key, true);
 
@@ -417,11 +453,13 @@ private:
         } else {
             *it = shader_property;
         }
+        
+        m_needs_hash_code_recalculation = true;
 
         return *this;
     }
 
-    ShaderProps &AddValueGroup(const String &key, const Array<String> &possible_values)
+    ShaderProperties &AddValueGroup(const String &key, const Array<String> &possible_values)
     {
         ShaderProperty shader_property(key, false);
         shader_property.possible_values = possible_values;
@@ -434,6 +472,8 @@ private:
             *it = shader_property;
         }
 
+        m_needs_hash_code_recalculation = true;
+
         return *this;
     }
 
@@ -441,6 +481,10 @@ private:
 
     VertexAttributeSet m_required_vertex_attributes;
     VertexAttributeSet m_optional_vertex_attributes;
+
+    mutable HashCode m_cached_hash_code;
+    mutable HashCode m_cached_property_set_hash_code;
+    mutable bool m_needs_hash_code_recalculation = true;
 };
 
 struct HashedShaderDefinition
@@ -463,25 +507,26 @@ struct HashedShaderDefinition
 struct ShaderDefinition
 {
     Name name;
-    ShaderProps properties;
+    ShaderProperties properties;
 
     Name GetName() const
         { return name; }
 
-    ShaderProps &GetProperties()
+    ShaderProperties &GetProperties()
         { return properties; }
 
-    const ShaderProps &GetProperties() const
+    const ShaderProperties &GetProperties() const
         { return properties; }
 
     explicit operator bool() const
         { return name.IsValid(); }
 
     explicit operator HashedShaderDefinition() const
-        { return HashedShaderDefinition { name, properties.GetPropertySet().GetHashCode(), properties.GetRequiredVertexAttributes() }; }
+        { return HashedShaderDefinition { name, properties.GetPropertySetHashCode(), properties.GetRequiredVertexAttributes() }; }
 
     HashCode GetHashCode() const
     {
+        // ensure they return the same hash codes so they can be compared.
         return (operator HashedShaderDefinition()).GetHashCode();
     }
 };
@@ -492,7 +537,7 @@ struct CompiledShader
     HeapArray<ByteBuffer, ShaderModule::Type::MAX> modules;
 
     CompiledShader() = default;
-    CompiledShader(Name name, const ShaderProps &properties)
+    CompiledShader(Name name, const ShaderProperties &properties)
         : definition { name, properties }
     {
     }
@@ -519,7 +564,7 @@ struct CompiledShader
     Name GetName() const
         { return definition.name; }
 
-    const ShaderProps &GetProperties() const
+    const ShaderProperties &GetProperties() const
         { return definition.properties; }
 
     const HeapArray<ByteBuffer, ShaderModule::Type::MAX> &GetModules() const
@@ -539,7 +584,6 @@ struct CompiledShaderBatch
 {
     Array<CompiledShader> compiled_shaders;
     Array<String> error_messages;
-    ShaderProps base_props;
 
     bool HasErrors() const
         { return error_messages.Any(); }
@@ -659,7 +703,7 @@ public:
     {
         Name name;
         FlatMap<ShaderModule::Type, SourceFile> sources;
-        ShaderProps versions; // permutations
+        ShaderProperties versions; // permutations
 
         bool HasRTShaders() const
         {
@@ -693,17 +737,17 @@ public:
     bool LoadShaderDefinitions();
 
     CompiledShader GetCompiledShader(Name name);
-    CompiledShader GetCompiledShader(Name name, const ShaderProps &properties);
+    CompiledShader GetCompiledShader(Name name, const ShaderProperties &properties);
 
     bool GetCompiledShader(
         Name name,
-        const ShaderProps &versions,
+        const ShaderProperties &versions,
         CompiledShader &out
     );
 
 private:
     void GetPlatformSpecificProperties(
-        ShaderProps &out
+        ShaderProperties &out
     ) const;
 
     ProcessResult ProcessShaderSource(
@@ -717,20 +761,20 @@ private:
 
     bool CompileBundle(
         Bundle &bundle,
-        const ShaderProps &additional_versions,
+        const ShaderProperties &additional_versions,
         CompiledShaderBatch &out
     );
 
     bool HandleCompiledShaderBatch(
         Bundle &bundle,
-        const ShaderProps &additional_versions,
+        const ShaderProperties &additional_versions,
         const FilePath &output_file_path,
         CompiledShaderBatch &batch
     );
 
     bool LoadOrCreateCompiledShaderBatch(
         Name name,
-        const ShaderProps &additional_versions,
+        const ShaderProperties &additional_versions,
         CompiledShaderBatch &out
     );
 

@@ -464,7 +464,7 @@ void SSRRenderer::CreateDescriptorSets()
 
 void SSRRenderer::CreateComputePipelines()
 {
-    ShaderProps shader_properties;
+    ShaderProperties shader_properties;
     shader_properties.Set("CONE_TRACING", m_should_perform_cone_tracing);
 
     switch (ssr_format) {

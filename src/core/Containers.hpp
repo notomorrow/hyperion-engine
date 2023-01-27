@@ -5,6 +5,7 @@
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/StaticMap.hpp>
+#include <core/lib/ArrayMap.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FixedArray.hpp>

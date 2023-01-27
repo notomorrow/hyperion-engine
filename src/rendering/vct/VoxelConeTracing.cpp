@@ -408,7 +408,7 @@ void VoxelConeTracing::CreateShader()
 
     m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         shader_name,
-        ShaderProps(renderer::static_mesh_vertex_attributes, { "MODE_TEXTURE_3D" })
+        ShaderProperties(renderer::static_mesh_vertex_attributes, { "MODE_TEXTURE_3D" })
     );
 
     AssertThrow(InitObject(m_shader));

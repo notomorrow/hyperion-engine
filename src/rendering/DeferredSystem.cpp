@@ -153,7 +153,7 @@ void DeferredSystem::RenderGroupHolder::AddRenderGroup(Handle<RenderGroup> &rend
         AddFramebuffersToPipeline(render_group);
     }
 
-    InitObject(render_group);
+    //InitObject(render_group);
 
     std::lock_guard guard(renderer_instances_mutex);
 
