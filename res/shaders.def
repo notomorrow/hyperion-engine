@@ -76,6 +76,7 @@ frag = particles/Particle.frag
 vert = particles/Particle.vert
 
 [UpdateParticles]
+permute = HAS_PHYSICS
 comp = particles/UpdateParticles.comp
 
 [Shadows]

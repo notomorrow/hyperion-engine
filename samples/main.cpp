@@ -543,12 +543,14 @@ public:
             }
         }
 
-        if (false) { // particles test
+        if (true) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = Engine::Get()->GetAssetManager().Load<Texture>("textures/spark.png"),
                 .max_particles = 1024u,
                 .origin = Vector3(0.0f, 4.1f, 0.0f),
-                .lifespan = 1.0f
+                .randomness = 1.0f,
+                .lifespan = 4.0f,
+                .has_physics = true
             });
 
             InitObject(particle_spawner);

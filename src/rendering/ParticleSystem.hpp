@@ -51,6 +51,7 @@ struct ParticleSpawnerParams
     Float radius = 1.0f;
     Float randomness = 0.5f;
     Float lifespan = 1.0f;
+    bool has_physics = false;
 };
 
 class ParticleSpawner
@@ -66,19 +67,19 @@ public:
     const ParticleSpawnerParams &GetParams() const
         { return m_params; }
 
-    const FixedArray<DescriptorSet, max_frames_in_flight> &GetDescriptorSets() const
+    const FixedArray<DescriptorSetRef, max_frames_in_flight> &GetDescriptorSets() const
         { return m_descriptor_sets; }
 
-    UniquePtr<StorageBuffer> &GetParticleBuffer()
+   GPUBufferRef &GetParticleBuffer()
         { return m_particle_buffer; }
 
-    const UniquePtr<StorageBuffer> &GetParticleBuffer() const
+    const GPUBufferRef &GetParticleBuffer() const
         { return m_particle_buffer; }
 
-    UniquePtr<IndirectBuffer> &GetIndirectBuffer()
+    GPUBufferRef &GetIndirectBuffer()
         { return m_indirect_buffer; }
 
-    const UniquePtr<IndirectBuffer> &GetIndirectBuffer() const
+    const GPUBufferRef &GetIndirectBuffer() const
         { return m_indirect_buffer; }
 
     Handle<RenderGroup> &GetRenderGroup()
@@ -108,10 +109,10 @@ private:
     void CreateComputePipelines();
 
     ParticleSpawnerParams m_params;
-    FixedArray<DescriptorSet, max_frames_in_flight> m_descriptor_sets;
-    UniquePtr<StorageBuffer> m_particle_buffer;
-    UniquePtr<IndirectBuffer> m_indirect_buffer;
-    UniquePtr<StorageBuffer> m_noise_buffer;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
+    GPUBufferRef m_particle_buffer;
+    GPUBufferRef m_indirect_buffer;
+    GPUBufferRef m_noise_buffer;
     Handle<ComputePipeline> m_update_particles;
     Handle<Shader> m_shader;
     Handle<RenderGroup> m_render_group;

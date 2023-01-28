@@ -124,12 +124,10 @@ void main()
     particle.velocity.a = mix(starting_final_scale, final_scale, is_alive);
     particle.lifetime = mix(starting_lifetime, particle.lifetime - push_constants.delta_time, is_alive);
 
-    const bool fade_alpha = false;
+    const bool fade_alpha = true;
     const float alpha = mix(1.0, lifetime_ratio, float(fade_alpha));
-    particle.color_5packed = VEC4_TO_UINT(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
+    particle.color_packed = VEC4_TO_UINT(mix(vec4(0.0), vec4(1.0, 1.0, 1.0, alpha), is_alive));
 
-
-#if 0
     // for depth-buffer based collisions:
     // get particle position in screen space,
     // sample the depth texture at that point,
@@ -138,6 +136,7 @@ void main()
     // if within a certain threshold, then we have a collision.
     // if there is a collision, push the particle in the direction of the gbuffers' normal
 
+#ifdef HAS_PHYSICS
     vec4 particle_position_ndc = camera.projection * camera.view * vec4(particle.position.xyz, 1.0);
     particle_position_ndc /= particle_position_ndc.w;
 
@@ -154,9 +153,7 @@ void main()
 
         particle.velocity.xyz = reflect(normal, normalize(particle.velocity.xyz));
     }
-
 #endif
-
 
     instances[index] = particle;
 
