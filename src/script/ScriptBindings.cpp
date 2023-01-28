@@ -7,6 +7,7 @@
 #include <ui/controllers/UIController.hpp>
 
 #include <script/compiler/ast/AstFloat.hpp>
+#include <script/compiler/ast/AstString.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/Entity.hpp>
@@ -797,9 +798,82 @@ static HYP_SCRIPT_FUNCTION(GetModuleExportedValue)
     HYP_SCRIPT_RETURN(out_value);
 }
 
+static HYP_SCRIPT_FUNCTION(NameToString)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 1);
+
+    vm::VMObject *name_object_ptr = GetArgument<0, vm::VMObject>(params);
+    AssertThrow(name_object_ptr != nullptr);
+
+    HYP_SCRIPT_GET_ARG_PTR(0, vm::VMObject, arg0);
+    HYP_SCRIPT_GET_MEMBER_UINT(arg0, "hash_code", UInt64, hash_code_value);
+
+    Name name = Name(NameID(hash_code_value));
+    const ANSIString &string_value = name.LookupString();
+
+    // create heap value for string
+    vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
+    AssertThrow(ptr != nullptr);
+
+    ptr->Assign(VMString(string_value.Data()));
+    ptr->Mark();
+
+    HYP_SCRIPT_RETURN_PTR(ptr);
+}
+
+static HYP_SCRIPT_FUNCTION(NameCreateFromString)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 2);
+
+    // auto &&name = GetArgument<0, Name>(params);
+    VMString *str = GetArgument<1, VMString>(params);
+
+    AssertThrow(str != nullptr);
+
+    Name name = CreateNameFromDynamicString(str->GetData());
+
+    const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Name>();
+    AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+
+    const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
+    AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+
+    vm::VMObject result_value(prototype_it->second); // construct from prototype
+    HYP_SCRIPT_SET_MEMBER(result_value, "hash_code", vm::Value(vm::Value::U64, { .u64 = name.hash_code }));
+    HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+    HYP_SCRIPT_RETURN(ptr);
+}
+
 void ScriptBindings::DeclareAll(APIInstance &api_instance)
 {
     using namespace hyperion::compiler;
+
+    api_instance.Module(Config::global_module_name)
+        .Class<Name>(
+            "Name",
+            {
+                API::NativeMemberDefine("hash_code", BuiltinTypes::UNSIGNED_INT, vm::Value(vm::Value::U64, { .u64 = 0 })),
+
+                API::NativeMemberDefine(
+                    "LookupString",
+                    BuiltinTypes::STRING,
+                    {
+                        { "self", BuiltinTypes::ANY }
+                    },
+                    NameToString
+                ),
+
+                API::NativeMemberDefine(
+                    "$construct",
+                    BuiltinTypes::ANY,
+                    {
+                        { "self", BuiltinTypes::ANY },
+                        { "str", BuiltinTypes::STRING, std::shared_ptr<AstString>(new AstString("", SourceLocation::eof)) }
+                    },
+                    NameCreateFromString
+                )
+            }
+        );
 
     api_instance.Module(Config::global_module_name)
         .Class<RC<DynModule>>(

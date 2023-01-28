@@ -85,19 +85,16 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
 
         if (is_proxy_class) {
             if (m_target_type->GetTypeObject() != nullptr) {
-                // m_proxy_expr.reset(new AstMember(
-                //     m_field_name,
-                //     m_target_type->GetTypeObject(),
-                //     m_location
-                // ));
-
-                m_proxy_expr = CloneAstNode(m_target_type->GetTypeObject());
+                // load the type by name
+                m_proxy_expr.reset(new AstPrototypeSpecification(
+                    std::shared_ptr<AstVariable>(new AstVariable(
+                        m_target_type->GetName(),
+                        m_location
+                    )),
+                    m_location
+                ));
 
                 m_proxy_expr->Visit(visitor, mod);
-
-                // m_symbol_type = m_proxy_expr->GetExprType();
-
-                // return;
             } else {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
@@ -105,8 +102,6 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
                     m_location
                 ));
             }
-            
-
 
             // if it is proxy,
             // convert thing.DoThing()

@@ -77,17 +77,6 @@ public:
     const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin) { m_origin = origin; }
 
-    float GetMaxDistance() const { return m_max_distance; }
-    void SetMaxDistance(float max_distance) { m_max_distance = max_distance; }
-
-    BoundingBox GetAABB() const
-    {
-        return {
-            MathUtil::Round(m_origin - m_max_distance),
-            MathUtil::Round(m_origin + m_max_distance)
-        };
-    }
-
     UInt GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
@@ -118,7 +107,6 @@ private:
     Handle<Camera> m_camera;
     RenderList m_render_list;
     Vector3 m_origin;
-    Float m_max_distance;
     UInt m_shadow_map_index;
     Extent2D m_dimensions;
 

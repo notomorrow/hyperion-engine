@@ -1,4 +1,4 @@
-#include <script/compiler/ast/AstPrototypeSpecification.hpp>
+#include <script/compiler/ast/AstSymbolTypeReference.hpp>
 #include <script/compiler/ast/AstMember.hpp>
 #include <script/compiler/ast/AstHasExpression.hpp>
 #include <script/compiler/ast/AstIdentifier.hpp>
@@ -18,72 +18,22 @@
 
 namespace hyperion::compiler {
 
-AstPrototypeSpecification::AstPrototypeSpecification(
-    const std::shared_ptr<AstExpression> &proto,
+AstSymbolTypeReference::AstSymbolTypeReference(
+    const String &name
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_proto(proto)
+    m_name(name)
 {
 }
 
-void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
+void AstSymbolTypeReference::Visit(AstVisitor *visitor, Module *mod)
 {
     AssertThrow(visitor != nullptr);
     AssertThrow(mod != nullptr);
 
-    AssertThrow(m_proto != nullptr);
-    m_proto->Visit(visitor, mod);
-
-    const AstExpression *value_of = m_proto->GetDeepValueOf(); // GetDeepValueOf() returns the non-wrapped generic AstTypeObject*
-    const AstTypeObject *type_obj = nullptr;
-    const AstIdentifier *identifier = nullptr;
-
-    const auto expr_type = value_of->GetExprType();
-    AssertThrow(expr_type != nullptr);
-
-    SymbolTypePtr_t unaliased;
-
-    if (!expr_type->IsAlias() || !(unaliased = expr_type->GetUnaliased())) {
-        unaliased = expr_type;
-    }
-
-    if (value_of != nullptr) {
-        if (!(type_obj = dynamic_cast<const AstTypeObject *>(value_of))) {
-            if ((identifier = dynamic_cast<const AstIdentifier *>(value_of))) {
-                type_obj = identifier->ExtractTypeObject();
-            }
-        }
-    }
-
-    if (!type_obj) {
-        type_obj = unaliased->GetTypeObject().get();
-    }
-
     m_symbol_type = BuiltinTypes::UNDEFINED;
-    m_prototype_type = BuiltinTypes::UNDEFINED;
 
-    if (unaliased == BuiltinTypes::ANY_TYPE || unaliased->HasBase(*BuiltinTypes::ANY_TYPE)) {
-        // it is a dynamic type
-        m_symbol_type = BuiltinTypes::ANY;
-        m_prototype_type = BuiltinTypes::ANY_TYPE;
-        m_default_value = BuiltinTypes::ANY->GetDefaultValue();
-
-        return;
-    }
-
-    SymbolTypePtr_t found_symbol_type;
-
-    if (type_obj != nullptr) {
-        if (type_obj->IsEnum()) {
-            found_symbol_type = type_obj->GetEnumUnderlyingType();
-        } else {
-            found_symbol_type = type_obj->GetHeldType();
-        }
-
-        AssertThrow(found_symbol_type != nullptr);
-    } else if (identifier != nullptr) {
-        found_symbol_type = mod->LookupSymbolType(identifier->GetName());
-    }
+    SymbolTypePtr_t found_symbol_type = mod->LookupSymbolType(m_name);
 
     if (found_symbol_type != nullptr) {
         found_symbol_type = found_symbol_type->GetUnaliased();
@@ -112,14 +62,13 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
         // m_symbol_type = constructor_type;
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
-            Msg_not_a_constant_type,
+            Msg_undefined_type,
             m_location,
             expr_type->GetName()
         ));
     }
 
     AssertThrow(m_symbol_type != nullptr);
-    AssertThrow(m_prototype_type != nullptr);
 }
 
 std::unique_ptr<Buildable> AstPrototypeSpecification::Build(AstVisitor *visitor, Module *mod)

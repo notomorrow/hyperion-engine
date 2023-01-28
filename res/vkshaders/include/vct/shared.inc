@@ -22,22 +22,39 @@ uint vct_greatest_extent = max(vct_params.dimensions.x, max(vct_params.dimension
 #define VOXEL_GRID_SCALE 1.0
 
 // returns vec3 so it can be interpolated
+// vec3 VctStoragePosition(vec3 scaled_position)
+// {
+//     const vec3 image_size = vec3(vct_params.dimensions.xyz);
+
+//     return clamp(scaled_position * image_size - 0.5, vec3(0), vec3(image_size) - 1.0);
+// }
+
+// vec3 VctWorldToAABB(vec3 world_position)
+// {
+//     return ((world_position - vct_aabb_center) / vct_aabb_extent) + 0.5;
+// }
+
+
 vec3 VctStoragePosition(vec3 scaled_position)
 {
     const vec3 image_size = vec3(vct_params.dimensions.xyz);
 
-    return clamp(scaled_position * image_size - 0.5, vec3(0), vec3(image_size) - 1.0);
+    return vec3((scaled_position * 0.5 + 0.5) * (image_size - vec3(1.0)));
 }
 
 vec3 VctWorldToAABB(vec3 world_position)
 {
-    return ((world_position - vct_aabb_center) / vct_aabb_extent) + 0.5;
+    return ((world_position - vct_aabb_center) / vct_aabb_extent);
 }
 
 vec3 VctWorldToTexCoord(vec3 world_position)
 {
-    return VctWorldToAABB(world_position);
+
+    const vec3 storage_coord = VctStoragePosition(VctWorldToAABB(world_position));
+    return vec3(storage_coord) / vec3(vct_params.dimensions.xyz - 1);
+    // return VctWorldToAABB(world_position);
 }
+
 
 
 // SVO Methods

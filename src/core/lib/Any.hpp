@@ -131,7 +131,10 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE void *GetPointer() const
+    HYP_FORCE_INLINE void *GetPointer()
+        { return m_ptr; }
+
+    HYP_FORCE_INLINE const void *GetPointer() const
         { return m_ptr; }
 
     HYP_FORCE_INLINE bool HasValue() const
@@ -163,6 +166,28 @@ public:
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         return *static_cast<const T *>(m_ptr);
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE T *TryGet()
+    {
+        const auto requested_type_id = TypeID::ForType<T>();
+        if (m_type_id == requested_type_id) {
+            return static_cast<T *>(m_ptr);
+        }
+
+        return nullptr;
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE const T *TryGet() const
+    {
+        const auto requested_type_id = TypeID::ForType<T>();
+        if (m_type_id == requested_type_id) {
+            return static_cast<const T *>(m_ptr);
+        }
+
+        return nullptr;
     }
 
     /*! \brief Construct a new pointer into the Any. Any current value will be destroyed. */

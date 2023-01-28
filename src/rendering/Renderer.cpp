@@ -13,7 +13,7 @@ using renderer::Result;
 
 struct RENDER_COMMAND(CreateGraphicsPipeline) : RenderCommand
 {
-    renderer::GraphicsPipeline *pipeline;
+    GraphicsPipelineRef pipeline;
     renderer::ShaderProgram *shader_program;
     renderer::RenderPass *render_pass;
     Array<renderer::FramebufferObject *> framebuffers;
@@ -21,13 +21,13 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : RenderCommand
     RenderableAttributeSet attributes;
 
     RENDER_COMMAND(CreateGraphicsPipeline)(
-        renderer::GraphicsPipeline *pipeline,
+        GraphicsPipelineRef pipeline,
         renderer::ShaderProgram *shader_program,
         renderer::RenderPass *render_pass,
         Array<renderer::FramebufferObject *> &&framebuffers,
         Array<Array<renderer::CommandBuffer *>> &&command_buffers,
         const RenderableAttributeSet &attributes
-    ) : pipeline(pipeline),
+    ) : pipeline(std::move(pipeline)),
         shader_program(shader_program),
         render_pass(render_pass),
         framebuffers(std::move(framebuffers)),
@@ -72,28 +72,13 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyGraphicsPipeline) : RenderCommand
-{
-    renderer::GraphicsPipeline *pipeline;
-
-    RENDER_COMMAND(DestroyGraphicsPipeline)(renderer::GraphicsPipeline *pipeline)
-        : pipeline(pipeline)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        return pipeline->Destroy(Engine::Get()->GetGPUDevice());
-    }
-};
-
 #pragma endregion
 
 RenderGroup::RenderGroup(
     Handle<Shader> &&shader,
     const RenderableAttributeSet &renderable_attributes
 ) : EngineComponentBase(),
-    m_pipeline(std::make_unique<renderer::GraphicsPipeline>()),
+    m_pipeline(RenderObjects::Make<renderer::GraphicsPipeline>()),
     m_shader(std::move(shader)),
     m_renderable_attributes(renderable_attributes)
 {
@@ -104,7 +89,7 @@ RenderGroup::RenderGroup(
     const RenderableAttributeSet &renderable_attributes,
     const Array<const DescriptorSet *> &used_descriptor_sets
 ) : EngineComponentBase(),
-    m_pipeline(std::make_unique<renderer::GraphicsPipeline>(used_descriptor_sets)),
+    m_pipeline(RenderObjects::Make<renderer::GraphicsPipeline>(used_descriptor_sets)),
     m_shader(std::move(shader)),
     m_renderable_attributes(renderable_attributes)
 {
@@ -187,7 +172,7 @@ void RenderGroup::Init()
         }
 
         RenderCommands::Push<RENDER_COMMAND(CreateGraphicsPipeline)>(
-            m_pipeline.get(),
+            m_pipeline,
             m_shader->GetShaderProgram(),
             render_pass,
             std::move(framebuffers),
@@ -216,7 +201,7 @@ void RenderGroup::Init()
                 fbo.Reset();
             }
 
-            RenderCommands::Push<RENDER_COMMAND(DestroyGraphicsPipeline)>(m_pipeline.get());
+            SafeRelease(std::move(m_pipeline));
             
             HYP_SYNC_RENDER();
         });
@@ -425,7 +410,7 @@ RenderAll(
     Frame *frame,
     FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> &command_buffers,
     UInt &command_buffer_index,
-    renderer::GraphicsPipeline *pipeline,
+    const GraphicsPipelineRef &pipeline,
     IndirectRenderer *indirect_renderer,
     Array<Array<DrawCall>> &divided_draw_calls,
     const DrawCallCollection &draw_state,
@@ -545,7 +530,7 @@ void RenderGroup::PerformRendering(Frame *frame)
         frame,
         m_command_buffers,
         m_command_buffer_index,
-        m_pipeline.get(),
+        m_pipeline,
         &m_indirect_renderer,
         m_divided_draw_calls,
         m_draw_state,
@@ -566,7 +551,7 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
         frame,
         m_command_buffers,
         m_command_buffer_index,
-        m_pipeline.get(),
+        m_pipeline,
         &m_indirect_renderer,
         m_divided_draw_calls,
         m_draw_state,
@@ -635,9 +620,9 @@ CommandBuffer *RendererProxy::GetCommandBuffer(UInt frame_index)
     return m_render_group->m_command_buffers[frame_index].Front().Get();
 }
 
-renderer::GraphicsPipeline *RendererProxy::GetGraphicsPipeline()
+const GraphicsPipelineRef &RendererProxy::GetGraphicsPipeline() const
 {
-    return m_render_group->m_pipeline.get();
+    return m_render_group->m_pipeline;
 }
 
 void RendererProxy::Bind(Frame *frame)

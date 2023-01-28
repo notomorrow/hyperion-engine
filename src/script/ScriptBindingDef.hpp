@@ -8,7 +8,7 @@
 namespace hyperion {
 
 template <int index, class ReturnType>
-typename std::enable_if_t<!std::is_class_v<ReturnType> || std::is_same_v<vm::VMString, ReturnType>, std::conditional_t<std::is_class_v<ReturnType>, std::add_pointer_t<ReturnType>, ReturnType>>
+typename std::enable_if_t<!std::is_class_v<ReturnType> || std::is_same_v<vm::VMString, ReturnType> || std::is_same_v<vm::VMObject, ReturnType>, std::conditional_t<std::is_class_v<ReturnType>, std::add_pointer_t<ReturnType>, ReturnType>>
 GetArgument(sdk::Params &params)
 {
     static_assert(!std::is_same_v<void, ReturnType>);
@@ -56,7 +56,7 @@ GetArgument(sdk::Params &params)
 }
 
 template <int index, class ReturnType>
-typename std::enable_if_t<std::is_class_v<ReturnType> && !std::is_same_v<vm::VMString, ReturnType>, ReturnType &>
+typename std::enable_if_t<std::is_class_v<ReturnType> && !std::is_same_v<vm::VMString, ReturnType> && !std::is_same_v<vm::VMObject, ReturnType>, ReturnType &>
 GetArgument(sdk::Params &params)
 {
     HYP_SCRIPT_GET_ARG_PTR(index, vm::VMObject, arg0);
@@ -474,6 +474,47 @@ HYP_SCRIPT_FUNCTION(CxxFn)
         HYP_SCRIPT_RETURN_BOOLEAN(Fn());
     } else {
         HYP_SCRIPT_CREATE_PTR(Fn(), result);
+
+        const auto class_name_it = params.api_instance.class_bindings.class_names.Find<ReturnType>();
+        AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+    
+        const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
+        AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+
+        vm::VMObject result_value(prototype_it->second); // construct from prototype
+        HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+
+        HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+
+        HYP_SCRIPT_RETURN(ptr);
+    }
+}
+
+template <class ReturnType, class Arg1Type, ReturnType(*Fn)(const Arg1Type &)>
+HYP_SCRIPT_FUNCTION(CxxFn)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 1);
+
+    auto &&arg1 = GetArgument<0, Arg1Type>(params);
+
+    if constexpr (std::is_same_v<void, ReturnType>) {
+        HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<int32_t, ReturnType>) {
+        HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<int64_t, ReturnType>) {
+        HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<uint32_t, ReturnType>) {
+        HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<uint64_t, ReturnType>) {
+        HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<float, ReturnType>) {
+        HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<double, ReturnType>) {
+        HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg1Type>(arg1)));
+    } else if constexpr (std::is_same_v<bool, ReturnType>) {
+        HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg1Type>(arg1)));
+    } else {
+        HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg1Type>(arg1)), result);
 
         const auto class_name_it = params.api_instance.class_bindings.class_names.Find<ReturnType>();
         AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");

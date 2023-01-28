@@ -1,7 +1,8 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
-#include <script/vm/HeapValue.hpp>
+#include <core/lib/TypeID.hpp>
+
 #include <script/vm/VMString.hpp>
 #include <Types.hpp>
 
@@ -24,7 +25,7 @@ typedef UInt8 BCRegister;
 struct Value;
 
 class InstructionHandler;
-class ExecutionThread;
+struct ExecutionThread;
 class HeapValue;
 struct VMState;
 
@@ -75,6 +76,10 @@ typedef void *UserData_t;
 
 namespace hyperion {
 namespace vm {
+
+TypeID GetTypeIDForHeapValue(const HeapValue *);
+void *GetRawPointerForHeapValue(HeapValue *);
+const void *GetRawPointerForHeapValue(const HeapValue *);
 
 enum CompareFlags : Int
 {
@@ -270,7 +275,15 @@ struct Value
             return false;
         }
 
-        return (*out = m_value.ptr->GetPointer<T>()) != nullptr;
+        if (TypeID::ForType<T>() == GetTypeIDForHeapValue(m_value.ptr)) {
+            *out = static_cast<T *>(GetRawPointerForHeapValue(m_value.ptr));
+
+            return true;
+        }
+
+        *out = nullptr;
+
+        return false;
     }
 
     template <class T>

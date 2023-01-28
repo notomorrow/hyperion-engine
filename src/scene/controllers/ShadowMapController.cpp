@@ -53,7 +53,9 @@ void ShadowMapController::UpdateShadowCamera(const Transform &transform)
 
     const Vector3 &center = transform.GetTranslation();
 
-    BoundingBox aabb = BoundingBox(center - 40.0f, center + 40.0f);
+    const Float radius = 35.0f;
+
+    BoundingBox aabb = BoundingBox(center - radius, center + radius);
 
     const Vector3 light_direction = m_light->GetPosition().Normalized() * -1.0f;
 
@@ -76,6 +78,9 @@ void ShadowMapController::UpdateShadowCamera(const Transform &transform)
         aabb.max = MathUtil::Max(aabb.max, corner);
         aabb.min = MathUtil::Min(aabb.min, corner);
     }
+
+    aabb.max.z = radius;
+    aabb.min.z = -radius;
 
     m_shadow_map_renderer->SetCameraData(ShadowMapCameraData {
         camera->GetViewMatrix(),

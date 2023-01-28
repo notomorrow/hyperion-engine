@@ -1,9 +1,13 @@
 #ifndef VM_STATE_HPP
 #define VM_STATE_HPP
 
+#include <core/lib/DynArray.hpp>
 #include <core/lib/UniquePtr.hpp>
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/LinkedList.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/HeapArray.hpp>
+#include <core/lib/ValueStorage.hpp>
 
 #include <script/vm/StackMemory.hpp>
 #include <script/vm/StaticMemory.hpp>
@@ -16,6 +20,8 @@
 #include <Types.hpp>
 
 #include <util/NonOwningPtr.hpp>
+
+#include <atomic>
 
 #define ENABLE_GC 1
 #define GC_THRESHOLD_MIN 150
@@ -111,17 +117,19 @@ struct VMState
     void DestroyThread(int id);
     
     /** Get the number of threads currently in use */
-    size_t GetNumThreads() const { return m_num_threads; }
+    SizeType GetNumThreads() const { return m_num_threads; }
     ExecutionThread *GetMainThread() const { AssertThrow(m_num_threads != 0); return m_threads[0]; }
 
     Heap &GetHeap() { return m_heap; }
+    const Heap &GetHeap() const { return m_heap; }
+
     StaticMemory &GetStaticMemory() { return m_static_memory; }
 
     ExportedSymbolTable &GetExportedSymbols() { return m_exported_symbols; }
     const ExportedSymbolTable &GetExportedSymbols() const { return m_exported_symbols; }
 
 private:
-    size_t m_num_threads = 0;
+    SizeType m_num_threads = 0;
 };
 
 } // namespace vm

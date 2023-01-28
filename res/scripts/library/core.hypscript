@@ -10,8 +10,20 @@ module engine {
     // }
 }
 
+//extern func HashFNV1(str : String);
+
 func AssertEqual(lhs, rhs) {
     if (!(lhs == rhs)) {
+        throw "Assertion failed!";
+
+        return false;
+    }
+
+    return true;
+}
+
+func AssertNotEqual(lhs, rhs) {
+    if (lhs == rhs) {
         throw "Assertion failed!";
 
         return false;

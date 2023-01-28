@@ -62,7 +62,7 @@ HeapValue *VMState::HeapAlloc(ExecutionThread *thread)
 {
     AssertThrow(thread != nullptr);
 
-    const auto heap_size = m_heap.Size();
+    const SizeType heap_size = m_heap.Size();
         
     if (heap_size >= m_max_heap_objects) {
         if (heap_size >= GC_THRESHOLD_MAX) {

@@ -92,8 +92,6 @@ void PointShadowRenderer::OnRender(Frame *frame)
 
         if (m_env_probe->NeedsRender()) {
             m_env_probe->Render(frame);
-        } else {
-            std::cout << "Skip render point light shadows because it doesnt need update\n";
         }
     } else {
         // No point in keeping it bound if the light is not visible on the screen.

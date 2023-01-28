@@ -1209,7 +1209,7 @@ void Engine::RenderFinalPass(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    auto *pipeline = m_root_pipeline->GetPipeline();
+    const GraphicsPipelineRef &pipeline = m_root_pipeline->GetPipeline();
     const UInt acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(0, frame->GetCommandBuffer());

@@ -579,7 +579,7 @@ void ParticleSystem::Render(Frame *frame)
         THREAD_POOL_RENDER,
         m_particle_spawners.GetItems(),
         [this, &command_buffers_recorded_states, frame_index](const Handle<ParticleSpawner> &particle_spawner, UInt index, UInt batch_index) {
-            auto *pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
+            const GraphicsPipelineRef &pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
 
             m_command_buffers[frame_index][batch_index]->Record(
                 Engine::Get()->GetGPUDevice(),

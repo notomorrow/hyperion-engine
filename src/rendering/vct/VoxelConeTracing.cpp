@@ -170,8 +170,6 @@ void VoxelConeTracing::OnRender(Frame *frame)
         return;
     }
 
-    std::cout << "Render voxel cone tracing\n";
-
     CommandBuffer *command_buffer = frame->GetCommandBuffer();
     const UInt frame_index = frame->GetFrameIndex();
 

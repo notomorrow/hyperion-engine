@@ -135,6 +135,8 @@ public:
     void RenderUI(Frame *frame);
 
 private:
+    void ApplyCameraJitter();
+
     void CreateCombinePass();
     void CreateDescriptorSets();
 

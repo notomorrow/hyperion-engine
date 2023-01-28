@@ -216,6 +216,18 @@
         decl_name = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<Int64>(num.u) : num.i; \
     } while (false)
 
+#define HYP_SCRIPT_GET_MEMBER_UINT(object, name, type, decl_name) \
+    type decl_name; \
+    do { \
+        UInt64 num; \
+        vm::Member *_member = nullptr; \
+        if (!(_member = object->LookupMemberFromHash(hash_fnv_1(name))) || !_member->value.GetUnsigned(&num)) { \
+            params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type uint")); \
+            return; \
+        } \
+        decl_name = static_cast<type>(num); \
+    } while (false)
+
 #define HYP_SCRIPT_GET_MEMBER_FLOAT(object, name, type, decl_name) \
     type decl_name; \
     do { \
@@ -259,9 +271,11 @@
         out_name = vm::Value(vm::Value::HEAP_POINTER, {.ptr = ptr_result}); \
     } while (false)
 
-#define HYP_SCRIPT_SET_MEMBER(object, name, assignment) \
+#define HYP_SCRIPT_SET_MEMBER(object, name_str, assignment) \
     do { \
-        object.LookupMemberFromHash(hash_fnv_1("__intern"))->value = assignment; \
+        auto *member = object.LookupMemberFromHash(hash_fnv_1(name_str)); \
+        AssertThrowMsg(member != nullptr, "Member " name_str " not set on object, unmatching prototype definition");\
+        member->value = assignment; \
     } while (false)
 
 #pragma endregion

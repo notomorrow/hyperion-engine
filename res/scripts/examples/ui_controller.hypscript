@@ -1,6 +1,7 @@
 #importpath "../" "../library";
 
 import core::engine;
+import core::{ AssertEqual, AssertNotEqual };
 import scene::{ Entity };
 
 // dynamic import
@@ -14,6 +15,17 @@ enum UIEventType {
     MOUSE_DRAG,
     MOUSE_HOVER
 }
+
+let my_name : Name = new Name("Foo bar");
+AssertEqual(my_name.hash_code, (new Name("Foo bar")).hash_code);
+AssertNotEqual(my_name.hash_code, (new Name("Andrew")).hash_code);
+
+Print("my_name = %", my_name);
+my_name = new Name("Andrew");
+AssertNotEqual(my_name.hash_code, (new Name("Foo bar")).hash_code);
+AssertEqual(my_name.hash_code, (new Name("Andrew")).hash_code);
+Print("my_name = %", my_name);
+Print("my_name.LookupString() = %", my_name.LookupString());
 
 class TestUIController {
     const receives_update : Bool = false;

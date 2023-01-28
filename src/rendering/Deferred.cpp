@@ -145,6 +145,7 @@ void DeferredPass::Record(UInt frame_index)
 #endif
             // render with each light
             for (const auto &it : Engine::Get()->GetRenderState().lights) {
+                const ID<Light> light_id = it.first;
                 const LightDrawProxy &light = it.second;
 
                 if (light.visibility_bits & (1ull << SizeType(camera_index))) {
@@ -153,10 +154,14 @@ void DeferredPass::Record(UInt frame_index)
 
                     UInt shadow_probe_index = 0;
 
-                    if (light.type == LightType::POINT && light.shadow_map_index != ~0u) {
-                        AssertThrow(light.shadow_map_index < max_shadow_maps);
+                    if (light.shadow_map_index != ~0u) {
+                        if (light.type == LightType::POINT) {
+                            AssertThrow(light.shadow_map_index < max_env_probes);
 
-                        shadow_probe_index = light.shadow_map_index;
+                            shadow_probe_index = light.shadow_map_index;
+                        } else if (light.type == LightType::DIRECTIONAL) {
+                            AssertThrow(light.shadow_map_index < max_shadow_maps);
+                        }
                     }
 
                     cmd->BindDescriptorSet(
@@ -166,7 +171,7 @@ void DeferredPass::Record(UInt frame_index)
                         DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
                         FixedArray {
                             HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                            HYP_RENDER_OBJECT_OFFSET(Light, it.first.ToIndex()),
+                            HYP_RENDER_OBJECT_OFFSET(Light, light_id.ToIndex()),
                             HYP_RENDER_OBJECT_OFFSET(EnvGrid, Engine::Get()->GetRenderState().bound_env_grid.ToIndex()),
                             HYP_RENDER_OBJECT_OFFSET(EnvProbe, shadow_probe_index),
                             HYP_RENDER_OBJECT_OFFSET(Camera, camera_index)
@@ -581,6 +586,10 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const bool use_reflection_probes = Engine::Get()->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS) && Engine::Get()->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any();
     const bool use_temporal_aa = Engine::Get()->GetConfig().Get(CONFIG_TEMPORAL_AA) && m_temporal_aa != nullptr;
 
+    if (use_temporal_aa) {
+        ApplyCameraJitter();
+    }
+
     struct alignas(128) {  UInt32 flags; } deferred_data;
 
     Memory::Set(&deferred_data, 0, sizeof(deferred_data));
@@ -782,6 +791,24 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
 
     // put src image in state for reading
     src_image->GetGPUImage()->InsertBarrier(primary, renderer::ResourceState::SHADER_RESOURCE);
+}
+
+void DeferredRenderer::ApplyCameraJitter()
+{
+    Matrix4 offset_matrix;
+    Vector4 jitter;
+
+    const ID<Camera> camera_id = Engine::Get()->GetRenderState().GetCamera().id;
+    const CameraDrawProxy &camera = Engine::Get()->GetRenderState().GetCamera().camera;
+
+    const UInt frame_counter = Engine::Get()->GetRenderState().frame_counter + 1;
+
+    if (camera.projection[3][3] < MathUtil::epsilon<Float>) {
+        offset_matrix = Matrix4::Jitter(frame_counter, camera.dimensions.width, camera.dimensions.height, jitter);
+
+        Engine::Get()->GetRenderData()->cameras.Get(camera_id.ToIndex()).jitter = jitter;
+        Engine::Get()->GetRenderData()->cameras.MarkDirty(camera_id.ToIndex());
+    }
 }
 
 void DeferredRenderer::CollectDrawCalls(Frame *frame)

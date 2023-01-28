@@ -17,6 +17,7 @@ enum Keywords
     Keyword_public,
     Keyword_private,
     Keyword_protected,
+    Keyword_extern,
     Keyword_ref,
     Keyword_val,
     Keyword_func,

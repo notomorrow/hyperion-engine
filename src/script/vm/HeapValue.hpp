@@ -2,6 +2,10 @@
 #define HEAP_VALUE_HPP
 
 #include <core/lib/Any.hpp>
+#include <core/lib/Variant.hpp>
+#include <script/vm/VMString.hpp>
+#include <script/vm/VMArray.hpp>
+#include <script/vm/VMObject.hpp>
 #include <Constants.hpp>
 #include <util/Defines.hpp>
 
@@ -24,6 +28,123 @@ enum HeapValueFlags
     GC_ALIVE = GC_MARKED | GC_ALWAYS_ALIVE
 };
 
+class HeapValue_Impl
+{
+    Variant<VMString, VMObject, VMArray, Any> m_variant;
+
+#define IS_INLINE_TYPE(T) (std::is_same_v<VMString, NormalizedType<T>> || std::is_same_v<VMObject, NormalizedType<T>> || std::is_same_v<VMArray, NormalizedType<T>>)
+
+public:
+    HeapValue_Impl() = default;
+    HeapValue_Impl(const HeapValue_Impl &other) = delete;
+    HeapValue_Impl &operator=(const HeapValue_Impl &other) = delete;
+    ~HeapValue_Impl() = default;
+    
+    TypeID GetTypeID() const
+    {
+        const TypeID type_id = m_variant.GetTypeID();
+
+        if (type_id == TypeID::ForType<Any>()) {
+            return m_variant.Get<Any>().GetTypeID();
+        }
+
+        return type_id;
+    }
+
+    template <class T>
+    bool Is() const
+        { return GetTypeID() == TypeID::ForType<T>(); }
+
+    bool HasValue() const
+        { return m_variant.IsValid(); }
+
+    template <typename T>
+    T &Get()
+    {
+        if constexpr (IS_INLINE_TYPE(T)) {
+            return m_variant.Get<T>();
+        } else {
+            return m_variant.Get<Any>().Get<T>();
+        }
+    }
+
+    template <typename T>
+    const T &Get() const
+    {
+        if constexpr (IS_INLINE_TYPE(T)) {
+            return m_variant.Get<T>();
+        } else {
+            return m_variant.Get<Any>().Get<T>();
+        }
+    }
+
+    void *GetRawPointer()
+    {
+        const TypeID type_id = m_variant.GetTypeID();
+
+        if (type_id == TypeID::ForType<Any>()) {
+            return m_variant.Get<Any>().GetPointer();
+        }
+
+        return m_variant.GetPointer();
+    }
+
+    const void *GetRawPointer() const
+    {
+        const TypeID type_id = m_variant.GetTypeID();
+
+        if (type_id == TypeID::ForType<Any>()) {
+            return m_variant.Get<Any>().GetPointer();
+        }
+
+        return m_variant.GetPointer();
+    }
+
+    template <class T>
+    T *GetPointer()
+    {
+        DebugLog(LogType::Debug, "VMObject Type: %u\n", TypeID::ForType<VMObject>().GetHashCode().Value());
+        DebugLog(LogType::Debug, "VMString Type: %u\n", TypeID::ForType<VMString>().GetHashCode().Value());
+        DebugLog(LogType::Debug, "VMArray Type: %u\n", TypeID::ForType<VMArray>().GetHashCode().Value());
+        DebugLog(LogType::Debug, "Any Type: %u\n", TypeID::ForType<Any>().GetHashCode().Value());
+        DebugLog(LogType::Debug, "void Type: %u\n", TypeID::ForType<void>().GetHashCode().Value());
+        DebugLog(LogType::Debug, "Current Type: %u\n", GetTypeID().GetHashCode().Value());
+        DebugLog(LogType::Debug, "Current (Variant) Type: %u\n", m_variant.GetTypeID().GetHashCode().Value());
+
+        if constexpr (IS_INLINE_TYPE(T)) {
+            return m_variant.TryGet<T>();
+        } else {
+            if (auto *any_ptr = m_variant.TryGet<Any>()) {
+                return any_ptr->TryGet<T>();
+            }
+
+            return nullptr;
+        }
+    }
+
+    template <class T>
+    void Assign(const T &value)
+    {
+        if constexpr (IS_INLINE_TYPE(T)) {
+            m_variant.Set(value);
+        } else {
+            m_variant.Set(Any::Construct<T>(value));
+        }
+    }
+
+    template <typename T>
+    void Assign(T &&value)
+    {
+        if constexpr (IS_INLINE_TYPE(T)) {
+            m_variant.Set(std::move(value));
+        } else {
+            m_variant.Set(Any(std::move(value)));
+        }
+    }
+
+#undef IS_INLINE_TYPE
+};
+
 class HeapValue
 {
 public:
@@ -32,8 +153,8 @@ public:
     HeapValue &operator=(const HeapValue &other) = delete;
     ~HeapValue();
 
-    const TypeID &GetTypeID() const
-        { return m_any.GetTypeID(); }
+    TypeID GetTypeID() const
+        { return m_impl.GetTypeID(); }
 
     int &GetFlags()
         { return m_flags; }
@@ -43,43 +164,52 @@ public:
 
     template <class T>
     bool Is() const
-        { return m_any.Is<T>(); }
+        { return m_impl.Is<T>(); }
 
     template <class T>
     bool TypeCompatible() const 
-        { return m_any.Is<T>(); }
+        { return m_impl.Is<T>(); }
 
     bool HasValue() const
-        { return m_any.HasValue(); }
+        { return m_impl.HasValue(); }
 
     template <class T>
     void Assign(const T &value)
-        { m_any = value; }
+        { m_impl.Assign(value); debug_name = typeid(T).name(); }
 
     template <typename T>
     void Assign(T &&value)
-        { m_any = std::move(value);  }
+        { m_impl.Assign(std::forward<T>(value)); debug_name = typeid(T).name(); }
 
     template <typename T>
     T &Get()
-        { return m_any.Get<T>(); }
+        { return m_impl.Get<T>(); }
 
     template <typename T>
     const T &Get() const
-        { return m_any.Get<T>(); }
+        { return m_impl.Get<T>(); }
 
-    void *GetRawPointer() const
-        { return m_any.GetPointer(); }
+    void *GetRawPointer()
+        { return m_impl.GetRawPointer(); }
+
+    const void *GetRawPointer() const
+        { return m_impl.GetRawPointer(); }
 
     template <class T>
     T *GetPointer()
-        { return TypeCompatible<T>() ? static_cast<T *>(GetRawPointer()) : nullptr; }
+        { return m_impl.GetPointer<T>(); }
+
+    template <class T>
+    const T *GetPointer() const
+        { return m_impl.GetPointer<T>(); }
 
     void Mark();
 
 private:
-    Any m_any;
+    HeapValue_Impl m_impl;
     int m_flags;
+
+    const char *debug_name = "";
 };
 
 } // namespace vm

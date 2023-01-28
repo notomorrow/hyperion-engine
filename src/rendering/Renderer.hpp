@@ -5,6 +5,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/Framebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/CullData.hpp>
@@ -66,7 +67,8 @@ class RendererProxy
 
 public:
     CommandBuffer *GetCommandBuffer(UInt frame_index);
-    renderer::GraphicsPipeline *GetGraphicsPipeline();
+    
+    const GraphicsPipelineRef &GetGraphicsPipeline() const;
 
     /*! \brief For using this RenderGroup as a standalone graphics pipeline that will simply
         be bound, with all draw calls recorded elsewhere. */
@@ -108,7 +110,8 @@ public:
     RenderGroup &operator=(const RenderGroup &other) = delete;
     ~RenderGroup();
 
-    renderer::GraphicsPipeline *GetPipeline() const { return m_pipeline.get(); }
+    GraphicsPipelineRef &GetPipeline() { return m_pipeline; }
+    const GraphicsPipelineRef &GetPipeline() const { return m_pipeline; }
 
     Handle<Shader> &GetShader() { return m_shader; }
     const Handle<Shader> &GetShader() const { return m_shader; }
@@ -154,7 +157,7 @@ private:
         UInt scene_index
     );
 
-    std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
+    GraphicsPipelineRef m_pipeline;
 
     Handle<Shader> m_shader;
     RenderableAttributeSet m_renderable_attributes;

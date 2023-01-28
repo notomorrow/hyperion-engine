@@ -73,5 +73,5 @@ void main()
 
     v_object_index = OBJECT_INDEX;
     
-    gl_Position = vec4(v_voxel.xy * 2.0 - 1.0, v_voxel.z, 1.0);
+    gl_Position = vec4(v_voxel.xy, v_voxel.z * 0.5 + 0.5, 1.0);
 }

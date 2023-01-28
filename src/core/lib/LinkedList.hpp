@@ -160,6 +160,43 @@ public:
 
     [[nodiscard]] bool Empty() const { return Size() == 0; }
     [[nodiscard]] bool Any() const { return Size() != 0; }
+
+    
+    template <class ...Args>
+    void EmplaceBack(Args &&... args)
+    {
+        Node *new_node = new Node;
+        new_node->previous = m_tail;
+        new_node->value.Construct(std::forward<Args>(args)...);
+        
+        if (m_size == 0) {
+            m_head = new_node;
+            m_tail = m_head;
+        } else {
+            m_tail->next = new_node;
+            m_tail = new_node;
+        }
+
+        ++m_size;
+    }
+
+    template <class ...Args>
+    void EmplaceFront(Args &&... args)
+    {
+        Node *new_node = new Node;
+        new_node->next = m_head;
+        new_node->value.Construct(std::forward<Args>(args)...);
+
+        if (m_size != 0) {
+            m_head->previous = new_node;
+            m_tail = m_head;
+        } else {
+            m_tail = new_node;
+        }
+
+        m_head = new_node;
+        ++m_size;
+    }
     
     void PushBack(const ValueType &value);
     void PushBack(ValueType &&value);
@@ -243,7 +280,6 @@ LinkedList<T>::LinkedList()
 {
     //m_head->previous = m_head;
 }
-
 
 template <class T>
 void LinkedList<T>::PushBack(const ValueType &value)

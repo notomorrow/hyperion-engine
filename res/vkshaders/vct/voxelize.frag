@@ -55,6 +55,8 @@ void main()
         }
 #endif
 
+        frag_color.a = 1.0;
+
 #if HYP_VCT_LIGHTING
         float shadow = 1.0;
 
@@ -67,16 +69,10 @@ void main()
             shadow = GetShadowStandard(light.shadow_map_index, g_position.xyz, vec2(0.0), NdotL);
         }
 
-        frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, NdotL * shadow));
+        frag_color.a = max(HYP_VCT_LIGHTING_AMBIENT, NdotL * shadow);
 #endif
 
-// #if HYP_VCT_LIGHTING
-//         frag_color.rgb *= g_lighting;
-// #endif
-
-        // frag_color.rgb *= 1.0 - GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-        // frag_color.a = 1.0;
-
+        frag_color.rgb *= 1.0 - GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
         frag_color.rgb = pow(frag_color.rgb, vec3(1.0 / 2.2));
 
 #ifdef MODE_SVO

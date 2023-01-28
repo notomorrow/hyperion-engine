@@ -159,7 +159,6 @@ ShadowPass::ShadowPass(const Handle<Scene> &parent_scene)
     : FullScreenPass(),
       m_parent_scene(parent_scene),
       m_shadow_mode(ShadowMode::VSM),
-      m_max_distance(100.0f),
       m_shadow_map_index(~0u),
       m_dimensions { 2048, 2048 }
 {
@@ -445,7 +444,7 @@ void ShadowMapRenderer::OnUpdate(GameCounter::TickUnit delta)
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_SHADOW,
-                .cull_faces = FaceCullMode::FRONT
+                .cull_faces = FaceCullMode::BACK
             },
             m_shadow_pass->GetShader()->GetCompiledShader().GetDefinition()
         ),

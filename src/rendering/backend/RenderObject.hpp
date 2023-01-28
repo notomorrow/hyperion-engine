@@ -368,6 +368,7 @@ public:
 
 DEF_RENDER_OBJECT(CommandBuffer,       2048);
 DEF_RENDER_OBJECT(ShaderProgram,       2048);
+DEF_RENDER_OBJECT(GraphicsPipeline,    2048);
 DEF_RENDER_OBJECT(GPUBuffer,           65536);
 DEF_RENDER_OBJECT(Image,               16384);
 DEF_RENDER_OBJECT(ImageView,           65536);

@@ -109,8 +109,8 @@ void main()
         #define VCT_RENDER_COMPONENT_INDEX HYP_RENDER_COMPONENT_SVO
 #endif
 
-        if (IsRenderComponentEnabled(VCT_RENDER_COMPONENT_INDEX)) {
-            vct_specular = ConeTraceSpecular(position.xyz, N, R, 0.01);
+        // if (IsRenderComponentEnabled(VCT_RENDER_COMPONENT_INDEX)) {
+            vct_specular = ConeTraceSpecular(position.xyz, N, R, perceptual_roughness);
             vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, perceptual_roughness);
 
 #if HYP_VCT_INDIRECT_ENABLED
@@ -120,7 +120,7 @@ void main()
 #if HYP_VCT_REFLECTIONS_ENABLED
             reflections = vct_specular;
 #endif
-        }
+        // }
 #endif
 
 #ifdef REFLECTION_PROBE_ENABLED

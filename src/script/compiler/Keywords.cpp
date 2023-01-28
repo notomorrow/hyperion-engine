@@ -12,6 +12,7 @@ const std::map<std::string, Keywords> Keyword::keyword_strings = {
     { "public",    Keyword_public },
     { "private",   Keyword_private },
     { "protected", Keyword_protected },
+    { "extern",    Keyword_extern },
     { "ref",       Keyword_ref },
     { "func",      Keyword_func },
     { "class",     Keyword_class },

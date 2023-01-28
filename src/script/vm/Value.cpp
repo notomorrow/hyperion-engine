@@ -19,6 +19,34 @@ namespace vm {
 static const VMString NULL_STRING = VMString("null");
 static const VMString BOOLEAN_STRINGS[2] = { VMString("false"), VMString("true") };
 
+
+TypeID GetTypeIDForHeapValue(const HeapValue *heap_value)
+{
+    if (!heap_value) {
+        return TypeID::ForType<void>();
+    }
+
+    return heap_value->GetTypeID();
+}
+
+void *GetRawPointerForHeapValue(HeapValue *heap_value)
+{
+    if (!heap_value) {
+        return nullptr;
+    }
+
+    return heap_value->GetRawPointer();
+}
+
+const void *GetRawPointerForHeapValue(const HeapValue *heap_value)
+{
+    if (!heap_value) {
+        return nullptr;
+    }
+
+    return heap_value->GetRawPointer();
+}
+
 Value::Value(const Value &other)
     : m_type(other.m_type),
       m_value(other.m_value)

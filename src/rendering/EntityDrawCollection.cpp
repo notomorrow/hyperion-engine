@@ -227,10 +227,6 @@ void RenderList::UpdateRenderGroups()
                         return;
                     }
 
-                    // NOTE: Do not call InitObject with render_group.
-                    // It may attempt to sync with the render thread, which is
-                    // disallowed from task threads.
-
                     InitObject(render_group);
 
                     entity_list.render_group = render_group;
@@ -329,7 +325,7 @@ void RenderList::CollectDrawCalls(
             const Bucket bucket = bucket_bits.Test(UInt(attributes.material_attributes.bucket)) ? attributes.material_attributes.bucket : BUCKET_INVALID;
 
             if (bucket == BUCKET_INVALID) {
-                return;
+                continue;
             }
 
             iterators.PushBack(&it);
@@ -410,22 +406,6 @@ void RenderList::ExecuteDrawCalls(
 
     CommandBuffer *command_buffer = frame->GetCommandBuffer();
     const UInt frame_index = frame->GetFrameIndex();
-
-    { // calculate camera jitter
-        if (Engine::Get()->GetConfig().Get(CONFIG_TEMPORAL_AA)) {
-            Matrix4 offset_matrix;
-            Vector4 jitter;
-
-            const UInt frame_counter = Engine::Get()->GetRenderState().frame_counter + 1;
-
-            if (camera->GetDrawProxy().projection[3][3] < MathUtil::epsilon<Float>) {
-                offset_matrix = Matrix4::Jitter(frame_counter, camera->GetDrawProxy().dimensions.width, camera->GetDrawProxy().dimensions.height, jitter);
-
-                Engine::Get()->GetRenderData()->cameras.Get(camera->GetID().ToIndex()).jitter = jitter;
-                Engine::Get()->GetRenderData()->cameras.MarkDirty(camera->GetID().ToIndex());
-            }
-        }
-    }
 
     if (framebuffer) {
         framebuffer->BeginCapture(frame_index, command_buffer);

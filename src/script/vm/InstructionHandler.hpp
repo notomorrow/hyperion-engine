@@ -383,6 +383,8 @@ public:
                 AssertThrow(index < obj_ptr->GetSize());
                 thread->m_regs[dst].AssignValue(obj_ptr->GetMember(index).value, false);
                 return;
+            } else {
+                HYP_BREAKPOINT;
             }
         }
 

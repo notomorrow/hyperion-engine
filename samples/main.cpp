@@ -148,7 +148,7 @@ public:
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
                 Vector3(0.0f, 1.0f, 0.0f),
                 Color(1.0f, 1.0f, 1.0f),
-                2.0f,
+                40.0f,
                 7.35f
             )));
             // m_point_lights.PushBack(CreateObject<Light>(PointLight(
@@ -160,12 +160,12 @@ public:
 
             for (auto &light : m_point_lights) {
                 auto point_light_entity = CreateObject<Entity>();
-                // point_light_entity->AddController<LightController>(light);
-                // GetScene()->AddEntity(std::move(point_light_entity));
+                point_light_entity->AddController<LightController>(light);
+                GetScene()->AddEntity(std::move(point_light_entity));
             }
         }
 
-        if (false) {
+        if (true) {
             auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
             btn_node.SetEntity(CreateObject<Entity>());
             btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 0.85f, 0.0f));
@@ -505,7 +505,7 @@ public:
             GetScene()->GetRoot().AddChild(tree);
         }
         
-        if (true) {
+        if (false) {
             auto cube_model = Engine::Get()->GetAssetManager().Load<Node>("models/cube.obj");
 
             // add a plane physics shape
