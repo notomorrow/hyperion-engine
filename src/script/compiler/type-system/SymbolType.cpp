@@ -53,6 +53,10 @@ SymbolType::SymbolType(const SymbolType &other)
 
 bool SymbolType::TypeEqual(const SymbolType &other) const
 {
+    if (std::addressof(other) == this) {
+        return true;
+    }
+
     if (m_name != other.m_name) {
         return false;
     }
@@ -62,6 +66,8 @@ bool SymbolType::TypeEqual(const SymbolType &other) const
     }
 
     switch (m_type_class) {
+        case TYPE_BUILTIN:
+            return true;
         case TYPE_ALIAS:
             if (SymbolTypePtr_t sp = m_alias_info.m_aliasee.lock()) {
                 return (*sp) == other;
@@ -178,6 +184,25 @@ bool SymbolType::TypeCompatible(
 
     if (TypeEqual(*BuiltinTypes::ANY) || right.TypeEqual(*BuiltinTypes::ANY)) {
         return true;
+    }
+
+    // if (IsAnyType() || IsAnyType()) {
+    //     return true;
+    // }
+
+    if (IsProxyClass()) {
+        // TODO:
+        // have proxy class declare which class it is a proxy for,
+        // then check that the types match?
+        return true;
+    }
+
+    if (IsNullType()) {
+        return right.IsNullableType();
+    }
+
+    if (right.IsNullType()) {
+        return IsNullableType();
     }
 
     if (right.IsGenericParameter()) {
@@ -333,7 +358,7 @@ bool SymbolType::FindMember(const std::string &name, SymbolMember_t &out) const
 const SymbolTypePtr_t SymbolType::FindPrototypeMember(const std::string &name) const
 {
     if (SymbolTypePtr_t proto_type = FindMember("$proto")) {
-        if (proto_type == BuiltinTypes::ANY_TYPE || proto_type->HasBase(*BuiltinTypes::ANY_TYPE)) {
+        if (proto_type->IsAnyType()) {
             return BuiltinTypes::ANY;
         }
 
@@ -355,7 +380,7 @@ bool SymbolType::FindPrototypeMember(const std::string &name, SymbolMember_t &ou
 
 bool SymbolType::IsOrHasBase(const SymbolType &base_type) const
 {
-    return TypeEqual(base_type ) || HasBase(base_type);
+    return TypeEqual(base_type) || HasBase(base_type);
 }
 
 bool SymbolType::HasBase(const SymbolType &base_type) const
@@ -384,6 +409,22 @@ SymbolTypePtr_t SymbolType::GetUnaliased()
     }
 
     return shared_from_this();
+}
+
+bool SymbolType::IsAnyType() const
+{
+    AssertThrow(BuiltinTypes::ANY->IsOrHasBase(*BuiltinTypes::ANY_TYPE));
+    return IsOrHasBase(*BuiltinTypes::ANY_TYPE);
+}
+
+bool SymbolType::IsNullType() const
+{
+    return IsOrHasBase(*BuiltinTypes::NULL_TYPE);
+}
+
+bool SymbolType::IsNullableType() const
+{
+    return IsOrHasBase(*BuiltinTypes::OBJECT);
 }
 
 bool SymbolType::IsArrayType() const

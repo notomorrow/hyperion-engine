@@ -107,7 +107,7 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         // for ANY type we conditionally build in a check
         // also, for proxy class that does not have the operator overloaded,
         // we build in the condition as well
-        else if ((target_type == BuiltinTypes::ANY_TYPE || target_type->HasBase(*BuiltinTypes::ANY_TYPE)) || target_type->IsProxyClass()) {
+        else if (target_type->IsAnyType() || target_type->IsProxyClass()) {
             auto sub_bin_expr = std::static_pointer_cast<AstBinaryExpression>(Clone());
             sub_bin_expr->SetIsOperatorOverloadingEnabled(false); // don't look for overload again
 

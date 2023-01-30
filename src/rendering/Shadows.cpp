@@ -127,12 +127,22 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : RenderCommand
     Matrix4 view_matrix;
     Matrix4 projection_matrix;
     BoundingBox aabb;
+    Extent2D dimensions;
+    ShadowFlags flags;
 
-    RENDER_COMMAND(UpdateShadowMapRenderData)(UInt shadow_map_index, const Matrix4 &view_matrix, const Matrix4 &projection_matrix, const BoundingBox &aabb)
-        : shadow_map_index(shadow_map_index),
-          view_matrix(view_matrix),
-          projection_matrix(projection_matrix),
-          aabb(aabb)
+    RENDER_COMMAND(UpdateShadowMapRenderData)(
+        UInt shadow_map_index,
+        const Matrix4 &view_matrix,
+        const Matrix4 &projection_matrix,
+        const BoundingBox &aabb,
+        Extent2D dimensions,
+        ShadowFlags flags
+    ) : shadow_map_index(shadow_map_index),
+        view_matrix(view_matrix),
+        projection_matrix(projection_matrix),
+        aabb(aabb),
+        dimensions(dimensions),
+        flags(flags)
     {
     }
 
@@ -145,7 +155,9 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : RenderCommand
                 .projection = projection_matrix,
                 .view = view_matrix,
                 .aabb_max = Vector4(aabb.max, 1.0f),
-                .aabb_min = Vector4(aabb.min, 1.0f)
+                .aabb_min = Vector4(aabb.min, 1.0f),
+                .dimensions = dimensions,
+                .flags = UInt32(flags)
             }
         );
 
@@ -158,7 +170,7 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : RenderCommand
 ShadowPass::ShadowPass(const Handle<Scene> &parent_scene)
     : FullScreenPass(),
       m_parent_scene(parent_scene),
-      m_shadow_mode(ShadowMode::VSM),
+      m_shadow_mode(ShadowMode::PCF),
       m_shadow_map_index(~0u),
       m_dimensions { 2048, 2048 }
 {
@@ -168,9 +180,28 @@ ShadowPass::~ShadowPass() = default;
 
 void ShadowPass::CreateShader()
 {
+    ShaderProperties properties;
+    properties.SetRequiredVertexAttributes(renderer::static_mesh_vertex_attributes);
+
+    switch (m_shadow_mode) {
+    case ShadowMode::VSM:
+        properties.Set("MODE_VSM");
+        break;
+    case ShadowMode::CONTACT_HARDENED:
+        properties.Set("MODE_CONTACT_HARDENED");
+        break;
+    case ShadowMode::PCF:
+        properties.Set("MODE_PCF");
+        break;
+    case ShadowMode::STANDARD: // fallthrough
+    default:
+        properties.Set("MODE_STANDARD");
+        break;
+    }
+
     m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
         HYP_NAME(Shadows),
-        ShaderProperties(renderer::static_mesh_vertex_attributes)
+        properties
     );
 
     InitObject(m_shader);
@@ -444,7 +475,9 @@ void ShadowMapRenderer::OnUpdate(GameCounter::TickUnit delta)
             MeshAttributes { },
             MaterialAttributes {
                 .bucket = BUCKET_SHADOW,
-                .cull_faces = FaceCullMode::BACK
+                .cull_faces = m_shadow_pass->GetShadowMode() == ShadowMode::VSM
+                    ? FaceCullMode::BACK
+                    : FaceCullMode::FRONT
             },
             m_shadow_pass->GetShader()->GetCompiledShader().GetDefinition()
         ),
@@ -467,12 +500,30 @@ void ShadowMapRenderer::SetCameraData(const ShadowMapCameraData &camera_data)
 {
     AssertThrow(m_shadow_pass != nullptr);
 
+    ShadowFlags flags = SHADOW_FLAGS_NONE;
+
+    switch (m_shadow_pass->GetShadowMode()) {
+    case ShadowMode::VSM:
+        flags |= SHADOW_FLAGS_VSM;
+        break;
+    case ShadowMode::CONTACT_HARDENED:
+        flags |= SHADOW_FLAGS_CONTACT_HARDENED;
+        break;
+    case ShadowMode::PCF:
+        flags |= SHADOW_FLAGS_PCF;
+        break;
+    default:
+        break;
+    }
+
     PUSH_RENDER_COMMAND(
         UpdateShadowMapRenderData,
         m_shadow_pass->GetShadowMapIndex(),
         camera_data.view,
         camera_data.projection,
-        camera_data.aabb
+        camera_data.aabb,
+        m_shadow_pass->GetDimensions(),
+        flags
     );
 }
 

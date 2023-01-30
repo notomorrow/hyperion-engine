@@ -458,11 +458,11 @@ void ParticleSystem::UpdateParticles(Frame *frame)
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
 
-    if (m_particle_spawners.HasUpdatesPending()) {
-        m_particle_spawners.UpdateItems();
-    }
-
     if (m_particle_spawners.GetItems().Empty()) {
+        if (m_particle_spawners.HasUpdatesPending()) {
+            m_particle_spawners.UpdateItems();
+        }
+
         return;
     }
 
@@ -541,6 +541,8 @@ void ParticleSystem::UpdateParticles(Frame *frame)
 
     ++m_counter;
 
+    // update render-side container after render,
+    // so that all objects get initialized before the next render call.
     if (m_particle_spawners.HasUpdatesPending()) {
         m_particle_spawners.UpdateItems();
     }

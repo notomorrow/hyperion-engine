@@ -62,7 +62,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     m_symbol_type = BuiltinTypes::UNDEFINED;
     m_prototype_type = BuiltinTypes::UNDEFINED;
 
-    if (unaliased == BuiltinTypes::ANY_TYPE || unaliased->HasBase(*BuiltinTypes::ANY_TYPE)) {
+    if (unaliased->IsAnyType()) {
         // it is a dynamic type
         m_symbol_type = BuiltinTypes::ANY;
         m_prototype_type = BuiltinTypes::ANY_TYPE;

@@ -1,9 +1,9 @@
 
-proxy class Entity {
-    func SetTranslation(self : Entity, pos : Vector3) {
+proxy class EntityProxy {
+    func SetTranslation(self : EntityProxy, pos : Vector3) {
         Entity_SetTranslation(self, pos);
     }
 
-    func GetTranslation(self : Entity) : Vector3 => Entity_GetTranslation(self);
-    func GetWorldAABB(self : Entity) : BoundingBox => Entity_GetWorldAABB(self);
+    func GetTranslation(self : EntityProxy) : Vector3 => Entity_GetTranslation(self);
+    func GetWorldAABB(self : EntityProxy) : BoundingBox => Entity_GetWorldAABB(self);
 }

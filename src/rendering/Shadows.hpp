@@ -77,6 +77,9 @@ public:
     const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin) { m_origin = origin; }
 
+    Extent2D GetDimensions() const
+        { return m_dimensions; }
+
     UInt GetShadowMapIndex() const
         { return m_shadow_map_index; }
 

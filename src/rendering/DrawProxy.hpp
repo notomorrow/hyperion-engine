@@ -126,6 +126,16 @@ enum EnvProbeFlagBits : EnvProbeFlags
     ENV_PROBE_FLAGS_SHADOW = 0x2
 };
 
+using ShadowFlags = UInt32;
+
+enum ShadowFlagBits : ShadowFlags
+{
+    SHADOW_FLAGS_NONE = 0x0,
+    SHADOW_FLAGS_PCF = 0x1,
+    SHADOW_FLAGS_VSM = 0x2,
+    SHADOW_FLAGS_CONTACT_HARDENED = 0x4
+};
+
 template <>
 struct DrawProxy<STUB_CLASS(EnvProbe)>
 {

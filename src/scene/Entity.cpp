@@ -8,7 +8,7 @@
 #include <rendering/RenderCommands.hpp>
 
 #include <script/ScriptApi.hpp>
-#include <script/ScriptBindingDef.hpp>
+#include <script/ScriptBindingDef.generated.hpp>
 
 namespace hyperion::v2 {
 

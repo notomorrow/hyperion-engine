@@ -27,8 +27,6 @@ namespace hyperion {
 using namespace compiler;
 using namespace vm;
 
-class APIInstance;
-
 namespace v2 {
 
 class Engine;
@@ -39,7 +37,7 @@ public:
     using Bytes = std::vector<UByte>;
 
     using ArgCount = UInt16;
-
+    
     struct ValueHandle
     {
         Value _inner = Value(

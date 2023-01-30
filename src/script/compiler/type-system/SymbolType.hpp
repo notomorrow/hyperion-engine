@@ -273,6 +273,9 @@ public:
     /** Find the root aliasee. If not an alias, just returns itself */
     SymbolTypePtr_t GetUnaliased();
     
+    bool IsAnyType() const;
+    bool IsNullType() const;
+    bool IsNullableType() const;
     bool IsArrayType() const;
     bool IsBoxedType() const;
     /** Is is an uninstantiated generic parameter? (e.g T) */

@@ -1,5 +1,5 @@
 #include <script/ScriptBindings.hpp>
-#include <script/ScriptBindingDef.hpp>
+#include <script/ScriptBindingDef.generated.hpp>
 #include <script/vm/VMMemoryBuffer.hpp>
 
 #include <asset/BufferedByteReader.hpp>
@@ -588,7 +588,7 @@ static HYP_SCRIPT_FUNCTION(EngineCreateEntity)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
-    Engine *engine_ptr = GetArgument<0, Engine *>(params);
+    Engine *engine_ptr = (Engine *)GetArgument<0, void *>(params);
 
     if (!engine_ptr) {
         HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
@@ -613,8 +613,8 @@ static HYP_SCRIPT_FUNCTION(Entity_SetTranslation)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 2);
 
-    auto &&entity_ptr = GetArgument<0, Entity *>(params);
-    auto &&translation = GetArgument<1, Vector3>(params);
+    auto &&entity_ptr = GetArgument<0, Handle<Entity> &>(params);
+    const Vector3 &translation = GetArgument<1, const Vector3 &>(params);
 
     if (!entity_ptr) {
         HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
@@ -629,7 +629,7 @@ static HYP_SCRIPT_FUNCTION(Entity_GetTranslation)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
-    auto &&entity_ptr = GetArgument<0, Entity *>(params);
+    auto &&entity_ptr = GetArgument<0, Handle<Entity> &>(params);
 
     if (!entity_ptr) {
         HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
@@ -654,7 +654,7 @@ static HYP_SCRIPT_FUNCTION(Entity_GetWorldAABB)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
-    auto &&entity_ptr = GetArgument<0, Entity *>(params);
+    auto &&entity_ptr = GetArgument<0, Handle<Entity> &>(params);
 
     if (!entity_ptr) {
         HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
@@ -849,6 +849,9 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
     using namespace hyperion::compiler;
 
     api_instance.Module(Config::global_module_name)
+        .Class<Handle<Entity>>("Entity", { API::NativeMemberDefine("__intern", BuiltinTypes::ANY, vm::Value(vm::Value::HEAP_POINTER, { .ptr = nullptr })) }, { });
+
+    api_instance.Module(Config::global_module_name)
         .Class<Name>(
             "Name",
             {
@@ -990,7 +993,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2, Vector2, Vector2, &Vector2::operator+ >
+                    CxxMemberFn< Vector2, Vector2, const Vector2 &, &Vector2::operator+ >
                 ),
                 API::NativeMemberDefine(
                     "operator+=",
@@ -999,7 +1002,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2 &, Vector2, Vector2, &Vector2::operator+= >
+                    CxxMemberFn< Vector2 &, Vector2, const Vector2 &, &Vector2::operator+= >
                 ),
                 API::NativeMemberDefine(
                     "operator-",
@@ -1008,7 +1011,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2, Vector2, Vector2, &Vector2::operator- >
+                    CxxMemberFn< Vector2, Vector2, const Vector2 &, &Vector2::operator- >
                 ),
                 API::NativeMemberDefine(
                     "operator-=",
@@ -1017,7 +1020,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2 &, Vector2, Vector2, &Vector2::operator-= >
+                    CxxMemberFn< Vector2 &, Vector2, const Vector2 &, &Vector2::operator-= >
                 ),
                 API::NativeMemberDefine(
                     "operator*",
@@ -1026,7 +1029,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2, Vector2, Vector2, &Vector2::operator* >
+                    CxxMemberFn< Vector2, Vector2, const Vector2 &, &Vector2::operator* >
                 ),
                 API::NativeMemberDefine(
                     "operator*=",
@@ -1035,7 +1038,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2 &, Vector2, Vector2, &Vector2::operator*= >
+                    CxxMemberFn< Vector2 &, Vector2, const Vector2 &, &Vector2::operator*= >
                 ),
                 API::NativeMemberDefine(
                     "operator/",
@@ -1044,7 +1047,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2, Vector2, Vector2, &Vector2::operator/ >
+                    CxxMemberFn< Vector2, Vector2, const Vector2 &, &Vector2::operator/ >
                 ),
                 API::NativeMemberDefine(
                     "operator/=",
@@ -1053,7 +1056,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector2 &, Vector2, Vector2, &Vector2::operator/= >
+                    CxxMemberFn< Vector2 &, Vector2, const Vector2 &, &Vector2::operator/= >
                 ),
                 API::NativeMemberDefine(
                     "operator==",
@@ -1062,7 +1065,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< bool, Vector2, Vector2, &Vector2::operator== >
+                    CxxMemberFn< bool, Vector2, const Vector2 &, &Vector2::operator== >
                 ),
                 API::NativeMemberDefine(
                     "operator!=",
@@ -1071,7 +1074,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< bool, Vector2, Vector2, &Vector2::operator!= >
+                    CxxMemberFn< bool, Vector2, const Vector2 &, &Vector2::operator!= >
                 ),
                 API::NativeMemberDefine(
                     "Length",
@@ -1088,7 +1091,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Float, Vector2, Vector2, &Vector2::Distance >
+                    CxxMemberFn< Float, Vector2, const Vector2 &, &Vector2::Distance >
                 ),
                 API::NativeMemberDefine(
                     "Normalize",
@@ -1140,7 +1143,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3, Vector3, Vector3, &Vector3::operator+ >
+                    CxxMemberFn< Vector3, Vector3, const Vector3 &, &Vector3::operator+ >
                 ),
                 API::NativeMemberDefine(
                     "operator+=",
@@ -1149,7 +1152,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3 &, Vector3, Vector3, &Vector3::operator+= >
+                    CxxMemberFn< Vector3 &, Vector3, const Vector3 &, &Vector3::operator+= >
                 ),
                 API::NativeMemberDefine(
                     "operator-",
@@ -1158,7 +1161,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3, Vector3, Vector3, &Vector3::operator- >
+                    CxxMemberFn< Vector3, Vector3, const Vector3 &, &Vector3::operator- >
                 ),
                 API::NativeMemberDefine(
                     "operator-=",
@@ -1167,7 +1170,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3 &, Vector3, Vector3, &Vector3::operator-= >
+                    CxxMemberFn< Vector3 &, Vector3, const Vector3 &, &Vector3::operator-= >
                 ),
                 API::NativeMemberDefine(
                     "operator*",
@@ -1176,7 +1179,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3, Vector3, Vector3, &Vector3::operator* >
+                    CxxMemberFn< Vector3, Vector3, const Vector3 &, &Vector3::operator* >
                 ),
                 API::NativeMemberDefine(
                     "operator*=",
@@ -1185,7 +1188,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3 &, Vector3, Vector3, &Vector3::operator*= >
+                    CxxMemberFn< Vector3 &, Vector3, const Vector3 &, &Vector3::operator*= >
                 ),
                 API::NativeMemberDefine(
                     "operator/",
@@ -1194,7 +1197,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3, Vector3, Vector3, &Vector3::operator/ >
+                    CxxMemberFn< Vector3, Vector3, const Vector3 &, &Vector3::operator/ >
                 ),
                 API::NativeMemberDefine(
                     "operator/=",
@@ -1203,7 +1206,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3 &, Vector3, Vector3, &Vector3::operator/= >
+                    CxxMemberFn< Vector3 &, Vector3, const Vector3 &, &Vector3::operator/= >
                 ),
                 API::NativeMemberDefine(
                     "operator==",
@@ -1212,7 +1215,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< bool, Vector3, Vector3, &Vector3::operator== >
+                    CxxMemberFn< bool, Vector3, const Vector3 &, &Vector3::operator== >
                 ),
                 API::NativeMemberDefine(
                     "operator!=",
@@ -1221,7 +1224,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< bool, Vector3, Vector3, &Vector3::operator!= >
+                    CxxMemberFn< bool, Vector3, const Vector3 &, &Vector3::operator!= >
                 ),
                 API::NativeMemberDefine(
                     "Dot",
@@ -1230,7 +1233,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Float, Vector3, Vector3, &Vector3::Dot >
+                    CxxMemberFn< Float, Vector3, const Vector3 &, &Vector3::Dot >
                 ),
                 API::NativeMemberDefine(
                     "Cross",
@@ -1239,7 +1242,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Vector3, Vector3, Vector3, &Vector3::Cross >
+                    CxxMemberFn< Vector3, Vector3, const Vector3 &, &Vector3::Cross >
                 ),
                 API::NativeMemberDefine(
                     "Length",
@@ -1256,7 +1259,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                         { "self", BuiltinTypes::ANY },
                         { "other", BuiltinTypes::ANY }
                     },
-                    CxxMemberFn< Float, Vector3, Vector3, &Vector3::Distance >
+                    CxxMemberFn< Float, Vector3, const Vector3 &, &Vector3::Distance >
                 ),
                 API::NativeMemberDefine(
                     "Normalized",

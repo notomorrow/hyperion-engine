@@ -80,6 +80,7 @@ permute = HAS_PHYSICS
 comp = particles/UpdateParticles.comp
 
 [Shadows]
+permute = MODE(STANDARD VSM PCF CONTACT_HARDENED)
 frag = shadow.frag
 vert = main.vert
 

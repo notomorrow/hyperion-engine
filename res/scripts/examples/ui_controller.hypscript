@@ -2,7 +2,7 @@
 
 import core::engine;
 import core::{ AssertEqual, AssertNotEqual };
-import scene::{ Entity };
+import scene::{ EntityProxy };
 
 // dynamic import
 //const tests = Module.Load("../tests");
@@ -31,32 +31,20 @@ class TestUIController {
     const receives_update : Bool = false;
 
     click_position : Vector2 = new Vector2();
-    entity : Entity;
+    entity : EntityProxy = null;
 
     TestUIController(self : TestUIController)
     {
-        /*if (tests) {
-            Print("tests = %\n", tests);
-
-            const Foo : Int = tests.Get("Foo");
-
-            Print("Foo = %\n", Foo);
-
-            const tests_reload = Module.Load("../tests");
-            Print("tests_reload = %\n", tests_reload);
-        } else {
-            throw "Failed to load module";
-        }*/
     }
 
-    func OnAdded(self : TestUIController, entity : Entity)
+    func OnAdded(self : TestUIController, entity : EntityProxy)
     {
         self.entity = entity;
     }
 
-    func OnRemoved(self : TestUIController, entity : Entity)
+    func OnRemoved(self : TestUIController)
     {
-        //self.entity = null;
+        self.entity = null;
     }
 
     func OnTick(self : TestUIController, delta : Float)
@@ -75,11 +63,20 @@ class TestUIController {
 
         if (event_type == UIEventType.MOUSE_DOWN) {
             self.click_position = new Vector2(mouse_position.GetX() - entity_position.GetX(), mouse_position.GetY() - entity_position.GetY());
+
+            let ent : EntityProxy = engine::CreateEntity();
+            ent.SetTranslation(new Vector3(0, 20, 0));
+            Print("ent.GetWorldAABB() = %\n", ent.GetWorldAABB());
+
         } else if (event_type == UIEventType.MOUSE_UP) {
             self.click_position = new Vector2(0.0, 0.0);
         } else if (event_type == UIEventType.MOUSE_DRAG) {
             self.entity.SetTranslation(new Vector3(mouse_position.GetX() + self.click_position.GetX(), mouse_position.GetY() + self.click_position.GetY()/*(mouse_position.GetY() - (1.0 - self.click_position.GetY()))*/, 0.0));
         }
+
+        Print("world AABB = %\n", self.entity.GetWorldAABB());
+
+        Print("self.entity = %\n", self.entity);
     }
 };
 

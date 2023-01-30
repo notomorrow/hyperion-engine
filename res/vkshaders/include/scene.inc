@@ -55,6 +55,11 @@ struct Light
     vec4 _pad2; vec4 _pad3; vec4 _pad4;
 };
 
+#define SHADOW_FLAGS_PCF 0x1
+#define SHADOW_FLAGS_VSM 0x2
+#define SHADOW_FLAGS_CONTACT_HARDENED 0x4
+#define SHADOW_FLAGS_TYPE_MASK (SHADOW_FLAGS_PCF | SHADOW_FLAGS_VSM | SHADOW_FLAGS_CONTACT_HARDENED)
+
 struct ShadowMap
 {
     mat4 projection;
@@ -62,9 +67,13 @@ struct ShadowMap
     vec4 aabb_max;
     vec4 aabb_min;
 
-    vec4 _pad0; vec4 _pad1;
-    vec4 _pad2; vec4 _pad3;
-    vec4 _pad4; vec4 _pad5;
+    uvec2 dimensions;
+    uint flags;
+    float _pad2;
+
+    vec4 _pad3; vec4 _pad4;
+    vec4 _pad5; vec4 _pad6;
+    vec4 _pad7;
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS

@@ -93,7 +93,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
             }
 
 #if ACE_ANY_ONLY_FUNCTION_PARAMATERS
-            if (symbol_type == BuiltinTypes::ANY) {
+            if (symbol_type->IsAnyType()) {
                 // Any type is reserved for method parameters
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,

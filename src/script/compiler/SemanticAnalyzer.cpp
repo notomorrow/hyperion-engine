@@ -580,7 +580,8 @@ void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
     Module *mod,
     const SymbolTypePtr_t &symbol_type,
     const SymbolTypePtr_t &assignment_type,
-    const SourceLocation &location)
+    const SourceLocation &location
+)
 {
     AssertThrow(symbol_type != nullptr);
     AssertThrow(assignment_type != nullptr);
@@ -594,7 +595,7 @@ void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
             assignment_type->GetName()
         );
 
-        if (assignment_type == BuiltinTypes::ANY) {
+        if (assignment_type->IsAnyType()) {
             error = CompilerError(
                 LEVEL_ERROR,
                 Msg_implicit_any_mismatch,

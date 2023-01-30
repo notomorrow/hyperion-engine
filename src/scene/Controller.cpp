@@ -25,7 +25,11 @@ void Controller::SetScript(const Handle<Script> &script)
     if (m_script != nullptr) {
         if (GetOwner() != nullptr) {
             if ((m_script_valid = CreateScriptedObjects())) {
-                m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
+                m_script->CallFunction(
+                    m_script_methods[SCRIPT_METHOD_ON_ADDED],
+                    m_self_object,
+                    m_script->CreateInternedObject<Handle<Entity>>(Handle<Entity>(GetOwner()->GetID()))
+                );
             }
         }
     }
@@ -41,7 +45,11 @@ void Controller::SetScript(Handle<Script> &&script)
     if (m_script != nullptr) {
         if (GetOwner() != nullptr) {
             if ((m_script_valid = CreateScriptedObjects())) {
-                m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
+                m_script->CallFunction(
+                    m_script_methods[SCRIPT_METHOD_ON_ADDED],
+                    m_self_object,
+                    m_script->CreateInternedObject<Handle<Entity>>(Handle<Entity>(GetOwner()->GetID()))
+                );
             }
         }
     }
@@ -149,7 +157,11 @@ void Controller::OnAdded()
 
     if (HasScript()) {
         if ((m_script_valid = CreateScriptedObjects())) {
-            m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
+            m_script->CallFunction(
+                m_script_methods[SCRIPT_METHOD_ON_ADDED],
+                m_self_object,
+                m_script->CreateInternedObject<Handle<Entity>>(Handle<Entity>(GetOwner()->GetID()))
+            );
         }
     }
 }
@@ -159,7 +171,11 @@ void Controller::OnRemoved()
     Threads::AssertOnThread(THREAD_GAME);
 
     if (HasScript() && IsScriptValid()) {
-        m_script->CallFunction(m_script_methods[SCRIPT_METHOD_ON_ADDED], m_self_object, GetOwner());
+        m_script->CallFunction(
+            m_script_methods[SCRIPT_METHOD_ON_REMOVED],
+            m_self_object,
+            m_script->CreateInternedObject<Handle<Entity>>(Handle<Entity>(GetOwner()->GetID()))
+        );
     }
 }
 

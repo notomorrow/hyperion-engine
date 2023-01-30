@@ -18,7 +18,9 @@ struct EnvProbe
     float camera_near;
     float camera_far;
 
-    uvec4 _pad2;
+    uvec2 dimensions;
+    uvec2 _pad2;
+
     uvec4 _pad3;
     uvec4 _pad4;
     uvec4 _pad5;

@@ -713,6 +713,8 @@ void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)
     
     const UInt texture_slot = IsAmbientProbe() ? ~0u : m_bound_index.GetProbeIndex();
 
+    const ShadowFlags shadow_flags = IsShadowProbe() ? SHADOW_FLAGS_VSM : SHADOW_FLAGS_NONE;
+
     EnvProbeShaderData data {
         .face_view_matrices = {
             ShaderMat4(GetViewMatrices()[0]),
@@ -726,7 +728,7 @@ void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)
         .aabb_min = Vector4(m_draw_proxy.aabb.min, 1.0f),
         .world_position = Vector4(m_draw_proxy.world_position, 1.0f),
         .texture_index = texture_slot,
-        .flags = UInt32(m_draw_proxy.flags),
+        .flags = UInt32(m_draw_proxy.flags) | (shadow_flags << 3),
         .camera_near = m_draw_proxy.camera_near,
         .camera_far = m_draw_proxy.camera_far
     };

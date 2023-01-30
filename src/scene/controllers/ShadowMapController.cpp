@@ -79,8 +79,8 @@ void ShadowMapController::UpdateShadowCamera(const Transform &transform)
         aabb.min = MathUtil::Min(aabb.min, corner);
     }
 
-    aabb.max.z = radius;
-    aabb.min.z = -radius;
+    // aabb.max.z = radius;
+    // aabb.min.z = -radius;
 
     m_shadow_map_renderer->SetCameraData(ShadowMapCameraData {
         camera->GetViewMatrix(),

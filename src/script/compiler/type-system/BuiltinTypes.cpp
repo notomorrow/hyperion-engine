@@ -325,9 +325,9 @@ const SymbolTypePtr_t BuiltinTypes::VAR_ARGS = SymbolType::Generic(
 );
 
 const SymbolTypePtr_t BuiltinTypes::NULL_TYPE = SymbolType::Primitive(
-    "Null",
+    "NullType",
     sp<AstNil>(new AstNil(SourceLocation::eof)),
-    BuiltinTypes::CLASS_TYPE
+    BuiltinTypes::PRIMITIVE_TYPE
 );
 
 const SymbolTypePtr_t BuiltinTypes::MODULE_INFO = SymbolType::Object(

@@ -18,7 +18,6 @@ layout(location=0) out vec4 output_shadow;
 #include "include/shared.inc"
 
 #define HYP_SHADOW_SAMPLE_ALBEDO 1
-#define HYP_SHADOW_VARIANCE 1
 
 void main()
 {
@@ -38,7 +37,7 @@ void main()
 
     const float depth = gl_FragCoord.z / gl_FragCoord.w;
 
-#if defined(HYP_SHADOW_VARIANCE) && HYP_SHADOW_VARIANCE
+#ifdef MODE_VSM
     vec2 moments = vec2(depth, HYP_FMATH_SQR(depth));
 
     float dx = dFdx(depth);

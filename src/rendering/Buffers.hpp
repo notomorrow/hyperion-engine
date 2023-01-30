@@ -199,8 +199,10 @@ struct alignas(256) ShadowShaderData
     ShaderMat4 view;
     ShaderVec4<Float> aabb_max;
     ShaderVec4<Float> aabb_min;
+    ShaderVec2<UInt32> dimensions;
+    UInt32 flags;
 
-    HYP_PAD_STRUCT_HERE(UByte, 256 - (64 + 64 + 16 + 16));
+    HYP_PAD_STRUCT_HERE(UByte, 256 - (64 + 64 + 16 + 16 + 8 + 4));
 };
 
 static_assert(sizeof(ShadowShaderData) == 256);
@@ -218,7 +220,9 @@ struct alignas(256) EnvProbeShaderData
     Float camera_near;
     Float camera_far;
 
-    ShaderVec4<UInt32> _pad2;
+    ShaderVec2<UInt32> dimensions;
+    ShaderVec2<UInt32> _pad2;
+
     ShaderVec4<UInt32> _pad3;
     ShaderVec4<UInt32> _pad4;
     ShaderVec4<UInt32> _pad5;

@@ -98,15 +98,9 @@ void main()
 
         if (light.type == HYP_LIGHT_TYPE_POINT && light_has_shadow_map && probe_has_texture) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-            const vec2 moments = TextureCube(HYP_SAMPLER_LINEAR, point_shadow_maps[current_env_probe.texture_index], world_to_light).rg;
-            const float current_depth = length(world_to_light);
+            const uint shadow_flags = current_env_probe.flags >> 3;
 
-            float shadow_dist = current_depth - moments.x;
-            float p = step(current_depth, moments.x);
-            float variance = max(moments.y - moments.x * moments.x, 0.0001);
-            float p_max = variance / (variance + shadow_dist * shadow_dist);
-
-            shadow = max(p, p_max);
+            shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
         } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light_has_shadow_map) {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
