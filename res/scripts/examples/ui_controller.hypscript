@@ -80,4 +80,70 @@ class TestUIController {
     }
 };
 
+class MyClass {
+    j : Float = 4.5;
+}
+
+class TempClass : MyClass {
+    i : Int = 4;
+    static name : String = "TempClass";
+
+    TempClass(self: TempClass)
+    {
+        Print("Create new TempClass!\n");
+        Print("i = %\n", self.i);
+    }
+
+    // You can literally override the class type check...
+    // static func operator==(const ref self : TempClass, other)
+    // {
+    //     // Temp
+    //     return 12345;
+    // }
+}
+
+// func MakeNewObjectWithTemplate<T>()
+// {
+//     Print("MakeNewObjectWithTemplate: %\n", T);
+
+//     return new T;
+// }
+
+func MakeNewObject(cls : any)
+{
+    Print("MakeNewObject: %\n", cls);
+    Print("does class % have $construct? %\n", cls.name, reflect::HasMember(cls, "$construct"));
+    Print("does class % proto have $construct? %\n", cls.name, reflect::HasMember(cls.$proto, "$construct"));
+
+    return new cls();
+}
+
+MakeNewObject(TempClass);
+// MakeNewObjectWithTemplate<TempClass>();
+
+let t : TempClass = new TempClass();
+
+let x = new TempClass();
+
+func GetIAndJ(obj : TempClass)
+{
+    Print("i = %\n", obj.i);
+    Print("j = %\n", obj.j);
+    // Print("obj.name = %\n", obj.name);
+
+    Print("$proto of TempClass : %\n", TempClass.$proto);
+    Print("base of TempClass : %\n", TempClass.base);
+
+    Print("obj GetClass is %\n", reflect::GetClass(obj));
+    Print("obj.GetClass memory address: %, TempClass memory address: %\n", GetMemoryAddress(reflect::GetClass(obj)), GetMemoryAddress(TempClass));
+    Print(" is obj a TempClass ? : %\n", reflect::GetClass(obj) == TempClass);
+    Print("Memory addresses equal? %\n", GetMemoryAddress(reflect::GetClass(obj)) == GetMemoryAddress(TempClass));
+}
+
+GetIAndJ(t);
+
+Print("t.j = %\n", t.j);
+Print("typeof(t.j) = %\n", typeof(t.j));
+
+
 export const controller = new TestUIController;
