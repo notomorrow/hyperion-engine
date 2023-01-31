@@ -26,7 +26,7 @@ struct Object
     vec4 _pad5;
 };
 
-#define MAX_ENTITIES_PER_INSTANCE_BATCH 60
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 28
 
 struct EntityInstanceBatch
 {
@@ -35,7 +35,7 @@ struct EntityInstanceBatch
     uint _pad1;
     uint _pad2;
 
-    uvec4 indices[15];
+    uvec4 indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
 };
 
 // can use up to 16 bits.

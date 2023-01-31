@@ -301,11 +301,13 @@ float CalculateEnvProbeIrradiance(DeferredParams deferred_params, vec3 P, vec3 N
         return 0.0;
     }
 
-    if (bool(env_grid.enabled_indices_mask & (1u << uint(probe_index_at_point)))) {
+    const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
+
+    if (probe_index != ~0u) {
         const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
         const vec3 texel_size = vec3(1.0) / vec3(image_size);
 
-        EnvProbe probe = GET_GRID_PROBE(probe_index_at_point);
+        EnvProbe probe = env_probes[probe_index];
         const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
         const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
         const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
@@ -351,6 +353,8 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
                 : R,
             lod
         );
+
+        ibl.rgb = ReverseTonemapReinhardSimple(ibl.rgb);
     }
 }
 

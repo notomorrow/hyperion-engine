@@ -166,7 +166,8 @@ EnvProbe::EnvProbe(
     m_env_probe_type(env_probe_type),
     m_camera_near(0.001f),
     m_camera_far(aabb.GetRadius()),
-    m_needs_update { 0x1 | 0x2 },
+    m_needs_update(true),
+    m_needs_render_counter { UInt16(0) },
     m_is_rendered { false }
 {
 }
@@ -414,35 +415,25 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     
     // Check if octree has changes, and we need to re-render.
 
-    const UInt8 update_bits = m_needs_update.load(std::memory_order_acquire);
-    bool needs_update = update_bits & 0x1;
-    bool needs_render = update_bits & 0x2;
-
     const bool is_rendered = m_is_rendered.load(std::memory_order_acquire);
 
     Octree const *octree = nullptr;
 
-    if (!is_rendered) {
-        //if (!needs_update) {
-        //    SetNeedsUpdate(true);
-
-        //    needs_update = true;
-        //}
-    } else if (Engine::Get()->GetWorld()->GetOctree().GetNearestOctant(m_aabb.GetCenter(), octree)) {
+    HashCode octant_hash;
+    
+    if (Engine::Get()->GetWorld()->GetOctree().GetFittingOctant(m_aabb, octree)) {
         AssertThrow(octree != nullptr);
 
-        const HashCode octant_hash = octree->GetNodesHash();
+        octant_hash = octree->GetNodesHash();
+    }
 
-        if (m_octant_hash_code != octant_hash) {
-            SetNeedsUpdate(true);
+    if (m_octant_hash_code != octant_hash || !is_rendered) {
+        SetNeedsUpdate(true);
 
-            needs_update = true;
-
-            m_octant_hash_code = octant_hash;
-        }
+        m_octant_hash_code = octant_hash;
     }
     
-    if (!needs_update) {
+    if (!NeedsUpdate()) {
         return;
     }
 
@@ -464,7 +455,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     .bucket = BUCKET_INTERNAL,
                     .cull_faces = IsShadowProbe()
                         ? FaceCullMode::FRONT
-                        : FaceCullMode::BACK
+                        : (IsReflectionProbe() ? FaceCullMode::NONE : FaceCullMode::BACK)
                 },
                 m_shader->GetCompiledShader().GetDefinition()
             ),
@@ -485,6 +476,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     });
     
     SetNeedsUpdate(false);
+    SetNeedsRender(true);
 }
 
 void EnvProbe::Render(Frame *frame)
@@ -497,7 +489,7 @@ void EnvProbe::Render(Frame *frame)
     }
 
     if (!NeedsRender()) {
-    //    return;
+        return;
     }
 
     AssertThrow(m_texture.IsValid());
@@ -589,9 +581,9 @@ void EnvProbe::Render(Frame *frame)
 
     m_is_rendered.store(true, std::memory_order_release);
 
-    SetNeedsRender(false);
-
     HYPERION_ASSERT_RESULT(result);
+
+    SetNeedsRender(false);
 }
 
 void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *image_view)

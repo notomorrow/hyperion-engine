@@ -139,8 +139,48 @@ public:
         { return m_aabb; }
 
     /*! \brief Get a hashcode of all entities currently in this Octant (child octants affect this too) */
+    // HashCode GetNodesHash() const
+    //     { return m_nodes_hash; }
+
+    // HashCode GetNodesHash() const
+    // {
+    //     HashCode hc;
+
+    //     // if (m_parent) {
+    //     //     hc.Add(m_parent->GetNodesHash());
+    //     // }
+
+    //     for (const Node &item : m_nodes) {
+    //         hc.Add(item.GetHashCode());
+    //     }
+
+    //     if (m_is_divided) {
+    //         for (const Octant &octant : m_octants) {
+    //             AssertThrow(octant.octree != nullptr);
+
+    //             hc.Add(octant.octree->GetNodesHash());
+    //         }
+    //     }
+
+    //     return hc;
+    // }
+
     HashCode GetNodesHash() const
-        { return m_nodes_hash; }
+    {
+        HashCode hc;
+
+        hc.Add(m_nodes_hash);
+
+        if (m_is_divided) {
+            for (const Octant &octant : m_octants) {
+                AssertThrow(octant.octree != nullptr);
+
+                hc.Add(octant.octree->GetNodesHash());
+            }
+        }
+
+        return hc;
+    }
         
     void Clear();
     Result Insert(Entity *entity);
@@ -152,6 +192,7 @@ public:
     void CollectEntitiesInRange(const Vector3 &position, float radius, Array<Entity *> &out) const;
     bool GetNearestOctants(const Vector3 &position, FixedArray<Octree *, 8> &out) const;
     bool GetNearestOctant(const Vector3 &position, Octree const *&out) const;
+    bool GetFittingOctant(const BoundingBox &aabb, Octree const *&out) const;
 
     void NextVisibilityState();
     void CalculateVisibility(Camera *camera);
@@ -162,7 +203,7 @@ public:
 
 private:
     void ResetNodesHash();
-    void RebuildNodesHash();
+    void RebuildNodesHash(UInt level = 0);
 
     void ClearInternal(Array<Node> &out_nodes);
     void Clear(Array<Node> &out_nodes);

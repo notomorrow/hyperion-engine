@@ -1,6 +1,10 @@
 module engine {
     class EngineWrapper {
         handle : any = null;
+
+        EngineWrapper(self : EngineWrapper)
+        {
+        }
     };
 
     export _engine : EngineWrapper = new EngineWrapper();
