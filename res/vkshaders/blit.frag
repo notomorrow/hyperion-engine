@@ -1,3 +1,4 @@
+
 #version 450
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_separate_shader_objects : require
@@ -19,7 +20,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_resu
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_texture;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_vectors_result;
@@ -39,7 +39,7 @@ void main()
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
 
-    bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
+    const bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
     out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
 
     // blend in UI.

@@ -351,6 +351,8 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
                 : R,
             lod
         );
+
+        ibl.rgb = ReverseTonemapReinhardSimple(ibl.rgb);
     }
 }
 

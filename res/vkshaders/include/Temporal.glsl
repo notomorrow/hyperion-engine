@@ -508,8 +508,8 @@ vec4 TemporalBlendRounded(in texture2D input_texture, in texture2D prev_input_te
 
 vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_texture, vec2 uv, vec2 velocity, vec2 texel_size, float view_space_depth)
 {
-    const vec4 color = ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, input_texture, uv));
-    const vec4 previous_color = ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, prev_input_texture, uv - velocity));
+    const vec4 color = RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv));
+    const vec4 previous_color = RGBToYCoCg(Texture2D(sampler_linear, prev_input_texture, uv - velocity));
 
     const float _SubpixelThreshold = 0.5;
     const float _GatherBase = 0.5;
@@ -523,10 +523,10 @@ vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_te
     const vec2 ss_offset01 = min_max_support * vec2(-texel_size.x, texel_size.y);
     const vec2 ss_offset11 = min_max_support * vec2(texel_size.x, texel_size.y);
 
-    const vec4 c00 = ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, input_texture, uv - ss_offset11)));
-    const vec4 c10 = ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, input_texture, uv - ss_offset01)));
-    const vec4 c01 = ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, input_texture, uv + ss_offset01)));
-    const vec4 c11 = ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(Texture2D(sampler_linear, input_texture, uv + ss_offset11)));
+    const vec4 c00 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv - ss_offset11)));
+    const vec4 c10 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv - ss_offset01)));
+    const vec4 c01 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv + ss_offset01)));
+    const vec4 c11 = ADJUST_COLOR_IN(RGBToYCoCg(Texture2D(sampler_linear, input_texture, uv + ss_offset11)));
 
     vec4 cmin = min(c00, min(c10, min(c01, c11)));
     vec4 cmax = max(c00, max(c10, max(c01, c11)));
@@ -540,7 +540,7 @@ vec4 TemporalBlendVarying(in texture2D input_texture, in texture2D prev_input_te
 
     const vec4 clipped = ADJUST_COLOR_OUT(ClipAABB(cmin, cmax, clamp(cavg, cmin, cmax), ADJUST_COLOR_IN(previous_color)));
 
-    return ADJUST_COLOR_GAMMA_OUT(TemporalLuminanceResolve(color, clipped));
+    return YCoCgToRGB(TemporalLuminanceResolve(color, clipped));
 }
 
 #endif

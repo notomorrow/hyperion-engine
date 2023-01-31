@@ -4,7 +4,7 @@
 #include "noise.inc"
 #include "aabb.inc"
 
-#define HYP_SHADOW_BIAS 0.001
+#define HYP_SHADOW_BIAS 0.0001
 // #define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
@@ -13,8 +13,8 @@
 
 // #define HYP_SHADOW_SAMPLES_4
 // #define HYP_SHADOW_SAMPLES_8
-// #define HYP_SHADOW_SAMPLES_16
-#define HYP_SHADOW_SAMPLES_36_TAP
+#define HYP_SHADOW_SAMPLES_16
+// #define HYP_SHADOW_SAMPLES_36_TAP
 
 // #define HYP_PENUMBRA_SAMPLES_4
 #define HYP_PENUMBRA_SAMPLES_8
@@ -430,7 +430,7 @@ float GetPointShadowStandard(uint texture_index, vec3 world_to_light)
 
     float bias = HYP_SHADOW_BIAS;
 
-    return max(step(current_depth - bias, shadow_depth), 0.0);
+    return max(step(current_depth - 0.001, shadow_depth), 0.0);
 }
 
 float GetPointShadow(uint texture_index, uint flags, vec3 world_to_light)
