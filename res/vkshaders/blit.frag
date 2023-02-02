@@ -32,9 +32,9 @@ void main()
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
 
 #ifdef TEMPORAL_AA
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, temporal_aa_result, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, temporal_aa_result, v_texcoord0).rgb;
 #else
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0).rgb;
 #endif
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);

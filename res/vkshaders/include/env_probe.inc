@@ -33,11 +33,7 @@ struct EnvGrid
     vec4 center;
     vec4 aabb_extent;
     uvec4 density;
-
-    uint enabled_indices_mask;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
+    uvec4 enabled_indices_mask;
 
     mat4 _pad3;
 };
@@ -58,6 +54,8 @@ struct SH9
 
         #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
         #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
+
+        #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
         layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
 

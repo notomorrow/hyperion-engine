@@ -63,7 +63,7 @@ void main()
     );
 
     // vec4 result = TemporalResolve(color_texture, prev_color_texture, uv, velocity, texel_size, view_space_depth);
-    vec4 result = TemporalBlendVarying(
+    vec4 result = TemporalBlendRounded(
         color_texture,
         prev_color_texture,
         uv,
