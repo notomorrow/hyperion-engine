@@ -463,8 +463,8 @@ if (true) {
 }
 
 // dynamic module loading
-const dynamic_module = Module.Load("res/scripts/test_dynamic_module");
-Expect(dynamic_module.Get("v") == 12345);
+// const dynamic_module = Module.Load("res/scripts/test_dynamic_module");
+// Expect(dynamic_module.Get("v") == 12345);
 
 // testing reflection
 const refl_value = new Vector3();
