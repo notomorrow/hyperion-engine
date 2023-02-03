@@ -1,14 +1,14 @@
-class Stack<T> {
-    ary: T[];
+class Stack<StkType> {
+    ary: StkType[];
 
     Stack(self) {
     }
 
-    func Push(self, value : T) {
+    func Push(self, value : StkType) {
         ArrayPush(self.ary, value);
     }
 
-    func Pop(self) : T {
+    func Pop(self) : StkType {
         return ArrayPop(self.ary);
     }
 
@@ -16,7 +16,7 @@ class Stack<T> {
         return ArraySize(self.ary);
     }
 
-    func Top(const self) : T {
+    func Top(const self) : StkType {
         //const idx : Int = ;
         return self.ary[ArraySize(self.ary) - 1];
     }

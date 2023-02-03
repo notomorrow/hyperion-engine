@@ -8,7 +8,7 @@ num_ticks : UInt = 0;
 
 class ExampleController {
 private:
-    entity: any;
+    entity: Any;
 
 public:
     ExampleController(self: ExampleController)
@@ -16,7 +16,7 @@ public:
         self.entity = null;
     }
 
-    func OnAdded(self: ExampleController, entity: any)
+    func OnAdded(self: ExampleController, entity: Any)
     {
         //test_entity : Entity = CreateEntity();
         //Print("test_entity = %\n", test_entity);
@@ -27,7 +27,7 @@ public:
         Print("Script added controller to Entity: %s\n", entity);
     }
 
-    func OnRemoved(self: ExampleController, entity: any)
+    func OnRemoved(self: ExampleController, entity: Any)
     {
         Print("Script removed from Entity: %s\n", entity);
 
