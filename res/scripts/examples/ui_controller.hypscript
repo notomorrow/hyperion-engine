@@ -87,7 +87,7 @@ class TestUIController : Controller
     }
 };
 
-Print("5.class = %\n", 5.class)
+// Print("5.class = %\n", 5.class)
 Print("Int.class = %\n", Int.class)
 
 export const controller = new TestUIController;
