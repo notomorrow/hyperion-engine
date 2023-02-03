@@ -1,6 +1,6 @@
 module engine {
     class EngineWrapper {
-        handle : any = null;
+        handle : Any = null;
 
         EngineWrapper(self : EngineWrapper)
         {
@@ -16,7 +16,9 @@ module engine {
 
 //extern func HashFNV1(str : String);
 
-func AssertEqual(lhs, rhs) {
+func AssertEqual(lhs, rhs, msg = "") {
+    Print("Check % == %\t%\n", lhs, rhs, msg);
+
     if (!(lhs == rhs)) {
         throw "Assertion failed!";
 
@@ -26,7 +28,9 @@ func AssertEqual(lhs, rhs) {
     return true;
 }
 
-func AssertNotEqual(lhs, rhs) {
+func AssertNotEqual(lhs, rhs, msg = "") {
+    Print("Check % != %\t%\n", lhs, rhs, msg);
+
     if (lhs == rhs) {
         throw "Assertion failed!";
 
