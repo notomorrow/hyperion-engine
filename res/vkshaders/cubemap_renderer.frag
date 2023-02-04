@@ -35,7 +35,7 @@ layout(location=0) out vec4 output_color;
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
-    #define TONEMAP
+    // #define TONEMAP
 #endif
 
 #ifdef TONEMAP

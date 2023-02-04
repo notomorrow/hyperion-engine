@@ -48,7 +48,7 @@ void main() {
     {
         mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
+        position = object.model_matrix * skinning_matrix * vec4(a_position * (1.0 + sin(scene.global_timer) * 0.1), 1.0);
         previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
     }

@@ -191,12 +191,12 @@ void main()
         }
     }
 
-    // if (is_visible) {
+    if (is_visible) {
         uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);
 
         atomicExchange(
             entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
             entity_id - 1
         );
-    // }
+    }
 }
