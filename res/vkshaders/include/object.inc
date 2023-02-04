@@ -27,7 +27,7 @@ struct Object
     vec4 _pad6;
 };
 
-#define MAX_ENTITIES_PER_INSTANCE_BATCH 28
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 60
 
 struct EntityInstanceBatch
 {
