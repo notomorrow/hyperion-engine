@@ -82,7 +82,7 @@ struct Material
 #define MATERIAL_TEXTURE_BITANGENT_MAP 12
 #define MATERIAL_TEXTURE_DEPTH_MAP     13
 
-#define MATERIAL_ALPHA_DISCARD         0.2
+#define MATERIAL_ALPHA_DISCARD         0.25
 
 #define HAS_TEXTURE(mat, index) \
     (((mat).texture_usage & (1 << index)) != 0)

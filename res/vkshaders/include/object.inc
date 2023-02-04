@@ -21,12 +21,13 @@ struct Object
     uint bucket;
     uint flags;
     uint _pad3;
+    uint _pad4;
 
-    vec4 _pad4;
     vec4 _pad5;
+    vec4 _pad6;
 };
 
-#define MAX_ENTITIES_PER_INSTANCE_BATCH 28
+#define MAX_ENTITIES_PER_INSTANCE_BATCH 60
 
 struct EntityInstanceBatch
 {
@@ -69,7 +70,6 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly
         EntityInstanceBatch entity_instance_batch;
     };
     
-    // having to do this, flat array doesn't work... possible glsl compiler bug
     #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
     #define object (objects[OBJECT_INDEX])
 #elif defined(FRAGMENT_SHADER)

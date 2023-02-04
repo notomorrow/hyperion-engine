@@ -186,17 +186,18 @@ void main()
 
             // //find the max depth
             float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
-            //is_visible = (clip_min.z < max_depth);
             is_visible = (clip_min.z <= max_depth + 0.001);
         }
     }
 
     if (is_visible) {
-        uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);
+        const uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);
 
-        atomicExchange(
-            entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
-            entity_id - 1
-        );
+        if (instance_index < MAX_ENTITIES_PER_INSTANCE_BATCH) {
+            atomicExchange(
+                entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
+                entity_id - 1
+            );
+        }
     }
 }
