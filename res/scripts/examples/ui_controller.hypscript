@@ -22,7 +22,7 @@ class Controller
 
     Controller(self : Controller)
     {
-        Print("Construct Controller\n");
+        Print("Construct Controller base\n");
     }
 
     func OnTick(self : Controller, delta : Float)
@@ -41,6 +41,7 @@ class TestUIController : Controller
         Print("TestUIController = %\n", TestUIController);
         Print("TestUIController.base = %\n", TestUIController.base);
         Print("self.class = %\n", self.class);
+        Print("self.class.base = %\n", self.class.base);
         Print("self.class.name = %\n", self.class.name);
 
         self.receives_update = false;
@@ -86,8 +87,5 @@ class TestUIController : Controller
         Print("world AABB = %\n", self.entity.GetWorldAABB());
     }
 };
-
-// Print("5.class = %\n", 5.class)
-Print("Int.class = %\n", Int.class)
 
 export const controller = new TestUIController;
