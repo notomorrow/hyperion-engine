@@ -21,9 +21,10 @@ struct Object
     uint bucket;
     uint flags;
     uint _pad3;
+    uint _pad4;
 
-    vec4 _pad4;
     vec4 _pad5;
+    vec4 _pad6;
 };
 
 #define MAX_ENTITIES_PER_INSTANCE_BATCH 28

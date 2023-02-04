@@ -17,6 +17,7 @@ layout(location=8) in mat3 v_tbn_matrix;
 layout(location=11) in vec4 v_position_ndc;
 layout(location=12) in vec4 v_previous_position_ndc;
 layout(location=15) in flat uint v_object_index;
+layout(location=16) in flat uint v_object_mask;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
@@ -113,5 +114,5 @@ void main()
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
-    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
+    gbuffer_mask = UINT_TO_VEC4(v_object_mask);
 }

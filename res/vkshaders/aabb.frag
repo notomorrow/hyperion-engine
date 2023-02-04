@@ -43,6 +43,6 @@ void main() {
 #ifndef IMMEDIATE_MODE
     gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
 #else
-    gbuffer_mask = vec4(0.0);
+    gbuffer_mask = vec2(0.0);
 #endif
 }
