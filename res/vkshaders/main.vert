@@ -14,6 +14,7 @@ layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out vec4 v_position_ndc;
 layout(location=12) out vec4 v_previous_position_ndc;
 layout(location=15) out flat uint v_object_index;
+layout(location=16) out flat uint v_object_mask;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -75,6 +76,12 @@ void main() {
     v_previous_position_ndc = (jitter_matrix * camera.projection) * camera.previous_view * previous_position;
 
     v_object_index = OBJECT_INDEX;
+
+    const uint bucket = object.bucket;
+    v_object_mask = (uint(bucket == HYP_OBJECT_BUCKET_OPAQUE) * OBJECT_MASK_OPAQUE)
+        | (uint(bucket == HYP_OBJECT_BUCKET_TRANSLUCENT) * OBJECT_MASK_TRANSLUCENT)
+        | (uint(bucket == HYP_OBJECT_BUCKET_SKYBOX) * OBJECT_MASK_SKY)
+        | (uint(bucket == HYP_OBJECT_BUCKET_UI) * OBJECT_MASK_UI);
 
     gl_Position = v_position_ndc;
 } 
