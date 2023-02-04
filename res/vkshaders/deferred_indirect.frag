@@ -176,5 +176,5 @@ void main()
         result = albedo.rgb;
     }
 
-    output_color = vec4(result.rgb, 1.0);
+    output_color = vec4(result, 1.0);
 }

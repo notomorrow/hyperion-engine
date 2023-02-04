@@ -214,10 +214,11 @@ void main()
         forward_lit_result.rgb += Fr;
 
         result.rgb = (forward_lit_result.rgb * forward_lit_result.a) + (result.rgb * (1.0 - forward_lit_result.a));
-    } else {//if (bool(object_mask & 0x04)) {
+    } else {
         result.rgb += forward_result.rgb * forward_result.a;
     }
 
+    // result.rgb = vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord).rgb);//  DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
     result.a = 1.0;
 
     color_output = result;

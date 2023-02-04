@@ -170,7 +170,7 @@ vec3 CalculateRefraction(
 
     const float lod = ApplyIORToRoughness(IOR, roughness) * log2(float(max_dimension));
 
-    float absorption = 0.1; // TODO: material parameter
+    float absorption = 0.5; // TODO: material parameter
     vec3 T = min(vec3(1.0), exp(-absorption * refraction.direction));
 
     vec3 Ft = Texture2DLod(sampler_linear, gbuffer_mip_chain, refraction_texcoord, lod).rgb;
@@ -354,7 +354,7 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
             lod
         );
 
-        ibl.rgb = ReverseTonemapReinhardSimple(ibl.rgb);
+        // ibl.rgb = ReverseTonemapReinhardSimple(ibl.rgb);
     }
 }
 
