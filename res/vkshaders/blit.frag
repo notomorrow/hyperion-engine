@@ -62,5 +62,7 @@ void main()
     out_color.rgb = pow(out_color.rgb, vec3(2.2));
 #endif
 
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
+
     out_color.a = 1.0;
 }

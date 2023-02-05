@@ -37,8 +37,8 @@ layout(location=5) out vec4 gbuffer_mask;
 #define MIE_SCATTER_HEIGHT 1.2e3
 #define MIE_SCATTER_DIRECTION 0.758
 
-#define NUM_STEPS_X 8
-#define NUM_STEPS_Y 8
+#define NUM_STEPS_X 4
+#define NUM_STEPS_Y 4
 
 vec2 RaySphereIntersection(vec3 r0, vec3 rd, float sr)
 {
