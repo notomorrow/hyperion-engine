@@ -252,20 +252,58 @@ vec3 SphericalHarmonics(const vec3 sph[9], const in vec3 normal) {
 
 vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
 {
+// #ifndef PI
+//     #define PI HYP_FMATH_PI
+// #endif
+
+//     float x = N.x;
+// 	float y = N.y;
+// 	float z = N.z;
+// 	float x2 = x*x;
+// 	float y2 = y*y;
+// 	float z2 = z*z;
+
+//     float basis[9];
+//     vec3 sph[9];
+
+//     for (int i = 0; i < 9; i++) {
+//         sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
+//     }
+
+// 	basis[0] = 1.f / 2.f * sqrt(1.f / PI);
+// 	basis[1] = sqrt(3.f / (4.f*PI))*y;
+// 	basis[2] = sqrt(3.f / (4.f*PI))*z;
+// 	basis[3] = sqrt(3.f / (4.f*PI))*x;
+// 	basis[4] = 1.f / 2.f * sqrt(15.f / PI) * x * y;
+// 	basis[5] = 1.f / 2.f * sqrt(15.f / PI) * y * z;
+// 	basis[6] = 1.f / 4.f * sqrt(5.f / PI) * (-x*x - y*y + 2 * z*z);
+// 	basis[7] = 1.f / 2.f * sqrt(15.f / PI) * z * x;
+// 	basis[8] = 1.f / 4.f * sqrt(15.f / PI) * (x*x - y*y);
+
+//     vec3 irradiance = vec3(0.0);
+
+//     for (int i = 0; i < 9; i++) {
+//         irradiance += sph[i] * basis[i];
+//     }
+
+//     irradiance = max(irradiance, vec3(0.0));
+
+//     return irradiance;
+
+
 
     vec3 irradiance = vec3(0.0);
-
     vec3 sph[9];
 
     for (int i = 0; i < 9; i++) {
         sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
     }
 
-    
     irradiance = SphericalHarmonics(sph, N);
     irradiance = max(irradiance, vec3(0.0));
-
     return irradiance;
+
+
 
     // const float cos_a0 = HYP_FMATH_PI;
     // const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
@@ -362,7 +400,7 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = float(8.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 

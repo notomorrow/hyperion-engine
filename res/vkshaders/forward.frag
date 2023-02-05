@@ -89,7 +89,13 @@ void main()
         normals_texture.xy *= normal_map_intensity;
         normals_texture.xyz = normalize(normals_texture.xyz);
 
-        normal = normalize(v_tbn_matrix * normals_texture.xyz);
+        normal = v_tbn_matrix * normals_texture.xyz;
+        normal = normalize(normal);
+
+
+        // normals_texture.xy = (2.0 * (vec2(1.0) - SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP, texcoord).rg) - 1.0);
+        // normals_texture.z = sqrt(1.0 - dot(normals_texture.xy, normals_texture.xy));
+        // normal = ((normalize(v_tangent) * normals_texture.x) + (normalize(v_bitangent) * normals_texture.y) + (normal * normals_texture.z));
     }
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP)) {
