@@ -15,6 +15,7 @@ layout(location=0) out vec4 color_output;
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
 #include "../include/tonemap.inc"
+#include "../include/noise.inc"
 
 #define HYP_DEFERRED_NO_RT_RADIANCE
 #define HYP_DEFERRED_NO_SSR
@@ -33,12 +34,19 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
+#define SAMPLE_COUNT 16
+
+// @TODO: Combine ssr_write_uvs and ssr_sample into one shader,
+// which will be renamed into something more generic for on screen reflections.
+// Then, we can take advantage of the temporal blending that happens with it
+// in one pass. also we can save on samples because the env probe can just be a fallback of SSR.
+
 void main()
 {
     vec3 irradiance = vec3(0.0);
 
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
-    const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
+    const vec3 N = normalize(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord)));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
@@ -47,7 +55,36 @@ void main()
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
+    const float lod = float(8.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+
+    vec4 ibl = vec4(0.0);
+
+    const uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+    
+    uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 0.5);
+
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(N, tangent, bitangent);
+
+    // TODO: Blue noise texture/buffer
+    uint _seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
+
+    for (int i = 0; i < SAMPLE_COUNT; i++) {
+        // vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
+        vec2 rnd = vec2(RandomFloat(_seed), RandomFloat(_seed));
+        // vec3 dir = RandomInHemisphere(vec3(RandomFloat(_seed), RandomFloat(_seed), RandomFloat(_seed)), N);
+        vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
+        H = tangent * H.x + bitangent * H.y + N * H.z;
+        vec3 dir = normalize(2.0 * dot(V, H) * H - V);
+
+        vec4 sample_ibl = vec4(0.0);
+        ApplyReflectionProbe(current_env_probe, P, dir, lod, ibl);
+    
+        ibl += sample_ibl * (1.0 / float(SAMPLE_COUNT));
+    }
+
+    // vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
 
     color_output = ibl;
 }

@@ -114,13 +114,13 @@ void main()
 #ifdef LIGHTING
     output_color.rgb = albedo.rgb * (1.0 / HYP_FMATH_PI) * vec3(HYP_CUBEMAP_AMBIENT);   
 
-    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
+    // if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
         #ifdef SHADOWS
-            output_color.rgb = albedo.rgb * NdotL * light.position_intensity.w * shadow;
+            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w * shadow;
         #else
-            output_color.rgb = albedo.rgb * NdotL * light.position_intensity.w;
+            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w;
         #endif
-    }
+    // }
 #else
     output_color.rgb = albedo.rgb;
 

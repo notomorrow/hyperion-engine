@@ -3,7 +3,7 @@
 namespace hyperion::v2 {
 
 FixedArray<RenderCommandHolder *, max_render_command_types> RenderCommands::holders = { };
-std::atomic<SizeType> RenderCommands::render_command_type_index = { 0 };
+AtomicVar<SizeType> RenderCommands::render_command_type_index = { 0 };
 RenderScheduler RenderCommands::scheduler = { };
 
 std::mutex RenderCommands::mtx = std::mutex();
@@ -12,7 +12,7 @@ std::condition_variable RenderCommands::flushed_cv = std::condition_variable();
 void RenderScheduler::Commit(RenderCommand *command)
 {
     m_commands.PushBack(command);
-    m_num_enqueued.fetch_add(1, std::memory_order_relaxed);
+    m_num_enqueued.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 }
 
 RenderScheduler::FlushResult RenderScheduler::Flush()

@@ -22,6 +22,7 @@
 #include <core/lib/Bitset.hpp>
 #include <core/lib/Span.hpp>
 #include <core/lib/LinkedList.hpp>
+#include <core/lib/AtomicVar.hpp>
 #include <math/MathUtil.hpp>
 #include <Types.hpp>
 

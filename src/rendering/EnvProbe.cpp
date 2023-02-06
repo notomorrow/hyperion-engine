@@ -11,7 +11,7 @@ struct RenderCommand_DestroyCubemapRenderPass;
 using renderer::Result;
 
 static const Extent2D num_tiles = { 4, 4 };
-static const InternalFormat reflection_probe_format = InternalFormat::RGBA16F;//R11G11B10F;
+static const InternalFormat reflection_probe_format = InternalFormat::R11G11B10F;
 static const InternalFormat shadow_probe_format = InternalFormat::RG32F;
 
 struct alignas(16) SHTile
@@ -416,7 +416,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     
     // Check if octree has changes, and we need to re-render.
 
-    const bool is_rendered = m_is_rendered.load(std::memory_order_acquire);
+    const bool is_rendered = m_is_rendered.Get(MemoryOrder::ACQUIRE);
 
     Octree const *octree = nullptr;
 
@@ -454,9 +454,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                 MeshAttributes { },
                 MaterialAttributes {
                     .bucket = BUCKET_INTERNAL,
-                    .cull_faces = IsShadowProbe()
-                        ? FaceCullMode::FRONT
-                        : (IsReflectionProbe() ? FaceCullMode::NONE : FaceCullMode::BACK)
+                    .cull_faces = FaceCullMode::FRONT
                 },
                 m_shader->GetCompiledShader().GetDefinition()
             ),
@@ -580,7 +578,7 @@ void EnvProbe::Render(Frame *frame)
     framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
     m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 
-    m_is_rendered.store(true, std::memory_order_release);
+    m_is_rendered.Set(true, MemoryOrder::RELEASE);
 
     HYPERION_ASSERT_RESULT(result);
 
@@ -674,7 +672,7 @@ void EnvProbe::ComputeSH(Frame *frame, const Image *image, const ImageView *imag
         texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
     }
     
-    m_is_rendered.store(true, std::memory_order_release);
+    m_is_rendered.Set(true, MemoryOrder::RELEASE);
 }
 
 void EnvProbe::UpdateRenderData(const EnvProbeIndex &probe_index)

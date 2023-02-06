@@ -161,7 +161,7 @@ void DeferredSystem::RenderGroupHolder::AddRenderGroup(Handle<RenderGroup> &rend
     std::lock_guard guard(renderer_instances_mutex);
 
     renderer_instances_pending_addition.PushBack(render_group);
-    renderer_instances_changed.Set(true);
+    renderer_instances_changed.Set(true, MemoryOrder::RELEASE);
 
     DebugLog(
         LogType::Debug,
@@ -175,7 +175,7 @@ void DeferredSystem::RenderGroupHolder::AddPendingRenderGroups()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    if (!renderer_instances_changed.Get()) {
+    if (!renderer_instances_changed.Get(MemoryOrder::ACQUIRE)) {
         return;
     }
 
@@ -193,7 +193,7 @@ void DeferredSystem::RenderGroupHolder::AddPendingRenderGroups()
     }
     
     renderer_instances_pending_addition.Clear();
-    renderer_instances_changed.Set(false);
+    renderer_instances_changed.Set(false, MemoryOrder::RELEASE);
 }
 
 void DeferredSystem::RenderGroupHolder::AddFramebuffersToPipelines()
