@@ -45,7 +45,7 @@ public:
     struct Instance
     {
         ValueStorage<T> storage;
-        std::atomic<UInt16> ref_count;
+        AtomicVar<UInt16> ref_count;
         bool has_value;
 
         Instance()
@@ -68,7 +68,7 @@ public:
 
         UInt16 GetRefCount() const
         {
-            return ref_count.load();
+            return ref_count.Get(MemoryOrder::SEQUENTIAL);
         }
 
         template <class ...Args>
@@ -84,7 +84,7 @@ public:
         }
 
         HYP_FORCE_INLINE void IncRef()
-            { ref_count.fetch_add(1, std::memory_order_relaxed); }
+            { ref_count.Increment(1, MemoryOrder::RELAXED); }
 
         UInt DecRef()
         {
@@ -92,7 +92,7 @@ public:
 
             UInt16 count;
 
-            if ((count = ref_count.fetch_sub(1)) == 1) {
+            if ((count = ref_count.Decrement(1, MemoryOrder::SEQUENTIAL)) == 1) {
                 storage.Destruct();
                 has_value = false;
             }
@@ -391,7 +391,7 @@ struct RenderObjectDeleter
     struct DeletionQueueBase
     {
         TypeID type_id;
-        std::atomic_uint num_items { 0 };
+        AtomicVar<UInt32> num_items { 0 };
         std::mutex mtx;
 
         virtual ~DeletionQueueBase() = default;
@@ -415,7 +415,7 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
-            if (!num_items.load()) {
+            if (!num_items.Get(MemoryOrder::ACQUIRE)) {
                 return;
             }
             
@@ -431,7 +431,7 @@ struct RenderObjectDeleter
                 }
             }
 
-            num_items.store(items.Size());
+            num_items.Set(items.Size(), MemoryOrder::RELEASE);
 
             mtx.unlock();
 
@@ -444,7 +444,7 @@ struct RenderObjectDeleter
 
         void Push(renderer::RenderObjectHandle<T> &&handle)
         {
-            num_items.fetch_add(1);
+            num_items.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
             std::lock_guard guard(mtx);
 
@@ -460,15 +460,7 @@ struct RenderObjectDeleter
 
         DeletionQueueInstance()
         {
-            /*const auto it = deleter.queues.FindIf([](const DeletionQueueBase *item) {
-                return item->type_id == TypeID::ForType<T>();
-            });
-
-            AssertThrowMsg(it == deleter.queues.End(), "Duplicate deletion queue added!");
-
-            deleter.queues.PushBack(&queue);*/
-
-            index = queue_index.fetch_add(1);
+            index = queue_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
             AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
 
@@ -482,12 +474,6 @@ struct RenderObjectDeleter
 
         ~DeletionQueueInstance()
         {
-            /*auto it = deleter.queues.Find(&queue);
-
-            AssertThrow(it != deleter.queues.End());
-
-            deleter.queues.Erase(it);*/
-
             queues[index] = nullptr;
         }
     };
@@ -511,7 +497,7 @@ struct RenderObjectDeleter
     }
 
     static FixedArray<DeletionQueueBase *, max_queues + 1> queues;
-    static std::atomic_uint16_t queue_index;
+    static AtomicVar<UInt16> queue_index;
 };
 
 template <class T>

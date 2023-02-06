@@ -3,6 +3,7 @@
 
 #include <core/Base.hpp>
 #include <core/lib/Optional.hpp>
+#include <core/lib/AtomicVar.hpp>
 #include <math/BoundingBox.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/DrawProxy.hpp>
@@ -170,17 +171,15 @@ public:
     void SetNeedsRender(bool needs_render)
     {
         if (needs_render) {
-            // TEMP: Works when having multiple frames between states
-
-            m_needs_render_counter.fetch_add(2, std::memory_order_relaxed);
+            m_needs_render_counter.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
         } else {
-            m_needs_render_counter.fetch_sub(1, std::memory_order_relaxed);
+            m_needs_render_counter.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
         }
     }
 
     bool NeedsRender() const
     {
-        const UInt16 counter = m_needs_render_counter.load(std::memory_order_relaxed);
+        const UInt16 counter = m_needs_render_counter.Get(MemoryOrder::ACQUIRE);
 
         return counter != 0;
     }
@@ -230,8 +229,8 @@ private:
     EnvProbeIndex m_bound_index;
 
     bool m_needs_update;
-    std::atomic_bool m_is_rendered;
-    std::atomic<UInt16> m_needs_render_counter;
+    AtomicVar<Bool> m_is_rendered;
+    AtomicVar<UInt16> m_needs_render_counter;
     HashCode m_octant_hash_code;
 };
 

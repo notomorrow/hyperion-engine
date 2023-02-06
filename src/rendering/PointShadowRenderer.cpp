@@ -91,22 +91,22 @@ void PointShadowRenderer::OnRender(Frame *frame)
     AssertThrow(m_env_probe.IsValid());
     AssertThrow(m_light.IsValid());
 
-    // if (m_light->GetDrawProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
-    //     if (!m_last_visibility_state) {
-    //         Engine::Get()->GetRenderState().BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
+    if (m_light->GetDrawProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
+        if (!m_last_visibility_state) {
+            Engine::Get()->GetRenderState().BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 
-    //         m_last_visibility_state = true;
-    //     }
+            m_last_visibility_state = true;
+        }
 
         m_env_probe->Render(frame);
-    // } else {
-    //     // No point in keeping it bound if the light is not visible on the screen.
-    //     if (m_last_visibility_state) {
-    //         Engine::Get()->GetRenderState().UnbindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
+    } else {
+        // No point in keeping it bound if the light is not visible on the screen.
+        if (m_last_visibility_state) {
+            Engine::Get()->GetRenderState().UnbindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 
-    //         m_last_visibility_state = false;
-    //     }
-    // }
+            m_last_visibility_state = false;
+        }
+    }
 }
 
 void PointShadowRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)

@@ -5,6 +5,7 @@
 
 #include <system/Debug.hpp>
 #include <core/Containers.hpp>
+#include <core/lib/AtomicVar.hpp>
 #include <Threads.hpp>
 #include <Types.hpp>
 
@@ -239,7 +240,7 @@ struct RenderScheduler
     Array<RenderCommand *> m_commands;
 
     std::mutex m_mutex;
-    std::atomic<SizeType> m_num_enqueued;
+    AtomicVar<SizeType> m_num_enqueued;
     std::condition_variable m_flushed_cv;
     ThreadID m_owner_thread;
 
@@ -265,7 +266,7 @@ private:
 
     // last item must always evaluate to false, same way null terminated char strings work
     static FixedArray<RenderCommandHolder *, max_render_command_types> holders;
-    static std::atomic<SizeType> render_command_type_index;
+    static AtomicVar<SizeType> render_command_type_index;
 
     static std::mutex mtx;
     static std::condition_variable flushed_cv;
@@ -297,7 +298,7 @@ public:
 
     HYP_FORCE_INLINE static SizeType Count()
     {
-        return scheduler.m_num_enqueued.load();
+        return scheduler.m_num_enqueued.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE static Result Flush()
@@ -312,7 +313,7 @@ public:
         if (flush_result.num_executed) {
             Rewind();
 
-            scheduler.m_num_enqueued.fetch_sub(flush_result.num_executed);
+            scheduler.m_num_enqueued.Decrement(flush_result.num_executed, MemoryOrder::ACQUIRE_RELEASE);
         }
 
         lock.unlock();
@@ -355,7 +356,7 @@ private:
             {
                 holder.memory_ptr = &commands;
 
-                const SizeType command_type_index = RenderCommands::render_command_type_index.fetch_add(1);
+                const SizeType command_type_index = RenderCommands::render_command_type_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
                 AssertThrow(command_type_index < max_render_command_types - 1);
 
                 RenderCommands::holders[command_type_index] = &holder;

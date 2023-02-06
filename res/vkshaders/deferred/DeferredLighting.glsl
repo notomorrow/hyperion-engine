@@ -170,7 +170,7 @@ vec3 CalculateRefraction(
 
     const float lod = ApplyIORToRoughness(IOR, roughness) * log2(float(max_dimension));
 
-    float absorption = 0.5; // TODO: material parameter
+    float absorption = 0.1; // TODO: material parameter
     vec3 T = min(vec3(1.0), exp(-absorption * refraction.direction));
 
     vec3 Ft = Texture2DLod(sampler_linear, gbuffer_mip_chain, refraction_texcoord, lod).rgb;
@@ -400,7 +400,7 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    const float lod = float(8.0) * perceptual_roughness * (2.0 - perceptual_roughness);
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 
