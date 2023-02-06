@@ -35,7 +35,7 @@ layout(location=0) out vec4 output_color;
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
-    // #define TONEMAP
+    #define TONEMAP
 #endif
 
 #ifdef TONEMAP
@@ -116,9 +116,9 @@ void main()
 
     if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
         #ifdef SHADOWS
-            output_color.rgb = albedo.rgb * NdotL * light.position_intensity.w * shadow;
+            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w * shadow;
         #else
-            output_color.rgb = albedo.rgb * NdotL * light.position_intensity.w;
+            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w;
         #endif
     }
 #else

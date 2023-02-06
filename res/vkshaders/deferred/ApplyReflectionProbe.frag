@@ -48,6 +48,7 @@ void main()
     const float perceptual_roughness = sqrt(roughness);
 
     vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
+    ibl.a = saturate(ibl.a);
 
     color_output = ibl;
 }
