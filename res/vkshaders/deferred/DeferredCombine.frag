@@ -15,7 +15,6 @@ layout(location=0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
-#include "../include/shadows.inc"
 // #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
@@ -26,6 +25,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 56) uniform texture2D deferred
 // #define HYP_DEFERRED_NO_ENV_PROBE // temp
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
+#include "../include/shadows.inc"
 
 layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
 {

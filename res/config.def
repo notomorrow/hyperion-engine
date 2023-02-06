@@ -17,5 +17,5 @@ TemporalAA = true
 DebugSSR = false
 DebugHBAO = false
 DebugHBIL = false
-DebugReflections = false
+DebugReflections = true
 DebugIrradiance = false
