@@ -54,13 +54,11 @@ void PointShadowRenderer::InitGame()
     Threads::AssertOnThread(THREAD_GAME);
 
     AssertThrow(m_env_probe.IsValid());
-    // GetParent()->GetScene()->AddEnvProbe(m_env_probe);
 }
 
 void PointShadowRenderer::OnRemoved()
 {
     AssertThrow(m_env_probe.IsValid());
-    // GetParent()->GetScene()->RemoveEnvProbe(m_env_probe->GetID());
 
     if (m_env_probe) {
         m_env_probe->EnqueueUnbind();

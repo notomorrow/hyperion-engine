@@ -340,17 +340,6 @@ void RenderList::CollectDrawCalls(
         }
     }
 
-    // Begin sanity check
-    // FlatSet<ID<RenderGroup>> render_group_ids;
-
-    // for (IteratorType it : iterators) {
-    //     AssertThrow(it->second.render_group.IsValid());
-
-    //     AssertThrow(!render_group_ids.Contains(it->second.render_group->GetID()));
-    //     render_group_ids.Insert(it->second.render_group->GetID());
-    // }
-    // End sanity check
-
     if constexpr (do_parallel_collection) {
         Engine::Get()->task_system.ParallelForEach(THREAD_POOL_RENDER, iterators, [](IteratorType it, UInt, UInt) {
             EntityDrawCollection::EntityList &entity_list = it->second;
