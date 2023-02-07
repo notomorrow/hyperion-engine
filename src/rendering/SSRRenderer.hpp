@@ -7,6 +7,7 @@
 #include <core/Containers.hpp>
 
 #include <rendering/TemporalBlending.hpp>
+#include <rendering/FullScreenPass.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
@@ -81,7 +82,6 @@ private:
     FixedArray<FixedArray<ImageOutput, 4>, max_frames_in_flight> m_image_outputs;
     FixedArray<ImageOutput, max_frames_in_flight> m_radius_output;
     FixedArray<GPUBufferRef, max_frames_in_flight> m_uniform_buffers;
-    GPUBufferRef m_blue_noise_buffer;
     FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     
     Handle<ComputePipeline> m_write_uvs;
@@ -89,7 +89,10 @@ private:
     Handle<ComputePipeline> m_blur_hor;
     Handle<ComputePipeline> m_blur_vert;
 
+    UniquePtr<FullScreenPass> m_reflection_pass;
     UniquePtr<TemporalBlending> m_temporal_blending;
+
+    FixedArray<Handle<Texture>, 2> m_temporal_history_textures;
 
     bool m_should_perform_cone_tracing;
 

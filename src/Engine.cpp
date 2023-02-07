@@ -853,6 +853,9 @@ void Engine::Initialize(RefCountedPtr<Application> application)
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
                 ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+                
+            descriptor_set_globals
+                ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::BLUE_NOISE_BUFFER);
         }
 
         { // POST FX processing placeholders

@@ -34,12 +34,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 16
-
-// @TODO: Combine ssr_write_uvs and ssr_sample into one shader,
-// which will be renamed into something more generic for on screen reflections.
-// Then, we can take advantage of the temporal blending that happens with it
-// in one pass. also we can save on samples because the env probe can just be a fallback of SSR.
+#define SAMPLE_COUNT 8
 
 void main()
 {
@@ -67,24 +62,18 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-    // TODO: Blue noise texture/buffer
-    uint _seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
-
     for (int i = 0; i < SAMPLE_COUNT; i++) {
-        // vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
-        vec2 rnd = vec2(RandomFloat(_seed), RandomFloat(_seed));
-        // vec3 dir = RandomInHemisphere(vec3(RandomFloat(_seed), RandomFloat(_seed), RandomFloat(_seed)), N);
+        vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
+
         vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
         H = tangent * H.x + bitangent * H.y + N * H.z;
+
         vec3 dir = normalize(2.0 * dot(V, H) * H - V);
 
         vec4 sample_ibl = vec4(0.0);
-        ApplyReflectionProbe(current_env_probe, P, dir, lod, ibl);
-    
+        ApplyReflectionProbe(current_env_probe, P, dir, lod, sample_ibl);
         ibl += sample_ibl * (1.0 / float(SAMPLE_COUNT));
     }
-
-    // vec4 ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
 
     color_output = ibl;
 }
