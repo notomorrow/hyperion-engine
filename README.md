@@ -68,8 +68,7 @@ This section will be updated soon. Hyperion uses a pretty simple CMake set up, u
 Make sure you install the required packages listed in CMakeLists.txt.
 
 ### Known issues
-* Currently some resources are not being cleaned up properly on close
-* May run into a race condition. This is getting pretty rare though.
+* Currently may get a deadlock on close as render thread is synced to in many places. This can be alleviated by using `GPUBufferRef`, `ImageRef`, etc. types instead of something like UniquePtr<GPUBuffer>.
 * Scripting has issues with generic types
 * Binding C++ variables to scripts still not fleshed out
 * Voxel cone tracing may have stability issues
