@@ -121,13 +121,17 @@ void main(void)
     vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     vec3 V = normalize(vec3(0.0) - P);
     vec3 view_space_normal = normalize((camera.view * vec4(N, 0.0)).xyz);
+    vec3 world_space_position = (inverse_view * vec4(P, 1.0)).xyz;
 
     vec3 tangent;
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-    vec3 world_space_position = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
-    vec3 ray_origin = P + N * 0.001;
+    const vec2 texel_size = vec2(1.0) / vec2(ssr_params.dimension.xy);
+    const float texel_size_max = max(texel_size.x, texel_size.y);
+
+    //vec3 ray_origin = (camera.view * vec4(world_space_position + N * 0.25, 1.0)).xyz;//
+    vec3 ray_origin = P + N * 0.001;// + view_space_normal * texel_size_max;
     
 #ifdef HYP_SSR_ROUGHNESS_SCATTERING
     vec2 blue_noise_sample = vec2(
@@ -142,6 +146,14 @@ void main(void)
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     vec3 ray_direction = reflect(-V, normalize((camera.view * vec4(H, 0.0)).xyz));
+
+    // vec2 rnd = Hammersley(scene.frame_counter & 7, 8);
+
+    // vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
+    // H = tangent * H.x + bitangent * H.y + N * H.z;
+
+    // vec3 ray_direction = normalize(2.0 * dot(V, H) * H - V);
+    // ray_direction = (camera.view * vec4(ray_direction, 0.0)).xyz;
 
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);

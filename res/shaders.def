@@ -21,6 +21,10 @@ vert = deferred.vert
 frag = deferred/ApplyReflectionProbe.frag
 vert = deferred.vert
 
+[OnScreenReflections]
+frag = deferred/OnScreenReflections.frag
+vert = deferred.vert
+
 [FXAA]
 frag = fxaa.frag
 vert = PostEffect.vert

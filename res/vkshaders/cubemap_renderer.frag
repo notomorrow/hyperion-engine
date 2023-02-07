@@ -30,7 +30,7 @@ layout(location=0) out vec4 output_color;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.15
+#define HYP_CUBEMAP_AMBIENT 0.08
 
 #ifdef MODE_REFLECTION
     #define LIGHTING

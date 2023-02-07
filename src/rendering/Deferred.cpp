@@ -3,6 +3,8 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <util/BlueNoise.hpp>
+
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
@@ -14,12 +16,54 @@ using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
 using renderer::Rect;
 using renderer::Result;
+using renderer::GPUBufferType;
 
 const Extent2D DeferredRenderer::mip_chain_extent(512, 512);
 const InternalFormat DeferredRenderer::mip_chain_format = InternalFormat::R10G10B10A2;
 
 const Extent2D DeferredRenderer::hbao_extent(512, 512);
 const Extent2D DeferredRenderer::ssr_extent(512, 512);
+
+#pragma region Render commands
+
+struct RENDER_COMMAND(CreateBlueNoiseBuffer) : RenderCommand
+{
+    GPUBufferRef buffer;
+
+    RENDER_COMMAND(CreateBlueNoiseBuffer)(const GPUBufferRef &buffer)
+        : buffer(buffer)
+    {
+    }
+
+    virtual Result operator()()
+    {
+        AssertThrow(buffer.IsValid());
+
+        struct alignas(256) AlignedBuffer
+        {
+            ShaderVec4<Int32> sobol_256spp_256d[256 * 256 / 4];
+            ShaderVec4<Int32> scrambling_tile[128 * 128 * 8 / 4];
+            ShaderVec4<Int32> ranking_tile[128 * 128 * 8 / 4];
+        };
+
+        static_assert(sizeof(AlignedBuffer::sobol_256spp_256d) == sizeof(BlueNoise::sobol_256spp_256d));
+        static_assert(sizeof(AlignedBuffer::scrambling_tile) == sizeof(BlueNoise::scrambling_tile));
+        static_assert(sizeof(AlignedBuffer::ranking_tile) == sizeof(BlueNoise::ranking_tile));
+
+        UniquePtr<AlignedBuffer> aligned_buffer(new AlignedBuffer);
+        Memory::Copy(&aligned_buffer->sobol_256spp_256d[0], BlueNoise::sobol_256spp_256d, sizeof(BlueNoise::sobol_256spp_256d));
+        Memory::Copy(&aligned_buffer->scrambling_tile[0], BlueNoise::scrambling_tile, sizeof(BlueNoise::scrambling_tile));
+        Memory::Copy(&aligned_buffer->ranking_tile[0], BlueNoise::ranking_tile, sizeof(BlueNoise::ranking_tile));
+
+        HYPERION_BUBBLE_ERRORS(buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(AlignedBuffer)));
+
+        buffer->Copy(Engine::Get()->GetGPUDevice(), sizeof(AlignedBuffer), aligned_buffer.Get());
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+#pragma endregion
 
 static ShaderProperties GetDeferredShaderProperties()
 {
@@ -437,13 +481,14 @@ void DeferredRenderer::Create()
 
     m_hbao.Reset(new HBAO(hbao_extent));
     m_hbao->Create();
-
-    // render half-res
-    m_ssr.Reset(new SSRRenderer(Engine::Get()->GetGPUInstance()->GetSwapchain()->extent / 2, true));
-    m_ssr->Create();
     
     m_indirect_pass.CreateDescriptors(); // no-op
     m_direct_pass.CreateDescriptors();
+    
+    CreateBlueNoiseBuffer();
+
+    m_ssr.Reset(new SSRRenderer(Engine::Get()->GetGPUInstance()->GetSwapchain()->extent / 2 /* Half-res */, true));
+    m_ssr->Create();
 
     CreateCombinePass();
     CreateDescriptorSets();
@@ -524,6 +569,10 @@ void DeferredRenderer::CreateDescriptorSets()
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
             ->SetElementSRV(0, m_combine_pass->GetAttachmentUsage(0)->GetImageView());
+
+        descriptor_set_globals
+            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::BLUE_NOISE_BUFFER)
+            ->SetElementBuffer(0, m_blue_noise_buffer.Get());
     }
 }
 
@@ -545,6 +594,8 @@ void DeferredRenderer::Destroy()
     Threads::AssertOnThread(THREAD_RENDER);
 
     //! TODO: remove all descriptors
+
+    SafeRelease(std::move(m_blue_noise_buffer));
 
     m_ssr->Destroy();
     m_dpr.Destroy();
@@ -592,7 +643,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         ApplyCameraJitter();
     }
 
-    struct alignas(128) {  UInt32 flags; } deferred_data;
+    struct alignas(128) { UInt32 flags; } deferred_data;
 
     Memory::Set(&deferred_data, 0, sizeof(deferred_data));
 
@@ -676,7 +727,6 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     auto &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer();
     
     m_post_processing.RenderPre(frame);
-
 
     { // deferred lighting on opaque objects
         DebugMarker marker(primary, "Deferred shading");
@@ -812,6 +862,13 @@ void DeferredRenderer::ApplyCameraJitter()
         Engine::Get()->GetRenderData()->cameras.Get(camera_id.ToIndex()).jitter = jitter * jitter_scale;
         Engine::Get()->GetRenderData()->cameras.MarkDirty(camera_id.ToIndex());
     }
+}
+
+void DeferredRenderer::CreateBlueNoiseBuffer()
+{
+    m_blue_noise_buffer = RenderObjects::Make<GPUBuffer>(GPUBufferType::STORAGE_BUFFER);
+
+    PUSH_RENDER_COMMAND(CreateBlueNoiseBuffer, m_blue_noise_buffer);
 }
 
 void DeferredRenderer::CollectDrawCalls(Frame *frame)

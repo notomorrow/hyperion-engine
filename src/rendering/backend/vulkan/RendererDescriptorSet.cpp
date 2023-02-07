@@ -89,7 +89,9 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::VCT_VOXEL_UAV, 70},
             {DescriptorKey::VCT_VOXEL_UNIFORMS, 71},
             {DescriptorKey::VCT_SVO_BUFFER, 72},
-            {DescriptorKey::VCT_SVO_FRAGMENT_LIST, 73}
+            {DescriptorKey::VCT_SVO_FRAGMENT_LIST, 73},
+
+            {DescriptorKey::BLUE_NOISE_BUFFER, 75}
         }
     },
     {

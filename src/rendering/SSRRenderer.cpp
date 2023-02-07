@@ -3,7 +3,6 @@
 #include <Threads.hpp>
 
 #include <asset/ByteReader.hpp>
-#include <util/BlueNoise.hpp>
 #include <util/fs/FsUtil.hpp>
 
 namespace hyperion::v2 {
@@ -15,6 +14,12 @@ using renderer::Rect;
 using renderer::ShaderVec2;
 using renderer::Result;
 using renderer::GPUBufferType;
+
+//#define USE_SSR_FRAGMENT_SHADER
+
+#ifndef USE_SSR_FRAGMENT_SHADER
+#define USE_SSR_COMPUTE_SHADER
+#endif
 
 struct alignas(16) SSRParams
 {
@@ -168,43 +173,6 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateBlueNoiseBuffer) : RenderCommand
-{
-    GPUBufferRef buffer;
-
-    RENDER_COMMAND(CreateBlueNoiseBuffer)(const GPUBufferRef &buffer)
-        : buffer(buffer)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        AssertThrow(buffer.IsValid());
-
-        struct alignas(256) AlignedBuffer
-        {
-            ShaderVec4<Int32> sobol_256spp_256d[256 * 256 / 4];
-            ShaderVec4<Int32> scrambling_tile[128 * 128 * 8 / 4];
-            ShaderVec4<Int32> ranking_tile[128 * 128 * 8 / 4];
-        };
-
-        static_assert(sizeof(AlignedBuffer::sobol_256spp_256d) == sizeof(BlueNoise::sobol_256spp_256d));
-        static_assert(sizeof(AlignedBuffer::scrambling_tile) == sizeof(BlueNoise::scrambling_tile));
-        static_assert(sizeof(AlignedBuffer::ranking_tile) == sizeof(BlueNoise::ranking_tile));
-
-        UniquePtr<AlignedBuffer> aligned_buffer(new AlignedBuffer);
-        Memory::Copy(&aligned_buffer->sobol_256spp_256d[0], BlueNoise::sobol_256spp_256d, sizeof(BlueNoise::sobol_256spp_256d));
-        Memory::Copy(&aligned_buffer->scrambling_tile[0], BlueNoise::scrambling_tile, sizeof(BlueNoise::scrambling_tile));
-        Memory::Copy(&aligned_buffer->ranking_tile[0], BlueNoise::ranking_tile, sizeof(BlueNoise::ranking_tile));
-
-        HYPERION_BUBBLE_ERRORS(buffer->Create(Engine::Get()->GetGPUDevice(), sizeof(AlignedBuffer)));
-
-        buffer->Copy(Engine::Get()->GetGPUDevice(), sizeof(AlignedBuffer), aligned_buffer.Get());
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 #pragma endregion
 
 SSRRenderer::SSRRenderer(const Extent2D &extent, bool should_perform_cone_tracing)
@@ -281,25 +249,49 @@ void SSRRenderer::Create()
         m_radius_output.Data()
     );
 
+    CreateUniformBuffers();
+
+#ifdef USE_SSR_FRAGMENT_SHADER
+    CreateDescriptorSets();
+    CreateComputePipelines();
+    
+    for (UInt i = 0; i < 2; i++) {
+        m_temporal_history_textures[i] = CreateObject<Texture>(Texture2D(
+            m_extent,
+            ssr_format,
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            nullptr
+        ));
+
+        InitObject(m_temporal_history_textures[i]);
+    }
+#endif
+
     if (use_temporal_blending) {
         m_temporal_blending.Reset(new TemporalBlending(
             m_extent,
             ssr_format,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::MEDIUM,
-            FixedArray<ImageViewRef, max_frames_in_flight> {
+            FixedArray<ImageViewRef, 2> {
+#ifdef USE_SSR_FRAGMENT_SHADER
+                m_temporal_history_textures[0]->GetImageView(), //m_image_outputs[0][blur_result ? 3 : 1].image_view,
+                m_temporal_history_textures[1]->GetImageView()               //m_image_outputs[1][blur_result ? 3 : 1].image_view
+#elif defined(USE_SSR_COMPUTE_SHADER)
                 m_image_outputs[0][blur_result ? 3 : 1].image_view,
                 m_image_outputs[1][blur_result ? 3 : 1].image_view
+#endif
             }
         ));
 
         m_temporal_blending->Create();
     }
 
-    CreateUniformBuffers();
-    CreateBlueNoiseBuffer();
+#ifdef USE_SSR_COMPUTE_SHADER
     CreateDescriptorSets();
     CreateComputePipelines();
+#endif
 }
 
 void SSRRenderer::Destroy()
@@ -311,12 +303,21 @@ void SSRRenderer::Destroy()
     m_blur_hor.Reset();
     m_blur_vert.Reset();
 
+    for (auto &texture : m_temporal_history_textures) {
+        texture.Reset();
+    }
+
     if (m_temporal_blending) {
         m_temporal_blending->Destroy();
+        m_temporal_blending.Reset();
+    }
+
+    if (m_reflection_pass) {
+        m_reflection_pass->Destroy();
+        m_reflection_pass.Reset();
     }
     
     SafeRelease(std::move(m_uniform_buffers));
-    SafeRelease(std::move(m_blue_noise_buffer));
     
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         for (UInt j = 0; j < UInt(m_image_outputs[frame_index].Size()); j++) {
@@ -346,13 +347,6 @@ void SSRRenderer::CreateUniformBuffers()
         m_extent,
         m_uniform_buffers
     );
-}
-
-void SSRRenderer::CreateBlueNoiseBuffer()
-{
-    m_blue_noise_buffer = RenderObjects::Make<GPUBuffer>(GPUBufferType::STORAGE_BUFFER);
-
-    PUSH_RENDER_COMMAND(CreateBlueNoiseBuffer, m_blue_noise_buffer);
 }
 
 void SSRRenderer::CreateDescriptorSets()
@@ -447,7 +441,7 @@ void SSRRenderer::CreateDescriptorSets()
         // blue noise buffer
         descriptor_set
             ->AddDescriptor<renderer::StorageBufferDescriptor>(19)
-            ->SetElementBuffer(0, m_blue_noise_buffer);
+            ->SetElementBuffer(0, Engine::Get()->GetDeferredRenderer().GetBlueNoiseBuffer().Get());
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
@@ -479,6 +473,18 @@ void SSRRenderer::CreateComputePipelines()
         break;
     }
 
+#ifdef USE_SSR_FRAGMENT_SHADER
+    auto on_screen_reflections_shader = Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(OnScreenReflections));
+    InitObject(on_screen_reflections_shader);
+
+    m_reflection_pass.Reset(new FullScreenPass(
+        on_screen_reflections_shader,
+        ssr_format,
+        m_extent
+    ));
+
+    m_reflection_pass->Create();
+#else
     m_write_uvs = CreateObject<ComputePipeline>(
         Engine::Get()->GetShaderManager().GetOrCreate(HYP_NAME(SSRWriteUVs), shader_properties),
         Array<const DescriptorSet *> { m_descriptor_sets[0].Get() }
@@ -506,6 +512,7 @@ void SSRRenderer::CreateComputePipelines()
     );
 
     InitObject(m_blur_vert);
+#endif
 }
 
 void SSRRenderer::Render(Frame *frame)
@@ -516,12 +523,57 @@ void SSRRenderer::Render(Frame *frame)
     const auto &camera_binding = Engine::Get()->render_state.GetCamera();
     const UInt camera_index = camera_binding ? camera_binding.id.ToIndex() : 0;
 
-    auto *command_buffer = frame->GetCommandBuffer();
-    const auto frame_index = frame->GetFrameIndex();
+    CommandBuffer *command_buffer = frame->GetCommandBuffer();
+    const UInt frame_index = frame->GetFrameIndex();
 
     /* ========== BEGIN SSR ========== */
     DebugMarker begin_ssr_marker(command_buffer, "Begin SSR");
-    
+
+#ifdef USE_SSR_FRAGMENT_SHADER
+    // Begin new SSR (one pass)
+    {
+        // // TODO: What is the best way to blend the
+        // // environment probes?
+        // if (Engine::Get()->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Empty()) {
+        //     return;
+        // }
+
+        // Engine::Get()->GetRenderState().SetActiveEnvProbe(Engine::Get()->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Front().first);
+
+        struct alignas(128) {
+            ShaderVec4<UInt32> dimensions;
+            Float32 ray_step,
+                num_iterations,
+                max_ray_distance,
+                distance_bias,
+                offset,
+                eye_fade_start,
+                eye_fade_end,
+                screen_edge_fade_start,
+                screen_edge_fade_end;
+        } push_constants;
+
+        push_constants.dimensions = { m_extent.width, m_extent.height, 0, 0 };
+        push_constants.ray_step = 0.33f;
+        push_constants.num_iterations = 128.0f;
+        push_constants.max_ray_distance = 100.0f;
+        push_constants.distance_bias = 0.1f;
+        push_constants.offset = 0.01f;
+        push_constants.eye_fade_start = 0.75f;
+        push_constants.eye_fade_end = 0.98f;
+        push_constants.screen_edge_fade_start = 0.985f;
+        push_constants.screen_edge_fade_end = 0.995f;
+
+        m_reflection_pass->SetPushConstants(&push_constants, sizeof(push_constants));
+        m_reflection_pass->Record(frame_index);
+        m_reflection_pass->Render(frame);
+
+        
+        // Engine::Get()->GetRenderState().UnsetActiveEnvProbe();
+    }
+
+    // End new SSR
+#elif defined(USE_SSR_COMPUTE_SHADER)
     // PASS 1 -- write UVs
 
     m_image_outputs[frame_index][0].image->GetGPUImage()
@@ -629,8 +681,24 @@ void SSRRenderer::Render(Frame *frame)
         m_image_outputs[frame_index][3].image->GetGPUImage()
             ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
     }
+#endif
 
     if (use_temporal_blending && m_temporal_blending != nullptr) {
+#ifdef USE_SSR_FRAGMENT_SHADER
+        // blit to temporal history buffer
+        const ImageRef &src_image = m_reflection_pass->GetAttachmentUsage(0)->GetAttachment()->GetImage();
+
+        src_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
+
+        const Handle<Texture> &history_buffer = m_temporal_history_textures[frame_index & 1];
+
+        history_buffer->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+        history_buffer->GetImage()->Blit(command_buffer, src_image.Get());
+        history_buffer->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+
+        src_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+#endif
+
         m_temporal_blending->Render(frame);
     }
 
