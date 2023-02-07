@@ -532,8 +532,6 @@ void SSRRenderer::Render(Frame *frame)
 #ifdef USE_SSR_FRAGMENT_SHADER
     // Begin new SSR (one pass)
     {
-        // // TODO: What is the best way to blend the
-        // // environment probes?
         // if (Engine::Get()->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Empty()) {
         //     return;
         // }

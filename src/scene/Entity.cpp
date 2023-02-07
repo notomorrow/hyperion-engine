@@ -638,17 +638,11 @@ void Entity::SetTransform(const Transform &transform)
     //     node->SetWorldTransform(transform, false)
    // }
 
-    if (IsInitCalled()) {
-        UpdateOctree();
+    UpdateOctree();
 
-        if (m_blas) {
-            m_blas->SetTransform(m_transform);
-        }
-    } else {
-        // m_needs_octree_update = true;
-
-        UpdateOctree();
-    }
+    if (IsInitCalled() && m_blas.IsValid()) {
+        m_blas->SetTransform(m_transform);
+    } 
 }
 
 void Entity::OnAddedToOctree(Octree *octree)
@@ -661,13 +655,7 @@ void Entity::OnAddedToOctree(Octree *octree)
 
     m_octree = octree;
 
-    if (IsInitCalled()) {
-        UpdateOctree();
-    } else {
-        // m_needs_octree_update = true;
-
-        UpdateOctree();
-    }
+    UpdateOctree();
 }
 
 void Entity::OnRemovedFromOctree(Octree *octree)
@@ -691,12 +679,7 @@ void Entity::OnMovedToOctant(Octree *octree)
 
     m_octree = octree;
 
-    if (IsInitCalled()) {
-        UpdateOctree();
-    } else {
-        // m_needs_octree_update = true;
-        UpdateOctree();
-    }
+    UpdateOctree();
 }
 
 
