@@ -39,16 +39,16 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : RenderCommand
     virtual Result operator()()
     {
         renderer::GraphicsPipeline::ConstructionInfo construction_info {
-            .vertex_attributes = attributes.mesh_attributes.vertex_attributes,
-            .topology          = attributes.mesh_attributes.topology,
-            .cull_mode         = attributes.material_attributes.cull_faces,
-            .fill_mode         = attributes.material_attributes.fill_mode,
-            .blend_mode        = attributes.material_attributes.blend_mode,
-            .depth_test        = bool(attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST),
-            .depth_write       = bool(attributes.material_attributes.flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE),
+            .vertex_attributes = attributes.GetMeshAttributes().vertex_attributes,
+            .topology          = attributes.GetMeshAttributes().topology,
+            .cull_mode         = attributes.GetMaterialAttributes().cull_faces,
+            .fill_mode         = attributes.GetMaterialAttributes().fill_mode,
+            .blend_mode        = attributes.GetMaterialAttributes().blend_mode,
+            .depth_test        = bool(attributes.GetMaterialAttributes().flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST),
+            .depth_write       = bool(attributes.GetMaterialAttributes().flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE),
             .shader            = shader_program,
             .render_pass       = render_pass,
-            .stencil_state     = attributes.stencil_state
+            .stencil_state     = attributes.GetStencilState()
         };
 
         for (renderer::FramebufferObject *framebuffer : framebuffers) {

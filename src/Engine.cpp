@@ -1068,7 +1068,7 @@ void Engine::RenderNextFrame(Game *game)
 
 Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &renderable_attributes)
 {
-    Handle<Shader> shader = GetShaderManager().GetOrCreate(renderable_attributes.shader_def);
+    Handle<Shader> shader = GetShaderManager().GetOrCreate(renderable_attributes.GetShaderDefinition());
 
     if (!shader) {
         DebugLog(
@@ -1115,9 +1115,9 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
     }
 
     RenderableAttributeSet new_renderable_attributes(renderable_attributes);
-    new_renderable_attributes.shader_def = shader->GetCompiledShader().GetDefinition();
+    new_renderable_attributes.SetShaderDefinition(shader->GetCompiledShader().GetDefinition());
 
-    auto &render_list_bucket = m_render_list_container.Get(new_renderable_attributes.material_attributes.bucket);
+    auto &render_list_bucket = m_render_list_container.Get(new_renderable_attributes.GetMaterialAttributes().bucket);
 
     // create a RenderGroup with the given params
     auto renderer_instance = CreateObject<RenderGroup>(
@@ -1152,7 +1152,7 @@ void Engine::AddRenderGroupInternal(Handle<RenderGroup> &render_group, bool cach
     }
 
     m_render_list_container
-        .Get(render_group->GetRenderableAttributes().material_attributes.bucket)
+        .Get(render_group->GetRenderableAttributes().GetMaterialAttributes().bucket)
         .AddRenderGroup(render_group);
 }
 

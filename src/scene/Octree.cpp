@@ -888,7 +888,7 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
                 continue;
             }
 
-            if (!BucketRayTestsEnabled(node.entity->GetRenderableAttributes().material_attributes.bucket)) {
+            if (!BucketRayTestsEnabled(node.entity->GetRenderableAttributes().GetMaterialAttributes().bucket)) {
                 continue;
             }
 

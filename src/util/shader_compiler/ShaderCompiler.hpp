@@ -403,7 +403,8 @@ public:
 
         return properties_string;
     }
-
+    
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         if (m_needs_hash_code_recalculation) {
@@ -414,7 +415,8 @@ public:
 
         return m_cached_hash_code;
     }
-
+    
+    HYP_FORCE_INLINE
     HashCode GetPropertySetHashCode() const
     {
         if (m_needs_hash_code_recalculation) {
@@ -427,6 +429,7 @@ public:
     }
 
 private:
+
     void RecalculateHashCode() const
     {
         HashCode hc;
@@ -444,7 +447,7 @@ private:
 
     ShaderProperties &AddPermutation(const String &key)
     {
-        ShaderProperty shader_property(key, true);
+        const ShaderProperty shader_property(key, true);
 
         const auto it = m_props.Find(shader_property);
 
@@ -492,7 +495,8 @@ struct HashedShaderDefinition
     Name name;
     HashCode property_set_hash;
     VertexAttributeSet required_vertex_attributes;
-
+    
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -508,22 +512,28 @@ struct ShaderDefinition
 {
     Name name;
     ShaderProperties properties;
-
+    
+    HYP_FORCE_INLINE
     Name GetName() const
         { return name; }
-
+    
+    HYP_FORCE_INLINE
     ShaderProperties &GetProperties()
         { return properties; }
-
+    
+    HYP_FORCE_INLINE
     const ShaderProperties &GetProperties() const
         { return properties; }
-
+    
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return name.IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     explicit operator HashedShaderDefinition() const
         { return HashedShaderDefinition { name, properties.GetPropertySetHashCode(), properties.GetRequiredVertexAttributes() }; }
-
+    
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         // ensure they return the same hash codes so they can be compared.

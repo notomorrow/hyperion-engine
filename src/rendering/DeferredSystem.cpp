@@ -146,10 +146,10 @@ DeferredSystem::RenderGroupHolder::~RenderGroupHolder()
 
 void DeferredSystem::RenderGroupHolder::AddRenderGroup(Handle<RenderGroup> &render_group)
 {
-    if (render_group->GetRenderableAttributes().framebuffer_id) {
-        Handle<Framebuffer> framebuffer(render_group->GetRenderableAttributes().framebuffer_id);
+    if (render_group->GetRenderableAttributes().GetFramebufferID()) {
+        Handle<Framebuffer> framebuffer(render_group->GetRenderableAttributes().GetFramebufferID());
 
-        AssertThrowMsg(framebuffer.IsValid(), "Invalid framebuffer ID %u", render_group->GetRenderableAttributes().framebuffer_id.Value());
+        AssertThrowMsg(framebuffer.IsValid(), "Invalid framebuffer ID %u", render_group->GetRenderableAttributes().GetFramebufferID().Value());
 
         render_group->AddFramebuffer(std::move(framebuffer));
     } else {

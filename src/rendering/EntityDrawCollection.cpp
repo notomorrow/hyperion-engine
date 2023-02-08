@@ -82,12 +82,12 @@ const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityLi
 
 void EntityDrawCollection::Insert(const RenderableAttributeSet &attributes, const EntityDrawProxy &entity)
 {
-    GetEntityList(THREAD_TYPE_GAME)[BucketToPassType(attributes.material_attributes.bucket)][attributes].drawables.PushBack(entity);
+    GetEntityList(THREAD_TYPE_GAME)[BucketToPassType(attributes.GetMaterialAttributes().bucket)][attributes].drawables.PushBack(entity);
 }
 
 void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entity_list)
 {
-    auto &mapping = GetEntityList()[BucketToPassType(attributes.material_attributes.bucket)];
+    auto &mapping = GetEntityList()[BucketToPassType(attributes.GetMaterialAttributes().bucket)];
 
     // TODO...
     // Rather than recreate new render side resources,
@@ -290,25 +290,32 @@ void RenderList::PushEntityToRender(
     RenderableAttributeSet attributes = entity->GetRenderableAttributes();
 
     if (framebuffer) {
-        attributes.framebuffer_id = framebuffer->GetID();
+        attributes.SetFramebufferID(framebuffer->GetID());
     }
 
     if (override_attributes) {
-        attributes.shader_def = override_attributes->shader_def ? override_attributes->shader_def : attributes.shader_def;
+        if (const ShaderDefinition &override_shader_definition = override_attributes->GetShaderDefinition()) {
+            attributes.SetShaderDefinition(override_shader_definition);
+        }
         
         // Check for varying vertex attributes on the override shader compared to the entity's vertex
         // attributes. If there is not a match, we should switch to a version of the override shader that
         // has matching vertex attribs.
-        if (attributes.mesh_attributes.vertex_attributes != attributes.shader_def.GetProperties().GetRequiredVertexAttributes()) {
-            attributes.shader_def.properties.SetRequiredVertexAttributes(attributes.mesh_attributes.vertex_attributes);
+        const VertexAttributeSet mesh_vertex_attributes = attributes.GetMeshAttributes().vertex_attributes;
+
+        if (mesh_vertex_attributes != attributes.GetShaderDefinition().GetProperties().GetRequiredVertexAttributes()) {
+            ShaderDefinition new_shader_definition = attributes.GetShaderDefinition();
+            new_shader_definition.properties.SetRequiredVertexAttributes(mesh_vertex_attributes);
+
+            attributes.SetShaderDefinition(new_shader_definition);
         }
 
         // do not override bucket!
-        const Bucket previous_bucket = attributes.material_attributes.bucket;
-        attributes.material_attributes = override_attributes->material_attributes;
-        attributes.material_attributes.bucket = previous_bucket;
+        MaterialAttributes new_material_attributes = override_attributes->GetMaterialAttributes();
+        new_material_attributes.bucket = attributes.GetMaterialAttributes().bucket;
 
-        attributes.stencil_state = override_attributes->stencil_state;
+        attributes.SetMaterialAttributes(new_material_attributes);
+        attributes.SetStencilState(override_attributes->GetStencilState());
     }
 
     m_draw_collection.Get().Insert(attributes, entity->GetDrawProxy());
@@ -330,7 +337,7 @@ void RenderList::CollectDrawCalls(
         for (auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
 
-            const Bucket bucket = bucket_bits.Test(UInt(attributes.material_attributes.bucket)) ? attributes.material_attributes.bucket : BUCKET_INVALID;
+            const Bucket bucket = bucket_bits.Test(UInt(attributes.GetMaterialAttributes().bucket)) ? attributes.GetMaterialAttributes().bucket : BUCKET_INVALID;
 
             if (bucket == BUCKET_INVALID) {
                 continue;
@@ -442,7 +449,7 @@ void RenderList::ExecuteDrawCalls(
             const RenderableAttributeSet &attributes = it.first;
             const EntityDrawCollection::EntityList &entity_list = it.second;
 
-            const Bucket bucket = bucket_bits.Test(UInt(attributes.material_attributes.bucket)) ? attributes.material_attributes.bucket : BUCKET_INVALID;
+            const Bucket bucket = bucket_bits.Test(UInt(attributes.GetMaterialAttributes().bucket)) ? attributes.GetMaterialAttributes().bucket : BUCKET_INVALID;
 
             if (bucket == BUCKET_INVALID) {
                 continue;
@@ -452,7 +459,7 @@ void RenderList::ExecuteDrawCalls(
 
             if (framebuffer) {
                 AssertThrowMsg(
-                    attributes.framebuffer_id == framebuffer->GetID(),
+                    attributes.GetFramebufferID() == framebuffer->GetID(),
                     "Given Framebuffer's ID does not match RenderList item's framebuffer ID -- invalid data passed?"
                 );
             }

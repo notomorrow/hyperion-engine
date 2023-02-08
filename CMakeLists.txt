@@ -2,13 +2,25 @@ cmake_minimum_required(VERSION 3.5)
 
 set(BUILD_NAME hyperion)
 
+#set(VCPKG_ROOT "$ENV{VKPKG_INSTALLED_DIR}/..")
+#set(vcpkg_path "$ENV{VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
+#set(CMAKE_TOOLCHAIN_FILE ${vcpkg_path} CACHE STRING "CMake toolchain file")
+#set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+
 project(${BUILD_NAME} CXX C)
 
 if(MSVC)
+    message(STATUS "Building on MSVC, checking toolchain is set (should be set to `<vcpkg root path>/scripts/buildsystems/vcpkg.cmake`)")
+
+    if (DEFINED CMAKE_TOOLCHAIN_FILE)
+        message(STATUS "Using CMake toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+    else()
+        message(SEND_ERROR "CMake toolchain file not specified -- should be set to vcpkg cmake file! \
+            If you don't have vcpkg set up, download vcpkg from Microsoft and set the `-DCMAKE_TOOLCHAIN_FILE` CMake argument to \
+            `<vcpkg root path>/scripts/buildsystems/vcpkg.cmake`.")
+    endif()
+
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
-    
-    # set to path of vcpkg
-    set(CMAKE_TOOLCHAIN_FILE, "${VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O1")
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address,undefined")
@@ -18,14 +30,19 @@ endif()
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
-link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib ${VCPKG_INSTALLED_DIR}/)
+link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib $ENV{VCPKG_INSTALLED_DIR})
 
 find_package(Threads REQUIRED)
-find_package(OpenAL REQUIRED)
 find_package(Bullet REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(SDL2 REQUIRED)
+
+find_package(OpenAL)
+
+if(${OpenAL_FOUND})
+    add_definitions(-DHYP_OPENAL=1)
+endif()
 
 add_definitions(-DHYP_ROOT_DIR="${CMAKE_CURRENT_LIST_DIR}")
 add_definitions(-DSDL_MAIN_HANDLED=1)

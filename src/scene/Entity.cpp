@@ -212,8 +212,8 @@ void Entity::Update(GameCounter::TickUnit delta)
         m_material->Update();
 
         // make changes if it was updated
-        if (m_material->GetRenderAttributes() != m_renderable_attributes.material_attributes) {
-            m_renderable_attributes.material_attributes = m_material->GetRenderAttributes();
+        if (m_material->GetRenderAttributes() != m_renderable_attributes.GetMaterialAttributes()) {
+            m_renderable_attributes.SetMaterialAttributes(m_material->GetRenderAttributes());
             SetRenderableAttributes(m_renderable_attributes);
         }
     }
@@ -270,7 +270,7 @@ void Entity::EnqueueRenderUpdates()
         .skeleton_id = skeleton_id,
         .bounding_box = m_world_aabb,
         .mesh = m_mesh.Get(),
-        .bucket = m_renderable_attributes.material_attributes.bucket
+        .bucket = m_renderable_attributes.GetMaterialAttributes().bucket
     };
 
     RenderCommands::Push<RENDER_COMMAND(UpdateEntityRenderData)>(
@@ -378,7 +378,7 @@ void Entity::SetShader(Handle<Shader> &&shader)
         }
 
         RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-        new_renderable_attributes.shader_def = m_shader->GetCompiledShader().GetDefinition();
+        new_renderable_attributes.SetShaderDefinition(m_shader->GetCompiledShader().GetDefinition());
         SetRenderableAttributes(new_renderable_attributes);
     } else {
         RebuildRenderableAttributes();
@@ -396,13 +396,13 @@ void Entity::SetMaterial(Handle<Material> &&material)
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
 
     if (m_material) {
-        new_renderable_attributes.material_attributes = m_material->GetRenderAttributes();
+        new_renderable_attributes.SetMaterialAttributes(m_material->GetRenderAttributes());
 
         if (IsInitCalled()) {
             InitObject(m_material);
         }
     } else {
-        new_renderable_attributes.material_attributes = { };
+        new_renderable_attributes.SetMaterialAttributes(MaterialAttributes { });
     }
 
     if (m_blas) {
@@ -521,15 +521,19 @@ void Entity::RebuildRenderableAttributes()
     );
 
     if (m_skeleton) {
-        new_renderable_attributes.mesh_attributes.vertex_attributes |= renderer::skeleton_vertex_attributes;
+        MeshAttributes new_mesh_attributes = new_renderable_attributes.GetMeshAttributes();
+        new_mesh_attributes.vertex_attributes |= renderer::skeleton_vertex_attributes;
+
+        new_renderable_attributes.SetMeshAttributes(new_mesh_attributes);
     }
 
     if (m_shader && m_mesh) {
         const VertexAttributeSet shader_vertex_attributes = m_shader->GetCompiledShader().GetProperties().GetRequiredVertexAttributes();
 
-        if (shader_vertex_attributes != new_renderable_attributes.mesh_attributes.vertex_attributes) {
-            ShaderProperties modified_shader_properties(m_shader->GetCompiledShader().GetProperties());
-            modified_shader_properties.SetRequiredVertexAttributes(new_renderable_attributes.mesh_attributes.vertex_attributes);
+        ShaderDefinition new_shader_definition = m_shader->GetCompiledShader().GetDefinition();
+            
+        if (shader_vertex_attributes != new_renderable_attributes.GetMeshAttributes().vertex_attributes) {
+            new_shader_definition.properties.SetRequiredVertexAttributes(new_renderable_attributes.GetMeshAttributes().vertex_attributes);
 
             DebugLog(
                 LogType::Debug,
@@ -540,7 +544,7 @@ void Entity::RebuildRenderableAttributes()
 
             m_shader = Engine::Get()->GetShaderManager().GetOrCreate(
                 m_shader->GetName(),
-                modified_shader_properties
+                new_shader_definition.properties
             );
 
             InitObject(m_shader);
@@ -551,9 +555,9 @@ void Entity::RebuildRenderableAttributes()
             );
         }
 
-        new_renderable_attributes.shader_def = m_shader->GetCompiledShader().GetDefinition();
+        new_renderable_attributes.SetShaderDefinition(new_shader_definition);
     } else {
-        new_renderable_attributes.shader_def = { };
+        new_renderable_attributes.SetShaderDefinition(ShaderDefinition { });
     }
 
     SetRenderableAttributes(new_renderable_attributes);
@@ -562,7 +566,7 @@ void Entity::RebuildRenderableAttributes()
 void Entity::SetStencilAttributes(const StencilState &stencil_state)
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
-    new_renderable_attributes.stencil_state = stencil_state;
+    new_renderable_attributes.SetStencilState(stencil_state);
 
     SetRenderableAttributes(new_renderable_attributes);
 }

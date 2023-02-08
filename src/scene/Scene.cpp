@@ -687,7 +687,7 @@ void Scene::CollectEntities(
     const ID<Camera> camera_id = camera->GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
-    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->override_flags : 0;
+    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
 
     // push all entities to render if they are visible to the given camera
     for (auto &it : m_entities) {
@@ -695,7 +695,7 @@ void Scene::CollectEntities(
 
         if (
             entity->IsRenderable()
-            && bucket_bits.Test(entity->GetRenderableAttributes().material_attributes.bucket)
+            && bucket_bits.Test(entity->GetRenderableAttributes().GetMaterialAttributes().bucket)
             && (skip_frustum_culling || IsEntityInFrustum(entity, camera_id))
         ) {
             render_list.PushEntityToRender(camera, entity, override_attributes_ptr);
@@ -722,7 +722,7 @@ void Scene::CollectEntities(
     const ID<Camera> camera_id = camera->GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
-    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->override_flags : 0;
+    const UInt32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
     
     // push all entities to render if they are visible to the given camera
     for (auto &it : m_entities) {
@@ -740,7 +740,7 @@ bool Scene::IsEntityInFrustum(const Handle<Entity> &entity, ID<Camera> camera_id
         return false;
     }
 
-    return entity->GetRenderableAttributes().material_attributes.bucket == BUCKET_UI
+    return entity->GetRenderableAttributes().GetMaterialAttributes().bucket == BUCKET_UI
         || entity->IsVisibleToCamera(camera_id);
 }
 

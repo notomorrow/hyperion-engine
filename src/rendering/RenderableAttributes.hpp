@@ -47,7 +47,8 @@ struct MaterialAttributes
             flags
         );
     }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const MaterialAttributes &other) const
     {
         return bucket == other.bucket
@@ -57,10 +58,12 @@ struct MaterialAttributes
             && flags == other.flags;
     }
 
+    HYP_FORCE_INLINE
+    bool operator!=(const MaterialAttributes &other) const
+        { return !operator==(other); }
+
     bool operator<(const MaterialAttributes &other) const
-    {
-         return ToTuple() < other.ToTuple();
-    }
+        { return ToTuple() < other.ToTuple(); }
 
     HashCode GetHashCode() const
     {
@@ -109,25 +112,30 @@ struct MeshAttributes
     }
 };
 
-struct RenderableAttributeSet
+class RenderableAttributeSet
 {
-    ShaderDefinition shader_def;
-    ID<Framebuffer> framebuffer_id; // only used for scenes, not per entity
-    MeshAttributes mesh_attributes;
-    MaterialAttributes material_attributes;
-    StencilState stencil_state { };
-    UInt32 override_flags;
+    ShaderDefinition m_shader_definition;
+    ID<Framebuffer> m_framebuffer_id; // only used for scenes, not per entity
+    MeshAttributes m_mesh_attributes;
+    MaterialAttributes m_material_attributes;
+    StencilState m_stencil_state { };
+    UInt32 m_override_flags;
 
+    mutable HashCode m_cached_hash_code;
+    mutable bool m_needs_hash_code_recalculation = true;
+
+public:
     RenderableAttributeSet(
         const MeshAttributes &mesh_attributes = { },
         const MaterialAttributes &material_attributes = { },
-        const ShaderDefinition &shader_def = { },
+        const ShaderDefinition &shader_definition = { },
         UInt32 override_flags = 0
-    ) : mesh_attributes(mesh_attributes),
-        material_attributes(material_attributes),
-        shader_def(shader_def),
-        override_flags(override_flags)
+    ) : m_mesh_attributes(mesh_attributes),
+        m_material_attributes(material_attributes),
+        m_shader_definition(shader_definition),
+        m_override_flags(override_flags)
     {
+
     }
 
     RenderableAttributeSet(const RenderableAttributeSet &other) = default;
@@ -135,28 +143,91 @@ struct RenderableAttributeSet
     RenderableAttributeSet(RenderableAttributeSet &&other) noexcept = default;
     RenderableAttributeSet &operator=(RenderableAttributeSet &&other) noexcept = default;
     ~RenderableAttributeSet() = default;
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const RenderableAttributeSet &other) const
-    {
-        return GetHashCode() == other.GetHashCode();
-    }
+        { return GetHashCode() == other.GetHashCode(); }
 
+    HYP_FORCE_INLINE
+    bool operator!=(const RenderableAttributeSet &other) const
+        { return GetHashCode() != other.GetHashCode(); }
+    
+    HYP_FORCE_INLINE
     bool operator<(const RenderableAttributeSet &other) const
-    {
-         return GetHashCode().Value() < other.GetHashCode().Value();
-    }
+        { return GetHashCode().Value() < other.GetHashCode().Value(); }
 
+    HYP_FORCE_INLINE
+    const ShaderDefinition &GetShaderDefinition() const
+        { return m_shader_definition; }
+    
+    HYP_FORCE_INLINE
+    void SetShaderDefinition(const ShaderDefinition &shader_definition)
+        { m_shader_definition = shader_definition; }
+    
+    HYP_FORCE_INLINE
+    ID<Framebuffer> GetFramebufferID() const
+        { return m_framebuffer_id; }
+    
+    HYP_FORCE_INLINE
+    void SetFramebufferID(ID<Framebuffer> framebuffer_id)
+        { m_framebuffer_id = framebuffer_id; }
+    
+    HYP_FORCE_INLINE
+    const MeshAttributes &GetMeshAttributes() const
+        { return m_mesh_attributes; }
+    
+    HYP_FORCE_INLINE
+    void SetMeshAttributes(const MeshAttributes &mesh_attributes)
+        { m_mesh_attributes = mesh_attributes; }
+    
+    HYP_FORCE_INLINE
+    const MaterialAttributes &GetMaterialAttributes() const
+        { return m_material_attributes; }
+    
+    HYP_FORCE_INLINE
+    void SetMaterialAttributes(const MaterialAttributes &material_attributes)
+        { m_material_attributes = material_attributes; }
+    
+    HYP_FORCE_INLINE
+    const StencilState &GetStencilState() const
+        { return m_stencil_state; }
+    
+    HYP_FORCE_INLINE
+    void SetStencilState(const StencilState &stencil_state)
+        { m_stencil_state = stencil_state; }
+    
+    HYP_FORCE_INLINE
+    UInt32 GetOverrideFlags() const
+        { return m_override_flags; }
+    
+    HYP_FORCE_INLINE
+    void SetOverrideFlags(UInt32 override_flags)
+        { m_override_flags = override_flags; }
+
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
-        HashCode hc;
-        hc.Add(shader_def.GetHashCode());
-        hc.Add(framebuffer_id.GetHashCode());
-        hc.Add(mesh_attributes.GetHashCode());
-        hc.Add(material_attributes.GetHashCode());
-        hc.Add(stencil_state.GetHashCode());
-        hc.Add(override_flags);
+        if (m_needs_hash_code_recalculation) {
+            RecalculateHashCode();
 
-        return hc;
+            m_needs_hash_code_recalculation = false;
+        }
+
+        return m_cached_hash_code;
+    }
+
+private:
+    void RecalculateHashCode() const
+    {
+        HashCode hc;
+        hc.Add(m_shader_definition.GetHashCode());
+        hc.Add(m_framebuffer_id.GetHashCode());
+        hc.Add(m_mesh_attributes.GetHashCode());
+        hc.Add(m_material_attributes.GetHashCode());
+        hc.Add(m_stencil_state.GetHashCode());
+        hc.Add(m_override_flags);
+
+        m_cached_hash_code = hc;
     }
 };
 
