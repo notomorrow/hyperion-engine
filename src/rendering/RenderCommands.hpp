@@ -32,7 +32,7 @@ using renderer::Result;
 
 
 constexpr SizeType max_render_command_types = 128;
-constexpr SizeType render_command_cache_size = 4096;
+constexpr SizeType render_command_cache_size = 8192;
 
 template <class T>
 using RenderCommandStorageArray = Array<ValueStorage<T>, render_command_cache_size * sizeof(T)>;
@@ -61,7 +61,15 @@ struct RenderCommandHolderDerived : RenderCommandHolder
 template <class T>
 struct RenderCommandList
 {
-    using Block = FixedArray<ValueStorage<T>, render_command_cache_size>;
+    struct Block
+    {
+        FixedArray<ValueStorage<T>, render_command_cache_size> storage;
+        UInt index = 0;
+
+        HYP_FORCE_INLINE
+        bool IsFull() const
+            { return index >= render_command_cache_size; }
+    };
 
     LinkedList<Block> blocks;
 
@@ -72,7 +80,12 @@ struct RenderCommandList
 
     void Push()
     {
+        // always gaurenteed to have at least 1 block
+        Block &last_block = blocks.Back();
 
+        if (!last_block.IsFull()) {
+            //last_block.storage[last_block.index++].Construct
+        }
     }
 };
 

@@ -462,7 +462,7 @@ FunctionTypeSignature_t SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
                     RC<AstArgument> substituted_arg(new AstArgument(
                         has_default_value
                             ? CloneAstNode(generic_args[unused_index].m_default_value)
-                            : RC<AstUndefined>(new AstUndefined(location)),
+                            : RC<AstUndefined>(new AstUndefined(location)).Cast<AstExpression>(),
                         false,
                         true,
                         generic_args[unused_index].m_name,

@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <thread>
+#include <iomanip>
 #endif
 
 namespace hyperion::v2 {

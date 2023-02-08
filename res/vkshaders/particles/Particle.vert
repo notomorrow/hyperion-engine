@@ -28,7 +28,7 @@ layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 5, row_major) readonly buffer CameraShaderData
+layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
 {
     Camera camera;
 };
@@ -39,9 +39,6 @@ void main()
 
     vec4 position;
     mat4 normal_matrix;
-    
-    // position = object.model_matrix * vec4(a_position, 1.0);
-    // normal_matrix = transpose(inverse(object.model_matrix));
 
     position = vec4(a_position, 1.0);
 
@@ -70,7 +67,7 @@ void main()
     position = lookat_matrix * position;
     position.xyz += particle_position_world.xyz;
 
-    v_color = unpackUnorm4x8(instance.color_packed);
+    v_color = instance.color;
 
     gl_Position = camera.projection * camera.view * position;
 } 

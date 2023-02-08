@@ -61,14 +61,13 @@ static_assert(sizeof(EntityInstanceBatch) == 256);
 
 struct alignas(16) ParticleShaderData
 {
-    ShaderVec4<Float32> position; // 4 x 4    = 16
-    ShaderVec4<Float32> velocity; // + 4 x 4  = 32
-    Float lifetime;               // + 4      = 36
-    Color color;                  // + 4      = 40
-                                  // align 16 = 48   
+    ShaderVec4<Float32> position;   // 4 x 4    = 16
+    ShaderVec4<Float32> velocity;   // + 4 x 4  = 32
+    ShaderVec4<Float32> color;      // + 4 x 4  = 48
+    ShaderVec4<Float32> attributes; // + 4 x 4 = 64
 };
 
-static_assert(sizeof(ParticleShaderData) == 48);
+static_assert(sizeof(ParticleShaderData) == 64);
 
 struct alignas(256) CubemapUniforms
 {
@@ -322,7 +321,7 @@ static const SizeType max_env_grids_bytes = max_env_grids * sizeof(EnvGridShader
 static const SizeType max_immediate_draws = (1ull * 1024ull * 1024ull) / sizeof(ImmediateDrawShaderData);
 static const SizeType max_immediate_draws_bytes = max_immediate_draws * sizeof(ImmediateDrawShaderData);
 /* max number of instance batches, based on size in mb */
-static const SizeType max_entity_instance_batches = (16ull * 1024ull * 1024ull) / sizeof(EntityInstanceBatch);
+static const SizeType max_entity_instance_batches = (8ull * 1024ull * 1024ull) / sizeof(EntityInstanceBatch);
 static const SizeType max_entity_instance_batches_bytes = max_entity_instance_batches * sizeof(EntityInstanceBatch);
 
 template <class T>

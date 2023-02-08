@@ -90,8 +90,7 @@ void main()
     output_color = vec4(moments, 0.0, 0.0);
 #else
 
-    // const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-    // albedo *= (1.0 - metalness);
+    const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
 
 #if defined(LIGHTING) || defined(SHADOWS)
     vec3 L = light.position_intensity.xyz;
@@ -112,13 +111,15 @@ void main()
 #endif
 
 #ifdef LIGHTING
-    output_color.rgb = albedo.rgb * (1.0 / HYP_FMATH_PI) * vec3(HYP_CUBEMAP_AMBIENT);   
+    const vec4 light_color = unpackUnorm4x8(light.color_encoded);
+
+    output_color.rgb = albedo.rgb * (1.0 - metalness) * vec3(HYP_CUBEMAP_AMBIENT);   
 
     // if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
         #ifdef SHADOWS
-            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w * shadow;
+            output_color.rgb += albedo.rgb * HYP_FMATH_ONE_OVER_PI * NdotL * light_color.rgb * light.position_intensity.w * shadow;
         #else
-            output_color.rgb += albedo.rgb * NdotL * light.position_intensity.w;
+            output_color.rgb += albedo.rgb * HYP_FMATH_ONE_OVER_PI * NdotL * light_color.rgb * light.position_intensity.w;
         #endif
     // }
 #else
