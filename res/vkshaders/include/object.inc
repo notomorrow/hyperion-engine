@@ -50,6 +50,7 @@ struct EntityInstanceBatch
 #define OBJECT_MASK_UI_TEXT     (0x80)
 #define OBJECT_MASK_UI_BUTTON   (0x100)
 #define OBJECT_MASK_UI_PANEL    (0x200)
+#define OBJECT_MASK_DEBUG       (0x400)
 
 #define GET_OBJECT_BUCKET(obj) \
     ((uint((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE)) \

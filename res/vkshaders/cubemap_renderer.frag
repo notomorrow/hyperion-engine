@@ -32,6 +32,11 @@ layout(location=0) out vec4 output_color;
 
 #define HYP_CUBEMAP_AMBIENT 0.08
 
+// #ifdef MODE_AMBIENT
+//     #define LIGHTING
+//     #define SHADOWS
+// #endif
+
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS

@@ -296,7 +296,7 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
     vec3 sph[9];
 
     for (int i = 0; i < 9; i++) {
-        sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
+        sph[i] = Texture3D(sampler_nearest, spherical_harmonics_volumes[i], coord).rgb;
     }
 
     irradiance = SphericalHarmonics(sph, N);
@@ -330,6 +330,7 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
 
     // return irradiance / HYP_FMATH_PI;
 }
+
 float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
 {
     ivec3 probe_position;
@@ -346,21 +347,30 @@ float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
         const vec3 texel_size = vec3(1.0) / vec3(image_size);
 
         EnvProbe probe = env_probes[probe_index];
-        const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
-        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-        const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+        ivec3 probe_stored_position = probe.position_in_grid.xyz;
 
-        const vec3 pos_relative_to_grid = P - env_grid.center.xyz;
+        const vec3 probe_aabb_min = env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+        const vec3 probe_aabb_max = env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+
+        const vec3 extent = (probe_aabb_max - probe_aabb_min);
+        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+        const vec3 center = (probe_aabb_max + probe_aabb_min) * 0.5;
 
         // + 0.5 takes it from -0.5,0.5 to 0.0,1.0
-        const vec3 pos_relative_to_probe = ((P - center) / extent) + 0.5;
+        const vec3 pos_fract = fract(((P - center) / extent) + 0.5);
+
+        // const ivec3 diff = probe_stored_position - probe_position;
 
         // instead of using +0.5 to get center of the cell, we add pos_relative_to_probe,
         // which has been transformed from 0.0,1.0 range. so samplers at the edge of the cell will offset by
         // 0.0, at the middle will offset by 0.5, etc.
-        vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
+        // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
+        // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
+        vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
 
         irradiance += SphericalHarmonicsSample(N, coord);
+
+        // irradiance = UINT_TO_VEC4(probe_index).xyz;
 
         return 1.0;
     }

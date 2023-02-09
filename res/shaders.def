@@ -53,6 +53,10 @@ vert = cubemap_renderer.vert
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
 comp = sh/ComputeSH.comp
 
+[ComputeSHClipmap]
+permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE), MODIFY_ENV_PROBE
+comp = sh/ComputeSHClipmap.comp
+
 [Forward]
 permute = SKINNING, FORWARD_LIGHTING
 frag = forward.frag
