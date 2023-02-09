@@ -21,8 +21,8 @@ struct EnvProbe
     uvec2 dimensions;
     uvec2 _pad2;
 
-    uvec4 _pad3;
-    uvec4 _pad4;
+    ivec4 position_in_grid;
+    ivec4 offset;
     uvec4 _pad5;
 };
 
@@ -32,10 +32,14 @@ struct EnvGrid
 
     vec4 center;
     vec4 aabb_extent;
+    vec4 aabb_max;
+    vec4 aabb_min;
+
     uvec4 density;
     uvec4 enabled_indices_mask;
 
-    mat4 _pad3;
+    vec4 _pad0;
+    vec4 _pad1;
 };
 
 struct SH9
@@ -52,13 +56,9 @@ struct SH9
             EnvGrid env_grid;
         };
 
-        #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
-        #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
-
-        #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
         layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
-
+        layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture3D sh_clipmaps[9];
     #endif
 
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
@@ -74,6 +74,10 @@ struct SH9
         EnvProbe current_env_probe;
     };
 #endif
+
+#define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
+#define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
+#define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
 vec4 EnvProbeSample(
     sampler samp, textureCube tex,

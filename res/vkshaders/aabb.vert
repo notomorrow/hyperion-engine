@@ -11,6 +11,10 @@ layout(location=11) out vec4 v_position_ndc;
 layout(location=12) out vec4 v_previous_position_ndc;
 layout(location=15) out flat uint v_object_index;
 
+#ifdef IMMEDIATE_MODE
+layout(location=16) out vec4 v_color;
+#endif
+
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
 HYP_ATTRIBUTE(2) vec2 a_texcoord0;
@@ -38,7 +42,8 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
     #define PREV_MODEL_MATRIX (object.previous_model_matrix)
 #endif
 
-void main() {
+void main()
+{
     vec4 position = MODEL_MATRIX * vec4(a_position, 1.0);
     vec4 previous_position = PREV_MODEL_MATRIX * vec4(a_position, 1.0);
 
@@ -54,6 +59,7 @@ void main() {
     v_object_index = OBJECT_INDEX;
 #else
     v_object_index = ~0u; // unused
+    v_color = UINT_TO_VEC4(color_packed);
 #endif
 
     mat4 jitter_matrix = mat4(1.0);

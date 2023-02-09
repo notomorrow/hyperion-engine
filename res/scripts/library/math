@@ -1,5 +1,5 @@
 const PI : Float = 3.14159265;
-const NAN : Float = global::NAN;
+const NaN : Float = global::NaN;
 
 func Sign<T>(num : T) {
     return (num > 0) ? 1 : ((num < 0) ? -1 : 0);
