@@ -38,7 +38,8 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
     #define PREV_MODEL_MATRIX (object.previous_model_matrix)
 #endif
 
-void main() {
+void main()
+{
     vec4 position = MODEL_MATRIX * vec4(a_position, 1.0);
     vec4 previous_position = PREV_MODEL_MATRIX * vec4(a_position, 1.0);
 
