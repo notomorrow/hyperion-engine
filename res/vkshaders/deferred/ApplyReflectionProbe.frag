@@ -24,11 +24,6 @@ layout(location=0) out vec4 color_output;
 #include "../include/env_probe.inc"
 #include "./DeferredLighting.glsl"
 
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
-{
-    EnvProbe current_env_probe;
-};
-
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;

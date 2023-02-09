@@ -29,11 +29,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 56) uniform texture2D deferred
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 // #define HYP_DEFERRED_NO_ENV_PROBE // temp
 
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3) readonly buffer EnvProbeBuffer
-{
-    EnvProbe current_env_probe;
-};
-
 layout(push_constant) uniform DeferredCombineData
 {
     uvec2 image_dimensions;
@@ -118,6 +113,7 @@ void main()
     vec4 forward_lit_result = vec4(0.0, 0.0, 0.0, forward_result.a);
 
     if (bool(object_mask & 0x02)) {
+#if 0
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
         const vec3 F0 = CalculateF0(forward_result.rgb, metalness);
         vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
@@ -148,7 +144,7 @@ void main()
             );
 
     #ifdef ENV_GRID_ENABLED
-            CalculateEnvProbeIrradiance(deferred_params, P, N, irradiance);
+            CalculateEnvProbeIrradiance(P, N, irradiance);
     #endif
 
             Fd = forward_result.rgb * irradiance * (1.0 - E) * ao;
@@ -173,7 +169,9 @@ void main()
         Ft *= transmission;
         Fd *= (1.0 - transmission);
 
-        forward_lit_result.rgb += Ft + Fd;
+        forward_lit_result.rgb += Ft + Fd + Fr;
+
+        Fr = vec3(0.0);
 
         { // direct lighting
             float shadow = 1.0;
@@ -212,12 +210,20 @@ void main()
         }
 
         forward_lit_result.rgb += Fr;
-
-        result.rgb = (forward_lit_result.rgb * forward_lit_result.a) + (result.rgb * (1.0 - forward_lit_result.a));
+#endif
+        
+        // result.rgb = (forward_lit_result.rgb) + (result.rgb * (1.0 - forward_lit_result.a));
+        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
     } else {
         result.rgb += forward_result.rgb * forward_result.a;
     }
 
+    // result.rgb = forward_result.aaa;
+
+    // result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
+
+    // result.rgb = forward_result.aaa;
+    // result.rgb = forward_lit_result.rgb;
     // result.rgb = vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord).rgb);//  DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
     result.a = 1.0;
 

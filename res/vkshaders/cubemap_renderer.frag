@@ -46,11 +46,6 @@ layout(location=0) out vec4 output_color;
     #include "include/shadows.inc"
 #endif
 
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
-{
-    EnvProbe current_env_probe;
-};
-
 void main()
 {
     vec3 view_vector = normalize(v_camera_position - v_position);

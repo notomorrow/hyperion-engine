@@ -38,11 +38,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #define HYP_ENABLE_SKINNING
 
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
-{
-    EnvProbe current_env_probe;
-};
-
 #ifdef VERTEX_SKINNING_ENABLED
 #include "include/Skeleton.glsl"
 #endif

@@ -54,7 +54,7 @@ permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
 comp = sh/ComputeSH.comp
 
 [Forward]
-permute = SKINNING
+permute = SKINNING, FORWARD_LIGHTING
 frag = forward.frag
 vert = main.vert
 

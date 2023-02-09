@@ -41,10 +41,18 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 
+#ifdef FORWARD_LIGHTING
+#include "include/brdf.inc"
+#include "deferred/DeferredLighting.glsl"
+#include "include/shadows.inc"
+#endif
+
 void main()
 {
     vec3 view_vector = normalize(v_camera_position - v_position);
-    vec3 normal = normalize(v_normal);
+    vec3 N = normalize(v_normal);
+    const vec3 P = v_position.xyz;
+    const vec3 V = normalize(camera.position.xyz - P);
     
     vec3 tangent_view = transpose(v_tbn_matrix) * view_vector;
     vec3 tangent_position = v_tbn_matrix * v_position;
@@ -55,6 +63,9 @@ void main()
     float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
     float transmission = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_TRANSMISSION);
+    const float alpha_threshold = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ALPHA_THRESHOLD);
+
+    const float perceptual_roughness = sqrt(roughness);
 
     const float normal_map_intensity = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_NORMAL_MAP_INTENSITY);
     
@@ -75,12 +86,14 @@ void main()
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
-        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
+        if (albedo_texture.a < alpha_threshold) {
             discard;
         }
 
         gbuffer_albedo *= albedo_texture;
     }
+
+    gbuffer_albedo.a = max(gbuffer_albedo.a, 0.005);
 
     vec4 normals_texture = vec4(0.0);
 
@@ -89,14 +102,134 @@ void main()
         normals_texture.xy *= normal_map_intensity;
         normals_texture.xyz = normalize(normals_texture.xyz);
 
-        normal = v_tbn_matrix * normals_texture.xyz;
-        normal = normalize(normal);
-
+        N = v_tbn_matrix * normals_texture.xyz;
+        N = normalize(N);
 
         // normals_texture.xy = (2.0 * (vec2(1.0) - SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP, texcoord).rg) - 1.0);
         // normals_texture.z = sqrt(1.0 - dot(normals_texture.xy, normals_texture.xy));
-        // normal = ((normalize(v_tangent) * normals_texture.x) + (normalize(v_bitangent) * normals_texture.y) + (normal * normals_texture.z));
+        // N = ((normalize(v_tangent) * normals_texture.x) + (normalize(v_bitangent) * normals_texture.y) + (N * normals_texture.z));
     }
+
+#ifdef FORWARD_LIGHTING
+    {
+        const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
+        const vec3 F0 = CalculateF0(gbuffer_albedo.rgb, metalness);
+        vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+
+        vec3 L = light.position_intensity.xyz;
+        L -= v_position.xyz * float(min(light.type, 1));
+        L = normalize(L);
+
+        const vec3 H = normalize(L + V);
+        const float NdotL = max(0.0001, dot(N, L));
+        const float NdotH = max(0.0001, dot(N, H));
+        const float LdotH = max(0.0001, dot(L, H));
+        const float HdotV = max(0.0001, dot(H, V));
+
+        const vec3 R = normalize(reflect(-V, N));
+
+        // gbuffer_albedo.rgb *= NdotL;
+        // gbuffer_albedo.rgb *= light.position_intensity.w;
+
+
+        vec3 Ft = vec3(0.0);
+        vec3 Fr = vec3(0.0);
+        vec3 Fd = vec3(0.0);
+
+        vec3 irradiance = vec3(0.0);
+        vec4 ibl = vec4(0.0);
+        vec4 reflections = vec4(0.0);
+
+        { // irradiance
+            const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
+
+            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 E = CalculateE(F0, dfg);
+            const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+
+#if 1
+            Ft = CalculateRefraction(
+                uvec2(512, 512), // TODO: Make global constant
+                P, N, V,
+                texcoord,
+                F0, E,
+                transmission, roughness,
+                vec4(0.0),
+                gbuffer_albedo,
+                vec3(ao)
+            );
+#endif
+
+// #ifdef ENV_GRID_ENABLED
+            CalculateEnvProbeIrradiance(P, N, irradiance);
+// #endif
+
+            Fd = gbuffer_albedo.rgb * irradiance * (1.0 - E) * ao;
+
+// #ifdef REFLECTION_PROBE_ENABLED
+            ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, perceptual_roughness);
+            ibl.a = saturate(ibl.a);
+// #endif
+
+// #ifdef SSR_ENABLED
+//             CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
+// #endif
+
+            // vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+            // specular_ao *= energy_compensation;
+
+            vec3 reflection_combined = (ibl.rgb * (1.0 - reflections.a)) + (reflections.rgb);
+            Fr = reflection_combined * E;
+        }
+
+        Ft *= transmission;
+        Fd *= (1.0 - transmission);
+
+        vec3 indirect_lighting = Ft + Fd + Fr;
+        vec3 direct_lighting = vec3(0.0);
+
+        { // direct lighting
+            float shadow = 1.0;
+
+            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+                shadow = GetShadow(light.shadow_map_index, P, texcoord, NdotL);
+            }
+
+            vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb;
+
+            const float D = CalculateDistributionTerm(roughness, NdotH);
+            const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+            const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
+
+            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 E = CalculateE(F0, dfg);
+            const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+
+            const vec3 diffuse_color = CalculateDiffuseColor(gbuffer_albedo.rgb, metalness);
+            const vec3 specular_lobe = D * G * F;
+
+            vec3 specular = specular_lobe;
+
+            const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+                ? GetSquareFalloffAttenuation(P, V, light.position_intensity.xyz, light.radius)
+                : 1.0;
+
+            vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
+            vec3 diffuse = diffuse_lobe;
+            diffuse *= (1.0 - transmission);
+
+            vec3 direct_component = diffuse + specular * energy_compensation;
+
+            direct_lighting += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
+        }
+
+        vec3 lighting = indirect_lighting + direct_lighting;
+
+        // overwrite gbuffer_albedo with lit result
+        gbuffer_albedo.rgb = lighting;
+        // gbuffer_albedo.a = 0.0; // no deferred lighting
+    }
+#endif
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP)) {
         float metalness_sample = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
@@ -116,7 +249,7 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
-    gbuffer_normals = EncodeNormal(normal);
+    gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
