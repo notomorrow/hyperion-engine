@@ -35,12 +35,6 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-// Used for point light shadows
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
-{
-    EnvProbe current_env_probe;
-};
-
 void main()
 {
     vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);

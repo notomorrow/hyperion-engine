@@ -34,7 +34,7 @@ void main()
     const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
-    float weight = CalculateEnvProbeIrradiance(deferred_params, P, N, irradiance);
+    float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
 
     color_output = vec4(irradiance, weight);
 }

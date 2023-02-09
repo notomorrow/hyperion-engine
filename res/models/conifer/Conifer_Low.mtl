@@ -32,7 +32,7 @@ Kd 1 1 1
 Ka 0.784314 0.729412 0.678431
 Ks 0.25098 0.258824 0.258824
 Ns 64
-illum 2
+illum 6
 map_Kd Leaf_Low.png
 map_d Leaf_Low.png
 map_bump Leaf_Low_Normal.png
