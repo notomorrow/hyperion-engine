@@ -296,7 +296,7 @@ vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
     vec3 sph[9];
 
     for (int i = 0; i < 9; i++) {
-        sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
+        sph[i] = Texture3D(sampler_nearest, spherical_harmonics_volumes[i], coord).rgb;
     }
 
     irradiance = SphericalHarmonics(sph, N);
@@ -366,7 +366,7 @@ float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
         // 0.0, at the middle will offset by 0.5, etc.
         // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
         // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
-        vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
+        vec3 coord = (vec3(probe_stored_position /*+ pos_fract*/)) * texel_size;
 
         irradiance += SphericalHarmonicsSample(N, coord);
 
