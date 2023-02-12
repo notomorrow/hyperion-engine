@@ -21,7 +21,7 @@ struct EnvProbe
     uvec2 dimensions;
     uvec2 _pad2;
 
-    uvec4 _pad3;
+    ivec4 position_in_grid;
     uvec4 _pad4;
     uvec4 _pad5;
 };
@@ -32,10 +32,14 @@ struct EnvGrid
 
     vec4 center;
     vec4 aabb_extent;
+    vec4 aabb_max;
+    vec4 aabb_min;
+
     uvec4 density;
     uvec4 enabled_indices_mask;
 
-    mat4 _pad3;
+    vec4 _pad0;
+    vec4 _pad1;
 };
 
 struct SH9
