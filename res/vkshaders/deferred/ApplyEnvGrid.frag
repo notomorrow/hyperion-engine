@@ -68,12 +68,11 @@ void main()
 
     irradiance = vec3(0.0);
 
-    // irradiance = Texture3DTexel(sampler_nearest, sh_clipmaps[0], cage_coord_pixel).rgb;
+    irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], cage_coord).rgb;
 
-    for (int i = 0; i < 9; i++) {
-        // irradiance += Texture3D(sampler_linear, sh_clipmaps[i], (((floor(cage_coord_pixel) - (vec3(cage_size) * 0.5)) + 0.5) / vec3(cage_size)) + 0.5 ).rgb * bands[i];
-        irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];//((vec3(cage_coord_pixel) + 0.5) / vec3(cage_size)) + position_fract ).rgb * bands[i];
-    }
+    // for (int i = 0; i < 9; i++) {
+    //     irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];
+    // }
 
     irradiance = max(irradiance, vec3(0.0));
 
