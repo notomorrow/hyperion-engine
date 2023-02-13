@@ -2,6 +2,7 @@
 
 import math;
 import containers::{ Stack };
+import core::{ AssertEqual, AssertNotEqual };
 
 func Expect( cond : Bool ) : Bool
 {
@@ -50,8 +51,8 @@ class TempClass : MyClass {
 func MakeNewObject(cls : Any)
 {
     Print("MakeNewObject: %\n", cls);
-    Print("does class % have $construct? %\n", cls.name, reflect::HasMember(cls, "$construct"));
-    Print("does class % proto have $construct? %\n", cls.name, reflect::HasMember(cls.$proto, "$construct"));
+    Print("does class % have $construct? %\n", cls.name, runtime::HasMember(cls, "$construct"));
+    Print("does class % proto have $construct? %\n", cls.name, runtime::HasMember(cls.$proto, "$construct"));
 
     return new cls();
 }
@@ -72,10 +73,10 @@ func GetIAndJ(obj : TempClass)
     Print("$proto of TempClass : %\n", TempClass.$proto);
     Print("base of TempClass : %\n", TempClass.base);
 
-    Print("obj GetClass is %\n", reflect::GetClass(obj));
-    Print("obj.GetClass memory address: %, TempClass memory address: %\n", GetMemoryAddress(reflect::GetClass(obj)), GetMemoryAddress(TempClass));
-    Print(" is obj a TempClass ? : %\n", reflect::GetClass(obj) == TempClass);
-    Print("Memory addresses equal? %\n", GetMemoryAddress(reflect::GetClass(obj)) == GetMemoryAddress(TempClass));
+    Print("obj GetClass is %\n", runtime::GetClass(obj));
+    Print("obj.GetClass memory address: %, TempClass memory address: %\n", GetMemoryAddress(runtime::GetClass(obj)), GetMemoryAddress(TempClass));
+    Print(" is obj a TempClass ? : %\n", runtime::GetClass(obj) == TempClass);
+    Print("Memory addresses equal? %\n", GetMemoryAddress(runtime::GetClass(obj)) == GetMemoryAddress(TempClass));
     Print("TempClass has $construct? %\n", TempClass has '$construct');
     Print("TempClass.$proto has $construct? %\n", TempClass.$proto has '$construct');
     Print("obj has $construct? %\n", obj has '$construct');
@@ -545,9 +546,9 @@ if (true) {
 
 // testing reflection
 const refl_value = new Vector3();
-Print("reflect::HasMember(refl_value, \"__intern\") == %\n", Expect(reflect::HasMember(refl_value, "__intern")));
-Print("reflect::HasMember(refl_value, \"operator+\") == %\n", Expect(reflect::HasMember(refl_value, "operator+")));
-Print("reflect::HasMember(refl_value, \"blah\") == !%\n", Expect(!reflect::HasMember(refl_value, "blah")));
+Print("runtime::HasMember(refl_value, \"__intern\") == %\n", Expect(runtime::HasMember(refl_value, "__intern")));
+Print("runtime::HasMember(refl_value, \"operator+\") == %\n", Expect(runtime::HasMember(refl_value, "operator+")));
+Print("runtime::HasMember(refl_value, \"blah\") == !%\n", Expect(!runtime::HasMember(refl_value, "blah")));
 
 
 

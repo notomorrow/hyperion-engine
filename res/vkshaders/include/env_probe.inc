@@ -56,10 +56,6 @@ struct SH9
             EnvGrid env_grid;
         };
 
-        #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
-        #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
-
-        #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
         layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
         layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture3D sh_clipmaps[9];
@@ -78,6 +74,10 @@ struct SH9
         EnvProbe current_env_probe;
     };
 #endif
+
+#define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
+#define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
+#define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
 vec4 EnvProbeSample(
     sampler samp, textureCube tex,
