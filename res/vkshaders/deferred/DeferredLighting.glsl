@@ -366,7 +366,7 @@ float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
         // 0.0, at the middle will offset by 0.5, etc.
         // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
         // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
-        vec3 coord = (vec3(probe_stored_position /*+ pos_fract*/)) * texel_size;
+        vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
 
         irradiance += SphericalHarmonicsSample(N, coord);
 

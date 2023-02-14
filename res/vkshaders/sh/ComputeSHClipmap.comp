@@ -169,17 +169,27 @@ void main(void)
             EnvProbe probe = env_probes[probe_index];
             ivec3 probe_stored_position = probe.position_in_grid.xyz;
 
-            const vec3 probe_aabb_min = env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
-            const vec3 probe_aabb_max = env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+            const vec3 probe_aabb_min = probe.aabb_max.xyz;//env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+            const vec3 probe_aabb_max = probe.aabb_min.xyz;//env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
 
             const vec3 extent = (probe_aabb_max - probe_aabb_min);
             const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
             const vec3 center = (probe_aabb_max + probe_aabb_min) * 0.5;
 
-            vec3 coord = (vec3(probe_stored_position)) * texel_size;
+            vec3 coord = (vec3(probe_stored_position) + 0.5) * texel_size;
 
             for (int i = 0; i < 9; i++) {
-                sh.values[i] = Texture3D(sampler_nearest, sh_grid_images[i], coord).rgb;//vec3(probe_stored_position) / vec3(env_grid.density.xyz);//UINT_TO_VEC4(probe_index).rgb;
+                vec3 rel_position = vec3(probe_stored_position) / vec3(env_grid.density.xyz);
+                vec3 grid_color = Texture3D(sampler_nearest, sh_grid_images[i], coord).rgb;
+                sh.values[i] = grid_color;//UINT_TO_VEC4(probe_index).rgb;//mix(rel_position, grid_color, vec3(0.5));//////
+            }
+
+            SetSH9InClipmap(id, sh);
+
+            return;
+        } else {
+            for (int i = 0; i < 9; i++) {
+                sh.values[i] = vec3(0.0, 0.0, 1.0);
             }
 
             SetSH9InClipmap(id, sh);

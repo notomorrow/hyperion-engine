@@ -26,6 +26,8 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
+#define USE_CLIPMAP
+
 void main()
 {
     vec3 irradiance = vec3(0.0);
@@ -34,11 +36,7 @@ void main()
     const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
-    // float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
-
-    // color_output = vec4(irradiance, weight);
-
-
+#ifdef USE_CLIPMAP
     #define PROBE_CAGE_VIEW_RANGE 50.0
 
     const ivec3 cage_size = textureSize(sampler3D(sh_clipmaps[0], sampler_linear), 0);
@@ -68,13 +66,19 @@ void main()
 
     irradiance = vec3(0.0);
 
-    irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], cage_coord).rgb;
 
-    // for (int i = 0; i < 9; i++) {
-    //     irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];
-    // }
+    for (int i = 0; i < 9; i++) {
+        irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];
+    }
 
     irradiance = max(irradiance, vec3(0.0));
+    irradiance /= HYP_FMATH_PI;
 
+    irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], cage_coord).rgb;
     color_output = vec4(irradiance, 1.0);
+#else
+    float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
+
+    color_output = vec4(irradiance, weight);
+#endif
 }
