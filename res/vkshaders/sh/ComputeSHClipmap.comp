@@ -54,21 +54,9 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
 {
     const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
     const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(env_grid.density.xyz) * 0.5));
-    const ivec3 position_offset = position_units % ivec3(env_grid.density.xyz);//ivec3(fract((position_units / vec3(env_grid.density.xyz)) + 0.5) * vec3(env_grid.density.xyz));//position_units + vec3(env_grid.density.xyz) * 0.5;
-    // const ivec3 position_in_grid = position_offset % //mod(position_offset, env_grid.density.xyz);
+    const ivec3 position_offset = position_units % ivec3(env_grid.density.xyz);
 
     unit_diff = position_offset;
-
-    
-    // const vec3 diff = world_position - env_grid.center.xyz;//(env_grid.aabb_extent.xyz * 0.5);
-    // const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
-
-    // if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
-    //     unit_diff = ivec3(0);
-    //     return -1;
-    // }
-
-    // unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz) /*- 0.5*/);
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
