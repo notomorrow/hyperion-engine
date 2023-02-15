@@ -22,7 +22,7 @@ struct EnvProbe
     uvec2 _pad2;
 
     ivec4 position_in_grid;
-    uvec4 _pad4;
+    ivec4 offset;
     uvec4 _pad5;
 };
 

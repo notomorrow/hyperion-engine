@@ -66,7 +66,6 @@ void main()
 
     irradiance = vec3(0.0);
 
-
     for (int i = 0; i < 9; i++) {
         irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];
     }

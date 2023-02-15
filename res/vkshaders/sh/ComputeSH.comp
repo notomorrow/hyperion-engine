@@ -36,7 +36,7 @@ layout(set = 0, binding = 3, rgba16f) uniform image3D sh_grid_images[9];
 layout(push_constant) uniform PushConstant
 {
     uvec4 probe_grid_position;
-    uvec2 cubemap_dimensions;
+    uvec4 cubemap_dimensions;
 };
 
 ivec2 GetCoefficientCoord(int coefficient_index)
@@ -84,7 +84,7 @@ float AreaIntegral(float x, float y)
 
 float TexelSolidAngle(vec2 uv)
 {
-    vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions);
+    vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
 
     float x0 = uv.x - texel_size.x;
     float y0 = uv.y - texel_size.y;
@@ -145,10 +145,10 @@ void main(void)
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
-    const vec2 size_per_sample = vec2(cubemap_dimensions) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+    const vec2 size_per_sample = vec2(cubemap_dimensions.xy) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
     const vec2 sample_fract = size_per_sample * vec2(sample_index);
 
-    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions);
+    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
     const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
     const vec2 sample_point = uv * 2.0 - 1.0;
     
