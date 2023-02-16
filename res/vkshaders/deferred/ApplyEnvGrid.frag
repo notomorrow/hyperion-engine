@@ -73,7 +73,7 @@ void main()
     irradiance = max(irradiance, vec3(0.0));
     irradiance /= HYP_FMATH_PI;
 
-    irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], cage_coord).rgb;
+    // irradiance = Texture3D(sampler_nearest, sh_clipmaps[0], cage_coord).rgb;
     color_output = vec4(irradiance, 1.0);
 #else
     float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
