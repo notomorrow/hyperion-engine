@@ -65,18 +65,6 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
     return probe_index_at_point;
 }
 
-int GetProbeIndex(uvec3 coord_in_clipmap, out ivec3 coord_in_probe_grid)
-{
-    vec3 clipmap_uv = vec3(coord_in_clipmap) / vec3(clipmap_dimensions.xyz) - vec3(0.5);
-    coord_in_probe_grid = ivec3((clipmap_uv + vec3(0.5)) * vec3(env_grid.density.xyz));
-
-    int probe_index_at_point = (coord_in_probe_grid.x * int(env_grid.density.y) * int(env_grid.density.z))
-        + (coord_in_probe_grid.y * int(env_grid.density.z))
-        + coord_in_probe_grid.z + 1 /* + 1 because the first element is always the reflection probe */;
-
-    return probe_index_at_point;
-}
-
 mat4 inverse_projection = inverse(camera.projection);
 
 float GetViewSpaceDepth(vec2 uv, float depth)
@@ -135,7 +123,7 @@ void main(void)
     const vec3 world_position = camera_position_snapped + ((((vec3(id) - vec3(clipmap_dimensions.xyz) * 0.5)) * scale));
 
     ivec3 probe_position;
-    int probe_index_at_point = GetLocalEnvProbeIndex(world_position, probe_position);//GetProbeIndex(id, probe_position); 
+    int probe_index_at_point = GetLocalEnvProbeIndex(world_position, probe_position);
 
     if (probe_index_at_point >= 1 && probe_index_at_point < HYP_MAX_BOUND_AMBIENT_PROBES) {
         const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
