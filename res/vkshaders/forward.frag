@@ -117,7 +117,7 @@ void main()
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(roughness, metalness, transmission, ao);
+    gbuffer_material = vec4(0.0, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
