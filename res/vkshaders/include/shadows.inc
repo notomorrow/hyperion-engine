@@ -75,6 +75,20 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
+float GetShadowStandard(vec4 shadow_sample, vec3 coord, float NdotL)
+{
+    const float shadow_depth = shadow_sample.r;
+
+    float bias = HYP_SHADOW_BIAS;
+
+#if defined(HYP_SHADOW_VARIABLE_BIAS) && HYP_SHADOW_VARIABLE_BIAS
+    bias *= tan(acos(NdotL));
+    bias = clamp(bias, 0.0, 0.01);
+#endif
+
+    return max(step(coord.z - bias, shadow_depth), 0.0);
+}
+
 float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
 {
 #define HYP_1_OVER_16 0.0625
@@ -144,6 +158,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
 #endif
 
 #if defined(HYP_SHADOW_SAMPLES_16)
+    // TODO: Precalculate vogel disk for a a set number of random values.
     HYP_DEF_VOGEL_DISK(8); HYP_DEF_VOGEL_DISK(9);
     HYP_DEF_VOGEL_DISK(10); HYP_DEF_VOGEL_DISK(11);
     HYP_DEF_VOGEL_DISK(12); HYP_DEF_VOGEL_DISK(13);
@@ -152,9 +167,18 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
 
 #undef HYP_DEF_VOGEL_DISK
 
+    vec3 shadow_coords[HYP_SHADOW_SAMPLE_COUNT];
+    vec4 shadow_samples[HYP_SHADOW_SAMPLE_COUNT];
+
+#define HYP_FETCH_SHADOW(iter_index) \
+    {                                \
+        shadow_coords[iter_index] = GetShadowCoord(iter_index, pos); \
+        shadow_samples[iter_index] = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[iter_index], vogel_##iter_index * shadow_filter_size); \
+    }
+
 #define HYP_DO_SHADOW(iter_index) \
     { \
-        shadowness += GetShadowStandard(index, pos, (vogel_##iter_index * shadow_filter_size), NdotL); \
+        shadowness += GetShadowStandard(shadow_samples[iter_index], shadow_coords[iter_index], NdotL); \
     }
 
 #endif
@@ -187,27 +211,35 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
     shadowness /= 36.0;
 
 #else
-    HYP_DO_SHADOW(0)
-    HYP_DO_SHADOW(1)
-    HYP_DO_SHADOW(2)
-    HYP_DO_SHADOW(3)
+
+    HYP_FETCH_SHADOW(0) HYP_FETCH_SHADOW(1)
+    HYP_FETCH_SHADOW(2) HYP_FETCH_SHADOW(3)
 
 #if defined(HYP_SHADOW_SAMPLES_8) || defined(HYP_SHADOW_SAMPLES_16)
-    HYP_DO_SHADOW(4)
-    HYP_DO_SHADOW(5)
-    HYP_DO_SHADOW(6)
-    HYP_DO_SHADOW(7)
+    HYP_FETCH_SHADOW(4) HYP_FETCH_SHADOW(5)
+    HYP_FETCH_SHADOW(6) HYP_FETCH_SHADOW(7)
 #endif
 
 #if defined(HYP_SHADOW_SAMPLES_16)
-    HYP_DO_SHADOW(8)
-    HYP_DO_SHADOW(9)
-    HYP_DO_SHADOW(10)
-    HYP_DO_SHADOW(11)
-    HYP_DO_SHADOW(12)
-    HYP_DO_SHADOW(13)
-    HYP_DO_SHADOW(14)
-    HYP_DO_SHADOW(15)
+    HYP_FETCH_SHADOW(8)  HYP_FETCH_SHADOW(9)
+    HYP_FETCH_SHADOW(10) HYP_FETCH_SHADOW(11)
+    HYP_FETCH_SHADOW(12) HYP_FETCH_SHADOW(13)
+    HYP_FETCH_SHADOW(14) HYP_FETCH_SHADOW(15)
+#endif
+
+    HYP_DO_SHADOW(0) HYP_DO_SHADOW(1)
+    HYP_DO_SHADOW(2) HYP_DO_SHADOW(3)
+
+#if defined(HYP_SHADOW_SAMPLES_8) || defined(HYP_SHADOW_SAMPLES_16)
+    HYP_DO_SHADOW(4) HYP_DO_SHADOW(5)
+    HYP_DO_SHADOW(6) HYP_DO_SHADOW(7)
+#endif
+
+#if defined(HYP_SHADOW_SAMPLES_16)
+    HYP_DO_SHADOW(8)  HYP_DO_SHADOW(9)
+    HYP_DO_SHADOW(10) HYP_DO_SHADOW(11)
+    HYP_DO_SHADOW(12) HYP_DO_SHADOW(13)
+    HYP_DO_SHADOW(14) HYP_DO_SHADOW(15)
     
     shadowness /= 16.0;
 

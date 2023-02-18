@@ -87,15 +87,12 @@ void main()
         const float LdotH = max(0.0001, dot(L, H));
         const float HdotV = max(0.0001, dot(H, V));
 
-        const bool light_has_shadow_map = light.shadow_map_index != ~0u;
-        const bool probe_has_texture = current_env_probe.texture_index != ~0u;
-
-        if (light.type == HYP_LIGHT_TYPE_POINT && light_has_shadow_map && probe_has_texture) {
+        if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
             const uint shadow_flags = current_env_probe.flags >> 3;
 
             shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
-        } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light_has_shadow_map) {
+        } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
         }
 
