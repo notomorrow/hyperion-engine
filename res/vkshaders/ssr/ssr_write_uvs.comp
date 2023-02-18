@@ -101,6 +101,10 @@ void main(void)
         return;
     }
 
+    if ((coord.x & 1) != (scene.frame_counter & 1) && (coord.y & 1) != (scene.frame_counter & 1)) {
+        return;
+    }
+
     vec2 texcoord = saturate((vec2(coord) + 0.5) / vec2(ssr_params.dimension.xy));
 
     const mat4 inverse_proj = inverse(camera.projection);
