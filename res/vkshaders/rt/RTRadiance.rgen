@@ -36,6 +36,11 @@ layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
     Scene scene;
 };
 
+layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
 #include "../include/rt/payload.inc"
 
 const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
