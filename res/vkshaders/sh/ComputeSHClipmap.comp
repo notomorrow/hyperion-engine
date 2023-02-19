@@ -115,7 +115,7 @@ void main(void)
     vec3 uv = (vec3(id) + 0.5) / vec3(clipmap_dimensions.xyz);
 
     const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(clipmap_dimensions.xyz);
-    const vec3 camera_position_snapped = (floor(camera.position.xyz / scale) + 0.5) * scale;
+    const vec3 camera_position_snapped = (floor(cage_center_world.xyz / scale) + 0.5) * scale;
 
     const vec3 world_position = camera_position_snapped + ((((vec3(id) - vec3(clipmap_dimensions.xyz) * 0.5)) * scale));
 
