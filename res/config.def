@@ -1,14 +1,14 @@
 [Default]
 DebugMode = true
 ShaderCompilation = true
-RTSupported = true
-RTEnabled = true
-RTReflections = true
-RTGlobalIllumination = true
+RTSupported = false
+RTEnabled = false
+RTReflections = false
+RTGlobalIllumination = false
 DebugDDGIProbes = false
-ScreenSpaceReflections = false
-EnvGridGlobalIllumination = false
-EnvGridReflections = false
+ScreenSpaceReflections = true
+EnvGridGlobalIllumination = true
+EnvGridReflections = true
 HBAO = true
 HBIL = false
 VCTGlobalIllumination = false
