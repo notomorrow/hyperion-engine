@@ -4,6 +4,7 @@ import core::engine;
 import core::{ AssertEqual, AssertNotEqual };
 import scene::{ EntityProxy };
 import math;
+import io;
 
 // dynamic import
 // const tests = Module.Load("../tests");
@@ -130,6 +131,77 @@ func GetIAndJ(obj : TempClass)
 }
 
 GetIAndJ(t);
+
+Print("File.class == %\n", io::File.class);
+Print("File.base == %\n", io::File.base);
+Print("File is class? %\n", IsInstance(io::File, Class));
+Print("Int = %\n", Int);
+Print("(new io::File).class = %\n", (new io::File("test.txt")).class);
+Print("File.class = %\n", io::File.class);
+Print("typeof(io::File) = %\n", typeof(io::File));
+Expect(IsInstance(io::File, Class));
+Expect(IsInstance(new io::File("test.txt"), io::File));
+
+Expect(typeof([1,2,3]) == "Int[]");
+Expect(typeof([1.0,2.0,3.0]) == "Float[]");
+Expect(typeof([]) == "Any[]");
+Expect(IsInstance([1,2,3], Array));
+AssertEqual(typeof([0, 1, 2, 3]), "Int[]");
+AssertEqual(typeof([0, 1, 2, 3][0]), "Int");
+Expect(IsInstance([1, 2, 3], Array));
+Expect(IsInstance([1, 2, 3], Array<Int>));
+
+AssertEqual(typeof(1u), "UInt");
+Expect(1u is UInt);
+Expect(null is Object);
+io::out.Printf("typeof(null) = %\n", typeof(null));
+io::out.Printf("Number = %\n", Number);
+
+// io console writing
+io::out.WriteString("Test IO write");
+io::out.WriteLine("Test IO Writeline", flush: true);
+io::err.WriteString("Error message\n");
+io::err.WriteLine(12345, flush: true);
+
+// structs
+
+let my_struct = MakeStruct([["i32", "foo", 123]]);
+Print("my_struct = %\n", my_struct);
+Print("my_struct.foo = %\n", ReadStructMember(my_struct, "foo"));
+let my_struct_2 = MakeStruct([["struct", "StructMember", my_struct]]);
+Print("my_struct_2 = %\n", my_struct_2);
+Print("my_struct_2.StructMember = %\n", ReadStructMember(my_struct_2, "StructMember"));
+
+AssertEqual(ReadStructMember(my_struct, "foo"), 123);
+
+// test file writing
+
+Print("new File = %\n", io::File.Open("foo.txt", "w+"));
+
+const struct_memory = GetStructMemoryBuffer(my_struct);
+Print("my_struct memory buffer = %\n", struct_memory);
+const struct_memory_length = ArraySize(struct_memory);
+Print("struct_memory size  = %\n", struct_memory_length);
+for (let i = 0; i < struct_memory_length; i++) {
+    Print("% ", struct_memory[i]);
+}
+Print("\n");
+
+const foo_bar : io::File = io::File.Open("foo.bar.txt", "w+");
+Expect(IsInstance(foo_bar, io::File));
+Print("foo bar class base = %\n", foo_bar.class.base.name);
+Print("Address 1: %, 2: %\n", GetMemoryAddress(foo_bar.class), GetMemoryAddress(io::File));
+Print("Address 1: %, 2: %\n", GetMemoryAddress(foo_bar.class.base), GetMemoryAddress(io::Resource));
+Expect(IsInstance(foo_bar, io::Resource));
+
+// save Struct object to binary file
+foo_bar.WriteBinary(my_struct_2);
+foo_bar.Flush();
+foo_bar.Close();
+
+Expect(io::File is Class);
+Expect(foo_bar is io::File);
+Expect(!(foo_bar is Class));
 
 Print("t.j = %\n", t.j);
 Print("typeof(t.j) = %\n", typeof(t.j));
@@ -456,6 +528,9 @@ class MyObject {
     //     return !self.operator==(other);
     // }
 };
+
+AssertEqual(typeof((new MyObject).proc), "Function");
+AssertEqual(typeof((new MyObject).proc2), "Function(self: MyObject, thing: Float) -> Number");
 
 class ClassWithGenericMember <T> {
     const member : T;
