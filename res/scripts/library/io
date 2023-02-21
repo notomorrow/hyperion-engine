@@ -1,0 +1,83 @@
+class Resource
+{
+protected:
+    id : UInt = -1;
+}
+
+class File : Resource
+{
+public:
+
+    path : String;
+
+private:
+    func IsOpen(self : File) : Bool
+    {
+        return self.id != -1;
+    }
+
+    func Close(self : File)
+    {
+        if (self.IsOpen()) {
+            return;
+        }
+
+        fclose(self.id);
+        self.id = -1;
+    }
+
+    func OpenWithArgs(self : File, args : String)
+    {
+        if (self.IsOpen()) {
+            self.Close();
+        }
+
+        self.id = fopen(self.path, args);
+        Print("Opened file, id = %\n", self.id);
+    }
+
+public:
+
+    File(self : File, path : String)
+    {
+        self.path = path;
+    }
+
+    static func Open(self, path : String, args : String = "rw+")
+    {
+        Print("Open file %\n", path);
+
+        let file : Any = new File(path);
+        file.OpenWithArgs(args);
+
+        return file;
+    }
+
+    func Flush(self : File)
+    {
+        fflush(self.id);
+    }
+
+    func WriteBinary(self : File, data : Any)
+    {
+        fwrite(self.id, ToMemoryBuffer(data));
+    }
+
+    func WriteString(self : File, data : Any)
+    {
+        fwrite(self.id, ToString(data));
+    }
+
+    func WriteLine(self : File, data : Any, flush : Bool = false)
+    {
+        fwrite(self.id, ToString(data));
+        fwrite(self.id, '\n');
+
+        if (flush) {
+            fflush(self.id);
+        }
+    }
+}
+
+const out : File = File.Open("stdout");
+const err : File = File.Open("stderr");
