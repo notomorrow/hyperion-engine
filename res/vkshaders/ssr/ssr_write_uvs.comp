@@ -101,7 +101,7 @@ void main(void)
         return;
     }
 
-    if ((coord.x & 1) != (scene.frame_counter & 1) && (coord.y & 1) != (scene.frame_counter & 1)) {
+    if (((coord.x * ssr_params.dimension.y + ssr_params.dimension.x) & 1) == (scene.frame_counter & 1)) {
         return;
     }
 
