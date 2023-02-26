@@ -29,6 +29,15 @@ vert = deferred.vert
 frag = fxaa.frag
 vert = PostEffect.vert
 
+[DOFBlurDirection]
+permute = DIRECTION(HORIZONTAL VERTICAL)
+frag = dof/DOFBlurDirection.frag
+vert = PostEffect.vert
+
+[DOFBlurMix]
+frag = dof/DOFBlurMix.frag
+vert = PostEffect.vert
+
 [ObjectVisibility]
 comp = cull/object_visibility.comp
 

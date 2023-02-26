@@ -24,18 +24,22 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_textu
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_vectors_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 77) uniform texture2D dof_blur_results[3];
 
 layout(location=0) out vec4 out_color;
 
 void main()
 {
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
-
+#if 0
 #ifdef TEMPORAL_AA
     out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, temporal_aa_result, v_texcoord0).rgb;
 #else
     out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0).rgb;
 #endif
+#endif
+
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, dof_blur_results[2], v_texcoord0).rgb;
 
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
 
