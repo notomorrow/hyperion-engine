@@ -18,4 +18,4 @@ DebugSSR = false
 DebugHBAO = false
 DebugHBIL = false
 DebugReflections = false
-DebugIrradiance = true
+DebugIrradiance = false

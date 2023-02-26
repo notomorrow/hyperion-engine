@@ -178,7 +178,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
 
 #define HYP_DO_SHADOW(iter_index) \
     { \
-        shadowness += GetShadowStandard(shadow_samples[iter_index], shadow_coords[iter_index], NdotL); \
+        shadowness += GetShadowStandard(index, pos, (vogel_##iter_index * shadow_filter_size), NdotL); \
     }
 
 #endif
@@ -212,6 +212,9 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
 
 #else
 
+
+#if 0
+
     HYP_FETCH_SHADOW(0) HYP_FETCH_SHADOW(1)
     HYP_FETCH_SHADOW(2) HYP_FETCH_SHADOW(3)
 
@@ -225,6 +228,8 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
     HYP_FETCH_SHADOW(10) HYP_FETCH_SHADOW(11)
     HYP_FETCH_SHADOW(12) HYP_FETCH_SHADOW(13)
     HYP_FETCH_SHADOW(14) HYP_FETCH_SHADOW(15)
+#endif
+
 #endif
 
     HYP_DO_SHADOW(0) HYP_DO_SHADOW(1)
