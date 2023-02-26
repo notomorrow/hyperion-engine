@@ -130,7 +130,7 @@ void main(void)
             const int storage_index = probe.position_in_grid.w * 9;
 
             for (int i = 0; i < 9; i++) {
-                sh.values[i] = world_position.xyz;//sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+                sh.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
             }
 
             SetSH9InClipmap(id, sh);
