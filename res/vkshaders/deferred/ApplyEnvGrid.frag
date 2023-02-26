@@ -37,7 +37,7 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
 #ifdef USE_CLIPMAP
-    #define PROBE_CAGE_VIEW_RANGE 50.0
+    #define PROBE_CAGE_VIEW_RANGE 150.0
 
     const ivec3 cage_size = textureSize(sampler3D(sh_clipmaps[0], sampler_linear), 0);
 
