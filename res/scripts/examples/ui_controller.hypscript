@@ -928,7 +928,6 @@ extended_vector3.Print();
 
 const mesh = new Mesh();
 Print("mesh.NumIndices() = %\n", mesh.NumIndices());
-mesh.Init();
 
 let vertex: Vertex = new Vertex();
 Print("vertex.GetPosition() = %\n", vertex.GetPosition().ToString());
@@ -950,7 +949,20 @@ AssertEqual(vertices[99].GetPosition(), new Vector3(0, 10, 99));
 
 mesh.SetVertices(vertices);
 Print("Num Vertices : %\n", mesh.NumVertices());
+mesh.Init();
 
+let entity_1 = new Entity();
+entity_1.SetMesh(mesh);
+entity_1.Init();
+Print("entity_1.GetMesh() = %\n", entity_1.GetMesh());
+Expect(entity_1.GetMesh().GetID() == mesh.GetID());
+
+let material = new Material();
+entity_1.SetMaterial(material);
+
+Print("entity_1.GetMaterial().GetID() = %\n", entity_1.GetMaterial().GetID());
+
+Print("Tex: %", material.GetTextureAtIndex(0));
 
 
 enum UIEventType {
