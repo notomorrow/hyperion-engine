@@ -9,6 +9,7 @@ import io;
 // dynamic import
 // const tests = Module.Load("../tests");
 
+
 func Expect( cond : Bool ) : Bool
 {
     Print("check cond: %\n", cond);
@@ -21,6 +22,8 @@ func Expect( cond : Bool ) : Bool
 
     return true;
 }
+
+
 
 Expect(math::NaN != math::NaN);
 // Print("1 / 0 = %\n", 1 / 0);
@@ -154,8 +157,8 @@ Expect(IsInstance([1, 2, 3], Array<Int>));
 AssertEqual(typeof(1u), "UInt");
 Expect(1u is UInt);
 Expect(null is Object);
-io::out.Printf("typeof(null) = %\n", typeof(null));
-io::out.Printf("Number = %\n", Number);
+//io::out.Printf("typeof(null) = %\n", typeof(null));
+//io::out.Printf("Number = %\n", Number);
 
 // io console writing
 io::out.WriteString("Test IO write");
@@ -910,6 +913,46 @@ Print("typeof(new_generic2.x) = %\n", typeof(new_generic2.x));
 Print("typeof(new_generic.AddOne) == %\n", typeof(new_generic.AddOne));
 Print("typeof(new_generi2.AddOne) == %\n", typeof(new_generic2.AddOne));
 
+class ExtendedVector3 : Vector3
+{
+    func Print(self : ExtendedVector3)
+    {
+        io::out.WriteString("Vector3 print function\n");
+        Print("self = %   x = %\n", self); // self.GetX() or any Vector3 member functions break
+    }
+}
+
+let extended_vector3 = new ExtendedVector3;
+extended_vector3.Print();
+//Print("extended_vector3.x = %\n", extended_vector3.x);
+
+const mesh = new Mesh();
+Print("mesh.NumIndices() = %\n", mesh.NumIndices());
+mesh.Init();
+
+let vertex: Vertex = new Vertex();
+Print("vertex.GetPosition() = %\n", vertex.GetPosition().ToString());
+vertex.SetPosition(new Vector3(1, 2, 3));
+AssertEqual(vertex.GetPosition(), new Vector3(1, 2, 3));
+vertex.SetBoneIndex(0, 1);
+AssertEqual(vertex.GetBoneIndex(0), 1);
+
+let vertices : Vertex[] = [];
+for (let i = 0; i < 100; i++) {
+    let v = new Vertex();
+    v.SetPosition(new Vector3(0, 10, i));
+    ArrayPush(vertices, v);
+}
+
+AssertEqual(vertices[0].GetPosition(), new Vector3(0, 10, 0));
+AssertEqual(vertices[99].GetPosition(), new Vector3(0, 10, 99));
+//AssertEqual(vertices[100].GetPosition(), new Vector3(0, 10, 100)); // break
+
+mesh.SetVertices(vertices);
+Print("Num Vertices : %\n", mesh.NumVertices());
+
+
+
 enum UIEventType {
     NONE,
 
@@ -977,9 +1020,9 @@ class TestUIController : Controller
         if (event_type == UIEventType.MOUSE_DOWN) {
             self.click_position = new Vector2(mouse_position.GetX() - entity_position.GetX(), mouse_position.GetY() - entity_position.GetY());
 
-            let ent : EntityProxy = engine::CreateEntity();
-            ent.SetTranslation(new Vector3(0, 20, 0));
-            Print("ent.GetWorldAABB() = %\n", ent.GetWorldAABB());
+            //let ent : EntityProxy = engine::CreateEntity();
+            //ent.SetTranslation(new Vector3(0, 20, 0));
+            //Print("ent.GetWorldAABB() = %\n", ent.GetWorldAABB());
 
         } else if (event_type == UIEventType.MOUSE_UP) {
             self.click_position = new Vector2(0.0, 0.0);

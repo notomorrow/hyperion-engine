@@ -18,13 +18,13 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 77) uniform texture2D dof_blur
 
 void main()
 {
-    const float dof_start = 0.35;
-    const float dof_end = 10.0;
+    const float dof_start = 1.35;
+    const float dof_end = 15.0;
 
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
 
     // temp
-    const vec3 focal_point = camera.position.xyz + camera.direction.xyz * 5.0;
+    const vec3 focal_point = camera.position.xyz + camera.direction.xyz * 6.0;
 
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
