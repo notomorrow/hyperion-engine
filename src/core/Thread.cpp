@@ -17,6 +17,8 @@ const ThreadID ThreadID::invalid = ThreadID { ~0u, "INVALID" };
 
 void SetCurrentThreadID(const ThreadID &thread_id)
 {
+    DebugLog(LogType::Debug, "SetCurrentThreadID() %u\n", thread_id.value);
+
     Threads::SetThreadID(thread_id);
 
 #ifdef HYP_WINDOWS

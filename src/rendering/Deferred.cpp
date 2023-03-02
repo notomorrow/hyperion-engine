@@ -490,8 +490,8 @@ void DeferredRenderer::Create()
     m_ssr.Reset(new SSRRenderer(ssr_extent, true));
     m_ssr->Create();
 
-    m_dof_blur.Reset(new DOFBlur(g_engine->GetGPUInstance()->GetSwapchain()->extent));
-    m_dof_blur->Create();
+    // m_dof_blur.Reset(new DOFBlur(g_engine->GetGPUInstance()->GetSwapchain()->extent));
+    // m_dof_blur->Create();
 
     CreateCombinePass();
     CreateDescriptorSets();
@@ -577,11 +577,17 @@ void DeferredRenderer::CreateDescriptorSets()
             ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::BLUE_NOISE_BUFFER)
             ->SetElementBuffer(0, m_blue_noise_buffer.Get());
 
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_RESULT)
-            ->SetElementSRV(0, m_dof_blur->GetHorizontalBlurPass()->GetAttachmentUsage(0)->GetImageView())
-            ->SetElementSRV(1, m_dof_blur->GetVerticalBlurPass()->GetAttachmentUsage(0)->GetImageView())
-            ->SetElementSRV(2, m_dof_blur->GetCombineBlurPass()->GetAttachmentUsage(0)->GetImageView());
+        // descriptor_set_globals
+        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_HOR)
+        //     ->SetElementSRV(0, m_dof_blur->GetHorizontalBlurPass()->GetAttachmentUsage(0)->GetImageView());
+
+        // descriptor_set_globals
+        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_VERT)
+        //     ->SetElementSRV(0, m_dof_blur->GetVerticalBlurPass()->GetAttachmentUsage(0)->GetImageView());
+
+        // descriptor_set_globals
+        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_BLENDED)
+        //     ->SetElementSRV(0, m_dof_blur->GetCombineBlurPass()->GetAttachmentUsage(0)->GetImageView());
     }
 }
 
@@ -611,7 +617,7 @@ void DeferredRenderer::Destroy()
     m_hbao->Destroy();
     m_temporal_aa->Destroy();
 
-    m_dof_blur->Destroy();
+    // m_dof_blur->Destroy();
 
     m_post_processing.Destroy();
 
@@ -836,7 +842,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     }
 
     // depth of field
-    m_dof_blur->Render(frame);
+    // m_dof_blur->Render(frame);
 }
 
 void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)

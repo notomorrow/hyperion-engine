@@ -294,7 +294,7 @@ public:
         }
 
         std::unique_lock lock(m_mutex);
-        m_is_empty.wait(lock, [this] { return m_num_enqueued.load() == 0u; });
+        m_is_empty.wait(lock, [this] { return m_num_enqueued.Get(MemoryOrder::SEQUENTIAL) == 0u; });
     }
 
     /* Move all the next pending task in the queue to an external container. */
@@ -310,7 +310,7 @@ public:
             out_container.Push(std::move(front));
             m_scheduled_functions.PopFront();
 
-            m_num_enqueued.fetch_sub(1u, std::memory_order_relaxed);
+            m_num_enqueued.Decrement(1u, MemoryOrder::RELAXED);
         }
 
         lock.unlock();

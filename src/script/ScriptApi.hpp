@@ -367,6 +367,9 @@ using namespace compiler;
 
 class APIInstance;
 
+template <class T>
+constexpr bool is_vm_object_type = std::is_same_v<vm::VMString, T> || std::is_same_v<vm::VMObject, T> || std::is_same_v<vm::VMArray, T> || std::is_same_v<vm::VMStruct, T>;
+
 class API
 {
 public:
@@ -1349,9 +1352,6 @@ struct GetArgumentImpl<vm::VMStruct>
         return arg_value;
     }
 };
-
-template <class T>
-constexpr bool is_vm_object_type = std::is_same_v<vm::VMString, T> || std::is_same_v<vm::VMObject, T> || std::is_same_v<vm::VMArray, T> || std::is_same_v<vm::VMStruct, T>;
 
 #if 0
 

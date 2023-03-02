@@ -557,7 +557,7 @@ void ParticleSystem::Render(Frame *frame)
     // always run renderer items as HIGH priority,
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
-    g_engine->task_system.ParallelForEach(
+    g_engine->task_system->ParallelForEach(
         THREAD_POOL_RENDER,
         m_particle_spawners.GetItems(),
         [this, &command_buffers_recorded_states, frame_index](const Handle<ParticleSpawner> &particle_spawner, UInt index, UInt batch_index) {

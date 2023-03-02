@@ -427,7 +427,7 @@ RenderAll(
     const UInt frame_index = frame->GetFrameIndex();
 
     const auto num_batches = use_parallel_rendering
-        ? MathUtil::Min(UInt(g_engine->task_system.GetPool(THREAD_POOL_RENDER).threads.Size()), num_async_rendering_command_buffers)
+        ? MathUtil::Min(UInt(g_engine->task_system->GetPool(THREAD_POOL_RENDER).threads.Size()), num_async_rendering_command_buffers)
         : 1u;
     
     GetDividedDrawCalls(
@@ -443,7 +443,7 @@ RenderAll(
     // always run renderer items as HIGH priority,
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
-    g_engine->task_system.ParallelForEach(
+    g_engine->task_system->ParallelForEach(
         THREAD_POOL_RENDER,
         num_batches,
         divided_draw_calls,

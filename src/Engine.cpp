@@ -372,9 +372,12 @@ void Engine::Initialize(RefCountedPtr<Application> application)
 
     RenderCommands::SetOwnerThreadID(Threads::GetThreadID(THREAD_RENDER));
 
+    game_thread.Reset(new GameThread);
+
     m_crash_handler.Initialize();
 
-    task_system.Start();
+    task_system.Reset(new TaskSystem);
+    task_system->Start();
 
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -837,11 +840,17 @@ void Engine::Initialize(RefCountedPtr<Application> application)
             descriptor_set_globals
                 ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::BLUE_NOISE_BUFFER);
                 
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_RESULT)
-                ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8())
-                ->SetElementSRV(1, &GetPlaceholderData().GetImageView2D1x1R8())
-                ->SetElementSRV(2, &GetPlaceholderData().GetImageView2D1x1R8());
+            // descriptor_set_globals
+            //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_HOR)
+            //     ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            // descriptor_set_globals
+            //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_VERT)
+            //     ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
+
+            // descriptor_set_globals
+            //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_BLENDED)
+            //     ->SetElementSRV(0, &GetPlaceholderData().GetImageView2D1x1R8());
         }
 
         { // POST FX processing placeholders
@@ -966,19 +975,22 @@ void Engine::FinalizeStop()
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
-    SafeReleaseHandle<Mesh>(std::move(m_full_screen_quad));
+    AssertThrow(game_thread != nullptr);
+    AssertThrow(task_system != nullptr);
+
+    m_full_screen_quad.Reset();
 
     m_is_stopping = true;
     m_is_render_loop_active = false;
-    task_system.Stop();
+    task_system->Stop();
 
     HYPERION_ASSERT_RESULT(GetGPUInstance()->GetDevice()->Wait());
 
-    while (game_thread.IsRunning()) {
+    while (game_thread->IsRunning()) {
         HYP_SYNC_RENDER();
     }
 
-    game_thread.Join();
+    game_thread->Join();
 
     m_render_list_container.Destroy();
     m_deferred_renderer.Destroy();

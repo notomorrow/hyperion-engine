@@ -228,8 +228,8 @@ public:
 
     AtomicVar<Bool> m_stop_requested;
 
-    GameThread game_thread;
-    TaskSystem task_system;
+    UniquePtr<GameThread> game_thread;
+    UniquePtr<TaskSystem> task_system;
 
     template <class T, class First, class Second, class ...Rest>
     Handle<T> CreateObject(First &&first, Second &&second, Rest &&... args)

@@ -2,6 +2,8 @@
 #include "system/SdlSystem.hpp"
 #include "system/Debug.hpp"
 
+#include <HyperionEngine.hpp>
+
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -105,7 +107,7 @@ public:
 
     FilePath scene_export_filepath;
 
-    MyGame(RefCountedPtr<Application> application)
+    MyGame(RC<Application> application)
         : Game(application),
           scene_export_filepath(g_asset_manager->GetBasePath() / "export.hypnode")
     {
@@ -136,7 +138,7 @@ public:
             m_sun->AddController<LightController>(CreateObject<Light>(DirectionalLight(
                 Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
                 Color(1.0f, 0.7f, 0.4f),
-                3.0f
+                8.0f
             )));
             m_sun->SetTranslation(Vector3(-0.105425f, 0.988823f, 0.105425f));
             m_sun->AddController<ShadowMapController>();
@@ -178,8 +180,6 @@ public:
             }
 
             btn_node.Scale(0.01f);
-
-            HYP_BREAKPOINT;
         }
 
         { // allow ui rendering
@@ -308,11 +308,11 @@ public:
             );
         }
 
-        m_scene->GetEnvironment()->AddRenderComponent<PointShadowRenderer>(
-            HYP_NAME(PointShadowRenderer0),
-            m_point_lights.Front(),
-            Extent2D { 256, 256 }
-        );
+        // m_scene->GetEnvironment()->AddRenderComponent<PointShadowRenderer>(
+        //     HYP_NAME(PointShadowRenderer0),
+        //     m_point_lights.Front(),
+        //     Extent2D { 256, 256 }
+        // );
 
         if (false) {
             int i = 0;
@@ -356,8 +356,8 @@ public:
             }
 
             zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.001f);
-            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.05f);
+            zombie_entity->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
             zombie_entity->RebuildRenderableAttributes();
             zombie_entity->SetTranslation(Vector3(0, 1, 0));
             zombie_entity->SetScale(Vector3(0.25f));
@@ -674,7 +674,7 @@ public:
                     }
                 });
 
-                g_engine->task_system.EnqueueBatch(m_export_task.Get());
+                TaskSystem::GetInstance().EnqueueBatch(m_export_task.Get());
             }
         }
 
@@ -908,7 +908,6 @@ public:
 #endif
     }
 
-    std::unique_ptr<Node> zombie;
     GameCounter::TickUnit timer = -18.0f;
     GameCounter::TickUnit ray_cast_timer{};
     bool m_export_pressed = false;
@@ -921,24 +920,19 @@ public:
 
 int main()
 {
-    using namespace hyperion::renderer;
+    RC<Application> application(new SDLApplication("My Application"));
+    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 960, 540));
+    
+    hyperion::InitializeApplication(application);
 
-    RefCountedPtr<Application> application(new SDLApplication("My Application"));
-    application->SetCurrentWindow(application->CreateSystemWindow("Hyperion Engine", 1920, 1080));
-    
-    SystemEvent event;
-    
     auto *my_game = new MyGame(application);
-
-    g_engine->Initialize(application);
-
-    my_game->Init();
-    
-    g_engine->game_thread.Start(my_game);
+    g_engine->InitializeGame(my_game);
 
     UInt num_frames = 0;
     float delta_time_accum = 0.0f;
     GameCounter counter;
+
+    SystemEvent event;
 
     while (g_engine->IsRenderLoopActive()) {
         // input manager stuff

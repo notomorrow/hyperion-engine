@@ -17,7 +17,7 @@ const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
 };
 
 #ifdef HYP_ENABLE_THREAD_ID
-thread_local ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
+thread_local ThreadID current_thread_id = ThreadID { UInt(THREAD_MAIN), StringView("MainThread") };//Threads::thread_ids.At(THREAD_MAIN);
 #else
 static const ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif

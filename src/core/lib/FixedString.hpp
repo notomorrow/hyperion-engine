@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_LIB_FIXED_STRING_H
 #define HYPERION_V2_LIB_FIXED_STRING_H
 
+#include <core/lib/CMemory.hpp>
+
 #include <algorithm>
 #include <cstring>
 
@@ -54,6 +56,18 @@ public:
     ~StringView() = default;
 
     explicit operator const char *() const { return m_str; }
+
+    constexpr bool operator==(const StringView &other) const
+    {
+        if (!m_str) {
+            return !other.m_str;
+        }
+
+        return Memory::AreStaticStringsEqual(m_str, other.m_str);
+    }
+
+    constexpr bool operator!=(const StringView &other) const
+        { return !operator==(other); }
 
     bool operator<(const StringView &other) const
         { return m_str == nullptr ? true : bool(std::strcmp(m_str, other.m_str) < 0); }

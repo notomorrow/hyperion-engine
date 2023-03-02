@@ -84,8 +84,8 @@ void Game::HandleEvent(SystemEvent &&event)
 
             break;
         default:
-            if (g_engine->game_thread.IsRunning()) {
-                g_engine->game_thread.GetScheduler().Enqueue([this, event = std::move(event)](...) mutable {
+            if (g_engine->game_thread->IsRunning()) {
+                g_engine->game_thread->GetScheduler().Enqueue([this, event = std::move(event)](...) mutable {
                     OnInputEvent(event);
 
                     HYPERION_RETURN_OK;

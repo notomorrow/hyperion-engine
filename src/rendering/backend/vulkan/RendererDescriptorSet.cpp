@@ -94,7 +94,9 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
 
             {DescriptorKey::BLUE_NOISE_BUFFER, 75},
 
-            {DescriptorKey::DOF_BLUR_RESULT, 77}
+            {DescriptorKey::DOF_BLUR_HOR, 77},
+            {DescriptorKey::DOF_BLUR_VERT, 78},
+            {DescriptorKey::DOF_BLUR_BLENDED, 79}
         }
     },
     {

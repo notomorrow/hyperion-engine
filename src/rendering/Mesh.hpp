@@ -79,8 +79,8 @@ public:
 
     const std::vector<Index> &GetIndices() const { return m_indices; }
 
-    SizeType NumIndices() const { return m_indices_count; }
-    SizeType NumVertices() const { return m_vertices.size(); }
+    UInt NumIndices() const { return m_indices_count; }
+    UInt NumVertices() const { return UInt(m_vertices.size()); }
 
     const VertexAttributeSet &GetVertexAttributes() const { return m_mesh_attributes.vertex_attributes; }
     void SetVertexAttributes(const VertexAttributeSet &attributes) { m_mesh_attributes.vertex_attributes = attributes; }
@@ -100,7 +100,7 @@ public:
 
     void Init();
 
-    void Render(CommandBuffer *cmd, SizeType num_instances = 1) const;
+    void Render(CommandBuffer *cmd, UInt num_instances = 1) const;
 
     void RenderIndirect(
         CommandBuffer *cmd,
@@ -116,7 +116,7 @@ private:
     GPUBufferRef m_vbo;
     GPUBufferRef m_ibo;
 
-    SizeType m_indices_count = 0;
+    UInt m_indices_count = 0;
 
     MeshAttributes m_mesh_attributes;
 

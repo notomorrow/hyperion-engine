@@ -245,7 +245,7 @@ void Mesh::Init()
         }
     }
 
-    m_indices_count = m_indices.size();
+    m_indices_count = UInt(m_indices.size());
 
     PUSH_RENDER_COMMAND(
         UploadMeshData,
@@ -332,12 +332,12 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 #undef PACKED_SET_ATTR
 
-void Mesh::Render(CommandBuffer *cmd, SizeType num_instances) const
+void Mesh::Render(CommandBuffer *cmd, UInt num_instances) const
 {
     cmd->BindVertexBuffer(m_vbo);
     cmd->BindIndexBuffer(m_ibo);
 
-    cmd->DrawIndexed(UInt32(m_indices_count), UInt32(num_instances));
+    cmd->DrawIndexed(m_indices_count, num_instances);
 }
 
 void Mesh::RenderIndirect(
@@ -359,7 +359,7 @@ void Mesh::PopulateIndirectDrawCommand(IndirectDrawCommand &out)
 {
 #if HYP_VULKAN
     out.command = {
-        .indexCount = static_cast<UInt32>(m_indices_count)
+        .indexCount = m_indices_count
     };
 #else
     #error Not implemented for this platform!
@@ -746,7 +746,7 @@ static struct MeshScriptBindings : ScriptBindingsBase
                         {
                             { "self", BuiltinTypes::ANY }
                         },
-                        CxxMemberFnWrapped< UInt64, Handle<Mesh>, Mesh, &Mesh::NumIndices >
+                        CxxMemberFnWrapped< UInt32, Handle<Mesh>, Mesh, &Mesh::NumIndices >
                     ),
                     API::NativeMemberDefine(
                         "NumVertices",
@@ -754,7 +754,7 @@ static struct MeshScriptBindings : ScriptBindingsBase
                         {
                             { "self", BuiltinTypes::ANY }
                         },
-                        CxxMemberFnWrapped< UInt64, Handle<Mesh>, Mesh, &Mesh::NumVertices >
+                        CxxMemberFnWrapped< UInt32, Handle<Mesh>, Mesh, &Mesh::NumVertices >
                     ),
                     API::NativeMemberDefine(
                         "SetVertices",

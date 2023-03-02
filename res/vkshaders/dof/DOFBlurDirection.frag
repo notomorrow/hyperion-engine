@@ -14,7 +14,8 @@ layout(location=0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 77) uniform texture2D dof_blur_results[3];
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 77) uniform texture2D dof_blur_hor;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 78) uniform texture2D dof_blur_vert;
 
 layout(push_constant) uniform PushConstant
 {
@@ -30,7 +31,7 @@ void main()
     vec2 offset = vec2(0.0);
 
 #ifdef DIRECTION_VERTICAL
-    #define INPUT_TEXTURE dof_blur_results[0]
+    #define INPUT_TEXTURE dof_blur_hor
 
     offset = vec2(1.0, 0.0);
 #else
