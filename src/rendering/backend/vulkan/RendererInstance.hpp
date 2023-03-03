@@ -45,7 +45,7 @@ class Instance
     Result CreateCommandPool(DeviceQueue &queue, UInt index);
 
 public:
-    Instance(RefCountedPtr<Application> application);
+    Instance(RC<Application> application);
     Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
     
@@ -96,7 +96,7 @@ public:
     FrameHandler *frame_handler;
 
 private:
-    RefCountedPtr<Application> m_application;
+    RC<Application> m_application;
 
     VkInstance instance = nullptr;
     VkSurfaceKHR surface = nullptr;

@@ -27,7 +27,7 @@ class Game
     friend class GameThread;
 
 public:
-    Game(RefCountedPtr<Application> application);
+    Game(RC<Application> application);
     virtual ~Game();
     
     Handle<Scene> &GetScene()
@@ -60,7 +60,7 @@ protected:
     const UniquePtr<InputManager> &GetInputManager() const
         { return m_input_manager; }
 
-    RefCountedPtr<Application> m_application;
+    RC<Application> m_application;
 
     UniquePtr<InputManager> m_input_manager;
     Handle<Scene> m_scene;

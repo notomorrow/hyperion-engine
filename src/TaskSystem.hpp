@@ -92,6 +92,8 @@ class TaskSystem
     };
 
 public:
+    static TaskSystem &GetInstance();
+
     TaskSystem()
     {
         ThreadMask mask = THREAD_TASK_0;
@@ -354,10 +356,10 @@ public:
         );
     }
 
-    bool Unschedule(const TaskRef &task_ref)
-    {
-        return task_ref.runner->GetScheduler().Dequeue(task_ref.id);
-    }
+    HYP_FORCE_INLINE bool Unschedule(const TaskRef &task_ref)
+        { return task_ref.runner->GetScheduler().Dequeue(task_ref.id); }
+
+
 
 private:
     FixedArray<TaskThreadPool, THREAD_POOL_MAX> m_pools;

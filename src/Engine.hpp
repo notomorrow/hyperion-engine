@@ -131,6 +131,8 @@ public:
 
     Engine();
     ~Engine();
+
+    bool InitializeGame(Game *game);
     
     Instance *GetGPUInstance() const { return m_instance.Get(); }
     Device *GetGPUDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
@@ -202,7 +204,7 @@ public:
     bool IsRenderLoopActive() const
         { return m_is_render_loop_active; }
 
-    void Initialize(RefCountedPtr<Application> application);
+    void Initialize(RC<Application> application);
     void Compile();
     void RequestStop();
 
@@ -229,7 +231,6 @@ public:
     AtomicVar<Bool> m_stop_requested;
 
     UniquePtr<GameThread> game_thread;
-    UniquePtr<TaskSystem> task_system;
 
     template <class T, class First, class Second, class ...Rest>
     Handle<T> CreateObject(First &&first, Second &&second, Rest &&... args)

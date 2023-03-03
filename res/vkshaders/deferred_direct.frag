@@ -30,6 +30,8 @@ vec2 texcoord = v_texcoord0;
 #include "include/shadows.inc"
 #include "include/PhysicalCamera.inc"
 
+#include "include/LightRays.glsl"
+
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -74,30 +76,41 @@ void main()
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, texcoord);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
+    vec3 L = light.position_intensity.xyz;
+    L -= position.xyz * float(min(light.type, 1));
+    L = normalize(L);
+
+    const vec3 H = normalize(L + V);
+
+    const float NdotL = max(0.0001, dot(N, L));
+    const float NdotH = max(0.0001, dot(N, H));
+    const float LdotH = max(0.0001, dot(L, H));
+    const float HdotV = max(0.0001, dot(H, V));
+
+    vec4 light_rays = vec4(0.0);
+    vec4 light_color = unpackUnorm4x8(light.color_encoded);
+
+    if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+        const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
+        const uint shadow_flags = current_env_probe.flags >> 3;
+
+        shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
+    } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+        shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
+
+        const float light_ray_attenuation = LightRays(
+            light.shadow_map_index,
+            texcoord,
+            L,
+            position.xyz,
+            camera.position.xyz,
+            ViewDepth(depth, camera.near, camera.far) //LinearDepth(camera.projection, depth)
+        );
+
+        light_rays = vec4(light_color * light_ray_attenuation);
+    }
+
     if (perform_lighting) {
-
-        vec3 L = light.position_intensity.xyz;
-        L -= position.xyz * float(min(light.type, 1));
-        L = normalize(L);
-
-        const vec3 H = normalize(L + V);
-
-        const float NdotL = max(0.0001, dot(N, L));
-        const float NdotH = max(0.0001, dot(N, H));
-        const float LdotH = max(0.0001, dot(L, H));
-        const float HdotV = max(0.0001, dot(H, V));
-
-        if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
-            const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-            const uint shadow_flags = current_env_probe.flags >> 3;
-
-            shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
-        } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-            shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
-        }
-
-        vec4 light_color = unpackUnorm4x8(light.color_encoded);
-
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
@@ -132,6 +145,8 @@ void main()
     } else {
         result = albedo;
     }
+
+    result = (result * (1.0 - light_rays.a)) + (light_rays * light_rays.a);
 
 #if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE)
     output_color = vec4(0.0);

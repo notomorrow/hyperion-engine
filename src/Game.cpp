@@ -1,4 +1,4 @@
-#include "Game.hpp"
+#include <Game.hpp>
 #include <Engine.hpp>
 #include <Threads.hpp>
 
@@ -6,7 +6,7 @@
 
 namespace hyperion::v2 {
 
-Game::Game(RefCountedPtr<Application> application)
+Game::Game(RC<Application> application)
     : m_application(application),
       m_is_init(false),
       m_input_manager(nullptr)

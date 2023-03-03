@@ -149,7 +149,7 @@ Result Instance::SetupDebug()
     HYPERION_RETURN_OK;
 }
 
-Instance::Instance(RefCountedPtr<Application> application)
+Instance::Instance(RC<Application> application)
     : m_application(application),
       frame_handler(nullptr)
 {
@@ -159,7 +159,7 @@ Instance::Instance(RefCountedPtr<Application> application)
 
 Result Instance::CreateCommandPool(DeviceQueue &queue, UInt index)
 {
-    VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+    VkCommandPoolCreateInfo pool_info { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     pool_info.queueFamilyIndex = queue.family;
     /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;

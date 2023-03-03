@@ -36,10 +36,10 @@ using renderer::FramebufferObject;
 using renderer::DescriptorKey;
 using renderer::FillMode;
 
-Engine *g_engine = new Engine;
-AssetManager *g_asset_manager = new AssetManager;
-ShaderManagerSystem *g_shader_manager = new ShaderManagerSystem;
-MaterialCache *g_material_system = new MaterialCache;
+Engine *g_engine = nullptr;
+AssetManager *g_asset_manager = nullptr;
+ShaderManagerSystem *g_shader_manager = nullptr;
+MaterialCache *g_material_system = nullptr;
 
 class StaticDescriptorTable
 {
@@ -170,6 +170,22 @@ Engine::~Engine()
     }
 
     m_instance->Destroy();
+}
+
+bool Engine::InitializeGame(Game *game)
+{
+    AssertThrow(game != nullptr);
+    AssertThrowMsg(game_thread == nullptr || !game_thread->IsRunning(), "Game thread already running; cannot initialize game instance");
+
+    Threads::AssertOnThread(THREAD_MAIN, "Must be on main thread to initialize game instance");
+
+    game->Init();
+
+    if (game_thread == nullptr) {
+        game_thread.Reset(new GameThread);
+    }
+
+    return game_thread->Start(game);
 }
 
 void Engine::RegisterComponents()
@@ -366,7 +382,7 @@ void Engine::PrepareFinalPass()
     });
 }
 
-void Engine::Initialize(RefCountedPtr<Application> application)
+void Engine::Initialize(RC<Application> application)
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
@@ -376,8 +392,7 @@ void Engine::Initialize(RefCountedPtr<Application> application)
 
     m_crash_handler.Initialize();
 
-    task_system.Reset(new TaskSystem);
-    task_system->Start();
+    TaskSystem::GetInstance().Start();
 
 #ifdef HYP_WINDOWS
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -975,22 +990,21 @@ void Engine::FinalizeStop()
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
-    AssertThrow(game_thread != nullptr);
-    AssertThrow(task_system != nullptr);
-
     m_full_screen_quad.Reset();
 
     m_is_stopping = true;
     m_is_render_loop_active = false;
-    task_system->Stop();
+    TaskSystem::GetInstance().Stop();
 
     HYPERION_ASSERT_RESULT(GetGPUInstance()->GetDevice()->Wait());
 
-    while (game_thread->IsRunning()) {
-        HYP_SYNC_RENDER();
-    }
+    if (game_thread != nullptr) {
+        while (game_thread->IsRunning()) {
+            HYP_SYNC_RENDER();
+        }
 
-    game_thread->Join();
+        game_thread->Join();
+    }
 
     m_render_list_container.Destroy();
     m_deferred_renderer.Destroy();

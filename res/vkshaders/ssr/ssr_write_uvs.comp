@@ -101,9 +101,9 @@ void main(void)
         return;
     }
 
-    if (((coord.x * ssr_params.dimension.y + ssr_params.dimension.x) & 1) == (scene.frame_counter & 1)) {
-        return;
-    }
+    // if (((coord.x * ssr_params.dimension.y + ssr_params.dimension.x) & 1) == (scene.frame_counter & 1)) {
+    //     return;
+    // }
 
     vec2 texcoord = saturate((vec2(coord) + 0.5) / vec2(ssr_params.dimension.xy));
 

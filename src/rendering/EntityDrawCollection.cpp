@@ -247,7 +247,7 @@ void RenderList::UpdateRenderGroups()
     };
 
     if constexpr (do_parallel_collection) {
-        g_engine->task_system->ParallelForEach(THREAD_POOL_RENDER_COLLECT, iterators, UpdateRenderGroupForAttributeSet);
+        TaskSystem::GetInstance().ParallelForEach(THREAD_POOL_RENDER_COLLECT, iterators, UpdateRenderGroupForAttributeSet);
     } else {
         for (UInt index = 0; index < iterators.Size(); index++) {
             UpdateRenderGroupForAttributeSet(iterators[index], index, 0);
@@ -348,7 +348,7 @@ void RenderList::CollectDrawCalls(
     }
 
     if constexpr (do_parallel_collection) {
-        g_engine->task_system->ParallelForEach(THREAD_POOL_RENDER, iterators, [](IteratorType it, UInt, UInt) {
+        TaskSystem::GetInstance().ParallelForEach(THREAD_POOL_RENDER, iterators, [](IteratorType it, UInt, UInt) {
             EntityDrawCollection::EntityList &entity_list = it->second;
             Handle<RenderGroup> &render_group = entity_list.render_group;
 
