@@ -77,7 +77,8 @@ struct RenderCommandList
         if (last_block->IsFull()) {
             DebugLog(
                 LogType::Debug,
-                "Allocating new block node for render commands.\n"
+                "Allocating new block node for render commands of type %s.\n",
+                typeid(T).name()
             );
 
             blocks.EmplaceBack();

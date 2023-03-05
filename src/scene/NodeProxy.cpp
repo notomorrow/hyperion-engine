@@ -1,11 +1,14 @@
 #include "NodeProxy.hpp"
 #include "Node.hpp"
 
+#include <script/ScriptApi.hpp>
+#include <script/ScriptBindingDef.generated.hpp>
+
 namespace hyperion::v2 {
 
-SizeType NodeProxyChildren::Size() const
+UInt NodeProxyChildren::Size() const
 {
-    return node ? node->GetChildren().Size() : 0;
+    return node ? UInt(node->GetChildren().Size()) : 0;
 }
 
 NodeProxyChildren::Iterator NodeProxyChildren::Begin()
@@ -300,5 +303,55 @@ HashCode NodeProxy::GetHashCode() const
 
     return hc;
 }
+
+
+static NodeProxy ScriptCreateNodeProxy(void *)
+{
+    return NodeProxy(new Node);
+}
+
+static struct NodeProxyScriptBindings : ScriptBindingsBase
+{
+    NodeProxyScriptBindings()
+        : ScriptBindingsBase(TypeID::ForType<NodeProxy>())
+    {
+    }
+
+    virtual void Generate(APIInstance &api_instance) override
+    {
+        api_instance.Module(Config::global_module_name)
+            .Class<NodeProxy>(
+                "NodeProxy",
+                {
+                    API::NativeMemberDefine("__intern", BuiltinTypes::ANY, vm::Value(vm::Value::HEAP_POINTER, { .ptr = nullptr })),
+                    API::NativeMemberDefine(
+                        "$construct",
+                        BuiltinTypes::ANY,
+                        {
+                            { "self", BuiltinTypes::ANY }
+                        },
+                        CxxFn< NodeProxy, void *, ScriptCreateNodeProxy >
+                    ),
+                    API::NativeMemberDefine(
+                        "GetName",
+                        BuiltinTypes::STRING,
+                        {
+                            { "self", BuiltinTypes::ANY }
+                        },
+                        CxxMemberFn< const String &, NodeProxy, &NodeProxy::GetName >
+                    ),
+                    API::NativeMemberDefine(
+                        "SetName",
+                        BuiltinTypes::VOID_TYPE,
+                        {
+                            { "self", BuiltinTypes::ANY },
+                            { "name", BuiltinTypes::STRING }
+                        },
+                        CxxMemberFn< void, NodeProxy, const String &, &NodeProxy::SetName >
+                    )
+                }
+            );
+    }
+} node_proxy_script_bindings = { };
 
 } // namespace hyperion::v2

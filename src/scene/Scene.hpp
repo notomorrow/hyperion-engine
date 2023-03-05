@@ -56,6 +56,7 @@ class Scene
     friend class UIScene;
 
 public:
+    Scene();
     Scene(Handle<Camera> &&camera);
 
     Scene(

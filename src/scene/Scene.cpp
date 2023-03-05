@@ -7,6 +7,9 @@
 
 #include <math/Halton.hpp>
 
+#include <script/ScriptApi.hpp>
+#include <script/ScriptBindingDef.generated.hpp>
+
 
 namespace hyperion::v2 {
 
@@ -57,6 +60,11 @@ struct RENDER_COMMAND(BindEnvProbes) : RenderCommand
 };
 
 #pragma endregion
+
+Scene::Scene()
+    : Scene(Handle<Camera>(), { })
+{
+}
 
 Scene::Scene(Handle<Camera> &&camera)
     : Scene(std::move(camera), { })
@@ -854,5 +862,48 @@ bool Scene::CreateTLAS()
     return true;
 }
 
+
+static struct SceneScriptBindings : ScriptBindingsBase
+{
+    SceneScriptBindings()
+        : ScriptBindingsBase(TypeID::ForType<Scene>())
+    {
+    }
+
+    virtual void Generate(APIInstance &api_instance) override
+    {
+        api_instance.Module(Config::global_module_name)
+            .Class<Handle<Scene>>(
+                "Scene",
+                {
+                    API::NativeMemberDefine("__intern", BuiltinTypes::ANY, vm::Value(vm::Value::HEAP_POINTER, { .ptr = nullptr })),
+                    API::NativeMemberDefine(
+                        "$construct",
+                        BuiltinTypes::ANY,
+                        {
+                            { "self", BuiltinTypes::ANY }
+                        },
+                        CxxFn< Handle<Scene>, void *, ScriptCreateObject<Scene> >
+                    ),
+                    API::NativeMemberDefine(
+                        "GetID",
+                        BuiltinTypes::UNSIGNED_INT,
+                        {
+                            { "self", BuiltinTypes::ANY }
+                        },
+                        CxxFn< UInt32, const Handle<Scene> &, ScriptGetHandleIDValue<Scene> >
+                    ),
+                    API::NativeMemberDefine(
+                        "Init",
+                        BuiltinTypes::VOID_TYPE,
+                        {
+                            { "self", BuiltinTypes::ANY }
+                        },
+                        CxxMemberFnWrapped< void, Handle<Scene>, Scene, &Scene::Init >
+                    )
+                }
+            );
+    }
+} scene_script_bindings = { };
 
 } // namespace hyperion::v2

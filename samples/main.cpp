@@ -96,8 +96,141 @@
 using namespace hyperion;
 using namespace hyperion::v2;
 
-namespace hyperion::v2 {
+// #define HYP_TEST_DISTANCE_FIELDS
     
+#ifdef HYP_TEST_DISTANCE_FIELDS
+
+class MyGame : public Game
+{
+public:
+    MyGame(RC<Application> application)
+        : Game(application)
+    {   
+    }
+
+    virtual void InitGame() override
+    {
+        Game::InitGame();
+
+        // Start loading a model in the background
+        auto batch = g_asset_manager->CreateBatch();
+        batch->Add<Node>("monkey", "models/monkey/monkey.obj");
+        batch->Add<Node>("sponza", "models/sponza/sponza.obj");
+        batch->LoadAsync();
+
+        const Extent2D window_size = GetInputManager()->GetWindow()->GetExtent();
+
+        // Create our main camera
+        m_scene->SetCamera(CreateObject<Camera>(
+            60.0f,
+            window_size.width, window_size.height,
+            0.01f, 500.0f
+        ));
+
+        m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+
+        // Create a sun
+        const Vector3 sun_dir = Vector3(-0.5f, 1.0f, 0.65f).Normalize();
+
+        auto sun_entity = CreateObject<Entity>();
+        sun_entity->SetName(HYP_NAME(Sun));
+        sun_entity->AddController<LightController>(CreateObject<Light>(DirectionalLight(
+            sun_dir,
+            Color(1.0f, 0.7f, 0.3f),
+            1.0f
+        )));
+        sun_entity->SetTranslation(sun_dir);
+        sun_entity->AddController<ShadowMapController>();
+        GetScene()->AddEntity(sun_entity);
+
+        // Create a skydome
+        auto skydome_entity = CreateObject<Entity>();
+        skydome_entity->SetName(HYP_NAME(Skydome));
+        skydome_entity->AddController<SkydomeController>();
+        GetScene()->AddEntity(skydome_entity);
+
+        // Await our model to finish loading and add it to the scene
+        auto batch_results = batch->AwaitResults();
+
+        auto monkey_head = batch_results["monkey"].Get<Node>();
+        GetScene()->GetRoot().AddChild(monkey_head);
+
+        auto sponza = batch_results["sponza"].Get<Node>();
+        sponza.Scale(0.015f);
+        GetScene()->GetRoot().AddChild(sponza);
+
+        // Load a script
+        auto scripted_entity = CreateObject<Entity>();
+        scripted_entity->SetName(HYP_NAME(MyScriptedObject));
+        scripted_entity->AddController<ScriptedController>(g_asset_manager->Load<Script>("scripts/examples/load_assets.hypscript"));
+        GetScene()->AddEntity(scripted_entity);
+
+        // Enable UI rendering
+        m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
+
+        // Add grid of environment probes to capture indirect lighting
+        auto env_grid_entity = CreateObject<Entity>(HYP_NAME(EnvGridEntity));
+        env_grid_entity->SetLocalAABB(BoundingBox(Vector3(-40.0f, -20.0f, -40.0f), Vector3(40.0f, 20.0f, 40.0f)));
+        env_grid_entity->AddController<EnvGridController>();
+        GetScene()->AddEntity(env_grid_entity);
+
+        // Add a reflection probe
+        m_scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
+            HYP_NAME(EnvProbe0),
+            BoundingBox(BoundingBox(Vector3(-40.0f, -2.0f, -40.0f), Vector3(40.0f, 30.0f, 40.0f)))
+        );
+    }
+
+    virtual void Logic(GameCounter::TickUnit delta) override
+    {
+        HandleCameraMovement(delta);
+    }
+
+    // Handle keyboard input to move the main camera
+    void HandleCameraMovement(GameCounter::TickUnit delta)
+    {
+        Vector3 dir;
+
+        if (m_input_manager->IsKeyDown(KEY_W)) {
+            dir = GetScene()->GetCamera()->GetDirection();
+
+            GetScene()->GetCamera()->GetCameraController()->PushCommand({
+                CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                { .movement_data = { CameraCommand::CAMERA_MOVEMENT_FORWARD } }
+            });
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_S)) {
+            dir = GetScene()->GetCamera()->GetDirection() * -1.0f;
+
+            GetScene()->GetCamera()->GetCameraController()->PushCommand({
+                CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                { .movement_data = { CameraCommand::CAMERA_MOVEMENT_BACKWARD } }
+            });
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_A)) {
+            dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector()) * -1.0f;
+
+            GetScene()->GetCamera()->GetCameraController()->PushCommand({
+                CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                { .movement_data = { CameraCommand::CAMERA_MOVEMENT_LEFT } }
+            });
+        }
+
+        if (m_input_manager->IsKeyDown(KEY_D)) {
+            dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector());
+
+            GetScene()->GetCamera()->GetCameraController()->PushCommand({
+                CameraCommand::CAMERA_COMMAND_MOVEMENT,
+                { .movement_data = { CameraCommand::CAMERA_MOVEMENT_RIGHT } }
+            });
+        }
+    }
+};
+
+#else
+
 class MyGame : public Game
 {
 
@@ -137,8 +270,8 @@ public:
             m_sun->SetName(HYP_NAME(Sun));
             m_sun->AddController<LightController>(CreateObject<Light>(DirectionalLight(
                 Vector3(-0.105425f, 0.988823f, 0.105425f).Normalize(),
-                Color(1.0f, 0.7f, 0.4f),
-                8.0f
+                Color(1.0f, 1.0f, 1.0f),
+                1.0f
             )));
             m_sun->SetTranslation(Vector3(-0.105425f, 0.988823f, 0.105425f));
             m_sun->AddController<ShadowMapController>();
@@ -247,22 +380,20 @@ public:
         
         m_scene->GetFogParams().start_distance = 5000.0f;
         m_scene->GetFogParams().end_distance = 40000.0f;
-
-        g_engine->GetWorld()->AddScene(m_scene);
         
         auto batch = g_asset_manager->CreateBatch();
-        batch.Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch.Add<Node>("test_model", "models/pica_pica/pica_pica.obj");
-        batch.Add<Node>("cube", "models/cube.obj");
-        batch.Add<Node>("material", "models/material_sphere/material_sphere.obj");
-        batch.Add<Node>("grass", "models/grass/grass.obj");
+        batch->Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+        batch->Add<Node>("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");
+        batch->Add<Node>("cube", "models/cube.obj");
+        batch->Add<Node>("material", "models/material_sphere/material_sphere.obj");
+        batch->Add<Node>("grass", "models/grass/grass.obj");
 
         //batch.Add<Node>("dude3", "models/dude3/Dude3_Body.mesh.xml");
 
         //batch.Add<Node>("monkey_fbx", "models/zombieSuit.fbx");
-        batch.LoadAsync();
+        batch->LoadAsync();
 
-        auto obj_models = batch.AwaitResults();
+        auto obj_models = batch->AwaitResults();
         auto zombie = obj_models["zombie"].Get<Node>();
         auto test_model = obj_models["test_model"].Get<Node>();//g_asset_manager->Load<Node>("../data/dump2/sponza.fbom");
         auto cube_obj = obj_models["cube"].Get<Node>();
@@ -291,7 +422,8 @@ public:
         }
 
         // test_model.Scale(0.325f);
-        test_model.Scale(6.425f);
+        // test_model.Scale(6.425f);
+        test_model.Scale(0.0125f);
 
         if (g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             auto env_grid_entity = CreateObject<Entity>(HYP_NAME(EnvGridEntity));
@@ -814,10 +946,10 @@ public:
                 if (path->Open(reader)) {
 
                     auto batch = g_asset_manager->CreateBatch();
-                    batch.Add<Node>("dropped_object", *path);
-                    batch.LoadAsync();
+                    batch->Add<Node>("dropped_object", *path);
+                    batch->LoadAsync();
 
-                    auto results = batch.AwaitResults();
+                    auto results = batch->AwaitResults();
 
                     if (results.Any()) {
                         for (auto &it : results) {
@@ -916,7 +1048,7 @@ public:
 
 };
 
-} // namespace hyperion::v2
+#endif
 
 int main()
 {

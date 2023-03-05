@@ -26,7 +26,6 @@ CubemapRenderer::CubemapRenderer(
 
 CubemapRenderer::~CubemapRenderer()
 {
-    SetReady(false);
 }
 
 void CubemapRenderer::Init()

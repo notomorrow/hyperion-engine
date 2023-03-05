@@ -135,17 +135,17 @@ public:
     {
         FixedArray<typename AssetLoaderWrapper<NormalizedType<T>>::CastedType, sizeof...(paths) + 1> results_array;
         std::vector<String> paths_array { first_path, std::forward<Paths>(paths)... };
-        AssetBatch batch = CreateBatch();
+        auto batch = CreateBatch();
 
         UInt path_index = 0;
 
         for (const auto &path : paths_array) {
-            batch.Add<T>(String::ToString(path_index++), path);
+            batch->Add<T>(String::ToString(path_index++), path);
         }
 
-        batch.LoadAsync();
+        batch->LoadAsync();
 
-        auto results = batch.AwaitResults();
+        auto results = batch->AwaitResults();
 
         SizeType index = 0u;
         AssertThrow(results.Size() == results_array.Size());
@@ -157,9 +157,9 @@ public:
         return results_array;
     }
 
-    AssetBatch CreateBatch()
+    RC<AssetBatch> CreateBatch()
     {
-        return AssetBatch(this);
+        return RC<AssetBatch>::Construct(this);
     }
 
 private:

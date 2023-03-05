@@ -613,7 +613,8 @@ void API::ModuleDefine::BindType(
 }
 
 APIInstance::APIInstance(const SourceFile &source_file)
-    : m_source_file(source_file)
+    : m_source_file(source_file),
+      m_vm(nullptr)
 {
 }
 
@@ -634,6 +635,8 @@ API::ModuleDefine &APIInstance::Module(const std::string &name)
 
 void APIInstance::BindAll(VM *vm, CompilationUnit *compilation_unit)
 {
+    m_vm = vm;
+
     bindings_holder.GenerateAll(*this);
 
     for (auto &module_def : m_module_defs) {

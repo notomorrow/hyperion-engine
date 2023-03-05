@@ -249,7 +249,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             UInt num_enqueued = 0;
             String paths_string;
 
-            AssetBatch textures_batch = state.asset_manager->CreateBatch();
+            auto textures_batch = state.asset_manager->CreateBatch();
 
             // for (const String &str : unique_paths) {
             //     textures_batch.Add<Texture>(str, str);
@@ -265,7 +265,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             for (auto &it : texture_names_to_path) {
                 all_filepaths.push_back(it.second);
                 ++num_enqueued;
-                textures_batch.Add<Texture>(
+                textures_batch->Add<Texture>(
                     String(it.first.c_str()),
                     String(it.second.c_str())
                 );
@@ -284,8 +284,8 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
                     paths_string.Data()
                 );
 
-                textures_batch.LoadAsync();
-                loaded_textures = textures_batch.AwaitResults();
+                textures_batch->LoadAsync();
+                loaded_textures = textures_batch->AwaitResults();
             }
         }
     }

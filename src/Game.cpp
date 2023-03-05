@@ -39,6 +39,7 @@ void Game::Init()
     );
 
     InitObject(m_scene);
+    g_engine->GetWorld()->AddScene(m_scene);
 
     m_is_init = true;
 }

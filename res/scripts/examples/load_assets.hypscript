@@ -1,0 +1,39 @@
+#importpath "../" "../library";
+
+import core::engine;
+import scene::{ Controller };
+
+class LoadAssetExampleController : Controller
+{
+    batch : AssetBatch = null;
+
+    LoadAssetExampleController(self)
+    {
+        self.receives_update = false;
+    }
+
+    func OnAdded(self, entity)
+    {
+        Print("LoadAssetExampleController::OnAdded\n");
+
+        self.batch = new AssetBatch();
+        self.batch.AddNode("sponza", "models/sponza/sponza.obj");
+        let batch_results = self.batch.AwaitResults();
+
+        let sponza_model = batch_results.Get("sponza").AsNode();
+        Print("sponza_model = %\n", sponza_model);
+        Print("sponza name = %\n", sponza_model.GetName());
+    }
+
+    func OnRemoved(self, entity)
+    {
+        Print("LoadAssetExampleController::OnRemoved\n");
+    }
+
+    func OnTick(self, delta)
+    {
+        Print("LoadAssetExampleController::OnTick\n");
+    }
+}
+
+export const controller = new LoadAssetExampleController;

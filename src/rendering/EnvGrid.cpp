@@ -200,6 +200,7 @@ void EnvGrid::SetCameraData(const Vector3 &position)
                     m_aabb.min + ((Vector3(Float(x), Float(y), Float(z)) + camera_position) * size_of_probe),
                     m_aabb.min + ((Vector3(Float(x + 1), Float(y + 1), Float(z + 1)) + camera_position) * size_of_probe)
                 ));
+                probe->SetNeedsRender(true);
 
                 new_probes[x][y][z] = probe_index;//probe;
 
@@ -287,7 +288,7 @@ void EnvGrid::Init()
         m_camera = CreateObject<Camera>(
             90.0f,
             -Int(ambient_probe_dimensions.width), Int(ambient_probe_dimensions.height),
-            0.15f, (m_aabb * (Vector3::one / Vector3(m_density))).GetRadius() + 0.15f
+            0.15f, m_aabb.GetRadius()//(m_aabb * (Vector3::one / Vector3(m_density))).GetRadius() + 0.15f
         );
 
         m_camera->SetTranslation(m_aabb.GetCenter());
@@ -436,6 +437,7 @@ void EnvGrid::OnRender(Frame *frame)
         RenderEnvProbe(frame, m_next_render_indices.Pop());
     }
 
+#if 0
     // Debug draw
     for (UInt index = 0; index < m_grid.num_probes; index++) {
         const Handle<EnvProbe> &probe = m_grid.GetEnvProbeDirect(index);
@@ -452,6 +454,7 @@ void EnvGrid::OnRender(Frame *frame)
             Color(probe_id.Value())
         );
     }
+#endif
     
     if (num_ambient_probes != 0) {
         // update probe positions in grid, choose next to render.
@@ -518,7 +521,7 @@ void EnvGrid::OnRender(Frame *frame)
                     );
                 }
 
-                probe->SetNeedsRender(false);
+                // probe->SetNeedsRender(false);
             }
         }
     }

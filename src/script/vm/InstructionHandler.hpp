@@ -749,6 +749,7 @@ public:
         }
         
         object->GetMember(index).value.AssignValue(thread->m_regs[src_reg], true);
+        object->GetMember(index).value.Mark();
     }
 
     HYP_FORCE_INLINE void MovMemHash(BCRegister dst_reg, uint32_t hash, BCRegister src_reg)
@@ -792,6 +793,7 @@ public:
         
         // set value in member
         member->value.AssignValue(thread->m_regs[src_reg], true);
+        member->value.Mark();
     }
 
     HYP_FORCE_INLINE void MovArrayIdx(BCRegister dst_reg, UInt32 index, BCRegister src_reg)
@@ -897,6 +899,7 @@ public:
         }*/
         
         array->AtIndex(index) = thread->m_regs[src_reg];
+        array->AtIndex(index).Mark();
     }
 
     HYP_FORCE_INLINE void MovArrayIdxReg(BCRegister dst_reg, BCRegister index_reg, BCRegister src_reg)
@@ -1022,6 +1025,7 @@ public:
             }
 
             array->AtIndex(index_value) = thread->m_regs[src_reg];
+            array->AtIndex(index_value).Mark();
         } else { // unsigned
             const UInt64 index_value = index.u;
 
@@ -1035,6 +1039,7 @@ public:
             }
 
             array->AtIndex(index_value) = thread->m_regs[src_reg];
+            array->AtIndex(index_value).Mark();
         }
     }
 
@@ -1106,6 +1111,7 @@ public:
         }
 
         array->Push(thread->m_regs[src_reg]);
+        array->AtIndex(array->GetSize() - 1).Mark();
     }
 
     HYP_FORCE_INLINE void Jmp(BCAddress addr)

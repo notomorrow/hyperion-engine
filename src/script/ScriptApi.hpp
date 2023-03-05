@@ -699,6 +699,24 @@ public:
 
 #pragma region Script API Instance
 
+// class ClassBindingMap : TypeMap<RC<ClassBase>>
+// {
+//     template <class T>
+//     void SetClass(RC<ClassBase> class_object, vm::HeapValue *hv)
+//     {
+//         AssertThrow(class_object != nullptr);
+//         AssertThrowMsg(class_object->GetScriptHeapValue() == nullptr, "Class already has heap value assigned");
+
+//         class_object->SetScriptHeapValue(hv);
+
+//         TypeMap::template Set<T>(std::move(class_object));
+//     }
+
+//     template <class T>
+//     const RC<ClassBase> &GetClass() const
+//         { return TypeMap::template Get<T>(); }
+// };
+
 class APIInstance
 {
 public:
@@ -712,6 +730,9 @@ public:
     APIInstance(const APIInstance &other) = delete;
     ~APIInstance() = default;
 
+    vm::VM *GetVM() const
+        { return m_vm; }
+
     const SourceFile &GetSourceFile() const
         { return m_source_file; }
 
@@ -723,6 +744,7 @@ public:
     );
 
 private:
+    vm::VM *m_vm;
     SourceFile m_source_file;
     LinkedList<API::ModuleDefine> m_module_defs;
 };
@@ -808,15 +830,185 @@ API::ModuleDefine &API::ModuleDefine::Class(
 
 #pragma region Conversion Helpers
 
-
-/*template <class T>
-static inline auto ConvertScriptObject(APIInstance &api_instance, const vm::Value &value, T &&out) -> std::enable_if_t<!std::is_class_v<NormalizedType<std::remove_pointer_t<T>>> || is_vm_object_type<NormalizedType<std::remove_pointer_t<T>>>, bool>;
+template <class T>
+struct CxxToScriptValueImpl;
 
 template <class T>
-static inline auto ConvertScriptObject(APIInstance &api_instance, const vm::Value &value, T &&out) -> std::enable_if_t<std::is_class_v<NormalizedType<std::remove_pointer_t<T>>> && !(is_vm_object_type<NormalizedType<std::remove_pointer_t<T>>>), bool>;*/
+static inline vm::Value CxxToScriptValueInternal(APIInstance &api_instance, T &&value)
+{
+    CxxToScriptValueImpl<NormalizedType<T>> impl;
 
-//template <class T, class Normalized = NormalizedType<T>>
-//static inline auto ConvertScriptObject(APIInstance &, const vm::Value &) -> Optional<std::conditional_t<std::is_fundamental_v<Normalized>, Normalized, Normalized *>>;
+    return impl(api_instance, std::forward<T>(value));
+}
+
+template <class T>
+struct CxxToScriptValueImpl
+{
+    static_assert(std::is_class_v<T>, "Should not receive a VM object type as it is handled by other specializations");
+    static_assert(!is_vm_object_type<T>, "Should not receive a VM object type as it is handled by other specializations");
+
+    // use a template param to allow const references and similar but still having T be decayed
+    template <class Ty>
+    vm::Value operator()(APIInstance &api_instance, Ty &&value) const
+    {
+        static_assert(!IsDynArray<T>::value, "other specialization should handle dynarrays");
+        static_assert(std::is_convertible_v<Ty, T>, "must be convertible; unrelated types T and Ty");
+
+        const auto class_name_it = api_instance.class_bindings.class_names.Find<T>();
+        AssertThrowMsg(class_name_it != api_instance.class_bindings.class_names.End(), "Class not registered!");
+
+        const auto prototype_it = api_instance.class_bindings.class_prototypes.find(class_name_it->second);
+        AssertThrowMsg(prototype_it != api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+
+        vm::Value intern_value;
+        {
+            vm::HeapValue *ptr_result = api_instance.GetVM()->GetState().HeapAlloc(api_instance.GetVM()->GetState().GetMainThread());
+            AssertThrow(ptr_result != nullptr);
+
+            ptr_result->Assign(std::forward<Ty>(value));
+            ptr_result->Mark();
+            intern_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
+        }
+
+        vm::VMObject boxed_value(prototype_it->second);
+        HYP_SCRIPT_SET_MEMBER(boxed_value, "__intern", intern_value);
+
+        vm::Value final_value;
+        {
+            vm::HeapValue *ptr_result = api_instance.GetVM()->GetState().HeapAlloc(api_instance.GetVM()->GetState().GetMainThread());
+            AssertThrow(ptr_result != nullptr);
+
+            ptr_result->Assign(boxed_value);
+            ptr_result->Mark();
+            final_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
+        }
+
+        return final_value;
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Int8>
+{
+    vm::Value operator()(APIInstance &, Int8 value) const
+    {
+        return vm::Value(vm::Value::I8, { .i8 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Int16>
+{
+    vm::Value operator()(APIInstance &, Int16 value) const
+    {
+        return vm::Value(vm::Value::I16, { .i16 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Int32>
+{
+    vm::Value operator()(APIInstance &, Int32 value) const
+    {
+        return vm::Value(vm::Value::I32, { .i32 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Int64>
+{
+    vm::Value operator()(APIInstance &, Int64 value) const
+    {
+        return vm::Value(vm::Value::I64, { .i64 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<UInt8>
+{
+    vm::Value operator()(APIInstance &, UInt8 value) const
+    {
+        return vm::Value(vm::Value::U8, { .u8 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<UInt16>
+{
+    vm::Value operator()(APIInstance &, UInt16 value) const
+    {
+        return vm::Value(vm::Value::U16, { .u16 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<UInt32>
+{
+    vm::Value operator()(APIInstance &, UInt32 value) const
+    {
+        return vm::Value(vm::Value::U32, { .u32 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<UInt64>
+{
+    vm::Value operator()(APIInstance &, UInt64 value) const
+    {
+        return vm::Value(vm::Value::U64, { .u64 = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Float>
+{
+    vm::Value operator()(APIInstance &, Float value) const
+    {
+        return vm::Value(vm::Value::F32, { .f = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Double>
+{
+    vm::Value operator()(APIInstance &, Double value) const
+    {
+        return vm::Value(vm::Value::F64, { .d = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<Bool>
+{
+    vm::Value operator()(APIInstance &, Bool value) const
+    {
+        return vm::Value(vm::Value::BOOLEAN, { .b = value });
+    }
+};
+
+template <>
+struct CxxToScriptValueImpl<String>
+{
+    vm::Value operator()(APIInstance &api_instance, const String &value) const
+    {
+        vm::VMString str = value;
+
+        vm::Value final_value;
+        {
+            vm::HeapValue *ptr_result = api_instance.GetVM()->GetState().HeapAlloc(api_instance.GetVM()->GetState().GetMainThread());
+            AssertThrow(ptr_result != nullptr);
+
+            ptr_result->Assign(std::move(str));
+            ptr_result->Mark();
+            final_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
+        }
+
+        return final_value;
+    }
+};
+
+// @TODO DynArray -> VMArray
+
 
 template <class T>
 struct ConvertImpl;
@@ -828,8 +1020,6 @@ static inline auto ConvertScriptObjectInternal(APIInstance &api_instance, const 
 
     return impl(api_instance, value);
 }
-
-#if 1
 
 template <class T, class Ty = NormalizedType<T>>
 static inline auto ConvertScriptObject(APIInstance &api_instance, const vm::Value &value)
@@ -844,16 +1034,6 @@ static inline auto ConvertScriptObject(APIInstance &api_instance, const vm::Valu
 {
     return ConvertScriptObjectInternal<std::underlying_type_t<Ty>>(api_instance, value);
 }
-
-#else
-
-template <class T, class Ty = NormalizedType<T>>
-static inline auto ConvertScriptObject(APIInstance &api_instance, const vm::Value &value)
-{
-    return ConvertScriptObjectInternal<Ty>(api_instance, value);
-}
-
-#endif
 
 template <class T>
 struct ConvertImpl

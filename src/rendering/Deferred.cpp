@@ -487,7 +487,7 @@ void DeferredRenderer::Create()
     
     CreateBlueNoiseBuffer();
 
-    m_ssr.Reset(new SSRRenderer(ssr_extent, true));
+    m_ssr.Reset(new SSRRenderer(g_engine->GetGPUInstance()->GetSwapchain()->extent / 2, true));
     m_ssr->Create();
 
     // m_dof_blur.Reset(new DOFBlur(g_engine->GetGPUInstance()->GetSwapchain()->extent));

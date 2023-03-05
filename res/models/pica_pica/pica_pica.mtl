@@ -20,7 +20,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd textures/Decal_Caution_baseColor.png
+map_Kd /textures/Decal_Caution_baseColor.png
 
 newmtl Decal_First_Aid_Kit
 Ns 159.999981
@@ -96,7 +96,7 @@ d 1.000000
 illum 2
 
 newmtl Plastic_Blue
-Ns 948.395916
+Ns 874.225004
 Ka 1.000000 1.000000 1.000000
 Kd 0.165132 0.341914 0.401978
 Ks 0.500000 0.500000 0.500000

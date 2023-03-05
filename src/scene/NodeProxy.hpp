@@ -76,7 +76,7 @@ struct NodeProxyChildren
 
     const Node *node;
 
-    SizeType Size() const;
+    UInt Size() const;
 
     Iterator Begin();
     ConstIterator Begin() const;

@@ -18,35 +18,10 @@
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(${', '.join(invoke_args)}));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(${', '.join(invoke_args)}));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(${', '.join(invoke_args)}), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(${', '.join(invoke_args)}));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 </%def>

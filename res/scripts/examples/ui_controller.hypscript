@@ -2,10 +2,11 @@
 
 import core::engine;
 import core::{ AssertEqual, AssertNotEqual };
-import scene::{ EntityProxy };
+import scene::{ EntityProxy, Controller };
 import math;
-import io;
+import io::File;
 
+// const File2 = io::File;
 // dynamic import
 // const tests = Module.Load("../tests");
 
@@ -22,8 +23,6 @@ func Expect( cond : Bool ) : Bool
 
     return true;
 }
-
-
 
 Expect(math::NaN != math::NaN);
 // Print("1 / 0 = %\n", 1 / 0);
@@ -972,21 +971,6 @@ enum UIEventType {
     MOUSE_UP,
     MOUSE_DRAG,
     MOUSE_HOVER
-}
-
-class Controller
-{
-    receives_update : Bool = false;
-
-    Controller(self : Controller)
-    {
-        Print("Construct Controller base\n");
-    }
-
-    func OnTick(self : Controller, delta : Float)
-    {
-        Print("Tick Base Component\n")
-    }
 }
 
 class TestUIController : Controller

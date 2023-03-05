@@ -98,14 +98,23 @@ void main()
     } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
         shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
 
+        const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
+
         const float light_ray_attenuation = LightRays(
             light.shadow_map_index,
             texcoord,
             L,
             position.xyz,
             camera.position.xyz,
-            ViewDepth(depth, camera.near, camera.far) //LinearDepth(camera.projection, depth)
+            depth//linear_eye_depth//LinearDepth(camera.projection, depth)
         );
+
+        // const float light_ray_attenuation = LightRays2(
+        //     texcoord,
+        //     (camera.projection * vec4(L, 0.0)).xy * 0.5 + 0.5,
+        //     position.xyz,
+        //     camera.position.xyz
+        // );
 
         light_rays = vec4(light_color * light_ray_attenuation);
     }
@@ -146,7 +155,7 @@ void main()
         result = albedo;
     }
 
-    result = (result * (1.0 - light_rays.a)) + (light_rays * light_rays.a);
+    result = (result * (1.0 - light_rays.a)) + light_rays;
 
 #if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE)
     output_color = vec4(0.0);

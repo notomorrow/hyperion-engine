@@ -21,7 +21,7 @@ void SkydomeController::OnAdded()
         Handle<Material> material = CreateObject<Material>();
         material->SetBucket(Bucket::BUCKET_SKYBOX);
         // material->SetBlendMode(BlendMode::NORMAL);
-        material->SetFaceCullMode(FaceCullMode::NONE);
+        material->SetFaceCullMode(FaceCullMode::FRONT);
         material->SetIsDepthTestEnabled(false);
         material->SetIsDepthWriteEnabled(false);
 

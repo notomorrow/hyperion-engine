@@ -8,7 +8,7 @@ class File : Resource
 {
 public:
 
-    path : String;
+    path : String = "";
 
 private:
     func IsOpen(self : File) : Bool

@@ -100,7 +100,7 @@ void SetSH9InClipmap(uvec3 position, const in SH9 sh)
     imageStore(sh_clipmaps[8], ivec3(position), vec4(sh.values[8], 1.0));
 }
 
-#define PROBE_CAGE_VIEW_RANGE 50.0
+#define PROBE_CAGE_VIEW_RANGE 70.0
 
 void main(void)
 {

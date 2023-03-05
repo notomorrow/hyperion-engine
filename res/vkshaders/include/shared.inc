@@ -170,6 +170,21 @@ float LinearDepth(mat4 projection, float depth)
 {
     return projection[3][2] / (depth * projection[2][3] - projection[2][2]);
 }
+float LinearizeDepth(float depth, float near, float far)
+{
+    return near * far / (far + depth * (near - far));
+}
+
+// Based on Unity's Linear01Depth function, Unity uses a reversed depth buffer though.
+float Linear01Depth(float depth, float near, float far)
+{
+    float x = 1.0 - (far / near);
+    float y = (far / near);
+    float z = x / far;
+    float w = y / far;
+
+    return 1.0 - (1.0 / (x * (1.0 - depth) + y));
+}
 
 float ProjectedDepth(mat4 projection, float depth)
 {

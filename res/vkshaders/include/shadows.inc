@@ -75,6 +75,17 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
+float GetShadowStandard(uint index, vec3 pos)
+{
+    const vec3 coord = GetShadowCoord(index, pos);
+    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy);
+    const float shadow_depth = shadow_sample.r;
+
+    const float bias = HYP_SHADOW_BIAS;
+
+    return max(step(coord.z - bias, shadow_depth), 0.0);
+}
+
 float GetShadowStandard(vec4 shadow_sample, vec3 coord, float NdotL)
 {
     const float shadow_depth = shadow_sample.r;

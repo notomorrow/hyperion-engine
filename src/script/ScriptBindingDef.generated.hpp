@@ -30,35 +30,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)());
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)());
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -78,35 +53,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)());
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)());
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -129,35 +79,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)());
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)());
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)());
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -177,35 +102,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)());
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)());
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)());
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -231,35 +131,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -282,35 +157,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -336,35 +186,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -387,35 +212,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -444,35 +244,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -498,35 +273,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -555,35 +305,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -609,35 +334,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -669,35 +369,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -726,35 +401,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -786,35 +436,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -843,35 +468,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -906,35 +506,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -966,35 +541,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1029,35 +579,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1089,35 +614,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1155,35 +655,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1218,35 +693,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1284,35 +734,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1347,35 +772,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1416,35 +816,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1482,35 +857,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1551,35 +901,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1617,35 +942,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1689,35 +989,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1758,35 +1033,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1830,35 +1080,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1899,35 +1124,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -1974,35 +1174,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2046,35 +1221,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2121,35 +1271,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2193,35 +1318,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2271,35 +1371,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2346,35 +1421,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2424,35 +1474,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            HYP_SCRIPT_CREATE_PTR((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2499,35 +1524,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2555,35 +1555,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn());
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn());
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn());
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn());
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn());
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn());
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn());
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn());
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn());
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2605,35 +1580,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2658,35 +1608,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2714,35 +1639,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2773,35 +1673,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2835,35 +1710,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2900,35 +1750,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -2968,35 +1793,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -3039,35 +1839,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -3113,35 +1888,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 
@@ -3190,35 +1940,10 @@ namespace hyperion {
         
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<int32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<int64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_INT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<uint32_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<uint64_t, Normalized>) {
-            HYP_SCRIPT_RETURN_UINT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<float, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT32(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<double, Normalized>) {
-            HYP_SCRIPT_RETURN_FLOAT64(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
-        } else if constexpr (std::is_same_v<bool, Normalized>) {
-            HYP_SCRIPT_RETURN_BOOLEAN(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
         } else {
-            HYP_SCRIPT_CREATE_PTR(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)), result);
-
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Normalized>();
-            AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
-
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
-
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
-
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
-
-            HYP_SCRIPT_RETURN(ptr);
+            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
+                                                                                                 
+            HYP_SCRIPT_RETURN(return_value);
         }
     }
 

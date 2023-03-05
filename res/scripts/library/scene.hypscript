@@ -7,3 +7,16 @@ proxy class EntityProxy {
     func GetTranslation(self : EntityProxy) : Vector3 => Entity_GetTranslation(self);
     func GetWorldAABB(self : EntityProxy) : BoundingBox => Entity_GetWorldAABB(self);
 }
+
+class Controller
+{
+    receives_update : Bool = true;
+
+    Controller(self : Controller)
+    {
+    }
+
+    func OnTick(self : Controller, delta : Float)
+    {
+    }
+}
