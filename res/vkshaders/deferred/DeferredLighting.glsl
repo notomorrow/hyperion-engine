@@ -227,109 +227,109 @@ float[9] ProjectSHBands(vec3 N)
 }
 
 
-vec3 SphericalHarmonics(const vec3 sph[9], const in vec3 normal) {
-  float x = normal.x;
-  float y = normal.y;
-  float z = normal.z;
+// vec3 SphericalHarmonicsSample(const in SH9 sh9, vec3 normal)
+// {
+//     float x = normal.x;
+//     float y = normal.y;
+//     float z = normal.z;
 
-  vec3 result = (
-    sph[0] +
+//     vec3 result = (
+//         sh9.values[0] +
 
-    sph[1] * x +
-    sph[2] * y +
-    sph[3] * z +
+//         sh9.values[1] * x +
+//         sh9.values[2] * y +
+//         sh9.values[3] * z +
 
-    sph[4] * z * x +
-    sph[5] * y * z +
-    sph[6] * y * x +
-    sph[7] * (3.0 * z * z - 1.0) +
-    sph[8] * (x*x - y*y)
-  );
+//         sh9.values[4] * z * x +
+//         sh9.values[5] * y * z +
+//         sh9.values[6] * y * x +
+//         sh9.values[7] * (3.0 * z * z - 1.0) +
+//         sh9.values[8] * (x*x - y*y)
+//     );
 
-  return max(result, vec3(0.0));
-}
+//     return max(result, vec3(0.0));
+// }
+
+// vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
+// {
+// // #ifndef PI
+// //     #define PI HYP_FMATH_PI
+// // #endif
+
+// //     float x = N.x;
+// // 	float y = N.y;
+// // 	float z = N.z;
+// // 	float x2 = x*x;
+// // 	float y2 = y*y;
+// // 	float z2 = z*z;
+
+// //     float basis[9];
+// //     vec3 sph[9];
+
+// //     for (int i = 0; i < 9; i++) {
+// //         sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
+// //     }
+
+// // 	basis[0] = 1.f / 2.f * sqrt(1.f / PI);
+// // 	basis[1] = sqrt(3.f / (4.f*PI))*y;
+// // 	basis[2] = sqrt(3.f / (4.f*PI))*z;
+// // 	basis[3] = sqrt(3.f / (4.f*PI))*x;
+// // 	basis[4] = 1.f / 2.f * sqrt(15.f / PI) * x * y;
+// // 	basis[5] = 1.f / 2.f * sqrt(15.f / PI) * y * z;
+// // 	basis[6] = 1.f / 4.f * sqrt(5.f / PI) * (-x*x - y*y + 2 * z*z);
+// // 	basis[7] = 1.f / 2.f * sqrt(15.f / PI) * z * x;
+// // 	basis[8] = 1.f / 4.f * sqrt(15.f / PI) * (x*x - y*y);
+
+// //     vec3 irradiance = vec3(0.0);
+
+// //     for (int i = 0; i < 9; i++) {
+// //         irradiance += sph[i] * basis[i];
+// //     }
+
+// //     irradiance = max(irradiance, vec3(0.0));
+
+// //     return irradiance;
 
 
-vec3 SphericalHarmonicsSample(vec3 N, vec3 coord)
-{
-// #ifndef PI
-//     #define PI HYP_FMATH_PI
-// #endif
-
-//     float x = N.x;
-// 	float y = N.y;
-// 	float z = N.z;
-// 	float x2 = x*x;
-// 	float y2 = y*y;
-// 	float z2 = z*z;
-
-//     float basis[9];
-//     vec3 sph[9];
-
-//     for (int i = 0; i < 9; i++) {
-//         sph[i] = Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb;
-//     }
-
-// 	basis[0] = 1.f / 2.f * sqrt(1.f / PI);
-// 	basis[1] = sqrt(3.f / (4.f*PI))*y;
-// 	basis[2] = sqrt(3.f / (4.f*PI))*z;
-// 	basis[3] = sqrt(3.f / (4.f*PI))*x;
-// 	basis[4] = 1.f / 2.f * sqrt(15.f / PI) * x * y;
-// 	basis[5] = 1.f / 2.f * sqrt(15.f / PI) * y * z;
-// 	basis[6] = 1.f / 4.f * sqrt(5.f / PI) * (-x*x - y*y + 2 * z*z);
-// 	basis[7] = 1.f / 2.f * sqrt(15.f / PI) * z * x;
-// 	basis[8] = 1.f / 4.f * sqrt(15.f / PI) * (x*x - y*y);
 
 //     vec3 irradiance = vec3(0.0);
+//     SH9 sh9;
 
 //     for (int i = 0; i < 9; i++) {
-//         irradiance += sph[i] * basis[i];
+//         sh9.values[i] = Texture3D(sampler_nearest, spherical_harmonics_volumes[i], coord).rgb;
 //     }
 
+//     irradiance = SphericalHarmonics(sh9, N);
 //     irradiance = max(irradiance, vec3(0.0));
-
 //     return irradiance;
 
 
 
-    vec3 irradiance = vec3(0.0);
-    vec3 sph[9];
+//     // const float cos_a0 = HYP_FMATH_PI;
+//     // const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
+//     // const float cos_a2 = HYP_FMATH_PI * 0.25;
 
-    for (int i = 0; i < 9; i++) {
-        sph[i] = Texture3D(sampler_nearest, spherical_harmonics_volumes[i], coord).rgb;
-    }
+//     // float bands[9] = ProjectSHBands(N);
+//     // bands[0] *= cos_a0;
+//     // bands[1] *= cos_a1;
+//     // bands[2] *= cos_a1;
+//     // bands[3] *= cos_a1;
+//     // bands[4] *= cos_a2;
+//     // bands[5] *= cos_a2;
+//     // bands[6] *= cos_a2;
+//     // bands[7] *= cos_a2;
+//     // bands[8] *= cos_a2;
 
-    irradiance = SphericalHarmonics(sph, N);
-    irradiance = max(irradiance, vec3(0.0));
-    return irradiance;
+//     // vec3 irradiance = vec3(0.0);
 
+//     // for (int i = 0; i < 9; i++) {
+//     //     irradiance += Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb * bands[i];
+//     // }
 
+//     // irradiance = max(irradiance, vec3(0.0));
 
-    // const float cos_a0 = HYP_FMATH_PI;
-    // const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
-    // const float cos_a2 = HYP_FMATH_PI * 0.25;
-
-    // float bands[9] = ProjectSHBands(N);
-    // bands[0] *= cos_a0;
-    // bands[1] *= cos_a1;
-    // bands[2] *= cos_a1;
-    // bands[3] *= cos_a1;
-    // bands[4] *= cos_a2;
-    // bands[5] *= cos_a2;
-    // bands[6] *= cos_a2;
-    // bands[7] *= cos_a2;
-    // bands[8] *= cos_a2;
-
-    // vec3 irradiance = vec3(0.0);
-
-    // for (int i = 0; i < 9; i++) {
-    //     irradiance += Texture3D(sampler_linear, spherical_harmonics_volumes[i], coord).rgb * bands[i];
-    // }
-
-    // irradiance = max(irradiance, vec3(0.0));
-
-    // return irradiance / HYP_FMATH_PI;
-}
+//     // return irradiance / HYP_FMATH_PI;
+// }
 
 float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
 {
@@ -342,35 +342,45 @@ float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
 
     const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
 
+    SH9 sh9;
+
     if (probe_index != ~0u) {
-        const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
-        const vec3 texel_size = vec3(1.0) / vec3(image_size);
-
         EnvProbe probe = env_probes[probe_index];
-        ivec3 probe_stored_position = probe.position_in_grid.xyz;
+        const int storage_index = probe.position_in_grid.w * 9;
 
-        const vec3 probe_aabb_min = env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
-        const vec3 probe_aabb_max = env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+        for (int i = 0; i < 9; i++) {
+            sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+        }
 
-        const vec3 extent = (probe_aabb_max - probe_aabb_min);
-        const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-        const vec3 center = (probe_aabb_max + probe_aabb_min) * 0.5;
+        irradiance += SphericalHarmonicsSample(sh9, N);
 
-        // + 0.5 takes it from -0.5,0.5 to 0.0,1.0
-        const vec3 pos_fract = fract(((P - center) / extent) + 0.5);
 
-        // const ivec3 diff = probe_stored_position - probe_position;
+        // const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
+        // const vec3 texel_size = vec3(1.0) / vec3(image_size);
 
-        // instead of using +0.5 to get center of the cell, we add pos_relative_to_probe,
-        // which has been transformed from 0.0,1.0 range. so samplers at the edge of the cell will offset by
-        // 0.0, at the middle will offset by 0.5, etc.
-        // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
-        // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
-        vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
+        // EnvProbe probe = env_probes[probe_index];
+        // ivec3 probe_stored_position = probe.position_in_grid.xyz;
 
-        irradiance += SphericalHarmonicsSample(N, coord);
+        // const vec3 probe_aabb_min = env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+        // const vec3 probe_aabb_max = env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
 
-        // irradiance = UINT_TO_VEC4(probe_index).xyz;
+        // const vec3 extent = (probe_aabb_max - probe_aabb_min);
+        // const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+        // const vec3 center = (probe_aabb_max + probe_aabb_min) * 0.5;
+
+        // // + 0.5 takes it from -0.5,0.5 to 0.0,1.0
+        // const vec3 pos_fract = fract(((P - center) / extent) + 0.5);
+
+        // // const ivec3 diff = probe_stored_position - probe_position;
+
+        // // instead of using +0.5 to get center of the cell, we add pos_relative_to_probe,
+        // // which has been transformed from 0.0,1.0 range. so samplers at the edge of the cell will offset by
+        // // 0.0, at the middle will offset by 0.5, etc.
+        // // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
+        // // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
+        // vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
+
+        // irradiance += SphericalHarmonicsSample(N, coord);
 
         return 1.0;
     }

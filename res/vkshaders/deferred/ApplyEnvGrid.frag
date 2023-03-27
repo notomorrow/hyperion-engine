@@ -37,8 +37,6 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
 
 #ifdef USE_CLIPMAP
-    #define PROBE_CAGE_VIEW_RANGE 70.0
-
     const ivec3 cage_size = textureSize(sampler3D(sh_clipmaps[0], sampler_linear), 0);
 
     const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(cage_size.xyz);
@@ -77,6 +75,6 @@ void main()
 #else
     float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
 
-    color_output = vec4(irradiance, weight);
+    color_output = vec4(irradiance, 1.0);
 #endif
 }

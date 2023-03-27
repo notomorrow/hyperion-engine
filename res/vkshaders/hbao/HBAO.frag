@@ -48,8 +48,13 @@ layout(push_constant) uniform PushConstant
 
 #define HYP_HBAO_NUM_CIRCLES 3
 #define HYP_HBAO_NUM_SLICES 2
+<<<<<<< HEAD
 #define HYP_HBAO_RADIUS 1.08
 #define HYP_HBAO_POWER 1.5
+=======
+#define HYP_HBAO_RADIUS 1.65
+#define HYP_HBAO_POWER 1.05
+>>>>>>> 860f7470 (TEMP)
 
 float fov_rad = HYP_FMATH_DEG2RAD(camera.fov);
 float tan_half_fov = tan(fov_rad * 0.5);

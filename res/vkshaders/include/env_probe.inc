@@ -3,6 +3,8 @@
 
 #include "defines.inc"
 
+#define PROBE_CAGE_VIEW_RANGE 70.0
+
 // ENV PROBES
 
 struct EnvProbe
@@ -57,7 +59,13 @@ struct SH9
         };
 
 
-        layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
+        #define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
+
+        layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) buffer SHGridBuffer {
+            vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
+        };
+
+        //layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
         layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture3D sh_clipmaps[9];
     #endif
 
