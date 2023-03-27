@@ -4,7 +4,7 @@ frag = deferred_indirect.frag
 vert = deferred.vert
 
 [DeferredDirect]
-permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, HBIL_ENABLED, HBAO_EABLED
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_ENABLED, HBIL_ENABLED, HBAO_EABLED, LIGHT_RAYS_ENABLED
 frag = deferred_direct.frag
 vert = deferred.vert
 
