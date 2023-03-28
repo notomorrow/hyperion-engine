@@ -429,14 +429,13 @@ public:
         test_model.Scale(6.425f);
 =======
         // test_model.Scale(1.825f);
-        // test_model.Scale(6.425f);
->>>>>>> 860f7470 (TEMP)
-        // test_model.Scale(0.0125f);
+        test_model.Scale(8.0f);
+        // test_model.Scale(0.0225f);
 
         if (g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             auto env_grid_entity = CreateObject<Entity>(HYP_NAME(EnvGridEntity));
             // Local aabb wil not be overwritten unless we add a Mesh to the Entity.
-            env_grid_entity->SetLocalAABB(BoundingBox(Vector3(-40.0f, -10.0f, -40.0f), Vector3(40.0f, 10.0f, 40.0f)));
+            env_grid_entity->SetLocalAABB(BoundingBox(Vector3(-40.0f, -20.0f, -40.0f), Vector3(40.0f, 20.0f, 40.0f)));
             env_grid_entity->AddController<EnvGridController>();
             GetScene()->AddEntity(std::move(env_grid_entity));
         }
