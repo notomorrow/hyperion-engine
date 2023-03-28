@@ -4,7 +4,7 @@
 #include "noise.inc"
 #include "aabb.inc"
 
-#define HYP_SHADOW_BIAS 0.0001
+#define HYP_SHADOW_BIAS 0.005
 // #define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
@@ -144,7 +144,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
     const vec2 b = vec2(1.0) - a;
 
     const float shadow_map_depth = coord.z;
-    const float shadow_filter_size = 0.001;
+    const float shadow_filter_size = 0.0005;
 
     const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(camera.dimensions.xy) - 0.5);
 
