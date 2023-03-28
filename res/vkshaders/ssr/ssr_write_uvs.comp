@@ -146,18 +146,10 @@ void main(void)
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
+    vec3 H = ImportanceSampleGGX(rnd, N, roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     vec3 ray_direction = reflect(-V, normalize((camera.view * vec4(H, 0.0)).xyz));
-
-    // vec2 rnd = Hammersley(scene.frame_counter & 7, 8);
-
-    // vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
-    // H = tangent * H.x + bitangent * H.y + N * H.z;
-
-    // vec3 ray_direction = normalize(2.0 * dot(V, H) * H - V);
-    // ray_direction = (camera.view * vec4(ray_direction, 0.0)).xyz;
 
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);

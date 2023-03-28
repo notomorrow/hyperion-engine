@@ -116,6 +116,7 @@ void main(void)
             const int storage_index = probe.position_in_grid.w * 9;
 
             for (int i = 0; i < 9; i++) {
+                // sh.values[i] = UINT_TO_VEC4(probe_index).rgb;
                 sh.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
                 // sh.values[i] = vec3(distance(world_position, cage_center_world.xyz) / PROBE_CAGE_VIEW_RANGE);//sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
             }
