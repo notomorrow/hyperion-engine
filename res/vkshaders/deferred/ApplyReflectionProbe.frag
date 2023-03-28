@@ -60,7 +60,7 @@ void main()
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
-        vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
+        vec3 H = ImportanceSampleGGX(rnd, N, roughness);
         H = tangent * H.x + bitangent * H.y + N * H.z;
 
         vec3 dir = normalize(2.0 * dot(V, H) * H - V);

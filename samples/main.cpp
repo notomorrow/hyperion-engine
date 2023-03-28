@@ -286,16 +286,16 @@ public:
             // m_scene->AddLight(m_sun);
 
             m_point_lights.PushBack(CreateObject<Light>(PointLight(
-                Vector3(0.0f, 15.0f, 0.0f),
+                Vector3(0.0f, 25.0f, 8.0f),
                 Color(1.0f, 1.0f, 1.0f),
                 40.0f,
-                7.35f
+                200.35f
             )));
             // m_point_lights.PushBack(CreateObject<Light>(PointLight(
-            //     Vector3(-2.0f, 0.75f, 0.0f),
-            //     Color(0.0f, 0.0f, 1.0f),
+            //     Vector3(0.0f, 10.0f, 0.0f),
+            //     Color(1.0f, 1.0f, 1.0f),
             //     15.0f,
-            //     20.0f
+            //     200.0f
             // )));
 
             for (auto &light : m_point_lights) {
@@ -424,10 +424,6 @@ public:
             GetScene()->GetRoot().AddChild(dude);
         }
 
-<<<<<<< HEAD
-        // test_model.Scale(0.325f);
-        test_model.Scale(6.425f);
-=======
         // test_model.Scale(1.825f);
         test_model.Scale(8.0f);
         // test_model.Scale(0.0225f);
@@ -435,7 +431,8 @@ public:
         if (g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             auto env_grid_entity = CreateObject<Entity>(HYP_NAME(EnvGridEntity));
             // Local aabb wil not be overwritten unless we add a Mesh to the Entity.
-            env_grid_entity->SetLocalAABB(BoundingBox(Vector3(-40.0f, -20.0f, -40.0f), Vector3(40.0f, 20.0f, 40.0f)));
+            // env_grid_entity->SetLocalAABB(BoundingBox(Vector3(-70.0f, -40.0f, -70.0f), Vector3(70.0f, 40.0f, 70.0f)));
+            env_grid_entity->SetLocalAABB(test_model.GetWorldAABB() * 1.08f);
             env_grid_entity->AddController<EnvGridController>();
             GetScene()->AddEntity(std::move(env_grid_entity));
         }
@@ -747,9 +744,9 @@ public:
 
         HandleCameraMovement(delta);
 
-        if (const Handle<Entity> &env_grid_entity = GetScene()->FindEntityByName(HYP_NAME(EnvGridEntity))) {
-            env_grid_entity->SetTranslation(GetScene()->GetCamera()->GetTranslation());
-        }
+        // if (const Handle<Entity> &env_grid_entity = GetScene()->FindEntityByName(HYP_NAME(EnvGridEntity))) {
+        //     env_grid_entity->SetTranslation(GetScene()->GetCamera()->GetTranslation());
+        // }
 
         if (auto fbx_node = GetScene()->GetRoot().Select("monkey_fbx")) {
             if (auto body = fbx_node.Select("Models:Body")) {
@@ -1088,7 +1085,7 @@ int main()
         "Hyperion Engine",
         1280,
         768,
-        false
+        true
     }));
     
     hyperion::InitializeApplication(application);
