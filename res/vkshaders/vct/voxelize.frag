@@ -35,6 +35,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 70, rgba8) uniform image3D vox
 #define HYP_VCT_LIGHTING 1
 #define HYP_VCT_LIGHTING_AMBIENT 0.01
 
+#ifdef HYP_VCT_MODE
+
 #include "../include/vct/Voxelize.inc"
 
 void main()
@@ -82,3 +84,11 @@ void main()
 #endif
     }
 }
+
+#else
+
+void main()
+{
+}
+
+#endif

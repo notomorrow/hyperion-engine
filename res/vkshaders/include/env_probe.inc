@@ -3,7 +3,7 @@
 
 #include "defines.inc"
 
-#define PROBE_CAGE_VIEW_RANGE 70.0
+#define PROBE_CAGE_VIEW_RANGE 150.0
 
 // ENV PROBES
 
