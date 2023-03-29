@@ -223,3 +223,58 @@ void main()
     }
 }
 #endif
+
+
+// mappings2 = ((len) => {
+//     let values = []
+//     for (let x = len; x >= 1; x--) {
+//         let y = 1;
+
+//         let diff = len - x;
+//         let dstX = (diff + 1);
+//         let dstY = 0;
+
+//         values.push([x, y, dstX, dstY]);
+//     }
+//     for (let x = len; x >= 1; x--) {
+//         let y = len;
+
+//         let diff = len - x;
+//         let dstX = (diff + 1);
+//         let dstY = len + 1;
+
+//         values.push([x, y, dstX, dstY]);
+//     }
+//     for (let y = len; y >= 1; y--) {
+//         let x = 1;
+
+//         let diff = len - y;
+//         let dstY = (diff + 1);
+//         let dstX = 0;
+
+//         values.push([x, y, dstX, dstY]);
+//     }
+//     for (let y = len; y >= 1; y--) {
+//         let x = len;
+
+//         let diff = len - y;
+//         let dstY = (diff + 1);
+//         let dstX = len + 1;
+
+//         values.push([x, y, dstX, dstY]);
+//     }
+
+//     // corners
+//     values.push([len, len, 0, 0]);
+//     values.push([1, len, len + 1, 0]);
+//     values.push([len, 1, 0, len + 1]);
+//     values.push([1, 1, len + 1, len + 1]);
+
+//     const mappingsText = values.map((v) =>
+//         `    ivec4(${v.join(', ')})`).join(',\n')
+
+//     return (
+//         `const ivec4 g_offsets[${values.length}] = ivec4[](${mappingsText});
+//         `
+//     )
+// })(32)

@@ -51,15 +51,16 @@ struct SH9
 
 #define HYP_ENV_PROBE_PARALLAX_CORRECTED 0x1
 
+#define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9 // + HYP_MAX_BOUND_AMBIENT_PROBES * 9 / 4
+//#define SH_GRID_BUFFER_DEPTH_VALUES_OFFSET HYP_MAX_BOUND_AMBIENT_PROBES * 9
+//#define SH_GRID_BUFFER_DEPTH_VALUE(index) sh_grid_buffer[SH_GRID_BUFFER_DEPTH_VALUES_OFFSET + (index >> 2)][index & 3]
+
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     #ifndef HYP_DEFERRED_NO_ENV_GRID
         layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
         {
             EnvGrid env_grid;
         };
-
-
-        #define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
 
         layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) buffer SHGridBuffer {
             vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];

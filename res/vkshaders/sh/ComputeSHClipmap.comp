@@ -19,8 +19,6 @@ layout(local_size_x = SIZE_X, local_size_y = SIZE_Y, local_size_z = SIZE_Z) in;
 #include "../include/env_probe.inc"
 #include "../include/scene.inc"
 
-#define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
-
 layout(std140, set = 0, binding = 0) buffer SHGridBuffer {
     vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
 };
