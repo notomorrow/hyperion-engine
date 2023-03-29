@@ -31,8 +31,6 @@ layout(std140, set = 0, binding = 2) buffer SHTilesBuffer {
     SHTile sh_tiles[6 * NUM_SAMPLES_X * NUM_SAMPLES_Y];
 };
 
-#define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
-
 layout(std140, set = 0, binding = 3) buffer SHGridBuffer {
     vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
 };

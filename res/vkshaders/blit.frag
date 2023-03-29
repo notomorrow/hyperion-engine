@@ -26,6 +26,11 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_v
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 79) uniform texture2D dof_blur_blended;
 
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
+
 layout(location=0) out vec4 out_color;
 
 void main()
@@ -70,6 +75,8 @@ void main()
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, v_texcoord0).rgb;
+
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_color_buffer, v_texcoord0).rgb;
 
     out_color.a = 1.0;
 }
