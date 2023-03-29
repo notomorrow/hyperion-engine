@@ -20,6 +20,17 @@ layout(location=14) in vec2 v_cube_face_uv;
 
 // #ifndef MODE_SHADOWS
 layout(location=0) out vec4 output_color;
+#ifdef WRITE_NORMALS
+layout(location=1) out vec2 output_normals;
+#ifdef WRITE_MOMENTS
+layout(location=2) out vec2 output_moments;
+#endif
+
+#else
+#ifdef WRITE_MOMENTS
+layout(location=1) out vec2 output_moments;
+#endif
+#endif
 // #endif
 
 #include "include/scene.inc"
@@ -136,5 +147,25 @@ void main()
 
     output_color.a = 1.0;
 
+#endif
+
+#ifdef WRITE_NORMALS
+    output_normals = PackNormalVec2(v_normal);
+#endif
+
+#ifdef WRITE_MOMENTS
+
+#ifndef MODE_SHADOWS
+    const float depth = gl_FragCoord.z / gl_FragCoord.w;
+
+    vec2 moments = vec2(depth, HYP_FMATH_SQR(depth));
+
+    float dx = dFdx(depth);
+    float dy = dFdy(depth);
+
+    moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
+#endif
+
+    output_moments = moments;
 #endif
 }

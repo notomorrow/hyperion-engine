@@ -54,7 +54,7 @@ frag = blit.frag
 vert = blit.vert
 
 [CubemapRenderer]
-permute = MODE(REFLECTION AMBIENT SHADOWS)
+permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
 frag = cubemap_renderer.frag
 vert = cubemap_renderer.vert
 
@@ -65,6 +65,13 @@ comp = sh/ComputeSH.comp
 [ComputeSHClipmap]
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE), MODIFY_ENV_PROBE
 comp = sh/ComputeSHClipmap.comp
+
+[PackLightFieldProbe]
+comp = light_field/PackLightFieldProbe.comp
+
+[LightField_CopyBorderTexels]
+permute = DEPTH
+comp = light_field/CopyBorderTexels.comp
 
 [Forward]
 permute = SKINNING, FORWARD_LIGHTING

@@ -21,6 +21,11 @@ layout(location=0) out vec4 color_output;
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
+#include "../light_field/ComputeIrradiance.glsl"
+
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -35,6 +40,9 @@ void main()
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
+
+#if 0
+
 
 #ifdef USE_CLIPMAP
     const ivec3 cage_size = textureSize(sampler3D(sh_clipmaps[0], sampler_linear), 0);
@@ -74,6 +82,12 @@ void main()
     color_output = vec4(irradiance, 1.0);
 #else
     float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
+
+    color_output = vec4(irradiance, 1.0);
+#endif
+
+#else
+    irradiance = ComputeLightFieldProbeIrradiance(P, N, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
 
     color_output = vec4(irradiance, 1.0);
 #endif

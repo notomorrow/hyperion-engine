@@ -1,6 +1,8 @@
 #ifndef PROBE_COMMON_GLSL
 #define PROBE_COMMON_GLSL
 
+#include "../../Octahedron.glsl"
+
 #define M_PI 3.14159265359
 
 #define PROBE_GRID_ORIGIN (probe_system.aabb_min.xyz)
@@ -47,33 +49,6 @@ ivec3 BaseGridCoord(vec3 P)
     return PROBE_TOTAL_COUNT == 0
         ? ivec3(0)
         : clamp(ivec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), ivec3(0), ivec3(probe_system.probe_counts.xyz) - ivec3(1));
-}
-
-vec2 EncodeOctahedralCoord(in vec3 v)
-{
-#define NON_ZERO_SIGN(n) (n >= 0.0 ? 1.0 : -1.0)
-    float l1norm = abs(v.x) + abs(v.y) + abs(v.z);
-    vec2 vec = v.xy * (1.0 / l1norm);
-
-    if (v.z < 0.0) {
-        vec = (1.0 - abs(vec.yx)) * vec2(NON_ZERO_SIGN(vec.x), NON_ZERO_SIGN(vec.y));
-    }
-#undef NON_ZERO_SIGN
-
-    return vec;
-}
-
-vec3 DecodeOctahedralCoord(vec2 coord)
-{
-#define NON_ZERO_SIGN(n) (n >= 0.0 ? 1.0 : -1.0)
-    vec3 vec = vec3(coord.x, coord.y, 1.0 - abs(coord.x) - abs(coord.y));
-    
-    if (vec.z < 0.0) {
-        vec.xy = (1.0 - abs(vec.yx)) * vec2(NON_ZERO_SIGN(vec.x), NON_ZERO_SIGN(vec.y));
-    }
-#undef NON_ZERO_SIGN
-    
-    return normalize(vec);
 }
 
 uvec2 DDGIGetProbeTexelCoords(uint probeIndex)

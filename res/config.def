@@ -19,5 +19,5 @@ DebugSSR = false
 DebugHBAO = false
 DebugHBIL = false
 DebugReflections = false
-DebugIrradiance = false
+DebugIrradiance = true
 DebugEnvGridProbes = false
