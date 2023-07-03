@@ -383,7 +383,7 @@ public:
         
         auto batch = g_asset_manager->CreateBatch();
         batch->Add<Node>("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-        batch->Add<Node>("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");
+        batch->Add<Node>("test_model", "models/pica_pica/pica_pica.obj");
         batch->Add<Node>("cube", "models/cube.obj");
         batch->Add<Node>("material", "models/material_sphere/material_sphere.obj");
         batch->Add<Node>("grass", "models/grass/grass.obj");
@@ -422,8 +422,8 @@ public:
         }
 
         // test_model.Scale(0.325f);
-        // test_model.Scale(6.425f);
-        test_model.Scale(0.0125f);
+        test_model.Scale(6.425f);
+        // test_model.Scale(0.0125f);
 
         if (g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI)) {
             auto env_grid_entity = CreateObject<Entity>(HYP_NAME(EnvGridEntity));
@@ -440,11 +440,11 @@ public:
             );
         }
 
-        // m_scene->GetEnvironment()->AddRenderComponent<PointShadowRenderer>(
-        //     HYP_NAME(PointShadowRenderer0),
-        //     m_point_lights.Front(),
-        //     Extent2D { 256, 256 }
-        // );
+        m_scene->GetEnvironment()->AddRenderComponent<PointShadowRenderer>(
+            HYP_NAME(PointShadowRenderer0),
+            m_point_lights.Front(),
+            Extent2D { 256, 256 }
+        );
 
         if (false) {
             int i = 0;

@@ -18,7 +18,7 @@ const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 #endif
 
 #ifndef HYP_TEMPORAL_BLENDING_FEEDBACK
-    #define HYP_TEMPORAL_BLENDING_FEEDBACK 0.92
+    #define HYP_TEMPORAL_BLENDING_FEEDBACK 0.95
 #endif
 
 
