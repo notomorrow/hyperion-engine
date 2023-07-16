@@ -6,7 +6,7 @@
 #include "Shared.glsl"
 
 #define GROUP_SIZE_X PROBE_SIDE_LENGTH
-#define GROUP_SIZE_Y 4
+#define GROUP_SIZE_Y (PROBE_BORDER_LENGTH * 2)
 
 layout(local_size_x = GROUP_SIZE_X, local_size_y = GROUP_SIZE_Y, local_size_z = 1) in;
 
@@ -205,9 +205,10 @@ void main()
 
 //     const uvec2 coord = uvec2(gl_GlobalInvocationID.xy);
 
+//     const ivec2 image_dimensions = imageSize(OUTPUT_IMAGE).xy;
 
-//     for (int x = int(gl_GlobalInvocationID.x); x < int(gl_GlobalInvocationID.x) + GROUP_SIZE; x++) {
-//         for (int y = int(gl_GlobalInvocationID.y); y < int(gl_GlobalInvocationID.y) + GROUP_SIZE; y++) {
+//     for (int x = int(gl_GlobalInvocationID.x); x < int(gl_GlobalInvocationID.x) + GROUP_SIZE_X; x++) {
+//         for (int y = int(gl_GlobalInvocationID.y); y < int(gl_GlobalInvocationID.y) + GROUP_SIZE_Y; y++) {
 //             const ivec2 coord = ivec2(x, y);
 
 //             if (any(greaterThanEqual(coord, ivec2(image_dimensions.xy)))) {
@@ -218,28 +219,28 @@ void main()
 //                 continue;
 //             }
 
-//             if (coord.x % (PROBE_SIDE_LENGTH + PROBE_BORDER_SIZE) == 0) {
+//             if (coord.x % (PROBE_SIDE_LENGTH + PROBE_BORDER_LENGTH) == 0) {
 //                 vec4 value = imageLoad(OUTPUT_IMAGE, ivec2(coord.x - 1, coord.y));
 //                 imageStore(OUTPUT_IMAGE, coord, value);
 
 //                 continue;
 //             }
 
-//             if (coord.x % (PROBE_SIDE_LENGTH + PROBE_BORDER_SIZE) == 1) {
+//             if (coord.x % (PROBE_SIDE_LENGTH + PROBE_BORDER_LENGTH) == 1) {
 //                 vec4 value = imageLoad(OUTPUT_IMAGE, ivec2(coord.x + 1, coord.y));
 //                 imageStore(OUTPUT_IMAGE, coord, value);
 
 //                 continue;
 //             }
 
-//             if (coord.y % (PROBE_SIDE_LENGTH + PROBE_BORDER_SIZE) == 0) {
+//             if (coord.y % (PROBE_SIDE_LENGTH + PROBE_BORDER_LENGTH) == 0) {
 //                 vec4 value = imageLoad(OUTPUT_IMAGE, ivec2(coord.x, coord.y - 1));
 //                 imageStore(OUTPUT_IMAGE, coord, value);
 
 //                 continue;
 //             }
 
-//             if (coord.y % (PROBE_SIDE_LENGTH + PROBE_BORDER_SIZE) == 1) {
+//             if (coord.y % (PROBE_SIDE_LENGTH + PROBE_BORDER_LENGTH) == 1) {
 //                 vec4 value = imageLoad(OUTPUT_IMAGE, ivec2(coord.x, coord.y + 1));
 //                 imageStore(OUTPUT_IMAGE, coord, value);
 
