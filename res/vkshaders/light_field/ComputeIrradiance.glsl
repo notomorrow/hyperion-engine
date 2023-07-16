@@ -98,8 +98,8 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 grid_aab
         total_irradiance += probe_irradiance.rgb * weight;
     }
 
-    // total_irradiance = 2.0 * HYP_FMATH_PI * total_irradiance / total_weight;
-    total_irradiance = total_irradiance / total_weight;
+    total_irradiance = 0.5 * HYP_FMATH_PI * total_irradiance / total_weight;
+    // total_irradiance = total_irradiance / total_weight;
 
     return total_irradiance;
 }
