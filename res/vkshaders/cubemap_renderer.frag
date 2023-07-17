@@ -43,10 +43,10 @@ layout(location=1) out vec2 output_moments;
 
 #define HYP_CUBEMAP_AMBIENT 0.08
 
-// #ifdef MODE_AMBIENT
-//     #define LIGHTING
+#ifdef MODE_AMBIENT
+//    #define LIGHTING
 //     #define SHADOWS
-// #endif
+#endif
 
 #ifdef MODE_REFLECTION
     #define LIGHTING
@@ -86,18 +86,22 @@ void main()
         albedo *= albedo_texture;
     }
 
-#ifdef MODE_SHADOWS
+#if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
+        
     // write out distance
     const vec3 env_probe_center = (current_env_probe.aabb_max.xyz + current_env_probe.aabb_min.xyz) * 0.5;
-    const float shadow_depth = distance(v_position.xyz, env_probe_center);
+    const float shadow_depth = length(v_position.xyz);//distance(v_position.xyz, env_probe_center);
 
     vec2 moments = vec2(shadow_depth, HYP_FMATH_SQR(shadow_depth));
 
+#endif
+
+#ifdef MODE_SHADOWS
+
     float dx = dFdx(shadow_depth);
     float dy = dFdy(shadow_depth);
-
+    
     moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
-
     output_color = vec4(moments, 0.0, 0.0);
 #else
 
@@ -154,18 +158,6 @@ void main()
 #endif
 
 #ifdef WRITE_MOMENTS
-
-#ifndef MODE_SHADOWS
-    const float depth = gl_FragCoord.z / gl_FragCoord.w;
-
-    vec2 moments = vec2(depth, HYP_FMATH_SQR(depth));
-
-    float dx = dFdx(depth);
-    float dy = dFdy(depth);
-
-    moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
-#endif
-
     output_moments = moments;
 #endif
 }

@@ -25,6 +25,7 @@ layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
+layout(location=6) out vec4 gbuffer_ws_normals;
 
 #define PARALLAX_ENABLED 1
 #define HAS_REFRACTION 1
@@ -51,6 +52,7 @@ void main()
 {
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
+    const vec3 ws_normals = N;
     const vec3 P = v_position.xyz;
     const vec3 V = normalize(camera.position.xyz - P);
     
@@ -254,4 +256,5 @@ void main()
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
+    gbuffer_ws_normals = EncodeNormal(ws_normals);
 }
