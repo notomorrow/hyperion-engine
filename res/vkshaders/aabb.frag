@@ -24,6 +24,7 @@ layout(location=2) out vec4 gbuffer_material;
 layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
+layout(location=6) out vec4 gbuffer_ws_normals;
 
 #include "include/material.inc"
 #include "include/packing.inc"
@@ -42,6 +43,7 @@ void main() {
     gbuffer_material = vec4(0.0, 0.0, 1.0, 1.0);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = vec2(velocity);
+    gbuffer_ws_normals = EncodeNormal(normal);
 
 #ifndef IMMEDIATE_MODE
     gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));

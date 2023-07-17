@@ -3,7 +3,7 @@
 
 #include "defines.inc"
 
-#define NUM_GBUFFER_TEXTURES 7
+#define NUM_GBUFFER_TEXTURES 8
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
@@ -31,6 +31,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_lin
 #define gbuffer_tangents_texture HYP_GBUFFER_TEXTURE(3)
 #define gbuffer_velocity_texture HYP_GBUFFER_TEXTURE(4)
 #define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
+#define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(6)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS

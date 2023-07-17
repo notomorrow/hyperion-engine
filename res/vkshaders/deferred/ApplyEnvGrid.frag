@@ -38,8 +38,9 @@ void main()
     vec3 irradiance = vec3(0.0);
 
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
-    const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, v_texcoord));
+    const vec3 N = DecodeNormal(SampleGBuffer(gbuffer_ws_normals_texture, v_texcoord));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
+    const vec3 V = normalize(camera.position.xyz - P);
 
 #if 0
 
@@ -87,7 +88,7 @@ void main()
 #endif
 
 #else
-    irradiance = ComputeLightFieldProbeIrradiance(P, N, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
+    irradiance = ComputeLightFieldProbeIrradiance(P, N, V, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
 
     color_output = vec4(irradiance, 1.0);
 #endif

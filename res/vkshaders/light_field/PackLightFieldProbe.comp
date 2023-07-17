@@ -4,7 +4,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 
-#define PROBE_SIDE_LENGTH 32
+#define PROBE_SIDE_LENGTH 16
 #define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + 2)
 
 layout(local_size_x = PROBE_SIDE_LENGTH, local_size_y = PROBE_SIDE_LENGTH, local_size_z = 1) in;
@@ -25,7 +25,7 @@ layout(set = 0, binding = 2) uniform textureCube depth_texture;
 layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 
-layout(set = 0, binding = 5, rgba8) uniform writeonly image2D color_image;
+layout(set = 0, binding = 5, rgba16f) uniform writeonly image2D color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2D normals_image;
 layout(set = 0, binding = 7, rg16f) uniform writeonly image2D depth_image;
 
@@ -76,13 +76,26 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
 
 void main(void)
 {
-    const uvec2 coord = probe_offset_coord + uvec2(gl_GlobalInvocationID.xy) + uvec2(1);
+    const uvec2 coord = probe_offset_coord + uvec2(gl_GlobalInvocationID.xy) + 2;
+
+
+
+   /* const vec2 size_per_sample = vec2(cubemap_dimensions.xy) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+    const vec2 sample_fract = size_per_sample * vec2(sample_index);
+
+    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
+    const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
+    const vec2 sample_point = uv * 2.0 - 1.0;
     
-    const vec3 dir = DecodeOctahedralCoord(NormalizeOctahedralCoord(coord));
+    const vec3 dir = MapXYSToDirection(face_index, sample_point);
+    */
+
+    
+    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
 
     const vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;
-    const vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
+    const vec2 depth_sample = TextureCube(sampler_linear, depth_texture, dir).rg;
 
     // const float depth_sample_squared = depth_sample * depth_sample;
 
@@ -103,17 +116,6 @@ void main(void)
         ivec2(coord),
         vec4(depth_sample, 0.0, 0.0)
     );
-
-
-
-    // const vec2 size_per_sample = vec2(cubemap_dimensions.xy) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
-    // const vec2 sample_fract = size_per_sample * vec2(sample_index);
-
-    // const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
-    // const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
-    // const vec2 sample_point = uv * 2.0 - 1.0;
-    
-    // const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
 
     
