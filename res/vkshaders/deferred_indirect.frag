@@ -134,9 +134,11 @@ void main()
 
         irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
-#ifdef RT_ENABLED
+#ifdef RT_REFLECTIONS_ENABLED
         CalculateRaytracingReflection(deferred_params, texcoord, reflections);
+#endif
 
+#ifdef RT_GI_ENABLED
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
