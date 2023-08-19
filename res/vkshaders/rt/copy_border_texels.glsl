@@ -167,12 +167,37 @@ void copy_texel(ivec2 current_coord, uint index)
 
 void main()
 {
-    const ivec2 current_coord = (ivec2(gl_WorkGroupID.xy) * ivec2(PROBE_SIDE_LENGTH_BORDER)) + ivec2(1);
+    //const ivec2 current_coord = (ivec2(gl_WorkGroupID.xy) * ivec2(PROBE_SIDE_LENGTH_BORDER)) + ivec2(1);
+    const ivec2 current_coord = ivec2(gl_GlobalInvocationID.xy);//(ivec2(gl_WorkGroupID.xy) * ivec2(PROBE_SIDE_LENGTH_BORDER));
 
-    copy_texel(current_coord, gl_LocalInvocationIndex);
+    if (current_coord.x == 0 || current_coord.y == 0 || current_coord.x == (probe_system.image_dimensions.x - 1) || current_coord.y == (probe_system.image_dimensions.y - 1)) {
+        return;
+    }
+
+    if (current_coord.x % int(PROBE_SIDE_LENGTH_BORDER) == 0) {
+        imageStore(OUTPUT_IMAGE, current_coord, imageLoad(OUTPUT_IMAGE, ivec2(current_coord.x - 1, current_coord.y)));
+        return;
+    }
+
+    if (current_coord.x % int(PROBE_SIDE_LENGTH_BORDER) == 1) {
+        imageStore(OUTPUT_IMAGE, current_coord, imageLoad(OUTPUT_IMAGE, ivec2(current_coord.x + 1, current_coord.y)));
+        return;
+    }
+
+    if (current_coord.y % int(PROBE_SIDE_LENGTH_BORDER) == 0) {
+        imageStore(OUTPUT_IMAGE, current_coord, imageLoad(OUTPUT_IMAGE, ivec2(current_coord.x, current_coord.y - 1)));
+        return;
+    }
+
+    if (current_coord.y % int(PROBE_SIDE_LENGTH_BORDER) == 1) {
+        imageStore(OUTPUT_IMAGE, current_coord, imageLoad(OUTPUT_IMAGE, ivec2(current_coord.x, current_coord.y + 1)));
+        return;
+    }
+
+    /*copy_texel(current_coord, gl_LocalInvocationIndex);
 
     if (gl_LocalInvocationIndex < 4)
-        copy_texel(current_coord, (GROUP_SIZE * GROUP_SIZE) + gl_LocalInvocationIndex);
+        copy_texel(current_coord, (GROUP_SIZE * GROUP_SIZE) + gl_LocalInvocationIndex);*/
 }
 
 
