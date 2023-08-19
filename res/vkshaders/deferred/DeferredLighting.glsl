@@ -449,7 +449,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
 #endif
 
 #ifndef HYP_DEFERRED_NO_RT_RADIANCE
-#ifdef RT_ENABLED
+#ifdef RT_REFLECTIONS_ENABLED
 void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_RT_RADIANCE_ENABLED);
