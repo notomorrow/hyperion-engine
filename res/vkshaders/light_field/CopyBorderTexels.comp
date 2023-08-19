@@ -5,8 +5,8 @@
 
 #include "Shared.glsl"
 
-#define GROUP_SIZE_X PROBE_SIDE_LENGTH
-#define GROUP_SIZE_Y PROBE_SIDE_LENGTH
+#define GROUP_SIZE_X 8
+#define GROUP_SIZE_Y 8
 
 layout(local_size_x = GROUP_SIZE_X, local_size_y = GROUP_SIZE_Y, local_size_z = 1) in;
 
@@ -27,7 +27,7 @@ layout(push_constant) uniform PushConstant
     uvec2 grid_dimensions;
 };
 
-#if 0
+#if 1
 
 const ivec4 g_offsets[132] = ivec4[](
     ivec4(32, 1, 1, 0),
@@ -251,12 +251,12 @@ void copy_texel(ivec2 current_coord, uint index)
 void main()
 {
     const ivec2 current_coord = ivec2(probe_offset_coord) + 1;
-    const uint index = gl_GlobalInvocationID.y * GROUP_SIZE_X + gl_GlobalInvocationID.x;
+    const uint index = gl_GlobalInvocationID.y * PROBE_SIDE_LENGTH + gl_GlobalInvocationID.x;
 
-    copy_texel(current_coord, gl_LocalInvocationIndex);
+    copy_texel(current_coord, index);
 
     if (gl_LocalInvocationIndex < 4)
-        copy_texel(current_coord, (GROUP_SIZE_X * GROUP_SIZE_Y) + gl_LocalInvocationIndex);
+        copy_texel(current_coord, (PROBE_SIDE_LENGTH * PROBE_SIDE_LENGTH) + index);
 
     //copy_texel(current_coord, index);
     //copy_texel(current_coord, index + (GROUP_SIZE_X * GROUP_SIZE_Y));

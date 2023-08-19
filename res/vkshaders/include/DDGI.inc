@@ -66,8 +66,10 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         weight *= trilinear.x * trilinear.y * trilinear.z;
 
         irradiance = sqrt(irradiance);
-
-        total_irradiance += irradiance * weight;
+        
+        weight = 1.0 / 8.0;
+        total_irradiance += vec3(dir) * weight;
+        //total_irradiance += irradiance * weight;
         total_weight += weight;
     }
 

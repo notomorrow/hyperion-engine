@@ -20,4 +20,4 @@ DebugHBAO = false
 DebugHBIL = false
 DebugReflections = false
 DebugIrradiance = true
-DebugEnvGridProbes = false
+DebugEnvGridProbes = true
