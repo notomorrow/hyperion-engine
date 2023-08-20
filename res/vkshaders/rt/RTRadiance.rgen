@@ -74,7 +74,7 @@ void main()
     const float tmin = 0.05;
     const float tmax = mix(300.0, 2.0, 1.0 - perceptual_roughness);
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 8);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 16);
 
     vec3 color = vec3(0.0);
 
