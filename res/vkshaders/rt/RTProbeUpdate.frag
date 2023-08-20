@@ -110,7 +110,6 @@ void GatherRays(ivec2 coord, uint num_rays, inout vec3 result, inout float total
 void main()
 {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy) + (ivec2(gl_WorkGroupID.xy) * ivec2(2)) + ivec2(2);
-    const vec4 src_color = imageLoad(OUTPUT_IMAGE, coord);
     
     vec3 result = vec3(0.0);
     float total_weight = 0.0;
@@ -137,14 +136,13 @@ void main()
         result /= total_weight;
     }
 
-    // TEMP
-    float hysteresis = 0.99;
+    float hysteresis = 0.9;
 
     float alpha = 1.0 - hysteresis;
     
     imageStore(
         OUTPUT_IMAGE,
         coord,
-        vec4(mix(mix(src_color.rgb, vec3(0.0), isnan(src_color.rgb)), result, alpha), 1.0)
+        vec4(result.rgb, alpha)
     );
 }
