@@ -12,13 +12,13 @@
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 // radiance image
-layout(set = 0, binding = 1, rgba8) uniform image2D image;
+layout(set = 0, binding = 1, rgba16f) uniform image2D image;
 
-layout(set = 0, binding = 5) uniform texture2D gbuffer_normals_texture;
-layout(set = 0, binding = 6) uniform texture2D gbuffer_material_texture;
-layout(set = 0, binding = 7) uniform texture2D gbuffer_depth_texture;
-layout(set = 0, binding = 7) uniform sampler sampler_nearest;
-layout(set = 0, binding = 8) uniform sampler sampler_linear;
+layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
+layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
+layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
+layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+layout(set = 0, binding = 10) uniform sampler sampler_linear;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -27,6 +27,16 @@ layout(set = 0, binding = 8) uniform sampler sampler_linear;
 #include "../include/packing.inc"
 #include "../include/noise.inc"
 #include "../include/brdf.inc"
+
+/// Blue noise
+
+layout(std140, set = 0, binding = 11) readonly buffer BlueNoiseBuffer {
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+#include "../include/BlueNoise.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #undef HYP_NO_CUBEMAP
@@ -47,9 +57,8 @@ const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
 const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
-#define RAY_OFFSET 0.025
+#define RAY_OFFSET 0.25
 #define NUM_SAMPLES 1
-#define NUM_ACCUMULATION_SAMPLES 6
 
 void main() 
 {
@@ -71,10 +80,10 @@ void main()
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
-    const float tmin = 0.05;
-    const float tmax = mix(300.0, 2.0, 1.0 - perceptual_roughness);
+    const float tmin = 0.25;
+    const float tmax = 10000.0;
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 16);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 256);
 
     vec3 color = vec3(0.0);
 
@@ -84,10 +93,21 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(normal, tangent, bitangent);
 
-    const float r1 = RandomFloat(ray_seed);
-    const float r2 = RandomFloat(ray_seed);
+    //const float r1 = RandomFloat(ray_seed);
+    //const float r2 = RandomFloat(ray_seed);
 
-    vec3 H = ImportanceSampleGTR2(perceptual_roughness, r1, r2);
+    //vec3 H = ImportanceSampleGTR2(perceptual_roughness, r1, r2);
+
+    vec2 blue_noise_sample = vec2(
+        SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 0),
+        SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 1)
+    );
+
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
+    const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+    
+    vec3 H = ImportanceSampleGGX(rnd, normal, perceptual_roughness);
+
     H = tangent * H.x + bitangent * H.y + normal * H.z;
 
     direction = H;

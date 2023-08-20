@@ -3,7 +3,7 @@
 
 #define PI 3.14159265359
 
-float GetSquareFalloffAttenuation(vec3 P, vec3 V, vec3 L, float radius)
+float GetSquareFalloffAttenuation(vec3 P, vec3 L, float radius)
 {
     const vec3 position_to_light = P - L;
     float distance_square = dot(position_to_light, position_to_light);

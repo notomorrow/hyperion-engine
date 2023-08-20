@@ -146,7 +146,7 @@ void main(void)
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, N, roughness);
+    vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     vec3 ray_direction = reflect(-V, normalize((camera.view * vec4(H, 0.0)).xyz));
