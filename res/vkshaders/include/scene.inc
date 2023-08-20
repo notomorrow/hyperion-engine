@@ -76,6 +76,15 @@ struct ShadowMap
     vec4 _pad7;
 };
 
+vec3 CalculateLightDirection(Light light, in vec3 world_position)
+{
+    vec3 L = light.position_intensity.xyz;
+    L -= world_position.xyz * float(min(light.type, 1));
+    L = normalize(L);
+
+    return L;
+}
+
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneShaderData
 {

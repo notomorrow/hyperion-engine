@@ -6,7 +6,7 @@
 #define CACHE_SIZE 64
 #define EPS 0.00001
 #define ENERGY_CONSERVATION 0.95
-#define MAX_DISTANCE (probe_system.params[PARAM_PROBE_DISTANCE] * 1.5)
+#define MAX_DISTANCE (probe_system.probe_distance * 1.5)
 
 #if DEPTH
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_DEPTH
@@ -114,7 +114,7 @@ void main()
     vec3 result = vec3(0.0);
     float total_weight = 0.0;
 
-    uint remaining_rays = uint(probe_system.params[PARAM_NUM_RAYS_PER_PROBE]);
+    uint remaining_rays = probe_system.num_rays_per_probe;
     uint offset = 0;
 
     while (remaining_rays != 0) {

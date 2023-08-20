@@ -43,7 +43,7 @@ void main()
     const uint ray_index = coord.y;
     
     vec3 origin = ProbeIndexToWorldPosition(probe_index);
-    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, uint(probe_system.params[PARAM_NUM_RAYS_PER_PROBE])));
+    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;

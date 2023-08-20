@@ -6,7 +6,7 @@
 #define M_PI 3.14159265359
 
 #define PROBE_GRID_ORIGIN (probe_system.aabb_min.xyz)
-#define PROBE_GRID_STEP   (vec3(probe_system.params[PARAM_PROBE_DISTANCE]))
+#define PROBE_GRID_STEP   (vec3(probe_system.probe_distance))
 #define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
 #define PROBE_NORMAL_BIAS (0.01)
 

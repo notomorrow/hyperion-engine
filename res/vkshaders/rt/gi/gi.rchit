@@ -13,10 +13,20 @@
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../include/material.inc"
 #include "../../include/object.inc"
+#include "../../include/scene.inc"
+
+#include "../../include/brdf.inc"
+//    #include "../../include/shadows.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../../include/rt/mesh.inc"
 #include "../../include/rt/payload.inc"
+
+#include "../../include/rt/probe/probe_uniforms.inc"
+
+layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+    ProbeSystemUniforms probe_system;
+};
 
 #undef HYP_NO_CUBEMAP
 
@@ -54,6 +64,12 @@ layout(std140, set = 0, binding = 6) readonly buffer EntityBuffer
 {
     Object entities[];
 };
+
+layout(std140, set = 0, binding = 7) readonly buffer LightShaderData
+{
+    Light lights[];
+};
+
 
 // for RT, all textures are bindless
 layout(set = 2, binding = 0) uniform sampler2D textures[];
@@ -143,6 +159,7 @@ void main()
     const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
     const vec3 normal = normalize((gl_ObjectToWorldEXT * vec4(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z, 0.0)).xyz);
     const vec2 texcoord = v0.texcoord0 * barycentric_coords.x + v1.texcoord0 * barycentric_coords.y + v2.texcoord0 * barycentric_coords.z;
+    const vec3 position = v0.position * barycentric_coords.x + v1.position * barycentric_coords.y + v2.position * barycentric_coords.z;
     
     vec4 material_color = vec4(1.0);
 
@@ -160,7 +177,27 @@ void main()
         material_color *= albedo_texture;
     }
 
-    payload.color = material_color.rgb;
+    vec3 light_color = vec3(0.0);
+    float shadow = 1.0;
+
+    for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
+        const vec3 L = CalculateLightDirection(lights[light_index], position);
+        const float NdotL = max(dot(normal, L), 0.00001);
+        const vec3 local_light_color = vec3(NdotL) * UINT_TO_VEC4(lights[light_index].color_encoded).rgb;
+
+        const float attenuation = lights[light_index].type == HYP_LIGHT_TYPE_POINT
+            ? GetSquareFalloffAttenuation(position.xyz, lights[light_index].position_intensity.xyz, lights[light_index].radius)
+            : 1.0;
+
+        light_color += local_light_color * lights[light_index].position_intensity.w * attenuation;
+
+        
+        //if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+        //    shadow *= GetShadowStandard(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
+        //}
+    }
+
+    payload.color = material_color.rgb * HYP_FMATH_ONE_OVER_PI * light_color;
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);

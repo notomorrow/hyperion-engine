@@ -10,7 +10,7 @@ const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 #define HYP_TAA_NEIGHBORS_2x2 5
 
 #if defined(FEEDBACK_HIGH)
-    #define HYP_TEMPORAL_BLENDING_FEEDBACK 0.95
+    #define HYP_TEMPORAL_BLENDING_FEEDBACK 0.99
 #elif defined(FEEDBACK_MEDIUM)
     #define HYP_TEMPORAL_BLENDING_FEEDBACK 0.85
 #elif defined(FEEDBACK_LOW)

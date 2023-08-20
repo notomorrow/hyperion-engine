@@ -213,7 +213,7 @@ void main()
             vec3 specular = specular_lobe;
 
             const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-                ? GetSquareFalloffAttenuation(P, V, light.position_intensity.xyz, light.radius)
+                ? GetSquareFalloffAttenuation(P, light.position_intensity.xyz, light.radius)
                 : 1.0;
 
             vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);

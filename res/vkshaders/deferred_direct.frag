@@ -129,7 +129,7 @@ void main()
         const vec4 specular_lobe = D * G * F;
 
         const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, V, light.position_intensity.xyz, light.radius)
+            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
             : 1.0;
 
         vec4 specular = specular_lobe;
