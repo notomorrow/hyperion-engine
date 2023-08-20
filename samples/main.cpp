@@ -1083,8 +1083,8 @@ int main()
     RC<Application> application(new SDLApplication("My Application"));
     application->SetCurrentWindow(application->CreateSystemWindow({
         "Hyperion Engine",
-        1280,
-        768,
+        1920,
+        1080,
         true
     }));
     
