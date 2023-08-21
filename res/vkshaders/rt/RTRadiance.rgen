@@ -17,8 +17,12 @@ layout(set = 0, binding = 1, rgba16f) uniform image2D image;
 layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
 layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
+
 layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+#define HYP_SAMPLER_NEAREST sampler_nearest
+
 layout(set = 0, binding = 10) uniform sampler sampler_linear;
+#define HYP_SAMPLER_LINEAR sampler_linear
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

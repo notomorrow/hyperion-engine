@@ -96,7 +96,7 @@ void main()
 
         shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
     } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-        shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, NdotL);
+        shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
 
 #ifdef LIGHT_RAYS_ENABLED
         const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
@@ -121,7 +121,7 @@ void main()
         const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
         const float perceptual_roughness = sqrt(roughness);
-        const vec4 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+        const vec4 dfg = CalculateDFG(F, roughness, NdotV);
         const vec4 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);
 
@@ -137,10 +137,10 @@ void main()
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
         vec4 diffuse = diffuse_lobe;
 
-        vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
+        vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
 
         // direct_component.rgb *= (exposure);
-        result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
+        result += direct_component * HYP_FMATH_ONE_OVER_PI * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
         result.a = attenuation;
 
         // ApplyFog(position.xyz, result);

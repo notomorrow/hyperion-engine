@@ -145,7 +145,7 @@ void main()
         { // irradiance
             const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
 
-            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 dfg = CalculateDFG(F, roughness, NdotV);
             const vec3 E = CalculateE(F0, dfg);
             const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
@@ -194,7 +194,7 @@ void main()
             float shadow = 1.0;
 
             if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-                shadow = GetShadow(light.shadow_map_index, P, texcoord, NdotL);
+                shadow = GetShadow(light.shadow_map_index, P, texcoord, camera.dimensions.xy, NdotL);
             }
 
             vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb;
@@ -203,7 +203,7 @@ void main()
             const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
             const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
-            const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+            const vec3 dfg = CalculateDFG(F, roughness, NdotV);
             const vec3 E = CalculateE(F0, dfg);
             const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
