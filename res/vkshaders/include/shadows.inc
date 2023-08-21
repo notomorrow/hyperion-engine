@@ -100,7 +100,7 @@ float GetShadowStandard(vec4 shadow_sample, vec3 coord, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
-float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
+float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
 #define HYP_1_OVER_16 0.0625
 
@@ -146,7 +146,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, float NdotL)
     const float shadow_map_depth = coord.z;
     const float shadow_filter_size = 0.0005;
 
-    const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(camera.dimensions.xy) - 0.5);
+    const float gradient_noise = InterleavedGradientNoise(texcoord * screen_dimensions - 0.5);
 
 #if defined(HYP_SHADOW_SAMPLES_16)
     #define HYP_SHADOW_SAMPLE_COUNT 16
@@ -329,7 +329,7 @@ float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float
     return penumbra;
 }
 
-float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
+float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
     AABB aabb;
     aabb.min = shadow_map_data[index].aabb_min.xyz;
@@ -347,7 +347,7 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, float NdotL)
     const float penumbra_filter_size = 0.0005;
     const float light_size = 15.0; // affects how quickly shadows become soft
 
-    const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(camera.dimensions.xy) - 0.5);
+    const float gradient_noise = InterleavedGradientNoise(texcoord * screen_dimensions - 0.5);
 
     float total_blocker_depth = 0.0;
     float num_blockers = 0.0;
@@ -495,7 +495,7 @@ float GetPointShadow(uint texture_index, uint flags, vec3 world_to_light)
 
 #endif
 
-float GetShadow(uint index, vec3 position, vec2 texcoord, float NdotL)
+float GetShadow(uint index, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
     if (index >= HYP_MAX_SHADOW_MAPS) {
         return 1.0;
@@ -505,9 +505,9 @@ float GetShadow(uint index, vec3 position, vec2 texcoord, float NdotL)
     case SHADOW_FLAGS_VSM:
         return GetShadowVariance(index, position, NdotL);
     case SHADOW_FLAGS_CONTACT_HARDENED:
-        return GetShadowContactHardened(index, position, texcoord, NdotL);
+        return GetShadowContactHardened(index, position, texcoord, screen_dimensions, NdotL);
     case SHADOW_FLAGS_PCF: // fallthrough
-        return GetShadowPCF(index, position, texcoord, NdotL);
+        return GetShadowPCF(index, position, texcoord, screen_dimensions, NdotL);
     default:
         return GetShadowStandard(index, position, vec2(0.0), NdotL);
     }

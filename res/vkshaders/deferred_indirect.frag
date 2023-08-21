@@ -98,7 +98,7 @@ void main()
         F = CalculateFresnelTerm(F0, roughness, NdotV);
 
         const float perceptual_roughness = sqrt(roughness);
-        const vec3 dfg = CalculateDFG(F, perceptual_roughness, NdotV);
+        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 

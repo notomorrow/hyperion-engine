@@ -21,10 +21,37 @@
 #include "../include/rt/mesh.inc"
 #include "../include/rt/payload.inc"
 
+layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+#define HYP_SAMPLER_NEAREST sampler_nearest
+
+layout(set = 0, binding = 10) uniform sampler sampler_linear;
+#define HYP_SAMPLER_LINEAR sampler_linear
+
+
+/* Shadows */
+
+layout(set = 1, binding = 12) uniform texture2D shadow_maps[];
+
+layout(std140, set = 1, binding = 13, row_major) readonly buffer ShadowShaderData
+{
+    ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
+};
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/shadows.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+/* End Shadows */
+
 #undef HYP_NO_CUBEMAP
 
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
+
+layout(push_constant) uniform PushConstant
+{
+    uint num_bound_lights;
+};
 
 struct PackedVertex
 {
@@ -167,27 +194,41 @@ void main()
         material_color *= albedo_texture;
     }
 
-    vec3 light_color = vec3(0.0);
-    float shadow = 1.0;
+    float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
 
-    for (uint light_index = 0; light_index < 1; light_index++) {
+    if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
+        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
+        
+        metalness = metalness_sample;
+    }
+
+    const float ambient = 0.025;
+
+    vec3 indirect_lighting = material_color.rgb * (1.0 - metalness) * vec3(ambient);
+
+    vec3 direct_lighting = vec3(0.0);
+
+    for (uint light_index = 0; light_index < num_bound_lights; light_index++) {
         const vec3 L = CalculateLightDirection(lights[light_index], position);
         const float NdotL = max(dot(normal, L), 0.00001);
-        const vec3 local_light_color = vec3(NdotL) * UINT_TO_VEC4(lights[light_index].color_encoded).rgb;
-
+        
         const float attenuation = lights[light_index].type == HYP_LIGHT_TYPE_POINT
             ? GetSquareFalloffAttenuation(position.xyz, lights[light_index].position_intensity.xyz, lights[light_index].radius)
             : 1.0;
 
-        light_color += local_light_color * lights[light_index].position_intensity.w * attenuation;
+        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(lights[light_index].color_encoded).rgb;
+
+        local_light *= lights[light_index].position_intensity.w * attenuation;
 
         
-        //if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-        //    shadow *= GetShadowStandard(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
-        //}
+        if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u) {
+            local_light *= GetShadowStandard(lights[light_index].shadow_map_index, position.xyz, vec2(0.0), NdotL);
+        }
+
+        direct_lighting += local_light;
     }
     
-    payload.color = material_color.rgb * HYP_FMATH_ONE_OVER_PI * light_color;
+    payload.color = indirect_lighting + (material_color.rgb * HYP_FMATH_ONE_OVER_PI * direct_lighting);
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
