@@ -65,14 +65,14 @@ vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
         // trilinear
         weight *= trilinear.x * trilinear.y * trilinear.z;
 
-        irradiance = sqrt(irradiance);
+        //irradiance = sqrt(irradiance);
 
         total_irradiance += irradiance * weight;
         total_weight += weight;
     }
 
     vec3 net_irradiance = total_irradiance / max(total_weight, 0.001);
-    net_irradiance = HYP_FMATH_SQR(net_irradiance);
+   // net_irradiance = HYP_FMATH_SQR(net_irradiance);
 
     return vec4(mix(net_irradiance, vec3(0.0), isnan(net_irradiance)), 1.0);
 }

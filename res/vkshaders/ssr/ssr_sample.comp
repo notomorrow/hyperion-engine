@@ -68,8 +68,8 @@ void main(void)
         roughness = clamp(roughness, 0.001, 0.999);
         const float perceptual_roughness = sqrt(roughness);
 
-        const float gloss = 1.0 - perceptual_roughness;
-        const float cone_angle = RoughnessToConeAngle(perceptual_roughness) * 0.5;
+        const float gloss = 1.0 - roughness;
+        const float cone_angle = RoughnessToConeAngle(roughness) * 0.5;
 
         const float trace_size = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
         const float max_mip_level = 9.0;
