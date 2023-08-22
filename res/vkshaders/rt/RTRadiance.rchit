@@ -48,10 +48,8 @@ layout(std140, set = 1, binding = 13, row_major) readonly buffer ShadowShaderDat
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
 
-layout(push_constant) uniform PushConstant
-{
-    uint num_bound_lights;
-};
+#define HYP_GET_LIGHT(index) \
+    lights[rt_radiance_uniforms.light_indices[(index / 4)][index % 4]]
 
 struct PackedVertex
 {
@@ -88,6 +86,20 @@ layout(std140, set = 0, binding = 4) readonly buffer EntityBuffer
 layout(std140, set = 0, binding = 5) readonly buffer LightShaderData
 {
     Light lights[];
+};
+
+struct RTRadianceUniforms
+{
+    uint num_bound_lights;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
+    uvec4 light_indices[4];
+};
+
+layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
+{
+    RTRadianceUniforms rt_radiance_uniforms;
 };
 
 // for RT, all textures are bindless
@@ -168,15 +180,15 @@ void main()
     // payload.color = vec3(v0.position);
     // return;
 
-    v0.position = (gl_ObjectToWorldEXT * vec4(v0.position, 1.0)).xyz;
-    v1.position = (gl_ObjectToWorldEXT * vec4(v1.position, 1.0)).xyz;
-    v2.position = (gl_ObjectToWorldEXT * vec4(v2.position, 1.0)).xyz;
-
     // Interpolate normal
     const vec3 barycentric_coords = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
     const vec3 normal = normalize((gl_ObjectToWorldEXT * vec4(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z, 0.0)).xyz);
     const vec2 texcoord = v0.texcoord0 * barycentric_coords.x + v1.texcoord0 * barycentric_coords.y + v2.texcoord0 * barycentric_coords.z;
-    const vec3 position = v0.position * barycentric_coords.x + v1.position * barycentric_coords.y + v2.position * barycentric_coords.z;
+    const vec3 position = (gl_ObjectToWorldEXT * vec4(v0.position * barycentric_coords.x + v1.position * barycentric_coords.y + v2.position * barycentric_coords.z, 1.0)).xyz;
+
+    v0.position = (gl_ObjectToWorldEXT * vec4(v0.position, 1.0)).xyz;
+    v1.position = (gl_ObjectToWorldEXT * vec4(v1.position, 1.0)).xyz;
+    v2.position = (gl_ObjectToWorldEXT * vec4(v2.position, 1.0)).xyz;
 
     vec4 material_color = vec4(1.0);
 
@@ -208,27 +220,28 @@ void main()
 
     vec3 direct_lighting = vec3(0.0);
 
-    for (uint light_index = 0; light_index < num_bound_lights; light_index++) {
-        const vec3 L = CalculateLightDirection(lights[light_index], position);
+    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+        const Light light = HYP_GET_LIGHT(light_index);
+
+        const vec3 L = CalculateLightDirection(light, position);
         const float NdotL = max(dot(normal, L), 0.00001);
         
-        const float attenuation = lights[light_index].type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, lights[light_index].position_intensity.xyz, lights[light_index].radius)
+        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
             : 1.0;
 
-        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(lights[light_index].color_encoded).rgb;
+        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(light.color_encoded).rgb;
 
-        local_light *= lights[light_index].position_intensity.w * attenuation;
+        local_light *= light.position_intensity.w * attenuation;
 
-        
-        if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u) {
-            local_light *= GetShadowStandard(lights[light_index].shadow_map_index, position.xyz, vec2(0.0), NdotL);
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+            local_light *= GetShadowStandard(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
         }
 
-        direct_lighting += local_light;
+        direct_lighting += material_color.rgb * HYP_FMATH_ONE_OVER_PI * local_light;
     }
     
-    payload.color = indirect_lighting + (material_color.rgb * HYP_FMATH_ONE_OVER_PI * direct_lighting);
+    payload.color = indirect_lighting + direct_lighting;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);

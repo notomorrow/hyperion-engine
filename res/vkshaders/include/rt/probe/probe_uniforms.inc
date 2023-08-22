@@ -23,7 +23,11 @@ struct ProbeSystemUniforms
     uint num_rays_per_probe;
     uint flags;
     uint num_bound_lights;
+
     uint shadow_map_index;
+    uint _pad0, _pad1, _pad2;
+
+    uvec4 light_indices[4];
 
     //uvec4 params; // x = probe distance, y = num rays per probe, z = flags, w =  num bound lights
 
