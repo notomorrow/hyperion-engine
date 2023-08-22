@@ -98,7 +98,7 @@ struct Material
 
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
     #define SAMPLE_TEXTURE(mat, index, texcoord) \
-        Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
+        Texture2DLod(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
 
     #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
         Texture2DTriplanar(texture_sampler, GET_TEXTURE(mat, index), (position), (normal))

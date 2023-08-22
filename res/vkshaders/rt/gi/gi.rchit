@@ -87,6 +87,9 @@ layout(std140, set = 0, binding = 7) readonly buffer LightShaderData
 };
 
 
+#define HYP_GET_LIGHT(index) \
+    lights[probe_system.light_indices[(index / 4)][index % 4]]
+
 // for RT, all textures are bindless
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
@@ -208,26 +211,28 @@ void main()
     vec3 direct_lighting = vec3(0.0);
 
     for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
-        const vec3 L = CalculateLightDirection(lights[light_index], position);
+        const Light light = HYP_GET_LIGHT(light_index);
+
+        const vec3 L = CalculateLightDirection(light, position);
         const float NdotL = max(dot(normal, L), 0.00001);
         
-        const float attenuation = lights[light_index].type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, lights[light_index].position_intensity.xyz, lights[light_index].radius)
+        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
             : 1.0;
 
-        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(lights[light_index].color_encoded).rgb;
+        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(light.color_encoded).rgb;
 
-        local_light *= lights[light_index].position_intensity.w * attenuation;
+        local_light *= light.position_intensity.w * attenuation;
 
         
-        if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index == probe_system.shadow_map_index) {
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index == probe_system.shadow_map_index) {
             local_light *= GetShadowStandard(probe_system.shadow_map_index, position.xyz, vec2(0.0), NdotL);
         }
 
         direct_lighting += local_light;
     }
 
-    payload.color = indirect_lighting + (material_color.rgb * HYP_FMATH_ONE_OVER_PI * direct_lighting);
+    payload.color = indirect_lighting + (material_color.rgb * direct_lighting);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
