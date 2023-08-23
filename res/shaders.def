@@ -116,7 +116,7 @@ vert = main.vert
 comp = shadow/BlurShadowMap.comp
 
 [SSRWriteUVs]
-permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
+permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING, ROUGHNESS_SCATTERING
 comp = ssr/ssr_write_uvs.comp
 
 [SSRSample]
