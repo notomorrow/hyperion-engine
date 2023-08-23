@@ -879,7 +879,7 @@ public:
                 Vector3(),
                 Color(1.0f, 0.8f, 0.5f),
                 50.0f,
-                10.0f
+                3.0f
             )));
 
             GetScene()->AddEntity(point_light_entity);

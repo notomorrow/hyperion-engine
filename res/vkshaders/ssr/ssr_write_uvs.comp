@@ -137,7 +137,7 @@ void main(void)
     //vec3 ray_origin = (camera.view * vec4(world_space_position + N * 0.25, 1.0)).xyz;//
     vec3 ray_origin = P + N * 0.001;// + view_space_normal * texel_size_max;
     
-#ifdef HYP_SSR_ROUGHNESS_SCATTERING
+#ifdef ROUGHNESS_SCATTERING
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 0),
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)

@@ -28,7 +28,6 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #define HYP_SSR_ROUGHNESS_MAX 1.0
-#define HYP_SSR_ROUGHNESS_SCATTERING
 
 layout(set = 0, binding = 10) uniform texture2D gbuffer_mip_chain;
 layout(set = 0, binding = 11) uniform texture2D gbuffer_normals_texture;
