@@ -169,7 +169,9 @@ void main()
         ApplyFog(position.xyz, final_result);
         result = final_result.rgb;
 
-#if defined(DEBUG_REFLECTIONS)
+#ifdef PATHTRACER
+        result = CalculatePathTracing(deferred_params, texcoord).rgb;
+#elif defined(DEBUG_REFLECTIONS)
         result = reflection_combined.rgb;
 #elif defined(DEBUG_IRRADIANCE)
         result = irradiance.rgb;

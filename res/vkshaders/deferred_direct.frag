@@ -140,7 +140,7 @@ void main()
         vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
 
         // direct_component.rgb *= (exposure);
-        result += direct_component * HYP_FMATH_ONE_OVER_PI * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
+        result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
         result.a = attenuation;
 
         // ApplyFog(position.xyz, result);
@@ -152,7 +152,7 @@ void main()
 
     result = (result * (1.0 - light_rays.a)) + light_rays;
 
-#if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE)
+#if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE) || defined(PATHTRACER)
     output_color = vec4(0.0);
 #else
     output_color = vec4(result);

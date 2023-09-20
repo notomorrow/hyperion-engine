@@ -49,7 +49,7 @@ vert = PostEffect.vert
 frag = GenerateMipmaps.frag
 
 [FinalOutput]
-permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB
+permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
 frag = blit.frag
 vert = blit.vert
 
@@ -182,6 +182,11 @@ vert = vct/voxelize.vert
 rgen = rt/RTRadiance.rgen
 rchit = rt/RTRadiance.rchit
 rmiss = rt/RTRadiance.rmiss
+
+[PathTracer]
+rgen = rt/pathtracer/PathTracer.rgen
+rchit = rt/pathtracer/PathTracer.rchit
+rmiss = rt/pathtracer/PathTracer.rmiss
 
 [RTProbe]
 rgen = rt/gi/gi.rgen

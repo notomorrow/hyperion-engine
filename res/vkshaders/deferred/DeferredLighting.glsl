@@ -26,82 +26,6 @@ struct Refraction
     vec3 direction;
 };
 
-float ApplyIORToRoughness(float ior, float roughness)
-{
-    return roughness * clamp(ior * 2.0 - 2.0, 0.0, 1.0);
-}
-
-vec3 CalculateDiffuseColor(vec3 albedo, float metalness)
-{
-    return albedo * (1.0 - metalness);
-}
-
-vec4 CalculateDiffuseColor(vec4 albedo, float metalness)
-{
-    return vec4(CalculateDiffuseColor(albedo.rgb, metalness), albedo.a);
-}
-
-vec3 CalculateF0(vec3 albedo, float metalness)
-{
-    const float material_reflectance = 0.5;
-    const float reflectance = 0.16 * material_reflectance * material_reflectance;
-    return albedo * metalness + (reflectance * (1.0 - metalness));
-}
-
-vec3 CalculateFresnelTerm(vec3 F0, float roughness, float NdotV)
-{
-    return SchlickFresnelRoughness(F0, roughness, NdotV);
-}
-
-vec4 CalculateFresnelTerm(vec4 F0, float roughness, float NdotV)
-{
-    return SchlickFresnelRoughness(F0, roughness, NdotV);
-}
-
-float CalculateGeometryTerm(float NdotL, float NdotV, float HdotV, float NdotH)
-{
-    return CookTorranceG(NdotL, NdotV, HdotV, NdotH);
-}
-
-float CalculateDistributionTerm(float roughness, float NdotH)
-{
-    return Trowbridge(NdotH, roughness);
-}
-
-vec3 CalculateDFG(vec3 F, float perceptual_roughness, float NdotV)
-{
-    const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
-
-    return F * AB.x + AB.y;
-}
-
-vec4 CalculateDFG(vec4 F, float perceptual_roughness, float NdotV)
-{
-    const vec2 AB = BRDFMap(perceptual_roughness, NdotV);
-
-    return F * AB.x + AB.y;
-}
-
-vec3 CalculateE(vec3 F0, vec3 dfg)
-{
-    return mix(dfg.xxx, dfg.yyy, F0);
-}
-
-vec4 CalculateE(vec4 F0, vec4 dfg)
-{
-    return mix(dfg.xxxx, dfg.yyyy, F0);
-}
-
-vec3 CalculateEnergyCompensation(vec3 F0, vec3 dfg)
-{
-    return 1.0 + F0 * ((1.0 / max(dfg.y, 0.0001)) - 1.0);
-}
-
-vec4 CalculateEnergyCompensation(vec4 F0, vec4 dfg)
-{
-    return 1.0 + F0 * ((1.0 / max(dfg.y, 0.0001)) - 1.0);
-}
-
 void RefractionSolidSphere(
     vec3 P, vec3 N, vec3 V, float eta_ir,
     out Refraction out_refraction
@@ -449,6 +373,13 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
 #endif
 
 #ifndef HYP_DEFERRED_NO_RT_RADIANCE
+#ifdef PATHTRACER
+vec4 CalculatePathTracing(DeferredParams deferred_params, vec2 uv)
+{
+    return Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
+}
+#endif
+
 #ifdef RT_REFLECTIONS_ENABLED
 void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
 {
