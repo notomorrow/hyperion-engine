@@ -39,9 +39,16 @@ layout(std140, set = 1, binding = 13, row_major) readonly buffer ShadowShaderDat
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
 
+layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../include/shadows.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+#include "../../include/rt/RTRadiance.inc"
 
 /* End Shadows */
 
@@ -88,15 +95,6 @@ layout(std140, set = 0, binding = 4) readonly buffer EntityBuffer
 layout(std430, set = 0, binding = 5) readonly buffer LightShaderData
 {
     Light lights[];
-};
-
-struct RTRadianceUniforms
-{
-    uint num_bound_lights;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
-    uvec4 light_indices[4];
 };
 
 layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
@@ -227,8 +225,8 @@ void main()
     const float ambient = 0.025;
 
     vec3 direct_lighting = vec3(0.0);
-
-    const vec3 V = -gl_WorldRayDirectionEXT;
+    
+    const vec3 V = -gl_WorldRayDirectionEXT;//normalize(camera.position.xyz - position);
     const float NdotV = max(0.0001, dot(normal, V));
 
     const float material_reflectance = 0.5;
@@ -237,7 +235,7 @@ void main()
     vec4 F0 = vec4(material_color.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
     vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
 
-    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+    /*for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
 
         const vec3 L = CalculateLightDirection(light, position);
@@ -277,10 +275,36 @@ void main()
         
         const vec4 direct_component = diffuse_lobe + specular_lobe;
         direct_lighting += (direct_component.rgb * NdotL * attenuation);
-    }
-    
+    }*/
+
+    const vec3 L = reflect(-V, payload.dir);
+    const vec3 H = payload.dir;// normalize(L + V);
+
+    const float NdotL = max(0.0001, dot(normal, L));
+    const float NdotH = max(0.0001, dot(normal, H));
+    const float LdotH = max(0.0001, dot(L, H));
+    const float HdotV = max(0.0001, dot(H, V));
+        
+    const float D = CalculateDistributionTerm(roughness, NdotH);
+    const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+    const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
+        
+    const vec4 dfg = CalculateDFG(F, roughness, NdotV);
+    const vec4 E = CalculateE(F0, dfg);
+    const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);
+        
+    const vec4 diffuse_color = CalculateDiffuseColor(material_color, metalness);
+    const vec4 specular_lobe = D * G * F;
+
+    vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
+        
+    const vec4 direct_component = diffuse_lobe + specular_lobe;
+    direct_lighting += (direct_component.rgb * NdotL);
+
+    payload.beta *= exp(-payload.absorption * gl_HitTEXT);
     payload.color = direct_lighting * payload.beta;
-    payload.beta *= 0.5;
+    payload.beta *= F.rgb * NdotL / ((NdotL * (1.0 / HYP_FMATH_PI)) + HYP_FMATH_EPSILON);
+
 
     payload.distance = gl_HitTEXT;
     payload.normal = normal;

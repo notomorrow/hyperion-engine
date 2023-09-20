@@ -7,6 +7,7 @@ struct RayPayload
 #ifdef PATHTRACER
     vec3 beta;
 	vec3 absorption;
+	vec3 dir;
 #endif
 };
 
