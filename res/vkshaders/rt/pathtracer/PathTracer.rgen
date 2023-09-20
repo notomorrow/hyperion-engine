@@ -1,0 +1,157 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_scalar_block_layout : require
+
+#define HYP_NO_CUBEMAP
+
+#include "../../include/defines.inc"
+#include "../../include/noise.inc"
+#include "../../include/packing.inc"
+#include "../../include/tonemap.inc"
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
+// radiance image
+layout(set = 0, binding = 1, rgba16f) uniform image2D image;
+
+layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
+layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
+layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
+
+layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+#define HYP_SAMPLER_NEAREST sampler_nearest
+
+layout(set = 0, binding = 10) uniform sampler sampler_linear;
+#define HYP_SAMPLER_LINEAR sampler_linear
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+#include "../../include/scene.inc"
+#include "../../include/shared.inc"
+#include "../../include/packing.inc"
+#include "../../include/noise.inc"
+#include "../../include/brdf.inc"
+
+/// Blue noise
+
+layout(std140, set = 0, binding = 11) readonly buffer BlueNoiseBuffer {
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+#include "../../include/BlueNoise.glsl"
+
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#undef HYP_NO_CUBEMAP
+
+layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
+{
+    Scene scene;
+};
+
+layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+#define PATHTRACER
+#include "../../include/rt/payload.inc"
+
+const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
+const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
+
+layout(location = 0) rayPayloadEXT RayPayload payload;
+#define RAY_OFFSET 0.25
+#define NUM_SAMPLES 1
+#define NUM_BOUNCES 8
+
+void main() 
+{
+    const ivec2 resolution = imageSize(image);
+
+    const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
+
+    const int pixel_index = storage_coord.y * resolution.x + storage_coord.x;
+
+    //if (pixel_index % 2 == 0) {
+    //    return;
+    //}
+
+    const vec2 uv = (vec2(storage_coord) + 0.5) / vec2(resolution);
+
+    const mat4 view_inverse = inverse(camera.view);
+    const mat4 projection_inverse = inverse(camera.projection);
+
+    const vec3 normal = normalize(DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, uv, 0.0)));
+    const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
+    const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
+    const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
+    const float roughness = material_data.r;
+    const float perceptual_roughness = sqrt(roughness);
+
+    //const vec3 V = normalize(camera.position.xyz - position);
+    //const vec3 R = normalize(reflect(-V, normal));
+
+    const uint flags = gl_RayFlagsOpaqueEXT;
+    const uint mask = 0xff;
+    const float tmin = 0.1;
+    const float tmax = 1000.0;
+
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 256);
+
+    vec3 color = vec3(0.0);
+
+    vec4 target = projection_inverse * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+    vec3 direction = (view_inverse * vec4(normalize(target.xyz / target.w), 0.0)).xyz;//camera.direction.xyz;
+    vec3 origin = (view_inverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; //camera.position.xyz;
+
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(normal, tangent, bitangent);
+
+    for (int sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
+
+        const float r1 = RandomFloat(ray_seed);
+        const float r2 = RandomFloat(ray_seed);
+
+        /*vec3 H = ImportanceSampleGTR2(roughness, r1, r2);
+        H = tangent * H.x + bitangent * H.y + normal * H.z;
+
+        direction = H;
+        direction = reflect(-V, direction);
+
+        vec3 origin = position + normal * RAY_OFFSET;*/
+
+        vec3 H;
+
+        vec3 radiance = vec3(0.0);
+        payload.beta = vec3(1.0);
+        payload.absorption = vec3(0.0);
+
+        for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
+            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+    
+            vec3 hit_position = origin + direction * payload.distance;
+
+            radiance += payload.color;
+
+            ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+
+            H = ImportanceSampleGTR2(payload.roughness, r1, r2);
+            H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+            
+            direction = reflect(direction, H);
+
+            origin = hit_position + direction * RAY_OFFSET;
+        }
+
+        if (payload.distance >= tmin && payload.distance < tmax) {
+            color += radiance;
+        }
+    }
+
+    color /= float(NUM_SAMPLES);
+
+    imageStore(image, storage_coord, vec4(color, 1.0));
+}
