@@ -4,6 +4,10 @@ struct RayPayload
 	float distance;
 	vec3 normal;
 	float roughness;
+#ifdef PATHTRACER
+    vec3 beta;
+	vec3 absorption;
+#endif
 };
 
 struct RayProbePayload
