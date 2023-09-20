@@ -9,8 +9,8 @@ layout(location = 0) rayPayloadInEXT RayPayload payload;
 
 void main()
 {
-    payload.color = vec3(1.0);
-    payload.distance = 10000.0f;
+    payload.color = vec3(0.0);
+    payload.distance = -1.0f;
     payload.normal = vec3(0.0f);
     payload.roughness = 0.0f;
 }

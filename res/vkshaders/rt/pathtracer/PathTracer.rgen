@@ -115,33 +115,38 @@ void main()
         const float r1 = RandomFloat(ray_seed);
         const float r2 = RandomFloat(ray_seed);
 
-        /*vec3 H = ImportanceSampleGTR2(roughness, r1, r2);
-        H = tangent * H.x + bitangent * H.y + normal * H.z;
+        vec3 H = ImportanceSampleGTR2(roughness, r1, r2);
+        //H = tangent * H.x + bitangent * H.y + normal * H.z;
 
-        direction = H;
-        direction = reflect(-V, direction);
+        //direction = H;
+        //direction = reflect(-V, direction);
 
-        vec3 origin = position + normal * RAY_OFFSET;*/
-
-        vec3 H;
+        vec3 origin = position + normal * RAY_OFFSET;
 
         vec3 radiance = vec3(0.0);
         payload.beta = vec3(1.0);
         payload.absorption = vec3(0.0);
 
+        payload.dir = H;
+
         for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
-    
-            vec3 hit_position = origin + direction * payload.distance;
 
             radiance += payload.color;
+
+            if (payload.distance < 0.0) {
+                break;
+            }
+    
+            vec3 hit_position = origin + direction * payload.distance;
 
             ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
 
             H = ImportanceSampleGTR2(payload.roughness, r1, r2);
-            H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+            //H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
             
             direction = reflect(direction, H);
+            payload.dir = H;
 
             origin = hit_position + direction * RAY_OFFSET;
         }
