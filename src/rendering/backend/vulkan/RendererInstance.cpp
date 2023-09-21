@@ -220,6 +220,13 @@ Result Instance::Initialize(bool load_debug_layers)
     // Setup validation layers
     create_info.enabledLayerCount = uint32_t(this->validation_layers.size());
     create_info.ppEnabledLayerNames = this->validation_layers.data();
+    create_info.flags = 0;
+
+#if VK_HEADER_VERSION >= 216
+    // for vulkan sdk 1.3.216 and above, enumerate portability extension is required for
+    // translation layers such as moltenvk.
+    create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 
     // Setup Vulkan extensions
     Array<const char *> extension_names;
@@ -228,23 +235,32 @@ Result Instance::Initialize(bool load_debug_layers)
         return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
     }
 
+
+#ifndef HYPERION_BUILD_RELEASE
+    extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
+
+#if VK_HEADER_VERSION >= 216
+    // add our enumeration extension to our instance extensions
+    extension_names.PushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
+
     DebugLog(LogType::Debug, "Got %llu extensions:\n", extension_names.Size());
 
     for (const char *extension_name : extension_names) {
         DebugLog(LogType::Debug, "\t%s\n", extension_name);
     }
 
-#ifndef HYPERION_BUILD_RELEASE
-    extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
-
     create_info.enabledExtensionCount = UInt32(extension_names.Size());
     create_info.ppEnabledExtensionNames = extension_names.Data();
 
     DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.Size());
 
+    VkResult instance_result = vkCreateInstance(&create_info, nullptr, &this->instance);
+
+    DebugLog(LogType::Info, "Instance result: %d\n", instance_result);
     HYPERION_VK_CHECK_MSG(
-        vkCreateInstance(&create_info, nullptr, &this->instance),
+        instance_result,
         "Failed to create Vulkan Instance!"
     );
 
