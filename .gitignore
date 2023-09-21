@@ -284,6 +284,8 @@ cmake-build-*/**/*
 /res/models/san-miguel
 /res/models/bistro
 
+res/vkshaders/**/*.spv
+res/data/compiled_shaders/**/*
 res/data/**/tmp/**/*
 res/data/dump/**/*
 
