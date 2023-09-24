@@ -99,6 +99,13 @@ permute = HBIL_ENABLED
 frag = hbao/HBAO.frag
 vert = PostEffect.vert
 
+[GaussianSplatting]
+frag = gaussian/Gaussian.frag
+vert = gaussian/Gaussian.vert
+
+[UpdateGaussianSplatting]
+comp = gaussian/UpdateGaussianSplatting.comp
+
 [Particle]
 frag = particles/Particle.frag
 vert = particles/Particle.vert
