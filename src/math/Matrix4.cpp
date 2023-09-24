@@ -1,4 +1,5 @@
 #include "Matrix4.hpp"
+#include "Matrix3.hpp"
 #include "Vector3.hpp"
 #include "Quaternion.hpp"
 #include "Rect.hpp"
@@ -212,6 +213,17 @@ Matrix4::Matrix4()
 {
 }
 
+Matrix4::Matrix4(const Matrix3 &matrix3)
+    : rows {
+        { matrix3.rows[0][0], matrix3.rows[0][1], matrix3.rows[0][2], 0.0f },
+        { matrix3.rows[1][0], matrix3.rows[1][1], matrix3.rows[1][2], 0.0f },
+        { matrix3.rows[2][0], matrix3.rows[2][1], matrix3.rows[2][2], 0.0f },
+        { 0.0f, 0.0f, 0.0f, 1.0f }
+      }
+{
+    
+}
+
 Matrix4::Matrix4(const Vector4 *rows)
     : rows {
           rows[0],
@@ -344,6 +356,49 @@ Matrix4 Matrix4::Inverted() const
     return Matrix4(reinterpret_cast<const float *>(tmp));
 }
 
+Matrix4 &Matrix4::Orthonormalize()
+{
+    return operator=(Orthonormalized());
+}
+
+Matrix4 Matrix4::Orthonormalized() const
+{
+    Matrix4 mat = *this;
+    
+    Float length = MathUtil::Sqrt(mat[0][0]*mat[0][0] + mat[0][1]*mat[0][1] + mat[0][2]*mat[0][2]);
+    mat[0][0] /= length;
+    mat[0][1] /= length;
+    mat[0][2] /= length;
+    
+    Float dot_product = mat[0][0] * mat[1][0] + mat[0][1] * mat[1][1] + mat[0][2] * mat[1][2];
+
+    mat[1][0] -= dot_product * mat[0][0];
+    mat[1][1] -= dot_product * mat[0][1];
+    mat[1][2] -= dot_product * mat[0][2];
+    
+    length = MathUtil::Sqrt((mat[1][0] * mat[1][0] + mat[1][1] * mat[1][1] + mat[1][2] * mat[1][2]));
+    mat[1][0] /= length;
+    mat[1][1] /= length;
+    mat[1][2] /= length;
+    
+    dot_product = mat[0][0] * mat[2][0] + mat[0][1] * mat[2][1] + mat[0][2] * mat[2][2];
+    mat[2][0] -= dot_product * mat[0][0];
+    mat[2][1] -= dot_product * mat[0][1];
+    mat[2][2] -= dot_product * mat[0][2];
+
+    dot_product = mat[1][0] * mat[2][0] + mat[1][1] * mat[2][1] + mat[1][2] * mat[2][2];
+    mat[2][0] -= dot_product * mat[1][0];
+    mat[2][1] -= dot_product * mat[1][1];
+    mat[2][2] -= dot_product * mat[1][2];
+    
+    length = MathUtil::Sqrt((mat[2][0] * mat[2][0] + mat[2][1] * mat[2][1] + mat[2][2] * mat[2][2]));
+    mat[2][0] /= length;
+    mat[2][1] /= length;
+    mat[2][2] /= length;
+
+    return mat;
+}
+
 float Matrix4::GetYaw() const
 {
     return Quaternion(*this).Yaw();
@@ -441,7 +496,7 @@ Vector3 Matrix4::operator*(const Vector3 &vec) const
         vec.x * values[12] + vec.y * values[13] + vec.z * values[14] + values[15]
     };
 
-    return Vector3(product / product.w);
+    return product.GetXYZ() / product.w;
 }
 
 Vector4 Matrix4::operator*(const Vector4 &vec) const
@@ -458,13 +513,17 @@ Vector3 Matrix4::ExtractTransformScale() const
 {
     Vector3 scale;
 
-    scale.x = Vector3(GetColumn(0)).Length();
-    scale.y = Vector3(GetColumn(1)).Length();
-    scale.z = Vector3(GetColumn(2)).Length();
+    scale.x = GetColumn(0).GetXYZ().Length();
+    scale.y = GetColumn(1).GetXYZ().Length();
+    scale.z = GetColumn(2).GetXYZ().Length();
 
     return scale;
 }
 
+Quaternion Matrix4::ExtractRotation() const
+{
+    return Quaternion(*this);
+}
 
 Vector4 Matrix4::GetColumn(UInt index) const
 {
@@ -478,14 +537,14 @@ Vector4 Matrix4::GetColumn(UInt index) const
 
 Matrix4 Matrix4::Zeros()
 {
-    float zero_array[sizeof(values) / sizeof(values[0])] = {0.0f};
+    static constexpr float zero_array[sizeof(values) / sizeof(values[0])] = { 0.0f };
 
     return Matrix4(zero_array);
 }
 
 Matrix4 Matrix4::Ones()
 {
-    float ones_array[sizeof(values) / sizeof(values[0])] = {1.0f};
+    static constexpr float ones_array[sizeof(values) / sizeof(values[0])] = { 1.0f };
 
     return Matrix4(ones_array);
 }

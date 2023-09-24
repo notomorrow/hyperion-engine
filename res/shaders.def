@@ -1,12 +1,12 @@
 [DeferredIndirect]
 permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_REFLECTIONS_ENABLED, RT_GI_ENABLED, VCT_ENABLED(SVO TEXTURE), HBIL_ENABLED, HBAO_EABLED
-frag = deferred_indirect.frag
-vert = deferred.vert
+frag = DeferredIndirect.frag
+vert = Deferred.vert
 
 [DeferredDirect]
 permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_REFLECTIONS_ENABLED, RT_GI_ENABLED, HBIL_ENABLED, HBAO_EABLED, LIGHT_RAYS_ENABLED
-frag = deferred_direct.frag
-vert = deferred.vert
+frag = DeferredDirect.frag
+vert = Deferred.vert
 
 [DeferredCombine]
 permute = SSR_ENABLED,  REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_REFLECTIONS_ENABLED, RT_GI_ENABLED, HBIL_ENABLED, HBAO_EABLED
@@ -15,18 +15,18 @@ vert = PostEffect.vert
 
 [ApplyEnvGrid]
 frag = deferred/ApplyEnvGrid.frag
-vert = deferred.vert
+vert = Deferred.vert
 
 [ApplyReflectionProbe]
 frag = deferred/ApplyReflectionProbe.frag
-vert = deferred.vert
+vert = Deferred.vert
 
 [OnScreenReflections]
 frag = deferred/OnScreenReflections.frag
-vert = deferred.vert
+vert = Deferred.vert
 
 [FXAA]
-frag = fxaa.frag
+frag = FXAA.frag
 vert = PostEffect.vert
 
 [DOFBlurDirection]
@@ -50,13 +50,13 @@ frag = GenerateMipmaps.frag
 
 [FinalOutput]
 permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
-frag = blit.frag
-vert = blit.vert
+frag = FinalOutput.frag
+vert = FinalOutput.vert
 
 [CubemapRenderer]
 permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
-frag = cubemap_renderer.frag
-vert = cubemap_renderer.vert
+frag = CubemapRenderer.frag
+vert = CubemapRenderer.vert
 
 [ComputeSH]
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
@@ -75,29 +75,42 @@ comp = light_field/CopyBorderTexels.comp
 
 [Forward]
 permute = SKINNING, FORWARD_LIGHTING
-frag = forward.frag
-vert = main.vert
+frag = ForwardPass.frag
+vert = Default.vert
 
 [Vegetation]
-frag = forward.frag
-vert = vegetation.vert
+frag = ForwardPass.frag
+vert = Vegetation.vert
 
 [Skybox]
-frag = skybox.frag
-vert = skybox.vert
+frag = Skybox.frag
+vert = Skybox.vert
 
 [Skydome]
 frag = Skydome.frag
-vert = skybox.vert
+vert = Skybox.vert
 
 [Terrain]
 frag = Terrain.frag
-vert = main.vert
+vert = Default.vert
 
 [HBAO]
 permute = HBIL_ENABLED
 frag = hbao/HBAO.frag
 vert = PostEffect.vert
+
+[GaussianSplatting]
+frag = gaussian/Gaussian.frag.glsl
+vert = gaussian/Gaussian.vert.glsl
+
+[GaussianSplatting_UpdateSplats]
+comp = gaussian/UpdateSplats.comp.glsl
+
+[GaussianSplatting_SortSplats]
+comp = gaussian/SortSplats.comp.glsl
+
+[GaussianSplatting_UpdateDistances]
+comp = gaussian/UpdateDistances.comp.glsl
 
 [Particle]
 frag = particles/Particle.frag
@@ -110,7 +123,7 @@ comp = particles/UpdateParticles.comp
 [Shadows]
 permute = MODE(STANDARD VSM PCF CONTACT_HARDENED)
 frag = shadow.frag
-vert = main.vert
+vert = Default.vert
 
 [BlurShadowMap]
 comp = shadow/BlurShadowMap.comp
@@ -137,8 +150,8 @@ vert = ui/UIObject.vert
 
 [DebugAABB]
 permute = IMMEDIATE_MODE
-frag = aabb.frag
-vert = aabb.vert
+frag = DebugAABB.frag
+vert = DebugAABB.vert
 
 # SVO-based VCT
 
@@ -223,6 +236,29 @@ comp = TemporalBlending.comp
 [ImageBlurCompute]
 permute = HORIZONTAL, OUTPUT(RGBA8 RGBA16F RGBA32F)
 comp = Blur.comp
+
+
+# Third Party Shaders
+
+[FfxParallelSort_Reduce]
+entry_point = FfxParallelSortReduce
+comp = third_party/FfxParallelSort.hlsl
+
+[FfxParallelSort_ScanAdd]
+entry_point = FfxParallelSortScanAdd
+comp = third_party/FfxParallelSort.hlsl
+
+[FfxParallelSort_Scan]
+entry_point = FfxParallelSortScan
+comp = third_party/FfxParallelSort.hlsl
+
+[FfxParallelSort_Scatter]
+entry_point = FfxParallelSortScatter
+comp = third_party/FfxParallelSort.hlsl
+
+[FfxParallelSort_Count]
+entry_point = FfxParallelSortCount
+comp = third_party/FfxParallelSort.hlsl
 
 # Testing
 

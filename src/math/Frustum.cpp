@@ -111,7 +111,7 @@ Frustum &Frustum::SetFromViewProjectionMatrix(const Matrix4 &view_proj)
         Vector4 corner = clip_to_world * Vector4(corners_ndc[i], 1.0f);
         corner /= corner.w;
 
-        m_corners[i] = Vector3(corner);
+        m_corners[i] = corner.GetXYZ();
     }
 
     return *this;
@@ -129,12 +129,12 @@ Vector3 Frustum::GetIntersectionPoint(UInt plane_index_0, UInt plane_index_1, UI
     
    // return (v1 + v2 + v3) / f;
 
-    Vector3 bxc = Vector3(planes[1]).Cross(Vector3(planes[2]));
-    Vector3 cxa = Vector3(planes[2]).Cross(Vector3(planes[0]));
-    Vector3 axb = Vector3(planes[0]).Cross(Vector3(planes[1]));
+    Vector3 bxc = planes[1].GetXYZ().Cross(planes[2].GetXYZ());
+    Vector3 cxa = planes[2].GetXYZ().Cross(planes[0].GetXYZ());
+    Vector3 axb = planes[0].GetXYZ().Cross(planes[1].GetXYZ());
 
     Vector3 r = (bxc * -planes[0].w) - (cxa * planes[1].w) - (axb * planes[2].w);
-    return r * (1.0f / Vector3(planes[0]).Dot(bxc));
+    return r * (1.0f / planes[0].GetXYZ().Dot(bxc));
 }
 
 } // namespace hyperion

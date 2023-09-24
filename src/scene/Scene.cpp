@@ -810,8 +810,8 @@ void Scene::EnqueueRenderUpdates()
             draw_proxy.frame_counter = frame_counter;
 
             SceneShaderData shader_data { };
-            shader_data.aabb_max         = aabb.max.ToVector4();
-            shader_data.aabb_min         = aabb.min.ToVector4();
+            shader_data.aabb_max         = Vector4(aabb.max, 1.0f);
+            shader_data.aabb_min         = Vector4(aabb.min, 1.0f);
             shader_data.fog_params       = Vector4(Float(fog_params.color.Packed()), fog_params.start_distance, fog_params.end_distance, 0.0f);
             shader_data.global_timer     = global_timer;
             shader_data.frame_counter    = frame_counter;

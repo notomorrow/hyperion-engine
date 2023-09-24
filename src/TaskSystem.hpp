@@ -18,8 +18,8 @@ namespace hyperion::v2 {
 
 struct TaskRef
 {
-    TaskThread *runner;
-    TaskID id;
+    TaskThread  *runner;
+    TaskID      id;
 };
 
 enum TaskThreadPoolName : UInt
@@ -87,7 +87,7 @@ class TaskSystem
     
     struct TaskThreadPool
     {
-        std::atomic_uint cycle { 0u };
+        AtomicVar<UInt> cycle { 0u };
         FixedArray<UniquePtr<TaskThread>, num_threads_per_pool> threads;
     };
 
@@ -149,16 +149,15 @@ public:
     {
         TaskThreadPool &pool = GetPool(pool_name);
 
-        const UInt cycle = pool.cycle.load(std::memory_order_relaxed);
+        const UInt cycle = pool.cycle.Get(MemoryOrder::RELAXED);
 
-        UniquePtr<TaskThread> &task_thread = pool.threads[cycle];
+        TaskThread *task_thread = pool.threads[cycle].Get();
+        const TaskID task_id = task_thread->ScheduleTask(std::forward<Task>(task));
 
-        const auto task_id = task_thread->ScheduleTask(std::forward<Task>(task));
-
-        pool.cycle.store((cycle + 1) % pool.threads.Size(), std::memory_order_relaxed);
+        pool.cycle.Set((cycle + 1) % pool.threads.Size(), MemoryOrder::RELAXED);
 
         return TaskRef {
-            task_thread.Get(),
+            task_thread,
             task_id
         };
     }
@@ -189,13 +188,13 @@ public:
 
         TaskThreadPool &pool = GetPool(batch->pool);
 
-        const UInt num_threads_in_pool = UInt(pool.threads.Size());
-        const UInt max_spins = num_threads_in_pool;
+        constexpr UInt num_threads_in_pool = UInt(pool.threads.Size());
+        constexpr UInt max_spins = num_threads_in_pool;
 
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
 
-            UInt cycle = pool.cycle.load(std::memory_order_relaxed);
+            UInt cycle = pool.cycle.Get(MemoryOrder::RELAXED);
 
             TaskThread *task_thread = nullptr;
             UInt num_spins = 0;
@@ -249,7 +248,7 @@ public:
                 task_id
             };
 
-            pool.cycle.store(cycle, std::memory_order_relaxed);
+            pool.cycle.Set(cycle, MemoryOrder::RELAXED);
         }
 
         // all have been moved

@@ -36,6 +36,8 @@
 #include <core/lib/Pair.hpp>
 #include <core/lib/DynArray.hpp>
 
+#include <util/json/JSON.hpp>
+
 #include <core/net/Socket.hpp>
 
 #include <GameThread.hpp>
@@ -63,10 +65,12 @@
 
 #include <scene/camera/FirstPersonCamera.hpp>
 #include <scene/camera/FollowCamera.hpp>
+#include <scene/camera/CameraTrackController.hpp>
 
 #include <util/MeshBuilder.hpp>
 
 #include <asset/BufferedByteReader.hpp>
+#include <asset/model_loaders/PLYModelLoader.hpp>
 
 #include "util/Profile.hpp"
 
@@ -85,6 +89,7 @@
 #include "rendering/CubemapRenderer.hpp"
 #include "rendering/PointShadowRenderer.hpp"
 #include "rendering/UIRenderer.hpp"
+#include <rendering/GaussianSplatting.hpp>
 
 #include <rendering/ParticleSystem.hpp>
 
@@ -263,10 +268,15 @@ public:
             0.01f, 30000.0f
         ));
 
-        //m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
-       //     Vector3(0.0f), Vector3(0.0f, 150.0f, -15.0f)
-        //));
+        /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
+            Vector3(0.0f, 7.0f, 0.0f), Vector3(0.0f, 0.0f, 5.0f)
+        ));*/
         m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
+
+        RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
+        camera_track->SetDuration(60.0);
+
+        //m_scene->GetCamera()->SetCameraController(UniquePtr<CameraTrackController>::Construct(camera_track));
 
         {
             m_sun = CreateObject<Entity>();
@@ -363,7 +373,7 @@ public:
             }
         }
 
-        if (true) { // skydome
+        if (false) { // skydome
             if (auto skydome_node = m_scene->GetRoot().AddChild()) {
                 skydome_node.SetEntity(CreateObject<Entity>());
                 skydome_node.GetEntity()->AddController<SkydomeController>();
@@ -397,6 +407,8 @@ public:
         batch->LoadAsync();
 
         auto obj_models = batch->AwaitResults();
+        
+#if 0
         auto zombie = obj_models["zombie"].Get<Node>();
         auto test_model = obj_models["test_model"].Get<Node>();//g_asset_manager->Load<Node>("../data/dump2/sponza.fbom");
         auto cube_obj = obj_models["cube"].Get<Node>();
@@ -410,7 +422,7 @@ public:
         material_test_obj.Scale(2.0f);
         material_test_obj.Translate(Vector3(5.0f, 3.0f, 0.0f));
         GetScene()->GetRoot().AddChild(material_test_obj);
-        
+
         if (auto dude = obj_models["dude3"].Get<Node>()) {
             dude.SetName("dude");
             for (auto &child : dude.GetChildren()) {
@@ -503,7 +515,7 @@ public:
             }
         }
 
-        if (true) { // hardware skinning
+        if (false) { // hardware skinning
             auto zombie_entity = zombie[0].GetEntity();
 
             if (auto *animation_controller = zombie_entity->GetController<AnimationController>()) {
@@ -522,32 +534,6 @@ public:
             zombie.SetName("zombie");
 
             m_scene->GetRoot().AddChild(zombie);
-            
-            // auto zomb2 = CreateObject<Entity>();
-            // zomb2->SetMesh(zombie_entity->GetMesh());
-            // zomb2->SetTranslation(Vector3(0, 20, 0));
-            // zomb2->SetScale(Vector3(2.0f));
-            // zomb2->SetShader(zombie_entity->GetShader());
-            // zomb2->SetMaterial(CreateObject<Material>());//zombie_entity->GetMaterial());
-            // zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Color(1.0f, 1.0f, 1.0f, 0.8f));
-            // //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_TRANSMISSION, 0.95f);
-            // //zomb2->GetMaterial()->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.025f);
-            // //zomb2->GetMaterial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-            // //zomb2->GetMaterial()->SetIsAlphaBlended(true);
-            // // zomb2->SetSkeleton(zombie_entity->GetSkeleton());
-            // zomb2->SetSkeleton(CreateObject<Skeleton>());
-            // zomb2->RebuildRenderableAttributes();
-
-            // InitObject(zomb2);
-            // m_scene->AddEntity(zomb2);
-        }
-
-        cube_obj.Scale(50.0f);
-
-        if (false) {
-            auto axis_angles = g_asset_manager->Load<Node>("models/editor/axis_arrows.obj");
-            axis_angles.Scale(10.0f);
-            GetScene()->GetRoot().AddChild(axis_angles);
         }
         
         for (auto &child : test_model.GetChildren()) {
@@ -599,7 +585,7 @@ public:
             }
         }
 
-        if (true) {
+        if (false) {
             if (auto monkey = g_asset_manager->Load<Node>("models/monkey/monkey.obj")) {
                 monkey.SetName("monkey");
                 auto monkey_entity = monkey[0].GetEntity();
@@ -730,7 +716,7 @@ public:
             }
         }
 
-        if (true) { // particles test
+        if (false) { // particles test
             auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
                 .texture = g_asset_manager->Load<Texture>("textures/spark.png"),
                 .max_particles = 1024u,
@@ -743,6 +729,207 @@ public:
             InitObject(particle_spawner);
 
             m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(std::move(particle_spawner));
+        }
+#endif
+        
+        // Test gaussian splatting
+        if (true) {
+            auto batch = g_asset_manager->CreateBatch();
+            batch->Add<json::JSONValue>("cameras json", "models/gaussian_splatting/cameras.json");
+            batch->Add<PLYModelLoader::PLYModel>("ply model", "models/gaussian_splatting/point_cloud.ply");
+
+            batch->LoadAsync();
+
+            auto loaded_assets = batch->AwaitResults();
+
+            auto cameras_json = loaded_assets["cameras json"].Get<json::JSONValue>();
+            AssertThrow(loaded_assets["cameras json"].result.status == LoaderResult::Status::OK);
+
+            struct GaussianSplattingCameraDefinition
+            {
+                String id;
+                String img_name;
+                UInt32 width;
+                UInt32 height;
+                Vector3 position;
+                Matrix3 rotation;
+                Float fx;
+                Float fy;
+            };
+
+            Array<GaussianSplattingCameraDefinition> camera_definitions;
+
+            if (cameras_json && cameras_json->IsArray()) {
+                camera_definitions.Reserve(cameras_json->AsArray().Size());
+
+                for (const auto &item : cameras_json->AsArray()) {
+                    GaussianSplattingCameraDefinition definition;
+                    definition.id = (*item)["id"].ToString();
+                    definition.img_name = (*item)["img_name"].ToString();
+                    definition.width = MathUtil::Floor((*item)["width"].ToNumber());
+                    definition.height = MathUtil::Floor((*item)["height"].ToNumber());
+                    definition.fx = (*item)["fx"].ToNumber();
+                    definition.fy = (*item)["fy"].ToNumber();
+
+                    if ((*item)["position"].IsArray()) {
+                        definition.position = Vector3(
+                            (*item)["position"][0].ToNumber(),
+                            (*item)["position"][1].ToNumber(),
+                            (*item)["position"][2].ToNumber()
+                        );
+                    }
+
+                    if ((*item)["rotation"].IsArray()) {
+                        float v[9] = {
+                            (*item)["rotation"][0][0].ToNumber(),
+                            (*item)["rotation"][0][1].ToNumber(),
+                            (*item)["rotation"][0][2].ToNumber(),
+                            (*item)["rotation"][1][0].ToNumber(),
+                            (*item)["rotation"][1][1].ToNumber(),
+                            (*item)["rotation"][1][2].ToNumber(),
+                            (*item)["rotation"][2][0].ToNumber(),
+                            (*item)["rotation"][2][1].ToNumber(),
+                            (*item)["rotation"][2][2].ToNumber()
+                        };
+
+                        definition.rotation = Matrix3(v);
+                    }
+
+                    camera_definitions.PushBack(definition);
+                }
+            }
+
+            Quaternion camera_offset_rotation = Quaternion::Identity();
+            Vector3 up_direction = Vector3::UnitY();
+
+            Array<Vector3> all_up_directions;
+            all_up_directions.Reserve(camera_definitions.Size());
+
+            for (const auto &camera_definition : camera_definitions) {
+                const Vector3 camera_up = Matrix4(camera_definition.rotation) * Vector3::UnitY();
+
+                all_up_directions.PushBack(camera_up);
+            }
+
+            if (all_up_directions.Size() != 0) {
+                up_direction = Vector3::Zero();
+
+                for (const auto &camera_up_direction : all_up_directions) {
+                    up_direction += camera_up_direction;
+                }
+
+                up_direction /= Float(all_up_directions.Size());
+                up_direction.Normalize();
+
+                const Vector3 axis = up_direction.Cross(Vector3::UnitY()).Normalize();
+
+                const Float cos_theta = up_direction.Dot(Vector3::UnitY());
+                const Float theta = MathUtil::Arccos(cos_theta);
+
+                camera_offset_rotation = Quaternion(axis, theta).Invert();
+            }
+
+            DebugLog(LogType::Debug, "Up direction = %f, %f, %f\n", up_direction.x, up_direction.y, up_direction.z);
+
+            //const auto camera_rotation = camera_definitions.Any() ? Quaternion(Matrix4(camera_definitions[0].rotation)).Invert() : Quaternion::identity;
+
+            auto ply_model = loaded_assets["ply model"].Get<PLYModelLoader::PLYModel>();
+
+            const SizeType num_points = ply_model->vertices.Size();
+
+            RC<GaussianSplattingModelData> gaussian_splatting_model = RC<GaussianSplattingModelData>::Construct();
+            gaussian_splatting_model->points.Resize(num_points);
+            gaussian_splatting_model->transform.SetRotation(Quaternion(Vector3(1, 0, 0), M_PI));
+
+            const bool has_rotations = ply_model->custom_data.Contains("rot_0")
+                && ply_model->custom_data.Contains("rot_1")
+                && ply_model->custom_data.Contains("rot_2")
+                && ply_model->custom_data.Contains("rot_3");
+
+            const bool has_scales = ply_model->custom_data.Contains("scale_0")
+                && ply_model->custom_data.Contains("scale_1")
+                && ply_model->custom_data.Contains("scale_2");
+
+            const bool has_sh = ply_model->custom_data.Contains("f_dc_0")
+                && ply_model->custom_data.Contains("f_dc_1")
+                && ply_model->custom_data.Contains("f_dc_2");
+
+            const bool has_opacity = ply_model->custom_data.Contains("opacity");
+
+            for (SizeType index = 0; index < num_points; index++) {
+                auto &out_point = gaussian_splatting_model->points[index];
+
+                out_point.position = Vector4(ply_model->vertices[index].GetPosition(), 1.0f);
+
+                if (has_rotations) {
+                    Quaternion rotation;
+
+                    ply_model->custom_data["rot_0"].Read(index * sizeof(Float), &rotation.w);
+                    ply_model->custom_data["rot_1"].Read(index * sizeof(Float), &rotation.x);
+                    ply_model->custom_data["rot_2"].Read(index * sizeof(Float), &rotation.y);
+                    ply_model->custom_data["rot_3"].Read(index * sizeof(Float), &rotation.z);
+                    
+                    rotation.Normalize();
+
+                    out_point.rotation = rotation;
+                }
+
+                if (has_scales) {
+                    Vector3 scale = Vector3::one;
+
+                    ply_model->custom_data["scale_0"].Read(index * sizeof(Float), &scale.x);
+                    ply_model->custom_data["scale_1"].Read(index * sizeof(Float), &scale.y);
+                    ply_model->custom_data["scale_2"].Read(index * sizeof(Float), &scale.z);
+
+                    //scale = Vector3(MathUtil::Exp(scale.x), MathUtil::Exp(scale.y), MathUtil::Exp(scale.z));
+
+                    out_point.scale = Vector4(scale, 1.0f);
+
+                    // DebugLog(LogType::Debug, "Scale %u = %f, %f, %f\n", index, out_point.scale.x, out_point.scale.y, out_point.scale.z);
+                }
+
+                if (has_sh) {
+                    Float f_dc_0 = 0.0f;
+                    Float f_dc_1 = 0.0f;
+                    Float f_dc_2 = 0.0f;
+                    Float opacity = 1.0f;
+
+                    static constexpr Float SH_C0 = 0.28209479177387814f;
+
+                    ply_model->custom_data["f_dc_0"].Read(index * sizeof(Float), &f_dc_0);
+                    ply_model->custom_data["f_dc_1"].Read(index * sizeof(Float), &f_dc_1);
+                    ply_model->custom_data["f_dc_2"].Read(index * sizeof(Float), &f_dc_2);
+
+                    if (has_opacity) {
+                        ply_model->custom_data["opacity"].Read(index * sizeof(Float), &opacity);
+                    }
+
+                    out_point.color = Vector4(
+                        0.5f + (SH_C0 * f_dc_0),
+                        0.5f + (SH_C0 * f_dc_1),
+                        0.5f + (SH_C0 * f_dc_2),
+                        1.0f / (1.0f + MathUtil::Exp(-opacity))
+                    );
+                }
+            }
+            
+            UInt camera_definition_index = 0;
+
+            for (const auto &camera_definition : camera_definitions) {
+                camera_track->AddPivot({
+                    Double(camera_definition_index) / Double(camera_definitions.Size()),
+                    gaussian_splatting_model->transform * Transform(camera_definition.position, Vector3(1.0f), Quaternion(Matrix4(camera_definition.rotation).Orthonormalized()))
+                });
+
+                camera_definition_index++;
+
+                break;
+            }
+
+            auto gaussian_splatting_instance = CreateObject<GaussianSplattingInstance>(std::move(gaussian_splatting_model));
+            InitObject(gaussian_splatting_instance);
+
+            m_scene->GetEnvironment()->GetGaussianSplatting()->SetGaussianSplattingInstance(std::move(gaussian_splatting_instance));
         }
     }
 
@@ -910,7 +1097,7 @@ public:
 
         // std::cout << "ray direction: " << ray_direction << "\n";
 
-        Ray ray { m_scene->GetCamera()->GetTranslation(), Vector3(ray_direction) };
+        Ray ray { m_scene->GetCamera()->GetTranslation(), ray_direction.GetXYZ() };
         RayTestResults results;
 
         if (g_engine->GetWorld()->GetOctree().TestRay(ray, results)) {
@@ -1143,12 +1330,12 @@ void HandleSignal(int signum)
 int main()
 {
     signal(SIGINT, HandleSignal);
-
+    
     RC<Application> application(new SDLApplication("My Application"));
     application->SetCurrentWindow(application->CreateSystemWindow({
         "Hyperion Engine",
-        1920,
-        1080,
+        1024,
+        1024,
         true
     }));
     
@@ -1202,7 +1389,7 @@ int main()
 
     // AssertThrow(server.Start());
 
-    while (g_engine->IsRenderLoopActive()) {
+     while (g_engine->IsRenderLoopActive()) {
         // input manager stuff
         while (application->PollEvent(event)) {
             my_game->HandleEvent(std::move(event));

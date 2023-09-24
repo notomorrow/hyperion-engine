@@ -2,6 +2,7 @@
 #ifndef MATRIX4_H
 #define MATRIX4_H
 
+#include "Vector3.hpp"
 #include "Vector4.hpp"
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
@@ -12,8 +13,8 @@
 
 namespace hyperion {
 
-class Vector3;
 class Quaternion;
+class Matrix3;
 
 class Matrix4
 {
@@ -24,9 +25,6 @@ public:
     static const Matrix4 ones;
 
     static Matrix4 Translation(const Vector3 &translation);
-#if 0
-    static Matrix4 Rotation(const Matrix4 &transform);
-#endif
     static Matrix4 Rotation(const Quaternion &rotation);
     static Matrix4 Rotation(const Vector3 &axis, float radians);
     static Matrix4 Scaling(const Vector3 &scaling);
@@ -38,10 +36,11 @@ public:
 
     union {
         Vector4 rows[4];
-        float values[16];
+        float   values[16];
     };
 
     Matrix4();
+    explicit Matrix4(const Matrix3 &matrix3);
     explicit Matrix4(const Vector4 *rows);
     explicit Matrix4(const float *v);
     Matrix4(const Matrix4 &other);
@@ -51,6 +50,8 @@ public:
     Matrix4 Transposed() const;
     Matrix4 &Invert();
     Matrix4 Inverted() const;
+    Matrix4 &Orthonormalize();
+    Matrix4 Orthonormalized() const;
 
     float GetYaw() const;
     float GetPitch() const;
@@ -67,6 +68,7 @@ public:
     Vector4 operator*(const Vector4 &vec) const;
 
     Vector3 ExtractTransformScale() const;
+    Quaternion ExtractRotation() const;
 
     Vector4 GetColumn(UInt index) const;
 

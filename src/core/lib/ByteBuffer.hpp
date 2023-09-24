@@ -84,6 +84,12 @@ public:
 
     ~ByteBuffer() = default;
 
+    explicit operator bool() const
+        { return true; }
+
+    /**
+     * \brief Updates the ByteBuffer's data. If the size would go beyond the number of inline elements that can be stored, the ByteBuffer will switch to a reference counted internal byte array.
+     */
     void SetData(SizeType count, const void *data)
     {
         if (count > InternalArray::num_inline_elements) {
@@ -109,6 +115,9 @@ public:
         }
     }
 
+    /**
+     * \brief Returns a reference to the ByteBuffer's internal array. The reference is only valid as long as the ByteBuffer is not modified.
+     */
     InternalArray &GetInternalArray()
     {
         if (m_internal.Is<RefCountedPtr<InternalArray>>()) {
@@ -118,9 +127,15 @@ public:
         }
     }
 
+    /**
+     * \brief Returns a const reference to the ByteBuffer's internal array. The reference is only valid as long as the ByteBuffer is not modified.
+     */
     const InternalArray &GetInternalArray() const
         { return const_cast<ByteBuffer *>(this)->GetInternalArray(); }
 
+    /**
+     * \brief Returns a copy of the ByteBuffer's data.
+     */
     ByteArray ToByteArray() const
     {
         const auto size = GetInternalArray().Size();
@@ -133,6 +148,30 @@ public:
         return byte_array;
     }
 
+    /**
+     * \brief Returns a ByteView of the ByteBuffer's data. The ByteView is only valid as long as the ByteBuffer is not modified.
+     */
+    ByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull)
+    {
+        if (size > Size()) {
+            size = Size();
+        }
+
+        return ByteView(Data() + offset, size);
+    }
+
+    /**
+     * \brief Returns a ConstByteView of the ByteBuffer's data. The ConstByteView is only valid as long as the ByteBuffer is not modified.
+     */
+    ConstByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull) const
+    {
+        if (size > Size()) {
+            size = Size();
+        }
+
+        return ConstByteView(Data() + offset, size);
+    }
+
     /*! \brief Be aware that modifying the ByteBuffer's data could have unintentional consequences if
         it is sharing memory with other ByteBuffers. */
     UByte *Data()
@@ -141,6 +180,9 @@ public:
     const UByte *Data() const
         { return GetInternalArray().Data(); }
 
+    /**
+     * \brief Reads a value from the ByteBuffer at the given offset.
+     */
     bool Read(SizeType offset, SizeType count, UByte *out_values) const
     {
         AssertThrow(out_values != nullptr);
@@ -160,6 +202,9 @@ public:
         return true;
     }
 
+    /**
+     * \brief Reads a value from the ByteBuffer at the given offset.
+     */
     template <class T>
     bool Read(SizeType offset, T *out) const
     {
@@ -190,28 +235,7 @@ public:
 
     SizeType Size() const
         { return GetInternalArray().Size(); }
-
-    bool Any() const
-        { return Size() != 0; }
-
-    bool Empty() const
-        { return Size() == 0; }
-
-    const UByte &operator[](SizeType index) const
-        { return GetInternalArray()[index]; }
-
-    bool operator==(const ByteBuffer &other) const
-        { return GetInternalArray() == other.GetInternalArray(); }
-
-    bool operator!=(const ByteBuffer &other) const
-        { return GetInternalArray() != other.GetInternalArray(); }
-
-    HashCode GetHashCode() const
-        { return GetInternalArray().GetHashCode(); }
-
-private:
-    Variant<InternalArray, RefCountedPtr<InternalArray>> m_internal;
-
+    
     void SetSize(SizeType count)
     {
         if (count > InternalArray::num_inline_elements) {
@@ -228,6 +252,67 @@ private:
             byte_array.Resize(count);
         }
     }
+
+    /**
+     * \brief Returns true if the ByteBuffer has any elements.
+     */
+    bool Any() const
+        { return Size() != 0; }
+
+    /**
+     * \brief Returns true if the ByteBuffer has no elements.
+     */
+    bool Empty() const
+        { return Size() == 0; }
+
+    const UByte &operator[](SizeType index) const
+        { return GetInternalArray()[index]; }
+
+    bool operator==(const ByteBuffer &other) const
+        { return m_internal.GetPointer() == other.m_internal.GetPointer(); }
+
+    bool operator!=(const ByteBuffer &other) const
+        { return m_internal.GetPointer() != other.m_internal.GetPointer(); }
+
+    /**
+     * \brief Returns true if the ByteBuffer is sharing memory with other ByteBuffers.
+     */
+    bool IsShared() const
+    {
+        const auto *ptr = m_internal.TryGet<RefCountedPtr<InternalArray>>();
+
+        if (!ptr) {
+            return false;
+        }
+
+        return ptr->GetRefCountData()->UseCount() > 1;
+    }
+
+    /**
+     * \brief Returns a copy of the ByteBuffer. If the ByteBuffer is sharing memory with other ByteBuffers, the copy will be unique. Otherwise, the copy may share memory with the original.
+     */
+    ByteBuffer Lock() const
+    {
+        if (IsShared()) {
+            return Copy();
+        }
+
+        return *this;
+    }
+
+    /**
+     * \brief Returns a copy of the ByteBuffer, which is guaranteed to not share memory with the original.
+     */
+    ByteBuffer Copy() const
+    {
+        return ByteBuffer(Size(), Data());
+    }
+
+    HashCode GetHashCode() const
+        { return GetInternalArray().GetHashCode(); }
+
+private:
+    Variant<InternalArray, RefCountedPtr<InternalArray>> m_internal;
 };
 
 } // namespace hyperion

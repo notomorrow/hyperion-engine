@@ -1,5 +1,8 @@
 #ifndef VECTOR4_H
 #define VECTOR4_H
+
+#include "Vector2.hpp"
+#include "Vector3.hpp"
 #include "../HashCode.hpp"
 #include "../Util.hpp"
 
@@ -7,12 +10,10 @@
 #include <Types.hpp>
 
 #include <cmath>
-#include <iostream>
 
 namespace hyperion {
 
 class Vector2;
-class Vector3;
 class Matrix4;
 
 class Vector4
@@ -37,18 +38,28 @@ public:
     explicit Vector4(const Vector3 &xyz, float w);
     Vector4(const Vector4 &other);
 
-    float GetX() const { return x; }
-    float &GetX() { return x; }
-    Vector4 &SetX(float x) { this->x = x; return *this; }
-    float GetY() const { return y; }
-    float &GetY() { return y; }
-    Vector4 &SetY(float y) { this->y = y; return *this; }
-    float GetZ() const { return z; }
-    float &GetZ() { return z; }
-    Vector4 &SetZ(float z) { this->z = z; return *this; }
-    float GetW() const { return w; }
-    float &GetW() { return w; }
-    Vector4 &SetW(float w) { this->w = w; return *this; }
+    float GetX() const      { return x; }
+    float &GetX()           { return x; }
+    Vector4 &SetX(float x)  { this->x = x; return *this; }
+    float GetY() const      { return y; }
+    float &GetY()           { return y; }
+    Vector4 &SetY(float y)  { this->y = y; return *this; }
+    float GetZ() const      { return z; }
+    float &GetZ()           { return z; }
+    Vector4 &SetZ(float z)  { this->z = z; return *this; }
+    float GetW() const      { return w; }
+    float &GetW()           { return w; }
+    Vector4 &SetW(float w)  { this->w = w; return *this; }
+
+    /**
+     * \brief Get the XY components of this vector as a Vector2. 
+     */
+    Vector2 GetXY() const   { return Vector2(x, y); }
+
+    /**
+     * \brief Get the XYZ components of this vector as a Vector3. 
+     */
+    Vector3 GetXYZ() const  { return Vector3(x, y, z); }
     
     constexpr float operator[](SizeType index) const
         { return values[index]; }
@@ -69,12 +80,15 @@ public:
     Vector4 &operator/=(const Vector4 &other);
     bool operator==(const Vector4 &other) const;
     bool operator!=(const Vector4 &other) const;
-    Vector4 operator-() const { return operator*(-1.0f); }
+    Vector4 operator-() const
+        { return operator*(-1.0f); }
 
     bool operator<(const Vector4 &other) const
         { return std::tie(x, y, z, w) < std::tie(other.x, other.y, other.z, other.w); }
 
-    constexpr float LengthSquared() const { return x * x + y * y + z * z + w * w; }
+    constexpr float LengthSquared() const
+        { return x * x + y * y + z * z + w * w; }
+
     float Length() const { return std::sqrt(LengthSquared()); }
 
     constexpr float Avg() const { return (x + y + z + w) / 4.0f; }

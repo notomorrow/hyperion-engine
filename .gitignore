@@ -283,6 +283,7 @@ cmake-build-*/**/*
 /res/models/sdb.fbom
 /res/models/san-miguel
 /res/models/bistro
+/res/models/gaussian_splatting/**/*
 
 res/vkshaders/**/*.spv
 res/data/compiled_shaders/**/*

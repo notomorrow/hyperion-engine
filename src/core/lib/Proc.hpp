@@ -5,6 +5,7 @@
 #include <Constants.hpp>
 #include <HashCode.hpp>
 #include <core/lib/CMemory.hpp>
+#include <core/lib/Variant.hpp>
 #include <util/Defines.hpp>
 
 #include <type_traits>
@@ -18,17 +19,19 @@ struct ProcFunctorMemory
 {
     alignas(std::max_align_t) UByte bytes[Sz];
 
-    HYP_FORCE_INLINE void *GetPointer()
+    HYP_FORCE_INLINE
+    void *GetPointer()
         { return &bytes[0]; }
 
-    HYP_FORCE_INLINE const void *GetPointer() const
+    HYP_FORCE_INLINE
+    const void *GetPointer() const
         { return &bytes[0]; }
 };
 
-template <SizeType Sz, class ReturnType, class ...Args>
+template <class MemoryType, class ReturnType, class ...Args>
 struct ProcFunctorInternal
 {
-    ProcFunctorMemory<Sz> memory;
+    Variant<MemoryType, void *> memory;
     //static constexpr SizeType alignment = alignof(ProcFunctorMemory<Sz>);
 
     ReturnType (*invoke_fn)(void *, Args &&...);
@@ -38,9 +41,6 @@ struct ProcFunctorInternal
         : invoke_fn(nullptr),
           delete_fn(nullptr)
     {
-#ifdef HYP_DEBUG_MODE
-        Memory::Garble(memory.GetPointer(), sizeof(memory.bytes));
-#endif
     }
 
     ProcFunctorInternal(const ProcFunctorInternal &other) = delete;
@@ -48,11 +48,7 @@ struct ProcFunctorInternal
 
     ProcFunctorInternal(ProcFunctorInternal &&other) noexcept
     {
-        Memory::MemCpy(memory.GetPointer(), other.memory.GetPointer(), sizeof(memory.bytes));
-
-#ifdef HYP_DEBUG_MODE
-        Memory::Garble(other.memory.GetPointer(), sizeof(other.memory.bytes));
-#endif
+        memory = std::move(other.memory);
 
         invoke_fn = other.invoke_fn;
         other.invoke_fn = nullptr;
@@ -68,14 +64,10 @@ struct ProcFunctorInternal
         }
 
         if (HasValue()) {
-            delete_fn(memory.GetPointer());
+            delete_fn(GetPointer());
         }
 
-        Memory::MemCpy(memory.GetPointer(), other.memory.GetPointer(), sizeof(memory.bytes));
-
-#ifdef HYP_DEBUG_MODE
-        Memory::Garble(other.memory.GetPointer(), sizeof(other.memory.bytes));
-#endif
+        memory = std::move(other.memory);
 
         invoke_fn = other.invoke_fn;
         other.invoke_fn = nullptr;
@@ -89,22 +81,37 @@ struct ProcFunctorInternal
     ~ProcFunctorInternal()
     {
         if (HasValue()) {
-            delete_fn(memory.GetPointer());
+            delete_fn(GetPointer());
         }
     }
+
+    HYP_FORCE_INLINE
+    bool IsDynamic() const
+        { return memory.template Is<void *>(); }
     
-    HYP_FORCE_INLINE bool HasValue() const
+    HYP_FORCE_INLINE
+    bool HasValue() const
         { return delete_fn != nullptr; }
 
-    HYP_FORCE_INLINE ReturnType Invoke(Args &&... args)
-        { return invoke_fn(memory.GetPointer(), std::forward<Args>(args)...); }
+    HYP_FORCE_INLINE
+    void *GetPointer()
+    {
+        return IsDynamic()
+            ? memory.template Get<void *>()
+            : memory.template Get<MemoryType>().GetPointer();
+    }
+
+    HYP_FORCE_INLINE
+    ReturnType Invoke(Args &&... args)
+        { return invoke_fn(GetPointer(), std::forward<Args>(args)...); }
 };
 
 template <class ReturnType, class ...Args>
 struct Invoker
 {
     template <class Functor>
-    static HYP_FORCE_INLINE ReturnType InvokeFn(void *ptr, Args &&... args)
+    static HYP_FORCE_INLINE
+    ReturnType InvokeFn(void *ptr, Args &&... args)
     {
         return (*static_cast<Functor *>(ptr))(std::forward<Args>(args)...);
     }
@@ -115,7 +122,8 @@ template <class ...Args>
 struct Invoker<void, Args...>
 {
     template <class Functor>
-    static HYP_FORCE_INLINE void InvokeFn(void *ptr, Args &&... args)
+    static HYP_FORCE_INLINE
+    void InvokeFn(void *ptr, Args &&... args)
     {
         (*static_cast<Functor *>(ptr))(std::forward<Args>(args)...);
     }
@@ -133,7 +141,8 @@ struct Proc : detail::ProcBase
 {
     static constexpr UInt inline_storage_size_bytes = 256;
 
-    using FunctorDataType = detail::ProcFunctorInternal<inline_storage_size_bytes, ReturnType, Args...>;
+    using MemoryDataType = detail::ProcFunctorMemory<inline_storage_size_bytes>;
+    using FunctorDataType = detail::ProcFunctorInternal<MemoryDataType, ReturnType, Args...>;
 
 public:
 
@@ -152,25 +161,16 @@ public:
     {
         static_assert(!std::is_base_of_v<detail::ProcBase, NormalizedType<Functor>>, "Object should not be ProcBase");
 
-        static_assert(sizeof(Functor) <= sizeof(functor.memory.bytes),
-            "Functor object too large; must fit into inline storage");
-
         functor.invoke_fn = &detail::Invoker<ReturnType, Args...>::template InvokeFn<Functor>;
 
-        static_assert(alignof(Functor) <= alignof(std::max_align_t), "Alignment not valid to be used as functor!");
-
-        /*if constexpr (std::is_trivially_copyable_v<Functor>) {
-            Memory::MemCpy(functor.memory.GetPointer(), &fn, sizeof(Functor));
-
-            if constexpr (sizeof(Functor) < inline_storage_size_bytes) {
-                Memory::MemSet(functor.memory.GetPointer() + sizeof(Functor), 0, inline_storage_size_bytes - sizeof(Functor));
-            }
-
-            functor.delete_fn = [](void *ptr) { Memory::MemSet(ptr, 0, sizeof(Functor)); };
-        } else {*/
-            Memory::Construct<Functor>(functor.memory.GetPointer(), std::forward<Functor>(fn));
+        if constexpr (sizeof(Functor) <= sizeof(MemoryDataType::bytes) && alignof(Functor) <= alignof(std::max_align_t)) {
+            functor.memory.template Set<MemoryDataType>({ });
+            Memory::Construct<Functor>(functor.GetPointer(), std::forward<Functor>(fn));
             functor.delete_fn = &Memory::Destruct<Functor>;
-        //}
+        } else {
+            functor.memory.template Set<void *>(Memory::AllocateAndConstruct<Functor>(std::forward<Functor>(fn)));
+            functor.delete_fn = &Memory::Delete<Functor>;
+        }
     }
 
     Proc(const Proc &other) = delete;
@@ -195,7 +195,8 @@ public:
 
     FunctorDataType functor;
 
-    HYP_FORCE_INLINE ReturnType operator()(Args... args)
+    HYP_FORCE_INLINE
+    ReturnType operator()(Args... args)
         { return functor.Invoke(std::forward<Args>(args)...); }
 };
 

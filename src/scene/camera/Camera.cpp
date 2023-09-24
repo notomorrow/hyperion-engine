@@ -30,8 +30,8 @@ struct RENDER_COMMAND(UpdateCameraDrawProxy) : RenderCommand
         shader_data.projection       = draw_proxy.projection;
         shader_data.previous_view    = draw_proxy.previous_view;
         shader_data.dimensions       = { draw_proxy.dimensions.width, draw_proxy.dimensions.height, 0, 1 };
-        shader_data.camera_position  = draw_proxy.position.ToVector4();
-        shader_data.camera_direction = draw_proxy.direction.ToVector4();
+        shader_data.camera_position  = Vector4(draw_proxy.position, 1.0f);
+        shader_data.camera_direction = Vector4(draw_proxy.position, 1.0f);
         shader_data.camera_near      = draw_proxy.clip_near;
         shader_data.camera_fov       = draw_proxy.fov;
         shader_data.camera_far       = draw_proxy.clip_far;
@@ -103,7 +103,7 @@ Camera::Camera()
 Camera::Camera(int width, int height)
     : EngineComponentBase(),
       HasDrawProxy(),
-      m_fov(60.0f),
+      m_fov(50.0f),
       m_width(width),
       m_height(height),
       m_near(0.01f),
