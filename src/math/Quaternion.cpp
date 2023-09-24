@@ -18,11 +18,11 @@ Quaternion::Quaternion(float x, float y, float z, float w)
 
 Quaternion::Quaternion(const Matrix4 &m)
 {
-    Vector3 m0 = Vector3(m[0]),//m.GetColumn(0)),
-        m1 = Vector3(m[1]),//.GetColumn(1)),
-        m2 = Vector3(m[2]);//.GetColumn(2));
+    Vector3 m0 = m[0].GetXYZ(),
+            m1 = m[1].GetXYZ(),
+            m2 = m[2].GetXYZ();
 
-    float length_sqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
+    Float length_sqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
 
     if (length_sqr != 1.0f && length_sqr != 0.0f) {
         length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
@@ -49,28 +49,32 @@ Quaternion::Quaternion(const Matrix4 &m)
         m2[2] *= length_sqr;
     }
 
-    const float tr = m0[0] + m1[1] + m2[2];
+    const Float tr = m0[0] + m1[1] + m2[2];
 
     if (tr > 0.0f) { 
-        float S = sqrt(tr + 1.0f) * 2.0f; // S=4*qw 
+        Float S = sqrt(tr + 1.0f) * 2.0f; // S=4*qw
+
         x = (m2[1] - m1[2]) / S;
         y = (m0[2] - m2[0]) / S; 
         z = (m1[0] - m0[1]) / S; 
         w = 0.25f * S;
     } else if ((m0[0] > m1[1]) && (m0[0] > m2[2])) { 
-        float S = sqrt(1.0f + m0[0] - m1[1] - m2[2]) * 2.0f; // S=4*qx 
+        Float S = sqrt(1.0f + m0[0] - m1[1] - m2[2]) * 2.0f; // S=4*qx
+
         x = 0.25f * S;
         y = (m0[1] + m1[0]) / S; 
         z = (m0[2] + m2[0]) / S; 
         w = (m2[1] - m1[2]) / S;
     } else if (m1[1] > m2[2]) { 
-        float S = sqrt(1.0f + m1[1] - m0[0] - m2[2]) * 2.0f; // S=4*qy
+        Float S = sqrt(1.0f + m1[1] - m0[0] - m2[2]) * 2.0f; // S=4*qy
+
         x = (m0[1] + m1[0]) / S; 
         y = 0.25f * S;
         z = (m1[2] + m2[1]) / S; 
         w = (m0[2] - m2[0]) / S;
     } else { 
-        float S = sqrt(1.0f + m2[2] - m0[0] - m1[1]) * 2.0f; // S=4*qz
+        Float S = sqrt(1.0f + m2[2] - m0[0] - m1[1]) * 2.0f; // S=4*qz
+
         x = (m0[2] + m2[0]) / S;
         y = (m1[2] + m2[1]) / S;
         z = 0.25f * S;

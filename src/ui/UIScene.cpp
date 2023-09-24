@@ -70,14 +70,14 @@ bool UIScene::TestRay(const Vector2 &position, RayHit &out_first_hit)
     Threads::AssertOnThread(THREAD_GAME);
 
     const Vector4 world_position = m_scene->GetCamera()->TransformScreenToWorld(position);
-    const Vector3 direction = Vector3(Vector2(world_position.x, world_position.y) / world_position.w, 0.0f);
+    const Vector3 direction = Vector3(world_position.x / world_position.w, world_position.y / world_position.w, 0.0f);
     
     RayTestResults results;
 
     for (auto &it : m_scene->GetEntities()) {
         if (it.second->GetWorldAABB().ContainsPoint(direction)) {
             RayHit hit { };
-            hit.hitpoint = Vector3(position, 0.0f);
+            hit.hitpoint = Vector3(position.x, position.y, 0.0f);
             hit.distance = m_scene->GetCamera()->TransformWorldToNDC(it.second->GetTranslation()).z;
             hit.id = it.first.value;
 

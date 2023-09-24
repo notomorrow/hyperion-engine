@@ -48,7 +48,7 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape *physic
         );
     case PhysicsShapeType::PLANE:
         return UniquePtr<btStaticPlaneShape>::Construct(
-            ToBtVector(Vector3(static_cast<PlanePhysicsShape *>(physics_shape)->GetPlane())),
+            ToBtVector(static_cast<PlanePhysicsShape *>(physics_shape)->GetPlane().GetXYZ()),
             static_cast<PlanePhysicsShape *>(physics_shape)->GetPlane().w
         );
     case PhysicsShapeType::CONVEX_HULL:

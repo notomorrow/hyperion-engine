@@ -652,6 +652,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const UInt scene_index = scene_binding.id.ToIndex();
 
     const bool do_particles = environment && environment->IsReady();
+    const bool do_gaussian_splatting = environment && environment->IsReady();
 
     const bool use_ssr = g_engine->GetConfig().Get(CONFIG_SSR);
     const bool use_rt_radiance = g_engine->GetConfig().Get(CONFIG_RT_REFLECTIONS) || g_engine->GetConfig().Get(CONFIG_PATHTRACER);
@@ -679,7 +680,11 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     CollectDrawCalls(frame);
     
     if (do_particles) {
-        UpdateParticles(frame, environment);
+        environment->GetParticleSystem()->UpdateParticles(frame);
+    }
+
+    if (do_gaussian_splatting) {
+        environment->GetGaussianSplatting()->UpdateSplats(frame);
     }
 
     if (use_ssr) { // screen space reflection
@@ -775,6 +780,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
         m_translucent_fbo->BeginCapture(frame_index, primary);
 
+#if 0
         bool has_set_active_env_probe = false;
 
         if (g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any()) {
@@ -787,15 +793,20 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         RenderTranslucentObjects(frame);
 
         if (do_particles) {
-            RenderParticles(frame, environment);
+            environment->GetParticleSystem()->Render(frame);
+        }
+#endif
+        if (do_gaussian_splatting) {
+            environment->GetGaussianSplatting()->Render(frame);
         }
 
+#if 0
         if (has_set_active_env_probe) {
             g_engine->GetRenderState().UnsetActiveEnvProbe();
         }
 
         g_engine->GetImmediateMode().Render(frame);
-
+#endif
         m_translucent_fbo->EndCapture(frame_index, primary);
     }
 
@@ -955,16 +966,6 @@ void DeferredRenderer::RenderUI(Frame *frame)
     for (auto &render_group : g_engine->GetDeferredSystem().Get(Bucket::BUCKET_UI).GetRenderGroups()) {
         render_group->Render(frame);
     }
-}
-
-void DeferredRenderer::UpdateParticles(Frame *frame, RenderEnvironment *environment)
-{
-    environment->GetParticleSystem()->UpdateParticles(frame);
-}
-
-void DeferredRenderer::RenderParticles(Frame *frame, RenderEnvironment *environment)
-{
-    environment->GetParticleSystem()->Render(frame);
 }
 
 } // namespace hyperion::v2

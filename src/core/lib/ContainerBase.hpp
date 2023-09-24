@@ -23,14 +23,18 @@ public:
     ContainerBase() { }
     ~ContainerBase() { }
 
-    auto &Get(KeyType index)
+    auto &Get(KeyType key)
     {
-        AssertThrow(index < static_cast<KeyType>(static_cast<const Container *>(this)->Size()));
-        return static_cast<Container *>(this)->operator[](index);
+        return static_cast<Container *>(this)->operator[](key);
     }
 
-    [[nodiscard]] const auto &Get(KeyType index) const
-        { return const_cast<const ContainerBase *>(this)->Get(index); }
+    [[nodiscard]] const auto &Get(KeyType key) const
+    {
+        const auto it = static_cast<const Container *>(this)->Find(key);
+        AssertThrowMsg(it != static_cast<const Container *>(this)->End(), "Cannot Get(): value not found");
+
+        return *it;
+    }
 
     template <class ValueType>
     void Set(KeyType index, const ValueType &value)
@@ -220,7 +224,9 @@ public:
         static_assert(std::is_convertible_v<decltype(iter),
             typename Container::ConstIterator>, "Iterator type does not match container");
 
-        return static_cast<KeyType>(std::distance(static_cast<const Container *>(this)->Begin(), iter));
+        return iter != static_cast<const Container *>(this)->End()
+            ? static_cast<KeyType>(std::distance(static_cast<const Container *>(this)->Begin(), iter))
+            : KeyType(-1);
     }
 
     template <class TaskSystem, class Lambda>

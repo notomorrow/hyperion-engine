@@ -26,9 +26,9 @@ void FollowCameraController::UpdateLogic(double dt)
 {
     m_real_offset.Lerp(m_offset, MathUtil::Clamp(Float(dt) * 25.0f, 0.0f, 1.0f));
 
-    const auto origin = m_camera->GetTarget();
-    const auto normalized_offset_direction = (origin - (origin + m_real_offset)).Normalized();
-
+    const Vector3 origin = m_camera->GetTarget();
+    const Vector3 normalized_offset_direction = (origin - (origin + m_real_offset)).Normalized();
+    
     m_camera->SetTranslation(origin + normalized_offset_direction * m_desired_distance);
 }
 
@@ -68,7 +68,7 @@ void FollowCameraController::RespondToCommand(const CameraCommand &command, Game
         constexpr float movement_speed = 80.0f;
         const float speed = movement_speed * dt;
 
-        const auto dir_cross_y = Vector3(m_camera->m_direction).Cross(m_camera->m_up);
+        const Vector3 dir_cross_y = Vector3(m_camera->m_direction).Cross(m_camera->m_up);
 
         switch (command.movement_data.movement_type) {
         case CameraCommand::CAMERA_MOVEMENT_FORWARD:

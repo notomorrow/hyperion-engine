@@ -7,7 +7,6 @@
 
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
-#include <math/Vector4.hpp>
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/SortedArray.hpp>
@@ -127,7 +126,7 @@ public:
         std::unique_ptr<NoiseGenerator> generator;
         Float multiplier; // amount to multiply a result by
         Float bias; // amount to add to a result (pre-mult)
-        Vector4 scaling; // coord scaling
+        Vector3 scaling; // coord scaling
     };
 
     NoiseCombinator(Seed seed)
@@ -143,7 +142,7 @@ public:
         Mode mode = Mode::ADDITIVE,
         Float multiplier = 1.0f,
         Float bias = 0.0f,
-        const Vector4 &scaling = Vector4::One()
+        const Vector3 &scaling = Vector3::One()
     )
     {
         static_assert(std::is_base_of_v<NoiseGenerator, NoiseGeneratorType>,
@@ -152,11 +151,11 @@ public:
         m_generators.Insert({
             priority,
             NoiseGeneratorInstance {
-                .mode = mode,
-                .generator = std::make_unique<NoiseGeneratorType>(m_seed),
+                .mode       = mode,
+                .generator  = std::make_unique<NoiseGeneratorType>(m_seed),
                 .multiplier = multiplier,
-                .bias = bias,
-                .scaling = scaling
+                .bias       = bias,
+                .scaling    = scaling
             }
         });
 

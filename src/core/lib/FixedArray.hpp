@@ -53,23 +53,33 @@ public:
     }
 
     HYP_FORCE_INLINE
-    T &operator[](SizeType index)
+    T &At(KeyType index)
+        { AssertThrow(index < Sz); return m_values[index]; }
+
+    HYP_FORCE_INLINE
+    const T &At(KeyType index) const
+        { AssertThrow(index < Sz); return m_values[index]; }
+
+    HYP_FORCE_INLINE
+    T &operator[](KeyType index)
         { return m_values[index]; }
 
     [[nodiscard]] HYP_FORCE_INLINE
-    const T &operator[](SizeType index) const
+    const T &operator[](KeyType index) const
         { return m_values[index]; }
 
     HYP_FORCE_INLINE
     constexpr SizeType Size() const
         { return Sz; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
-    bool Empty() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool Empty() const
         { return Sz == 0; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
-    bool Any() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool Any() const
         { return Sz != 0; }
         
     template <class Lambda>
@@ -88,28 +98,43 @@ public:
 
     [[nodiscard]] auto Sum() const
     {
-        containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
-        return impl.Sum();
+        if constexpr (Sz == 0) {
+            return T();
+        } else {
+            containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
+
+            return impl.Sum();
+        }
     }
 
     [[nodiscard]] auto Avg() const
     {
-        containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
-        return impl.Avg();
+        if constexpr (Sz == 0) {
+            return T();
+        } else {
+            containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
+            return impl.Avg();
+        }
     }
 
     template <class ConstIterator>
     [[nodiscard]] KeyType IndexOf(ConstIterator iter) const
     {
-        containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
-        return impl.IndexOf(iter);
+        if constexpr (Sz == 0) {
+            return KeyType(-1);
+        } else {
+            containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
+            return impl.IndexOf(iter);
+        }
     }
 
     template <class TaskSystem, class Lambda>
     void ParallelForEach(TaskSystem &task_system, Lambda &&lambda)
     {
-        containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
-        impl.ParallelForEach(task_system, std::forward<Lambda>(lambda));
+        if constexpr (Sz != 0) {
+            containers::detail::FixedArrayImpl<T, Sz> impl(const_cast<T *>(&m_values[0]));
+            impl.ParallelForEach(task_system, std::forward<Lambda>(lambda));
+        }
     }
 
     [[nodiscard]] HYP_FORCE_INLINE

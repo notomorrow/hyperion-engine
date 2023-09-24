@@ -15,7 +15,11 @@ class Matrix3 {
 public:
     union {
         Vector3 rows[3];
-        float   values[9];
+
+        struct {
+            float values[9];
+            float _pad[3];
+        };
     };
 
     Matrix3();
@@ -57,7 +61,7 @@ public:
     static Matrix3 Identity();
 };
 
-static_assert(sizeof(Matrix3) == sizeof(float) * 9, "sizeof(Matrix3) must be equal to sizeof(float) * 9");
+static_assert(sizeof(Matrix3) == sizeof(float) * 12, "sizeof(Matrix3) must be equal to sizeof(float) * 12");
 
 }
 

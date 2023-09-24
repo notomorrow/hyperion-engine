@@ -330,12 +330,7 @@ struct alignas(16) ShaderVec3
     ShaderVec3() = default;
     ShaderVec3(const ShaderVec3 &other) = default;
     ShaderVec3(T x, T y, T z) : x(x), y(y), z(z) {}
-    ShaderVec3(const Vector3 &vec)
-        : x(vec.x),
-          y(vec.y),
-          z(vec.z)
-    {
-    }
+
     ShaderVec3(const Extent3D &extent)
         : x(extent.width),
           y(extent.height),

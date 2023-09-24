@@ -7,99 +7,16 @@
 
 namespace hyperion {
 
-const Vector3 Vector3::zero = Vector3(0.0f);
-const Vector3 Vector3::one = Vector3(1.0f);
+const Vec3<Int> math::detail::Vec3<Int>::zero = { 0, 0, 0 };
+const Vec3<Int> math::detail::Vec3<Int>::one = { 1, 1, 1 };
 
-Vector3::Vector3()
-    : x(0.0f), 
-      y(0.0f), 
-      z(0.0f)
-{
-}
+const Vec3<UInt> math::detail::Vec3<UInt>::zero = { 0, 0, 0 };
+const Vec3<UInt> math::detail::Vec3<UInt>::one = { 1, 1, 1 };
 
-Vector3::Vector3(float x, float y, float z)
-    : x(x), 
-      y(y), 
-      z(z)
-{
-}
+const Vec3<Float> math::detail::Vec3<Float>::zero = { 0, 0, 0 };
+const Vec3<Float> math::detail::Vec3<Float>::one = { 1, 1, 1 };
 
-Vector3::Vector3(float xyz)
-    : x(xyz), 
-      y(xyz), 
-      z(xyz)
-{
-}
-
-Vector3::Vector3(const Vector2 &xy, float z)
-    : x(xy.x),
-      y(xy.y),
-      z(z)
-{
-}
-
-Vector3::Vector3(const Vector4 &vec)
-    : x(vec.x),
-      y(vec.y),
-      z(vec.z)
-{
-}
-
-Vector3::Vector3(const Vector3 &other)
-    : x(other.x), 
-      y(other.y), 
-      z(other.z)
-{
-}
-
-Vector3 &Vector3::operator=(const Vector3 &other)
-{
-    x = other.x;
-    y = other.y;
-    z = other.z;
-    return *this;
-}
-
-Vector3 Vector3::operator+(const Vector3 &other) const
-{
-    return Vector3(x + other.x, y + other.y, z + other.z);
-}
-
-Vector3 &Vector3::operator+=(const Vector3 &other)
-{
-    x += other.x;
-    y += other.y;
-    z += other.z;
-    return *this;
-}
-
-Vector3 Vector3::operator-(const Vector3 &other) const
-{
-    return Vector3(x - other.x, y - other.y, z - other.z);
-}
-
-Vector3 &Vector3::operator-=(const Vector3 &other)
-{
-    x -= other.x;
-    y -= other.y;
-    z -= other.z;
-    return *this;
-}
-
-Vector3 Vector3::operator*(const Vector3 &other) const
-{
-    return Vector3(x * other.x, y * other.y, z * other.z);
-}
-
-Vector3 &Vector3::operator*=(const Vector3 &other)
-{
-    x *= other.x;
-    y *= other.y;
-    z *= other.z;
-    return *this;
-}
-
-Vector3 Vector3::operator*(const Matrix3 &mat) const
+Vec3<Float> math::detail::Vec3<Float>::operator*(const Matrix3 &mat) const
 {
     return {
         x * mat.values[0] + y * mat.values[3] + z * mat.values[6],
@@ -108,12 +25,12 @@ Vector3 Vector3::operator*(const Matrix3 &mat) const
     };
 }
 
-Vector3 &Vector3::operator*=(const Matrix3 &mat)
+Vec3<Float> &math::detail::Vec3<Float>::operator*=(const Matrix3 &mat)
 {
     return operator=(operator*(mat));
 }
 
-Vector3 Vector3::operator*(const Matrix4 &mat) const
+Vec3<Float> math::detail::Vec3<Float>::operator*(const Matrix4 &mat) const
 {
     Vector4 product {
         x * mat.values[0] + y * mat.values[4] + z * mat.values[8]  + mat.values[12],
@@ -122,17 +39,23 @@ Vector3 Vector3::operator*(const Matrix4 &mat) const
         x * mat.values[3] + y * mat.values[7] + z * mat.values[11] + mat.values[15]
     };
 
-    return Vector3(product / product.w);
+    product /= product.w;
+
+    return {
+        product.x,
+        product.y,
+        product.z
+    };
 }
 
-Vector3 &Vector3::operator*=(const Matrix4 &mat)
+Vec3<Float> &math::detail::Vec3<Float>::operator*=(const Matrix4 &mat)
 {
     return operator=(operator*(mat));
 }
 
-Vector3 Vector3::operator*(const Quaternion &quat) const
+Vec3<Float> math::detail::Vec3<Float>::operator*(const Quaternion &quat) const
 {
-    Vector3 result;
+    Vec3<Float> result;
     result.x = quat.w * quat.w * x + 2 * 
         quat.y * quat.w * z - 2 * 
         quat.z * quat.w * y + 
@@ -161,71 +84,66 @@ Vector3 Vector3::operator*(const Quaternion &quat) const
     return result;
 }
 
-Vector3 &Vector3::operator*=(const Quaternion &quat)
+Vec3<Float> &math::detail::Vec3<Float>::operator*=(const Quaternion &quat)
 {
     return operator=(operator*(quat));
 }
 
-Vector3 Vector3::operator/(const Vector3 &other) const
-{
-    return Vector3(x / other.x, y / other.y, z / other.z);
-}
-
-Vector3 &Vector3::operator/=(const Vector3 &other)
-{
-    x /= other.x;
-    y /= other.y;
-    z /= other.z;
-    return *this;
-}
-
-bool Vector3::operator==(const Vector3 &other) const
-{
-    return MathUtil::ApproxEqual(x, other.x)
-        && MathUtil::ApproxEqual(y, other.y)
-        && MathUtil::ApproxEqual(z, other.z);
-}
-
-bool Vector3::operator!=(const Vector3 &other) const
-{
-    return !operator==(other);
-}
-
-float Vector3::Max() const
+Int math::detail::Vec3<Int>::Max() const
 {
     return MathUtil::Max(x, MathUtil::Max(y, z));
 }
 
-float Vector3::Min() const
+Int math::detail::Vec3<Int>::Min() const
 {
     return MathUtil::Min(x, MathUtil::Min(y, z));
 }
 
-float Vector3::DistanceSquared(const Vector3 &other) const
+UInt math::detail::Vec3<UInt>::Max() const
 {
-    float dx = x - other.x;
-    float dy = y - other.y;
-    float dz = z - other.z;
+    return MathUtil::Max(x, MathUtil::Max(y, z));
+}
+
+UInt math::detail::Vec3<UInt>::Min() const
+{
+    return MathUtil::Min(x, MathUtil::Min(y, z));
+}
+
+Float math::detail::Vec3<Float>::Max() const
+{
+    return MathUtil::Max(x, MathUtil::Max(y, z));
+}
+
+Float math::detail::Vec3<Float>::Min() const
+{
+    return MathUtil::Min(x, MathUtil::Min(y, z));
+}
+
+Float math::detail::Vec3<Float>::DistanceSquared(const Vec3f &other) const
+{
+    Float dx = x - other.x;
+    Float dy = y - other.y;
+    Float dz = z - other.z;
     return dx * dx + dy * dy + dz * dz;
 }
 
 /* Euclidean distance */
-float Vector3::Distance(const Vector3 &other) const
+Float math::detail::Vec3<Float>::Distance(const Vec3f &other) const
 {
     return MathUtil::Sqrt(DistanceSquared(other));
 }
 
-Vector3 Vector3::Normalized() const
+Vec3<Float> math::detail::Vec3<Float>::Normalized() const
 {
     return *this / MathUtil::Max(Length(), MathUtil::epsilon<float>);
 }
 
-Vector3 &Vector3::Normalize()
+Vec3<Float> &math::detail::Vec3<Float>::Normalize()
 {
     return *this /= MathUtil::Max(Length(), MathUtil::epsilon<float>);
 }
 
-Vector3 Vector3::Cross(const Vector3 &other) const
+Vec3<Float> math::detail::Vec3<Float>::Cross(const Vec3<Float> &other) const
 {
     return {
         y * other.z - z * other.y,
@@ -234,25 +152,26 @@ Vector3 Vector3::Cross(const Vector3 &other) const
     };
 }
 
-Vector3 &Vector3::Rotate(const Vector3 &axis, float radians)
+Vec3<Float> &math::detail::Vec3<Float>::Rotate(const Vec3<Float> &axis, float radians)
 {
     return (*this) = Matrix4::Rotation(axis, radians) * (*this);
 }
 
-Vector3 &Vector3::Lerp(const Vector3 &to, const float amt)
+Vec3<Float> &math::detail::Vec3<Float>::Lerp(const Vec3<Float> &to, const float amt)
 {
     x = MathUtil::Lerp(x, to.x, amt);
     y = MathUtil::Lerp(y, to.y, amt);
     z = MathUtil::Lerp(z, to.z, amt);
+
     return *this;
 }
 
-float Vector3::Dot(const Vector3 &other) const
+Float math::detail::Vec3<Float>::Dot(const Vec3<Float> &other) const
 {
     return x * other.x + y * other.y + z * other.z;
 }
 
-float Vector3::AngleBetween(const Vector3 &other) const
+Float math::detail::Vec3<Float>::AngleBetween(const Vector3 &other) const
 {
     const float dot_product = x * other.x + y * other.y + z * other.z;
     const float arc_cos = MathUtil::Arccos(dot_product);
@@ -260,68 +179,66 @@ float Vector3::AngleBetween(const Vector3 &other) const
     return arc_cos / (Length() * other.Length());
 }
 
-Vector3 Vector3::Abs(const Vector3 &vec)
+Vec3<Float> math::detail::Vec3<Float>::Abs(const Vec3<Float> &vec)
 {
-    return Vector3(MathUtil::Abs(vec.x), MathUtil::Abs(vec.y), MathUtil::Abs(vec.z));
+    return {
+        MathUtil::Abs(vec.x),
+        MathUtil::Abs(vec.y),
+        MathUtil::Abs(vec.z)
+    };
 }
 
-Vector3 Vector3::Round(const Vector3 &vec)
+Vec3<Float> math::detail::Vec3<Float>::Round(const Vec3<Float> &vec)
 {
-    return Vector3(MathUtil::Round(vec.x), MathUtil::Round(vec.y), MathUtil::Round(vec.z));
+    return {
+        MathUtil::Round(vec.x),
+        MathUtil::Round(vec.y),
+        MathUtil::Round(vec.z)
+    };
 }
 
-Vector3 Vector3::Clamp(const Vector3 &vec, float min_value, float max_value)
+Vec3<Float> math::detail::Vec3<Float>::Clamp(const Vec3<Float> &vec, Float min_value, Float max_value)
 {
     return Max(min_value, Min(vec, max_value));
 }
 
-Vector3 Vector3::Min(const Vector3 &a, const Vector3 &b)
+Vec3<Float> math::detail::Vec3<Float>::Min(const Vec3<Float> &a, const Vec3<Float> &b)
 {
-    return Vector3(
+    return {
         MathUtil::Min(a.x, b.x),
         MathUtil::Min(a.y, b.y),
         MathUtil::Min(a.z, b.z)
-    );
+    };
 }
 
-Vector3 Vector3::Max(const Vector3 &a, const Vector3 &b)
+Vec3<Float> math::detail::Vec3<Float>::Max(const Vec3<Float> &a, const Vec3<Float> &b)
 {
-    return Vector3(
+    return {
         MathUtil::Max(a.x, b.x),
         MathUtil::Max(a.y, b.y),
         MathUtil::Max(a.z, b.z)
-    );
+    };
 }
 
-Vector3 Vector3::Zero()
-{
-    return Vector3(0, 0, 0);
-}
+namespace math::detail {
 
-Vector3 Vector3::One()
-{
-    return Vector3(1, 1, 1);
-}
-
-Vector3 Vector3::UnitX()
-{
-    return Vector3(1, 0, 0);
-}
-
-Vector3 Vector3::UnitY()
-{
-    return Vector3(0, 1, 0);
-}
-
-Vector3 Vector3::UnitZ()
-{
-    return Vector3(0, 0, 1);
-}
-
-std::ostream &operator<<(std::ostream &out, const Vector3 &vec) // output
+std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<Int> &vec) // output
 {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
     return out;
 }
+
+std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<UInt> &vec) // output
+{
+    out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
+    return out;
+}
+std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<Float> &vec) // output
+{
+    out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
+    return out;
+}
+
+} // namespace math::detail
 
 } // namespace hyperion

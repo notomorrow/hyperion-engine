@@ -218,11 +218,18 @@ public:
         
         Array<String> lines;
 
-        ReadLines([&lines](const String &line) {
+        ReadLines([&lines](const String &line, bool *) {
             lines.PushBack(line);
         });
 
         return lines;
+    }
+
+    SizeType Read(ByteBuffer &byte_buffer)
+    {
+        return Read(byte_buffer.Data(), byte_buffer.Size(), [](void *ptr, const Byte *buffer, SizeType chunk_size) {
+           Memory::MemCpy(ptr, buffer, chunk_size);
+        });
     }
 
     SizeType Read(void *ptr, SizeType count)
@@ -279,15 +286,32 @@ public:
             return;
         }
 
+        bool stop = false;
+        SizeType total_read = 0;
+        SizeType total_processed = 0;
+
         if (!buffered) { // not buffered, do it in one pass
-            auto all_bytes = ReadBytes();
+            const ByteBuffer all_bytes = ReadBytes();
+            total_read = all_bytes.Size();
 
             String accum;
             accum.Reserve(BufferSize);
             
             for (SizeType i = 0; i < all_bytes.Size(); i++) {
                 if (all_bytes[i] == '\n') {
-                    func(accum);
+                    func(accum, &stop);
+                    total_processed += accum.Size() + 1;
+
+                    if (stop) {
+                        const SizeType amount_remaining = total_read - total_processed;
+
+                        if (amount_remaining != 0) {
+                            Rewind(amount_remaining);
+                        }
+
+                        return;
+                    }
+
                     accum.Clear();
                     
                     continue;
@@ -297,7 +321,8 @@ public:
             }
 
             if (accum.Any()) {
-                func(accum);
+                func(accum, &stop);
+                total_processed += accum.Size();
             }
 
             return;
@@ -316,9 +341,23 @@ public:
         ByteBuffer byte_buffer;
 
         while ((byte_buffer = ReadBytes(BufferSize)).Any()) {
+            total_read += byte_buffer.Size();
+
             for (SizeType i = 0; i < byte_buffer.Size(); i++) {
                 if (byte_buffer[i] == '\n') {
-                    func(accum);
+                    func(accum, &stop);
+                    total_processed += accum.Size() + 1;
+
+                    if (stop) {
+                        const SizeType amount_remaining = total_read - total_processed;
+
+                        if (amount_remaining != 0) {
+                            Rewind(amount_remaining);
+                        }
+
+                        return;
+                    }
+
                     accum.Clear();
                     
                     continue;
@@ -329,7 +368,8 @@ public:
         }
 
         if (accum.Any()) {
-            func(accum);
+            func(accum, &stop);
+            total_processed += accum.Size();
         }
     }
 

@@ -262,7 +262,7 @@ void DebugDrawCommandList::Plane(const Vector3 &position, const Vector2 &size, C
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::PLANE,
-        Transform(position, Vector3(size, 1.0f), Quaternion::identity).GetMatrix(),
+        Transform(position, Vector3(size.x, size.y, 1.0f), Quaternion::identity).GetMatrix(),
         color
     });
 }

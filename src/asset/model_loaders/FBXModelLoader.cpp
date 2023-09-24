@@ -317,7 +317,7 @@ static LoaderResult ReadFBXPropertyValue(ByteReader &reader, UInt8 type, FBXProp
             return { };
         }
     default:
-        return { LoaderResult::Status::ERR, ANSIString("Invalid property type '") + ANSIString::ToString(Int(type)) + "'" };
+        return { LoaderResult::Status::ERR, String("Invalid property type '") + String::ToString(Int(type)) + "'" };
     }
 }
 
@@ -578,7 +578,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
     Handle<Skeleton> root_skeleton = CreateObject<Skeleton>();
     
     // Include our root dir as part of the path
-    const String path(state.filepath.c_str());
+    const String path = state.filepath;
     const auto current_dir = FileSystem::CurrentPath();
     const auto base_path = StringUtil::BasePath(path.Data());
 
@@ -1266,7 +1266,11 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             node_proxy = NodeProxy(new Node);
         } else if (node.type == FBXNode::Type::LIMB_NODE) {
             Transform binding_transform;
-            binding_transform.SetTranslation(Vector3(node.local_bind_matrix.GetColumn(3)));
+            binding_transform.SetTranslation(Vector3(
+                node.local_bind_matrix.GetColumn(3)[0],
+                node.local_bind_matrix.GetColumn(3)[1],
+                node.local_bind_matrix.GetColumn(3)[2]
+            ));
             binding_transform.SetRotation(Quaternion(node.local_bind_matrix));
             binding_transform.SetScale(node.local_bind_matrix.ExtractTransformScale());
 

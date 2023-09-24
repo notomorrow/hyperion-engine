@@ -113,9 +113,9 @@ void main()
     vec4 forward_lit_result = vec4(0.0, 0.0, 0.0, forward_result.a);
 
     if (bool(object_mask & (0x02 | 0x400))) {
-        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
+        result.rgb = (pow(forward_result.rgb, vec3(2.2)) * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
     } else {
-        result.rgb += forward_result.rgb * forward_result.a;
+        result.rgb += pow(forward_result.rgb, vec3(2.2)) * forward_result.a;
     }
 
     // result.rgb = forward_result.aaa;
