@@ -13,9 +13,11 @@
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=3) in vec4 v_color;
+layout(location=1) in vec4 v_color;
+layout(location=2) in vec4 v_conic_radius;
+layout(location=3) in vec2 v_center_screen_position;
+layout(location=4) in vec2 v_quad_position;
+layout(location=5) in vec2 v_uv;
 
 layout(location = 0) out vec4 gbuffer_albedo;
 // layout(location=1) out vec4 gbuffer_normals;
@@ -29,8 +31,28 @@ layout(set = 0, binding = 7) uniform sampler texture_sampler;
 
 void main()
 {
-    vec4 color = Texture2D(texture_sampler, albedo_texture, v_texcoord0);
-    color *= v_color;
+    vec4 color = v_color;
 
-    gbuffer_albedo = color;
+    /*float a = -dot(v_quad_position * 2.0, v_quad_position * 2.0);
+    if (a < -4.0) {
+        discard;
+    }
+
+    float b = exp(a) * color.a;
+
+
+    gbuffer_albedo = vec4(color.rgb * b, b);*/
+
+
+    vec2 d = -v_uv;
+    vec3 conic = v_conic_radius.xyz;
+    float power = -0.5 * (conic.x * d.x * d.x + conic.z * d.y * d.y) + conic.y * d.x * d.y;
+
+    if (power > 0.0) {
+        discard;
+    }
+
+    float alpha = min(0.99, color.a * exp(power));
+
+    gbuffer_albedo = vec4(color.rgb * alpha, alpha);
 }

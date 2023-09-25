@@ -5,8 +5,7 @@ struct GaussianSplatShaderData
 {
     vec4 position;
     vec4 rotation; // quaternion
-    vec4 covariance0;
-    vec4 covariance1;
+    vec4 scale;
     vec4 color;
 };
 

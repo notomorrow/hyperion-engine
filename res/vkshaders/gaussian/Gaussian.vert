@@ -5,9 +5,11 @@
 #extension GL_EXT_scalar_block_layout : enable
 
 layout(location=0) out vec3 v_position;
-layout(location=1) out vec3 v_normal;
-layout(location=2) out vec2 v_texcoord0;
-layout(location=3) out vec4 v_color;
+layout(location=1) out vec4 v_color;
+layout(location=2) out vec4 v_conic_radius;
+layout(location=3) out vec2 v_center_screen_position;
+layout(location=4) out vec2 v_quad_position;
+layout(location=5) out vec2 v_uv;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -33,26 +35,134 @@ layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
     Camera camera;
 };
 
+
+void CalcCovariance3D(mat3 rotMat, out vec3 sigma0, out vec3 sigma1)
+{
+    mat3 sig = rotMat * transpose(rotMat);
+    sigma0 = vec3(sig[0][0], sig[0][1], sig[0][2]);
+    sigma1 = vec3(sig[1][1], sig[1][2], sig[2][2]);
+}
+
+vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1, mat4 matrixV, mat4 matrixP, vec4 screenParams)
+{
+    mat4 viewMatrix = matrixV;
+    vec4 viewPos = viewMatrix * vec4(worldPos, 1.0);
+
+    float aspect = matrixP[0][0] / matrixP[1][1];
+    float tanFovX = 1.0 / matrixP[0][0];
+    float tanFovY = aspect / matrixP[1][1];
+    float limX = 1.3 * tanFovX;
+    float limY = 1.3 * tanFovY;
+    viewPos.x = clamp(viewPos.x / viewPos.z, -limX, limX) * viewPos.z;
+    viewPos.y = clamp(viewPos.y / viewPos.z, -limY, limY) * viewPos.z;
+
+    float focal = screenParams.x * matrixP[0][0] / 2.0;
+
+    mat4 J = mat4(
+        focal / viewPos.z, 0.0, -(focal * viewPos.x) / (viewPos.z * viewPos.z), 0.0,
+        0.0, focal / viewPos.z, -(focal * viewPos.y) / (viewPos.z * viewPos.z), 0.0,
+        0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0
+    );
+    /*viewMatrix[0][3] = 0.0;
+    viewMatrix[1][3] = 0.0;
+    viewMatrix[2][3] = 0.0;
+    viewMatrix[3][3] = 1.0;*/
+
+    mat4 W = transpose(viewMatrix);
+    mat4 T = W * J;
+    mat4 V = mat4(
+        cov3d0.x, cov3d0.y, cov3d0.z, 0.0,
+        cov3d0.y, cov3d1.x, cov3d1.y, 0.0,
+        cov3d0.z, cov3d1.y, cov3d1.z, 0.0,
+        0.0, 0.0, 0.0, 0.0
+    );
+    mat4 cov = transpose(T) * V * T;
+
+    // Low pass filter to make each splat at least 1px size.
+    cov[0][0] += 0.3;
+    cov[1][1] += 0.3;
+    return vec3(cov[0][0], cov[0][1], cov[1][1]);
+}
+
+mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale)
+{
+    mat3 ms = mat3(
+        scale.x, 0.0, 0.0,
+        0.0, scale.y, 0.0,
+        0.0, 0.0, scale.z
+    );
+    float x = rot.x;
+    float y = rot.y;
+    float z = rot.z;
+    float w = rot.w;
+    mat3 mr = mat3(
+        1.0-2.0*(y*y + z*z),   2.0*(x*y + w*z),   2.0*(x*z - w*y),
+        2.0*(x*y - w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z + w*x),
+        2.0*(x*z + w*y),   2.0*(y*z - w*x), 1.0-2.0*(x*x + y*y)
+    );
+    return mr*ms;
+}
+
+float rcp(float x)
+{
+    return 1.0 / x;
+}
 void main()
 {
     const int instance_id = gl_InstanceIndex;
 
-    vec4 position;
+    vec4 position = vec4(a_position * 0.05, 1.0);
     mat4 normal_matrix;
 
-    position = vec4(a_position, 1.0);
+    const vec2 quad_position = a_position.xy;
 
-    v_position = position.xyz;
-    v_normal = a_normal;
-    // v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
-    v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
 
     GaussianSplatShaderData instance = instances[instance_id];
 
-    const vec4 position_world = instance.position;
-    position.xyz *= position_world.w;
+    vec4 rotation = instance.rotation;
+    vec3 scale = instance.scale.xyz;
 
-    const vec3 lookat_dir = normalize(camera.position.xyz - position_world.xyz);
+    mat3 rotation_scale_matrix = CalcMatrixFromRotationScale(rotation, scale);
+
+    vec3 covariance_3d_0;
+    vec3 covariance_3d_1;
+    CalcCovariance3D(rotation_scale_matrix, covariance_3d_0, covariance_3d_1);
+    vec3 covariance_2d = CalcCovariance2D(instance.position.xyz, covariance_3d_0, covariance_3d_1, camera.view, camera.projection, vec4(camera.dimensions.xy, 0.0, 0.0));
+
+    float det = covariance_2d.x * covariance_2d.z - covariance_2d.y * covariance_2d.y;
+
+    float mid = 0.5 * (covariance_2d.x + covariance_2d.z);
+    float lambda1 = mid + sqrt(max(0.1, mid * mid - det));
+    float lambda2 = mid - sqrt(max(0.1, mid * mid - det));
+    float radius = ceil(3.0 * sqrt(max(lambda1, lambda2)));
+
+    vec3 conic = vec3(covariance_2d.z, -covariance_2d.y, covariance_2d.x) * rcp(det);
+    const vec4 conic_radius = vec4(conic, radius);
+
+    vec3 world_view_dir = normalize(camera.position.xyz - instance.position.xyz);
+
+    vec4 center_ndc_position = camera.projection * camera.view * vec4(instance.position.xyz, 1.0);
+    center_ndc_position /= center_ndc_position.w;
+
+    vec2 center_screen_position = (center_ndc_position.xy * 0.5 + 0.5) * camera.dimensions.xy;
+
+    vec2 delta_screen_position = quad_position * radius * 2.0 / camera.dimensions.xy;
+    
+    gl_Position = center_ndc_position + vec4(delta_screen_position, 0.0, 0.0);
+
+    v_color = instance.color;
+    v_position = gl_Position.xyz;
+    v_quad_position = quad_position;
+    v_conic_radius = conic_radius;
+    v_uv = vec2(quad_position * radius);
+
+#if 0
+
+
+    const vec3 position_world = instance.position.xyz;
+
+    const vec3 lookat_dir = normalize(camera.position.xyz - position_world);
     const vec3 lookat_z = lookat_dir;
     const vec3 lookat_x = normalize(cross(vec3(0.0, 1.0, 0.0), lookat_dir));
     const vec3 lookat_y = normalize(cross(lookat_dir, lookat_x));
@@ -65,9 +175,9 @@ void main()
     };
 
     position = lookat_matrix * position;
-    position.xyz += position_world.xyz;
-
-    v_color = instance.color;
+    position.xyz += position_world;
 
     gl_Position = camera.projection * camera.view * position;
+
+#endif
 } 
