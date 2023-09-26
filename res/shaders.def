@@ -103,8 +103,15 @@ vert = PostEffect.vert
 frag = gaussian/Gaussian.frag
 vert = gaussian/Gaussian.vert
 
-[UpdateGaussianSplatting]
-comp = gaussian/UpdateGaussianSplatting.comp
+[GaussianSplatting_UpdateSplats]
+comp = gaussian/UpdateSplats.comp
+
+[GaussianSplatting_SortSplats]
+permute = MODE(SORT TRANSPOSE)
+comp = gaussian/SortSplats.comp
+
+[GaussianSplatting_UpdateDistances]
+comp = gaussian/UpdateDistances.comp
 
 [Particle]
 frag = particles/Particle.frag

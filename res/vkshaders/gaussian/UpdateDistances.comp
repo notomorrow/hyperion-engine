@@ -17,29 +17,14 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 #include "./Gaussian.glsl"
 
-struct IndirectDrawCommand
-{
-    // VkDrawIndexedIndirectCommand
-    uint index_count;
-    uint instance_count;
-    uint first_index;
-    int vertex_offset;
-    uint first_instance;
-};
-
-layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
-{
-    IndirectDrawCommand indirect_draw_command;
-};
-
-layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
-{
-    Scene scene;
-};
-
-layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
+layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 {
     Camera camera;
+};
+
+layout(std430, set = 0, binding = 4) buffer SplatDistancesBuffer
+{
+    vec4 splat_distances[];
 };
 
 layout(push_constant) uniform PushConstant {
@@ -57,5 +42,10 @@ void main()
 
     GaussianSplatShaderData instance = instances[index];
 
-    atomicAdd(indirect_draw_command.instance_count, 1u);
+    vec3 camera_position = camera.position.xyz;
+    vec3 splat_position = instance.position.xyz;
+
+    float dist = distance(camera.position.xyz, splat_position); // (camera.view * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
+
+    splat_distances[index >> 2][index & 3] = dist;
 }
