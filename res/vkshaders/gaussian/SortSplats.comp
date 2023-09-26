@@ -30,12 +30,6 @@
 
 #include "./Gaussian.glsl"
 
-#define READ_INDEX(idx) \
-    splat_indices[(idx) >> 2][(idx) & 3]
-
-#define WRITE_INDEX(idx, value) \
-    splat_indices[(idx) >> 2][(idx) & 3] = (value)
-
 layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
 {
     uvec4 splat_indices[];
@@ -71,63 +65,22 @@ layout(push_constant) uniform PushConstant {
 
 shared uint shared_data[BLOCK_SIZE];
 
-#if 0
-shared uint sharedData[512];
+#define READ_INDEX(idx) \
+    splat_indices[(idx) >> 2][(idx) & 3]
 
-void BitonicSortStage(uint blockOffset, uint stride, bool direction) {
-    uint globalIndex = gl_GlobalInvocationID.x;
-    uint localIndex = gl_LocalInvocationID.x;
-    
-    uint indexA = blockOffset + (2 * stride * localIndex);
-    uint indexB = indexA + stride;
-    
-    uint valueA = sharedData[indexA];
-    uint valueB = sharedData[indexB];
-    
-    bool swap = (READ_DISTANCE(valueA) > READ_DISTANCE(valueB)) == direction;
-    
-    valueA = swap ? valueB : valueA;
-    valueB = swap ? valueA : valueB;
-    
-    sharedData[indexA] = valueA;
-    sharedData[indexB] = valueB;
-}
-
-void main() {
-    uint globalIndex = gl_GlobalInvocationID.x;
-    uint localIndex = gl_LocalInvocationID.x;
-    
-    uint blockStart = gl_WorkGroupID.x * 512;
-    
-    // Load data from global memory into shared memory
-    sharedData[localIndex] = READ_INDEX(blockStart + localIndex);
-    barrier();
-    
-    // Bitonic sort stages
-    for (uint stride = 512; stride >= 2; stride /= 2) {
-        for (uint subStride = stride / 2; subStride > 0; subStride /= 2) {
-            uint direction = (localIndex / subStride) % 2;
-            BitonicSortStage(localIndex, subStride, direction == 0);
-            barrier();
-        }
-    }
-    
-    // Write sorted data back to global memory
-    WRITE_INDEX(blockStart + localIndex, sharedData[localIndex]);
-}
-
-#else
+#define WRITE_INDEX(idx, value) \
+    splat_indices[(idx) >> 2][(idx) & 3] = (value)
 
 void main()
 {
-    uint gi = gl_LocalInvocationIndex;
+    ivec2 dispatch_thread_id = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 local_invocation_id = ivec2(gl_LocalInvocationID.xy);
 
-    if (gi >= push_constants.num_points) {
+    if (dispatch_thread_id.x >= push_constants.num_points) {
         return;
     }
 
-    ivec2 dispatch_thread_id = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 local_invocation_id = ivec2(gl_LocalInvocationID.xy);
+    uint gi = gl_LocalInvocationIndex;
 
     // Load shared data
     shared_data[gi] = READ_INDEX(dispatch_thread_id.x);
@@ -136,7 +89,7 @@ void main()
     // Sort the shared data
     for (uint j = push_constants.level >> 1; j > 0; j >>= 1) {
         bool in_mask = bool(push_constants.level_mask & dispatch_thread_id.x);
-        uint result = ((READ_DISTANCE(shared_data[gi & ~j]) > READ_DISTANCE(shared_data[gi | j])) == in_mask) ? shared_data[gi ^ j] : shared_data[gi];
+        uint result = (((shared_data[gi & ~j]) <= (shared_data[gi | j])) == in_mask) ? shared_data[gi ^ j] : shared_data[gi];
         barrier();
         shared_data[gi] = result;
         barrier();
@@ -146,9 +99,23 @@ void main()
     WRITE_INDEX(dispatch_thread_id.x, shared_data[gi]);
 }
 
-#endif
-
 #elif defined(MODE_TRANSPOSE)
+
+layout(std430, set = 0, binding = 9) readonly buffer SortSplatsInputBuffer
+{
+    uvec4 input_data[];
+};
+
+layout(std430, set = 0, binding = 10) buffer SortSplatsOutputBuffer
+{
+    uvec4 output_data[];
+};
+
+#define READ_INDEX(idx) \
+    input_data[(idx) >> 2][(idx) & 3]
+
+#define WRITE_INDEX(idx, value) \
+    output_data[(idx) >> 2][(idx) & 3] = (value)
 
 shared uint shared_data[BLOCK_SIZE * BLOCK_SIZE];
 
@@ -157,20 +124,20 @@ void main()
     ivec2 dispatch_thread_id = ivec2(gl_GlobalInvocationID.xy);
     ivec2 local_invocation_id = ivec2(gl_LocalInvocationID.xy);
 
-    uint gi = gl_LocalInvocationIndex;
+	uvec2 xy = dispatch_thread_id.yx - local_invocation_id.yx + local_invocation_id.xy;
 
-    if (gi >= push_constants.num_points) {
+    uint write_index = xy.y * push_constants.height + xy.x;
+    uint read_index = dispatch_thread_id.y * push_constants.width + dispatch_thread_id.x;
+
+    if (write_index >= push_constants.num_points || read_index >= push_constants.num_points) {
         return;
     }
 
-    uint read_index = dispatch_thread_id.y * push_constants.width + dispatch_thread_id.x;
+    uint gi = gl_LocalInvocationIndex;
 
     shared_data[gi] = READ_INDEX(read_index);
 
 	barrier();
-	uvec2 xy = dispatch_thread_id.yx - local_invocation_id.yx + local_invocation_id.xy;
-
-    uint write_index = xy.y * push_constants.height + xy.x;
 
 	WRITE_INDEX(write_index, shared_data[local_invocation_id.x * BLOCK_SIZE + local_invocation_id.y]);
 }

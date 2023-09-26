@@ -40,15 +40,15 @@ layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
     Scene scene;
 };
 
-/*layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
+layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 {
-    Camera camera;
-};*/
+    Camera in_camera;
+};
 
 
 void CalcCovariance3D(mat3 rotMat, out vec3 sigma0, out vec3 sigma1)
 {
-    mat3 sig = rotMat * transpose(rotMat);
+    mat3 sig = transpose(rotMat) * rotMat;
     sigma0 = vec3(sig[0][0], sig[0][1], sig[0][2]);
     sigma1 = vec3(sig[1][1], sig[1][2], sig[2][2]);
 }
@@ -68,24 +68,26 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1, mat4 matrixV, mat
 
     //float focal = screenParams.x * matrixP[0][0] / 2.0;
 
-    mat3 J = mat3(
-        focal.x / viewPos.z, 0.0, -(focal.x * viewPos.x) / (viewPos.z * viewPos.z),
-        0.0, focal.y / viewPos.z, -(focal.y * viewPos.y) / (viewPos.z * viewPos.z),
-        0.0, 0.0, 0.0
+    mat4 J = mat4(
+        focal.x / viewPos.z, 0.0, -(focal.x * viewPos.x) / (viewPos.z * viewPos.z), 0.0,
+        0.0, focal.y / viewPos.z, -(focal.y * viewPos.y) / (viewPos.z * viewPos.z), 0.0,
+        0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0
     );
     /*viewMatrix[0][3] = 0.0;
     viewMatrix[1][3] = 0.0;
     viewMatrix[2][3] = 0.0;
     viewMatrix[3][3] = 1.0;*/
 
-    mat3 W = mat3(transpose(viewMatrix));
-    mat3 T = W * J;
-    mat3 V = mat3(
-        cov3d0.x, cov3d0.y, cov3d0.z,
-        cov3d0.y, cov3d1.x, cov3d1.y,
-        cov3d0.z, cov3d1.y, cov3d1.z
+    mat4 W = transpose(viewMatrix);
+    mat4 T = W * J;
+    mat4 V = mat4(
+        cov3d0.x, cov3d0.y, cov3d0.z, 0.0,
+        cov3d0.y, cov3d1.x, cov3d1.y, 0.0,
+        cov3d0.z, cov3d1.y, cov3d1.z, 0.0,
+        0.0, 0.0, 0.0, 0.0
     );
-    mat3 cov = transpose(T) * transpose(V) * T;
+    mat4 cov = transpose(T) * transpose(V) * T;
 
     // Low pass filter to make each splat at least 1px size.
     cov[0][0] += 0.3;
@@ -93,23 +95,23 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1, mat4 matrixV, mat
     return vec3(cov[0][0], cov[0][1], cov[1][1]);
 }
 
-mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale)
+mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
 {
     mat3 ms = mat3(
-        scale.x, 0.0, 0.0,
-        0.0, scale.y, 0.0,
-        0.0, 0.0, scale.z
+        exp(scale.x) * scale_modifier, 0.0, 0.0,
+        0.0, exp(scale.y) * scale_modifier, 0.0,
+        0.0, 0.0, exp(scale.z) * scale_modifier
     );
-    float x = rot.w;
-    float y = rot.x;
-    float z = rot.y;
-    float w = rot.z;
+    float w = rot.x;
+    float x = rot.y;
+    float y = rot.z;
+    float z = rot.w;
     mat3 mr = mat3(
-        1.0-2.0*(y*y + z*z),   2.0*(x*y + w*z),   2.0*(x*z - w*y),
-        2.0*(x*y - w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z + w*x),
-        2.0*(x*z + w*y),   2.0*(y*z - w*x), 1.0-2.0*(x*x + y*y)
+        1.0-2.0*(y*y + z*z),   2.0*(x*y - w*z),   2.0*(x*z + w*y),
+        2.0*(x*y + w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z - w*x),
+        2.0*(x*z - w*y),   2.0*(y*z + w*x), 1.0-2.0*(x*x + y*y)
     );
-    return mr*ms;
+    return ms*mr;
 }
 
 float rcp(float x)
@@ -137,16 +139,16 @@ void main()
     );
 
     camera.projection = mat4(
-        1.188818931579589, 0.0, 0.0, 0.0,
-        0.0, 2.1333301067352295, 0.0, 0.0,
-        0.0, 0.0, 1.0020040273666382, 1.0,
-        0.0, 0.0, -0.20040079951286316, 0.0
+        1.1436784267425537, -0.05776047334074974, -0.2721448838710785, -0.2716005742549896,
+        -0.017293909564614296, -2.130641460418701, 0.048131413757801056, 0.0480351485311985,
+        0.3240230977535248, 0.09015493839979172, 0.9631368517875671, 0.9612105488777161,
+        -1.3798089027404785, 0.9811712503433228, 3.696772575378418, 3.8893790245056152
     );
 
     camera.focal = vec2(581.3324518791126, 581.3324518791126);
     camera.dimensions = vec2(700.0, 700.0);
     camera.scale_modifier = 1.2844036697247707;
-    vec2 tan_half_fov = vec2(camera.dimensions / camera.focal) * 0.5;
+    vec2 tan_half_fov = vec2(0.6020651330725677);//vec2(camera.dimensions / camera.focal) * 0.5;
 
 
     const int instance_id = gl_InstanceIndex;
@@ -157,9 +159,9 @@ void main()
     GaussianSplatShaderData instance = instances[sorted_index];
 
     vec4 rotation = instance.rotation;
-    vec3 scale = instance.scale.xyz * camera.scale_modifier;
+    vec3 scale = instance.scale.xyz;
 
-    mat3 rotation_scale_matrix = CalcMatrixFromRotationScale(rotation, scale);
+    mat3 rotation_scale_matrix = CalcMatrixFromRotationScale(rotation, scale, camera.scale_modifier);
 
     vec3 covariance_3d_0;
     vec3 covariance_3d_1;
