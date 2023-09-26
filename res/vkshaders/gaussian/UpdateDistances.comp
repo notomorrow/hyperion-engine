@@ -19,7 +19,7 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 {
-    Camera in_camera;
+    Camera camera;
 };
 
 layout(std430, set = 0, binding = 4) buffer SplatDistancesBuffer
@@ -43,6 +43,7 @@ struct GaussianSplattingCamera {
 
 void main()
 {
+#if 0
     // TEMP
     GaussianSplattingCamera camera;
     camera.view = mat4(
@@ -66,9 +67,7 @@ void main()
     camera.dimensions = vec2(700.0, 700.0);
     camera.scale_modifier = 1.2844036697247707;
     vec2 tan_half_fov = vec2(0.6020651330725677);//vec2(camera.dimensions / camera.focal) * 0.5;
-
-
-
+#endif
 
     const uint id = gl_GlobalInvocationID.x;
     const uint index = id;
