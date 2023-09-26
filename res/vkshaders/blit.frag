@@ -79,6 +79,6 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_color_buffer, v_texcoord0).rgb;
     
     vec4 forward_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, v_texcoord0);
-    out_color = forward_result;
+    out_color.rgb = pow(forward_result.rgb, vec3(2.2));
     out_color.a = 1.0;
 }

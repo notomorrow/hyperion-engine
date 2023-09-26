@@ -102,14 +102,14 @@ mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
         0.0, exp(scale.y) * scale_modifier, 0.0,
         0.0, 0.0, exp(scale.z) * scale_modifier
     );
-    float w = rot.x;
-    float x = rot.y;
-    float y = rot.z;
-    float z = rot.w;
+    float w = rot.w;
+    float x = rot.x;
+    float y = rot.y;
+    float z = rot.z;
     mat3 mr = mat3(
-        1.0-2.0*(y*y + z*z),   2.0*(x*y - w*z),   2.0*(x*z + w*y),
-        2.0*(x*y + w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z - w*x),
-        2.0*(x*z - w*y),   2.0*(y*z + w*x), 1.0-2.0*(x*x + y*y)
+        1.0-2.0*(y*y + z*z),   2.0*(x*y + w*z),   2.0*(x*z - w*y),
+        2.0*(x*y - w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z + w*x),
+        2.0*(x*z + w*y),   2.0*(y*z - w*x), 1.0-2.0*(x*x + y*y)
     );
     return ms*mr;
 }
