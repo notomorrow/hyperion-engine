@@ -28,7 +28,7 @@
 #include "../include/packing.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "./Gaussian.glsl"
+#include "./Gaussian.inc.glsl"
 
 layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
 {
@@ -80,23 +80,22 @@ void main()
         return;
     }
 
-    uint gi = gl_LocalInvocationIndex;
-
     // Load shared data
-    shared_data[gi] = READ_INDEX(dispatch_thread_id.x);
+    shared_data[gl_LocalInvocationIndex] = READ_INDEX(gl_GlobalInvocationID.x);
     barrier();
 
     // Sort the shared data
     for (uint j = push_constants.level >> 1; j > 0; j >>= 1) {
-        bool in_mask = bool(push_constants.level_mask & dispatch_thread_id.x);
-        uint result = (((shared_data[gi & ~j]) <= (shared_data[gi | j])) == in_mask) ? shared_data[gi ^ j] : shared_data[gi];
+        uint result = (((shared_data[gl_LocalInvocationIndex & ~j]) <= (shared_data[gl_LocalInvocationIndex | j])) == bool(push_constants.level_mask & gl_GlobalInvocationID.x))
+            ? shared_data[gl_LocalInvocationIndex ^ j]
+            : shared_data[gl_LocalInvocationIndex];
         barrier();
-        shared_data[gi] = result;
+        shared_data[gl_LocalInvocationIndex] = result;
         barrier();
     }
 
     // Store shared data
-    WRITE_INDEX(dispatch_thread_id.x, shared_data[gi]);
+    WRITE_INDEX(gl_GlobalInvocationID.x, shared_data[gl_LocalInvocationIndex]);
 }
 
 #elif defined(MODE_TRANSPOSE)

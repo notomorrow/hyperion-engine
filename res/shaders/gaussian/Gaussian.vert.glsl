@@ -23,7 +23,7 @@ layout (location = 5) in vec3 a_bitangent;
 #include "../include/object.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "./Gaussian.glsl"
+#include "./Gaussian.inc.glsl"
 
 layout(std430, set = 0, binding = 3) readonly buffer SplatIndicesBuffer
 {

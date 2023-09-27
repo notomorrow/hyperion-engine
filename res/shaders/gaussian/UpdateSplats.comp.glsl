@@ -15,7 +15,7 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 #include "../include/packing.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "./Gaussian.glsl"
+#include "./Gaussian.inc.glsl"
 
 struct IndirectDrawCommand
 {

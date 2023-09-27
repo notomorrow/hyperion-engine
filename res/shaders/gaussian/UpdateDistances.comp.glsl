@@ -15,11 +15,21 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 #include "../include/packing.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "./Gaussian.glsl"
+#include "./Gaussian.inc.glsl"
 
 layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 {
     Camera camera;
+};
+
+layout(std430, set = 0, binding = 9) buffer SplatIndicesBuffer
+{
+    uvec4 splat_indices[];
+};
+
+layout(std430, set = 0, binding = 10) buffer SplatIndicesBufferSecondary
+{
+    uvec4 splat_indices_secondary[];
 };
 
 layout(std430, set = 0, binding = 4) buffer SplatDistancesBuffer
@@ -43,32 +53,6 @@ struct GaussianSplattingCamera {
 
 void main()
 {
-#if 0
-    // TEMP
-    GaussianSplattingCamera camera;
-    camera.view = mat4(
-        
-        0.9620291590690613, 0.027075262740254402, -0.2716005742549896, 0.0,
-        -0.014547135680913925, 0.9987397193908691, 0.0480351485311985, 0.0,
-        0.2725588381290436, -0.04226019233465195, 0.9612105488777161, 0.0,
-        -1.1606552600860596, -0.45992472767829895, 3.8893790245056152, 1.0
-    );
-
-    camera.projection = mat4(
-        1.1436784267425537, -0.05776047334074974, -0.2721448838710785, -0.2716005742549896,
-        -0.017293909564614296, -2.130641460418701, 0.048131413757801056, 0.0480351485311985,
-        0.3240230977535248, 0.09015493839979172, 0.9631368517875671, 0.9612105488777161,
-        -1.3798089027404785, 0.9811712503433228, 3.696772575378418, 3.8893790245056152
-    );
-
-    camera.position = vec3(2.185394287109375, 0.25563400983810425, -3.4416019916534424);
-
-    camera.focal = vec2(581.3324518791126, 581.3324518791126);
-    camera.dimensions = vec2(700.0, 700.0);
-    camera.scale_modifier = 1.2844036697247707;
-    vec2 tan_half_fov = vec2(0.6020651330725677);//vec2(camera.dimensions / camera.focal) * 0.5;
-#endif
-
     const uint id = gl_GlobalInvocationID.x;
     const uint index = id;
 
@@ -84,4 +68,6 @@ void main()
     float dist = (camera.view * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
 
     splat_distances[index >> 2][index & 3] = dist;
+    splat_indices[index >> 2][index & 3] = id;
+    splat_indices_secondary[index >> 2][index & 3] = id;
 }
