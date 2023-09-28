@@ -107,7 +107,6 @@ vert = gaussian/Gaussian.vert.glsl
 comp = gaussian/UpdateSplats.comp.glsl
 
 [GaussianSplatting_SortSplats]
-permute = STAGE(LOCAL_BMS LOCAL_DISPERSE BIG_FLIP BIG_DISPERSE)
 comp = gaussian/SortSplats.comp.glsl
 
 [GaussianSplatting_UpdateDistances]
