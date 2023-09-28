@@ -32,6 +32,11 @@ layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
     IndirectDrawCommand indirect_draw_command;
 };
 
+layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
+{
+    GaussianSplatIndex splat_indices[];
+};
+
 layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
 {
     Scene scene;
@@ -55,7 +60,11 @@ void main()
         return;
     }
 
-    GaussianSplatShaderData instance = instances[index];
+    GaussianSplatIndex splat_index = splat_indices[index];
+
+    if (splat_index.distance >= 1000.0 || splat_index.distance < 0.0) {
+        return;
+    }
 
     atomicAdd(indirect_draw_command.instance_count, 1u);
 }

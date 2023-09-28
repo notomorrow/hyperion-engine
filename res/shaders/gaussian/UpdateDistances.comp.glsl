@@ -22,14 +22,9 @@ layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
     Camera camera;
 };
 
-layout(std430, set = 0, binding = 9) buffer SplatIndicesBuffer
+layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
 {
-    uvec4 splat_indices[];
-};
-
-layout(std430, set = 0, binding = 10) buffer SplatIndicesBufferSecondary
-{
-    uvec4 splat_indices_secondary[];
+    GaussianSplatIndex splat_indices[];
 };
 
 layout(std430, set = 0, binding = 4) buffer SplatDistancesBuffer
@@ -53,10 +48,9 @@ struct GaussianSplattingCamera {
 
 void main()
 {
-    const uint id = gl_GlobalInvocationID.x;
-    const uint index = id;
+    const uint index = gl_GlobalInvocationID.x;
 
-    if (id >= push_constants.num_points) {
+    if (index >= push_constants.num_points) {
         return;
     }
 
@@ -67,7 +61,9 @@ void main()
 
     float dist = (camera.view * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
 
-    splat_distances[index >> 2][index & 3] = dist;
-    splat_indices[index >> 2][index & 3] = id;
-    splat_indices_secondary[index >> 2][index & 3] = id;
+    GaussianSplatIndex gaussian_splat_index;
+    gaussian_splat_index.index = index;
+    gaussian_splat_index.distance = dist >= 0.0 ? dist : 999999.0;
+
+    splat_indices[index] = gaussian_splat_index;
 }

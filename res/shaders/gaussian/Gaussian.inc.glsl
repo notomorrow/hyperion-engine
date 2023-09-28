@@ -1,6 +1,11 @@
 #ifndef HYP_GAUSSIAN_GLSL
 #define HYP_GAUSSIAN_GLSL
 
+struct GaussianSplatIndex {
+    uint index;
+    float distance;
+};
+
 struct GaussianSplatShaderData
 {
     vec4 position;

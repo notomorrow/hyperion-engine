@@ -27,7 +27,7 @@ layout (location = 5) in vec3 a_bitangent;
 
 layout(std430, set = 0, binding = 3) readonly buffer SplatIndicesBuffer
 {
-    uvec4 splat_indices[];
+    GaussianSplatIndex splat_indices[];
 };
 
 layout(std430, set = 0, binding = 4) readonly buffer SplatDistancesBuffer
@@ -119,46 +119,14 @@ float rcp(float x)
     return 1.0 / x;
 }
 
-struct GaussianSplattingCamera {
-    mat4 view;
-    mat4 projection;
-    vec2 focal;
-    vec2 dimensions;
-    float scale_modifier;
-};
-
 void main()
 {
-
-#if 0
-    GaussianSplattingCamera camera;
-    camera.view = mat4(
-        
-        0.9620291590690613, 0.027075262740254402, -0.2716005742549896, 0.0,
-        -0.014547135680913925, 0.9987397193908691, 0.0480351485311985, 0.0,
-        0.2725588381290436, -0.04226019233465195, 0.9612105488777161, 0.0,
-        -1.1606552600860596, -0.45992472767829895, 3.8893790245056152, 1.0
-    );
-
-    camera.projection = mat4(
-        1.1436784267425537, -0.05776047334074974, -0.2721448838710785, -0.2716005742549896,
-        -0.017293909564614296, -2.130641460418701, 0.048131413757801056, 0.0480351485311985,
-        0.3240230977535248, 0.09015493839979172, 0.9631368517875671, 0.9612105488777161,
-        -1.3798089027404785, 0.9811712503433228, 3.696772575378418, 3.8893790245056152
-    );
-
-    camera.focal = vec2(581.3324518791126, 581.3324518791126);
-    camera.dimensions = vec2(700.0, 700.0);
-    camera.scale_modifier = 1.2844036697247707;
-    vec2 tan_half_fov = vec2(0.6020651330725677);//vec2(camera.dimensions / camera.focal) * 0.5;
-#endif
-
     const int instance_id = gl_InstanceIndex;
-    const uint sorted_index = splat_indices[instance_id >> 2][instance_id & 3];
+    const GaussianSplatIndex gaussian_splat_index = splat_indices[instance_id];
 
     const vec2 quad_position = a_position.xy;
 
-    GaussianSplatShaderData instance = instances[sorted_index];
+    GaussianSplatShaderData instance = instances[gaussian_splat_index.index];
 
     vec4 rotation = instance.rotation;
     vec3 scale = instance.scale.xyz;
