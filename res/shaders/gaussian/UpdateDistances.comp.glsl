@@ -17,6 +17,11 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 #include "./Gaussian.inc.glsl"
 
+layout(std430, set = 0, binding = 4, row_major) uniform GaussianSplattingSceneShaderData
+{
+    mat4 model_matrix;
+};
+
 layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 {
     Camera camera;
@@ -25,11 +30,6 @@ layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
 {
     GaussianSplatIndex splat_indices[];
-};
-
-layout(std430, set = 0, binding = 4) buffer SplatDistancesBuffer
-{
-    vec4 splat_distances[];
 };
 
 layout(push_constant) uniform PushConstant {
@@ -59,7 +59,7 @@ void main()
     vec3 camera_position = camera.position.xyz;
     vec3 splat_position = instance.position.xyz;
 
-    float dist = (camera.view * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
+    float dist = (camera.view * model_matrix * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
 
     GaussianSplatIndex gaussian_splat_index;
     gaussian_splat_index.index = index;

@@ -30,9 +30,9 @@ layout(std430, set = 0, binding = 3) readonly buffer SplatIndicesBuffer
     GaussianSplatIndex splat_indices[];
 };
 
-layout(std430, set = 0, binding = 4) readonly buffer SplatDistancesBuffer
+layout(std430, set = 0, binding = 4, row_major) uniform GaussianSplattingSceneShaderData
 {
-    vec4 splat_distances[];
+    mat4 model_matrix;
 };
 
 layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
@@ -48,7 +48,7 @@ layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 
 void CalcCovariance3D(mat3 rot, out vec3 sigma0, out vec3 sigma1)
 {
-    mat3 sig = transpose(transpose(rot) * rot);
+    mat3 sig = transpose(rot) * (rot);
     sigma0 = vec3(sig[0][0], sig[0][1], sig[0][2]);
     sigma1 = vec3(sig[1][1], sig[1][2], sig[2][2]);
 }
@@ -68,20 +68,26 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1)
 
     float focal = camera.dimensions.x * camera.projection[0][0] / 2.0;
 
-    mat3 J = mat3(
-        focal / viewPos.z, 0.0, -(focal * viewPos.x) / (viewPos.z * viewPos.z),
-        0.0, focal / viewPos.z, -(focal * viewPos.y) / (viewPos.z * viewPos.z),
-        0.0, 0.0, 0.0
+    mat4 J = mat4(
+        focal / viewPos.z, 0.0, -(focal * viewPos.x) / (viewPos.z * viewPos.z), 0.0,
+        0.0, focal / viewPos.z, -(focal * viewPos.y) / (viewPos.z * viewPos.z), 0.0,
+        0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0
     );
 
-    mat3 W = transpose(mat3(view));
-    mat3 T = W * J;
-    mat3 V = mat3(
-        cov3d0.x, cov3d0.y, cov3d0.z,
-        cov3d0.y, cov3d1.x, cov3d1.y,
-        cov3d0.z, cov3d1.y, cov3d1.z
+    //view[0][3] = 0.0;
+    //view[1][3] = 0.0;
+    //view[2][3] = 0.0;
+
+    mat4 W = transpose(view);
+    mat4 T = W * J;
+    mat4 V = mat4(
+        cov3d0.x, cov3d0.y, cov3d0.z, 0.0,
+        cov3d0.y, cov3d1.x, cov3d1.y, 0.0,
+        cov3d0.z, cov3d1.y, cov3d1.z, 0.0,
+        0.0, 0.0, 0.0, 0.0
     );
-    mat3 cov = transpose(T) * (V) * T;
+    mat4 cov = transpose(T) * transpose(V) * T;
 
     // Low pass filter to make each splat at least 1px size.
     cov[0][0] += 0.3;
@@ -112,7 +118,7 @@ mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
         2. * (x * z - r * y), 2. * (y * z + r * x), 1. - 2. * (x * x + y * y)
     );
 
-    return ms * mr;
+    return (ms * mr);
 }
 
 float rcp(float x)
@@ -129,10 +135,12 @@ void main()
 
     GaussianSplatShaderData instance = instances[gaussian_splat_index.index];
 
+    vec3 world_position = (model_matrix * vec4(instance.position.xyz, 1.0)).xyz;
+
     vec4 rotation = instance.rotation;
     vec3 scale = instance.scale.xyz;
 
-    mat3 rotation_scale_matrix = CalcMatrixFromRotationScale(rotation, scale, 1.0);
+    mat3 rotation_scale_matrix = CalcMatrixFromRotationScale(rotation, scale, 1.0) * mat3(model_matrix);
 
     vec3 covariance_3d_0;
     vec3 covariance_3d_1;
@@ -140,7 +148,7 @@ void main()
     CalcCovariance3D(rotation_scale_matrix, covariance_3d_0, covariance_3d_1);
 
     vec3 covariance_2d = CalcCovariance2D(
-        instance.position.xyz,
+        world_position,
         covariance_3d_0,
         covariance_3d_1
     );
@@ -155,7 +163,7 @@ void main()
     vec3 conic = vec3(covariance_2d.z, -covariance_2d.y, covariance_2d.x) * rcp(det);
     const vec4 conic_radius = vec4(conic, radius);
 
-    vec4 center_ndc_position = camera.projection * camera.view * vec4(instance.position.xyz, 1.0);
+    vec4 center_ndc_position = camera.projection * camera.view * vec4(world_position, 1.0);
     center_ndc_position /= center_ndc_position.w;
 
     vec2 center_screen_position = (center_ndc_position.xy * 0.5 + 0.5) * camera.dimensions.xy;
