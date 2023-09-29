@@ -74,10 +74,6 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1, mat4 matrixV, mat
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0
     );
-    /*viewMatrix[0][3] = 0.0;
-    viewMatrix[1][3] = 0.0;
-    viewMatrix[2][3] = 0.0;
-    viewMatrix[3][3] = 1.0;*/
 
     mat4 W = transpose(viewMatrix);
     mat4 T = W * J;
@@ -107,11 +103,11 @@ mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
     float y = rot.y;
     float z = rot.z;
     mat3 mr = mat3(
-        1.0-2.0*(y*y + z*z),   2.0*(x*y + w*z),   2.0*(x*z - w*y),
-        2.0*(x*y - w*z), 1.0-2.0*(x*x + z*z),   2.0*(y*z + w*x),
-        2.0*(x*z + w*y),   2.0*(y*z - w*x), 1.0-2.0*(x*x + y*y)
+        1.0 - 2.0 * (y * y + z * z),    2.0 * (x * y + w * z),       2.0 * (x * z - w * y),
+        2.0 * (x * y - w * z),          1.0-2.0 * (x * x + z * z),  2.0 * (y * z + w * x),
+        2.0 * (x * z + w * y),          2.0 * (y * z - w * x),      1.0 - 2.0 * (x * x + y * y)
     );
-    return ms*mr;
+    return mr * ms;
 }
 
 float rcp(float x)

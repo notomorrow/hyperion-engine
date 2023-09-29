@@ -4,8 +4,8 @@
 #define HDR 1
 //#define HDR_TONEMAP_UNCHARTED 1
 //#define HDR_TONEMAP_FILMIC 1
-#define HDR_TONEMAP_UNREAL 1
-//#define HDR_TONEMAP_REINHARD 1
+//#define HDR_TONEMAP_UNREAL 1
+#define HDR_TONEMAP_REINHARD 1
 
 #ifndef HDR_EXPOSURE
     #define HDR_EXPOSURE 9.0
@@ -57,7 +57,7 @@ vec3 ChangeLuminance(vec3 x, float new_luminance)
 {
     float luminance = GetLuminance(x);
 
-    return x * (new_luminance / luminance);
+    return x * (new_luminance / max(luminance, 0.00001));
 }
 
 vec3 TonemapReinhard(vec3 x)
@@ -65,7 +65,7 @@ vec3 TonemapReinhard(vec3 x)
     const float max_white_l = 100.0;
     float l_old = GetLuminance(x);
     float numerator = l_old * (1.0f + (l_old / (max_white_l * max_white_l)));
-    float l_new = numerator / (1.0f + l_old);
+    float l_new = numerator / max(1.0f + l_old, 0.00001);
     return ChangeLuminance(x, l_new);
 }
 
