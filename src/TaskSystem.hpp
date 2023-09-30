@@ -188,8 +188,8 @@ public:
 
         TaskThreadPool &pool = GetPool(batch->pool);
 
-        constexpr UInt num_threads_in_pool = UInt(pool.threads.Size());
-        constexpr UInt max_spins = num_threads_in_pool;
+        const UInt num_threads_in_pool = UInt(pool.threads.Size());
+        const UInt max_spins = num_threads_in_pool;
 
         for (SizeType i = 0; i < batch->tasks.Size(); i++) {
             auto &task = batch->tasks[i];
