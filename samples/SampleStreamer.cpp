@@ -19,6 +19,8 @@
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/Pair.hpp>
 #include <core/lib/DynArray.hpp>
+#include <core/lib/Queue.hpp>
+#include <core/lib/AtomicVar.hpp>
 
 #include <util/json/JSON.hpp>
 
@@ -52,6 +54,8 @@
 #include <rendering/GaussianSplatting.hpp>
 
 #include <util/UTF8.hpp>
+
+#include <mutex>
 
 class FramebufferCaptureRenderComponent : public RenderComponent<FramebufferCaptureRenderComponent>
 {
@@ -153,6 +157,46 @@ private:
         { }
 };
 
+class WebSocketMessageQueue
+{
+public:
+    WebSocketMessageQueue() = default;
+    WebSocketMessageQueue(const WebSocketMessageQueue &other) = delete;
+    WebSocketMessageQueue &operator=(const WebSocketMessageQueue &other) = delete;
+    WebSocketMessageQueue(WebSocketMessageQueue &&other) = delete;
+    WebSocketMessageQueue &operator=(WebSocketMessageQueue &&other) = delete;
+    ~WebSocketMessageQueue() = default;
+
+    void Push(json::JSONValue &&message)
+    {
+        std::lock_guard guard(m_mutex);
+
+        m_messages.Push(std::move(message));
+        m_size.Increment(1, MemoryOrder::SEQUENTIAL);
+    }
+
+    json::JSONValue Pop()
+    {
+        AssertThrow(!Empty());
+
+        std::lock_guard guard(m_mutex);
+
+        m_size.Decrement(1, MemoryOrder::SEQUENTIAL);
+        return m_messages.Pop();
+    }
+
+    UInt Size() const
+        { return m_size.Get(MemoryOrder::SEQUENTIAL); }
+
+    bool Empty() const
+        { return Size() == 0; }
+
+private:
+    std::mutex              m_mutex;
+    Queue<json::JSONValue>  m_messages;
+    AtomicVar<UInt>         m_size;
+};
+
 SampleStreamer::SampleStreamer(RC<Application> application)
     : Game(application)
 {
@@ -163,6 +207,66 @@ void SampleStreamer::InitGame()
     Game::InitGame();
 
     // g_engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
+
+    m_message_queue.Reset(new WebSocketMessageQueue());
+    
+    m_rtc_instance.Reset(new RTCInstance(
+        RTCServerParams {
+            RTCServerAddress { "ws://127.0.0.1", 9945 }
+        }
+    ));
+
+    AssertThrow(m_rtc_instance->GetServer() != nullptr);
+
+    if (RTCServer *server = m_rtc_instance->GetServer()) {
+        server->GetCallbacks().On(RTCServerCallbackMessages::SERVER_ERROR, [](RTCServerCallbackData data) {
+            DebugLog(LogType::Error, "Server error: %s\n", data.error.HasValue() ? data.error.Get().message.Data() : "<unknown>");
+        });
+
+        server->GetCallbacks().On(RTCServerCallbackMessages::SERVER_STARTED, [](RTCServerCallbackData) {
+            DebugLog(LogType::Debug, "Server started\n");
+        });
+
+        server->GetCallbacks().On(RTCServerCallbackMessages::SERVER_STOPPED, [](RTCServerCallbackData) {
+            DebugLog(LogType::Debug, "Server stopped\n");
+        });
+
+        server->GetCallbacks().On(RTCServerCallbackMessages::CLIENT_CONNECTED, [](RTCServerCallbackData) {
+            DebugLog(LogType::Debug, "Client connected\n");
+        });
+
+        server->GetCallbacks().On(RTCServerCallbackMessages::CLIENT_DISCONNECTED, [](RTCServerCallbackData) {
+            DebugLog(LogType::Debug, "Client disconnected\n");
+        });
+
+        server->GetCallbacks().On(RTCServerCallbackMessages::CLIENT_MESSAGE, [this](RTCServerCallbackData data) {
+            DebugLog(LogType::Debug, "Got client message");
+
+            using namespace hyperion::json;
+
+            if (!data.bytes.HasValue()) {
+                DebugLog(LogType::Warn, "Received client message, but no bytes were provided\n");
+
+                return;
+            }
+
+            const ByteBuffer &bytes = data.bytes.Get();
+
+            auto json_parse_result = JSON::Parse(String(bytes));
+
+            if (!json_parse_result.ok) {
+                DebugLog(LogType::Warn, "Failed to parse JSON from client message: %s\n", json_parse_result.message.Data());
+
+                return;
+            }
+
+            JSONValue &json_value = json_parse_result.value;
+
+            m_message_queue->Push(std::move(json_value));
+        });
+
+        server->Start();
+    }
 
     const Extent2D window_size = GetInputManager()->GetWindow()->GetExtent();
 
@@ -423,6 +527,21 @@ void SampleStreamer::Teardown()
 
 void SampleStreamer::Logic(GameCounter::TickUnit delta)
 {
+    while (!m_message_queue->Empty()) {
+        const json::JSONValue message = m_message_queue->Pop();
+
+        DebugLog(LogType::Debug, "Got Message! %s\n", message.ToString().Data());
+
+        const String message_type = message["type"].ToString();
+
+        if (message_type == "Ping") {
+            String response_string = "{\"type\": \"Pong\"}";
+
+            // Send PONG
+            m_rtc_instance->GetServer()->SendToSignallingServer(ByteBuffer(response_string.Size(), response_string.Data()));
+        }
+    }
+
     m_ui.Update(delta);
 
     HandleCameraMovement(delta);

@@ -4,8 +4,12 @@
 #include <Game.hpp>
 #include <HyperionEngine.hpp>
 
+#include <rtc/RTCInstance.hpp>
+
 using namespace hyperion;
 using namespace hyperion::v2;
+
+class WebSocketMessageQueue;
 
 class SampleStreamer : public Game
 {
@@ -25,10 +29,13 @@ public:
 private:
     void HandleCameraMovement(GameCounter::TickUnit delta);
 
-    Handle<Texture> m_texture;
-    ByteBuffer      m_screen_buffer;
+    UniquePtr<RTCInstance>              m_rtc_instance;
+    UniquePtr<WebSocketMessageQueue>    m_message_queue;
 
-    UInt            m_counter = 0;
+    Handle<Texture>                     m_texture;
+    ByteBuffer                          m_screen_buffer;
+
+    UInt                                m_counter = 0;
 };
 
 #endif
