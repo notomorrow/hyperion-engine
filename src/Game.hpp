@@ -41,6 +41,7 @@ public:
     virtual void Teardown();
 
     virtual void InitGame();
+    virtual void InitRender();
 
     virtual void OnFrameBegin(Frame *frame);
     virtual void OnFrameEnd(Frame *frame);

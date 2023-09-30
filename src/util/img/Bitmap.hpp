@@ -56,6 +56,13 @@ struct Pixel
         );
     }
 
+    void SetRGB(const Vector3 &rgb)
+    {
+        for (UInt i = 0; i < MathUtil::Min(byte_size, 3); i++) {
+            bytes[byte_size - i - 1] = static_cast<UByte>(rgb[i] * 255.0f);
+        }
+    }
+
     Vector4 GetRGBA() const
     {
         if constexpr (byte_size < 4) {
@@ -72,6 +79,13 @@ struct Pixel
                 static_cast<Float>(bytes[1]) / 255.0f,
                 static_cast<Float>(bytes[0]) / 255.0f
             );
+        }
+    }
+
+    void SetRGBA(const Vector4 &rgba)
+    {
+        for (UInt i = 0; i < MathUtil::Min(byte_size, 4); i++) {
+            bytes[byte_size - i - 1] = static_cast<UByte>(rgba[i] * 255.0f);
         }
     }
 };
@@ -142,6 +156,12 @@ public:
             * static_cast<SizeType>(NumComponents);
     }
 
+    Pixel &GetPixelAtIndex(UInt index)
+        { return m_pixels[index]; }
+
+    const Pixel &GetPixelAtIndex(UInt index) const
+        { return m_pixels[index]; }
+
     Pixel &GetPixel(UInt x, UInt y)
     {
         const UInt index = ((x + m_width) % m_width)
@@ -181,6 +201,28 @@ public:
         GetUnpackedBytes(unpacked_bytes);
 
         WriteBitmap::Write(filepath.Data(), m_width, m_height, unpacked_bytes.Data());
+    }
+
+    void FlipVertical()
+    {
+        for (UInt x = 0; x < m_width; x++) {
+            for (UInt y = 0; y < m_height / 2; y++) {
+                auto temp = GetPixel(x, m_height - y - 1u);
+                GetPixel(x, m_height - y - 1u) = GetPixel(x, y);
+                GetPixel(x, y) = temp;
+            }
+        }
+    }
+
+    void FlipHorizontal()
+    {
+        for (UInt x = 0; x < m_width / 2; x++) {
+            for (UInt y = 0; y < m_height; y++) {
+                auto temp = GetPixel(m_width - x - 1u, y);
+                GetPixel(m_width - x - 1u, y) = GetPixel(x, y);
+                GetPixel(x, y) = temp;
+            }
+        }
     }
 
 private:

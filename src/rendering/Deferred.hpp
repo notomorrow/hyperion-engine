@@ -108,6 +108,9 @@ public:
     DeferredRenderer &operator=(const DeferredRenderer &other) = delete;
     ~DeferredRenderer();
 
+    FullScreenPass *GetCombinePass() const
+        { return m_combine_pass.Get(); }
+
     PostProcessing &GetPostProcessing()
         { return m_post_processing; }
 

@@ -41,6 +41,8 @@ void Game::Init()
     InitObject(m_scene);
     g_engine->GetWorld()->AddScene(m_scene);
 
+    InitRender();
+
     m_is_init = true;
 }
 
@@ -57,6 +59,11 @@ void Game::InitGame()
     Threads::AssertOnThread(THREAD_GAME);
 
     m_ui.Init();
+}
+
+void Game::InitRender()
+{
+    Threads::AssertOnThread(THREAD_RENDER);
 }
 
 void Game::Teardown()

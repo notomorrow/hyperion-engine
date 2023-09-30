@@ -84,6 +84,18 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/zlib/CMakeLists.txt")
 endif()
 
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/libdatachannel/CMakeLists.txt")
+    add_definitions(-DHYP_LIBDATACHANNEL=1)
+
+    include_directories(libdatachannel PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/libdatachannel/include")
+    add_subdirectory(libdatachannel)
+    
+    set(COMMON_LIBRARIES
+        ${COMMON_LIBRARIES}
+        datachannel-static
+    )
+endif()
+
 # if aftermath lib exists on windows, link to it
 if(WIN32)
     if(EXISTS "${CMAKE_SOURCE_DIR}/lib/windows/64/GFSDK_Aftermath_Lib.x64.lib")
@@ -100,7 +112,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
 )
 
-add_library(${BUILD_NAME} STATIC ${SOURCES} ${HEADERS} "src/util/json/JSON.cpp")
+add_library(${BUILD_NAME} STATIC ${SOURCES} ${HEADERS})
 
 set(COMMON_LIBRARIES
     ${COMMON_LIBRARIES}

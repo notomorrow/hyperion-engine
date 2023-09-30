@@ -40,6 +40,12 @@ enum RenderComponentName : UInt
     RENDER_COMPONENT_ENV_GRID,
     RENDER_COMPONENT_POINT_SHADOW,
 
+    RENDER_COMPONENT_SLOT6,
+    RENDER_COMPONENT_SLOT7,
+    RENDER_COMPONENT_SLOT8,
+    RENDER_COMPONENT_SLOT9,
+    RENDER_COMPONENT_SLOT10,
+
     RENDER_COMPONENT_MAX
 };
 
@@ -166,7 +172,7 @@ protected:
 
 private:
     bool m_component_is_render_init,
-        m_component_is_game_init;
+         m_component_is_game_init;
 };
 
 } // namespace hyperion::v2
