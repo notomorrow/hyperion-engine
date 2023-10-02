@@ -12,12 +12,12 @@ class AstDeclaration : public AstStatement
 {
 public:
     AstDeclaration(
-        const std::string &name,
+        const String &name,
         const SourceLocation &location
     );
     virtual ~AstDeclaration() = default;
 
-    void SetName(const std::string &name) { m_name = name; }
+    void SetName(const String &name) { m_name = name; }
 
     RC<Identifier> &GetIdentifier() { return m_identifier; }
     const RC<Identifier> &GetIdentifier() const { return m_identifier; }
@@ -28,10 +28,10 @@ public:
     
     virtual RC<AstStatement> Clone() const override = 0;
 
-    virtual const std::string &GetName() const override;
+    virtual const String &GetName() const override;
 
 protected:
-    std::string m_name;
+    String m_name;
     RC<Identifier> m_identifier;
 
 private:

@@ -9,6 +9,7 @@
 #include <script/compiler/emit/Buildable.hpp>
 
 #include <core/lib/CMemory.hpp>
+#include <core/lib/String.hpp>
 
 #include <vector>
 #include <ostream>
@@ -294,17 +295,17 @@ struct BuildableFunction final : public Buildable
 
 struct BuildableType final : public Buildable
 {
-    RegIndex reg;
-    std::string name;
-    Array<std::string> members;
+    RegIndex        reg;
+    String          name;
+    Array<String>   members;
 
     virtual ~BuildableType() = default;
 };
 
 struct BuildableString final : public Buildable
 {
-    RegIndex reg;
-    std::string value;
+    RegIndex    reg;
+    String      value;
 
     virtual ~BuildableString() = default;
 };
@@ -320,10 +321,10 @@ struct BinOp final : public Instruction
 
 struct Comment final : public Instruction
 {
-    std::string value;
+    String value;
 
     Comment() = default;
-    Comment(const std::string &value) : value(value) {}
+    Comment(const String &value) : value(value) {}
     Comment(const Comment &other) = default;
     virtual ~Comment() = default;
 };
@@ -331,10 +332,10 @@ struct Comment final : public Instruction
 struct SymbolExport final : public Instruction
 {
     RegIndex reg;
-    std::string name;
+    String name;
 
     SymbolExport() = default;
-    SymbolExport(RegIndex reg, const std::string &name) : reg(reg), name(name) {}
+    SymbolExport(RegIndex reg, const String &name) : reg(reg), name(name) { }
     SymbolExport(const SymbolExport &other) = default;
     virtual ~SymbolExport() = default;
 };

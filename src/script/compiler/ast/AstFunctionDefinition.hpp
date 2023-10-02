@@ -3,6 +3,7 @@
 
 #include <script/compiler/ast/AstDeclaration.hpp>
 #include <script/compiler/ast/AstFunctionExpression.hpp>
+#include <core/lib/String.hpp>
 
 #include <memory>
 #include <vector>
@@ -11,10 +12,12 @@ namespace hyperion::compiler {
 
 class AstFunctionDefinition : public AstDeclaration {
 public:
-    AstFunctionDefinition(const std::string &name,
+    AstFunctionDefinition(
+        const String &name,
         const RC<AstFunctionExpression> &expr,
-        const SourceLocation &location);
-    virtual ~AstFunctionDefinition() = default;
+        const SourceLocation &location
+    );
+    virtual ~AstFunctionDefinition() override = default;
 
     const RC<AstFunctionExpression> &GetAssignment() const
         { return m_expr; }

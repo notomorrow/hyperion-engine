@@ -29,7 +29,7 @@ private:
     RC<AstStatement> m_stmt;
 
     // set while analyzing
-    std::string m_exported_symbol_name;
+    String m_exported_symbol_name;
 
     RC<AstExportStatement> CloneImpl() const
     {

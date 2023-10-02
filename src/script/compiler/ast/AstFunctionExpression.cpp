@@ -114,7 +114,7 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
         // add implicit 'return self' at the end
         m_block_with_parameters->AddChild(RC<AstReturnStatement>(new AstReturnStatement(
             RC<AstVariable>(new AstVariable(
-                Keyword::ToString(Keywords::Keyword_self),
+                Keyword::ToString(Keywords::Keyword_self).Get(),
                 m_block_with_parameters->GetLocation()
             )),
             m_block_with_parameters->GetLocation()
@@ -194,8 +194,8 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
     Array<SymbolMember_t> closure_obj_members;
 
     for (const auto &it : function_scope->GetClosureCaptures()) {
-        const std::string &name = it.first;
-        const RC<Identifier> &identifier = it.second;
+        const String &name = it.key;
+        const RC<Identifier> &identifier = it.value;
 
         AssertThrow(identifier != nullptr);
         AssertThrow(identifier->GetSymbolType() != nullptr);

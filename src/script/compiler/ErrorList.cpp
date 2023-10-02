@@ -63,7 +63,7 @@ std::ostream &ErrorList::WriteOutput(std::ostream &os) const
             os << termcolor::reset << "In file \"" << real_filename << "\":\n";
         }
 
-        const std::string &error_text = error.GetText();
+        const String &error_text = error.GetText();
 
         switch (error.GetLevel()) {
         case LEVEL_INFO:

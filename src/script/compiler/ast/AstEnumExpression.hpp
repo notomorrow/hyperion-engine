@@ -4,6 +4,7 @@
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
 #include <script/compiler/ast/AstTypeExpression.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 #include <memory>
@@ -13,23 +14,23 @@ namespace hyperion::compiler {
 
 struct EnumEntry
 {
-    std::string name;
-    RC<AstExpression> assignment;
-    SourceLocation location;
+    String              name;
+    RC<AstExpression>   assignment;
+    SourceLocation      location;
 };
 
 class AstEnumExpression : public AstExpression
 {
 public:
     AstEnumExpression(
-        const std::string &name,
+        const String &name,
         const Array<EnumEntry> &entries,
         const RC<AstPrototypeSpecification> &underlying_type,
         const SourceLocation &location
     );
     virtual ~AstEnumExpression() = default;
 
-    void SetName(const std::string &name) { m_name = name; }
+    void SetName(const String &name) { m_name = name; }
 
     const Array<EnumEntry> &GetEntries() const { return m_entries; }
 
@@ -45,14 +46,13 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override;
     virtual const AstExpression *GetValueOf() const override;
     virtual const AstExpression *GetDeepValueOf() const override;
-    virtual const std::string &GetName() const override;
+    virtual const String &GetName() const override;
 
 protected:
-    std::string m_name;
-    Array<EnumEntry> m_entries;
-    RC<AstPrototypeSpecification> m_underlying_type;
-
-    RC<AstTypeExpression> m_expr;
+    String                          m_name;
+    Array<EnumEntry>                m_entries;
+    RC<AstPrototypeSpecification>   m_underlying_type;
+    RC<AstTypeExpression>           m_expr;
 
     RC<AstEnumExpression> CloneImpl() const
     {

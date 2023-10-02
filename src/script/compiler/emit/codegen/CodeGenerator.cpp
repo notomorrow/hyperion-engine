@@ -197,211 +197,211 @@ void CodeGenerator::Visit(BuildableType *node)
     m_ibs.Put(Instructions::LOAD_TYPE);
     m_ibs.Put(node->reg);
 
-    uint16_t name_len = (uint16_t)node->name.length();
+    uint16_t name_len = (uint16_t)node->name.Size();
     m_ibs.Put((byte*)&name_len, sizeof(name_len));
-    m_ibs.Put((byte*)&node->name[0], node->name.length());
+    m_ibs.Put((byte*)node->name.Data(), node->name.Size());
 
     uint16_t size = (uint16_t)node->members.Size();
     m_ibs.Put((byte*)&size, sizeof(size));
 
-    for (const std::string &member_name : node->members) {
-        uint16_t member_name_len = (uint16_t)member_name.length();
+    for (const String &member_name : node->members) {
+        uint16_t member_name_len = (uint16_t)member_name.Size();
         m_ibs.Put((byte*)&member_name_len, sizeof(member_name_len));
-        m_ibs.Put((byte*)&member_name[0], member_name.length());
+        m_ibs.Put((byte*)member_name.Data(), member_name.Size());
     }
 }
 
 void CodeGenerator::Visit(BuildableString *node)
 {
-    uint32_t len = node->value.length();
+    const UInt32 len = UInt32(node->value.Size());
 
     // TODO: make it store and load statically
     m_ibs.Put(Instructions::LOAD_STRING);
     m_ibs.Put(node->reg);
     m_ibs.Put((byte*)&len, sizeof(len));
-    m_ibs.Put((byte*)&node->value[0], node->value.length());
+    m_ibs.Put((byte*)node->value.Data(), node->value.Size());
 }
 
 void CodeGenerator::Visit(StorageOperation *node)
 {
     switch (node->method) {
-        case Methods::LOCAL:
-            switch (node->strategy) {
-                case Strategies::BY_OFFSET:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(node->op.is_ref ? Instructions::LOAD_OFFSET_REF : Instructions::LOAD_OFFSET);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.offset, sizeof(node->op.b.offset));
-
-                            break;
-                        case Operations::STORE:
-                            m_ibs.Put(Instructions::MOV_OFFSET);
-                            m_ibs.Put((byte*)&node->op.b.offset, sizeof(node->op.b.offset));
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-
-                            break;
-                    }
-                    
-                    break;
-
-                case Strategies::BY_INDEX:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(node->op.is_ref ? Instructions::LOAD_INDEX_REF : Instructions::LOAD_INDEX);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
-
-                            break;
-                        case Operations::STORE:
-                            m_ibs.Put(Instructions::MOV_INDEX);
-                            m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-
-                            break;
-                    }
+    case Methods::LOCAL:
+        switch (node->strategy) {
+        case Strategies::BY_OFFSET:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(node->op.is_ref ? Instructions::LOAD_OFFSET_REF : Instructions::LOAD_OFFSET);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.offset, sizeof(node->op.b.offset));
 
                     break;
-                
-                case Strategies::BY_HASH:
+                case Operations::STORE:
+                    m_ibs.Put(Instructions::MOV_OFFSET);
+                    m_ibs.Put((byte*)&node->op.b.offset, sizeof(node->op.b.offset));
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+
+                    break;
+            }
+            
+            break;
+
+        case Strategies::BY_INDEX:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(node->op.is_ref ? Instructions::LOAD_INDEX_REF : Instructions::LOAD_INDEX);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
+
+                    break;
+                case Operations::STORE:
+                    m_ibs.Put(Instructions::MOV_INDEX);
+                    m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+
+                    break;
+            }
+
+            break;
+        
+        case Strategies::BY_HASH:
+            AssertThrowMsg(false, "Not implemented");
+
+            break;
+        }
+
+        break;
+
+    case Methods::STATIC:
+        switch (node->strategy) {
+        case Strategies::BY_OFFSET:
+            AssertThrowMsg(false, "Not implemented");
+            
+            break;
+
+        case Strategies::BY_INDEX:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(Instructions::LOAD_STATIC);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
+
+                    break;
+                case Operations::STORE:
                     AssertThrowMsg(false, "Not implemented");
 
                     break;
             }
 
             break;
+        
+        case Strategies::BY_HASH:
+            AssertThrowMsg(false, "Not implemented");
 
-        case Methods::STATIC:
-            switch (node->strategy) {
-                case Strategies::BY_OFFSET:
-                    AssertThrowMsg(false, "Not implemented");
-                    
+            break;
+        }
+
+        break;
+
+    case Methods::ARRAY:
+        switch (node->strategy) {
+        case Strategies::BY_OFFSET:
+            AssertThrowMsg(false, "Not implemented");
+            
+            break;
+
+        case Strategies::BY_INDEX:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(Instructions::LOAD_ARRAYIDX);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
+
                     break;
-
-                case Strategies::BY_INDEX:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(Instructions::LOAD_STATIC);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.index, sizeof(node->op.b.index));
-
-                            break;
-                        case Operations::STORE:
-                            AssertThrowMsg(false, "Not implemented");
-
-                            break;
-                    }
-
-                    break;
-                
-                case Strategies::BY_HASH:
-                    AssertThrowMsg(false, "Not implemented");
+                case Operations::STORE:
+                    m_ibs.Put(Instructions::MOV_ARRAYIDX);
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
 
                     break;
             }
 
             break;
+        
+        case Strategies::BY_HASH:
+            AssertThrowMsg(false, "Not implemented");
 
-        case Methods::ARRAY:
-            switch (node->strategy) {
-                case Strategies::BY_OFFSET:
-                    AssertThrowMsg(false, "Not implemented");
-                    
-                    break;
+            break;
+        }
 
-                case Strategies::BY_INDEX:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(Instructions::LOAD_ARRAYIDX);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
+        break;
 
-                            break;
-                        case Operations::STORE:
-                            m_ibs.Put(Instructions::MOV_ARRAYIDX);
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+    case Methods::MEMBER:
+        switch (node->strategy) {
+        case Strategies::BY_OFFSET:
+            AssertThrowMsg(false, "Not implemented");
+            
+            break;
 
-                            break;
-                    }
+        case Strategies::BY_INDEX:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(Instructions::LOAD_MEM);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
 
                     break;
-                
-                case Strategies::BY_HASH:
-                    AssertThrowMsg(false, "Not implemented");
+                case Operations::STORE:
+                    m_ibs.Put(Instructions::MOV_MEM);
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
 
                     break;
             }
 
             break;
-
-        case Methods::MEMBER:
-            switch (node->strategy) {
-                case Strategies::BY_OFFSET:
-                    AssertThrowMsg(false, "Not implemented");
-                    
-                    break;
-
-                case Strategies::BY_INDEX:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(Instructions::LOAD_MEM);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
-
-                            break;
-                        case Operations::STORE:
-                            m_ibs.Put(Instructions::MOV_MEM);
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.index, sizeof(node->op.b.object_data.member.index));
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-
-                            break;
-                    }
+        
+        case Strategies::BY_HASH:
+            switch (node->operation) {
+                case Operations::LOAD:
+                    m_ibs.Put(Instructions::LOAD_MEM_HASH);
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.hash, sizeof(node->op.b.object_data.member.hash));
 
                     break;
-                
-                case Strategies::BY_HASH:
-                    switch (node->operation) {
-                        case Operations::LOAD:
-                            m_ibs.Put(Instructions::LOAD_MEM_HASH);
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.hash, sizeof(node->op.b.object_data.member.hash));
-
-                            break;
-                        case Operations::STORE:
-                            m_ibs.Put(Instructions::MOV_MEM_HASH);
-                            m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
-                            m_ibs.Put((byte*)&node->op.b.object_data.member.hash, sizeof(node->op.b.object_data.member.hash));
-                            m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
-
-                            break;
-                    }
+                case Operations::STORE:
+                    m_ibs.Put(Instructions::MOV_MEM_HASH);
+                    m_ibs.Put((byte*)&node->op.b.object_data.reg, sizeof(node->op.b.object_data.reg));
+                    m_ibs.Put((byte*)&node->op.b.object_data.member.hash, sizeof(node->op.b.object_data.member.hash));
+                    m_ibs.Put((byte*)&node->op.a.reg, sizeof(node->op.a.reg));
 
                     break;
             }
 
             break;
+        }
+
+        break;
     }
 }
 
 void CodeGenerator::Visit(Comment *node)
 {
-    const SizeType size = node->value.length();
+    const SizeType size = node->value.Size();
     UInt32 len = UInt32(size);
 
     m_ibs.Put(Instructions::REM);
     m_ibs.Put((byte*)&len, sizeof(len));
-    m_ibs.Put((byte*)&node->value[0], size);
+    m_ibs.Put((byte*)node->value.Data(), size);
 }
 
 void CodeGenerator::Visit(SymbolExport *node)
 {
-    const UInt32 hash = hash_fnv_1(node->name.c_str());
+    const UInt32 hash = hash_fnv_1(node->name.Data());
 
     m_ibs.Put(Instructions::EXPORT);
     m_ibs.Put((byte*)&node->reg, sizeof(node->reg));

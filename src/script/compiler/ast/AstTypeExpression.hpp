@@ -12,10 +12,11 @@
 
 namespace hyperion::compiler {
 
-class AstTypeExpression : public AstExpression {
+class AstTypeExpression : public AstExpression
+{
 public:
     AstTypeExpression(
-        const std::string &name,
+        const String &name,
         const RC<AstPrototypeSpecification> &base_specification,
         const Array<RC<AstVariableDeclaration>> &data_members,
         const Array<RC<AstVariableDeclaration>> &function_members,
@@ -25,7 +26,7 @@ public:
     );
 
     AstTypeExpression(
-        const std::string &name,
+        const String &name,
         const RC<AstPrototypeSpecification> &base_specification,
         const Array<RC<AstVariableDeclaration>> &data_members,
         const Array<RC<AstVariableDeclaration>> &function_members,
@@ -35,10 +36,10 @@ public:
         const SourceLocation &location
     );
 
-    virtual ~AstTypeExpression() = default;
+    virtual ~AstTypeExpression() override = default;
 
     /** enable setting to that variable declarations can change the type name */
-    void SetName(const std::string &name)
+    void SetName(const String &name)
         { m_name = name; }
 
     const Array<RC<AstVariableDeclaration>> &GetMembers() const
@@ -63,22 +64,22 @@ public:
     virtual const AstExpression *GetValueOf() const override;
     virtual const AstExpression *GetDeepValueOf() const override;
 
-    virtual const std::string &GetName() const override;
+    virtual const String &GetName() const override;
 
 protected:
-    std::string m_name;
-    RC<AstPrototypeSpecification> m_base_specification;
-    Array<RC<AstVariableDeclaration>> m_data_members;
-    Array<RC<AstVariableDeclaration>> m_function_members;
-    Array<RC<AstVariableDeclaration>> m_static_members;
-    SymbolTypePtr_t m_enum_underlying_type;
-    bool m_is_proxy_class;
+    String                              m_name;
+    RC<AstPrototypeSpecification>       m_base_specification;
+    Array<RC<AstVariableDeclaration>>   m_data_members;
+    Array<RC<AstVariableDeclaration>>   m_function_members;
+    Array<RC<AstVariableDeclaration>>   m_static_members;
+    SymbolTypePtr_t                     m_enum_underlying_type;
+    bool                                m_is_proxy_class;
 
-    SymbolTypePtr_t m_symbol_type;
+    SymbolTypePtr_t                     m_symbol_type;
 
-    RC<AstTypeObject> m_expr;
-    Array<RC<AstVariableDeclaration>> m_outside_members;
-    Array<RC<AstVariableDeclaration>> m_combined_members;
+    RC<AstTypeObject>                   m_expr;
+    Array<RC<AstVariableDeclaration>>   m_outside_members;
+    Array<RC<AstVariableDeclaration>>   m_combined_members;
 
     RC<AstTypeExpression> CloneImpl() const
     {

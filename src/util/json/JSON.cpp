@@ -460,7 +460,7 @@ private:
     JSONString ParseString()
     {
         if (Token token = Expect(TokenClass::TK_STRING, true)) {
-            return JSONString(token.GetValue().c_str());
+            return JSONString(token.GetValue());
         }
 
         return JSONString("");
@@ -478,7 +478,7 @@ private:
             return JSONNumber(0);
         }
     
-        std::istringstream ss(token.GetValue());
+        std::istringstream ss(token.GetValue().Data());
 
         JSONNumber value;
         ss >> value;
@@ -570,8 +570,9 @@ private:
         Token peek = m_token_stream->Peek();
         
         if (peek && peek.GetTokenClass() == TokenClass::TK_KEYWORD) {
-            std::string str = Keyword::ToString(keyword);
-            if (peek.GetValue() == str) {
+            auto str = Keyword::ToString(keyword);
+
+            if (str && peek.GetValue() == str.Get()) {
                 if (read && m_token_stream->HasNext()) {
                     m_token_stream->Next();
                 }
@@ -588,8 +589,9 @@ private:
         Token peek = m_token_stream->Peek(n);
         
         if (peek && peek.GetTokenClass() == TokenClass::TK_KEYWORD) {
-            std::string str = Keyword::ToString(keyword);
-            if (peek.GetValue() == str) {
+            auto str = Keyword::ToString(keyword);
+
+            if (str && peek.GetValue() == str.Get()) {
                 return peek;
             }
         }
@@ -597,7 +599,7 @@ private:
         return Token::EMPTY;
     }
 
-    Token MatchOperator(const std::string &op, bool read)
+    Token MatchOperator(const String &op, bool read)
     {
         Token peek = m_token_stream->Peek();
         
@@ -614,7 +616,7 @@ private:
         return Token::EMPTY;
     }
 
-    Token MatchOperatorAhead(const std::string &op, int n)
+    Token MatchOperatorAhead(const String &op, int n)
     {
         Token peek = m_token_stream->Peek(n);
         
@@ -635,15 +637,15 @@ private:
             const SourceLocation location = CurrentLocation();
 
             ErrorMessage error_msg;
-            std::string error_str;
+            String error_str;
 
             switch (token_class) {
-                case TokenClass::TK_IDENT:
-                    error_msg = ErrorMessage::Msg_expected_identifier;
-                    break;
-                default:
-                    error_msg = ErrorMessage::Msg_expected_token;
-                    error_str = Token::TokenTypeToString(token_class);
+            case TokenClass::TK_IDENT:
+                error_msg = ErrorMessage::Msg_expected_identifier;
+                break;
+            default:
+                error_msg = ErrorMessage::Msg_expected_token;
+                error_str = Token::TokenTypeToString(token_class);
             }
 
             m_compilation_unit->GetErrorList().AddError(CompilerError(
@@ -669,15 +671,18 @@ private:
             }
 
             ErrorMessage error_msg;
-            std::string error_str;
+            String error_str;
 
             switch (keyword) {
             case Keywords::Keyword_module:
                 error_msg = ErrorMessage::Msg_expected_module;
                 break;
-            default:
+            default: {
+                const auto keyword_str = Keyword::ToString(keyword);
+
                 error_msg = ErrorMessage::Msg_expected_token;
-                error_str = Keyword::ToString(keyword);
+                error_str = keyword_str ? keyword_str.Get() : "<unknown keyword>";
+            }
             }
 
             m_compilation_unit->GetErrorList().AddError(CompilerError(
@@ -691,7 +696,7 @@ private:
         return token;
     }
 
-    Token ExpectOperator(const std::string &op, bool read)
+    Token ExpectOperator(const String &op, bool read)
     {
         Token token = MatchOperator(op, read);
 
@@ -787,7 +792,7 @@ ParseResult JSON::Parse(const String &json_string)
             for (SizeType index = 0; index < unit.GetErrorList().Size(); index++) {
                 error_message += String::ToString(unit.GetErrorList()[index].GetLocation().GetLine() + 1)
                     + "," + String::ToString(unit.GetErrorList()[index].GetLocation().GetColumn() + 1)
-                    + ": " + (unit.GetErrorList()[index].GetText() + "\n").c_str();
+                    + ": " + unit.GetErrorList()[index].GetText() + "\n";
             }
 
             return { false, error_message, JSONValue() };

@@ -5,6 +5,7 @@
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
@@ -15,7 +16,7 @@ public:
         const RC<AstExpression> &expr,
         bool is_splat,
         bool is_named,
-        const std::string &name,
+        const String &name,
         const SourceLocation &location
     );
     virtual ~AstArgument() = default;
@@ -46,7 +47,7 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-    virtual const std::string &GetName() const override;
+    virtual const String &GetName() const override;
 
 private:
     RC<AstExpression> m_expr;
@@ -54,7 +55,7 @@ private:
     bool m_is_named;
     bool m_is_pass_by_ref;
     bool m_is_pass_const;
-    std::string m_name;
+    String m_name;
     
     bool m_is_visited = false;
 

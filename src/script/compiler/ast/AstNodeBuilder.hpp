@@ -7,6 +7,7 @@
 #include <script/compiler/type-system/SymbolType.hpp>
 
 #include <util/NonOwningPtr.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 #include <memory>
@@ -23,55 +24,52 @@ class FunctionBuilder;
 class AstNodeBuilder
 {
 public:
-    ModuleBuilder Module(const std::string &name);
+    ModuleBuilder Module(const String &name);
 };
 
 class ModuleBuilder
 {
 public:
     ModuleBuilder(
-        const std::string &name
+        const String &name
     );
 
     ModuleBuilder(
-        const std::string &name,
+        const String &name,
         ModuleBuilder *parent
     );
 
-    const std::string &GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
 
-    ModuleBuilder Module(const std::string &name);
-    FunctionBuilder Function(const std::string &name);
+    ModuleBuilder Module(const String &name);
+    FunctionBuilder Function(const String &name);
 
     RC<AstModuleAccess> Build(const RC<AstExpression> &expr);
 
 private:
-    std::string m_name;
-    ModuleBuilder *m_parent;
+    String          m_name;
+    ModuleBuilder   *m_parent;
 };
 
 class FunctionBuilder
 {
 public:
     FunctionBuilder(
-        const std::string &name
+        const String &name
     );
 
     FunctionBuilder(
-        const std::string &name,
+        const String &name,
         ModuleBuilder *parent
     );
 
-   // FunctionBuilder *Returns(const SymbolTypePtr_t &type);
-   // FunctionBuilder *Param(const std::string &name, const SymbolTypePtr_t &type);
-
     RC<AstExpression> Call(const Array<RC<AstArgument>> &args);
 
-    const std::string &GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
 
 private:
-    std::string m_name;
-    ModuleBuilder *m_parent;
+    String          m_name;
+    ModuleBuilder   *m_parent;
 };
 
 } // namespace hyperion::compiler

@@ -4,13 +4,14 @@
 #include <script/compiler/ast/AstDeclaration.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
 #include <script/compiler/ast/AstExpression.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
 class AstParameter : public AstDeclaration {
 public:
     AstParameter(
-        const std::string &name,
+        const String &name,
         const RC<AstPrototypeSpecification> &type_spec,
         const RC<AstExpression> &default_param,
         bool is_variadic,

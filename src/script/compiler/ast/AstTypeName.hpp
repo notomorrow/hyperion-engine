@@ -6,9 +6,10 @@
 
 namespace hyperion::compiler {
 
-class AstTypeName : public AstIdentifier {
+class AstTypeName : public AstIdentifier
+{
 public:
-    AstTypeName(const std::string &name, const SourceLocation &location);
+    AstTypeName(const String &name, const SourceLocation &location);
     virtual ~AstTypeName() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;

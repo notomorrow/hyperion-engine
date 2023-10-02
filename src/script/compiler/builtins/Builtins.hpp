@@ -7,6 +7,9 @@
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/emit/BytecodeChunk.hpp>
 
+#include <core/lib/HashMap.hpp>
+#include <core/lib/String.hpp>
+
 #include <map>
 #include <string>
 #include <memory>
@@ -31,7 +34,7 @@ public:
 private:
     static const SourceLocation BUILTIN_SOURCE_LOCATION;
 
-    std::map<std::string, RC<AstExpression>> m_vars;
+    HashMap<String, RC<AstExpression>> m_vars;
     AstIterator m_ast;
 };
 

@@ -2,6 +2,7 @@
 #define AST_STATEMENT_HPP
 
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/String.hpp>
 
 #include <script/SourceLocation.hpp>
 #include <script/compiler/emit/Buildable.hpp>
@@ -22,7 +23,7 @@ class AstStatement
     friend class AstIterator;
 
 protected:
-    static const std::string unnamed;
+    static const String unnamed;
 
 public:
     AstStatement(const SourceLocation &location);
@@ -35,7 +36,7 @@ public:
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) = 0;
     virtual void Optimize(AstVisitor *visitor, Module *mod) = 0;
 
-    virtual const std::string &GetName() const { return unnamed; }
+    virtual const String &GetName() const { return unnamed; }
     
     virtual RC<AstStatement> Clone() const = 0;
 

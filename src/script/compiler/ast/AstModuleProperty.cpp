@@ -21,7 +21,7 @@
 namespace hyperion::compiler {
 
 AstModuleProperty::AstModuleProperty(
-    const std::string &field_name,
+    const String &field_name,
     const SourceLocation &location)
     : AstExpression(location, ACCESS_MODE_LOAD),
       m_field_name(field_name),

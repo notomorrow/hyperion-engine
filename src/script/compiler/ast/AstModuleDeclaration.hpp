@@ -3,6 +3,7 @@
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstDeclaration.hpp>
+#include <core/lib/String.hpp>
 
 #include <vector>
 #include <memory>
@@ -11,10 +12,12 @@ namespace hyperion::compiler {
 
 class AstModuleDeclaration : public AstDeclaration {
 public:
-    AstModuleDeclaration(const std::string &name, 
+    AstModuleDeclaration(
+        const String &name, 
         const Array<RC<AstStatement>> &children,
-        const SourceLocation &location);
-    AstModuleDeclaration(const std::string &name, const SourceLocation &location);
+        const SourceLocation &location
+    );
+    AstModuleDeclaration(const String &name, const SourceLocation &location);
 
     void AddChild(const RC<AstStatement> &child) { m_children.PushBack(child); }
     Array<RC<AstStatement>> &GetChildren() { return m_children; }
@@ -32,7 +35,7 @@ public:
 
 private:
     Array<RC<AstStatement>> m_children;
-    RC<Module> m_module;
+    RC<Module>              m_module;
 
     void AddBuiltinHeader();
 

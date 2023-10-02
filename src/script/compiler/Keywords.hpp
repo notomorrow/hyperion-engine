@@ -1,7 +1,10 @@
 #ifndef KEYWORDS_HPP
 #define KEYWORDS_HPP
 
-#include <string>
+#include <core/lib/String.hpp>
+#include <core/lib/HashMap.hpp>
+#include <core/lib/Optional.hpp>
+
 #include <map>
 
 namespace hyperion::compiler {
@@ -60,11 +63,11 @@ class Keyword
 {
 /* Static class members */
 public:
-    static bool IsKeyword(const std::string &str);
-    static std::string ToString(Keywords keyword);
+    static bool IsKeyword(const String &str);
+    static Optional<String> ToString(Keywords keyword);
 
 private:
-    static const std::map<std::string, Keywords> keyword_strings;
+    static const HashMap<String, Keywords> keyword_strings;
 };
 
 } // namespace hyperion::compiler

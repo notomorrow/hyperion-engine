@@ -42,7 +42,7 @@ void ScriptBindingsHolder::GenerateAll(APIInstance &api_instance)
 }
 
 
-static Module *GetModule(CompilationUnit *compilation_unit, const std::string &module_name)
+static Module *GetModule(CompilationUnit *compilation_unit, const String &module_name)
 {
     if (Module *mod = compilation_unit->LookupModule(module_name)) {
         return mod;
@@ -54,7 +54,7 @@ static Module *GetModule(CompilationUnit *compilation_unit, const std::string &m
 static RC<Identifier> CreateIdentifier(
     CompilationUnit *compilation_unit,
     Module *mod,
-    const std::string &name
+    const String &name
 )
 {
     AssertThrow(compilation_unit != nullptr);
@@ -76,7 +76,7 @@ static RC<Identifier> CreateIdentifier(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     const SymbolTypePtr_t &variable_type,
     NativeInitializerPtr_t ptr
 )
@@ -91,7 +91,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     const SymbolTypePtr_t &variable_type,
     const vm::Value &value
 )
@@ -106,7 +106,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     Int32 value
 )
 {
@@ -118,7 +118,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     Int64 value
 )
 {
@@ -130,7 +130,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     UInt32 value
 )
 {
@@ -142,7 +142,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     UInt64 value
 )
 {
@@ -154,7 +154,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     Float value
 )
 {
@@ -166,7 +166,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     bool value
 )
 {
@@ -178,7 +178,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Variable(
-    const std::string &variable_name,
+    const String &variable_name,
     const SymbolTypePtr_t &variable_type,
     UserData_t user_data
 )
@@ -195,7 +195,7 @@ API::ModuleDefine &API::ModuleDefine::Variable(
 }
 
 API::ModuleDefine &API::ModuleDefine::Function(
-    const std::string &function_name,
+    const String &function_name,
     const SymbolTypePtr_t &return_type,
     const Array<GenericInstanceTypeInfo::Arg> &param_types,
     NativeFunctionPtr_t ptr
@@ -381,7 +381,7 @@ void API::ModuleDefine::BindType(
 {
     AssertThrow(mod != nullptr && vm != nullptr && compilation_unit != nullptr);
 
-    const std::string type_name = def.name;
+    const String type_name = def.name;
 
     if (mod->LookupSymbolType(type_name)) {
         // error; redeclaration of type in module
@@ -548,8 +548,8 @@ void API::ModuleDefine::BindType(
 
         for (auto &member : def.members) {
             vm::Member member_data_instance;
-            std::strncpy(member_data_instance.name, member.name.c_str(), 255);
-            member_data_instance.hash = hash_fnv_1(member.name.c_str());
+            std::strncpy(member_data_instance.name, member.name.Data(), 255);
+            member_data_instance.hash = hash_fnv_1(member.name.Data());
             member_data_instance.value = member.value;
             member_data.PushBack(member_data_instance);
         }
@@ -586,8 +586,8 @@ void API::ModuleDefine::BindType(
 
         for (auto &member : class_instance_members) {
             vm::Member member_data_instance;
-            std::strncpy(member_data_instance.name, member.name.c_str(), 255);
-            member_data_instance.hash = hash_fnv_1(member.name.c_str());
+            std::strncpy(member_data_instance.name, member.name.Data(), 255);
+            member_data_instance.hash = hash_fnv_1(member.name.Data());
             member_data_instance.value = member.value;
             member_data.PushBack(member_data_instance);
         }
@@ -618,7 +618,7 @@ APIInstance::APIInstance(const SourceFile &source_file)
 {
 }
 
-API::ModuleDefine &APIInstance::Module(const std::string &name)
+API::ModuleDefine &APIInstance::Module(const String &name)
 {
     // check if created already first
     for (auto &def : m_module_defs) {

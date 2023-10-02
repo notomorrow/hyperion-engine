@@ -2,6 +2,8 @@
 #define COMPILER_ERROR_HPP
 
 #include <script/SourceLocation.hpp>
+#include <core/lib/String.hpp>
+#include <core/lib/HashMap.hpp>
 
 #include <string>
 #include <sstream>
@@ -155,7 +157,7 @@ enum ErrorMessage
 
 class CompilerError
 {
-    static const std::map<ErrorMessage, std::string> error_message_strings;
+    static const HashMap<ErrorMessage, String> error_message_strings;
 
 public:
     template <typename...Args>
@@ -167,8 +169,8 @@ public:
         m_msg(msg),
         m_location(location)
     {
-        std::string msg_str = error_message_strings.at(m_msg);
-        MakeMessage(msg_str.c_str(), args...);
+        String msg_str = error_message_strings.At(m_msg);
+        MakeMessage(msg_str.Data(), args...);
     }
     
     CompilerError(const CompilerError &other);
@@ -177,7 +179,7 @@ public:
     ErrorLevel GetLevel() const { return m_level; }
     ErrorMessage GetMessage() const { return m_msg; }
     const SourceLocation &GetLocation() const { return m_location; }
-    const std::string &GetText() const { return m_text; }
+    const String &GetText() const { return m_text; }
 
     bool operator<(const CompilerError &other) const;
 
@@ -191,7 +193,7 @@ private:
             if (*format == '%') {
                 std::stringstream sstream;
                 sstream << value;
-                m_text += sstream.str();
+                m_text += sstream.str().c_str();
                 MakeMessage(format + 1, args...);
                 return;
             }
@@ -200,10 +202,10 @@ private:
         }
     }
 
-    ErrorLevel m_level;
-    ErrorMessage m_msg;
-    SourceLocation m_location;
-    std::string m_text;
+    ErrorLevel      m_level;
+    ErrorMessage    m_msg;
+    SourceLocation  m_location;
+    String          m_text;
 };
 
 } // namespace hyperion::compiler

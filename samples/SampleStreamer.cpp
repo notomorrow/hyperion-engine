@@ -56,6 +56,7 @@
 #include <util/UTF8.hpp>
 
 #include <mutex>
+#include <ui/controllers/UIButtonController.hpp>
 
 class FramebufferCaptureRenderComponent : public RenderComponent<FramebufferCaptureRenderComponent>
 {
@@ -291,6 +292,17 @@ void SampleStreamer::InitGame()
     m_scene->GetCamera()->SetCameraController(UniquePtr<FirstPersonCameraController>::Construct());
 
     { // allow ui rendering
+        auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
+        btn_node.SetEntity(CreateObject<Entity>());
+        btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 0.85f, 0.0f));
+        btn_node.GetEntity()->AddController<UIButtonController>();
+
+        if (UIButtonController *controller = btn_node.GetEntity()->GetController<UIButtonController>()) {
+            controller->SetScript(g_asset_manager->Load<Script>("scripts/examples/ui_controller.hypscript"));
+        }
+
+        btn_node.Scale(0.01f);
+
         m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
     }
 
@@ -530,14 +542,12 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
     while (!m_message_queue->Empty()) {
         const json::JSONValue message = m_message_queue->Pop();
 
-        DebugLog(LogType::Debug, "Got Message! %s\n", message.ToString().Data());
-
         const String message_type = message["type"].ToString();
 
         if (message_type == "Ping") {
             String response_string = "{\"type\": \"Pong\"}";
 
-            // Send PONG
+            // Send `Pong` message back
             m_rtc_instance->GetServer()->SendToSignallingServer(ByteBuffer(response_string.Size(), response_string.Data()));
         }
     }

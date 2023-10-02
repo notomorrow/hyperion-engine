@@ -2,16 +2,18 @@
 #define AST_STRING_HPP
 
 #include <script/compiler/ast/AstConstant.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 
 namespace hyperion::compiler {
 
-class AstString : public AstConstant {
+class AstString : public AstConstant
+{
 public:
-    AstString(const std::string &value, const SourceLocation &location);
+    AstString(const String &value, const SourceLocation &location);
 
-    const std::string &GetValue() const { return m_value; }
+    const String &GetValue() const { return m_value; }
 
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
     
@@ -26,10 +28,10 @@ public:
     virtual RC<AstConstant> HandleOperator(Operators op_type, const AstConstant *right) const override;
 
 private:
-    std::string m_value;
+    String  m_value;
 
     // set while compiling
-    int m_static_id;
+    int     m_static_id;
 
     RC<AstString> CloneImpl() const
     {

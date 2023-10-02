@@ -5,17 +5,21 @@
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
 
+#include <core/lib/String.hpp>
+
 #include <string>
 #include <memory>
 
 namespace hyperion::compiler {
 
-class AstTypeAlias: public AstStatement {
+class AstTypeAlias: public AstStatement
+{
 public:
     AstTypeAlias(
-        const std::string &name,
+        const String &name,
         const RC<AstPrototypeSpecification> &aliasee,
-        const SourceLocation &location);
+        const SourceLocation &location
+    );
     virtual ~AstTypeAlias() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
@@ -25,8 +29,8 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    std::string m_name;
-    RC<AstPrototypeSpecification> m_aliasee;
+    String                          m_name;
+    RC<AstPrototypeSpecification>   m_aliasee;
 
     RC<AstTypeAlias> CloneImpl() const
     {

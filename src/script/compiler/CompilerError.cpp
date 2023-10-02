@@ -2,7 +2,7 @@
 
 namespace hyperion::compiler {
 
-const std::map<ErrorMessage, std::string> CompilerError::error_message_strings {
+const HashMap<ErrorMessage, String> CompilerError::error_message_strings {
     /* Fatal errors */
     { Msg_internal_error, "Internal error" },
     { Msg_custom_error, "%" },

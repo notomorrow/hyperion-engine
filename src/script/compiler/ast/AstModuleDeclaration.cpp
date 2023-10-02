@@ -15,7 +15,7 @@
 namespace hyperion::compiler {
 
 AstModuleDeclaration::AstModuleDeclaration(
-    const std::string &name,
+    const String &name,
     const Array<RC<AstStatement>> &children,
     const SourceLocation &location)
     : AstDeclaration(name, location),
@@ -23,7 +23,7 @@ AstModuleDeclaration::AstModuleDeclaration(
 {
 }
 
-AstModuleDeclaration::AstModuleDeclaration(const std::string &name, const SourceLocation &location)
+AstModuleDeclaration::AstModuleDeclaration(const String &name, const SourceLocation &location)
     : AstDeclaration(name, location)
 {
 }
@@ -67,9 +67,9 @@ void AstModuleDeclaration::Visit(AstVisitor *visitor, Module *mod)
             String canon_path = String::Join(path, "/");
 
             // map filepath to module
-            auto it = visitor->GetCompilationUnit()->m_imported_modules.find(canon_path.Data());
-            if (it != visitor->GetCompilationUnit()->m_imported_modules.end()) {
-                it->second.PushBack(m_module);
+            auto it = visitor->GetCompilationUnit()->m_imported_modules.Find(canon_path);
+            if (it != visitor->GetCompilationUnit()->m_imported_modules.End()) {
+                it->value.PushBack(m_module);
             } else {
                 visitor->GetCompilationUnit()->m_imported_modules[canon_path.Data()] = { m_module };
             }

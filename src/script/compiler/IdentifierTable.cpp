@@ -35,7 +35,7 @@ int IdentifierTable::CountUsedVariables() const
     return used_variables.size();
 }
 
-RC<Identifier> IdentifierTable::AddAlias(const std::string &name, Identifier *aliasee)
+RC<Identifier> IdentifierTable::AddAlias(const String &name, Identifier *aliasee)
 {
     AssertThrow(aliasee != nullptr);
 
@@ -50,7 +50,7 @@ RC<Identifier> IdentifierTable::AddAlias(const std::string &name, Identifier *al
 }
 
 RC<Identifier> IdentifierTable::AddIdentifier(
-    const std::string &name,
+    const String &name,
     int flags,
     RC<AstExpression> current_value,
     SymbolTypePtr_t symbol_type
@@ -94,7 +94,7 @@ bool IdentifierTable::AddIdentifier(const RC<Identifier> &identifier)
     return true;
 }
 
-RC<Identifier> IdentifierTable::LookUpIdentifier(const std::string &name)
+RC<Identifier> IdentifierTable::LookUpIdentifier(const String &name)
 {
     for (auto &ident : m_identifiers) {
         if (ident != nullptr) {
@@ -107,7 +107,7 @@ RC<Identifier> IdentifierTable::LookUpIdentifier(const std::string &name)
     return nullptr;
 }
 
-void IdentifierTable::BindTypeToIdentifier(const std::string &name, SymbolTypePtr_t symbol_type)
+void IdentifierTable::BindTypeToIdentifier(const String &name, SymbolTypePtr_t symbol_type)
 {
     AddIdentifier(
         name,
@@ -117,7 +117,7 @@ void IdentifierTable::BindTypeToIdentifier(const std::string &name, SymbolTypePt
     );
 }
 
-SymbolTypePtr_t IdentifierTable::LookupSymbolType(const std::string &name) const
+SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String &name) const
 {
     for (auto &type : m_symbol_types) {
         if (type != nullptr && type->GetName() == name) {

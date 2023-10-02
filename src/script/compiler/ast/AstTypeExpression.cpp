@@ -19,7 +19,7 @@
 namespace hyperion::compiler {
 
 AstTypeExpression::AstTypeExpression(
-    const std::string &name,
+    const String &name,
     const RC<AstPrototypeSpecification> &base_specification,
     const Array<RC<AstVariableDeclaration>> &data_members,
     const Array<RC<AstVariableDeclaration>> &function_members,
@@ -39,7 +39,7 @@ AstTypeExpression::AstTypeExpression(
 }
 
 AstTypeExpression::AstTypeExpression(
-    const std::string &name,
+    const String &name,
     const RC<AstPrototypeSpecification> &base_specification,
     const Array<RC<AstVariableDeclaration>> &data_members,
     const Array<RC<AstVariableDeclaration>> &function_members,
@@ -178,7 +178,7 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             AssertThrow(mem != nullptr);
             mem->Visit(visitor, mod);
 
-            std::string mem_name = mem->GetName();
+            String mem_name = mem->GetName();
 
             AssertThrow(mem->GetIdentifier() != nullptr);
             SymbolTypePtr_t mem_type = mem->GetIdentifier()->GetSymbolType();
@@ -303,7 +303,7 @@ const AstExpression *AstTypeExpression::GetDeepValueOf() const
     return m_expr->GetDeepValueOf();
 }
 
-const std::string &AstTypeExpression::GetName() const
+const String &AstTypeExpression::GetName() const
 {
     return m_name;
 }

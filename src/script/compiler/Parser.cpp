@@ -63,8 +63,9 @@ Token Parser::MatchKeyword(Keywords keyword, bool read)
     Token peek = m_token_stream->Peek();
     
     if (peek && peek.GetTokenClass() == TK_KEYWORD) {
-        std::string str = Keyword::ToString(keyword);
-        if (peek.GetValue() == str) {
+        auto str = Keyword::ToString(keyword);
+
+        if (str && peek.GetValue() == str.Get()) {
             if (read && m_token_stream->HasNext()) {
                 m_token_stream->Next();
             }
@@ -81,8 +82,9 @@ Token Parser::MatchKeywordAhead(Keywords keyword, int n)
     Token peek = m_token_stream->Peek(n);
     
     if (peek && peek.GetTokenClass() == TK_KEYWORD) {
-        std::string str = Keyword::ToString(keyword);
-        if (peek.GetValue() == str) {
+        auto str = Keyword::ToString(keyword);
+
+        if (str && peek.GetValue() == str.Get()) {
             return peek;
         }
     }
@@ -90,7 +92,7 @@ Token Parser::MatchKeywordAhead(Keywords keyword, int n)
     return Token::EMPTY;
 }
 
-Token Parser::MatchOperator(const std::string &op, bool read)
+Token Parser::MatchOperator(const String &op, bool read)
 {
     Token peek = m_token_stream->Peek();
     
@@ -107,7 +109,7 @@ Token Parser::MatchOperator(const std::string &op, bool read)
     return Token::EMPTY;
 }
 
-Token Parser::MatchOperatorAhead(const std::string &op, int n)
+Token Parser::MatchOperatorAhead(const String &op, int n)
 {
     Token peek = m_token_stream->Peek(n);
     
@@ -128,7 +130,7 @@ Token Parser::Expect(TokenClass token_class, bool read)
         const SourceLocation location = CurrentLocation();
 
         ErrorMessage error_msg;
-        std::string error_str;
+        String error_str;
 
         switch (token_class) {
             case TK_IDENT:
@@ -162,15 +164,18 @@ Token Parser::ExpectKeyword(Keywords keyword, bool read)
         }
 
         ErrorMessage error_msg;
-        std::string error_str;
+        String error_str;
 
         switch (keyword) {
-            case Keyword_module:
-                error_msg = Msg_expected_module;
-                break;
-            default:
-                error_msg = Msg_expected_token;
-                error_str = Keyword::ToString(keyword);
+        case Keyword_module:
+            error_msg = Msg_expected_module;
+            break;
+        default: {
+            const String *keyword_str = Keyword::ToString(keyword).TryGet();
+
+            error_msg = Msg_expected_token;
+            error_str = keyword_str ? *keyword_str : "<unknown keyword>";
+        }
         }
 
         m_compilation_unit->GetErrorList().AddError(CompilerError(
@@ -184,7 +189,7 @@ Token Parser::ExpectKeyword(Keywords keyword, bool read)
     return token;
 }
 
-Token Parser::ExpectOperator(const std::string &op, bool read)
+Token Parser::ExpectOperator(const String &op, bool read)
 {
     Token token = MatchOperator(op, read);
 
@@ -482,7 +487,7 @@ RC<AstDirective> Parser::ParseDirective()
 {
     if (Token token = Expect(TK_DIRECTIVE, true)) {
         // the arguments will be held in an array expression
-        Array<std::string> args;
+        Array<String> args;
 
         while (m_token_stream->HasNext() && !(Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true))) {
             Token token = m_token_stream->Peek();
@@ -760,7 +765,7 @@ RC<AstExpression> Parser::ParseAngleBrackets(RC<AstIdentifier> target)
             const SourceLocation arg_location = CurrentLocation();
             bool is_splat_arg = false;
             bool is_named_arg = false;
-            std::string arg_name;
+            String arg_name;
 
             if (Match(TK_ELLIPSIS, true)) {
                 is_splat_arg = true;
@@ -820,7 +825,7 @@ RC<AstExpression> Parser::ParseAngleBrackets(RC<AstIdentifier> target)
 RC<AstConstant> Parser::ParseIntegerLiteral()
 {
     if (Token token = Expect(TK_INTEGER, true)) {
-        std::istringstream ss(token.GetValue());
+        std::istringstream ss(token.GetValue().Data());
 
         if (token.GetFlags()[0] == '\0' || token.GetFlags()[0] == 'i') {
             hyperion::Int32 value;
@@ -861,7 +866,7 @@ RC<AstConstant> Parser::ParseIntegerLiteral()
 RC<AstFloat> Parser::ParseFloatLiteral()
 {
     if (Token token = Expect(TK_FLOAT, true)) {
-        hyperion::Float32 value = std::atof(token.GetValue().c_str());
+        hyperion::Float32 value = std::atof(token.GetValue().Data());
 
         return RC<AstFloat>(new AstFloat(
             value,
@@ -908,7 +913,7 @@ RC<AstArgument> Parser::ParseArgument(RC<AstExpression> expr)
 
     bool is_splat_arg = false;
     bool is_named_arg = false;
-    std::string arg_name;
+    String arg_name;
 
     if (expr == nullptr) {
         if (Match(TK_ELLIPSIS, true)) {
@@ -2149,7 +2154,7 @@ RC<AstTypeExpression> Parser::ParseTypeExpression(
     bool require_keyword,
     bool allow_identifier,
     bool is_proxy_class,
-    std::string type_name
+    String type_name
 )
 {
     const auto location = CurrentLocation();
@@ -2177,7 +2182,7 @@ RC<AstTypeExpression> Parser::ParseTypeExpression(
     Array<RC<AstVariableDeclaration>> static_functions;
     Array<RC<AstVariableDeclaration>> static_variables;
 
-    auto current_access_specifier = Keyword::ToString(Keyword_private);
+    String current_access_specifier = Keyword::ToString(Keyword_private).Get();
 
     if (Expect(TK_OPEN_BRACE, true)) {
         while (!Match(TK_CLOSE_BRACE, true)) {
@@ -2265,11 +2270,11 @@ RC<AstTypeExpression> Parser::ParseTypeExpression(
                 generic_parameters = ParseGenericParameters();
             }
 
-            if (current_access_specifier == Keyword::ToString(Keyword_public)) {
+            if (current_access_specifier == Keyword::ToString(Keyword_public).Get()) {
                 flags |= IdentifierFlags::FLAG_ACCESS_PUBLIC;
-            } else if (current_access_specifier == Keyword::ToString(Keyword_private)) {
+            } else if (current_access_specifier == Keyword::ToString(Keyword_private).Get()) {
                 flags |= IdentifierFlags::FLAG_ACCESS_PRIVATE;
-            } else if (current_access_specifier == Keyword::ToString(Keyword_protected)) {
+            } else if (current_access_specifier == Keyword::ToString(Keyword_protected).Get()) {
                 flags |= IdentifierFlags::FLAG_ACCESS_PROTECTED;
             }
 
@@ -2402,7 +2407,7 @@ RC<AstStatement> Parser::ParseEnumDefinition()
 RC<AstEnumExpression> Parser::ParseEnumExpression(
     bool require_keyword,
     bool allow_identifier,
-    std::string enum_name
+    String enum_name
 )
 {
     const auto location = CurrentLocation();

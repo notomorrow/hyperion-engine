@@ -26,7 +26,7 @@
 namespace hyperion::compiler {
 
 AstMember::AstMember(
-    const std::string &field_name,
+    const String &field_name,
     const RC<AstExpression> &target,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD | ACCESS_MODE_STORE),
@@ -39,7 +39,7 @@ AstMember::AstMember(
 
 void AstMember::Visit(AstVisitor *visitor, Module *mod)
 {
-    if (m_field_name == Keyword::ToString(Keyword_class)) {
+    if (m_field_name == Keyword::ToString(Keyword_class).Get()) {
         // transform x.class into GetClass(x)
         m_override_expr = visitor->GetCompilationUnit()->GetAstNodeBuilder()
             .Module(Config::global_module_name)
@@ -285,7 +285,7 @@ std::unique_ptr<Buildable> AstMember::Build(AstVisitor *visitor, Module *mod)
 
     if (m_found_index == -1) {
         // no exact index of member found, have to load from hash.
-        const UInt32 hash = hash_fnv_1(m_field_name.c_str());
+        const UInt32 hash = hash_fnv_1(m_field_name.Data());
 
         switch (m_access_mode) {
             case ACCESS_MODE_LOAD:

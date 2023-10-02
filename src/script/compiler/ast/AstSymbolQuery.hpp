@@ -1,21 +1,21 @@
 #ifndef AST_SYMBOL_QUERY
 #define AST_SYMBOL_QUERY
 
-#include <string>
-
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstString.hpp>
 #include <script/compiler/ast/AstArrayExpression.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
 class AstSymbolQuery : public AstExpression {
 public:
     AstSymbolQuery(
-      const std::string &command_name,
+      const String &command_name,
       const RC<AstExpression> &expr,
-      const SourceLocation &location);
+      const SourceLocation &location
+    );
     virtual ~AstSymbolQuery() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
@@ -30,13 +30,13 @@ public:
     virtual const AstExpression *GetValueOf() const override;
 
 private:
-    std::string m_command_name;
-    RC<AstExpression> m_expr;
+    String                  m_command_name;
+    RC<AstExpression>       m_expr;
 
     // set while analyzing
-    SymbolTypePtr_t m_symbol_type;
-    RC<AstString> m_string_result_value;
-    RC<AstArrayExpression> m_array_result_value;
+    SymbolTypePtr_t         m_symbol_type;
+    RC<AstString>           m_string_result_value;
+    RC<AstArrayExpression>  m_array_result_value;
 
     RC<AstSymbolQuery> CloneImpl() const
     {

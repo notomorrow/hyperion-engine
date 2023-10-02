@@ -3,13 +3,14 @@
 
 #include <script/compiler/ast/AstMember.hpp>
 #include <script/compiler/ast/AstArgumentList.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
 class AstMemberCallExpression : public AstMember {
 public:
     AstMemberCallExpression(
-        const std::string &field_name,
+        const String &field_name,
         const RC<AstExpression> &target,
         const RC<AstArgumentList> &arguments,
         const SourceLocation &location
@@ -31,11 +32,11 @@ public:
     virtual AstExpression *GetTarget() const override;
 
 protected:
-    RC<AstArgumentList> m_arguments;
+    RC<AstArgumentList>     m_arguments;
 
     // set while analyzing
-    Array<RC<AstArgument>> m_substituted_args;
-    SymbolTypePtr_t m_return_type;
+    Array<RC<AstArgument>>  m_substituted_args;
+    SymbolTypePtr_t         m_return_type;
 
     RC<AstMemberCallExpression> CloneImpl() const
     {

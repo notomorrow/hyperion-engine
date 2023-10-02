@@ -17,6 +17,7 @@
 #include <core/lib/TypeMap.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/LinkedList.hpp>
+#include <core/lib/String.hpp>
 
 #include <Types.hpp>
 
@@ -375,7 +376,7 @@ class API
 public:
     struct NativeVariableDefine
     {
-        std::string name;
+        String name;
         SymbolTypePtr_t type;
         enum { INITIALIZER, VALUE } value_type;
         NativeInitializerPtr_t initializer_ptr;
@@ -384,7 +385,7 @@ public:
         RC<AstExpression> current_value; // defaults to DefaultValue() of type
 
         NativeVariableDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &type,
             NativeInitializerPtr_t initializer_ptr,
             bool is_const = false
@@ -397,7 +398,7 @@ public:
         }
 
         NativeVariableDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &type,
             const vm::Value &value,
             bool is_const = false
@@ -423,7 +424,7 @@ public:
 
     struct NativeFunctionDefine
     {
-        std::string function_name;
+        String function_name;
         SymbolTypePtr_t return_type;
         Array<GenericInstanceTypeInfo::Arg> param_types;
         NativeFunctionPtr_t ptr;
@@ -431,7 +432,7 @@ public:
         NativeFunctionDefine() = default;
 
         NativeFunctionDefine(
-            const std::string &function_name,
+            const String &function_name,
             const SymbolTypePtr_t &return_type,
             const Array<GenericInstanceTypeInfo::Arg> &param_types,
             NativeFunctionPtr_t ptr
@@ -453,14 +454,14 @@ public:
 
     struct NativeMemberDefine
     {
-        std::string name;
+        String name;
         enum { MEMBER_TYPE_VALUE, MEMBER_TYPE_FUNCTION } member_type;
         vm::Value value;
         SymbolTypePtr_t value_type;
         NativeFunctionDefine fn;
 
         NativeMemberDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &value_type,
             const vm::Value &value
         ) : name(name),
@@ -471,7 +472,7 @@ public:
         }
 
         NativeMemberDefine(
-            const std::string &name,
+            const String &name,
             const NativeFunctionDefine &fn
         ) : name(name),
             member_type(MEMBER_TYPE_FUNCTION),
@@ -481,7 +482,7 @@ public:
         }
 
         NativeMemberDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &return_type,
             const Array<GenericInstanceTypeInfo::Arg> &param_types,
             NativeFunctionPtr_t ptr
@@ -509,7 +510,7 @@ public:
 
     struct TypeDefine
     {
-        std::string name;
+        String name;
         SymbolTypePtr_t base_class;
         Array<NativeMemberDefine> members;
         Array<NativeMemberDefine> static_members;
@@ -518,7 +519,7 @@ public:
         TypeDefine(const TypeDefine &other) = default;
 
         TypeDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &base_class,
             const Array<NativeMemberDefine> &members
         ) : name(name),
@@ -528,7 +529,7 @@ public:
         }
 
         TypeDefine(
-            const std::string &name,
+            const String &name,
             const SymbolTypePtr_t &base_class,
             const Array<NativeMemberDefine> &members,
             const Array<NativeMemberDefine> &static_members
@@ -540,7 +541,7 @@ public:
         }
 
         TypeDefine(
-            const std::string &name,
+            const String &name,
             const Array<NativeMemberDefine> &members,
             const Array<NativeMemberDefine> &static_members
         ) : TypeDefine(
@@ -553,7 +554,7 @@ public:
         }
 
         TypeDefine(
-            const std::string &name,
+            const String &name,
             const Array<NativeMemberDefine> &members
         ) : name(name),
             base_class(nullptr),
@@ -567,13 +568,13 @@ public:
     public:
         ModuleDefine(
             APIInstance &api_instance,
-            const std::string &name
+            const String &name
         ) : m_api_instance(api_instance),
             m_name(name)
         {
         }
 
-        std::string m_name;
+        String m_name;
         Array<TypeDefine> m_type_defs;
         Array<NativeFunctionDefine> m_function_defs;
         Array<NativeVariableDefine> m_variable_defs;
@@ -581,14 +582,14 @@ public:
 
         template <class T>
         ModuleDefine &Class(
-            const std::string &class_name,
+            const String &class_name,
             const SymbolTypePtr_t &base_class,
             const Array<NativeMemberDefine> &members
         );
 
         template <class T>
         ModuleDefine &Class(
-            const std::string &class_name,
+            const String &class_name,
             const SymbolTypePtr_t &base_class,
             const Array<NativeMemberDefine> &members,
             const Array<NativeMemberDefine> &static_members
@@ -596,67 +597,67 @@ public:
 
         template <class T>
         ModuleDefine &Class(
-            const std::string &class_name,
+            const String &class_name,
             const Array<NativeMemberDefine> &members
         );
 
         template <class T>
         ModuleDefine &Class(
-            const std::string &class_name,
+            const String &class_name,
             const Array<NativeMemberDefine> &members,
             const Array<NativeMemberDefine> &static_members
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             const SymbolTypePtr_t &variable_type,
             NativeInitializerPtr_t ptr
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             const SymbolTypePtr_t &variable_type,
             const vm::Value &value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             Int32 value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             Int64 alue
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             UInt32 value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             UInt64 value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             Float value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             bool value
         );
 
         ModuleDefine &Variable(
-            const std::string &variable_name,
+            const String &variable_name,
             const SymbolTypePtr_t &variable_type,
             UserData_t ptr
         );
 
         ModuleDefine &Function(
-            const std::string &function_name,
+            const String &function_name,
             const SymbolTypePtr_t &return_type,
             const Array<GenericInstanceTypeInfo::Arg> &param_types,
             NativeFunctionPtr_t ptr
@@ -722,8 +723,8 @@ class APIInstance
 public:
     struct ClassBindings
     {
-        TypeMap<std::string> class_names;
-        std::unordered_map<std::string, vm::HeapValue *> class_prototypes;
+        TypeMap<String>                     class_names;
+        HashMap<String, vm::HeapValue *>    class_prototypes;
     } class_bindings;
 
     APIInstance(const SourceFile &source_file);
@@ -736,7 +737,7 @@ public:
     const SourceFile &GetSourceFile() const
         { return m_source_file; }
 
-    API::ModuleDefine &Module(const std::string &name);
+    API::ModuleDefine &Module(const String &name);
 
     void BindAll(
         vm::VM *vm,
@@ -755,7 +756,7 @@ private:
 
 template <class T>
 API::ModuleDefine &API::ModuleDefine::Class(
-    const std::string &class_name,
+    const String &class_name,
     const SymbolTypePtr_t &base_class,
     const Array<NativeMemberDefine> &members
 )
@@ -773,7 +774,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
 
 template <class T>
 API::ModuleDefine &API::ModuleDefine::Class(
-    const std::string &class_name,
+    const String &class_name,
     const SymbolTypePtr_t &base_class,
     const Array<NativeMemberDefine> &members,
     const Array<NativeMemberDefine> &static_members
@@ -793,7 +794,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
 
 template <class T>
 API::ModuleDefine &API::ModuleDefine::Class(
-    const std::string &class_name,
+    const String &class_name,
     const Array<NativeMemberDefine> &members
 )
 {
@@ -809,7 +810,7 @@ API::ModuleDefine &API::ModuleDefine::Class(
 
 template <class T>
 API::ModuleDefine &API::ModuleDefine::Class(
-    const std::string &class_name,
+    const String &class_name,
     const Array<NativeMemberDefine> &members,
     const Array<NativeMemberDefine> &static_members
 )
@@ -857,8 +858,8 @@ struct CxxToScriptValueImpl
         const auto class_name_it = api_instance.class_bindings.class_names.Find<T>();
         AssertThrowMsg(class_name_it != api_instance.class_bindings.class_names.End(), "Class not registered!");
 
-        const auto prototype_it = api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-        AssertThrowMsg(prototype_it != api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+        const auto prototype_it = api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
+        AssertThrowMsg(prototype_it != api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
 
         vm::Value intern_value;
         {
@@ -870,7 +871,7 @@ struct CxxToScriptValueImpl
             intern_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
         }
 
-        vm::VMObject boxed_value(prototype_it->second);
+        vm::VMObject boxed_value(prototype_it->value);
         HYP_SCRIPT_SET_MEMBER(boxed_value, "__intern", intern_value);
 
         vm::Value final_value;

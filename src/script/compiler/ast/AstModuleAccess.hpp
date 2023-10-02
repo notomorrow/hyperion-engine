@@ -2,6 +2,7 @@
 #define AST_MODULE_ACCESS_HPP
 
 #include <script/compiler/ast/AstExpression.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 #include <vector>
@@ -13,7 +14,7 @@ class AstModuleAccess : public AstExpression
 {
 public:
     AstModuleAccess(
-        const std::string &target,
+        const String &target,
         const RC<AstExpression> &expr,
         const SourceLocation &location
     );
@@ -21,7 +22,7 @@ public:
 
     Module *GetModule() { return m_mod_access; }
     const Module *GetModule() const { return m_mod_access; }
-    const std::string &GetTargetName() const { return m_target; }
+    const String &GetTargetName() const { return m_target; }
     const RC<AstExpression> &GetExpression() const { return m_expr; }
     void SetExpression(const RC<AstExpression> &expr) { m_expr = expr; }
     void SetChained(bool is_chained) { m_is_chained = is_chained; }
@@ -45,12 +46,12 @@ public:
     virtual bool IsLiteral() const override;
 
 private:
-    std::string m_target;
-    RC<AstExpression> m_expr;
-    Module *m_mod_access;
+    String              m_target;
+    RC<AstExpression>   m_expr;
+    Module              *m_mod_access;
     // is this module access chained to another before it?
-    bool m_is_chained;
-    bool m_looked_up;
+    bool                m_is_chained;
+    bool                m_looked_up;
 
     RC<AstModuleAccess> CloneImpl() const
     {

@@ -85,11 +85,11 @@ private:
     Token MatchAhead(TokenClass token_class, int n);
     Token MatchKeyword(Keywords keyword, bool read = false);
     Token MatchKeywordAhead(Keywords keyword, int n);
-    Token MatchOperator(const std::string &op, bool read = false);
-    Token MatchOperatorAhead(const std::string &op, int n);
+    Token MatchOperator(const String &op, bool read = false);
+    Token MatchOperatorAhead(const String &op, int n);
     Token Expect(TokenClass token_class, bool read = false);
     Token ExpectKeyword(Keywords keyword, bool read = false);
-    Token ExpectOperator(const std::string &op, bool read = false);
+    Token ExpectOperator(const String &op, bool read = false);
     Token MatchIdentifier(bool allow_keyword = false, bool read = false);
     Token ExpectIdentifier(bool allow_keyword = false, bool read = false);
     bool ExpectEndOfStmt();
@@ -174,13 +174,13 @@ private:
         bool require_keyword = true,
         bool allow_identifier = true,
         bool is_proxy_class = false,
-        std::string type_name = "<Anonymous Type>"
+        String type_name = "<Anonymous Type>"
     );
     RC<AstStatement> ParseEnumDefinition();
     RC<AstEnumExpression> ParseEnumExpression(
         bool require_keyword = true,
         bool allow_identifier = true,
-        std::string enum_name = "<Anonymous Enum>"
+        String enum_name = "<Anonymous Enum>"
     );
     RC<AstImport> ParseImport();
     RC<AstExportStatement> ParseExportStatement();

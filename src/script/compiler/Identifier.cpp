@@ -5,7 +5,7 @@
 namespace hyperion::compiler {
 
 Identifier::Identifier(
-  const std::string &name,
+  const String &name,
   int index,
   IdentifierFlagBits flags,
   Identifier *aliasee

@@ -36,10 +36,10 @@
             const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
             AssertThrowMsg(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
+            AssertThrowMsg(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
+            vm::VMObject result_value(prototype_it->value); // construct from prototype
             HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
 
             HYP_SCRIPT_CREATE_PTR(result_value, ptr);

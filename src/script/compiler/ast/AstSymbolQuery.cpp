@@ -13,12 +13,12 @@
 namespace hyperion::compiler {
 
 AstSymbolQuery::AstSymbolQuery(
-    const std::string &command_name,
+    const String &command_name,
     const RC<AstExpression> &expr,
-    const SourceLocation &location)
-    : AstExpression(location, ACCESS_MODE_LOAD),
-      m_command_name(command_name),
-      m_expr(expr)
+    const SourceLocation &location
+) : AstExpression(location, ACCESS_MODE_LOAD),
+    m_command_name(command_name),
+    m_expr(expr)
 {
 }
 

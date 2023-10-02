@@ -17,7 +17,7 @@
 namespace hyperion::compiler {
 
 AstTypeName::AstTypeName(
-    const std::string &name,
+    const String &name,
     const SourceLocation &location
 ) : AstIdentifier(name, location)
 {

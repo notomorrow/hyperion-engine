@@ -393,7 +393,7 @@ public:
             callback_instance.Call(std::get<Args>(holder.trigger_state.args)...);
         }
 
-        holder.AddOnceCallback(std::move(callback_instance));
+        holder.AddOnCallback(std::move(callback_instance));
 
         return CallbackRef<CallbackGroup>(id, &holder);
     }

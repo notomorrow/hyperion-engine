@@ -6,7 +6,7 @@ namespace hyperion::compiler {
 
 const Token Token::EMPTY = Token(TK_EMPTY, "", SourceLocation::eof);
 
-std::string Token::TokenTypeToString(TokenClass token_class)
+String Token::TokenTypeToString(TokenClass token_class)
 {
     switch (token_class) {
         case TK_INTEGER:       return "integer";
@@ -39,7 +39,7 @@ std::string Token::TokenTypeToString(TokenClass token_class)
     }
 }
 
-Token::Token(TokenClass token_class, const std::string &value, const SourceLocation &location)
+Token::Token(TokenClass token_class, const String &value, const SourceLocation &location)
     : m_token_class(token_class),
       m_value(value),
       m_location(location)
@@ -47,7 +47,7 @@ Token::Token(TokenClass token_class, const std::string &value, const SourceLocat
     std::memset(m_flags, 0, sizeof(m_flags));
 }
 
-Token::Token(TokenClass token_class, const std::string &value, Flags flags, const SourceLocation &location)
+Token::Token(TokenClass token_class, const String &value, Flags flags, const SourceLocation &location)
     : m_token_class(token_class),
       m_value(value),
       m_location(location)

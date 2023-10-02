@@ -4,63 +4,59 @@
 
 namespace hyperion::compiler {
 
-Module::Module(const std::string &name,
-    const SourceLocation &location)
-    : m_name(name),
-      m_location(location),
-      m_tree_link(nullptr)
+Module::Module(
+    const String &name,
+    const SourceLocation &location
+) : m_name(name),
+    m_location(location),
+    m_tree_link(nullptr)
 {
 }
 
-std::unordered_set<std::string> Module::GenerateAllScanPaths() const
+FlatSet<String> Module::GenerateAllScanPaths() const
 {
-    std::unordered_set<std::string> scan_paths;
-
-    scan_paths.insert(
-        m_scan_paths.begin(),
-        m_scan_paths.end()
-    );
+    FlatSet<String> all_scan_paths = m_scan_paths;
 
     TreeNode<Module*> *top = m_tree_link;
     
     while (top != nullptr) {
         AssertThrow(top->m_value != nullptr);
 
-        scan_paths.insert(
-            top->m_value->GetScanPaths().begin(),
-            top->m_value->GetScanPaths().end()
-        );
+        for (const auto &other_scan_path : top->m_value->GetScanPaths()) {
+            all_scan_paths.Insert(other_scan_path);
+        }
 
         top = top->m_parent;
     }
 
-    return scan_paths;
+    return all_scan_paths;
 }
 
-std::string Module::GenerateFullModuleName() const
+String Module::GenerateFullModuleName() const
 {
     TreeNode<Module*> *top = m_tree_link;
     
     if (top != nullptr) {
-        Array<std::string> parts;
-        SizeType length = 0;
+        Array<String> parts;
+        SizeType size = 0;
 
         do {
             AssertThrow(top->m_value != nullptr);
 
             parts.PushBack(top->m_value->GetName());
-            length += top->m_value->GetName().length();
+            size += top->m_value->GetName().Size();
 
             top = top->m_parent;
         } while (top != nullptr);
 
-        std::string res;
-        res.reserve(length + (2 * parts.Size()));
+        String res;
+        res.Reserve(size + (2 * parts.Size()));
 
         for (Int i = Int(parts.Size()) - 1; i >= 0; i--) {
-            res.append(parts[i]);
+            res += parts[i];
+
             if (i != 0) {
-                res.append("::");
+                res += "::";
             }
         }
 
@@ -105,7 +101,7 @@ bool Module::IsInScopeOfType(ScopeType scope_type, UInt scope_flags) const
     return false;
 }
 
-Module *Module::LookupNestedModule(const std::string &name)
+Module *Module::LookupNestedModule(const String &name)
 {
     AssertThrow(m_tree_link != nullptr);
 
@@ -141,7 +137,7 @@ Array<Module *> Module::CollectNestedModules() const
     return nested_modules;
 }
 
-RC<Identifier> Module::LookUpIdentifier(const std::string &name, bool this_scope_only, bool outside_modules)
+RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only, bool outside_modules)
 {
     TreeNode<Scope> *top = m_scopes.TopNode();
 
@@ -183,7 +179,7 @@ RC<Identifier> Module::LookUpIdentifier(const std::string &name, bool this_scope
     return nullptr;
 }
 
-RC<Identifier> Module::LookUpIdentifierDepth(const std::string &name, int depth_level)
+RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depth_level)
 {
     TreeNode<Scope> *top = m_scopes.TopNode();
 
@@ -198,7 +194,7 @@ RC<Identifier> Module::LookUpIdentifierDepth(const std::string &name, int depth_
     return nullptr;
 }
 
-SymbolTypePtr_t Module::LookupSymbolType(const std::string &name)
+SymbolTypePtr_t Module::LookupSymbolType(const String &name)
 {
     return PerformLookup(
         [&name](TreeNode<Scope> *top) {

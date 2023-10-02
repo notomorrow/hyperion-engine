@@ -8,6 +8,8 @@
 #include <script/compiler/type-system/SymbolType.hpp>
 #include <script/compiler/Tree.hpp>
 
+#include <core/lib/String.hpp>
+
 #include <map>
 #include <vector>
 #include <memory>
@@ -46,12 +48,12 @@ public:
         Modules with the name that are in the current module or any module
         above the current one will be considered.
     */
-    Module *LookupModule(const std::string &name);
+    Module *LookupModule(const String &name);
 
     /** Maps filepath to a vector of modules, so that no module has to be parsed
         and analyze more than once.
     */
-    std::map<std::string, Array<RC<Module>>> m_imported_modules;
+    HashMap<String, Array<RC<Module>>> m_imported_modules;
     Tree<Module*> m_module_tree;
 
     /** all modules contained in the compilation unit */
@@ -60,13 +62,13 @@ public:
     int m_module_index;
 
 private:
-    std::string m_exec_path;
+    String              m_exec_path;
 
-    ErrorList m_error_list;
-    InstructionStream m_instruction_stream;
-    AstNodeBuilder m_ast_node_builder;
+    ErrorList           m_error_list;
+    InstructionStream   m_instruction_stream;
+    AstNodeBuilder      m_ast_node_builder;
     // the global module
-    RC<Module> m_global_module;
+    RC<Module>          m_global_module;
 };
 
 } // namespace hyperion::compiler

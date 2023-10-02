@@ -19,7 +19,7 @@
 namespace hyperion::compiler {
 
 AstVariable::AstVariable(
-    const std::string &name,
+    const String &name,
     const SourceLocation &location
 ) : AstIdentifier(name, location),
     m_should_inline(false),
@@ -70,7 +70,7 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                 m_self_member_access.Reset(new AstMember(
                     m_name,
                     RC<AstVariable>(new AstVariable(
-                        Keyword::ToString(Keywords::Keyword_self),
+                        Keyword::ToString(Keywords::Keyword_self).Get(),
                         m_location
                     )),
                     m_location
@@ -254,7 +254,7 @@ std::unique_ptr<Buildable> AstVariable::Build(AstVisitor *visitor, Module *mod)
         Int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         Int stack_location = m_properties.GetIdentifier()->GetStackLocation();
 
-        AssertThrowMsg(stack_location != -1, "Variable %s has invalid stack location stored; not visited?", m_name.data());
+        AssertThrowMsg(stack_location != -1, "Variable %s has invalid stack location stored; not visited?", m_name.Data());
 
         Int offset = stack_size - stack_location;
 

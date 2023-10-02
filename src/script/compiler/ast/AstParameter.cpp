@@ -11,7 +11,7 @@
 namespace hyperion::compiler {
 
 AstParameter::AstParameter(
-    const std::string &name, 
+    const String &name, 
     const RC<AstPrototypeSpecification> &type_spec, 
     const RC<AstExpression> &default_param, 
     bool is_variadic,

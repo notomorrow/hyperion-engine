@@ -232,10 +232,10 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
                 // skip to here to avoid loading 'true' into the register
                 chunk->Append(BytecodeUtil::Make<LabelMarker>(false_label));
             } else {
-                AssertThrowMsg(false, "Operator not implemented: %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().c_str());
+                AssertThrowMsg(false, "Operator not implemented: %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().Data());
             }
         } else {
-            AssertThrowMsg(false, "Operator not implemented %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().c_str());
+            AssertThrowMsg(false, "Operator not implemented %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().Data());
         }
     }
 

@@ -4,7 +4,7 @@
 
 namespace hyperion::compiler {
 
-const std::map<std::string, Operator> Operator::binary_operators = {
+const HashMap<String, Operator> Operator::binary_operators = {
     { "+", Operator(OP_add, 13, ARITHMETIC, false, true) },
     { "-", Operator(OP_subtract, 13, ARITHMETIC, false, true) },
     { "*", Operator(OP_multiply, 14, ARITHMETIC, false, true) },
@@ -42,7 +42,7 @@ const std::map<std::string, Operator> Operator::binary_operators = {
     { "|=", Operator(OP_bitwise_or_assign, 3, ASSIGNMENT | BITWISE, true, true) },
 };
 
-const std::map<std::string, Operator> Operator::unary_operators = {
+const HashMap<String, Operator> Operator::unary_operators = {
     // Unary operators
     { "!", Operator(OP_logical_not, 0, LOGICAL | PREFIX, false, true) },
     { "-", Operator(OP_negative, 0, ARITHMETIC | PREFIX, false, true) },
@@ -75,17 +75,17 @@ Operator::Operator(const Operator &other)
 {
 }
 
-std::string Operator::LookupStringValue() const
+String Operator::LookupStringValue() const
 {
-    const std::map<std::string, Operator> *map = &Operator::binary_operators;
+    const auto *map = &Operator::binary_operators;
 
     if (IsUnary()) {
         map = &Operator::unary_operators;
     }
 
-    for (auto it = map->begin(); it != map->end(); ++it) {
-        if (it->second.GetOperatorType() == m_op_type) {
-            return it->first;
+    for (const auto &it : *map) {
+        if (it.value.GetOperatorType() == m_op_type) {
+            return it.key;
         }
     }
 
@@ -95,8 +95,8 @@ std::string Operator::LookupStringValue() const
 const Operator *Operator::FindBinaryOperator(Operators op)
 {
     for (auto &it : binary_operators) {
-        if (it.second.GetOperatorType() == op) {
-            return &it.second;
+        if (it.value.GetOperatorType() == op) {
+            return &it.value;
         }
     }
 
@@ -105,8 +105,8 @@ const Operator *Operator::FindBinaryOperator(Operators op)
 const Operator *Operator::FindUnaryOperator(Operators op)
 {
     for (auto &it : unary_operators) {
-        if (it.second.GetOperatorType() == op) {
-            return &it.second;
+        if (it.value.GetOperatorType() == op) {
+            return &it.value;
         }
     }
 

@@ -5,6 +5,8 @@
 #include <script/compiler/type-system/SymbolType.hpp>
 #include <script/compiler/type-system/BuiltinTypes.hpp>
 
+#include <core/lib/String.hpp>
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -26,11 +28,11 @@ public:
         { return m_identifiers; }
 
     /** Constructs an identifier with the given name, as an alias to the given identifier. */
-    RC<Identifier> AddAlias(const std::string &name, Identifier *aliasee);
+    RC<Identifier> AddAlias(const String &name, Identifier *aliasee);
 
     /** Constructs an identifier with the given name, and assigns an index to it. */
     RC<Identifier> AddIdentifier(
-        const std::string &name,
+        const String &name,
         int flags = 0,
         RC<AstExpression> current_value = nullptr,
         SymbolTypePtr_t symbol_type = nullptr
@@ -39,12 +41,12 @@ public:
     bool AddIdentifier(const RC<Identifier> &identifier);
 
     /** Look up an identifier by name. Returns nullptr if not found */
-    RC<Identifier> LookUpIdentifier(const std::string &name);
+    RC<Identifier> LookUpIdentifier(const String &name);
 
-    void BindTypeToIdentifier(const std::string &name, SymbolTypePtr_t symbol_type);
+    void BindTypeToIdentifier(const String &name, SymbolTypePtr_t symbol_type);
 
     /** Look up symbol type by name */
-    SymbolTypePtr_t LookupSymbolType(const std::string &name) const;
+    SymbolTypePtr_t LookupSymbolType(const String &name) const;
     /** Look up an instance of a generic type, with the given parameters*/
     SymbolTypePtr_t LookupGenericInstance(
         const SymbolTypePtr_t &base, 

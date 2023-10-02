@@ -11,11 +11,12 @@
 
 namespace hyperion::compiler {
 
-AstFunctionDefinition::AstFunctionDefinition(const std::string &name,
+AstFunctionDefinition::AstFunctionDefinition(
+    const String &name,
     const RC<AstFunctionExpression> &expr,
-    const SourceLocation &location)
-    : AstDeclaration(name, location),
-      m_expr(expr)
+    const SourceLocation &location
+) : AstDeclaration(name, location),
+    m_expr(expr)
 {
 }
 

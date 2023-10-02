@@ -4,6 +4,7 @@
 #include <script/compiler/IdentifierTable.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
 #include <script/SourceLocation.hpp>
+#include <core/lib/HashMap.hpp>
 
 #include <vector>
 #include <utility>
@@ -67,25 +68,25 @@ public:
     const Array<ReturnType_t> &GetReturnTypes() const
         { return m_return_types; }
 
-    RC<Identifier> FindClosureCapture(const std::string &name) 
+    RC<Identifier> FindClosureCapture(const String &name) 
     {
-        auto it = m_closure_captures.find(name);
+        auto it = m_closure_captures.Find(name);
 
-        return it != m_closure_captures.end() ? it->second : nullptr;
+        return it != m_closure_captures.End() ? it->value : nullptr;
     }
 
-    void AddClosureCapture(const std::string &name, const RC<Identifier> &ident) 
-        { m_closure_captures.insert({ name, ident }); }
+    void AddClosureCapture(const String &name, const RC<Identifier> &ident) 
+        { m_closure_captures.Insert(name, ident); }
 
-    const std::map<std::string, RC<Identifier>> &GetClosureCaptures() const
+    const HashMap<String, RC<Identifier>> &GetClosureCaptures() const
         { return m_closure_captures; }
 
 private:
-    IdentifierTable m_identifier_table;
-    ScopeType m_scope_type;
-    int m_scope_flags;
-    Array<ReturnType_t> m_return_types;
-    std::map<std::string, RC<Identifier>> m_closure_captures;
+    IdentifierTable                 m_identifier_table;
+    ScopeType                       m_scope_type;
+    int                             m_scope_flags;
+    Array<ReturnType_t>             m_return_types;
+    HashMap<String, RC<Identifier>> m_closure_captures;
 };
 
 } // namespace hyperion::compiler

@@ -3,13 +3,14 @@
 
 #include <script/compiler/ast/AstIdentifier.hpp>
 #include <script/compiler/ast/AstMember.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
 class AstVariable : public AstIdentifier
 {
 public:
-    AstVariable(const std::string &name, const SourceLocation &location);
+    AstVariable(const String &name, const SourceLocation &location);
     virtual ~AstVariable() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
@@ -27,13 +28,13 @@ public:
 private:
     // set while analyzing
     // used to get locals from outer function in a closure
-    RC<AstMember> m_closure_member_access;
-    RC<AstMember> m_self_member_access;
-    RC<AstExpression> m_inline_value;
-    bool m_should_inline;
-    bool m_is_in_ref_assignment;
-    bool m_is_in_const_assignment;
-    bool m_is_visited = false;
+    RC<AstMember>       m_closure_member_access;
+    RC<AstMember>       m_self_member_access;
+    RC<AstExpression>   m_inline_value;
+    bool                m_should_inline;
+    bool                m_is_in_ref_assignment;
+    bool                m_is_in_const_assignment;
+    bool                m_is_visited = false;
 
     RC<AstVariable> CloneImpl() const
     {

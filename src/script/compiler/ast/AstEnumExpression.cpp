@@ -7,9 +7,9 @@
 #include <script/compiler/SemanticAnalyzer.hpp>
 
 #include <script/compiler/type-system/BuiltinTypes.hpp>
-
 #include <script/compiler/emit/BytecodeChunk.hpp>
 #include <script/compiler/emit/BytecodeUtil.hpp>
+#include <core/lib/String.hpp>
 
 #include <script/Hasher.hpp>
 #include <system/Debug.hpp>
@@ -17,7 +17,7 @@
 namespace hyperion::compiler {
 
 AstEnumExpression::AstEnumExpression(
-    const std::string &name,
+    const String &name,
     const Array<EnumEntry> &entries,
     const RC<AstPrototypeSpecification> &underlying_type,
     const SourceLocation &location
@@ -154,7 +154,7 @@ const AstExpression *AstEnumExpression::GetDeepValueOf() const
     return m_expr->GetDeepValueOf();
 }
 
-const std::string &AstEnumExpression::GetName() const
+const String &AstEnumExpression::GetName() const
 {
     return m_name;
 }

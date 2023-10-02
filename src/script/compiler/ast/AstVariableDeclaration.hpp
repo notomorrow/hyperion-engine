@@ -8,6 +8,8 @@
 #include <script/compiler/Identifier.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
 
+#include <core/lib/String.hpp>
+
 #include <memory>
 
 namespace hyperion::compiler {
@@ -16,7 +18,7 @@ class AstVariableDeclaration : public AstDeclaration
 {
 public:
     AstVariableDeclaration(
-        const std::string &name,
+        const String &name,
         const RC<AstPrototypeSpecification> &proto,
         const RC<AstExpression> &assignment,
         const Array<RC<AstParameter>> &template_params,

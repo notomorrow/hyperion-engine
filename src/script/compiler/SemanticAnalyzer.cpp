@@ -43,8 +43,8 @@ void CheckArgTypeCompatible(
 
 struct ArgInfo
 {
-    bool is_named;
-    std::string name;
+    bool            is_named;
+    String          name;
     SymbolTypePtr_t type;
 };
 
@@ -86,7 +86,8 @@ static int ArgIndex(
 {
     if (arg_info.is_named) {
         for (int j = 0; j < generic_args.Size(); j++) {
-            const std::string &generic_arg_name = generic_args[j].m_name;
+            const String &generic_arg_name = generic_args[j].m_name;
+
             if (generic_arg_name == arg_info.name && used_indices.find(j) == used_indices.end()) {
                 return j;
             }
@@ -339,7 +340,7 @@ FunctionTypeSignature_t SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
                         for (SizeType i = 0; i < generic_args.Size(); i++) {
                             const auto &arg = generic_args[i];
 
-                            if (!arg.m_name.empty()) {
+                            if (arg.m_name.Any()) {
                                 ss << arg.m_name << ": " << (arg.m_type != nullptr ? arg.m_type->GetName() : "??");
                             } else {
                                 ss << "$" << i << ": " << (arg.m_type != nullptr ? arg.m_type->GetName() : "??");

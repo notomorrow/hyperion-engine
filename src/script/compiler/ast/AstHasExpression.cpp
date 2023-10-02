@@ -14,13 +14,15 @@
 #include <system/Debug.hpp>
 #include <script/Hasher.hpp>
 
+#include <core/lib/String.hpp>
+
 #include <iostream>
 
 namespace hyperion::compiler {
 
 AstHasExpression::AstHasExpression(
     const RC<AstStatement> &target,
-    const std::string &field_name,
+    const String &field_name,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_target(target),
@@ -100,7 +102,7 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *
     } else {
         // indeterminate at compile time.
         // check at runtime.
-        const HashFNV1 hash = hash_fnv_1(m_field_name.c_str());
+        const HashFNV1 hash = hash_fnv_1(m_field_name.Data());
 
         // the label to jump to the very end
         LabelId end_label = chunk->NewLabel();

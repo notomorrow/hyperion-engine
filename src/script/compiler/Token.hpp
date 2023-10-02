@@ -2,6 +2,7 @@
 #define TOKEN_HPP
 
 #include <script/SourceLocation.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 
@@ -41,7 +42,7 @@ enum TokenClass
 class Token
 {
 public:
-    static std::string TokenTypeToString(TokenClass token_class);
+    static String TokenTypeToString(TokenClass token_class);
     
     static const Token EMPTY;
 
@@ -50,13 +51,13 @@ public:
 
     Token(
         TokenClass token_class,
-        const std::string &value,
+        const String &value,
         const SourceLocation &location
     );
 
     Token(
         TokenClass token_class,
-        const std::string &value,
+        const String &value,
         Flags flags,
         const SourceLocation &location
     );
@@ -64,7 +65,7 @@ public:
     Token(const Token &other);
 
     TokenClass GetTokenClass() const { return m_token_class; }
-    const std::string &GetValue() const { return m_value; }
+    const String &GetValue() const { return m_value; }
     const Flags &GetFlags() const { return m_flags; }
     const SourceLocation &GetLocation() const { return m_location; }
     bool Empty() const { return m_token_class == TK_EMPTY; }
@@ -85,7 +86,7 @@ public:
 
 private:
     TokenClass m_token_class;
-    std::string m_value;
+    String m_value;
     Flags m_flags;
     SourceLocation m_location;
 };

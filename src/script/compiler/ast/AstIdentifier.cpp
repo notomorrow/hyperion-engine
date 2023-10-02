@@ -12,7 +12,7 @@
 
 namespace hyperion::compiler {
 
-AstIdentifier::AstIdentifier(const std::string &name, const SourceLocation &location)
+AstIdentifier::AstIdentifier(const String &name, const SourceLocation &location)
     : AstExpression(location, ACCESS_MODE_LOAD | ACCESS_MODE_STORE),
       m_name(name)
 {
@@ -153,7 +153,7 @@ ExprAccess AstIdentifier::GetExprAccess() const
     return AstExpression::GetExprAccess();
 }
 
-const std::string &AstIdentifier::GetName() const
+const String &AstIdentifier::GetName() const
 {
     return m_name;
 }

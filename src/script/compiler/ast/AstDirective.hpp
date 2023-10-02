@@ -3,6 +3,7 @@
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstArrayExpression.hpp>
+#include <core/lib/String.hpp>
 
 #include <memory>
 #include <string>
@@ -11,9 +12,11 @@ namespace hyperion::compiler {
 
 class AstDirective : public AstStatement {
 public:
-    AstDirective(const std::string &key,
-        const Array<std::string> &args,
-        const SourceLocation &location);
+    AstDirective(
+        const String &key,
+        const Array<String> &args,
+        const SourceLocation &location
+    );
     virtual ~AstDirective() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
@@ -23,8 +26,8 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    std::string m_key;
-    Array<std::string> m_args;
+    String          m_key;
+    Array<String>   m_args;
 
     RC<AstDirective> CloneImpl() const
     {

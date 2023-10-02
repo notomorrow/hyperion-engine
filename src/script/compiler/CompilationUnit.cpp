@@ -40,14 +40,14 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     Array<NamesPair_t> names;
 
     for (auto &mem : type_ptr->GetMembers()) {
-        std::string mem_name = std::get<0>(mem);
+        String mem_name = std::get<0>(mem);
 
         Array<UInt8> array_elements;
-        array_elements.Resize(mem_name.size());
-        Memory::MemCpy(array_elements.Data(), mem_name.data(), mem_name.size());
+        array_elements.Resize(mem_name.Size());
+        Memory::MemCpy(array_elements.Data(), mem_name.Data(), mem_name.Size());
 
         names.PushBack(NamesPair_t {
-            mem_name.size(),
+            mem_name.Size(),
             std::move(array_elements)
         });
     }
@@ -58,7 +58,7 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     StaticTypeInfo st;
     st.m_size = type_ptr->GetMembers().Size();
     st.m_names = names;
-    st.m_name = type_ptr->GetName().c_str();
+    st.m_name = type_ptr->GetName();
 
     int id;
 
@@ -75,7 +75,7 @@ void CompilationUnit::RegisterType(SymbolTypePtr_t &type_ptr)
     type_ptr->SetId(id);
 }
 
-Module *CompilationUnit::LookupModule(const std::string &name)
+Module *CompilationUnit::LookupModule(const String &name)
 {
     TreeNode<Module *> *top = m_module_tree.TopNode();
 

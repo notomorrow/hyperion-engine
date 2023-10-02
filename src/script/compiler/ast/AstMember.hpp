@@ -2,6 +2,7 @@
 #define AST_MEMBER_HPP
 
 #include <script/compiler/ast/AstIdentifier.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
@@ -9,7 +10,7 @@ class AstMember : public AstExpression
 {
 public:
     AstMember(
-        const std::string &field_name,
+        const String &field_name,
         const RC<AstExpression> &target,
         const SourceLocation &location
     );
@@ -31,7 +32,7 @@ public:
     virtual bool IsMutable() const override;
 
 protected:
-    std::string m_field_name;
+    String m_field_name;
     RC<AstExpression> m_target;
 
     // set while analyzing

@@ -8,8 +8,8 @@
 namespace hyperion::compiler {
 
 AstDirective::AstDirective(
-    const std::string &key,
-    const Array<std::string> &args,
+    const String &key,
+    const Array<String> &args,
     const SourceLocation &location
 ) : AstStatement(location),
     m_key(key),
@@ -26,7 +26,7 @@ void AstDirective::Visit(AstVisitor *visitor, Module *mod)
                 LEVEL_ERROR,
                 Msg_custom_error,
                 m_location,
-                std::string("'importpath' directive requires path names to be provided (e.g '#importpath \"../path\" \"../other/path\"')")
+                String("'importpath' directive requires path names to be provided (e.g '#importpath \"../path\" \"../other/path\"')")
             ));
         } else {
             // find the folder which the current file is in
@@ -37,11 +37,11 @@ void AstDirective::Visit(AstVisitor *visitor, Module *mod)
                 current_dir = m_location.GetFileName().Substr(0, index) + "/";
             }
             
-            for (const std::string &path_arg : m_args) {
-                const std::string scan_path = current_dir.Data() + path_arg;
+            for (const String &path_arg : m_args) {
+                const String scan_path = current_dir + path_arg;
 
                 // create relative path
-                DebugLog(LogType::Info, "[Script] add scan path %s\n", scan_path.c_str());
+                DebugLog(LogType::Info, "[Script] add scan path %s\n", scan_path.Data());
 
                 mod->AddScanPath(scan_path);
             }

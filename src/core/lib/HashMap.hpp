@@ -161,6 +161,8 @@ class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
 public:
     using Base = ContainerBase<HashMap<KeyType, ValueType>, KeyType>;
 
+    using KeyValuePair = KeyValuePair<KeyType, ValueType>;
+
     struct ConstIterator;
 
     struct Iterator
@@ -276,6 +278,17 @@ public:
     using InsertResult = Pair<Iterator, Bool>;
 
     HashMap();
+
+    HashMap(std::initializer_list<KeyValuePair> initializer_list)
+        : HashMap()
+    {
+        Array<KeyValuePair> temp(initializer_list);
+
+        for (auto &&item : temp) {
+            Set(std::move(item.first), std::move(item.second));
+        }
+    }
+
     HashMap(const HashMap &other);
     HashMap &operator=(const HashMap &other);
     HashMap(HashMap &&other) noexcept;

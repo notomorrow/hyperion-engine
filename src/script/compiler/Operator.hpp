@@ -2,6 +2,8 @@
 #define OPERATOR_HPP
 
 #include <Types.hpp>
+#include <core/lib/String.hpp>
+#include <core/lib/HashMap.hpp>
 
 #include <map>
 #include <string>
@@ -65,12 +67,12 @@ enum Operators
 
 class Operator {
 public:
-    static const std::map<std::string, Operator> binary_operators;
-    static const std::map<std::string, Operator> unary_operators;
+    static const HashMap<String, Operator> binary_operators;
+    static const HashMap<String, Operator> unary_operators;
 
-    static inline bool IsBinaryOperator(const std::string &str, OperatorTypeBits match_bits = 0)
+    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits match_bits = 0)
     {
-        const auto it = binary_operators.find(str);
+        const auto it = binary_operators.Find(str);
 
         if (it == binary_operators.end()) {
             return false;
@@ -80,38 +82,38 @@ public:
             return true;
         }
 
-        return bool(it->second.GetType() & match_bits);
+        return bool(it->value.GetType() & match_bits);
     }
 
-    static inline bool IsBinaryOperator(const std::string &str, const Operator *&out)
+    static inline bool IsBinaryOperator(const String &str, const Operator *&out)
     {
-        const auto it = binary_operators.find(str);
+        const auto it = binary_operators.Find(str);
 
         if (it == binary_operators.end()) {
             return false;
         }
 
-        out = &it->second;
+        out = &it->value;
 
         return true;
     }
 
-    static inline bool IsBinaryOperator(const std::string &str, OperatorTypeBits match_bits, const Operator *&out)
+    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits match_bits, const Operator *&out)
     {
-        const auto it = binary_operators.find(str);
+        const auto it = binary_operators.Find(str);
 
         if (it == binary_operators.end()) {
             return false;
         }
 
         if (match_bits == 0) {
-            out = &it->second;
+            out = &it->value;
 
             return true;
         }
 
-        if (it->second.GetType() & match_bits) {
-            out = &it->second;
+        if (it->value.GetType() & match_bits) {
+            out = &it->value;
 
             return true;
         }
@@ -119,9 +121,9 @@ public:
         return false;
     }
 
-    static inline bool IsUnaryOperator(const std::string &str, OperatorTypeBits match_bits = 0)
+    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits match_bits = 0)
     {
-        const auto it = unary_operators.find(str);
+        const auto it = unary_operators.Find(str);
 
         if (it == unary_operators.end()) {
             return false;
@@ -131,38 +133,38 @@ public:
             return true;
         }
 
-        return bool(it->second.GetType() & match_bits);
+        return bool(it->value.GetType() & match_bits);
     }
 
-    static inline bool IsUnaryOperator(const std::string &str, const Operator *&out)
+    static inline bool IsUnaryOperator(const String &str, const Operator *&out)
     {
-        const auto it = unary_operators.find(str);
+        const auto it = unary_operators.Find(str);
 
         if (it == unary_operators.end()) {
             return false;
         }
 
-        out = &it->second;
+        out = &it->value;
 
         return true;
     }
 
-    static inline bool IsUnaryOperator(const std::string &str, OperatorTypeBits match_bits, const Operator *&out)
+    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits match_bits, const Operator *&out)
     {
-        const auto it = unary_operators.find(str);
+        const auto it = unary_operators.Find(str);
 
         if (it == unary_operators.end()) {
             return false;
         }
 
         if (match_bits == 0) {
-            out = &it->second;
+            out = &it->value;
 
             return true;
         }
 
-        if (it->second.GetType() & match_bits) {
-            out = &it->second;
+        if (it->value.GetType() & match_bits) {
+            out = &it->value;
 
             return true;
         }
@@ -196,7 +198,7 @@ public:
     bool SupportsOverloading() const
         { return m_supports_overloading; }
 
-    std::string LookupStringValue() const;
+    String LookupStringValue() const;
 
 private:
     Operators m_op_type;

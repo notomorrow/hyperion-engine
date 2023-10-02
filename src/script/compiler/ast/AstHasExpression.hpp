@@ -2,6 +2,7 @@
 #define AST_HAS_EXPRESSION_HPP
 
 #include <script/compiler/ast/AstExpression.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 
@@ -12,7 +13,7 @@ class AstHasExpression : public AstExpression
 public:
     AstHasExpression(
         const RC<AstStatement> &target,
-        const std::string &field_name,
+        const String &field_name,
         const SourceLocation &location
     );
     virtual ~AstHasExpression() = default;
@@ -28,15 +29,15 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override;
 
 protected:
-    RC<AstStatement> m_target;
-    std::string m_field_name;
+    RC<AstStatement>    m_target;
+    String              m_field_name;
 
     // set while analyzing
-    Tribool m_has_member;
+    Tribool             m_has_member;
     // is it a check if an expression has the member,
     // or is it a check if a type has a member?
-    bool m_is_expr;
-    bool m_has_side_effects;
+    bool                m_is_expr;
+    bool                m_has_side_effects;
 
 private:
     RC<AstHasExpression> CloneImpl() const

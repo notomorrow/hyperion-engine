@@ -101,9 +101,7 @@ void AstImport::PerformImport(
     AstVisitor *visitor,
     Module *mod,
     const String &filepath
-    
-    /*bool make_parent_module,
-    const std::string &parent_module_name*/)
+)
 {
     AssertThrow(visitor != nullptr);
     AssertThrow(mod != nullptr);
@@ -126,13 +124,13 @@ void AstImport::PerformImport(
     const String canon_path = String::Join(path_parts, '/');
 
     // first, check if the file has already been imported somewhere in this compilation unit
-    const auto it = visitor->GetCompilationUnit()->m_imported_modules.find(canon_path.Data());
-    if (it != visitor->GetCompilationUnit()->m_imported_modules.end()) {
+    const auto it = visitor->GetCompilationUnit()->m_imported_modules.Find(canon_path);
+    if (it != visitor->GetCompilationUnit()->m_imported_modules.End()) {
         // imported file found, so just re-open all
         // modules that belong to the file into this scope
 
         // TODO: Fix issues with duplicated symbols...
-        for (RC<Module> &mod : it->second) {
+        for (RC<Module> &mod : it->value) {
             AstImport::CopyModules(
                 visitor,
                 mod.Get(),

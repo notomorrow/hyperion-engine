@@ -1,7 +1,7 @@
 #include <script/compiler/Keywords.hpp>
 
 namespace hyperion::compiler {
-const std::map<std::string, Keywords> Keyword::keyword_strings = {
+const HashMap<String, Keywords> Keyword::keyword_strings = {
     { "module",    Keyword_module },
     { "import",    Keyword_import },
     { "export",    Keyword_export },
@@ -50,20 +50,20 @@ const std::map<std::string, Keywords> Keyword::keyword_strings = {
     { "template",  Keyword_template }
 };
 
-bool Keyword::IsKeyword(const std::string &str)
+bool Keyword::IsKeyword(const String &str)
 {
-    return keyword_strings.find(str) != keyword_strings.end();
+    return keyword_strings.Find(str) != keyword_strings.End();
 }
 
-std::string Keyword::ToString(Keywords keyword)
+Optional<String> Keyword::ToString(Keywords keyword)
 {
     for (auto &it : keyword_strings) {
-        if (it.second == keyword) {
-            return it.first;
+        if (it.value == keyword) {
+            return it.key;
         }
     }
 
-    return "";
+    return { };
 }
 
 } // namespace hyperion::compiler

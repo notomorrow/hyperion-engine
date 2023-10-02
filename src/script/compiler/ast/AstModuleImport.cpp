@@ -15,7 +15,7 @@
 namespace hyperion::compiler {
 
 AstModuleImportPart::AstModuleImportPart(
-    const std::string &left,
+    const String &left,
     const Array<RC<AstModuleImportPart>> &right_parts,
     const SourceLocation &location
 ) : AstStatement(location),
@@ -110,7 +110,7 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
         first->SetPullInModules(false);
     }
 
-    Array<std::string> tried_paths;
+    Array<String> tried_paths;
 
     // if this is not a direct import (i.e `import range`),
     // we will allow duplicates in imports like `import range::{_Detail_}`
@@ -126,45 +126,43 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
 
         std::ifstream file;
 
-        std::unordered_set<std::string> scan_paths;
-        std::string found_path;
+        FlatSet<String> scan_paths;
+        String found_path;
 
         // add current directory as first.
-        scan_paths.insert(current_dir.Data());
+        scan_paths.Insert(current_dir);
 
         // add this module's scan paths.
-        scan_paths.insert(
-            mod->GetScanPaths().begin(),
-            mod->GetScanPaths().end()
-        );
+        for (const auto &scan_path : mod->GetScanPaths()) {
+            scan_paths.Insert(scan_path);
+        }
 
         // add global module's scan paths
-        const std::unordered_set<std::string> &global_scan_paths =
+        const FlatSet<String> &global_scan_paths =
             visitor->GetCompilationUnit()->GetGlobalModule()->GetScanPaths();
         
-        scan_paths.insert(
-            global_scan_paths.begin(),
-            global_scan_paths.end()
-        );
+        for (const auto &scan_path : global_scan_paths) {
+            scan_paths.Insert(scan_path);
+        }
 
         // iterate through library paths to try and find a file
-        for (const std::string &scan_path : scan_paths) {
-            const std::string &filename = first->GetLeft();
-            const std::string ext = ".hypscript";
+        for (const String &scan_path : scan_paths) {
+            const String &filename = first->GetLeft();
+            const String ext = ".hypscript";
 
-            found_path = FileSystem::Join(scan_path, filename + ext);
+            found_path = String(FileSystem::Join(scan_path.Data(), (filename + ext).Data()).c_str());
             tried_paths.PushBack(found_path);
 
-            if (AstImport::TryOpenFile(found_path.c_str(), file)) {
+            if (AstImport::TryOpenFile(found_path, file)) {
                 opened = true;
                 break;
             }
 
             // try it without extension
-            found_path = FileSystem::Join(scan_path, filename);
+            found_path = String(FileSystem::Join(scan_path.Data(), filename.Data()).c_str());
             tried_paths.PushBack(found_path);
 
-            if (AstImport::TryOpenFile(found_path.c_str(), file)) {
+            if (AstImport::TryOpenFile(found_path, file)) {
                 opened = true;
                 break;
             }
@@ -174,7 +172,7 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
             AstImport::PerformImport(
                 visitor,
                 mod,
-                found_path.c_str()
+                found_path
             );
         }
     }

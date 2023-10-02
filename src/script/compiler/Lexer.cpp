@@ -273,7 +273,7 @@ Token Lexer::ReadStringLiteral()
     // the location for the start of the string
     SourceLocation location = m_source_location;
 
-    std::string value;
+    String value;
     int pos_change = 0;
 
     u32char delim = m_source_stream.Next(pos_change);
@@ -305,10 +305,10 @@ Token Lexer::ReadStringLiteral()
         if (ch == (u32char)'\\') {
             u32char esc = ReadEscapeCode();
             // append the bytes
-            value.append(utf::get_bytes(esc));
+            value.Append(utf::get_bytes(esc));
         } else {
             // Append the character itself
-            value.append(utf::get_bytes(ch));
+            value.Append(utf::get_bytes(ch));
         }
 
         ch = m_source_stream.Next(pos_change);
@@ -323,7 +323,7 @@ Token Lexer::ReadNumberLiteral()
     SourceLocation location = m_source_location;
 
     // store the value in a string
-    std::string value;
+    String value;
 
     // assume integer to start
     TokenClass token_class = TK_INTEGER;
@@ -347,7 +347,7 @@ Token Lexer::ReadNumberLiteral()
     while (m_source_stream.HasNext() && utf32_isdigit(ch)) {
         int pos_change = 0;
         u32char next_ch = m_source_stream.Next(pos_change);
-        value.append(utf::get_bytes(next_ch));
+        value.Append(utf::get_bytes(next_ch));
         m_source_location.GetColumn() += pos_change;
 
         if (token_class != TK_FLOAT) {
@@ -363,7 +363,7 @@ Token Lexer::ReadNumberLiteral()
                     if (!utf::utf32_isalpha(next) && next != (u32char)'_') {
                         // type is a float because of '.' and not an identifier after
                         token_class = TK_FLOAT;
-                        value.append(utf::get_bytes(ch));
+                        value.Append(utf::get_bytes(ch));
                         m_source_location.GetColumn() += pos_change;
                     } else {
                         // not a float literal, so go back on the '.'
@@ -380,7 +380,7 @@ Token Lexer::ReadNumberLiteral()
                 has_exponent = true;
 
                 token_class = TK_FLOAT;
-                value.append(utf::get_bytes(ch));
+                value.Append(utf::get_bytes(ch));
 
                 int pos_change = 0;
                 m_source_stream.Next(pos_change);
@@ -390,7 +390,7 @@ Token Lexer::ReadNumberLiteral()
 
                 // Handle negative exponent
                 if (ch == (u32char)'-') {
-                    value.append(utf::get_bytes(ch));
+                    value.Append(utf::get_bytes(ch));
 
                     int pos_change = 0;
                     m_source_stream.Next(pos_change);
@@ -427,7 +427,7 @@ Token Lexer::ReadHexNumberLiteral()
     SourceLocation location = m_source_location;
 
     // store the value in a string
-    std::string value;
+    String value;
 
     // read the "0x"
     for (int i = 0; i < 2; i++) {
@@ -437,7 +437,7 @@ Token Lexer::ReadHexNumberLiteral()
 
         int pos_change = 0;
         u32char next_ch = m_source_stream.Next(pos_change);
-        value.append(utf::get_bytes(next_ch));
+        value.Append(utf::get_bytes(next_ch));
         m_source_location.GetColumn() += pos_change;
     }
 
@@ -449,7 +449,7 @@ Token Lexer::ReadHexNumberLiteral()
     while (m_source_stream.HasNext() && utf32_isxdigit(ch)) {
         int pos_change = 0;
         u32char next_ch = m_source_stream.Next(pos_change);
-        value.append(utf::get_bytes(next_ch));
+        value.Append(utf::get_bytes(next_ch));
         m_source_location.GetColumn() += pos_change;
         ch = m_source_stream.Peek();
     }
@@ -467,7 +467,7 @@ Token Lexer::ReadHexNumberLiteral()
         break;
     }
 
-    Int64 num = std::strtoll(value.c_str(), 0, 16);
+    Int64 num = std::strtoll(value.Data(), 0, 16);
     std::stringstream ss;
     ss << num;
 
@@ -581,8 +581,8 @@ Token Lexer::ReadOperator()
     // go back
     m_source_stream.GoBack(total_pos_change);
 
-    std::string op_1 = utf::get_bytes(ch[0]);
-    std::string op_2 = op_1 + utf::get_bytes(ch[1]);
+    String op_1 = utf::get_bytes(ch[0]);
+    String op_2 = op_1 + utf::get_bytes(ch[1]);
 
     if (Operator::IsUnaryOperator(op_2) || Operator::IsBinaryOperator(op_2)) {
         int pos_change_1 = 0, pos_change_2 = 0;
@@ -610,7 +610,7 @@ Token Lexer::ReadDirective()
     m_source_location.GetColumn() += pos_change;
 
     // store the name
-    std::string value;
+    String value;
 
     // the character as a utf-32 character
     u32char ch = m_source_stream.Peek();
@@ -620,7 +620,7 @@ Token Lexer::ReadDirective()
         ch = m_source_stream.Next(pos_change);
         m_source_location.GetColumn() += pos_change;
         // append the raw bytes
-        value.append(utf::get_bytes(ch));
+        value.Append(utf::get_bytes(ch));
         // set ch to be the next character in the buffer
         ch = m_source_stream.Peek();
     }
@@ -633,7 +633,7 @@ Token Lexer::ReadIdentifier()
     SourceLocation location = m_source_location;
 
     // store the name in this string
-    std::string value;
+    String value;
 
     // the character as a utf-32 character
     auto ch = m_source_stream.Peek();
@@ -643,7 +643,7 @@ Token Lexer::ReadIdentifier()
         ch = m_source_stream.Next(pos_change);
         m_source_location.GetColumn() += pos_change;
         // append the raw bytes
-        value.append(utf::get_bytes(ch));
+        value.Append(utf::get_bytes(ch));
         // set ch to be the next character in the buffer
         ch = m_source_stream.Peek();
 

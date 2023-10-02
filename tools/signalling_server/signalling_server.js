@@ -18,6 +18,7 @@ const httpServer = http.createServer((req, res) => {
 });
 
 const wsServer = new websocket.server({ httpServer });
+
 wsServer.on('request', (req) => {
     const { path } = req.resourceURL;
     const splitted = path.split('/');
@@ -29,10 +30,7 @@ wsServer.on('request', (req) => {
     const conn = req.accept(null, req.origin);
 
     testInterval = setInterval(() => {
-        if (!conn.connected) {
-            return;
-        }
-
+        console.log(`Client ${id} >> Ping`)
         conn.send(JSON.stringify({
             type: 'Ping',
             timestamp: Date.now()

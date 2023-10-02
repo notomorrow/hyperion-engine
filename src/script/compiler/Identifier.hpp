@@ -3,6 +3,7 @@
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
+#include <core/lib/String.hpp>
 #include <Types.hpp>
 
 #include <string>
@@ -34,10 +35,10 @@ enum IdentifierFlags : IdentifierFlagBits
 class Identifier
 {
 public:
-    Identifier(const std::string &name, int Index, IdentifierFlagBits flags, Identifier *aliasee = nullptr);
+    Identifier(const String &name, int Index, IdentifierFlagBits flags, Identifier *aliasee = nullptr);
     Identifier(const Identifier &other);
 
-    const std::string &GetName() const { return m_name; }
+    const String &GetName() const { return m_name; }
     int GetIndex() const { return Unalias()->m_index; }
     
     Int GetStackLocation() const
@@ -85,7 +86,7 @@ public:
     const Identifier *Unalias() const { return (m_aliasee != nullptr) ? m_aliasee : this; }
 
 private:
-    std::string m_name;
+    String m_name;
     Int m_index;
     Int m_stack_location;
     mutable Int m_usecount;

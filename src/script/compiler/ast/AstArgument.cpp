@@ -14,7 +14,7 @@ AstArgument::AstArgument(
     const RC<AstExpression> &expr,
     bool is_splat,
     bool is_named,
-    const std::string &name,
+    const String &name,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_expr(expr),
@@ -131,7 +131,7 @@ SymbolTypePtr_t AstArgument::GetExprType() const
     return m_expr->GetExprType();
 }
 
-const std::string &AstArgument::GetName() const
+const String &AstArgument::GetName() const
 {
     return m_name;
 }

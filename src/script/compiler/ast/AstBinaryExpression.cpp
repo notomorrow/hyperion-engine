@@ -758,7 +758,7 @@ RC<AstVariableDeclaration> AstBinaryExpression::CheckLazyDeclaration(AstVisitor 
 {
     if (m_op->GetOperatorType() == Operators::OP_assign) {
         if (AstVariable *left_as_var = dynamic_cast<AstVariable*>(m_left.Get())) {
-            std::string var_name = left_as_var->GetName();
+            String var_name = left_as_var->GetName();
             // lookup variable name
             if (mod->LookUpIdentifier(var_name, false)) {
                 return nullptr;

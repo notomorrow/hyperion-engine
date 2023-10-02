@@ -12,7 +12,7 @@
 namespace hyperion::compiler {
 
 SymbolType::SymbolType(
-    const std::string &name, 
+    const String &name, 
     SymbolTypeClass type_class, 
     const SymbolTypePtr_t &base
 ) : m_name(name),
@@ -25,7 +25,7 @@ SymbolType::SymbolType(
 }
 
 SymbolType::SymbolType(
-    const std::string &name, 
+    const String &name, 
     SymbolTypeClass type_class,
     const SymbolTypePtr_t &base,
     const RC<AstExpression> &default_value,
@@ -328,7 +328,7 @@ bool SymbolType::TypeCompatible(
     return true;
 }
 
-const SymbolTypePtr_t SymbolType::FindMember(const std::string &name) const
+const SymbolTypePtr_t SymbolType::FindMember(const String &name) const
 {
     for (const SymbolMember_t &member : m_members) {
         if (std::get<0>(member) == name) {
@@ -339,7 +339,7 @@ const SymbolTypePtr_t SymbolType::FindMember(const std::string &name) const
     return nullptr;
 }
 
-bool SymbolType::FindMember(const std::string &name, SymbolMember_t &out) const
+bool SymbolType::FindMember(const String &name, SymbolMember_t &out) const
 {
     for (const SymbolMember_t &member : m_members) {
         if (std::get<0>(member) == name) {
@@ -351,7 +351,7 @@ bool SymbolType::FindMember(const std::string &name, SymbolMember_t &out) const
     return false;
 }
 
-bool SymbolType::FindMemberDeep(const std::string &name, SymbolMember_t &out) const
+bool SymbolType::FindMemberDeep(const String &name, SymbolMember_t &out) const
 {
     if (FindMember(name, out)) {
         return true;
@@ -370,7 +370,7 @@ bool SymbolType::FindMemberDeep(const std::string &name, SymbolMember_t &out) co
     return false;
 }
 
-const SymbolTypePtr_t SymbolType::FindPrototypeMember(const std::string &name) const
+const SymbolTypePtr_t SymbolType::FindPrototypeMember(const String &name) const
 {
     if (SymbolTypePtr_t proto_type = FindMember("$proto")) {
         if (proto_type->IsAnyType()) {
@@ -384,7 +384,7 @@ const SymbolTypePtr_t SymbolType::FindPrototypeMember(const std::string &name) c
 }
 
 
-bool SymbolType::FindPrototypeMember(const std::string &name, SymbolMember_t &out) const
+bool SymbolType::FindPrototypeMember(const String &name, SymbolMember_t &out) const
 {
     if (SymbolTypePtr_t proto_type = FindMember("$proto")) {
         return proto_type->FindMember(name, out);
@@ -393,7 +393,7 @@ bool SymbolType::FindPrototypeMember(const std::string &name, SymbolMember_t &ou
     return false;
 }
 
-bool SymbolType::FindPrototypeMemberDeep(const std::string &name, SymbolMember_t &out) const
+bool SymbolType::FindPrototypeMemberDeep(const String &name, SymbolMember_t &out) const
 {
     if (FindPrototypeMember(name, out)) {
         return true;
@@ -412,7 +412,7 @@ bool SymbolType::FindPrototypeMemberDeep(const std::string &name, SymbolMember_t
     return false;
 }
 
-bool SymbolType::FindPrototypeMember(const std::string &name, SymbolMember_t &out, UInt &out_index) const
+bool SymbolType::FindPrototypeMember(const String &name, SymbolMember_t &out, UInt &out_index) const
 {
     bool found = false;
 
@@ -567,7 +567,7 @@ bool SymbolType::IsPrimitive() const
 }
 
 SymbolTypePtr_t SymbolType::Alias(
-    const std::string &name,
+    const String &name,
     const AliasTypeInfo &info
 )
 {
@@ -588,7 +588,7 @@ SymbolTypePtr_t SymbolType::Alias(
 }
 
 SymbolTypePtr_t SymbolType::Primitive(
-    const std::string &name, 
+    const String &name, 
     const RC<AstExpression> &default_value
 )
 {
@@ -602,7 +602,7 @@ SymbolTypePtr_t SymbolType::Primitive(
 }
 
 SymbolTypePtr_t SymbolType::Primitive(
-    const std::string &name,
+    const String &name,
     const RC<AstExpression> &default_value,
     const SymbolTypePtr_t &base
 )
@@ -617,7 +617,7 @@ SymbolTypePtr_t SymbolType::Primitive(
 }
 
 SymbolTypePtr_t SymbolType::Object(
-    const std::string &name,
+    const String &name,
     const Array<SymbolMember_t> &members
 )
 {
@@ -636,7 +636,7 @@ SymbolTypePtr_t SymbolType::Object(
     return symbol_type;
 }
 
-SymbolTypePtr_t SymbolType::Object(const std::string &name,
+SymbolTypePtr_t SymbolType::Object(const String &name,
     const Array<SymbolMember_t> &members,
     const SymbolTypePtr_t &base)
 {
@@ -655,7 +655,7 @@ SymbolTypePtr_t SymbolType::Object(const std::string &name,
     return symbol_type;
 }
 
-SymbolTypePtr_t SymbolType::Generic(const std::string &name,
+SymbolTypePtr_t SymbolType::Generic(const String &name,
     const Array<SymbolMember_t> &members, 
     const GenericTypeInfo &info,
     const SymbolTypePtr_t &base)
@@ -673,7 +673,7 @@ SymbolTypePtr_t SymbolType::Generic(const std::string &name,
     return res;
 }
 
-SymbolTypePtr_t SymbolType::Generic(const std::string &name,
+SymbolTypePtr_t SymbolType::Generic(const String &name,
     const RC<AstExpression> &default_value,
     const Array<SymbolMember_t> &members, 
     const GenericTypeInfo &info,
@@ -736,8 +736,8 @@ SymbolTypePtr_t SymbolType::GenericInstance(
     AssertThrow(base != nullptr);
     AssertThrow(base->IsGeneric());
 
-    std::string name;
-    std::string return_type_name;
+    String name;
+    String return_type_name;
     bool has_return_type = false;
 
     if (info.m_generic_args.Any()) {
@@ -755,7 +755,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
             name = base->GetName() + "(";
 
             for (size_t i = 0; i < info.m_generic_args.Size(); i++) {
-                const std::string &generic_arg_name = info.m_generic_args[i].m_name;
+                const String &generic_arg_name = info.m_generic_args[i].m_name;
                 const SymbolTypePtr_t &generic_arg_type = info.m_generic_args[i].m_type;
 
                 AssertThrow(generic_arg_type != nullptr);
@@ -764,7 +764,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
                     has_return_type = true;
                     return_type_name = generic_arg_type->GetName();
                 } else {
-                    if (!generic_arg_name.empty()) {
+                    if (generic_arg_name.Any()) {
                         name += generic_arg_name;
                         name += ": ";
                     }
@@ -861,7 +861,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
 }
 
 SymbolTypePtr_t SymbolType::GenericParameter(
-    const std::string &name, 
+    const String &name, 
     const SymbolTypePtr_t &substitution)
 {
     SymbolTypePtr_t res(new SymbolType(
@@ -876,7 +876,7 @@ SymbolTypePtr_t SymbolType::GenericParameter(
 }
 
 SymbolTypePtr_t SymbolType::Extend(
-    const std::string &name,
+    const String &name,
     const SymbolTypePtr_t &base,
     const Array<SymbolMember_t> &members
 )
@@ -920,7 +920,7 @@ SymbolTypePtr_t SymbolType::Extend(
 }
     
 SymbolTypePtr_t PrototypedObject(
-    const std::string &name,
+    const String &name,
     const SymbolTypePtr_t &base,
     const Array<SymbolMember_t> &prototype_members
 )

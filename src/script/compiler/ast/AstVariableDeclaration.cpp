@@ -23,7 +23,7 @@
 namespace hyperion::compiler {
 
 AstVariableDeclaration::AstVariableDeclaration(
-    const std::string &name,
+    const String &name,
     const RC<AstPrototypeSpecification> &proto,
     const RC<AstExpression> &assignment,
     const Array<RC<AstParameter>> &template_params,
@@ -299,7 +299,7 @@ std::unique_ptr<Buildable> AstVariableDeclaration::Build(AstVisitor *visitor, Mo
 
         { // add a comment for debugging to know where the var exists 
             chunk->Append(BytecodeUtil::Make<Comment>(" Var `" + m_name + "` at stack location: "
-                + std::to_string(m_identifier->GetStackLocation())));
+                + String::ToString(m_identifier->GetStackLocation())));
         }
 
         // increment stack size

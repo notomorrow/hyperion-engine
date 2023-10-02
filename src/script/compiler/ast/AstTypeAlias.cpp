@@ -8,12 +8,12 @@
 namespace hyperion::compiler {
 
 AstTypeAlias::AstTypeAlias(
-    const std::string &name,
+    const String &name,
     const RC<AstPrototypeSpecification> &aliasee,
-    const SourceLocation &location)
-    : AstStatement(location),
-      m_name(name),
-      m_aliasee(aliasee)
+    const SourceLocation &location
+) : AstStatement(location),
+    m_name(name),
+    m_aliasee(aliasee)
 {
 }
 

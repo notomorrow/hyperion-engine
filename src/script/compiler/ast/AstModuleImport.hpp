@@ -2,6 +2,7 @@
 #define AST_MODULE_IMPORT_HPP
 
 #include <script/compiler/ast/AstImport.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 
@@ -12,13 +13,13 @@ class AstModuleImportPart : public AstStatement
 {
 public:
     AstModuleImportPart(
-        const std::string &left,
+        const String &left,
         const Array<RC<AstModuleImportPart>> &right_parts,
         const SourceLocation &location
     );
     virtual ~AstModuleImportPart() = default;
 
-    const std::string &GetLeft() const { return m_left; }
+    const String &GetLeft() const { return m_left; }
     const Array<RC<AstModuleImportPart>> &GetParts() const
         { return m_right_parts; }
 
@@ -38,10 +39,10 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    std::string m_left;
-    Array<RC<AstModuleImportPart>> m_right_parts;
-    bool m_pull_in_modules;
-    Array<RC<Identifier>> m_identifiers;
+    String                          m_left;
+    Array<RC<AstModuleImportPart>>  m_right_parts;
+    bool                            m_pull_in_modules;
+    Array<RC<Identifier>>           m_identifiers;
 
     RC<AstModuleImportPart> CloneImpl() const
     {

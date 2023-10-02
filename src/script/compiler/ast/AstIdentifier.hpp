@@ -4,6 +4,7 @@
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/Identifier.hpp>
 #include <script/compiler/Enums.hpp>
+#include <core/lib/String.hpp>
 
 #include <string>
 
@@ -46,7 +47,7 @@ class AstIdentifier : public AstExpression
 {
 public:
     AstIdentifier(
-        const std::string &name,
+        const String &name,
         const SourceLocation &location
     );
 
@@ -72,13 +73,13 @@ public:
     virtual const AstExpression *GetValueOf() const override;
     virtual const AstExpression *GetDeepValueOf() const override;
 
-    virtual const std::string &GetName() const override;
+    virtual const String &GetName() const override;
 
     /** temporary, used for extracting a type object located in the stored value */
     const AstTypeObject *ExtractTypeObject() const;
 
 protected:
-    std::string m_name;
+    String m_name;
     
     AstIdentifierProperties m_properties;
 

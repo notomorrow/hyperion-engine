@@ -14,16 +14,16 @@ namespace hyperion::compiler {
 
 struct StaticFunction
 {
-    UInt32 m_addr;
-    UInt8 m_nargs;
-    UInt8 m_flags;
+    UInt32  m_addr;
+    UInt8   m_nargs;
+    UInt8   m_flags;
 };
 
 struct StaticTypeInfo
 {
-    UInt8 m_size;
-    ANSIString m_name;
-    Array<NamesPair_t> m_names;
+    UInt8               m_size;
+    String              m_name;
+    Array<NamesPair_t>  m_names;
 };
 
 struct StaticObject
@@ -31,10 +31,10 @@ struct StaticObject
     int m_id;
 
     /*union*/ struct {
-        int lbl;
-        ANSIString str;
-        StaticFunction func;
-        StaticTypeInfo type_info;
+        int             lbl;
+        String          str;
+        StaticFunction  func;
+        StaticTypeInfo  type_info;
     } m_value;
 
     enum {

@@ -60,7 +60,7 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
                 self_target,
                 false,
                 true,
-                Keyword::ToString(Keywords::Keyword_self),
+                Keyword::ToString(Keywords::Keyword_self).Get(),
                 self_target->GetLocation()
             ));
             
@@ -80,7 +80,7 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
     AssertThrow(unboxed_type != nullptr);
 
     SymbolTypePtr_t call_member_type;
-    std::string call_member_name;
+    String call_member_name;
 
     if ((call_member_type = unboxed_type->FindPrototypeMember("$invoke"))) {
         call_member_name = "$invoke";

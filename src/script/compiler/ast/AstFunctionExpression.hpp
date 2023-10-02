@@ -6,6 +6,7 @@
 #include <script/compiler/ast/AstBlock.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
 #include <script/compiler/ast/AstVariableDeclaration.hpp>
+#include <core/lib/String.hpp>
 
 #include <memory>
 #include <vector>

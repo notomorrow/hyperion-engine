@@ -170,7 +170,12 @@ void LibDataChannelRTCServer::SendToSignallingServer(const ByteBuffer &bytes)
 
     Memory::MemCpy(bin.data(), bytes.Data(), bytes.Size());
 
-    m_websocket->send(std::move(bin));
+    if (!m_websocket->send(std::move(bin))) {
+        m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
+            Optional<ByteBuffer>(),
+            Optional<RTCServerError>(RTCServerError { "Message could not be sent" })
+        });
+    }
 #else
     DebugLog(LogType::Error, "LibDataChannelRTCServer::SendToSignallingServer() called, but HYP_LIBDATACHANNEL is not defined!");
 #endif

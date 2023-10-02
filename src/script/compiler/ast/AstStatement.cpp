@@ -2,7 +2,7 @@
 
 namespace hyperion::compiler {
 
-const std::string AstStatement::unnamed = "<unnamed>";
+const String AstStatement::unnamed = "<unnamed>";
 
 AstStatement::AstStatement(const SourceLocation &location)
     : m_location(location)

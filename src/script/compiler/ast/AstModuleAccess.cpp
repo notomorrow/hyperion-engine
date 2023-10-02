@@ -11,15 +11,16 @@
 
 namespace hyperion::compiler {
 
-AstModuleAccess::AstModuleAccess(const std::string &target,
+AstModuleAccess::AstModuleAccess(
+    const String &target,
     const RC<AstExpression> &expr,
-    const SourceLocation &location)
-    : AstExpression(location, ACCESS_MODE_LOAD | ACCESS_MODE_STORE),
-      m_target(target),
-      m_expr(expr),
-      m_mod_access(nullptr),
-      m_is_chained(false),
-      m_looked_up(false)
+    const SourceLocation &location
+) : AstExpression(location, ACCESS_MODE_LOAD | ACCESS_MODE_STORE),
+    m_target(target),
+    m_expr(expr),
+    m_mod_access(nullptr),
+    m_is_chained(false),
+    m_looked_up(false)
 {
 }
 

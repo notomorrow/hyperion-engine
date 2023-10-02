@@ -2,13 +2,14 @@
 #define AST_MODULE_PROPERTY_HPP
 
 #include <script/compiler/ast/AstIdentifier.hpp>
+#include <core/lib/String.hpp>
 
 namespace hyperion::compiler {
 
 class AstModuleProperty : public AstExpression {
 public:
     AstModuleProperty(
-      const std::string &field_name,
+      const String &field_name,
       const SourceLocation &location
     );
     virtual ~AstModuleProperty() = default;
@@ -24,11 +25,11 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override;
 
 protected:
-    std::string m_field_name;
+    String              m_field_name;
 
     // set while analyzing
-    SymbolTypePtr_t m_expr_type;
-    RC<AstExpression> m_expr_value;
+    SymbolTypePtr_t     m_expr_type;
+    RC<AstExpression>   m_expr_value;
 
     RC<AstModuleProperty> CloneImpl() const
     {

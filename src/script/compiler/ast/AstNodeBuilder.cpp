@@ -6,32 +6,32 @@
 
 namespace hyperion::compiler {
 
-ModuleBuilder AstNodeBuilder::Module(const std::string &name)
+ModuleBuilder AstNodeBuilder::Module(const String &name)
 {
     return ModuleBuilder(name);
 }
 
 ModuleBuilder::ModuleBuilder(
-    const std::string &name
+    const String &name
 ) : m_name(name),
     m_parent(nullptr)
 {
 }
 
 ModuleBuilder::ModuleBuilder(
-    const std::string &name,
+    const String &name,
     ModuleBuilder *parent
 ) : m_name(name),
     m_parent(parent)
 {
 }
 
-ModuleBuilder ModuleBuilder::Module(const std::string &name)
+ModuleBuilder ModuleBuilder::Module(const String &name)
 {
     return ModuleBuilder(name, this);
 }
 
-FunctionBuilder ModuleBuilder::Function(const std::string &name)
+FunctionBuilder ModuleBuilder::Function(const String &name)
 {
     return FunctionBuilder(name, this);
 }
@@ -55,14 +55,14 @@ RC<AstModuleAccess> ModuleBuilder::Build(const RC<AstExpression> &expr)
 
 
 FunctionBuilder::FunctionBuilder(
-    const std::string &name
+    const String &name
 ) : m_name(name),
     m_parent(nullptr)
 {
 }
 
 FunctionBuilder::FunctionBuilder(
-    const std::string &name,
+    const String &name,
     ModuleBuilder *parent
 ) : m_name(name),
     m_parent(parent)

@@ -26,7 +26,7 @@
 namespace hyperion::compiler {
 
 AstMemberCallExpression::AstMemberCallExpression(
-    const std::string &field_name,
+    const String &field_name,
     const RC<AstExpression> &target,
     const RC<AstArgumentList> &arguments,
     const SourceLocation &location
@@ -49,7 +49,7 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         self_target,
         false,
         true,
-        Keyword::ToString(Keywords::Keyword_self),
+        Keyword::ToString(Keywords::Keyword_self).Get(),
         self_target->GetLocation()
     ));
 
@@ -169,7 +169,7 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     // now we load the member into the register, we call that
     if (m_target_type == BuiltinTypes::ANY) {
         // for Any type we will have to load from hash
-        const uint32_t hash = hash_fnv_1(m_field_name.c_str());
+        const UInt32 hash = hash_fnv_1(m_field_name.Data());
 
         chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, hash));
     } else {

@@ -15,7 +15,7 @@
 namespace hyperion::compiler {
 
 AstFileImport::AstFileImport(
-    const std::string &path,
+    const String &path,
     const SourceLocation &location)
     : AstImport(location),
       m_path(path)
@@ -33,12 +33,12 @@ void AstFileImport::Visit(AstVisitor *visitor, Module *mod)
     }
 
     // create relative path
-    std::string filepath = dir + m_path;
+    String filepath = String(dir.c_str()) + m_path;
 
     AstImport::PerformImport(
         visitor,
         mod,
-        filepath.c_str()
+        filepath
     );
 }
 

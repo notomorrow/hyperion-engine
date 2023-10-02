@@ -5,7 +5,7 @@
 namespace hyperion::compiler {
 
 AstDeclaration::AstDeclaration(
-    const std::string &name,
+    const String &name,
     const SourceLocation &location
 ) : AstStatement(location),
     m_name(name),
@@ -62,7 +62,7 @@ void AstDeclaration::Visit(AstVisitor *visitor, Module *mod)
     }
 }
 
-const std::string &AstDeclaration::GetName() const
+const String &AstDeclaration::GetName() const
 {
     return m_name;
 }

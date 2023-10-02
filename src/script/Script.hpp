@@ -215,8 +215,8 @@ public:
         const auto class_name_it = m_api_instance.class_bindings.class_names.Find<RegisteredType>();
         AssertThrowMsg(class_name_it != m_api_instance.class_bindings.class_names.End(), "Class not registered!");
 
-        const auto prototype_it = m_api_instance.class_bindings.class_prototypes.find(class_name_it->second);
-        AssertThrowMsg(prototype_it != m_api_instance.class_bindings.class_prototypes.end(), "Class not registered!");
+        const auto prototype_it = m_api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
+        AssertThrowMsg(prototype_it != m_api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
 
         vm::Value intern_value;
         {
@@ -228,7 +228,7 @@ public:
             intern_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
         }
 
-        vm::VMObject boxed_value(prototype_it->second);
+        vm::VMObject boxed_value(prototype_it->value);
         HYP_SCRIPT_SET_MEMBER(boxed_value, "__intern", intern_value);
 
         vm::Value final_value;
