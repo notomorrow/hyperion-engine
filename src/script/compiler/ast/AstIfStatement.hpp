@@ -24,9 +24,9 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    RC<AstExpression> m_conditional;
-    RC<AstBlock> m_block;
-    RC<AstBlock> m_else_block;
+    RC<AstExpression>   m_conditional;
+    RC<AstBlock>        m_block;
+    RC<AstBlock>        m_else_block;
 
     RC<AstIfStatement> CloneImpl() const
     {

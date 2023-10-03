@@ -65,10 +65,10 @@ namespace sdk {
 
 struct Params
 {
-    APIInstance &api_instance;
-    vm::InstructionHandler *handler;
-    vm::Value **args;
-    Int32 nargs;
+    APIInstance             &api_instance;
+    vm::InstructionHandler  *handler;
+    vm::Value               **args;
+    Int32                   nargs;
 };
 
 } // namespace sdk
@@ -298,6 +298,17 @@ struct Value
         }
 
         return false;
+    }
+    
+    HYP_FORCE_INLINE bool GetPointer(HeapValue **out) const
+    {
+        if (m_type != HEAP_POINTER) {
+            return false;
+        }
+        
+        *out = m_value.ptr;
+
+        return true;
     }
 
     template <class T>

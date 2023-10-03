@@ -501,6 +501,7 @@ HYP_SCRIPT_FUNCTION(ScriptBindings::Free)
     }
 }
 
+
 static HYP_SCRIPT_FUNCTION(VM_ReadStackVar)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
@@ -529,11 +530,11 @@ static HYP_SCRIPT_FUNCTION(Runtime_MakeStruct)
         HYP_SCRIPT_RETURN_VOID(nullptr);
     }
 
-    Array<vm::VMStructMember> members;
-    members.Resize(arguments_ptr->GetSize());
+    VMStructDefinition struct_definition;
+    struct_definition.members.Resize(arguments_ptr->GetSize());
 
     for (Int32 index = 0; index < arguments_ptr->GetSize(); index++) {
-        vm::VMStructMember &member = members[index];
+        Pair<String, Value> &member = struct_definition.members[index];
 
         vm::VMArray *item_array = nullptr;
         vm::VMString *item_type_str = nullptr;
@@ -562,95 +563,97 @@ static HYP_SCRIPT_FUNCTION(Runtime_MakeStruct)
             goto invalid_array;
         }
 
+        member.first = item_name_str->GetString();
         default_value = item_array->AtIndex(2);
 
         // Lookup a type based on the name
         if ((*item_type_str) == "i8") {
             member_type = vm::VM_STRUCT_TYPE_I8;
 
-            default_value.GetInteger(&data.i64);
-            data.i8 = static_cast<Int8>(data.i64);
+            if (!default_value.GetInteger(&data.i64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::I8, { .i8 = static_cast<Int8>(data.i64) });
         } else if ((*item_type_str) == "u8") {
             member_type = vm::VM_STRUCT_TYPE_U8;
 
-            default_value.GetUnsigned(&data.u64);
-            data.u8 = static_cast<UInt8>(data.u64);
+            if (!default_value.GetUnsigned(&data.u64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::U8, { .u8 = static_cast<UInt8>(data.u64) });
         } else if ((*item_type_str) == "i16") {
             member_type = vm::VM_STRUCT_TYPE_I16;
 
-            default_value.GetInteger(&data.i64);
-            data.i16 = static_cast<Int8>(data.i64);
+            if (!default_value.GetInteger(&data.i64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::I16, { .i16 = static_cast<Int16>(data.i64) });
         } else if ((*item_type_str) == "u16") {
             member_type = vm::VM_STRUCT_TYPE_U16;
 
-            default_value.GetUnsigned(&data.u64);
-            data.u16 = static_cast<UInt16>(data.u64);
+            if (!default_value.GetUnsigned(&data.u64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::U16, { .u16 = static_cast<UInt16>(data.u64) });
         } else if ((*item_type_str) == "i32") {
             member_type = vm::VM_STRUCT_TYPE_I32;
 
-            default_value.GetInteger(&data.i64);
-            data.i32 = static_cast<Int8>(data.i64);
+            if (!default_value.GetInteger(&data.i64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::I32, { .i32 = static_cast<Int32>(data.i64) });
         } else if ((*item_type_str) == "u32") {
             member_type = vm::VM_STRUCT_TYPE_U32;
 
-            default_value.GetUnsigned(&data.u64);
-            data.u32 = static_cast<UInt32>(data.u64);
+            if (!default_value.GetUnsigned(&data.u64)) {
+                goto invalid_member_type_given;
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::U32, { .u32 = static_cast<UInt32>(data.u64) });
         } else if ((*item_type_str) == "i64") {
             member_type = vm::VM_STRUCT_TYPE_I64;
 
-            default_value.GetInteger(&data.i64);
-            members[index].data_buffer.Set(data);
+            if (!default_value.GetInteger(&data.i64)) {
+                goto invalid_member_type_given;
+            }
+
+            member.second = Value(Value::ValueType::I64, { .i64 = static_cast<Int32>(data.i64) });
         } else if ((*item_type_str) == "u64") {
             member_type = vm::VM_STRUCT_TYPE_U64;
 
-            default_value.GetUnsigned(&data.u64);
-            members[index].data_buffer.Set(data);
+            if (!default_value.GetUnsigned(&data.u64)) {
+                goto invalid_member_type_given;    
+            }
+
+            member.second = Value(Value::ValueType::U64, { .u64 = static_cast<UInt32>(data.u64) });
         } else if ((*item_type_str) == "f32") {
             member_type = vm::VM_STRUCT_TYPE_F32;
 
-            default_value.GetFloatingPoint(&data.d);
-            data.f = static_cast<Float32>(data.d);
+            if (!default_value.GetFloatingPointCoerce(&data.d)) {
+                goto invalid_member_type_given;  
+            }
 
-            members[index].data_buffer.Set(data);
+            member.second = Value(Value::ValueType::F32, { .f = static_cast<Float32>(data.d) });
         } else if ((*item_type_str) == "f64") {
             member_type = vm::VM_STRUCT_TYPE_F64;
 
-            default_value.GetFloatingPoint(&data.d);
-            members[index].data_buffer.Set(data);
-        } else if ((*item_type_str) == "string") {
-            member_type = vm::VM_STRUCT_TYPE_STRING;
-
-            if (default_value.GetPointer<vm::VMString>(&value_str)) {
-                members[index].data_buffer.Set(ByteBuffer(value_str->GetLength(), value_str->GetData()));
-            } else {
-                members[index].data_buffer.Set(ByteBuffer(0, nullptr));
+            if (!default_value.GetFloatingPointCoerce(&data.d)) {
+                goto invalid_member_type_given;  
             }
-        } else if ((*item_type_str) == "struct") {
-            member_type = vm::VM_STRUCT_TYPE_STRUCT;
 
-            if (default_value.GetPointer<vm::VMStruct>(&value_struct)) {
-                members[index].data_buffer.Set(value_struct->GetStructMemory());
-            } else {
-                members[index].data_buffer.Set(ByteBuffer(0, nullptr));
-            }
+            member.second = Value(Value::ValueType::F64, { .d = static_cast<Float64>(data.d) });
+        } else if ((*item_type_str) == "object" || (*item_type_str) == "string") {
+            member_type = vm::VM_STRUCT_TYPE_DYNAMIC;
+
+            member.second = default_value;
         } else {
             goto invalid_member_type_given;
         }
-
-        members[index].type = member_type;
-        members[index].name = ANSIString(item_name_str->GetData());
 
         continue;
 
@@ -664,26 +667,18 @@ invalid_array:
 
         HYP_SCRIPT_RETURN_VOID(nullptr);
     }
+    
+    // create heap value for string
+    vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
+    AssertThrow(ptr != nullptr);
 
-    vm::VMStruct struct_object;
+    ptr->Assign(VMStruct::MakeStruct(struct_definition));
+    ptr->Mark();
 
-    if (vm::VMStruct::Make(members, struct_object)) {
-        // create heap value for string
-        vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
-        AssertThrow(ptr != nullptr);
-
-        ptr->Assign(std::move(struct_object));
-        ptr->Mark();
-
-        HYP_SCRIPT_RETURN_PTR(ptr);
-    } else {
-        params.handler->state->ThrowException(params.handler->thread, vm::Exception("Invalid struct object; could not create the struct."));
-
-        HYP_SCRIPT_RETURN_VOID(nullptr);
-    }
+    HYP_SCRIPT_RETURN_PTR(ptr);
 }
 
-static HYP_SCRIPT_FUNCTION(Runtime_ReadStructMember)
+static HYP_SCRIPT_FUNCTION(Runtime_GetStructMember)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 2);
 
@@ -692,104 +687,25 @@ static HYP_SCRIPT_FUNCTION(Runtime_ReadStructMember)
 
     if (!struct_ptr || !member_name_ptr) {
         HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
-        HYP_SCRIPT_RETURN_VOID(nullptr);
     }
 
-    vm::VMStructView struct_view;
-    
-    if (!struct_ptr->Decompose(struct_ptr->GetStructMemory(), struct_view)) {
-        HYP_BREAKPOINT;
-        params.handler->state->ThrowException(params.handler->thread, vm::Exception("Invalid struct object; could not decompose the struct memory."));
+    HYP_SCRIPT_RETURN(struct_ptr->ReadMember(member_name_ptr->GetData()));
+}
 
-        HYP_SCRIPT_RETURN_VOID(nullptr);
+static HYP_SCRIPT_FUNCTION(Runtime_SetStructMember)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 3);
+
+    vm::VMStruct *struct_ptr = GetArgument<0, vm::VMStruct *>(params);
+    vm::VMString *member_name_ptr = GetArgument<1, vm::VMString *>(params);
+    vm::Value *value_ptr = params.args[2];
+
+    if (!struct_ptr || !member_name_ptr) {
+        HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
     }
 
-    const auto it = struct_view.members.FindIf([member_name_ptr](const vm::VMStructMemberView &item) {
-        if (Memory::StrCmp(reinterpret_cast<const char *>(item.name_view.ptr), member_name_ptr->GetData(), item.name_view.size) == 0) {
-            return true;
-        }
 
-        return false;
-    });
-
-    if (it == struct_view.members.End()) {
-        HYP_SCRIPT_RETURN_NULL();
-    }
-
-    vm::Value value = vm::Value(vm::Value::NONE, { .ptr = nullptr });
-
-    if (it->type < vm::VM_STRUCT_TYPE_DYNAMIC) {
-        if (vm::Value::ValueData *value_data = it->data_view.TryGet<vm::Value::ValueData>()) {
-            value.m_value = *value_data;
-
-            switch (it->type) {
-            case VM_STRUCT_TYPE_I8:
-                value.m_type = vm::Value::I8;
-                break;
-            case VM_STRUCT_TYPE_U8:
-                value.m_type = vm::Value::U8;
-                break;
-            case VM_STRUCT_TYPE_I16:
-                value.m_type = vm::Value::I16;
-                break;
-            case VM_STRUCT_TYPE_U16:
-                value.m_type = vm::Value::U16;
-                break;
-            case VM_STRUCT_TYPE_I32:
-                value.m_type = vm::Value::I32;
-                break;
-            case VM_STRUCT_TYPE_U32:
-                value.m_type = vm::Value::U32;
-                break;
-            case VM_STRUCT_TYPE_I64:
-                value.m_type = vm::Value::I64;
-                break;
-            case VM_STRUCT_TYPE_U64:
-                value.m_type = vm::Value::U64;
-                break;
-            case VM_STRUCT_TYPE_F32:
-                value.m_type = vm::Value::F32;
-                break;
-            case VM_STRUCT_TYPE_F64:
-                value.m_type = vm::Value::F64;
-                break;
-            default:
-                AssertThrowMsg(false, "Not implemented");
-                break;
-            }
-
-            HYP_SCRIPT_RETURN(value);
-        }
-    } else {
-        if (vm::VMStructMemoryView *value_memory = it->data_view.TryGet<vm::VMStructMemoryView>()) {
-            // create heap value for struct or string
-            vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
-            AssertThrow(ptr != nullptr);
-
-            switch (it->type) {
-            case VM_STRUCT_TYPE_STRING:
-                ptr->Assign(vm::VMString(reinterpret_cast<const char *>(value_memory->ptr), value_memory->size));
-
-                break;
-            case VM_STRUCT_TYPE_STRUCT:
-                ptr->Assign(vm::VMStruct(*value_memory));
-
-                break;
-            
-            default:
-                AssertThrowMsg(false, "Not implemented");
-                break;
-            }
-
-            ptr->Mark();
-
-            HYP_SCRIPT_RETURN_PTR(ptr);
-        }
-    }
-
-    params.handler->state->ThrowException(params.handler->thread, vm::Exception("Invalid struct object; could not construct a valid value for the struct member."));
-
-    HYP_SCRIPT_RETURN_VOID(nullptr);
+    HYP_SCRIPT_RETURN_BOOLEAN(struct_ptr->WriteMember(member_name_ptr->GetData(), value_ptr != nullptr ? *value_ptr : Value(Value::ValueType::HEAP_POINTER, { .ptr = nullptr })));
 }
 
 static HYP_SCRIPT_FUNCTION(Runtime_GetStructMemoryBuffer)
@@ -806,7 +722,7 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetStructMemoryBuffer)
     vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
 
     AssertThrow(ptr != nullptr);
-    ptr->Assign(vm::VMMemoryBuffer(struct_ptr->GetStructMemory()));
+    ptr->Assign(vm::VMMemoryBuffer(struct_ptr->GetMemory()));
 
     vm::Value res;
     // assign register value to the allocated object
@@ -840,6 +756,34 @@ static HYP_SCRIPT_FUNCTION(Runtime_HasMember)
     }
 }
 
+static HYP_SCRIPT_FUNCTION(Runtime_GetMember)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 2);
+
+    vm::Value *arg0 = params.args[0];
+    VMString *str = GetArgument<1, VMString *>(params);
+
+    if (!arg0 || !str) {
+        HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
+    }
+    
+    vm::VMObject *object_ptr;
+
+    if (arg0->GetPointer<vm::VMObject>(&object_ptr)) {
+        const HashFNV1 hash = hash_fnv_1(str->GetData());
+        
+        Member *member = object_ptr->LookupMemberFromHash(hash);
+
+        if (member == nullptr) {
+            HYP_SCRIPT_RETURN_NULL();
+        } else {
+            HYP_SCRIPT_RETURN(member->value);
+        }
+    } else {
+        HYP_SCRIPT_THROW(vm::Exception("Not an object"));
+    }
+}
+
 static HYP_SCRIPT_FUNCTION(Runtime_GetMembers)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 1);
@@ -863,6 +807,37 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetMembers)
 
         HYP_SCRIPT_CREATE_PTR(ary, ptr);
         HYP_SCRIPT_RETURN(ptr);
+    } else {
+        HYP_SCRIPT_THROW(vm::Exception("Not an object"));
+    }
+}
+
+static HYP_SCRIPT_FUNCTION(Runtime_SetMember)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 3);
+
+    vm::Value *arg0 = params.args[0];
+    VMString *member_name_str_ptr = GetArgument<1, VMString *>(params);
+    vm::Value *member_value_ptr = params.args[2];
+
+    if (!arg0 || !member_name_str_ptr) {
+        HYP_SCRIPT_THROW(vm::Exception::NullReferenceException());
+    }
+    
+    vm::VMObject *object_ptr;
+
+    if (arg0->GetPointer<vm::VMObject>(&object_ptr)) {
+        if (member_value_ptr) {
+            object_ptr->SetMember(
+                member_name_str_ptr->GetData(),
+                *member_value_ptr
+            );
+        } else {
+            object_ptr->SetMember(
+                member_name_str_ptr->GetData(),
+                vm::Value(vm::Value::ValueType::HEAP_POINTER, { .ptr = nullptr })
+            );
+        }
     } else {
         HYP_SCRIPT_THROW(vm::Exception("Not an object"));
     }
@@ -998,11 +973,11 @@ static HYP_SCRIPT_FUNCTION(Runtime_WriteFileData)
     if (target_ptr->GetType() == Value::ValueType::HEAP_POINTER) {
         union
         {
-            VMString *str_ptr;
-            VMArray *array_ptr;
-            VMMemoryBuffer *memory_buffer_ptr;
-            VMObject *obj_ptr;
-            VMStruct *struct_ptr;
+            VMString        *str_ptr;
+            VMArray         *array_ptr;
+            VMMemoryBuffer  *memory_buffer_ptr;
+            VMObject        *obj_ptr;
+            VMStruct        *struct_ptr;
         } data;
 
         if (target_ptr->GetValue().ptr == nullptr) {
@@ -1015,7 +990,7 @@ static HYP_SCRIPT_FUNCTION(Runtime_WriteFileData)
         } else if ((data.memory_buffer_ptr = target_ptr->GetValue().ptr->GetPointer<VMMemoryBuffer>()) != nullptr) {
             fwrite(data.memory_buffer_ptr->GetBuffer(), 1, data.memory_buffer_ptr->GetSize(), fptr);
         } else if ((data.struct_ptr = target_ptr->GetValue().ptr->GetPointer<VMStruct>()) != nullptr) {
-            fwrite(data.struct_ptr->GetStructMemory().Data(), 1, data.struct_ptr->GetStructMemory().Size(), fptr);
+            fwrite(data.struct_ptr->GetMemory().Data(), 1, data.struct_ptr->GetMemory().Size(), fptr);
         } else {
             params.handler->state->ThrowException(params.handler->thread, e);
         }
@@ -1067,7 +1042,7 @@ static HYP_SCRIPT_FUNCTION(Runtime_ToMemoryBuffer)
 
     vm::Value *target_ptr = params.args[0];
 
-    const int buffer_size = 256;
+    constexpr int buffer_size = 256;
     char buffer[buffer_size];
     std::snprintf(
         buffer,
@@ -1104,7 +1079,7 @@ static HYP_SCRIPT_FUNCTION(Runtime_ToMemoryBuffer)
         } else if ((data.memory_buffer_ptr = target_ptr->GetValue().ptr->GetPointer<VMMemoryBuffer>()) != nullptr) {
             byte_writer.Write(data.memory_buffer_ptr->GetBuffer(), data.memory_buffer_ptr->GetSize());
         } else if ((data.struct_ptr = target_ptr->GetValue().ptr->GetPointer<VMStruct>()) != nullptr) {
-            byte_writer.Write(data.struct_ptr->GetStructMemory().Data(), data.struct_ptr->GetStructMemory().Size());
+            byte_writer.Write(data.struct_ptr->GetMemory().Data(), data.struct_ptr->GetMemory().Size());
         } else {
             params.handler->state->ThrowException(params.handler->thread, e);
         }
@@ -1412,8 +1387,7 @@ static HYP_SCRIPT_FUNCTION(LoadModule)
 
         HYP_SCRIPT_THROW(vm::Exception("Module not found"));
     }
-
-    // TODO: Use hash code other than source path.
+    
     const UInt32 hash_code = UInt32(path.GetHashCode().Value());
 
     RC<DynModule> dyn_module;
@@ -1636,7 +1610,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             Runtime_MakeStruct
         )
         .Function(
-            "ReadStructMember",
+            "GetStructMember",
             BuiltinTypes::ANY,
             {
                 {
@@ -1648,7 +1622,26 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                     BuiltinTypes::STRING
                 }
             },
-            Runtime_ReadStructMember
+            Runtime_GetStructMember
+        )
+        .Function(
+            "SetStructMember",
+            BuiltinTypes::BOOLEAN,
+            {
+                {
+                    "struct",
+                    BuiltinTypes::ANY
+                },
+                {
+                    "member_name",
+                    BuiltinTypes::STRING
+                },
+                {
+                    "value",
+                    BuiltinTypes::ANY
+                }
+            },
+            Runtime_SetStructMember
         )
         .Function(
             "GetStructMemoryBuffer",
@@ -1757,6 +1750,25 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                 { "member_name", BuiltinTypes::STRING }
             },
             Runtime_HasMember
+        )
+        .Function(
+            "GetMember",
+            BuiltinTypes::ANY,
+            {
+                { "object", BuiltinTypes::ANY },
+                { "member_name", BuiltinTypes::STRING }
+            },
+            Runtime_GetMember
+        )
+        .Function(
+            "SetMember",
+            BuiltinTypes::VOID_TYPE,
+            {
+                { "object", BuiltinTypes::ANY },
+                { "member_name", BuiltinTypes::STRING },
+                { "value", BuiltinTypes::ANY }
+            },
+            Runtime_SetMember
         )
         .Function(
             "GetMembers",

@@ -98,29 +98,29 @@ int Value::CompareAsPointers(
 void Value::Mark()
 {
     switch (m_type) {
-        case Value::VALUE_REF:
-            AssertThrow(m_value.value_ref != nullptr);
+    case Value::VALUE_REF:
+        AssertThrow(m_value.value_ref != nullptr);
 
-            if (m_value.value_ref != this) {
-                m_value.value_ref->Mark();
-            }
-
-            break;
-        
-        case Value::HEAP_POINTER: {
-            HeapValue *ptr = m_value.ptr;
-            
-            if (ptr != nullptr) {
-                AssertThrowMsg(!(ptr->GetFlags() & GC_DESTROYED), "VM heap corruption! VMObject had flag GC_DESTROYED in Mark()");
-
-                if (!(ptr->GetFlags() & GC_ALIVE)) {
-                    ptr->Mark();
-                }
-            }
+        if (m_value.value_ref != this) {
+            m_value.value_ref->Mark();
         }
 
-        default:
-            break;
+        break;
+    
+    case Value::HEAP_POINTER: {
+        HeapValue *ptr = m_value.ptr;
+        
+        if (ptr != nullptr) {
+            AssertThrowMsg(!(ptr->GetFlags() & GC_DESTROYED), "VM heap corruption! VMObject had flag GC_DESTROYED in Mark()");
+
+            if (!(ptr->GetFlags() & GC_ALIVE)) {
+                ptr->Mark();
+            }
+        }
+    }
+
+    default:
+        break;
     }
 }
 

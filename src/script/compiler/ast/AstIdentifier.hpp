@@ -16,31 +16,46 @@ class AstTypeObject;
 
 struct AstIdentifierProperties
 {
-    RC<Identifier> m_identifier = nullptr;
+    RC<Identifier>  m_identifier = nullptr;
 
-    IdentifierType m_identifier_type = IDENTIFIER_TYPE_UNKNOWN;
+    IdentifierType  m_identifier_type = IDENTIFIER_TYPE_UNKNOWN;
 
-    bool m_is_in_function = false;
-    bool m_is_in_pure_function = false;
+    Bool            m_is_in_function = false;
+    Bool            m_is_in_pure_function = false;
 
-    int m_depth = 0;
-    Scope *m_function_scope = nullptr;
+    Int             m_depth = 0;
+    Scope           *m_function_scope = nullptr;
 
     // if the found identifier was a type...
     SymbolTypePtr_t m_found_type = nullptr;
 
     // getters & setters
-    RC<Identifier> &GetIdentifier() { return m_identifier; }
-    const RC<Identifier> &GetIdentifier() const { return m_identifier; }
-    void SetIdentifier(const RC<Identifier> &identifier) { m_identifier = identifier; }
+    RC<Identifier> &GetIdentifier()
+        { return m_identifier; }
 
-    IdentifierType GetIdentifierType() const { return m_identifier_type; }
-    void SetIdentifierType(IdentifierType identifier_type) { m_identifier_type = identifier_type; }
+    const RC<Identifier> &GetIdentifier() const
+        { return m_identifier; }
 
-    bool IsInFunction() const { return m_is_in_function; }
-    bool IsInPureFunction() const { return m_is_in_pure_function; }
-    int GetDepth() const { return m_depth; }
-    Scope *GetFunctionScope() const { return m_function_scope; }
+    void SetIdentifier(const RC<Identifier> &identifier)
+        { m_identifier = identifier; }
+
+    IdentifierType GetIdentifierType() const
+        { return m_identifier_type; }
+
+    void SetIdentifierType(IdentifierType identifier_type)
+        { m_identifier_type = identifier_type; }
+
+    Bool IsInFunction() const
+        { return m_is_in_function; }
+
+    Bool IsInPureFunction() const
+        { return m_is_in_pure_function; }
+
+    Int GetDepth() const
+        { return m_depth; }
+
+    Scope *GetFunctionScope() const
+        { return m_function_scope; }
 };
 
 class AstIdentifier : public AstExpression
@@ -51,7 +66,7 @@ public:
         const SourceLocation &location
     );
 
-    virtual ~AstIdentifier() = default;
+    virtual ~AstIdentifier() override = default;
 
     void PerformLookup(AstVisitor *visitor, Module *mod);
     void CheckInFunction(AstVisitor *visitor, Module *mod);
@@ -79,11 +94,11 @@ public:
     const AstTypeObject *ExtractTypeObject() const;
 
 protected:
-    String m_name;
+    String                  m_name;
     
     AstIdentifierProperties m_properties;
 
-    int GetStackOffset(int stack_size) const;
+    Int GetStackOffset(Int stack_size) const;
 };
 
 } // namespace hyperion::compiler

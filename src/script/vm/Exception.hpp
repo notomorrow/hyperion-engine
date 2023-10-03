@@ -11,6 +11,9 @@ class Exception
 public:
     Exception(const char *str);
     Exception(const Exception &other);
+    Exception &operator=(const Exception &other);
+    Exception(Exception &&other) noexcept;
+    Exception &operator=(Exception &&other) noexcept;
     ~Exception();
 
     const char *ToString() const { return m_str; }

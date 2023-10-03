@@ -77,7 +77,8 @@ std::unique_ptr<Buildable> AstObject::Build(AstVisitor *visitor, Module *mod)
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
     // for each data member, load the default value
-    int i = 0;
+    Int i = 0;
+
     for (const auto &mem : sp->GetMembers()) {
         const SymbolTypePtr_t &mem_type = std::get<1>(mem);
         AssertThrow(mem_type != nullptr);
@@ -101,8 +102,8 @@ std::unique_ptr<Buildable> AstObject::Build(AstVisitor *visitor, Module *mod)
         // set obj_reg for future data members
         obj_reg = rp;
 
-        int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-        int diff = stack_size - obj_stack_loc;
+        Int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        Int diff = stack_size - obj_stack_loc;
         AssertThrow(diff == 1);
 
         { // load type from stack

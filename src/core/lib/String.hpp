@@ -144,6 +144,7 @@ public:
 
     [[nodiscard]] bool Contains(const T &ch) const { return ch != T{0} && Base::Contains(ch); }
     [[nodiscard]] bool Contains(const DynString &str) const { return FindIndex(str) != not_found; }
+
     [[nodiscard]] SizeType FindIndex(const DynString &str) const;
 
     [[nodiscard]] bool Empty() const { return Size() == 0; }
@@ -370,18 +371,7 @@ DynString<T, IsUtf8>::DynString(const T *str)
     if (str == nullptr) {
         return;
     }
-
-#ifdef HYP_DEBUG_MODE
-    {
-        const T *current = str;
-
-        while (*current) {
-            AssertThrowMsg(*current >= 0 && *current <= 255, "Out of character range");
-            ++current;
-        }
-    }
-#endif
-
+    
     int count;
     int len = utf::utf_strlen<T, IsUtf8>(str, &count);
 
@@ -416,20 +406,6 @@ DynString<T, IsUtf8>::DynString(const T *str, Int max_len)
     if (str == nullptr) {
         return;
     }
-
-#ifdef HYP_DEBUG_MODE
-    {
-        Int i = 0;
-        const T *current = str;
-
-        while (*current && i < max_len) {
-            AssertThrowMsg(*current >= 0 && *current <= 255, "Out of character range");
-
-            ++current;
-            ++i;
-        }
-    }
-#endif
 
     int count;
     int len = MathUtil::Min(utf::utf_strlen<T, IsUtf8>(str, &count), max_len);

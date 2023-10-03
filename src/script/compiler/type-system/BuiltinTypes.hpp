@@ -8,7 +8,8 @@ namespace hyperion::compiler {
 class SymbolType;
 using SymbolTypePtr_t = std::shared_ptr<SymbolType>;
 
-struct BuiltinTypes {
+struct BuiltinTypes
+{
     static const SymbolTypePtr_t PRIMITIVE_TYPE;
     static const SymbolTypePtr_t TRAIT_TYPE;
     static const SymbolTypePtr_t UNDEFINED;

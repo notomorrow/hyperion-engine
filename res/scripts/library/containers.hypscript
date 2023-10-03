@@ -29,3 +29,12 @@ class Stack<StkType> {
         return ArraySize(self.ary) != 0;
     }
 }
+
+proxy class Struct
+{
+    func Get(self : Struct, name : String) => GetStructMember(self, name);
+    func Set(self : Struct, name : String, value : Any) : Bool => SetStructMember(self, name, value);
+    func ToMemoryBuffer(self : Struct) => GetStructMemoryBuffer(self);
+
+    static Make(self : Class, members : Any[]) : Struct => MakeStruct(members);
+}

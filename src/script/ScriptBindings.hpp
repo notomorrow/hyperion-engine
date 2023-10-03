@@ -19,7 +19,6 @@ public:
     static HYP_SCRIPT_FUNCTION(ArrayPush);
     static HYP_SCRIPT_FUNCTION(ArrayPop);
 
-
     static HYP_SCRIPT_FUNCTION(Puts);
     static HYP_SCRIPT_FUNCTION(ToString);
     static HYP_SCRIPT_FUNCTION(Format);

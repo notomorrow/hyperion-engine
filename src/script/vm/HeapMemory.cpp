@@ -34,12 +34,12 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
 
         {
             union {
-                VMString *str_ptr;
-                VMArray *array_ptr;
-                VMMemoryBuffer *memory_buffer_ptr;
-                VMArraySlice *slice_ptr;
-                VMObject *obj_ptr;
-                VMTypeInfo *type_info_ptr;
+                VMString        *str_ptr;
+                VMArray         *array_ptr;
+                VMMemoryBuffer  *memory_buffer_ptr;
+                VMArraySlice    *slice_ptr;
+                VMObject        *obj_ptr;
+                VMTypeInfo      *type_info_ptr;
             } data;
             
             if (!tmp_head->value.HasValue()) {

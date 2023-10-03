@@ -34,21 +34,21 @@ enum TaskThreadPoolName : UInt
 
 struct TaskBatch
 {
-    AtomicVar<UInt> num_completed;
-    UInt num_enqueued = 0;
+    AtomicVar<UInt>                     num_completed;
+    UInt                                num_enqueued = 0;
 
     /*! \brief The priority / pool lane for which to place
      * all of the threads in this batch into
      */
-    TaskThreadPoolName pool = THREAD_POOL_GENERIC;
+    TaskThreadPoolName                  pool = THREAD_POOL_GENERIC;
 
     /* Number of tasks must remain constant from creation of the TaskBatch,
      * to completion. */
-    Array<TaskThread::Scheduler::Task> tasks;
+    Array<TaskThread::Scheduler::Task>  tasks;
 
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
-    Array<TaskRef> task_refs;
+    Array<TaskRef>                      task_refs;
     
     /*! \brief Add a task to be ran with this batch. Note: adding a task while the batch is already running
      * does not mean the newly added task will be ran! You'll need to re-enqueue the batch after the previous one has been completed.
@@ -87,7 +87,7 @@ class TaskSystem
     
     struct TaskThreadPool
     {
-        AtomicVar<UInt> cycle { 0u };
+        AtomicVar<UInt>                                         cycle { 0u };
         FixedArray<UniquePtr<TaskThread>, num_threads_per_pool> threads;
     };
 
@@ -96,8 +96,8 @@ public:
 
     TaskSystem()
     {
-        ThreadMask mask = THREAD_TASK_0;
-        UInt priority_value = 0;
+        ThreadMask  mask = THREAD_TASK_0;
+        UInt        priority_value = 0;
 
         for (auto &pool : m_pools) {
             for (auto &it : pool.threads) {
@@ -263,11 +263,11 @@ public:
      * @returns A Array<bool> containing for each Task that has been enqueued, whether or not
      * it was successfully dequeued.
      */
-    Array<bool> DequeueBatch(TaskBatch *batch)
+    Array<Bool> DequeueBatch(TaskBatch *batch)
     {
         AssertThrow(batch != nullptr);
 
-        Array<bool> results;
+        Array<Bool> results;
         results.Resize(batch->task_refs.Size());
 
         for (SizeType i = 0; i < batch->task_refs.Size(); i++) {

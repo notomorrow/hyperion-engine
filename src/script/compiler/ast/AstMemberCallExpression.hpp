@@ -15,7 +15,7 @@ public:
         const RC<AstArgumentList> &arguments,
         const SourceLocation &location
     );
-    virtual ~AstMemberCallExpression() = default;
+    virtual ~AstMemberCallExpression() override = default;
     
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;

@@ -933,10 +933,10 @@ void VM::Invoke(
             }
 
             sdk::Params params {
-                .api_instance = m_api_instance,
-                .handler = handler,
-                .args = args,
-                .nargs = nargs
+                .api_instance   = m_api_instance,
+                .handler        = handler,
+                .args           = args,
+                .nargs          = nargs
             };
 
             // disable auto gc so no collections happen during a native function

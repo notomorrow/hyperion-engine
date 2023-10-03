@@ -9,6 +9,7 @@
 namespace hyperion::compiler {
 
 class Identifier;
+
 class AstModuleImportPart : public AstStatement
 {
 public:
@@ -19,11 +20,13 @@ public:
     );
     virtual ~AstModuleImportPart() = default;
 
-    const String &GetLeft() const { return m_left; }
+    const String &GetLeft() const
+        { return m_left; }
+
     const Array<RC<AstModuleImportPart>> &GetParts() const
         { return m_right_parts; }
 
-    void SetPullInModules(bool pull_in_modules)
+    void SetPullInModules(Bool pull_in_modules)
         { m_pull_in_modules = pull_in_modules; }
 
     Array<RC<Identifier>> &GetIdentifiers()

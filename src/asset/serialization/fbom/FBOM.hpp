@@ -80,11 +80,11 @@ struct FBOMStaticData
     } type;
 
 
-    Int64 offset;
+    Int64               offset;
 
-    FBOMObject object_data;
-    FBOMType type_data;
-    Optional<FBOMData> data_data;
+    FBOMObject          object_data;
+    FBOMType            type_data;
+    Optional<FBOMData>  data_data;
 
     bool written;
 

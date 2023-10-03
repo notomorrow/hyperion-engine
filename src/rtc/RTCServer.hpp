@@ -46,7 +46,7 @@ struct RTCServerAddress
 
 struct RTCServerParams
 {
-    RTCServerAddress    address;
+    RTCServerAddress address;
 };
 
 class RTCServer

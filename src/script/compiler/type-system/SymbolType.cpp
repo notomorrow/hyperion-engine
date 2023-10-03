@@ -904,20 +904,6 @@ SymbolTypePtr_t SymbolType::Extend(
     
     return symbol_type;
 }
-
-SymbolTypePtr_t SymbolType::Extend(
-    const SymbolTypePtr_t &base,
-    const Array<SymbolMember_t> &members
-)
-{
-    AssertThrow(base != nullptr);
-
-    return Extend(
-        base->GetName() + " (extended)",
-        base,
-        members
-    );
-}
     
 SymbolTypePtr_t PrototypedObject(
     const String &name,

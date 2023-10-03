@@ -5,10 +5,11 @@
 
 namespace hyperion::compiler {
 
-class AstObject : public AstExpression {
+class AstObject : public AstExpression
+{
 public:
     AstObject(const SymbolTypeWeakPtr_t &symbol_type, const SourceLocation &location);
-    virtual ~AstObject() = default;
+    virtual ~AstObject() override = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;

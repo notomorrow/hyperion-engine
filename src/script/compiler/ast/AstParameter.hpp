@@ -14,16 +14,17 @@ public:
         const String &name,
         const RC<AstPrototypeSpecification> &type_spec,
         const RC<AstExpression> &default_param,
-        bool is_variadic,
-        bool is_const,
-        bool is_ref,
+        Bool is_variadic,
+        Bool is_const,
+        Bool is_ref,
         const SourceLocation &location
     );
 
-    virtual ~AstParameter() = default;
+    virtual ~AstParameter() override = default;
 
     const RC<AstExpression> &GetDefaultValue() const
         { return m_default_param; }
+
     void SetDefaultValue(const RC<AstExpression> &default_param)
         { m_default_param = default_param; }
 
@@ -33,11 +34,11 @@ public:
     
     virtual RC<AstStatement> Clone() const override;
 
-    bool IsVariadic() const { return m_is_variadic; }
-    bool IsConst() const { return m_is_const; }
-    bool IsRef() const { return m_is_ref; }
+    Bool IsVariadic() const { return m_is_variadic; }
+    Bool IsConst() const { return m_is_const; }
+    Bool IsRef() const { return m_is_ref; }
 
-    bool IsGenericParam() const { return m_is_generic_param; }
+    Bool IsGenericParam() const { return m_is_generic_param; }
     void SetIsGenericParam(bool is_generic_param) { m_is_generic_param = is_generic_param; }
 
     // used by AstTemplateExpression
@@ -50,10 +51,10 @@ public:
 private:
     RC<AstPrototypeSpecification> m_type_spec;
     RC<AstExpression> m_default_param;
-    bool m_is_variadic;
-    bool m_is_const;
-    bool m_is_ref;
-    bool m_is_generic_param;
+    Bool m_is_variadic;
+    Bool m_is_const;
+    Bool m_is_ref;
+    Bool m_is_generic_param;
 
     RC<AstParameter> CloneImpl() const
     {

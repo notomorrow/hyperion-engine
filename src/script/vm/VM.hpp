@@ -37,6 +37,8 @@ public:
     VM(APIInstance &api_instance);
     VM(const VM &other) = delete;
     VM &operator=(const VM &other) = delete;
+    VM(VM &&other) noexcept = delete;
+    VM &operator=(VM &&other) noexcept = delete;
     ~VM();
 
     void PushNativeFunctionPtr(NativeFunctionPtr_t ptr);
@@ -65,8 +67,8 @@ private:
     bool HandleException(InstructionHandler *handler);
     void CreateStackTrace(ExecutionThread *thread, StackTrace *out);
 
-    APIInstance &m_api_instance;
-    VMState m_state;
+    APIInstance     &m_api_instance;
+    VMState         m_state;
 };
 
 } // namespace vm

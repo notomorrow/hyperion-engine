@@ -3,12 +3,13 @@
 import core::engine;
 import core::{ AssertEqual, AssertNotEqual };
 import scene::{ EntityProxy, Controller };
+import containers::{ Struct };
 import math;
 import io::File;
 
 // const File2 = io::File;
 // dynamic import
-// const tests = Module.Load("../tests");
+//const tests = Module.Load("../tests");
 
 
 func Expect( cond : Bool ) : Bool
@@ -167,14 +168,22 @@ io::err.WriteLine(12345, flush: true);
 
 // structs
 
-let my_struct = MakeStruct([["i32", "foo", 123]]);
+my_struct := Struct.Make([["i32", "foo", 123]]);
 Print("my_struct = %\n", my_struct);
-Print("my_struct.foo = %\n", ReadStructMember(my_struct, "foo"));
-let my_struct_2 = MakeStruct([["struct", "StructMember", my_struct]]);
-Print("my_struct_2 = %\n", my_struct_2);
-Print("my_struct_2.StructMember = %\n", ReadStructMember(my_struct_2, "StructMember"));
+Print("my_struct.foo = %\n", my_struct.Get("foo"));
 
-AssertEqual(ReadStructMember(my_struct, "foo"), 123);
+let my_struct_2 = Struct.Make([["object", "StructMember", my_struct], ["i64", "num", 0xdeadbeef]]);
+
+Print("my_struct_2 = %\n", my_struct_2.ToMemoryBuffer());
+Print("my_struct_2 Memory Buffer = %\n", my_struct_2);
+Print("my_struct_2.Get('num') == %\n", my_struct_2.Get("num"));
+Expect(my_struct_2.Get("num") == 0xdeadbeef);
+//Print("runtime::GetClass(my_struct_2.Get('num') == %\n", runtime::GetClass(my_struct_2.Get("num")));
+Print("my_struct_2.StructMember = %\n", my_struct_2.Get("StructMember"));
+my_struct_2.Set("StructMember", my_struct_2);
+Expect(my_struct_2.Get("StructMember") == my_struct);
+
+AssertEqual(GetStructMember(my_struct, "foo"), 123);
 
 // test file writing
 
@@ -259,12 +268,12 @@ Expect(test_vector_0.Length() > 0.999);
 
 class ClassWithDefaultGenericArgs< T = Int, U = String >
 {
-    let t: T;
-    let u: U;
+    t: T;
+    u: U;
 };
 
 if (true) {
-    let test = new ClassWithDefaultGenericArgs < >;
+    test := new ClassWithDefaultGenericArgs < >;
     Print("ClassWithDefaultGenericArgs < >%\n", test);
 
     Expect(test.t is Int);
@@ -272,7 +281,7 @@ if (true) {
 }
 
 if (true) {
-    let test = new ClassWithDefaultGenericArgs < Int >;
+    test := new ClassWithDefaultGenericArgs < Int >;
     Print("ClassWithDefaultGenericArgs < Int >%\n", test);
 
     Expect(test.t is Int);
@@ -280,7 +289,7 @@ if (true) {
 }
 
 if (true) {
-    let test = new ClassWithDefaultGenericArgs < String, Int >;
+    test := new ClassWithDefaultGenericArgs < String, Int >;
     Print("ClassWithDefaultGenericArgs < String, Int >%\n", test);
 
     Expect(test.t is String);
@@ -288,7 +297,7 @@ if (true) {
 }
 
 if (true) {
-    let test = new ClassWithDefaultGenericArgs < T : String, U : Int >;
+    test := new ClassWithDefaultGenericArgs < T : String, U : Int >;
     Print("ClassWithDefaultGenericArgs < T : String, U : Int >%\n", test);
 
     Expect(test.t is String);
@@ -296,7 +305,7 @@ if (true) {
 }
 
 if (true) {
-    let test = new ClassWithDefaultGenericArgs < U : String, T : Int >;
+    test := new ClassWithDefaultGenericArgs < U : String, T : Int >;
     Print("ClassWithDefaultGenericArgs < U : String, T : Int >%\n", test);
 
     Expect(test.t is Int);
@@ -323,13 +332,13 @@ class GenericClass<T>
 }
 
 if (true) {
-    let test = new GenericClass<Int>();
+    test := new GenericClass<Int>();
     Expect(test.DoThing(1, 1) is Int);
     Expect(test.DoThing(1, 1) == 2);
 }
 
 if (true) {
-    let test = new GenericClass<Float>();
+    test := new GenericClass<Float>();
     Expect(test.DoThing(1.0, 1.0) is Float);
     Expect(test.DoThing(1.0, 1.0) == 2.0);
 }
@@ -338,9 +347,9 @@ class GenericClass2 <T>
     val : T;
 }
 
-// const pi <T> = 3.141592;
-// Print("π == %\n", pi<Float>);
-// Print("π == %\n", pi<Int>);
+const pi <T> = 3.141592;
+Print("pi as Float == %\n", pi<Float>);
+Print("pi as Int == %\n", pi<Int>);
 
 
 if (true) {
@@ -462,14 +471,14 @@ if (true) {
 }
 
 if (true) {
-    let c = new ClassWithConstructor(int_value: 5);
+    c := new ClassWithConstructor(int_value: 5);
     Expect(c.i == 5);
 
-    let c2 = c.MakeNew(i : 125);//ClassWithConstructor.MakeNew(i : 125);
+    c2 := c.MakeNew(i : 125);//ClassWithConstructor.MakeNew(i : 125);
     Print("Foo : %\n", c2.i);
     Expect(c2.i == 125);
 
-    let c3 = c.MakeNew(i : 129);//ClassWithConstructor.MakeNew(i : 125);
+    c3 := c.MakeNew(i : 129);//ClassWithConstructor.MakeNew(i : 125);
     Print("Foo : %\n", c3.i);
     Expect(c3.i == 129);
 
@@ -478,7 +487,7 @@ if (true) {
     Print("u = %\n", u);
     Print("typeof(u) == %\n", typeof(u));
 
-    let ary : Int[] = [1,2,3,4];
+    ary : Int[] = [1,2,3,4];
     ary[0]++;
     Expect(ary[0] == 2);
 
@@ -512,13 +521,13 @@ class MyObject {
 
     // because we type it with `Function`, we are able to
     // change it to any other `Function` type later
-    let proc : Function = func (self : MyObject, thing : Float) {
+    proc : Function = func (self : MyObject, thing : Float) {
         return self.val + thing;
     };
 
     // this one gets a more specific type and cannot be changed,
     // except to one with the same args
-    let proc2 = func (self : MyObject, thing : Float) {
+    proc2 = func (self : MyObject, thing : Float) {
         return self.val + thing;
     };
 
@@ -570,7 +579,7 @@ if (true) {
     Expect(obj2.proc(5) == 25);
     Expect(obj2.proc != obj1.proc);
 
-    let obj2_proc = obj2.proc;
+    obj2_proc := obj2.proc;
     obj1.proc = obj2_proc;
     Expect(obj1.proc == obj2.proc);
     Expect(obj1.proc(100) == 500);
@@ -587,7 +596,7 @@ if (true) {
 }
 
 class ClassWithToStringOverload <T = Int> {
-    let val : T;
+    val : T;
 
     func ClassWithToStringOverload(self, val : T) {
         self.val = val;

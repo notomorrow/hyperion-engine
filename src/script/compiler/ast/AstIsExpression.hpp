@@ -31,12 +31,12 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override;
 
 protected:
-    RC<AstExpression> m_target;
-    RC<AstPrototypeSpecification> m_type_specification;
+    RC<AstExpression>               m_target;
+    RC<AstPrototypeSpecification>   m_type_specification;
 
-    RC<AstExpression> m_override_expr;
+    RC<AstExpression>               m_override_expr;
 
-    Tribool m_is_type;
+    Tribool                         m_is_type;
 
 private:
     RC<AstIsExpression> CloneImpl() const

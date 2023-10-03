@@ -436,7 +436,7 @@ RC<AstStatement> Parser::ParseStatement(
         res = ParseDirective();
     } else if (Match(TK_OPEN_BRACE, false)) {
         res = ParseBlock();
-    } else if (Match(TK_IDENT, false) && MatchAhead(TK_COLON, 1)) {
+    } else if (Match(TK_IDENT, false) && (MatchAhead(TK_COLON, 1) || MatchAhead(TK_DEFINE, 1))) {
         res = ParseVariableDeclaration();
     } else {
         res = ParseExpression(false);
@@ -515,7 +515,12 @@ RC<AstExpression> Parser::ParseTerm(
     bool override_question_mark
 )
 {
-    Token token = m_token_stream->Peek();
+    Token token = Token::EMPTY;
+
+    // Skip comments, newlines, etc between terms
+    do {
+        token = m_token_stream->Peek();
+    } while (Match(TokenClass::TK_NEWLINE, true));
     
     if (!token) {
         m_compilation_unit->GetErrorList().AddError(CompilerError(
@@ -1667,20 +1672,18 @@ RC<AstPrototypeSpecification> Parser::ParsePrototypeSpecification()
 
 RC<AstExpression> Parser::ParseAssignment()
 {
-    if (MatchOperator("=", true)) {
-        // read assignment expression
-        const SourceLocation expr_location = CurrentLocation();
-
-        if (auto assignment = ParseExpression()) {
-            return assignment;
-        } else {
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
-                LEVEL_ERROR,
-                Msg_illegal_expression,
-                expr_location
-            ));
-        }
+    // read assignment expression
+    const SourceLocation expr_location = CurrentLocation();
+    
+    if (auto assignment = ParseExpression()) {
+        return assignment;
     }
+
+    m_compilation_unit->GetErrorList().AddError(CompilerError(
+        LEVEL_ERROR,
+        Msg_illegal_expression,
+        expr_location
+    ));
 
     return nullptr;
 }
@@ -1764,19 +1767,25 @@ RC<AstVariableDeclaration> Parser::ParseVariableDeclaration(
         RC<AstPrototypeSpecification> proto;
         RC<AstExpression> assignment;
 
+        bool requires_assignment_operator = true;
+
         if (Match(TK_COLON, true)) {
             // read object type
             proto = ParsePrototypeSpecification();
+        } else if (Match(TK_DEFINE, true)) {
+            requires_assignment_operator = false;
         }
 
-        if ((assignment = ParseAssignment())) {
-            if (flags & IdentifierFlags::FLAG_GENERIC) {
-                assignment = RC<AstTemplateExpression>(new AstTemplateExpression(
-                    assignment,
-                    template_expr_params,
-                    proto,
-                    assignment->GetLocation()
-                ));
+        if (!requires_assignment_operator || MatchOperator("=", true)) {
+            if ((assignment = ParseAssignment())) {
+                if (flags & IdentifierFlags::FLAG_GENERIC) {
+                    assignment = RC<AstTemplateExpression>(new AstTemplateExpression(
+                        assignment,
+                        template_expr_params,
+                        proto,
+                        assignment->GetLocation()
+                    ));
+                }
             }
         }
 

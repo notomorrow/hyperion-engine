@@ -17,9 +17,9 @@ namespace vm {
 
 struct Member
 {
-    char name[255];
-    UInt32 hash;
-    Value value;
+    char    name[256];
+    UInt32  hash;
+    Value   value;
 };
 
 class ObjectMap
@@ -34,14 +34,15 @@ public:
     void Push(UInt32 hash, Member *member);
     Member *Get(UInt32 hash);
 
-    SizeType GetSize() const { return m_size; }
+    SizeType GetSize() const
+        { return m_size; }
 
 private:
     struct ObjectBucket
     {
-        Member **m_data;
-        SizeType m_capacity;
-        SizeType m_size;
+        Member      **m_data;
+        SizeType    m_capacity;
+        SizeType    m_size;
 
         ObjectBucket();
         ObjectBucket(const ObjectBucket &other);
@@ -54,8 +55,8 @@ private:
         bool Lookup(UInt32 hash, Member **out);
     };
 
-    ObjectBucket *m_buckets;
-    SizeType m_size;
+    ObjectBucket    *m_buckets;
+    SizeType        m_size;
 };
 
 class VMObject
@@ -74,7 +75,8 @@ public:
     VMObject &operator=(VMObject &&other) noexcept = delete;
 
     // compare by memory address
-    bool operator==(const VMObject &other) const { return this == &other; }
+    bool operator==(const VMObject &other) const
+        { return this == &other; }
 
     Member *LookupMemberFromHash(UInt32 hash, bool deep = true) const;
 
@@ -87,10 +89,16 @@ public:
     const Member &GetMember(SizeType index) const
         { return m_members[index]; }
 
-    ObjectMap *GetObjectMap() const { return m_object_map; }
+    ObjectMap *GetObjectMap() const
+        { return m_object_map; }
 
-    SizeType GetSize() const { return m_object_map->GetSize(); }
-    HeapValue *GetClassPointer() const { return m_class_ptr; }
+    void SetMember(const char *name, const Value &value);
+
+    SizeType GetSize() const
+        { return m_object_map->GetSize(); }
+
+    HeapValue *GetClassPointer() const
+        { return m_class_ptr; }
 
     bool LookupBasePointer(Value &out) const
     {
@@ -112,10 +120,10 @@ public:
     ) const;
 
 private:
-    HeapValue *m_class_ptr;
+    HeapValue   *m_class_ptr;
 
-    ObjectMap *m_object_map;
-    Member *m_members;
+    ObjectMap   *m_object_map;
+    Member      *m_members;
 };
 
 } // namespace vm

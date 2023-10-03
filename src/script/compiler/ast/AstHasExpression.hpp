@@ -16,7 +16,7 @@ public:
         const String &field_name,
         const SourceLocation &location
     );
-    virtual ~AstHasExpression() = default;
+    virtual ~AstHasExpression() override = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -36,8 +36,8 @@ protected:
     Tribool             m_has_member;
     // is it a check if an expression has the member,
     // or is it a check if a type has a member?
-    bool                m_is_expr;
-    bool                m_has_side_effects;
+    Bool                m_is_expr;
+    Bool                m_has_side_effects;
 
 private:
     RC<AstHasExpression> CloneImpl() const

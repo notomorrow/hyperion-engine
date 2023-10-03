@@ -38,14 +38,14 @@ public:
     );
     virtual ~AstExpression() = default;
 
-    int GetAccessOptions() const
+    Int GetAccessOptions() const
         { return m_access_options; }
 
     AccessMode GetAccessMode() const
-      { return m_access_mode; }
+        { return m_access_mode; }
 
     void SetAccessMode(AccessMode access_mode)
-      { m_access_mode = access_mode; }
+        { m_access_mode = access_mode; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override = 0;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override = 0;
@@ -70,8 +70,12 @@ public:
     /** Determine whether or not there is a possibility of side effects. */
     virtual bool MayHaveSideEffects() const = 0;
     virtual SymbolTypePtr_t GetExprType() const = 0;
-    virtual bool IsMutable() const { return false; }
-    virtual ExprAccess GetExprAccess() const { return EXPR_ACCESS_PUBLIC; }
+
+    virtual bool IsMutable() const
+        { return false; }
+
+    virtual ExprAccess GetExprAccess() const
+        { return EXPR_ACCESS_PUBLIC; }
 
     ExpressionFlags GetExpressionFlags() const
         { return m_expression_flags; }
@@ -89,8 +93,8 @@ public:
     }
     
 protected:
-    AccessMode m_access_mode;
-    int m_access_options;
+    AccessMode      m_access_mode;
+    Int             m_access_options;
     ExpressionFlags m_expression_flags = EXPR_FLAGS_NONE;
 };
 

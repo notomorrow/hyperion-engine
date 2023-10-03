@@ -88,17 +88,17 @@ struct VMState
     VMState(const VMState &other) = delete;
     ~VMState();
 
-    ExecutionThread *m_threads[VM_MAX_THREADS];
-    Heap m_heap;
-    StaticMemory m_static_memory;
-    non_owning_ptr<VM> m_vm;
-    Tracemap m_tracemap;
-    ExportedSymbolTable m_exported_symbols;
-    FlatMap<UInt32, Weak<DynModule>> m_dyn_modules;
+    ExecutionThread                     *m_threads[VM_MAX_THREADS];
+    Heap                                m_heap;
+    StaticMemory                        m_static_memory;
+    non_owning_ptr<VM>                  m_vm;
+    Tracemap                            m_tracemap;
+    ExportedSymbolTable                 m_exported_symbols;
+    FlatMap<UInt32, Weak<DynModule>>    m_dyn_modules;
 
-    bool good = true;
-    bool enable_auto_gc = ENABLE_GC;
-    int m_max_heap_objects = GC_THRESHOLD_MIN;
+    bool                                good = true;
+    bool                                enable_auto_gc = ENABLE_GC;
+    int                                 m_max_heap_objects = GC_THRESHOLD_MIN;
 
     /** Reset the state of the VM, destroying all heap objects,
         stack objects and exception flags, etc.
@@ -117,16 +117,26 @@ struct VMState
     void DestroyThread(int id);
     
     /** Get the number of threads currently in use */
-    SizeType GetNumThreads() const { return m_num_threads; }
-    ExecutionThread *GetMainThread() const { AssertThrow(m_num_threads != 0); return m_threads[0]; }
+    SizeType GetNumThreads() const
+        { return m_num_threads; }
 
-    Heap &GetHeap() { return m_heap; }
-    const Heap &GetHeap() const { return m_heap; }
+    ExecutionThread *GetMainThread() const
+        { AssertThrow(m_num_threads != 0); return m_threads[0]; }
 
-    StaticMemory &GetStaticMemory() { return m_static_memory; }
+    Heap &GetHeap()
+        { return m_heap; }
 
-    ExportedSymbolTable &GetExportedSymbols() { return m_exported_symbols; }
-    const ExportedSymbolTable &GetExportedSymbols() const { return m_exported_symbols; }
+    const Heap &GetHeap() const
+        { return m_heap; }
+
+    StaticMemory &GetStaticMemory()
+        { return m_static_memory; }
+
+    ExportedSymbolTable &GetExportedSymbols()
+        { return m_exported_symbols; }
+
+    const ExportedSymbolTable &GetExportedSymbols() const
+        { return m_exported_symbols; }
 
 private:
     SizeType m_num_threads = 0;

@@ -48,7 +48,7 @@ public:
     
     TypeID GetTypeID() const
     {
-        const TypeID type_id = m_variant.GetTypeID();
+        TypeID type_id = m_variant.GetTypeID();
 
         if (type_id == TypeID::ForType<Any>()) {
             return m_variant.Get<Any>().GetTypeID();

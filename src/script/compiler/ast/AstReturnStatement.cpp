@@ -13,11 +13,12 @@
 
 namespace hyperion::compiler {
 
-AstReturnStatement::AstReturnStatement(const RC<AstExpression> &expr,
-    const SourceLocation &location)
-    : AstStatement(location),
-      m_expr(expr),
-      m_num_pops(0)
+AstReturnStatement::AstReturnStatement(
+    const RC<AstExpression> &expr,
+    const SourceLocation &location
+) : AstStatement(location),
+    m_expr(expr),
+    m_num_pops(0)
 {
 }
 

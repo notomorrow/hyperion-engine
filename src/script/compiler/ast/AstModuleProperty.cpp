@@ -22,10 +22,10 @@ namespace hyperion::compiler {
 
 AstModuleProperty::AstModuleProperty(
     const String &field_name,
-    const SourceLocation &location)
-    : AstExpression(location, ACCESS_MODE_LOAD),
-      m_field_name(field_name),
-      m_expr_type(BuiltinTypes::UNDEFINED)
+    const SourceLocation &location
+) : AstExpression(location, ACCESS_MODE_LOAD),
+    m_field_name(field_name),
+    m_expr_type(BuiltinTypes::UNDEFINED)
 {
 }
 

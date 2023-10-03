@@ -159,11 +159,6 @@ public:
         const Array<SymbolMember_t> &members
     );
     
-    static SymbolTypePtr_t Extend(
-        const SymbolTypePtr_t &base,
-        const Array<SymbolMember_t> &members
-    );
-    
     static SymbolTypePtr_t PrototypedObject(
         const String &name,
         const SymbolTypePtr_t &base,

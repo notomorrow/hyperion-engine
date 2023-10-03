@@ -5,16 +5,39 @@ namespace vm {
 
 Exception::Exception(const char *str)
 {
-    const size_t len = std::strlen(str);
+    const SizeType len = std::strlen(str);
     m_str = new char[len + 1];
     std::strcpy(m_str, str);
 }
 
 Exception::Exception(const Exception &other)
 {
-    const size_t len = std::strlen(other.m_str);
+    const SizeType len = std::strlen(other.m_str);
     m_str = new char[len + 1];
     std::strcpy(m_str, other.m_str);
+}
+
+Exception &Exception::operator=(const Exception &other)
+{
+    if (this != &other) {
+        delete[] m_str;
+        const SizeType len = std::strlen(other.m_str);
+        m_str = new char[len + 1];
+        std::strcpy(m_str, other.m_str);
+    }
+
+    return *this;
+}
+
+Exception &Exception::operator=(Exception &&other) noexcept
+{
+    if (this != &other) {
+        delete[] m_str;
+        m_str = other.m_str;
+        other.m_str = nullptr;
+    }
+
+    return *this;
 }
 
 Exception::~Exception()

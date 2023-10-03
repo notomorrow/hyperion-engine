@@ -22,7 +22,7 @@ public:
         const SourceLocation &location
     );
 
-    virtual ~AstFunctionExpression() = default;
+    virtual ~AstFunctionExpression() override = default;
 
     bool IsConstructorDefinition() const
         { return m_is_constructor_definition; }
@@ -40,28 +40,31 @@ public:
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
     
-    const SymbolTypePtr_t &GetReturnType() const { return m_return_type; }
-    void SetReturnType(const SymbolTypePtr_t &return_type) { m_return_type = return_type; }
+    const SymbolTypePtr_t &GetReturnType() const
+        { return m_return_type; }
+
+    void SetReturnType(const SymbolTypePtr_t &return_type)
+        { m_return_type = return_type; }
 
 protected:
-    Array<RC<AstParameter>> m_parameters;
-    RC<AstPrototypeSpecification> m_return_type_specification;
-    RC<AstBlock> m_block;
-    bool m_is_closure;
+    Array<RC<AstParameter>>         m_parameters;
+    RC<AstPrototypeSpecification>   m_return_type_specification;
+    RC<AstBlock>                    m_block;
+    Bool                            m_is_closure;
 
-    RC<AstExpression> m_closure_object;
-    RC<AstParameter> m_closure_self_param;
-    RC<AstBlock> m_block_with_parameters;
+    RC<AstExpression>               m_closure_object;
+    RC<AstParameter>                m_closure_self_param;
+    RC<AstBlock>                    m_block_with_parameters;
 
-    bool m_is_constructor_definition;
+    Bool                            m_is_constructor_definition;
 
-    SymbolTypePtr_t m_symbol_type;
-    SymbolTypePtr_t m_return_type;
-    SymbolTypePtr_t m_closure_type;
+    SymbolTypePtr_t                 m_symbol_type;
+    SymbolTypePtr_t                 m_return_type;
+    SymbolTypePtr_t                 m_closure_type;
 
-    int m_closure_object_location;
+    Int                             m_closure_object_location;
 
-    int m_static_id;
+    Int                             m_static_id;
 
     std::unique_ptr<Buildable> BuildFunctionBody(AstVisitor *visitor, Module *mod);
     RC<AstFunctionExpression> CloneImpl() const

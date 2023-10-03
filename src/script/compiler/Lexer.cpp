@@ -49,7 +49,7 @@ void Lexer::Analyze()
 
         if (SkipWhitespace()) {
             // add the `newline` statement terminator if not a continuation token
-            if (token && token.GetTokenClass() != TK_NEWLINE && !token.IsContinuationToken()) {
+            if (token && /*token.GetTokenClass() != TK_NEWLINE &&*/ !token.IsContinuationToken()) {
                 // skip whitespace before next token
                 SkipWhitespace();
 

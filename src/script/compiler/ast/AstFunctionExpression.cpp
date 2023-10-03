@@ -290,6 +290,7 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
         ));
 
         m_closure_type = SymbolType::Extend(
+            closure_base_type->GetName() + "$Instance",
             closure_base_type,
             {
                 SymbolMember_t {

@@ -18,14 +18,25 @@ public:
         const RC<AstExpression> &expr,
         const SourceLocation &location
     );
-    virtual ~AstModuleAccess() = default;
+    virtual ~AstModuleAccess() override = default;
 
-    Module *GetModule() { return m_mod_access; }
-    const Module *GetModule() const { return m_mod_access; }
-    const String &GetTargetName() const { return m_target; }
-    const RC<AstExpression> &GetExpression() const { return m_expr; }
-    void SetExpression(const RC<AstExpression> &expr) { m_expr = expr; }
-    void SetChained(bool is_chained) { m_is_chained = is_chained; }
+    Module *GetModule()
+        { return m_mod_access; }
+
+    const Module *GetModule() const
+        { return m_mod_access; }
+
+    const String &GetTargetName() const
+        { return m_target; }
+
+    const RC<AstExpression> &GetExpression() const
+        { return m_expr; }
+
+    void SetExpression(const RC<AstExpression> &expr)
+        { m_expr = expr; }
+
+    void SetChained(Bool is_chained)
+        { m_is_chained = is_chained; }
 
     void PerformLookup(AstVisitor *visitor, Module *mod);
 

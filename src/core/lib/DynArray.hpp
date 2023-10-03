@@ -244,6 +244,8 @@ public:
     /*! Shift the array to the left by {count} times */
     void Shift(SizeType count);
 
+    DynArray<T, NumInlineBytes> Slice(Int first, Int last) const;
+
     void Concat(const DynArray &other);
     void Concat(DynArray &&other);
     //! \brief Erase an element by iterator.
@@ -955,6 +957,51 @@ void DynArray<T, NumInlineBytes>::Shift(SizeType count)
     }
 
     m_size = new_size;
+}
+
+
+template <class T, SizeType NumInlineBytes>
+DynArray<T, NumInlineBytes> DynArray<T, NumInlineBytes>::Slice(Int first, Int last) const
+{
+    if (first < 0) {
+        first = Size() + first;
+    }
+
+    if (last < 0) {
+        last = Size() + last;
+    }
+
+    if (first < 0) {
+        first = 0;
+    }
+
+    if (last < 0) {
+        last = 0;
+    }
+
+    if (first > last) {
+        return DynArray<T, NumInlineBytes>();
+    }
+
+    if (first >= Size()) {
+        return DynArray<T, NumInlineBytes>();
+    }
+
+    if (last >= Size()) {
+        last = Size() - 1;
+    }
+
+    DynArray<T, NumInlineBytes> result;
+    result.Resize(last - first + 1);
+
+    auto *buffer = GetStorage();
+    auto *result_buffer = result.GetStorage();
+
+    for (SizeType i = 0; i < result.m_size; ++i) {
+        Memory::Construct<T>(&result_buffer[i].data_buffer, buffer[first + i].Get());
+    }
+
+    return result;
 }
 
 template <class T, SizeType NumInlineBytes>

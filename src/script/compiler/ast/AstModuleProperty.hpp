@@ -12,7 +12,7 @@ public:
       const String &field_name,
       const SourceLocation &location
     );
-    virtual ~AstModuleProperty() = default;
+    virtual ~AstModuleProperty() override = default;
     
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;

@@ -19,11 +19,17 @@ public:
     );
     AstModuleDeclaration(const String &name, const SourceLocation &location);
 
-    void AddChild(const RC<AstStatement> &child) { m_children.PushBack(child); }
-    Array<RC<AstStatement>> &GetChildren() { return m_children; }
-    const Array<RC<AstStatement>> &GetChildren() const { return m_children; }
+    void AddChild(const RC<AstStatement> &child)
+        { m_children.PushBack(child); }
 
-    const RC<Module> &GetModule() const { return m_module; }
+    Array<RC<AstStatement>> &GetChildren()
+        { return m_children; }
+
+    const Array<RC<AstStatement>> &GetChildren() const
+        { return m_children; }
+
+    const RC<Module> &GetModule() const
+        { return m_module; }
 
     void PerformLookup(AstVisitor *visitor);
 
@@ -36,8 +42,6 @@ public:
 private:
     Array<RC<AstStatement>> m_children;
     RC<Module>              m_module;
-
-    void AddBuiltinHeader();
 
     RC<AstModuleDeclaration> CloneImpl() const
     {

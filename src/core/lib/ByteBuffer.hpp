@@ -87,31 +87,48 @@ public:
     explicit operator bool() const
         { return true; }
 
+    void Write(SizeType count, SizeType offset, const void *data)
+    {
+        if (count == 0) {
+            return;
+        }
+
+        AssertThrow(offset + count <= Size());
+
+        if (m_internal.Is<RefCountedPtr<InternalArray>>()) {
+            auto &byte_array = m_internal.Get<RefCountedPtr<InternalArray>>();
+
+            Memory::MemCpy(byte_array->Data() + offset, data, count);
+        } else {
+            auto &byte_array = m_internal.Get<InternalArray>();
+
+            Memory::MemCpy(byte_array.Data() + offset, data, count);
+        }
+    }
+
     /**
      * \brief Updates the ByteBuffer's data. If the size would go beyond the number of inline elements that can be stored, the ByteBuffer will switch to a reference counted internal byte array.
      */
     void SetData(SizeType count, const void *data)
     {
+        if (count == 0) {
+            return;
+        }
+
         if (count > InternalArray::num_inline_elements) {
             m_internal.Set(RefCountedPtr<InternalArray>(new InternalArray()));
+            
+            auto &byte_array = m_internal.Get<RefCountedPtr<InternalArray>>();
+            byte_array->Resize(count);
 
-            if (count != 0) {
-                auto &byte_array = m_internal.Get<RefCountedPtr<InternalArray>>();
-
-                byte_array->Resize(count);
-
-                Memory::MemCpy(byte_array->Data(), data, count);
-            }
+            Memory::MemCpy(byte_array->Data(), data, count);
         } else {
             m_internal.Set(InternalArray { });
+            
+            auto &byte_array = m_internal.Get<InternalArray>();
+            byte_array.Resize(count);
 
-            if (count != 0) {
-                auto &byte_array = m_internal.Get<InternalArray>();
-
-                byte_array.Resize(count);
-
-                Memory::MemCpy(byte_array.Data(), data, count);
-            }
+            Memory::MemCpy(byte_array.Data(), data, count);
         }
     }
 

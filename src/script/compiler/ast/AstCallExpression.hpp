@@ -39,14 +39,14 @@ public:
     virtual AstExpression *GetTarget() const override;
 
 protected:
-    RC<AstExpression> m_target;
-    Array<RC<AstArgument>> m_args;
-    bool m_insert_self;
+    RC<AstExpression>       m_target;
+    Array<RC<AstArgument>>  m_args;
+    bool                    m_insert_self;
 
     // set while analyzing
-    Array<RC<AstArgument>> m_substituted_args;
-    SymbolTypePtr_t m_return_type;
-    bool m_is_visited = false;
+    Array<RC<AstArgument>>  m_substituted_args;
+    SymbolTypePtr_t         m_return_type;
+    bool                    m_is_visited = false;
 
     RC<AstCallExpression> CloneImpl() const
     {

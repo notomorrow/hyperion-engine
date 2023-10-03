@@ -29,13 +29,8 @@ void AstDirective::Visit(AstVisitor *visitor, Module *mod)
                 String("'importpath' directive requires path names to be provided (e.g '#importpath \"../path\" \"../other/path\"')")
             ));
         } else {
-            // find the folder which the current file is in
-            String current_dir;
-
-            const size_t index = std::string(m_location.GetFileName().Data()).find_last_of("/\\");
-            if (index != std::string::npos) {
-                current_dir = m_location.GetFileName().Substr(0, index) + "/";
-            }
+            // split current file path and remove file name
+            const String current_dir = String::Join(m_location.GetFileName().Split('/', '\\').Slice(0, -2), '/') + "/";
             
             for (const String &path_arg : m_args) {
                 const String scan_path = current_dir + path_arg;

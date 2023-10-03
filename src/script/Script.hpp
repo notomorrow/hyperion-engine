@@ -113,7 +113,7 @@ public:
         } else if constexpr (std::is_same_v<uint8_t, ArgType>) {
             first_value.m_type = Value::U8;
             first_value.m_value.u8 = item;
-        }  else if constexpr (std::is_same_v<uint16_t, ArgType>) {
+        } else if constexpr (std::is_same_v<uint16_t, ArgType>) {
             first_value.m_type = Value::U16;
             first_value.m_value.u16 = item;
         } else if constexpr (std::is_same_v<uint32_t, ArgType>) {

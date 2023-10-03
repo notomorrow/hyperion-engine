@@ -21,7 +21,7 @@ public:
         const RC<AstBlock> &block,
         const SourceLocation &location
     );
-    virtual ~AstForLoop() = default;
+    virtual ~AstForLoop() override = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -30,14 +30,14 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    RC<AstStatement> m_decl_part;
-    RC<AstExpression> m_condition_part;
-    RC<AstExpression> m_increment_part;
-    RC<AstBlock> m_block;
-    int m_num_locals;
-    int m_num_used_initializers;
+    RC<AstStatement>    m_decl_part;
+    RC<AstExpression>   m_condition_part;
+    RC<AstExpression>   m_increment_part;
+    RC<AstBlock>        m_block;
+    Int                 m_num_locals;
+    Int                 m_num_used_initializers;
 
-    RC<AstExpression> m_expr;
+    RC<AstExpression>   m_expr;
 
     RC<AstForLoop> CloneImpl() const
     {

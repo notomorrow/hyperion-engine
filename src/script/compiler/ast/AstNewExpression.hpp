@@ -20,7 +20,7 @@ public:
         bool enable_constructor_call,
         const SourceLocation &location
     );
-    virtual ~AstNewExpression() = default;
+    virtual ~AstNewExpression() override = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -34,16 +34,16 @@ public:
     virtual AstExpression *GetTarget() const override;
 
 private:
-    RC<AstPrototypeSpecification> m_proto;
-    RC<AstArgumentList> m_arg_list;
-    bool m_enable_constructor_call;
+    RC<AstPrototypeSpecification>   m_proto;
+    RC<AstArgumentList>             m_arg_list;
+    Bool                            m_enable_constructor_call;
 
     /** Set while analyzing */
-    RC<AstExpression> m_object_value;
-    SymbolTypePtr_t m_instance_type;
-    SymbolTypePtr_t m_prototype_type;
-    RC<AstBlock> m_constructor_block; // create a block to store temporary vars
-    RC<AstExpression> m_constructor_call;
+    RC<AstExpression>               m_object_value;
+    SymbolTypePtr_t                 m_instance_type;
+    SymbolTypePtr_t                 m_prototype_type;
+    RC<AstBlock>                    m_constructor_block; // create a block to store temporary vars
+    RC<AstExpression>               m_constructor_call;
 
     RC<AstNewExpression> CloneImpl() const
     {

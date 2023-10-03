@@ -22,12 +22,12 @@ AstForLoop::AstForLoop(
     const RC<AstExpression> &condition_part,
     const RC<AstExpression> &increment_part,
     const RC<AstBlock> &block,
-    const SourceLocation &location)
-    : AstStatement(location),
-      m_decl_part(decl_part),
-      m_condition_part(condition_part),
-      m_increment_part(increment_part),
-      m_block(block)
+    const SourceLocation &location
+) : AstStatement(location),
+    m_decl_part(decl_part),
+    m_condition_part(condition_part),
+    m_increment_part(increment_part),
+    m_block(block)
 {
 }
 
@@ -74,10 +74,11 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    int condition_is_true = m_condition_part->IsTrue();
+    Int condition_is_true = m_condition_part->IsTrue();
+
     if (condition_is_true == -1) {
         // the condition cannot be determined at compile time
-        uint8_t rp;
+        UInt8 rp;
 
         LabelId top_label = chunk->NewLabel();
 
@@ -112,7 +113,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         }
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (Int i = 0; i < m_num_locals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -126,7 +127,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (Int i = 0; i < m_num_used_initializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -155,7 +156,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         }
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (Int i = 0; i < m_num_locals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -165,7 +166,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (Int i = 0; i < m_num_used_initializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -186,7 +187,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
             }
 
             // pop all local variables off the stack
-            for (int i = 0; i < m_num_locals; i++) {
+            for (Int i = 0; i < m_num_locals; i++) {
                 visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
             }
 
@@ -194,7 +195,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         }
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (Int i = 0; i < m_num_used_initializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 

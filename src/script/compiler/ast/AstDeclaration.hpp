@@ -31,11 +31,11 @@ public:
     virtual const String &GetName() const override;
 
 protected:
-    String m_name;
-    RC<Identifier> m_identifier;
+    String          m_name;
+    RC<Identifier>  m_identifier;
 
 private:
-    bool m_is_visited = false;
+    bool            m_is_visited = false;
 };
 
 } // namespace hyperion::compiler

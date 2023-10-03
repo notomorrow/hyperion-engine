@@ -14,9 +14,9 @@ AstParameter::AstParameter(
     const String &name, 
     const RC<AstPrototypeSpecification> &type_spec, 
     const RC<AstExpression> &default_param, 
-    bool is_variadic,
-    bool is_const,
-    bool is_ref,
+    Bool is_variadic,
+    Bool is_const,
+    Bool is_ref,
     const SourceLocation &location
 ) : AstDeclaration(name, location),
     m_type_spec(type_spec),

@@ -41,9 +41,11 @@ public:
     static char *StrCpy(char *dest, const char *src, SizeType length = 0)
     {
         if (length) {
+            // ReSharper disable once CppDeprecatedEntity
             return std::strncpy(dest, src, length);
         }
 
+        // ReSharper disable once CppDeprecatedEntity
         return std::strcpy(dest, src);
     }
 

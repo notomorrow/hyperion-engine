@@ -88,6 +88,7 @@ void FBOMData::SetBytes(SizeType n, const void *data)
         AssertThrowMsg(n <= type.size, "Attempt to insert data past size max size of object");
     }
 
+    bytes.SetSize(n);
     bytes.SetData(n, data);
 }
 

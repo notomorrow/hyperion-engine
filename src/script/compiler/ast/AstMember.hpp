@@ -32,15 +32,15 @@ public:
     virtual bool IsMutable() const override;
 
 protected:
-    String m_field_name;
-    RC<AstExpression> m_target;
+    String              m_field_name;
+    RC<AstExpression>   m_target;
 
     // set while analyzing
-    SymbolTypePtr_t m_symbol_type;
-    SymbolTypePtr_t m_target_type;
-    RC<AstExpression> m_proxy_expr;
-    RC<AstExpression> m_override_expr;
-    int m_found_index;
+    SymbolTypePtr_t     m_symbol_type;
+    SymbolTypePtr_t     m_target_type;
+    RC<AstExpression>   m_proxy_expr;
+    RC<AstExpression>   m_override_expr;
+    Int                 m_found_index;
 
     RC<AstMember> CloneImpl() const
     {

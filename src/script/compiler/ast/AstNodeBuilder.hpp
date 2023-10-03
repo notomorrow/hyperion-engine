@@ -39,7 +39,8 @@ public:
         ModuleBuilder *parent
     );
 
-    const String &GetName() const { return m_name; }
+    const String &GetName() const
+        { return m_name; }
 
     ModuleBuilder Module(const String &name);
     FunctionBuilder Function(const String &name);
