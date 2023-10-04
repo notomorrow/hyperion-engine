@@ -79,6 +79,8 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
                         CloneAstNode(m_right),
                         false,
                         false,
+                        false,
+                        false,
                         "other",
                         m_location
                     ))
@@ -98,6 +100,8 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
                 {
                     RC<AstArgument>(new AstArgument(
                         CloneAstNode(m_right),
+                        false,
+                        false,
                         false,
                         false,
                         "other",

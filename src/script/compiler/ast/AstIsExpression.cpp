@@ -53,8 +53,8 @@ void AstIsExpression::Visit(AstVisitor *visitor, Module *mod)
             .Module(Config::global_module_name)
             .Function("IsInstance")
             .Call({
-                RC<AstArgument>(new AstArgument(CloneAstNode(m_target), false, false, "", m_target->GetLocation())),
-                RC<AstArgument>(new AstArgument(CloneAstNode(m_type_specification->GetExpr()), false, false, "", m_type_specification->GetLocation()))
+                RC<AstArgument>(new AstArgument(CloneAstNode(m_target), false, false, false, false, "", m_target->GetLocation())),
+                RC<AstArgument>(new AstArgument(CloneAstNode(m_type_specification->GetExpr()), false, false, false, false, "", m_type_specification->GetLocation()))
             });
 
         m_override_expr->Visit(visitor, mod);

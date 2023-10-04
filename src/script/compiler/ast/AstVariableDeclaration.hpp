@@ -27,17 +27,20 @@ public:
     );
     virtual ~AstVariableDeclaration() = default;
 
-    const RC<AstExpression> &GetAssignment() const
-        { return m_assignment; }
-
-    const RC<AstExpression> &GetRealAssignment() const
-        { return m_real_assignment; }
-
     const RC<AstPrototypeSpecification> &GetPrototypeSpecification() const
         { return m_proto; }
 
     void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &proto)
         { m_proto = proto; }
+
+    const RC<AstExpression> &GetAssignment() const
+        { return m_assignment; }
+
+    void SetAssignment(const RC<AstExpression> &assignment)
+        { m_assignment = assignment; }
+
+    const RC<AstExpression> &GetRealAssignment() const
+        { return m_real_assignment; }
 
     bool IsConst() const { return m_flags & IdentifierFlags::FLAG_CONST; }
     bool IsRef() const { return m_flags & IdentifierFlags::FLAG_REF; }
@@ -64,16 +67,19 @@ public:
     
     virtual RC<AstStatement> Clone() const override;
 
+    SymbolTypePtr_t GetExprType() const
+        { return m_symbol_type; }
+
 protected:
-    RC<AstPrototypeSpecification> m_proto;
-    RC<AstExpression> m_assignment;
-    Array<RC<AstParameter>> m_template_params;
-    IdentifierFlagBits m_flags;
+    RC<AstPrototypeSpecification>   m_proto;
+    RC<AstExpression>               m_assignment;
+    Array<RC<AstParameter>>         m_template_params;
+    IdentifierFlagBits              m_flags;
 
     // set while analyzing
-    RC<AstExpression> m_real_assignment;
+    RC<AstExpression>               m_real_assignment;
 
-    SymbolTypeWeakPtr_t m_symbol_type;
+    SymbolTypePtr_t                 m_symbol_type;
 
     RC<AstVariableDeclaration> CloneImpl() const
     {

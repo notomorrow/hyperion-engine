@@ -308,4 +308,10 @@ const String &AstTypeExpression::GetName() const
     return m_name;
 }
 
+const AstTypeObject *AstTypeExpression::ExtractTypeObject() const
+{
+    return m_expr.Get();
+}
+
+
 } // namespace hyperion::compiler

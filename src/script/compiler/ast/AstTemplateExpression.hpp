@@ -11,6 +11,8 @@
 
 namespace hyperion::compiler {
 
+class AstVariableDeclaration;
+
 class AstTemplateExpression final : public AstExpression
 {
 public:
@@ -20,7 +22,7 @@ public:
         const RC<AstPrototypeSpecification> &return_type_specification,
         const SourceLocation &location
     );
-    virtual ~AstTemplateExpression() = default;
+    virtual ~AstTemplateExpression() override = default;
 
     const Array<RC<AstParameter>> &GetGenericParameters() const { return m_generic_params; }
     const RC<AstExpression> &GetInnerExpression() const { return m_expr; }
@@ -39,14 +41,15 @@ public:
     virtual const AstExpression *GetHeldGenericExpr() const override;
 
 private:
-    RC<AstExpression> m_expr;
-    Array<RC<AstParameter>> m_generic_params;
-    RC<AstPrototypeSpecification> m_return_type_specification;
+    RC<AstExpression>                   m_expr;
+    Array<RC<AstParameter>>             m_generic_params;
+    RC<AstPrototypeSpecification>       m_return_type_specification;
 
     // set while analyzing
-    SymbolTypePtr_t m_symbol_type;
-    RC<AstBlock> m_block;
-    bool m_is_visited = false;
+    SymbolTypePtr_t                     m_symbol_type;
+    RC<AstBlock>                        m_block;
+    bool                                m_is_visited = false;
+    Array<RC<AstVariableDeclaration>>   m_generic_param_placeholders;
 
     RC<AstTemplateExpression> CloneImpl() const
     {

@@ -140,11 +140,11 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
         AssertThrow(param->GetIdentifier() != nullptr);
         // add to list of param types
         param_symbol_types.PushBack(GenericInstanceTypeInfo::Arg {
-            .m_name = param->GetName(),
-            .m_type = param->GetIdentifier()->GetSymbolType(),
-            .m_default_value = param->GetDefaultValue(),
-            .m_is_ref = param->IsRef(),
-            .m_is_const = param->IsConst()
+            .m_name             = param->GetName(),
+            .m_type             = param->GetIdentifier()->GetSymbolType(),
+            .m_default_value    = param->GetDefaultValue(),
+            .m_is_ref           = param->IsRef(),
+            .m_is_const         = param->IsConst()
         });
     }
 
@@ -267,16 +267,6 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
             }
         }
 
-        SymbolTypePtr_t closure_base_type = SymbolType::GenericInstance(
-            BuiltinTypes::CLOSURE_TYPE,
-            GenericInstanceTypeInfo {
-                generic_param_types
-            }
-        );
-
-        visitor->GetCompilationUnit()->GetCurrentModule()->
-            m_scopes.Root().GetIdentifierTable().AddSymbolType(closure_base_type);
-
         SymbolTypePtr_t prototype_type = SymbolType::Object(
             "ClosureInstance", // Prototype type
             closure_obj_members,
@@ -289,9 +279,11 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
             m_location
         ));
 
-        m_closure_type = SymbolType::Extend(
-            closure_base_type->GetName() + "$Instance",
-            closure_base_type,
+        m_closure_type = SymbolType::GenericInstance(
+            BuiltinTypes::CLOSURE_TYPE,
+            GenericInstanceTypeInfo {
+                generic_param_types
+            },
             {
                 SymbolMember_t {
                     "$proto",

@@ -87,52 +87,51 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
     m_target->Visit(visitor, mod);
 
     SymbolTypePtr_t type = m_target->GetExprType();
-    
-    if (m_op->GetType() & BITWISE) {
-        // no bitwise operators on floats allowed.
-        // do not allow right-hand side to be 'Any', because it might change the data type.
-        visitor->Assert(
-            type == BuiltinTypes::INT || 
-            type == BuiltinTypes::UNSIGNED_INT ||
-            type == BuiltinTypes::NUMBER ||
-            type == BuiltinTypes::ANY,
-            CompilerError(
-                LEVEL_ERROR,
-                Msg_bitwise_operand_must_be_int,
-                m_target->GetLocation(),
-                type->GetName()
-            )
-        );
-    } else if (m_op->GetType() & ARITHMETIC) {
-        if (type != BuiltinTypes::ANY &&
-            type != BuiltinTypes::INT &&
-            type != BuiltinTypes::UNSIGNED_INT &&
-            type != BuiltinTypes::FLOAT &&
-            type != BuiltinTypes::NUMBER) {
-        
-            visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-                LEVEL_ERROR,
-                Msg_invalid_operator_for_type,
-                m_target->GetLocation(),
-                m_op->LookupStringValue(),
-                type->GetName()
-            )); 
-        }
 
-        visitor->Assert(
-            type == BuiltinTypes::INT ||
-            type == BuiltinTypes::UNSIGNED_INT ||
-            type == BuiltinTypes::FLOAT ||
-            type == BuiltinTypes::NUMBER ||
-            type == BuiltinTypes::ANY,
-            CompilerError(
-                LEVEL_ERROR,
-                Msg_invalid_operator_for_type,
-                m_target->GetLocation(),
-                m_op->GetOperatorType(),
-                type->GetName()
-            )
-        );
+    if (!type->IsAnyType() && !type->IsGenericParameter()) {
+        if (m_op->GetType() & BITWISE) {
+            // no bitwise operators on floats allowed.
+            // do not allow right-hand side to be 'Any', because it might change the data type.
+            visitor->Assert(
+                type == BuiltinTypes::INT || 
+                type == BuiltinTypes::UNSIGNED_INT ||
+                type == BuiltinTypes::NUMBER,
+                CompilerError(
+                    LEVEL_ERROR,
+                    Msg_bitwise_operand_must_be_int,
+                    m_target->GetLocation(),
+                    type->GetName()
+                )
+            );
+        } else if (m_op->GetType() & ARITHMETIC) {
+            if (type != BuiltinTypes::INT &&
+                type != BuiltinTypes::UNSIGNED_INT &&
+                type != BuiltinTypes::FLOAT &&
+                type != BuiltinTypes::NUMBER) {
+            
+                visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
+                    LEVEL_ERROR,
+                    Msg_invalid_operator_for_type,
+                    m_target->GetLocation(),
+                    m_op->LookupStringValue(),
+                    type->GetName()
+                )); 
+            }
+
+            visitor->Assert(
+                type == BuiltinTypes::INT ||
+                type == BuiltinTypes::UNSIGNED_INT ||
+                type == BuiltinTypes::FLOAT ||
+                type == BuiltinTypes::NUMBER,
+                CompilerError(
+                    LEVEL_ERROR,
+                    Msg_invalid_operator_for_type,
+                    m_target->GetLocation(),
+                    m_op->GetOperatorType(),
+                    type->GetName()
+                )
+            );
+        }
     }
 
     if (m_op->ModifiesValue()) {

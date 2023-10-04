@@ -44,7 +44,7 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
         m_override_expr = visitor->GetCompilationUnit()->GetAstNodeBuilder()
             .Module(Config::global_module_name)
             .Function("GetClass")
-            .Call({ RC<AstArgument>(new AstArgument(m_target, false, false, "", m_location)) });
+            .Call({ RC<AstArgument>(new AstArgument(m_target, false, false, false, false, "", m_location)) });
 
         m_override_expr->Visit(visitor, mod);
 

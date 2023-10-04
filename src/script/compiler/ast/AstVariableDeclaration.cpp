@@ -45,7 +45,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
         m_identifier->GetFlags() |= m_flags;
     }
 
-    SymbolTypePtr_t symbol_type;
+    m_symbol_type = BuiltinTypes::UNDEFINED;
 
     const bool has_user_assigned = m_assignment != nullptr;
     const bool has_user_specified_type = m_proto != nullptr;
@@ -78,14 +78,14 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
             m_proto->Visit(visitor, mod);
 
             AssertThrow(m_proto->GetHeldType() != nullptr);
-            symbol_type = m_proto->GetHeldType();
+            m_symbol_type = m_proto->GetHeldType();
 
             if (m_identifier != nullptr) {
-                m_identifier->SetSymbolType(symbol_type);
+                m_identifier->SetSymbolType(m_symbol_type);
             }
 
 #if ACE_ANY_ONLY_FUNCTION_PARAMATERS
-            if (symbol_type->IsAnyType()) {
+            if (m_symbol_type->IsAnyType()) {
                 // Any type is reserved for method parameters
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
@@ -105,8 +105,8 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                     m_real_assignment = CloneAstNode(default_value);
                     // built-in assignment, turn off strict mode
                     is_default_assigned = true;
-                } else if (symbol_type->GetTypeClass() == TYPE_GENERIC) {
-                    const bool no_parameters_required = symbol_type->GetGenericInfo().m_num_parameters == -1;
+                } else if (m_symbol_type->GetTypeClass() == TYPE_GENERIC) {
+                    const bool no_parameters_required = m_symbol_type->GetGenericInfo().m_num_parameters == -1;
 
                     if (!no_parameters_required) {
                         // @TODO - idk. instantiate generic? it works for now, example being 'Function' type
@@ -117,11 +117,11 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                             LEVEL_ERROR,
                             Msg_generic_parameters_missing,
                             m_location,
-                            symbol_type->GetName(),
-                            symbol_type->GetGenericInfo().m_num_parameters
+                            m_symbol_type->GetName(),
+                            m_symbol_type->GetGenericInfo().m_num_parameters
                         ));
                     }
-                } else if (!symbol_type->IsGenericParameter() && !symbol_type->IsProxyClass()) { // generic parameters will be resolved upon instantiation
+                } else if (!m_symbol_type->IsGenericParameter() && !m_symbol_type->IsProxyClass()) { // generic parameters will be resolved upon instantiation
                     // no default assignment for this type
                     no_default_assignment = true;
                 }
@@ -199,7 +199,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                     SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
                         visitor,
                         mod,
-                        symbol_type,
+                        m_symbol_type,
                         m_real_assignment->GetExprType(),
                         m_real_assignment->GetLocation()
                     );
@@ -207,14 +207,14 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
             } else {
                 // Set the type to be the deduced type from the expression.
                 // if (const AstTypeObject *real_assignment_as_type_object = dynamic_cast<const AstTypeObject*>(m_real_assignment->GetValueOf())) {
-                //     symbol_type = real_assignment_as_type_object->GetHeldType();
+                //     m_symbol_type = real_assignment_as_type_object->GetHeldType();
                 // } else {
-                    symbol_type = m_real_assignment->GetExprType();
+                    m_symbol_type = m_real_assignment->GetExprType();
                 // }
             }
         }
 
-        // if (symbol_type == BuiltinTypes::ANY) {
+        // if (m_symbol_type == BuiltinTypes::ANY) {
         //     no_default_assignment = false;
         // }
 
@@ -225,7 +225,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                 m_proto != nullptr
                     ? m_proto->GetLocation()
                     : m_location,
-                symbol_type->GetName()
+                m_symbol_type->GetName()
             ));
         }
 
@@ -254,7 +254,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
         }
     }
 
-    if (symbol_type == nullptr) {
+    if (m_symbol_type == nullptr) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_could_not_deduce_type_for_expression,
@@ -266,7 +266,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
     }
 
     if (m_identifier != nullptr) {
-        m_identifier->SetSymbolType(symbol_type);
+        m_identifier->SetSymbolType(m_symbol_type);
     }
 }
 

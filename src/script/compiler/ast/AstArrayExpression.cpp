@@ -223,7 +223,7 @@ SymbolTypePtr_t AstArrayExpression::GetExprType() const
         BuiltinTypes::ARRAY,
         GenericInstanceTypeInfo {
             {
-                { "@array_of", m_held_type }
+                { "of", m_held_type }
             }
         }
     );

@@ -43,6 +43,7 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
+    virtual const AstTypeObject *ExtractTypeObject() const override;
 
     const SymbolTypePtr_t &GetHeldType() const
         { return m_symbol_type; }

@@ -49,6 +49,8 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         self_target,
         false,
         true,
+        false,
+        false,
         Keyword::ToString(Keywords::Keyword_self).Get(),
         self_target->GetLocation()
     ));
@@ -57,25 +59,18 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         ? m_arguments->GetArguments().Size() + 1
         : 1;
 
-    m_substituted_args.Reserve(num_arguments);
-    m_substituted_args.PushBack(self_arg);
+    Array<RC<AstArgument>> args_with_self;
+    args_with_self.Reserve(num_arguments);
+    args_with_self.PushBack(self_arg);
 
     if (m_arguments != nullptr) {
         for (auto &arg : m_arguments->GetArguments()) {
-            m_substituted_args.PushBack(arg);
+            args_with_self.PushBack(arg);
         }
     }
 
-    FunctionTypeSignature_t substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
-        visitor,
-        mod,
-        m_symbol_type,
-        m_substituted_args,
-        m_location
-    );
-
     // visit each argument
-    for (auto &arg : m_substituted_args) {
+    for (auto &arg : args_with_self) {
         AssertThrow(arg != nullptr);
 
         // note, visit in current module rather than module access
@@ -83,19 +78,26 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         // yet still pass variables from the local module.
         arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
     }
-    
-    SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
+
+    FunctionTypeSignature_t substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
         visitor,
         mod,
         m_symbol_type,
-        m_substituted_args,
+        args_with_self,
         m_location
     );
 
     if (substituted.first != nullptr) {
         m_return_type = substituted.first;
         // change args to be newly ordered vector
-        m_substituted_args = substituted.second;
+        m_substituted_args = CloneAllAstNodes(substituted.second);
+
+        // visit each argument (again, substituted)
+        for (auto &arg : m_substituted_args) {
+            AssertThrow(arg != nullptr);
+            
+            arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
+        }
 
         // should never be empty; self is needed
         if (m_substituted_args.Empty()) {
@@ -104,6 +106,14 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
                 Msg_internal_error,
                 m_location
             ));
+        } else {
+            SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
+                visitor,
+                mod,
+                m_symbol_type,
+                m_substituted_args,
+                m_location
+            );
         }
     } else {
         m_return_type = BuiltinTypes::UNDEFINED;

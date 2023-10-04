@@ -663,7 +663,8 @@ public:
     HYP_FORCE_INLINE void LoadDeref(BCRegister dst_reg, BCRegister src_reg)
     {
         Value &src = thread->m_regs[src_reg];
-        AssertThrowMsg(src.m_type == Value::VALUE_REF, "Value type must be VALUE_REF in order to deref");
+        AssertThrowMsg(src.m_type == Value::VALUE_REF,
+            "Value type must be VALUE_REF in order to deref, got %d", src.m_type);
         AssertThrow(src.m_value.value_ref != nullptr);
 
         Value deref = *src.m_value.value_ref;

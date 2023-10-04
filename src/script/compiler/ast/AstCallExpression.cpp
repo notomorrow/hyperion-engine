@@ -23,12 +23,12 @@
 namespace hyperion::compiler {
 
 AstCallExpression::AstCallExpression(
-    const RC<AstExpression> &target,
+    const RC<AstExpression> &expr,
     const Array<RC<AstArgument>> &args,
     bool insert_self,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_target(target),
+    m_expr(expr),
     m_args(args),
     m_insert_self(insert_self),
     m_return_type(BuiltinTypes::UNDEFINED)
@@ -43,16 +43,16 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
     AssertThrow(!m_is_visited);
     m_is_visited = true;
 
-    AssertThrow(m_target != nullptr);
-    m_target->Visit(visitor, mod);
+    AssertThrow(m_expr != nullptr);
+    m_expr->Visit(visitor, mod);
 
-    SymbolTypePtr_t target_type = m_target->GetExprType();
+    SymbolTypePtr_t target_type = m_expr->GetExprType();
     AssertThrow(target_type != nullptr);
 
-    m_substituted_args = m_args;
+    Array<RC<AstArgument>> args_with_self = m_args;
 
     if (m_insert_self) {
-        if (const auto *left_target = m_target->GetTarget()) {
+        if (const auto *left_target = m_expr->GetTarget()) {
             const auto self_target = CloneAstNode(left_target);
             AssertThrow(self_target != nullptr);
 
@@ -60,72 +60,62 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
                 self_target,
                 false,
                 true,
+                false,
+                false,
                 Keyword::ToString(Keywords::Keyword_self).Get(),
                 self_target->GetLocation()
             ));
             
-            m_substituted_args.PushFront(std::move(self_arg));
+            args_with_self.PushFront(std::move(self_arg));
         }
     }
 
     // allow unboxing
-    SymbolTypePtr_t unboxed_type = target_type;
-
-    if (target_type->GetTypeClass() == TYPE_GENERIC_INSTANCE) {
-        if (target_type->IsBoxedType()) {
-            unboxed_type = target_type->GetGenericInstanceInfo().m_generic_args[0].m_type;
-        }
-    }
-
-    AssertThrow(unboxed_type != nullptr);
+    SymbolTypePtr_t unaliased = target_type->GetUnaliased();
+    AssertThrow(unaliased != nullptr);
 
     SymbolTypePtr_t call_member_type;
     String call_member_name;
 
-    if ((call_member_type = unboxed_type->FindPrototypeMember("$invoke"))) {
+    if ((call_member_type = unaliased->FindPrototypeMember("$invoke"))) {
         call_member_name = "$invoke";
-    } else if ((call_member_type = unboxed_type->FindPrototypeMember("$construct"))) {
+    } else if ((call_member_type = unaliased->FindPrototypeMember("$construct"))) {
         call_member_name = "$construct";
     }
 
     if (call_member_type != nullptr) {
         // if (call_member_name == "$invoke") {
             // closure objects have a self parameter for the '$invoke' call.
-            RC<AstArgument> self_arg(new AstArgument(
-                CloneAstNode(m_target),
+            RC<AstArgument> closure_self_arg(new AstArgument(
+                CloneAstNode(m_expr),
+                false,
+                false,
                 false,
                 false,
                 "$functor",
-                m_target->GetLocation()
+                m_expr->GetLocation()
             ));
             
             // insert at front
-            m_substituted_args.PushFront(std::move(self_arg));
+            args_with_self.PushFront(std::move(closure_self_arg));
         // }
 
-        m_target.Reset(new AstMember(
+        m_replaced_expr.Reset(new AstMember(
             call_member_name,
-            CloneAstNode(m_target),
+            CloneAstNode(m_expr),
             m_location
         ));
         
-        AssertThrow(m_target != nullptr);
-        m_target->Visit(visitor, mod);
+        m_replaced_expr->Visit(visitor, mod);
 
-        unboxed_type = call_member_type;
-        AssertThrow(unboxed_type != nullptr);
+        unaliased = call_member_type;
+        AssertThrow(unaliased != nullptr);
+    } else {
+        m_replaced_expr = m_expr;
     }
 
-    FunctionTypeSignature_t substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
-        visitor,
-        mod,
-        unboxed_type,
-        m_substituted_args,
-        m_location
-    );
-
     // visit each argument
-    for (auto &arg : m_substituted_args) {
+    for (auto &arg : args_with_self) {
         AssertThrow(arg != nullptr);
 
         // note, visit in current module rather than module access
@@ -133,19 +123,32 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
         // yet still pass variables from the local module.
         arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
     }
-    
-    SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
+
+    FunctionTypeSignature_t substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
         visitor,
         mod,
-        unboxed_type,
-        m_substituted_args,
+        unaliased,
+        args_with_self,
         m_location
     );
 
     if (substituted.first != nullptr) {
         m_return_type = substituted.first;
+
         // change args to be newly ordered vector
-        m_substituted_args = substituted.second;
+        m_substituted_args = CloneAllAstNodes(substituted.second);
+
+        for (const RC<AstArgument> &arg : m_substituted_args) {
+            arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
+        }
+    
+        SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
+            visitor,
+            mod,
+            unaliased,
+            m_substituted_args,
+            m_location
+        );
     } else {
         // not a function type
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -168,9 +171,8 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
 std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module *mod)
 {
     AssertThrow(m_is_visited);
-
-    AssertThrow(m_target != nullptr);
-
+    AssertThrow(m_replaced_expr != nullptr);
+    
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // build arguments
@@ -185,7 +187,7 @@ std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module 
     chunk->Append(Compiler::BuildCall(
         visitor,
         mod,
-        m_target,
+        m_replaced_expr,
         UInt8(m_substituted_args.Size())
     ));
 
@@ -209,9 +211,8 @@ std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module 
 
 void AstCallExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    AssertThrow(m_target != nullptr);
-
-    m_target->Optimize(visitor, mod);
+    AssertThrow(m_replaced_expr != nullptr);
+    m_replaced_expr->Optimize(visitor, mod);
 
     // optimize each argument
     for (auto &arg : m_substituted_args) {

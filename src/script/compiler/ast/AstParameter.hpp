@@ -8,7 +8,8 @@
 
 namespace hyperion::compiler {
 
-class AstParameter : public AstDeclaration {
+class AstParameter : public AstDeclaration
+{
 public:
     AstParameter(
         const String &name,
@@ -48,13 +49,18 @@ public:
     void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &type_spec)
         { m_type_spec = type_spec; }
 
+    SymbolTypePtr_t GetExprType() const;
+
 private:
-    RC<AstPrototypeSpecification> m_type_spec;
-    RC<AstExpression> m_default_param;
-    Bool m_is_variadic;
-    Bool m_is_const;
-    Bool m_is_ref;
-    Bool m_is_generic_param;
+    RC<AstPrototypeSpecification>   m_type_spec;
+    RC<AstExpression>               m_default_param;
+    Bool                            m_is_variadic;
+    Bool                            m_is_const;
+    Bool                            m_is_ref;
+    Bool                            m_is_generic_param;
+
+    // Set while analyzing
+    SymbolTypePtr_t                 m_symbol_type;
 
     RC<AstParameter> CloneImpl() const
     {

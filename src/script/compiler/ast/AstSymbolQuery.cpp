@@ -34,6 +34,20 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
         AssertThrow(expr_type != nullptr);
 
         m_string_result_value = RC<AstString>::Construct(expr_type->GetName(), m_location);
+    } else if (m_command_name == "log") {
+        const auto *value_of = m_expr->GetDeepValueOf();
+
+        if (value_of) {
+            const auto *string_value = dynamic_cast<const AstString *>(value_of);
+
+            if (string_value) {
+                DebugLog(LogType::Info, "$meta::log(): %s\n", string_value->GetValue().Data());
+            } else {
+                DebugLog(LogType::Warn, "$meta::log(): Not a constant string\n");
+            }
+        } else {
+            DebugLog(LogType::Warn, "$meta::log(): No value found for expression\n");
+        }
     } else if (m_command_name == "fields") {
         SymbolTypePtr_t expr_type = m_expr->GetExprType();
         AssertThrow(expr_type != nullptr);
@@ -67,8 +81,10 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstSymbolQuery::Build(AstVisitor *visitor, Module *mod)
 {
-    if (AstExpression *value_of = const_cast<AstExpression*>(GetValueOf())) {
-        return value_of->Build(visitor, mod);
+    if (m_string_result_value != nullptr) {
+        return m_string_result_value->Build(visitor, mod);
+    } else if (m_array_result_value != nullptr) {
+        return m_array_result_value->Build(visitor, mod);
     }
 
     return nullptr;

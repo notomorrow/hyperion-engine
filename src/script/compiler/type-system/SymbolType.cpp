@@ -203,9 +203,7 @@ bool SymbolType::TypeCompatible(
 
     if (right.IsGenericParameter()) {
         // no substitution yet, compatible
-        if (right.GetGenericParameterInfo().m_substitution.lock() == nullptr) {
-            return true;
-        }
+        return true;
     }
 
     switch (m_type_class) {
@@ -227,7 +225,7 @@ bool SymbolType::TypeCompatible(
             return false;
         }
         case TYPE_GENERIC_INSTANCE: {
-            SymbolTypePtr_t base = m_base.lock();
+            SymbolTypePtr_t base = m_base;
             AssertThrow(base != nullptr);
 
             if (right.m_type_class == TYPE_GENERIC_INSTANCE) {
@@ -300,26 +298,31 @@ bool SymbolType::TypeCompatible(
         }
 
         case TYPE_GENERIC_PARAMETER: {
-            if (auto sp = m_generic_param_info.m_substitution.lock()) {
-                return sp->TypeCompatible(right, strict_numbers);
-            }
-
             // uninstantiated generic parameters are compatible with anything
             return true;
         }
 
         default:
-            if (TypeEqual(*BuiltinTypes::NUMBER)) {
-                return (right.TypeEqual(*BuiltinTypes::INT) ||
-                        right.TypeEqual(*BuiltinTypes::UNSIGNED_INT) ||
-                        right.TypeEqual(*BuiltinTypes::FLOAT));
-            } else if (!strict_numbers) {
+            if (!strict_numbers) {
                 if (TypeEqual(*BuiltinTypes::INT) || TypeEqual(*BuiltinTypes::UNSIGNED_INT) || TypeEqual(*BuiltinTypes::FLOAT)) {
                     return (right.TypeEqual(*BuiltinTypes::NUMBER) ||
                             right.TypeEqual(*BuiltinTypes::FLOAT) ||
                             right.TypeEqual(*BuiltinTypes::UNSIGNED_INT) ||
                             right.TypeEqual(*BuiltinTypes::INT));
                 }
+            }
+
+            if (TypeEqual(*BuiltinTypes::NUMBER)) {
+                return (right.TypeEqual(*BuiltinTypes::INT) ||
+                        right.TypeEqual(*BuiltinTypes::UNSIGNED_INT) ||
+                        right.TypeEqual(*BuiltinTypes::FLOAT));
+            } else if (TypeEqual(*BuiltinTypes::FLOAT)) {
+                return (right.TypeEqual(*BuiltinTypes::INT) ||
+                        right.TypeEqual(*BuiltinTypes::UNSIGNED_INT) ||
+                        right.TypeEqual(*BuiltinTypes::NUMBER));
+            } else if (TypeEqual(*BuiltinTypes::UNSIGNED_INT)) {
+                return (right.TypeEqual(*BuiltinTypes::INT) ||
+                        right.TypeEqual(*BuiltinTypes::NUMBER));
             }
 
             return false;
@@ -499,20 +502,8 @@ bool SymbolType::IsNullableType() const
 
 bool SymbolType::IsArrayType() const
 {
-    // compare directly to ARRAY type
-    if (this == BuiltinTypes::ARRAY.get()) {
-        return true;
-    } else if (m_type_class == TYPE_GENERIC_INSTANCE) {
-        // type is not Array, so check base class if it is a generic instance
-        // e.g Array(Int)
-        if (const SymbolTypePtr_t base = m_base.lock()) {
-            if (base == BuiltinTypes::ARRAY || base == BuiltinTypes::VAR_ARGS) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return IsOrHasBase(*BuiltinTypes::ARRAY)
+        || HasBase(*BuiltinTypes::VAR_ARGS);
 }
 
 bool SymbolType::IsBoxedType() const
@@ -530,12 +521,7 @@ bool SymbolType::IsBoxedType() const
 
 bool SymbolType::IsGenericParameter() const
 {
-    if (m_type_class == TYPE_GENERIC_PARAMETER && m_generic_param_info.m_substitution.lock() == nullptr) {
-        // right is a generic paramter that has not yet been substituted
-        return true;
-    }
-
-    return false;
+     return m_type_class == TYPE_GENERIC_PARAMETER;
 }
 
 bool SymbolType::IsGeneric() const
@@ -730,11 +716,12 @@ SymbolTypePtr_t SymbolType::Function(
 
 SymbolTypePtr_t SymbolType::GenericInstance(
     const SymbolTypePtr_t &base,
-    const GenericInstanceTypeInfo &info
+    const GenericInstanceTypeInfo &info,
+    const Array<SymbolMember_t> &members
 )
 {
     AssertThrow(base != nullptr);
-    AssertThrow(base->IsGeneric());
+    AssertThrow(base->GetTypeClass() == TYPE_GENERIC_INSTANCE || base->GetTypeClass() == TYPE_GENERIC);
 
     String name;
     String return_type_name;
@@ -786,11 +773,19 @@ SymbolTypePtr_t SymbolType::GenericInstance(
         name = base->GetName() + "()";
     }
 
-    Array<SymbolMember_t> members;
-    members.Reserve(base->GetMembers().Size());
+    Array<SymbolMember_t> all_members;
+    all_members.Reserve(base->GetMembers().Size() + members.Size());
 
     for (const SymbolMember_t &member : base->GetMembers()) {
-        bool is_substituted = false;
+        const auto overriden_member_it = members.FindIf([&member](const auto &other_member)
+        {
+            return std::get<0>(other_member) == std::get<0>(member);
+        });
+
+        if (overriden_member_it != members.End()) {
+            // if member is overriden, skip it
+            continue;
+        }
 
         if (std::get<1>(member)->GetTypeClass() == TYPE_GENERIC_PARAMETER) {
             // if members of the generic/template class are of the type T (generic parameter)
@@ -798,30 +793,26 @@ SymbolTypePtr_t SymbolType::GenericInstance(
             AssertThrow(base->GetGenericInfo().m_params.Size() == info.m_generic_args.Size());
             
             // find parameter and substitute it
-            for (size_t i = 0; i < base->GetGenericInfo().m_params.Size(); i++) {
-                SymbolTypePtr_t &it = base->GetGenericInfo().m_params[i];
+            const auto generic_param_it = base->GetGenericInfo().m_params.FindIf([&](const SymbolTypePtr_t &it)
+            {
+                return it->GetName() == std::get<1>(member)->GetName();
+            });
 
-                if (it->GetName() == std::get<1>(member)->GetName()) {
-                    RC<AstExpression> default_value;
+            if (generic_param_it != base->GetGenericInfo().m_params.End()) {
+                RC<AstExpression> default_value;
 
-                    if ((default_value = std::get<2>(member))) {
-                        default_value = CloneAstNode(default_value);
-                    }
-
-                    members.PushBack(SymbolMember_t(
-                        std::get<0>(member),
-                        info.m_generic_args[i].m_type,
-                        default_value
-                    ));
-
-                    is_substituted = true;
-                    break;
+                if ((default_value = std::get<2>(member))) {
+                    default_value = CloneAstNode(default_value);
                 }
-            }
 
-            if (!is_substituted) {
+                all_members.PushBack(SymbolMember_t(
+                    std::get<0>(member),
+                    info.m_generic_args[std::distance(base->GetGenericInfo().m_params.Begin(), generic_param_it)].m_type,
+                    default_value
+                ));
+            } else {
                 // substitution error, set type to be undefined
-                members.PushBack(SymbolMember_t(
+                all_members.PushBack(SymbolMember_t(
                     std::get<0>(member),
                     BuiltinTypes::UNDEFINED,
                     std::get<2>(member)
@@ -829,12 +820,20 @@ SymbolTypePtr_t SymbolType::GenericInstance(
             }
         } else {
             // push copy (clone assignment value)
-            members.PushBack(SymbolMember_t(
+            all_members.PushBack(SymbolMember_t(
                 std::get<0>(member),
                 std::get<1>(member),
                 CloneAstNode(std::get<2>(member))
             ));
         }
+    }
+
+    for (const SymbolMember_t &member : members) {
+        all_members.PushBack(SymbolMember_t(
+            std::get<0>(member),
+            std::get<1>(member),
+            CloneAstNode(std::get<2>(member))
+        ));
     }
 
     // if the generic's default value is nullptr,
@@ -860,17 +859,27 @@ SymbolTypePtr_t SymbolType::GenericInstance(
     return res;
 }
 
+SymbolTypePtr_t SymbolType::GenericInstance(
+    const SymbolTypePtr_t &base,
+    const GenericInstanceTypeInfo &info
+)
+{
+    return GenericInstance(base, info, { });
+}
+
+
+/**
+ * @TODO: Constraint
+ */
 SymbolTypePtr_t SymbolType::GenericParameter(
-    const String &name, 
-    const SymbolTypePtr_t &substitution)
+    const String &name
+)
 {
     SymbolTypePtr_t res(new SymbolType(
         name,
         TYPE_GENERIC_PARAMETER,
         BuiltinTypes::CLASS_TYPE
     ));
-
-    res->m_generic_param_info.m_substitution = substitution;
     
     return res;
 }
@@ -897,10 +906,10 @@ SymbolTypePtr_t SymbolType::Extend(
         new AstObject(symbol_type, SourceLocation::eof)
     ));
 
-    symbol_type->m_generic_info = base->m_generic_info;
-    symbol_type->m_generic_instance_info = base->m_generic_instance_info;
-    symbol_type->m_generic_param_info = base->m_generic_param_info;
-    symbol_type->m_function_info = base->m_function_info;
+    symbol_type->m_generic_info             = base->m_generic_info;
+    symbol_type->m_generic_instance_info    = base->m_generic_instance_info;
+    symbol_type->m_generic_param_info       = base->m_generic_param_info;
+    symbol_type->m_function_info            = base->m_function_info;
     
     return symbol_type;
 }
@@ -930,7 +939,8 @@ SymbolTypePtr_t PrototypedObject(
 SymbolTypePtr_t SymbolType::TypePromotion(
     const SymbolTypePtr_t &lptr,
     const SymbolTypePtr_t &rptr,
-    bool use_number)
+    bool use_number
+)
 {
     if (lptr == nullptr || rptr == nullptr) {
         return nullptr;
@@ -945,16 +955,25 @@ SymbolTypePtr_t SymbolType::TypePromotion(
         rptr->TypeEqual(*BuiltinTypes::UNDEFINED))
     {
         return BuiltinTypes::UNDEFINED;
-    } else if (lptr->TypeEqual(*BuiltinTypes::ANY) || rptr->TypeEqual(*BuiltinTypes::ANY)) {
+    } else if (lptr->IsAnyType() || rptr->IsAnyType()) {
         // Any + T = Any
         // T + Any = Any
         return BuiltinTypes::ANY;
+    } else if (lptr->IsGenericParameter() || rptr->IsGenericParameter()) {
+        /* @TODO: Might be useful to use the base type of the generic. */
+        return BuiltinTypes::ANY;
     } else if (lptr->TypeEqual(*BuiltinTypes::NUMBER)) {
-        return rptr->TypeEqual(*BuiltinTypes::INT) ||
-               rptr->TypeEqual(*BuiltinTypes::FLOAT) ||
-               rptr->TypeEqual(*BuiltinTypes::UNSIGNED_INT)
-               ? BuiltinTypes::NUMBER
-               : BuiltinTypes::UNDEFINED;
+        if (use_number) {
+            return rptr->TypeEqual(*BuiltinTypes::INT) ||
+                   rptr->TypeEqual(*BuiltinTypes::FLOAT) ||
+                   rptr->TypeEqual(*BuiltinTypes::UNSIGNED_INT)
+                       ? BuiltinTypes::NUMBER
+                       : BuiltinTypes::UNDEFINED;
+        } else if (rptr->TypeEqual(*BuiltinTypes::FLOAT)) {
+            return BuiltinTypes::FLOAT;
+        } else {
+            return BuiltinTypes::NUMBER;
+        }
     } else if (lptr->TypeEqual(*BuiltinTypes::INT)) {
         if (rptr->TypeEqual(*BuiltinTypes::UNSIGNED_INT)) {
             return BuiltinTypes::UNSIGNED_INT;
@@ -1003,66 +1022,66 @@ SymbolTypePtr_t SymbolType::GenericPromotion(
     AssertThrow(rptr != nullptr);
 
     switch (lptr->GetTypeClass()) {
-        case TYPE_GENERIC:
-            switch (rptr->GetTypeClass()) {
-                case TYPE_GENERIC_INSTANCE: {
-                    auto right_base = rptr->GetBaseType();
-
-                    while (right_base != nullptr) {
-                        if (lptr->TypeEqual(*right_base)) {
-                            // left-hand side is the base of the right hand side,
-                            // so upgrade left to the derived type.
-                            return rptr;
-                        }
-                        right_base = right_base->GetBaseType();
-                    }
-                }
-                    // fallthrough
-                default:
-                    // check if left is a Boxed type so we can upgrade the inner type
-                    if (auto left_base = lptr->GetBaseType()) {
-                        if (left_base == BuiltinTypes::BOXED_TYPE) {
-                            // if left is a Boxed type and still generic (no params),
-                            // e.i Const or Maybe, fill it with the assignment type
-                            Array<GenericInstanceTypeInfo::Arg> generic_types {
-                                { "", rptr }
-                            };
-                            
-                            return SymbolType::GenericInstance(
-                                lptr,
-                                GenericInstanceTypeInfo {
-                                    generic_types
-                                }
-                            );
-                        }
-                    }
-
-                    break;
-            }
-
-            break;
-        
+    case TYPE_GENERIC:
+        switch (rptr->GetTypeClass()) {
         case TYPE_GENERIC_INSTANCE: {
-            if (lptr->IsBoxedType()) {
-                // if left is a Boxed type and generic instance,
-                // perform promotion on the inner type.
-                const SymbolTypePtr_t &inner_type = lptr->GetGenericInstanceInfo().m_generic_args[0].m_type;
-                AssertThrow(inner_type != nullptr);
+            auto right_base = rptr->GetBaseType();
 
-                Array<GenericInstanceTypeInfo::Arg> new_generic_types {
-                    { "", SymbolType::GenericPromotion(inner_type, rptr) }
-                };
-                
-                return SymbolType::GenericInstance(
-                    lptr->GetBaseType(),
-                    GenericInstanceTypeInfo {
-                        new_generic_types
-                    }
-                );
+            while (right_base != nullptr) {
+                if (lptr->TypeEqual(*right_base)) {
+                    // left-hand side is the base of the right hand side,
+                    // so upgrade left to the derived type.
+                    return rptr;
+                }
+                right_base = right_base->GetBaseType();
+            }
+        }
+            // fallthrough
+        default:
+            // check if left is a Boxed type so we can upgrade the inner type
+            if (auto left_base = lptr->GetBaseType()) {
+                if (left_base == BuiltinTypes::BOXED_TYPE) {
+                    // if left is a Boxed type and still generic (no params),
+                    // e.i Const or Maybe, fill it with the assignment type
+                    Array<GenericInstanceTypeInfo::Arg> generic_types {
+                        { "", rptr }
+                    };
+                    
+                    return SymbolType::GenericInstance(
+                        lptr,
+                        GenericInstanceTypeInfo {
+                            generic_types
+                        }
+                    );
+                }
             }
 
             break;
         }
+
+        break;
+    
+    case TYPE_GENERIC_INSTANCE: {
+        if (lptr->IsBoxedType()) {
+            // if left is a Boxed type and generic instance,
+            // perform promotion on the inner type.
+            const SymbolTypePtr_t &inner_type = lptr->GetGenericInstanceInfo().m_generic_args[0].m_type;
+            AssertThrow(inner_type != nullptr);
+
+            Array<GenericInstanceTypeInfo::Arg> new_generic_types {
+                { "", SymbolType::GenericPromotion(inner_type, rptr) }
+            };
+            
+            return SymbolType::GenericInstance(
+                lptr->GetBaseType(),
+                GenericInstanceTypeInfo {
+                    new_generic_types
+                }
+            );
+        }
+
+        break;
+    }
     }
 
     // no promotion
@@ -1083,42 +1102,40 @@ SymbolTypePtr_t SymbolType::SubstituteGenericParams(
     }
 
     switch (lptr->GetTypeClass()) {
-        case TYPE_GENERIC_INSTANCE: {
-            SymbolTypePtr_t base_type = lptr->GetBaseType();
-            AssertThrow(base_type != nullptr);
+    case TYPE_GENERIC_INSTANCE: {
+        SymbolTypePtr_t base_type = lptr->GetBaseType();
+        AssertThrow(base_type != nullptr);
 
-            Array<GenericInstanceTypeInfo::Arg> new_generic_types;
+        Array<GenericInstanceTypeInfo::Arg> new_generic_types;
 
-            for (const GenericInstanceTypeInfo::Arg &arg : lptr->GetGenericInstanceInfo().m_generic_args) {
-                const SymbolTypePtr_t &arg_type = arg.m_type;
-                AssertThrow(arg_type != nullptr);
+        for (const GenericInstanceTypeInfo::Arg &arg : lptr->GetGenericInstanceInfo().m_generic_args) {
+            const SymbolTypePtr_t &arg_type = arg.m_type;
+            AssertThrow(arg_type != nullptr);
 
-                GenericInstanceTypeInfo::Arg new_arg;
-                new_arg.m_name = arg.m_name;
-                new_arg.m_default_value = arg.m_default_value;
+            GenericInstanceTypeInfo::Arg new_arg;
+            new_arg.m_name = arg.m_name;
+            new_arg.m_default_value = arg.m_default_value;
 
-                // perform substitution
-                SymbolTypePtr_t arg_type_substituted = SymbolType::SubstituteGenericParams(
-                    arg_type,
-                    placeholder,
-                    substitute
-                );
-
-                AssertThrow(arg_type_substituted != nullptr);
-                new_arg.m_type = arg_type_substituted;
-
-                new_generic_types.PushBack(new_arg);
-            }
-
-            return SymbolType::GenericInstance(
-                base_type,
-                GenericInstanceTypeInfo {
-                    new_generic_types
-                }
+            // perform substitution
+            SymbolTypePtr_t arg_type_substituted = SubstituteGenericParams(
+                arg_type,
+                placeholder,
+                substitute
             );
 
-            break;
+            AssertThrow(arg_type_substituted != nullptr);
+            new_arg.m_type = arg_type_substituted;
+
+            new_generic_types.PushBack(new_arg);
         }
+
+        return SymbolType::GenericInstance(
+            base_type,
+            GenericInstanceTypeInfo {
+                new_generic_types
+            }
+        );
+    }
     }
 
     return lptr;

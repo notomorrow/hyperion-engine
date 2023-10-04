@@ -57,12 +57,12 @@ public:
 
 private:
     /** To be incremented every time a new identifier is added */
-    int m_identifier_index;
+    Int                     m_identifier_index;
     /** List of all identifiers in the table */
-    Array<RC<Identifier>> m_identifiers;
+    Array<RC<Identifier>>   m_identifiers;
 
     /** All types that are defined in this identifier table */
-    Array<SymbolTypePtr_t> m_symbol_types;
+    Array<SymbolTypePtr_t>  m_symbol_types;
 };
 
 } // namespace hyperion::compiler

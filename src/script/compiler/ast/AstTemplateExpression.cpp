@@ -1,5 +1,6 @@
 #include <script/compiler/ast/AstTemplateExpression.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
+#include <script/compiler/ast/AstTypeObject.hpp>
 #include <script/compiler/ast/AstVariable.hpp>
 #include <script/compiler/ast/AstNil.hpp>
 #include <script/compiler/AstVisitor.hpp>
@@ -48,13 +49,56 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     // visit params before expression to make declarations
     // for things that may be used in the expression
 
+    m_generic_param_placeholders.Resize(m_generic_params.Size());
+
     {
+        UInt index = 0;
+
         for (auto &generic_param : m_generic_params) {
             AssertThrow(generic_param != nullptr);
 
+            SymbolTypePtr_t generic_param_type = SymbolType::GenericParameter(generic_param->GetName());
+
+            mod->m_scopes.Top().GetIdentifierTable().AddSymbolType(generic_param_type);
+
+            auto var_decl = RC<AstVariableDeclaration>(new AstVariableDeclaration(
+                generic_param->GetName(),
+                nullptr,
+                nullptr,
+                {},
+                IdentifierFlags::FLAG_CONST,
+                m_location
+            ));
+
+            if (generic_param->GetDefaultValue() != nullptr) {
+                var_decl->SetAssignment(generic_param->GetDefaultValue());
+            } else {
+                var_decl->SetAssignment(RC<AstTypeObject>(new AstTypeObject(
+                    generic_param_type, nullptr, SourceLocation::eof
+                )));
+            }
+
+            if (generic_param->GetPrototypeSpecification() != nullptr) {
+                var_decl->SetPrototypeSpecification(generic_param->GetPrototypeSpecification());
+            } else {
+                /*var_decl->SetPrototypeSpecification(RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
+                    RC<AstVariable>(new AstVariable(
+                        BuiltinTypes::ANY->GetName(),
+                        m_location
+                    )),
+                    m_location
+                )));*/
+            }
+
+            m_block->AddChild(var_decl);
+
+            m_generic_param_placeholders[index++] = var_decl;
+
+
+#if 0
             generic_param->SetIsGenericParam(true);
 
-            if (generic_param->GetPrototypeSpecification() == nullptr) {
+            /*if (generic_param->GetPrototypeSpecification() == nullptr) {
                 generic_param->SetPrototypeSpecification(RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                     RC<AstVariable>(new AstVariable(
                         BuiltinTypes::ANY->GetName(),
@@ -62,7 +106,7 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
                     )),
                     m_location
                 )));
-            }
+            }*/
 
             // gross, but we gotta do this our else on first pass,
             // these will just refer to the wrong memory
@@ -73,41 +117,47 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
             }
 
             m_block->AddChild(generic_param);
+
+#endif
         }
     }
+    
+    if (m_return_type_specification != nullptr) {
+        m_block->AddChild(m_return_type_specification);
+    }
 
-    // added because i made creation of this object happen in parser
     AssertThrow(m_expr != nullptr);
-    // m_expr->Visit(visitor, mod);
 
     m_block->AddChild(m_expr);
     m_block->Visit(visitor, mod);
 
-    AssertThrow(m_expr->GetExprType() != nullptr);
-
     Array<GenericInstanceTypeInfo::Arg> generic_param_types;
-    generic_param_types.Reserve(m_generic_params.Size() + 1); // anotha one
+    generic_param_types.Reserve(m_generic_param_placeholders.Size() + 1); // anotha one
     
     SymbolTypePtr_t expr_return_type;
+    SymbolTypePtr_t implicit_return_type = m_expr->GetExprType();
+    SymbolTypePtr_t explicit_return_type = m_return_type_specification != nullptr
+        ? m_return_type_specification->GetHeldType()
+        : nullptr;
+
+    AssertThrow(implicit_return_type != nullptr);
 
     // if return type has been specified - visit it and check to see
     // if it's compatible with the expression
     if (m_return_type_specification != nullptr) {
-        m_return_type_specification->Visit(visitor, mod);
-
-        AssertThrow(m_return_type_specification->GetHeldType() != nullptr);
+        AssertThrow(explicit_return_type != nullptr);
 
         SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
             visitor,
             mod,
-            m_return_type_specification->GetHeldType(),
-            m_expr->GetExprType(),
+            explicit_return_type,
+            implicit_return_type,
             m_return_type_specification->GetLocation()
         );
 
-        expr_return_type = m_return_type_specification->GetHeldType();
+        expr_return_type = explicit_return_type;
     } else {
-        expr_return_type = m_expr->GetExprType();
+        expr_return_type = implicit_return_type;
     }
 
     generic_param_types.PushBack({
@@ -115,20 +165,17 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
         expr_return_type
     });
 
-    for (SizeType i = 0; i < m_generic_params.Size(); i++) {
-        const RC<AstParameter> &param = m_generic_params[i];
-        AssertThrow(param != nullptr);
+    for (SizeType i = 0; i < m_generic_param_placeholders.Size(); i++) {
+        const RC<AstVariableDeclaration> &placeholder = m_generic_param_placeholders[i];
+        AssertThrow(placeholder != nullptr);
 
-        SymbolTypePtr_t param_type = BuiltinTypes::UNDEFINED;
-
-        if (param->GetIdentifier() && param->GetIdentifier()->GetSymbolType()) {
-            param_type = param->GetIdentifier()->GetSymbolType();
-        }
+        SymbolTypePtr_t param_type = placeholder->GetExprType();
+        AssertThrow(param_type != nullptr);
 
         generic_param_types.PushBack(GenericInstanceTypeInfo::Arg {
-            param->GetName(),
+            placeholder->GetName(),
             param_type,
-            param->GetDefaultValue()
+            placeholder->GetAssignment()
         });
     }
 

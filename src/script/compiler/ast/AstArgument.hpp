@@ -16,10 +16,12 @@ public:
         const RC<AstExpression> &expr,
         bool is_splat,
         bool is_named,
+        bool is_pass_by_ref,
+        bool is_pass_const,
         const String &name,
         const SourceLocation &location
     );
-    virtual ~AstArgument() = default;
+    virtual ~AstArgument() override = default;
 
     const RC<AstExpression> &GetExpr() const
       { return m_expr; }
@@ -47,6 +49,8 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
+    virtual const AstExpression *GetValueOf() const override;
+    virtual const AstExpression *GetDeepValueOf() const override;
     virtual const String &GetName() const override;
 
 private:
@@ -65,6 +69,8 @@ private:
             CloneAstNode(m_expr),
             m_is_splat,
             m_is_named,
+            m_is_pass_by_ref,
+            m_is_pass_const,
             m_name,
             m_location
         ));

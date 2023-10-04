@@ -75,11 +75,11 @@ struct GenericInstanceTypeInfo
 {
     struct Arg
     {
-        String m_name;
-        SymbolTypePtr_t m_type;
-        RC<AstExpression> m_default_value;
-        bool m_is_ref;
-        bool m_is_const;
+        String              m_name;
+        SymbolTypePtr_t     m_type;
+        RC<AstExpression>   m_default_value;
+        bool                m_is_ref = false;
+        bool                m_is_const = false;
     };
 
     Array<Arg> m_generic_args;
@@ -87,7 +87,6 @@ struct GenericInstanceTypeInfo
 
 struct GenericParameterTypeInfo
 {
-    SymbolTypeWeakPtr_t m_substitution;
 };
 
 class SymbolType : public std::enable_shared_from_this<SymbolType>
@@ -145,12 +144,17 @@ public:
 
     static SymbolTypePtr_t GenericInstance(
         const SymbolTypePtr_t &base,
+        const GenericInstanceTypeInfo &info,
+        const Array<SymbolMember_t> &members
+    );
+
+    static SymbolTypePtr_t GenericInstance(
+        const SymbolTypePtr_t &base,
         const GenericInstanceTypeInfo &info
     );
 
     static SymbolTypePtr_t GenericParameter(
-        const String &name, 
-        const SymbolTypePtr_t &substitution
+        const String &name
     );
     
     static SymbolTypePtr_t Extend(
@@ -203,17 +207,22 @@ public:
 
     const String &GetName() const { return m_name; }
     SymbolTypeClass GetTypeClass() const { return m_type_class; }
-    SymbolTypePtr_t GetBaseType() const { return m_base.lock(); }
+    const SymbolTypePtr_t &GetBaseType() const { return m_base; }
 
     const RC<AstExpression> &GetDefaultValue() const
         { return m_default_value; }
+
     void SetDefaultValue(const RC<AstExpression> &default_value)
         { m_default_value = default_value; }
     
     Array<SymbolMember_t> &GetMembers()
         { return m_members; }
+
     const Array<SymbolMember_t> &GetMembers() const
         { return m_members; }
+
+    void SetMembers(const Array<SymbolMember_t> &members)
+        { m_members = members; }
 
     void AddMember(const SymbolMember_t &member)
         { m_members.PushBack(member); }
@@ -305,7 +314,7 @@ private:
     Array<SymbolMember_t> m_members;
 
     // type that this type is based off of
-    SymbolTypeWeakPtr_t m_base;
+    SymbolTypePtr_t m_base;
 
     RC<AstTypeObject> m_type_object;
 

@@ -223,4 +223,9 @@ SymbolTypePtr_t AstTypeObject::GetExprType() const
     return BuiltinTypes::CLASS_TYPE;
 }
 
+const AstTypeObject *AstTypeObject::ExtractTypeObject() const
+{
+    return this;
+}
+
 } // namespace hyperion::compiler

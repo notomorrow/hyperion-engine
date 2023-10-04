@@ -14,14 +14,16 @@ AstArgument::AstArgument(
     const RC<AstExpression> &expr,
     bool is_splat,
     bool is_named,
+    bool is_pass_by_ref,
+    bool is_pass_const,
     const String &name,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_expr(expr),
     m_is_splat(is_splat),
     m_is_named(is_named),
-    m_is_pass_by_ref(false),
-    m_is_pass_const(false),
+    m_is_pass_by_ref(is_pass_by_ref),
+    m_is_pass_const(is_pass_const),
     m_name(name)
 {
 }
@@ -129,6 +131,21 @@ SymbolTypePtr_t AstArgument::GetExprType() const
 {
     AssertThrow(m_expr != nullptr);
     return m_expr->GetExprType();
+}
+
+
+const AstExpression *AstArgument::GetValueOf() const
+{
+    return m_expr.Get();
+}
+
+const AstExpression *AstArgument::GetDeepValueOf() const
+{
+    if (!m_expr) {
+        return nullptr;
+    }
+
+    return m_expr->GetDeepValueOf();
 }
 
 const String &AstArgument::GetName() const

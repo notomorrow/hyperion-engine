@@ -115,14 +115,8 @@ const AstTypeObject *AstIdentifier::ExtractTypeObject() const
 {
     if (const RC<Identifier> &ident = m_properties.GetIdentifier()) {
         if (const auto current_value = ident->GetCurrentValue()) {
-            if (auto *nested_identifier = dynamic_cast<const AstIdentifier *>(current_value.Get())) {
-                if (nested_identifier == this) {
-                    return nullptr;
-                }
-
-                return nested_identifier->ExtractTypeObject();
-            } else if (auto *type_object = dynamic_cast<const AstTypeObject *>(current_value.Get())) {
-                return type_object;
+            if (current_value.Get() != this) {
+                return current_value->ExtractTypeObject();
             }
         }
     }

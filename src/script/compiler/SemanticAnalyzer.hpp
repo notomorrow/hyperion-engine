@@ -7,20 +7,85 @@
 #include <script/compiler/ast/AstArgument.hpp>
 
 #include <memory>
-#include <vector>
-#include <string>
 #include <utility>
+#include <set>
 
 namespace hyperion::compiler {
 
 // forward declaration
 class Module;
 
+struct SubstitutionResult {
+    RC<AstArgument> arg;
+    Int             index = -1;
+};
+
+struct ArgInfo
+{
+    Bool            is_named;
+    String          name;
+    SymbolTypePtr_t type;
+};
+
 class SemanticAnalyzer : public AstVisitor
 {
 public:
     struct Helpers
     {
+    private:
+        static Int FindFreeSlot(
+            Int current_index,
+            const std::set<Int> &used_indices,
+            const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+            Bool is_variadic,
+            Int num_supplied_args
+        );
+
+        static Int ArgIndex(
+            Int current_index,
+            const ArgInfo &arg_info,
+            const std::set<Int> &used_indices,
+            const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+            Bool is_variadic = false,
+            Int num_supplied_args = -1
+        );
+
+    public:
+        static SymbolTypePtr_t GetVarArgType(
+            const Array<GenericInstanceTypeInfo::Arg> &generic_args
+        );
+
+        static SymbolTypePtr_t SubstituteGenericParameters(
+            AstVisitor *visitor,
+            Module *mod,
+            const SymbolTypePtr_t &input_type,
+            const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+            const Array<SubstitutionResult> &substitution_results,
+            const SourceLocation &location
+        );
+
+        static FunctionTypeSignature_t ExtractGenericArgs(
+            AstVisitor *visitor,
+            Module *mod,
+            const SymbolTypePtr_t &identifier_type, 
+            const Array<RC<AstArgument>> &args,
+            const SourceLocation &location,
+            Array<SubstitutionResult>(*fn) (
+                AstVisitor *visitor,
+                Module *mod,
+                const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+                const Array<RC<AstArgument>> &args,
+                const SourceLocation &location
+            )
+        );
+
+        static void CheckArgTypeCompatible(
+            AstVisitor *visitor,
+            const SourceLocation &location,
+            const SymbolTypePtr_t &arg_type,
+            const SymbolTypePtr_t &param_type
+        );
+
         static FunctionTypeSignature_t SubstituteFunctionArgs(
             AstVisitor *visitor,
             Module *mod,
@@ -29,14 +94,6 @@ public:
             const SourceLocation &location
         );
 
-        // static Array<RC<AstArgument>> SubstituteGenericArgs(
-        //     AstVisitor *visitor,
-        //     Module *mod,
-        //     const Array<GenericInstanceTypeInfo::Arg> &generic_args,
-        //     const Array<RC<AstArgument>> &args,
-        //     const SourceLocation &location
-        // );
-
         static void EnsureFunctionArgCompatibility(
             AstVisitor *visitor,
             Module *mod,
@@ -44,14 +101,6 @@ public:
             const Array<RC<AstArgument>> &args,
             const SourceLocation &location
         );
-
-        // static void EnsureFunctionArgCompatibility(
-        //     AstVisitor *visitor,
-        //     Module *mod,
-        //     const Array<GenericInstanceTypeInfo::Arg> &generic_args,
-        //     const Array<RC<AstArgument>> &args,
-        //     const SourceLocation &location
-        // );
 
         static void EnsureLooseTypeAssignmentCompatibility(
             AstVisitor *visitor,

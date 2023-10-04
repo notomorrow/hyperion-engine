@@ -84,14 +84,12 @@ public:
     virtual bool MayHaveSideEffects() const override = 0;
     virtual SymbolTypePtr_t GetExprType() const override = 0;
     virtual ExprAccess GetExprAccess() const override;
+    virtual const AstTypeObject *ExtractTypeObject() const override;
 
     virtual const AstExpression *GetValueOf() const override;
     virtual const AstExpression *GetDeepValueOf() const override;
 
     virtual const String &GetName() const override;
-
-    /** temporary, used for extracting a type object located in the stored value */
-    const AstTypeObject *ExtractTypeObject() const;
 
 protected:
     String                  m_name;

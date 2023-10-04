@@ -50,11 +50,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     }
 
     if (value_of != nullptr) {
-        if (!(type_obj = dynamic_cast<const AstTypeObject *>(value_of))) {
-            if ((identifier = dynamic_cast<const AstIdentifier *>(value_of))) {
-                type_obj = identifier->ExtractTypeObject();
-            }
-        }
+        type_obj = value_of->ExtractTypeObject();
     }
 
     if (!type_obj) {
@@ -63,7 +59,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
 
     m_symbol_type = BuiltinTypes::UNDEFINED;
     m_prototype_type = BuiltinTypes::UNDEFINED;
-
+    
     if (unaliased->IsAnyType()) {
         // it is a dynamic type
         m_symbol_type = BuiltinTypes::ANY;
@@ -138,7 +134,7 @@ void AstPrototypeSpecification::Optimize(AstVisitor *visitor, Module *mod)
 
 bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbol_type)
 {
-    if (symbol_type->GetTypeClass() == TYPE_BUILTIN) {
+    if (symbol_type->GetTypeClass() == TYPE_BUILTIN || symbol_type->IsGenericParameter()) {
         m_prototype_type = symbol_type;
         m_default_value = symbol_type->GetDefaultValue();
 

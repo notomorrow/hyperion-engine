@@ -14,7 +14,7 @@ class AstCallExpression : public AstExpression
 {
 public:
     AstCallExpression(
-        const RC<AstExpression> &target,
+        const RC<AstExpression> &expr,
         const Array<RC<AstArgument>> &args,
         bool insert_self,
         const SourceLocation &location
@@ -39,11 +39,12 @@ public:
     virtual AstExpression *GetTarget() const override;
 
 protected:
-    RC<AstExpression>       m_target;
+    RC<AstExpression>       m_expr;
     Array<RC<AstArgument>>  m_args;
     bool                    m_insert_self;
 
     // set while analyzing
+    RC<AstExpression>       m_replaced_expr;
     Array<RC<AstArgument>>  m_substituted_args;
     SymbolTypePtr_t         m_return_type;
     bool                    m_is_visited = false;
@@ -51,7 +52,7 @@ protected:
     RC<AstCallExpression> CloneImpl() const
     {
         return RC<AstCallExpression>(new AstCallExpression(
-            CloneAstNode(m_target),
+            CloneAstNode(m_expr),
             CloneAllAstNodes(m_args),
             m_insert_self,
             m_location

@@ -794,6 +794,8 @@ RC<AstExpression> Parser::ParseAngleBrackets(RC<AstIdentifier> target)
                     term,
                     is_splat_arg,
                     is_named_arg,
+                    false,
+                    false,
                     arg_name,
                     arg_location
                 )));
@@ -943,6 +945,8 @@ RC<AstArgument> Parser::ParseArgument(RC<AstExpression> expr)
             expr,
             is_splat_arg,
             is_named_arg,
+            false,
+            false,
             arg_name,
             location
         ));
@@ -1646,6 +1650,8 @@ RC<AstPrototypeSpecification> Parser::ParsePrototypeSpecification()
                     {
                         RC<AstArgument>(new AstArgument(
                             term,
+                            false,
+                            false,
                             false,
                             false,
                             "",
@@ -2611,34 +2617,22 @@ RC<AstExpression> Parser::ParseMetaProperty()
     if (Token token = ExpectKeyword(Keyword_meta, true)) {
         Expect(TK_DOUBLE_COLON, true);
 
-        Token ident = ExpectIdentifier(true, true);
+        const Token ident = ExpectIdentifier(true, true);
+        
+        Expect(TK_OPEN_PARENTH, true);
 
-        // @TODO refactor this to use ParseFunctionParameters() etc...
-        // rather than having it hard-coded. makes it hard to add new features..
-
-        if (ident.GetValue() == "query") {
-            Expect(TK_OPEN_PARENTH, true);
-
-            RC<AstString> query_command_name = ParseStringLiteral();
-            if (query_command_name == nullptr) {
-                return nullptr;
-            }
-
-            Expect(TK_COMMA, true);
-
-            RC<AstExpression> term = ParseTerm();
-            if (term == nullptr) {
-                return nullptr;
-            }
-
-            Expect(TK_CLOSE_PARENTH, true);
-
-            return RC<AstSymbolQuery>(new AstSymbolQuery(
-                query_command_name->GetValue(),
-                term,
-                location
-            ));
+        RC<AstExpression> term = ParseTerm();
+        if (term == nullptr) {
+            return nullptr;
         }
+
+        Expect(TK_CLOSE_PARENTH, true);
+
+        return RC<AstSymbolQuery>(new AstSymbolQuery(
+            ident.GetValue(),
+            term,
+            location
+        ));
     }
 
     return nullptr;

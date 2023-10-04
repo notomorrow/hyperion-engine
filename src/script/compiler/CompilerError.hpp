@@ -68,6 +68,7 @@ enum ErrorMessage
     Msg_expression_not_generic,
     Msg_too_many_generic_args,
     Msg_too_few_generic_args,
+    Msg_no_substitution_for_generic_arg,
     Msg_enum_assignment_not_constant,
 
     /* FUNCTIONS */

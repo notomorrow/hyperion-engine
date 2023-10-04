@@ -33,17 +33,18 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
     AstDeclaration::Visit(visitor, mod);
 
     // params are `Any` by default
-    SymbolTypePtr_t symbol_type = BuiltinTypes::UNDEFINED,
-        specified_symbol_type;
+    m_symbol_type = BuiltinTypes::ANY;
+
+    SymbolTypePtr_t specified_symbol_type;
 
     if (m_type_spec != nullptr) {
         m_type_spec->Visit(visitor, mod);
 
         if ((specified_symbol_type = m_type_spec->GetHeldType())) {
-            symbol_type = specified_symbol_type;
+            m_symbol_type = specified_symbol_type;
         }
     } else {
-        symbol_type = BuiltinTypes::ANY;
+        m_symbol_type = BuiltinTypes::ANY;
     }
 
     if (m_default_param != nullptr) {
@@ -53,9 +54,9 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
         AssertThrow(default_param_type != nullptr);
 
         if (specified_symbol_type == nullptr) { // no symbol type specified; just set to the default arg type
-            symbol_type = default_param_type;
+            m_symbol_type = default_param_type;
         } else { // have to check compatibility
-            AssertThrow(symbol_type == specified_symbol_type); // just sanity check, assigned above
+            AssertThrow(m_symbol_type == specified_symbol_type); // just sanity check, assigned above
            
             // verify types compatible
             if (!specified_symbol_type->TypeCompatible(*default_param_type, true)) {
@@ -63,7 +64,7 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
                     LEVEL_ERROR,
                     Msg_arg_type_incompatible,
                     m_default_param->GetLocation(),
-                    symbol_type->GetName(),
+                    m_symbol_type->GetName(),
                     default_param_type->GetName()
                 ));
             }
@@ -72,18 +73,18 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
 
     // if variadic, then make it array of whatever type it is
     if (m_is_variadic) {
-        symbol_type = SymbolType::GenericInstance(
+        m_symbol_type = SymbolType::GenericInstance(
             BuiltinTypes::VAR_ARGS,
             GenericInstanceTypeInfo {
                 {
-                    { m_name, symbol_type }
+                    { m_name, m_symbol_type }
                 }
             }
         );
     }
 
     if (m_identifier != nullptr) {
-        m_identifier->SetSymbolType(symbol_type);
+        m_identifier->SetSymbolType(m_symbol_type);
         m_identifier->SetFlags(m_identifier->GetFlags() | IdentifierFlags::FLAG_ARGUMENT);
 
         if (m_is_const) {
@@ -132,6 +133,11 @@ void AstParameter::Optimize(AstVisitor *visitor, Module *mod)
 RC<AstStatement> AstParameter::Clone() const
 {
     return CloneImpl();
+}
+
+SymbolTypePtr_t AstParameter::GetExprType() const
+{
+    return m_symbol_type;
 }
 
 } // namespace hyperion::compiler
