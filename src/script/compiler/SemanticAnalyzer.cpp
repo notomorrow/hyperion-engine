@@ -36,8 +36,8 @@ void SemanticAnalyzer::Helpers::CheckArgTypeCompatible(
                 LEVEL_ERROR,
                 Msg_arg_type_incompatible,
                 location,
-                arg_type->GetName(),
-                param_type->GetName()
+                arg_type->ToString(),
+                param_type->ToString()
             ));
         }
     }
@@ -520,9 +520,9 @@ FunctionTypeSignature_t SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
                             const auto &arg = generic_args[i];
 
                             if (arg.m_name.Any()) {
-                                ss << arg.m_name << ": " << (arg.m_type != nullptr ? arg.m_type->GetName() : "??");
+                                ss << arg.m_name << ": " << (arg.m_type != nullptr ? arg.m_type->ToString() : "??");
                             } else {
-                                ss << "$" << i << ": " << (arg.m_type != nullptr ? arg.m_type->GetName() : "??");
+                                ss << "$" << i << ": " << (arg.m_type != nullptr ? arg.m_type->ToString() : "??");
                             }
 
                             if (i != generic_args.Size() - 1) {
@@ -753,7 +753,7 @@ void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
             LEVEL_ERROR,
             Msg_generic_parameters_missing,
             location,
-            symbol_type_promoted->GetName(),
+            symbol_type_promoted->ToString(),
             symbol_type_promoted->GetGenericInfo().m_num_parameters
         ));
     }
@@ -797,8 +797,8 @@ void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
             LEVEL_ERROR,
             Msg_mismatched_types_assignment,
             location,
-            symbol_type->GetName(),
-            assignment_type->GetName()
+            symbol_type->ToString(),
+            assignment_type->ToString()
         );
 
         if (assignment_type->IsAnyType()) {
@@ -806,7 +806,7 @@ void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
                 LEVEL_ERROR,
                 Msg_implicit_any_mismatch,
                 location,
-                symbol_type->GetName()
+                symbol_type->ToString()
             );
         }
 

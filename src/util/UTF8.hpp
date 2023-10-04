@@ -33,6 +33,7 @@ typedef std::wostream utf8_ostream;
 typedef std::wofstream utf8_ofstream;
 typedef std::wistream utf8_istream;
 typedef std::wifstream utf8_ifstream;
+typedef std::wstringstream utf8_stringstream;
 static utf8_ostream &cout = std::wcout;
 static utf8_istream &cin = std::wcin;
 static auto &printf = std::wprintf;
@@ -49,23 +50,34 @@ inline std::vector<wchar_t> ToWide(const char *str)
     return buffer;
 }
 
+inline std::vector<char> ToMultiByte(const wchar_t *wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    std::vector<char> buffer(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &buffer[0], size_needed, NULL, NULL);
+    return buffer;
+}
+
 #define HYP_UTF8_WIDE
 #define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
+#define HYP_UTF8_TOMULTIBYTE(str) utf::ToMultiByte(str).data()
 
 #else
 typedef std::string stdstring;
 typedef std::ostream utf8_ostream;
 typedef std::ofstream utf8_ofstream;
 typedef std::istream utf8_istream;
-typedef std::wifstream utf8_ifstream;
+typedef std::ifstream utf8_ifstream;
+typedef std::stringstream utf8_stringstream;
 static utf8_ostream &cout = std::cout;
 static utf8_istream &cin = std::cin;
 static auto &printf = std::printf;
 static auto &sprintf = std::sprintf;
 static auto &fputs = std::fputs;
 #define PRIutf8s "s"
-#define HYP_UTF8_CSTR(str) str
-#define HYP_UTF8_TOWIDE(str) str
+#define HYP_UTF8_CSTR(str) (str)
+#define HYP_UTF8_TOWIDE(str) (str)
+#define HYP_UTF8_TOMULTIBYTE(str) (str)
 #endif
 
 using u32char = hyperion::UInt32;

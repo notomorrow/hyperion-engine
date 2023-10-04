@@ -50,7 +50,7 @@ void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
             break;
         }
         
-        if (m_held_type == BuiltinTypes::ANY) {
+        if (m_held_type->IsAnyType() || m_held_type->IsPlaceholderType()) {
             // take first item found that is not `Any`
             m_held_type = it;
         } else if (m_held_type->TypeCompatible(*it, false)) {

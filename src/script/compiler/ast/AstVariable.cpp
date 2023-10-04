@@ -386,6 +386,10 @@ bool AstVariable::IsLiteral() const
             return false;
         }
 
+        if (expr_type->IsPlaceholderType()) {
+            return false;
+        }
+
         if (expr_type->GetTypeClass() != TYPE_BUILTIN) {
             return false;
         }

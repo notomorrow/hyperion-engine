@@ -17,7 +17,8 @@ void DecompilationUnit::DecodeNext(
     UInt8 code,
     hyperion::vm::BytecodeStream &bs,
     InstructionStream &is,
-    utf::utf8_ostream *os)
+    utf::utf8_ostream *os
+)
 {
     auto opr = BytecodeUtil::Make<RawOperation<>>();
     opr->opcode = code;

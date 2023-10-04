@@ -67,7 +67,7 @@ void AstModuleProperty::Visit(AstVisitor *visitor, Module *mod)
           Msg_not_a_data_member,
           m_location,
           m_field_name,
-          BuiltinTypes::MODULE_INFO->GetName()
+          BuiltinTypes::MODULE_INFO->ToString()
       ));
     }
 }

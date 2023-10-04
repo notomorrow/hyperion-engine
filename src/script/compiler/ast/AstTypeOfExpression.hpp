@@ -21,7 +21,7 @@ public:
     );
     virtual ~AstTypeOfExpression() = default;
 
-    inline const RC<AstExpression> &GetExpr() const
+    virtual const RC<AstExpression> &GetExpr() const override
         { return m_expr; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;

@@ -5,7 +5,7 @@
 #include <script/compiler/emit/InstructionStream.hpp>
 #include <script/compiler/emit/Instruction.hpp>
 #include <script/compiler/emit/BytecodeUtil.hpp>
-
+#include <core/lib/String.hpp>
 #include <util/UTF8.hpp>
 
 #include <memory>
@@ -19,7 +19,7 @@ public:
     DecompilationUnit(const DecompilationUnit &other) = delete;
 
     void DecodeNext(
-        uint8_t code,
+        UInt8 code,
         hyperion::vm::BytecodeStream &bs,
         InstructionStream &is,
         utf::utf8_ostream *os = nullptr

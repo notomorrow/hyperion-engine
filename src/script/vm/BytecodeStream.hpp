@@ -63,8 +63,8 @@ public:
     void ReadZeroTerminatedString(SChar *ptr);
 
 private:
-    ByteBuffer m_byte_buffer;
-    SizeType m_position;
+    ByteBuffer  m_byte_buffer;
+    SizeType    m_position;
 };
 
 } // namespace vm

@@ -89,8 +89,14 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
         AssertThrow(m_target_type != nullptr);
         m_target_type = m_target_type->GetUnaliased();
 
-        if (m_target_type == BuiltinTypes::ANY) {
+        if (m_target_type->IsAnyType()) {
             field_type = BuiltinTypes::ANY;
+
+            break;
+        }
+
+        if (m_target_type->IsPlaceholderType()) {
+            field_type = BuiltinTypes::PLACEHOLDER;
 
             break;
         }
@@ -102,7 +108,7 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
                 // load the type by name
                 m_proxy_expr.Reset(new AstPrototypeSpecification(
                     RC<AstVariable>(new AstVariable(
-                        m_target_type->GetName(),
+                        m_target_type->ToString(),
                         m_location
                     )),
                     m_location
@@ -255,7 +261,7 @@ void AstMember::Visit(AstVisitor *visitor, Module *mod)
             Msg_not_a_data_member,
             m_location,
             m_field_name,
-            original_type->GetName()
+            original_type->ToString()
         ));
     }
 }

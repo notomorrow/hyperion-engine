@@ -172,39 +172,6 @@ void AstObject::Optimize(AstVisitor *visitor, Module *mod)
 {
 }
 
-/*void AstObject::SubstituteGenerics(AstVisitor *visitor, Module *mod, 
-    const SymbolTypePtr_t &instance)
-{
-    if (auto sp = m_symbol_type.lock()) {
-        if (sp->GetTypeClass() == TYPE_GENERIC_PARAMETER) {
-            // substitute generic parameter
-            auto base = instance->GetBaseType();
-            AssertThrow(base != nullptr);
-            AssertThrow(base->GetTypeClass() == TYPE_GENERIC);
-            AssertThrow(base->GetGenericInfo().m_params.Size() == 
-                sp->GetGenericInstanceInfo().m_param_types.Size());
-
-            size_t index = 0;
-            bool type_found = false;
-
-            for (auto &base_param : base->GetGenericInfo().m_params) {
-                AssertThrow(base_param != nullptr);
-
-                if (base_param->GetName() == sp->GetName()) {
-                    // substitute in supplied type
-                    m_symbol_type = sp->GetGenericInstanceInfo().m_param_types[index];
-                    type_found = true;
-                    break;
-                }
-
-                index++;
-            }
-
-            AssertThrow(type_found);
-        }
-    }
-}*/
-
 RC<AstStatement> AstObject::Clone() const
 {
     return CloneImpl();

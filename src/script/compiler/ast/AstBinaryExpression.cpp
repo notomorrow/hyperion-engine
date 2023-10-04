@@ -61,10 +61,6 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         target_type = target_type->GetUnaliased();
         AssertThrow(target_type != nullptr);
 
-        if (target_type->GetName() == "Any") {
-            AssertThrow(target_type->IsAnyType());
-        }
-
         const auto operator_string = m_op->LookupStringValue();
         const auto overload_function_name = "operator" + operator_string;
 
@@ -117,7 +113,7 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         // also, for proxy class that does not have the operator overloaded,
         // we build in the condition as well
         else if (
-            target_type->IsAnyType()
+            target_type->IsAnyType() || target_type->IsPlaceholderType()
             // target_type != BuiltinTypes::STRING // Special case for String class to override checking for members like operator== and operator+
             // && (target_type->IsAnyType() || target_type->IsClass())
         ) {

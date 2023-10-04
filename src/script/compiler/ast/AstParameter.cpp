@@ -64,8 +64,8 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
                     LEVEL_ERROR,
                     Msg_arg_type_incompatible,
                     m_default_param->GetLocation(),
-                    m_symbol_type->GetName(),
-                    default_param_type->GetName()
+                    m_symbol_type->ToString(),
+                    default_param_type->ToString()
                 ));
             }
         }

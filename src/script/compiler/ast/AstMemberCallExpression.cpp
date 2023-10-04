@@ -123,7 +123,7 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
             LEVEL_ERROR,
             Msg_not_a_function,
             m_location,
-            m_symbol_type->GetName()
+            m_symbol_type->ToString()
         ));
     }
 }
@@ -177,20 +177,16 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     }
 
     // now we load the member into the register, we call that
-    if (m_target_type == BuiltinTypes::ANY) {
-        // for Any type we will have to load from hash
-        const UInt32 hash = hash_fnv_1(m_field_name.Data());
-
-        chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, hash));
-    } else {
-        AssertThrow(m_found_index != -1);
-
-        // just load the data member.
+    if (m_found_index != -1) {
         chunk->Append(Compiler::LoadMemberAtIndex(
             visitor,
             mod,
             m_found_index
         ));
+    } else {
+        const UInt32 hash = hash_fnv_1(m_field_name.Data());
+
+        chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, hash));
     }
 
     chunk->Append(BytecodeUtil::Make<Comment>("Load member " + m_field_name));

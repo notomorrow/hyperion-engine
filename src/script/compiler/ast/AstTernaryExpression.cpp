@@ -48,8 +48,8 @@ void AstTernaryExpression::Visit(AstVisitor *visitor, Module *mod)
             LEVEL_ERROR,
             Msg_mismatched_types,
             m_location,
-            m_left->GetExprType()->GetName(),
-            m_right->GetExprType()->GetName()
+            m_left->GetExprType()->ToString(),
+            m_right->GetExprType()->ToString()
         ));
     }
 }

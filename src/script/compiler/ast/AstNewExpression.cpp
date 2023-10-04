@@ -63,7 +63,7 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
             Msg_not_a_type,
             m_location,
             m_proto->GetExprType() != nullptr
-                ? m_proto->GetExprType()->GetName()
+                ? m_proto->GetExprType()->ToString()
                 : "??"
         ));
 
@@ -85,9 +85,10 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
         static constexpr const char *temp_var_name = "__$temp_new_target";
 
         const bool is_any = m_prototype_type->IsAnyType();
+        const bool is_placeholder = m_prototype_type->IsPlaceholderType();
         const bool has_construct_member = m_prototype_type->FindMember(construct_method_name) != nullptr;
 
-        if (is_any || has_construct_member) {
+        if (is_any || is_placeholder || has_construct_member) {
             m_constructor_block.Reset(new AstBlock(m_location));
 
             if (has_construct_member) {

@@ -33,7 +33,7 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
         SymbolTypePtr_t expr_type = m_expr->GetExprType();
         AssertThrow(expr_type != nullptr);
 
-        m_string_result_value = RC<AstString>::Construct(expr_type->GetName(), m_location);
+        m_string_result_value = RC<AstString>::Construct(expr_type->ToString(), m_location);
     } else if (m_command_name == "log") {
         const auto *value_of = m_expr->GetDeepValueOf();
 

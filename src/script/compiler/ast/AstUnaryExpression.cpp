@@ -88,7 +88,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
     SymbolTypePtr_t type = m_target->GetExprType();
 
-    if (!type->IsAnyType() && !type->IsGenericParameter()) {
+    if (!type->IsAnyType() && !type->IsGenericParameter() && !type->IsPlaceholderType()) {
         if (m_op->GetType() & BITWISE) {
             // no bitwise operators on floats allowed.
             // do not allow right-hand side to be 'Any', because it might change the data type.
@@ -100,7 +100,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
                     LEVEL_ERROR,
                     Msg_bitwise_operand_must_be_int,
                     m_target->GetLocation(),
-                    type->GetName()
+                    type->ToString()
                 )
             );
         } else if (m_op->GetType() & ARITHMETIC) {
@@ -114,7 +114,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
                     Msg_invalid_operator_for_type,
                     m_target->GetLocation(),
                     m_op->LookupStringValue(),
-                    type->GetName()
+                    type->ToString()
                 )); 
             }
 
@@ -128,7 +128,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
                     Msg_invalid_operator_for_type,
                     m_target->GetLocation(),
                     m_op->GetOperatorType(),
-                    type->GetName()
+                    type->ToString()
                 )
             );
         }

@@ -44,7 +44,7 @@ void AstArrayAccess::Visit(AstVisitor *visitor, Module *mod)
     }
 
     // check if target is an array
-    if (target_type != BuiltinTypes::ANY) {
+    if (!target_type->IsAnyType() && !target_type->IsPlaceholderType()) {
         if (!target_type->IsArrayType()) {
             // not an array type
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -165,7 +165,11 @@ SymbolTypePtr_t AstArrayAccess::GetExprType() const
     }
 
     if (!held_type) {
-        held_type = BuiltinTypes::ANY;
+        if (target_type->IsPlaceholderType()) {
+            held_type = BuiltinTypes::PLACEHOLDER;
+        } else {
+            held_type = BuiltinTypes::ANY;
+        }
     }
 
     return held_type;

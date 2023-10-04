@@ -80,45 +80,11 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
 
             if (generic_param->GetPrototypeSpecification() != nullptr) {
                 var_decl->SetPrototypeSpecification(generic_param->GetPrototypeSpecification());
-            } else {
-                /*var_decl->SetPrototypeSpecification(RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
-                    RC<AstVariable>(new AstVariable(
-                        BuiltinTypes::ANY->GetName(),
-                        m_location
-                    )),
-                    m_location
-                )));*/
             }
 
             m_block->AddChild(var_decl);
 
             m_generic_param_placeholders[index++] = var_decl;
-
-
-#if 0
-            generic_param->SetIsGenericParam(true);
-
-            /*if (generic_param->GetPrototypeSpecification() == nullptr) {
-                generic_param->SetPrototypeSpecification(RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
-                    RC<AstVariable>(new AstVariable(
-                        BuiltinTypes::ANY->GetName(),
-                        m_location
-                    )),
-                    m_location
-                )));
-            }*/
-
-            // gross, but we gotta do this our else on first pass,
-            // these will just refer to the wrong memory
-            if (generic_param->GetDefaultValue() == nullptr) {
-                generic_param->SetDefaultValue(RC<AstNil>(new AstNil(
-                    m_location
-                )));
-            }
-
-            m_block->AddChild(generic_param);
-
-#endif
         }
     }
     
@@ -135,29 +101,27 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     generic_param_types.Reserve(m_generic_param_placeholders.Size() + 1); // anotha one
     
     SymbolTypePtr_t expr_return_type;
-    SymbolTypePtr_t implicit_return_type = m_expr->GetExprType();
+    //SymbolTypePtr_t implicit_return_type = m_expr->GetExprType();
     SymbolTypePtr_t explicit_return_type = m_return_type_specification != nullptr
         ? m_return_type_specification->GetHeldType()
         : nullptr;
-
-    AssertThrow(implicit_return_type != nullptr);
 
     // if return type has been specified - visit it and check to see
     // if it's compatible with the expression
     if (m_return_type_specification != nullptr) {
         AssertThrow(explicit_return_type != nullptr);
 
-        SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
+        /*SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
             visitor,
             mod,
             explicit_return_type,
             implicit_return_type,
             m_return_type_specification->GetLocation()
-        );
+        );*/
 
         expr_return_type = explicit_return_type;
     } else {
-        expr_return_type = implicit_return_type;
+        expr_return_type = BuiltinTypes::PLACEHOLDER;//implicit_return_type;
     }
 
     generic_param_types.PushBack({

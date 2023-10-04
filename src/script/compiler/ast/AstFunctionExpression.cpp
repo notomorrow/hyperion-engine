@@ -164,13 +164,13 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
                         LEVEL_ERROR,
                         Msg_mismatched_return_type,
                         it.second,
-                        m_return_type->GetName(),
-                        it.first->GetName()
+                        m_return_type->ToString(),
+                        it.first->ToString()
                     ));
                 }
             } else {
                 // deduce return type
-                if (m_return_type == BuiltinTypes::ANY) {
+                if (m_return_type->IsAnyType() || m_return_type->IsPlaceholderType()) {
                     m_return_type = it.first;
                 } else if (m_return_type->TypeCompatible(*it.first, false)) {
                     m_return_type = SymbolType::TypePromotion(m_return_type, it.first, true);

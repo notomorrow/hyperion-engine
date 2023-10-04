@@ -14,8 +14,6 @@ import io::File;
 
 func Expect( cond : Bool ) : Bool
 {
-    Print("check cond: %\n", cond);
-
     if (!cond) {
         throw "Assertion failed!";
 
@@ -31,9 +29,15 @@ func Test(name : String, block : Function)
 
     try {
         block(func (unit_name : String, unit_block : Function) {
-            Print("Unit %\n", unit_name);
+            Print("Unit \"%\" ... ", unit_name);
+            
+            try {
+                unit_block();
 
-            unit_block();
+                Print("passed\n");
+            } catch {
+                Print("failed\n");
+            }
         });
     } catch {
         Print("Test failed\n");
@@ -341,6 +345,11 @@ func GenericFunction <T> (t : T, cond : Bool) : T
     return cond ? t : t - 1;
 }
 
+func GenericFunctionWithImplicitReturnType<T>(t : T, cond : Bool)
+{
+    return cond ? t : t - 1;
+}
+
 Test("Generic function return type", func (Unit : Function) {
     Unit("GenericFunction<Int> returns Int", func () {
         Expect(GenericFunction<Int>(5, true) is Int);
@@ -365,6 +374,18 @@ Test("Generic function return type", func (Unit : Function) {
     Unit("typeof GenericFunction<Float>(5.0, true) is Float", func () {
         Expect(typeof(GenericFunction<Float>(5.0, true)) == "Float");
     });
+
+    Unit("GenericFunctionWithImplicitReturnType<Int> returns Int", func () {
+        Expect(GenericFunctionWithImplicitReturnType<Int>(5, true) is Int);
+    });
+
+    Unit("typeof GenericFunctionWithImplicitReturnType<Int> is Function(Int, Bool) -> Int", func () {
+        Expect(typeof(GenericFunctionWithImplicitReturnType<Int>) == "Function(Int, Bool) -> Int");
+    });
+
+    Print("typeof(GenericFunctionWithImplicitReturnType<Int>) == %s\n", typeof(GenericFunctionWithImplicitReturnType<Int>));
+
+    Print("Bytecode for GenericFunctionWithImplicitReturnType<Int> = %\n", GetFunctionBytecode(GenericFunctionWithImplicitReturnType<Int>));
 });
 
 

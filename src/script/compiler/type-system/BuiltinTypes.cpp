@@ -44,6 +44,12 @@ const SymbolTypePtr_t BuiltinTypes::ANY = SymbolType::Primitive(
     BuiltinTypes::ANY_TYPE
 );
 
+const SymbolTypePtr_t BuiltinTypes::PLACEHOLDER = SymbolType::Primitive(
+    "<placeholder>",
+    RC<AstNil>(new AstNil(SourceLocation::eof)),
+    BuiltinTypes::PRIMITIVE_TYPE
+);
+
 const SymbolTypePtr_t BuiltinTypes::VOID_TYPE = SymbolType::Primitive(
     "void",
     RC<AstUndefined>(new AstUndefined(SourceLocation::eof)),
@@ -275,14 +281,6 @@ const SymbolTypePtr_t BuiltinTypes::BOXED_TYPE = SymbolType::Generic(
     BuiltinTypes::TRAIT_TYPE
 );
 
-const SymbolTypePtr_t BuiltinTypes::MAYBE = SymbolType::Generic(
-    "Maybe",
-    RC<AstNil>(new AstNil(SourceLocation::eof)),
-    {},
-    GenericTypeInfo { 1 },
-    BuiltinTypes::BOXED_TYPE
-);
-
 const SymbolTypePtr_t BuiltinTypes::CONST_TYPE_TYPE = SymbolType::Primitive(
     "ConstType",
     RC<AstUndefined>(new AstUndefined(SourceLocation::eof)),
@@ -295,14 +293,6 @@ const SymbolTypePtr_t BuiltinTypes::CONST_TYPE = SymbolType::Generic(
     {},
     GenericTypeInfo { 1 },
     BuiltinTypes::CONST_TYPE_TYPE
-);
-
-const SymbolTypePtr_t BuiltinTypes::BLOCK_TYPE = SymbolType::Generic(
-    "Block",
-    nullptr,
-    {},
-    GenericTypeInfo { -1 },
-    BuiltinTypes::CLASS_TYPE
 );
 
 const SymbolTypePtr_t BuiltinTypes::CLOSURE_TYPE = SymbolType::Generic(

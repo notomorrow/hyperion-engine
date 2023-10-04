@@ -9,7 +9,7 @@
 
 namespace hyperion::compiler {
 
-class AstPrototypeSpecification: public AstExpression
+class AstPrototypeSpecification : public AstExpression
 {
 public:
     AstPrototypeSpecification(
@@ -24,8 +24,8 @@ public:
     
     const SymbolTypePtr_t &GetHeldType() const { return m_symbol_type; }
     const SymbolTypePtr_t &GetPrototypeType() const { return m_prototype_type; }
-    const RC<AstExpression> &GetDefaultValue() const { return m_default_value; }//m_symbol_type->GetDefaultValue(); }
-    const RC<AstExpression> &GetExpr() const { return m_proto; }
+    const RC<AstExpression> &GetDefaultValue() const { return m_default_value; }
+    virtual const RC<AstExpression> &GetExpr() const { return m_proto; }
 
     virtual RC<AstStatement> Clone() const override;
 

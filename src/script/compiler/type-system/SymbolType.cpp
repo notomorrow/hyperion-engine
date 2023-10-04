@@ -75,29 +75,6 @@ bool SymbolType::TypeEqual(const SymbolType &other) const
 
             return false;
 
-        case TYPE_FUNCTION:
-            if (!m_function_info.m_return_type || !other.m_function_info.m_return_type) {
-                return false;
-            }
-
-            if (!(*m_function_info.m_return_type == *other.m_function_info.m_return_type)) {
-                return false;
-            }
-
-            for (const SymbolTypePtr_t &i : m_function_info.m_param_types) {
-                if (i == nullptr) {
-                    return false;
-                }
-
-                for (const SymbolTypePtr_t &j : other.m_function_info.m_param_types) {
-                    if (j == nullptr || !(*i == *j)) {
-                        return false;
-                    }
-                }
-            }
-
-            break;
-
         case TYPE_GENERIC:
             if (m_generic_info.m_num_parameters != other.m_generic_info.m_num_parameters) {
                 return false;
@@ -111,7 +88,7 @@ bool SymbolType::TypeEqual(const SymbolType &other) const
             }
 
             // check each substituted parameter
-            for (size_t i = 0; i < m_generic_instance_info.m_generic_args.Size(); i++) {
+            for (SizeType i = 0; i < m_generic_instance_info.m_generic_args.Size(); i++) {
                 const SymbolTypePtr_t &instance_arg_type = m_generic_instance_info.m_generic_args[i].m_type;
                 const SymbolTypePtr_t &other_arg_type = other.m_generic_instance_info.m_generic_args[i].m_type;
 
@@ -186,6 +163,10 @@ bool SymbolType::TypeCompatible(
         return true;
     }
 
+    if (IsPlaceholderType() || right.IsPlaceholderType()) {
+        return true;
+    }
+
     if (IsProxyClass()) {
         // TODO:
         // have proxy class declare which class it is a proxy for,
@@ -254,7 +235,8 @@ bool SymbolType::TypeCompatible(
                         continue;
                     } else if (param_type->TypeEqual(*other_param_type)) {
                         continue;
-                    } else if (param_type == BuiltinTypes::ANY || other_param_type == BuiltinTypes::ANY) {
+                    } else if (param_type->IsAnyType() || other_param_type->IsAnyType()
+                            || param_type->IsPlaceholderType() || other_param_type->IsPlaceholderType()) {
                         continue;
                     } else {
                         return false;
@@ -263,21 +245,8 @@ bool SymbolType::TypeCompatible(
 
                 return true;
             } else {
-                // allow boxing/unboxing for 'Maybe(T)' type
-                if (base->TypeEqual(*BuiltinTypes::MAYBE)) {
-                    if (right.TypeEqual(*BuiltinTypes::NULL_TYPE)) {
-                        return true;
-                    } else {
-                        const SymbolTypePtr_t &held_type = m_generic_instance_info.m_generic_args[0].m_type;
-                        AssertThrow(held_type != nullptr);
-                        return held_type->TypeCompatible(
-                            right,
-                            strict_numbers
-                        );
-                    }
-                }
                 // allow boxing/unboxing for 'Const(T)' type
-                else if (base->TypeEqual(*BuiltinTypes::CONST_TYPE)) {
+                if (base->TypeEqual(*BuiltinTypes::CONST_TYPE)) {
                     // strict_const means you can't assign a const (left) to non-const (right)
                     if (strict_const) {
                         return false;
@@ -376,7 +345,7 @@ bool SymbolType::FindMemberDeep(const String &name, SymbolMember_t &out) const
 const SymbolTypePtr_t SymbolType::FindPrototypeMember(const String &name) const
 {
     if (SymbolTypePtr_t proto_type = FindMember("$proto")) {
-        if (proto_type->IsAnyType()) {
+        if (proto_type->IsAnyType() || proto_type->IsPlaceholderType()) {
             return BuiltinTypes::ANY;
         }
 
@@ -488,6 +457,11 @@ bool SymbolType::IsObject() const
 bool SymbolType::IsAnyType() const
 {
     return IsOrHasBase(*BuiltinTypes::ANY) || IsOrHasBase(*BuiltinTypes::ANY_TYPE);
+}
+
+bool SymbolType::IsPlaceholderType() const
+{
+    return IsOrHasBase(*BuiltinTypes::PLACEHOLDER);
 }
 
 bool SymbolType::IsNullType() const
@@ -714,6 +688,83 @@ SymbolTypePtr_t SymbolType::Function(
     return function_type;
 }
 
+String SymbolType::ToString(Bool include_parameter_names) const
+{
+    String res = m_name;
+
+    switch (m_type_class) {
+    case TYPE_BUILTIN: // fallthrough
+    case TYPE_ALIAS:
+    case TYPE_USER_DEFINED:
+    case TYPE_GENERIC_PARAMETER:
+    case TYPE_GENERIC:
+        break;
+    case TYPE_GENERIC_INSTANCE: {
+        res = m_name;
+
+        const GenericInstanceTypeInfo &info = m_generic_instance_info;
+
+        if (info.m_generic_args.Any()) {
+            if (IsArrayType()) {
+                const SymbolTypePtr_t &held_type = info.m_generic_args.Front().m_type;
+                AssertThrow(held_type != nullptr);
+
+                return held_type->ToString() + "[]";
+            } else if (IsOrHasBase(*BuiltinTypes::VAR_ARGS)) {
+                const SymbolTypePtr_t &held_type = info.m_generic_args.Front().m_type;
+                AssertThrow(held_type != nullptr);
+
+                return held_type->ToString() + "...";
+            } else {
+                const char *generic_argument_parentheses = IsOrHasBase(*BuiltinTypes::FUNCTION)
+                    ? "()"
+                    : "<>";
+
+                res += generic_argument_parentheses[0];
+
+                bool has_return_type = false;
+                String return_type_name;
+
+                for (size_t i = 0; i < info.m_generic_args.Size(); i++) {
+                    const String &generic_arg_name = info.m_generic_args[i].m_name;
+                    const SymbolTypePtr_t &generic_arg_type = info.m_generic_args[i].m_type;
+
+                    AssertThrow(generic_arg_type != nullptr);
+
+                    if (generic_arg_name == "@return") {
+                        has_return_type = true;
+                        return_type_name = generic_arg_type->ToString();
+                    } else {
+                        if (include_parameter_names && generic_arg_name.Any()) {
+                            res += generic_arg_name;
+                            res += ": ";
+                        }
+
+                        res += generic_arg_type->ToString();
+
+                        if (i != info.m_generic_args.Size() - 1) {
+                            res += ", ";
+                        }
+                    }
+                }
+
+                res += generic_argument_parentheses[1];
+
+                if (has_return_type) {
+                    res += " -> " + return_type_name;
+                }
+            }
+        }
+
+        break;
+    }
+    default:
+        break;
+    }
+
+    return res;
+}
+
 SymbolTypePtr_t SymbolType::GenericInstance(
     const SymbolTypePtr_t &base,
     const GenericInstanceTypeInfo &info,
@@ -723,55 +774,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
     AssertThrow(base != nullptr);
     AssertThrow(base->GetTypeClass() == TYPE_GENERIC_INSTANCE || base->GetTypeClass() == TYPE_GENERIC);
 
-    String name;
-    String return_type_name;
-    bool has_return_type = false;
-
-    if (info.m_generic_args.Any()) {
-        if (base == BuiltinTypes::ARRAY) {
-            const SymbolTypePtr_t &held_type = info.m_generic_args.Front().m_type;
-            AssertThrow(held_type != nullptr);
-
-            name = held_type->GetName() + "[]";
-        } else if (base == BuiltinTypes::VAR_ARGS) {
-            const SymbolTypePtr_t &held_type = info.m_generic_args.Front().m_type;
-            AssertThrow(held_type != nullptr);
-
-            name = held_type->GetName() + "...";
-        } else {
-            name = base->GetName() + "(";
-
-            for (size_t i = 0; i < info.m_generic_args.Size(); i++) {
-                const String &generic_arg_name = info.m_generic_args[i].m_name;
-                const SymbolTypePtr_t &generic_arg_type = info.m_generic_args[i].m_type;
-
-                AssertThrow(generic_arg_type != nullptr);
-
-                if (generic_arg_name == "@return") {
-                    has_return_type = true;
-                    return_type_name = generic_arg_type->GetName();
-                } else {
-                    if (generic_arg_name.Any()) {
-                        name += generic_arg_name;
-                        name += ": ";
-                    }
-
-                    name += generic_arg_type->GetName();
-                    if (i != info.m_generic_args.Size() - 1) {
-                        name += ", ";
-                    }
-                }
-            }
-
-            name += ")";
-
-            if (has_return_type) {
-                name += " -> " + return_type_name;
-            }
-        }
-    } else {
-        name = base->GetName() + "()";
-    }
+    const String name = base->GetName();
 
     Array<SymbolMember_t> all_members;
     all_members.Reserve(base->GetMembers().Size() + members.Size());
@@ -961,7 +964,9 @@ SymbolTypePtr_t SymbolType::TypePromotion(
         return BuiltinTypes::ANY;
     } else if (lptr->IsGenericParameter() || rptr->IsGenericParameter()) {
         /* @TODO: Might be useful to use the base type of the generic. */
-        return BuiltinTypes::ANY;
+        return BuiltinTypes::PLACEHOLDER;
+    } else if (lptr->IsPlaceholderType() || rptr->IsPlaceholderType()) {
+        return BuiltinTypes::PLACEHOLDER;
     } else if (lptr->TypeEqual(*BuiltinTypes::NUMBER)) {
         if (use_number) {
             return rptr->TypeEqual(*BuiltinTypes::INT) ||

@@ -204,10 +204,11 @@ public:
     ExecutionThread *thread;
     BytecodeStream *bs;
 
-    InstructionHandler(VMState *state,
-      ExecutionThread *thread,
-      BytecodeStream *bs)
-      : state(state),
+    InstructionHandler(
+        VMState *state,
+        ExecutionThread *thread,
+        BytecodeStream *bs
+    ) : state(state),
         thread(thread),
         bs(bs)
     {

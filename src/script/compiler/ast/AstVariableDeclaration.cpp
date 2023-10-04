@@ -117,7 +117,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                             LEVEL_ERROR,
                             Msg_generic_parameters_missing,
                             m_location,
-                            m_symbol_type->GetName(),
+                            m_symbol_type->ToString(),
                             m_symbol_type->GetGenericInfo().m_num_parameters
                         ));
                     }
@@ -225,7 +225,7 @@ void AstVariableDeclaration::Visit(AstVisitor *visitor, Module *mod)
                 m_proto != nullptr
                     ? m_proto->GetLocation()
                     : m_location,
-                m_symbol_type->GetName()
+                m_symbol_type->ToString()
             ));
         }
 

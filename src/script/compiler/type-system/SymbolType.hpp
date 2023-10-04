@@ -39,8 +39,6 @@ enum SymbolTypeClass
     TYPE_BUILTIN,
     TYPE_USER_DEFINED,
     TYPE_ALIAS,
-    TYPE_FUNCTION,
-    TYPE_ARRAY,
     TYPE_GENERIC,
     TYPE_GENERIC_INSTANCE,
     TYPE_GENERIC_PARAMETER
@@ -258,6 +256,8 @@ public:
     SymbolTypeFlags GetFlags() const { return m_flags; }
     SymbolTypeFlags &GetFlags() { return m_flags; }
 
+    String ToString(Bool include_parameter_names = false) const;
+
     bool IsAlias() const { return m_type_class == TYPE_ALIAS; }
 
     bool TypeEqual(const SymbolType &other) const;
@@ -295,6 +295,7 @@ public:
     bool IsClass() const;
     bool IsObject() const;
     bool IsAnyType() const;
+    bool IsPlaceholderType() const;
     bool IsNullType() const;
     bool IsNullableType() const;
     bool IsArrayType() const;

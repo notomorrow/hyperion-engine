@@ -35,7 +35,7 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
     if (m_underlying_type == nullptr) {
         m_underlying_type.Reset(new AstPrototypeSpecification(
             RC<AstVariable>(new AstVariable(
-                BuiltinTypes::INT->GetName(), // m_name
+                BuiltinTypes::INT->GetName(),
                 m_location
             )),
             m_location

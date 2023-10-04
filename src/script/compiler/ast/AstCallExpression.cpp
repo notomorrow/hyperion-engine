@@ -155,7 +155,7 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
             LEVEL_ERROR,
             Msg_not_a_function,
             m_location,
-            target_type->GetName()
+            target_type->ToString()
         ));
     }
 

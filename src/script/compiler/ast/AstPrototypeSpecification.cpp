@@ -68,6 +68,14 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
 
         return;
     }
+    
+    if (unaliased->IsPlaceholderType()) {
+        m_symbol_type = BuiltinTypes::PLACEHOLDER;
+        m_prototype_type = BuiltinTypes::PLACEHOLDER;
+        m_default_value = BuiltinTypes::PLACEHOLDER->GetDefaultValue();
+
+        return;
+    }
 
     SymbolTypePtr_t found_symbol_type;
 
@@ -95,14 +103,14 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
                     LEVEL_ERROR,
                     Msg_type_missing_prototype,
                     m_location,
-                    expr_type->GetName() + " (expanded: " + found_symbol_type->GetName() + ")"
+                    expr_type->ToString() + " (expanded: " + found_symbol_type->ToString() + ")"
                 ));
             } else {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_type_missing_prototype,
                     m_location,
-                    expr_type->GetName()
+                    expr_type->ToString()
                 ));
             }
         }
@@ -112,7 +120,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
             LEVEL_WARN,
             Msg_not_a_constant_type,
             m_location,
-            expr_type->GetName()
+            expr_type->ToString()
         ));
     }
 

@@ -17,6 +17,8 @@
  
 #include <core/lib/TypeMap.hpp>
 
+#include "compiler/dis/DecompilationUnit.hpp"
+
 namespace hyperion {
 
 using namespace vm;
@@ -1356,6 +1358,82 @@ static HYP_SCRIPT_FUNCTION(Entity_GetWorldAABB)
     HYP_SCRIPT_RETURN(ptr);
 }
 
+static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
+{
+    HYP_SCRIPT_CHECK_ARGS(==, 1);
+
+    // get value
+    vm::Value *target_ptr = params.args[0];
+    AssertThrow(target_ptr != nullptr);
+
+    String bytecode_str;
+
+    if (target_ptr->m_type != vm::Value::FUNCTION) {
+        if (target_ptr->m_type == vm::Value::NATIVE_FUNCTION) {
+            bytecode_str = "<Native Code>";
+        } else {
+            char buffer[256];
+
+            std::sprintf(
+                buffer,
+                "cannot convert type '%s' to bytecode",
+                target_ptr->GetTypeString()
+            );
+
+            params.handler->state->ThrowException(
+                params.handler->thread,
+                vm::Exception(buffer)
+            );
+        }
+    } else {
+        AssertThrow(params.handler->bs != nullptr);
+
+        const SizeType pos = target_ptr->m_value.func.m_addr;
+        AssertThrow(pos < params.handler->bs->Size());
+        
+        SourceFile source_file(
+            "",
+            params.handler->bs->Size()
+        );
+        // read into it starting at pos
+        source_file.ReadIntoBuffer(
+            &params.handler->bs->GetBuffer()[pos],
+            params.handler->bs->Size() - pos
+        );
+        
+        vm::BytecodeStream byte_stream = vm::BytecodeStream::FromSourceFile(source_file);
+
+        // create DecompilationUnit
+        DecompilationUnit dec;
+        InstructionStream is;
+        utf::utf8_stringstream ss;
+
+        UInt8 code;
+
+        do {
+            byte_stream.Read(&code);
+
+            // decompile the instruction
+            dec.DecodeNext(code, byte_stream, is, &ss);
+        } while (code != RET && !byte_stream.Eof());
+        
+        bytecode_str += HYP_UTF8_TOMULTIBYTE(ss.str().data());
+    }
+
+    // create heap value for string
+    vm::HeapValue *ptr = params.handler->state->HeapAlloc(params.handler->thread);
+    AssertThrow(ptr != nullptr);
+
+    ptr->Assign(vm::VMString(bytecode_str));
+
+    vm::Value res;
+    // assign register value to the allocated object
+    res.m_type = vm::Value::HEAP_POINTER;
+    res.m_value.ptr = ptr;
+
+    HYP_SCRIPT_RETURN(res);
+}
+
 static HYP_SCRIPT_FUNCTION(LoadModule)
 {
     HYP_SCRIPT_CHECK_ARGS(==, 2);
@@ -1724,6 +1802,14 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
                 { "value", BuiltinTypes::ANY }
             },
             Runtime_GetMemoryAddress
+        )
+        .Function(
+            "GetFunctionBytecode",
+            BuiltinTypes::STRING,
+            {
+                { "value", BuiltinTypes::FUNCTION }
+            },
+            Runtime_GetFunctionBytecode
         )
         .Function(
             "IsInstance",

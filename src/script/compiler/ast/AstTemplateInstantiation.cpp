@@ -37,10 +37,6 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     AssertThrow(visitor != nullptr);
     AssertThrow(mod != nullptr);
 
-    // TODO: Declare a variable with some mangled name,
-    // use it to look up to see if it is already instantiated.
-    // it will be declared in the same scope as the original generic.
-
     m_block.Reset(new AstBlock({}, m_location));
 
     ScopeGuard scope(mod, SCOPE_TYPE_GENERIC_INSTANTIATION, 0);
@@ -66,7 +62,7 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
             LEVEL_ERROR,
             Msg_expression_not_generic,
             m_expr->GetLocation(),
-            expr_type->GetName()
+            expr_type->ToString()
         ));
 
         return;
@@ -93,77 +89,38 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
         // error should occur
         return;
     }
-
-    // Create mangled name
-
-    // std::string mangled_name = "__$" + m_expr->GetName();
-
-    // for (const auto &arg : args_substituted) {
-    //     AssertThrow(arg != nullptr);
-
-    //     const std::string &name = arg->GetName();
-
-    //     if (name.empty()) {
-    //         mangled_name += ";invalid";
-
-    //         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-    //             LEVEL_ERROR,
-    //             Msg_generic_argument_must_be_literal,
-    //             arg->GetLocation()
-    //         ));
-    //     } else {
-    //         mangled_name += ";" + name;
-    //     }
-    // }
     
-    // Scope *original_scope = m_expr->GetProperties().m_function_scope;
-    // AssertThrow(original_scope != nullptr);
+    m_inner_expr = CloneAstNode(generic_expr);
 
-    // lookup identifier by mangled name to see if it exists already
+    for (SizeType index = 0; index < expr_type->GetGenericInstanceInfo().m_generic_args.Size() - 1; index++) {
+        AssertThrow(args_substituted[index]->GetExpr() != nullptr);
 
-    // if (auto identifier = mod->LookUpIdentifier(mangled_name, false, true)) {
-    //     // we can use it by adding a variable node with the name of the mangled name
+        if (!args_substituted[index]->GetExpr()->GetExprType()->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
+            RC<AstVariableDeclaration> param_override(new AstVariableDeclaration(
+                expr_type->GetGenericInstanceInfo().m_generic_args[index + 1].m_name,
+                nullptr,
+                CloneAstNode(args_substituted[index]->GetExpr()),
+                {},
+                IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_GENERIC_SUBSTITUTION,
+                args_substituted[index]->GetLocation()
+            ));
 
-    //     // @TODO: Reopen existing scope to use?
-
-    //     m_inner_expr.Reset(new AstVariable(
-    //         mangled_name,
-    //         m_location
-    //     ));
-
-    // } else {
-
-
-        // first instantiation, have to visit
-        m_inner_expr = CloneAstNode(generic_expr);
-
-    // there can be more because of varargs
-    // if (args_substituted.Size() + 1 >= expr_type->GetGenericInstanceInfo().m_generic_args.Size()) {
-        for (SizeType i = 0; i < expr_type->GetGenericInstanceInfo().m_generic_args.Size() - 1; i++) {
-            AssertThrow(args_substituted[i]->GetExpr() != nullptr);
-
-            if (args_substituted[i]->GetExpr()->GetExprType() != BuiltinTypes::UNDEFINED) {
-                RC<AstVariableDeclaration> param_override(new AstVariableDeclaration(
-                    expr_type->GetGenericInstanceInfo().m_generic_args[i + 1].m_name,
-                    nullptr,
-                    CloneAstNode(args_substituted[i]->GetExpr()),
-                    {},
-                    IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_GENERIC_SUBSTITUTION,
-                    args_substituted[i]->GetLocation()
-                ));
-
-                m_block->AddChild(param_override);
-            }
+            m_block->AddChild(param_override);
         }
+    }
 
-        // TODO: Cache instantiations so we don't create a new one for every set of arguments
-    // }
-    // }
+    // TODO: Cache instantiations so we don't create a new one for every set of arguments
 
     AssertThrow(m_inner_expr != nullptr);
 
     m_block->AddChild(m_inner_expr);
     m_block->Visit(visitor, mod);
+
+    // If the current return type is a placeholder, we need to set it to the inner expression's implicit return type
+    if (m_expr_type->IsPlaceholderType()) {
+        m_expr_type = m_inner_expr->GetExprType();
+        AssertThrow(m_expr_type != nullptr);
+    }
 }
 
 std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor *visitor, Module *mod)

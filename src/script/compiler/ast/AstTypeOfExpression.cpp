@@ -72,12 +72,12 @@ void AstTypeOfExpression::Visit(AstVisitor *visitor, Module *mod)
 
     if ((expr_type = m_expr->GetExprType()) && (unaliased = expr_type->GetUnaliased())) {
         m_string_expr.Reset(new AstString(
-            unaliased->GetName(),
+            unaliased->ToString(false),
             m_location
         ));
     } else {
         m_string_expr.Reset(new AstString(
-            BuiltinTypes::UNDEFINED->GetName(),
+            BuiltinTypes::UNDEFINED->ToString(),
             m_location
         ));
     }
