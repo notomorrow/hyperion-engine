@@ -13,7 +13,7 @@ class AstPrototypeSpecification : public AstExpression
 {
 public:
     AstPrototypeSpecification(
-        const RC<AstExpression> &proto,
+        const RC<AstExpression> &expr,
         const SourceLocation &location
     );
     virtual ~AstPrototypeSpecification() = default;
@@ -25,7 +25,7 @@ public:
     const SymbolTypePtr_t &GetHeldType() const { return m_symbol_type; }
     const SymbolTypePtr_t &GetPrototypeType() const { return m_prototype_type; }
     const RC<AstExpression> &GetDefaultValue() const { return m_default_value; }
-    virtual const RC<AstExpression> &GetExpr() const { return m_proto; }
+    virtual const RC<AstExpression> &GetExpr() const { return m_expr; }
 
     virtual RC<AstStatement> Clone() const override;
 
@@ -39,18 +39,18 @@ public:
 protected:
     bool FindPrototypeType(const SymbolTypePtr_t &symbol_type);
 
-    RC<AstExpression> m_proto;
+    RC<AstExpression>   m_expr;
 
     /** Set while analyzing */
-    SymbolTypePtr_t m_symbol_type;
-    SymbolTypePtr_t m_prototype_type;
-    RC<AstExpression> m_default_value;
+    SymbolTypePtr_t     m_symbol_type;
+    SymbolTypePtr_t     m_prototype_type;
+    RC<AstExpression>   m_default_value;
 
 private:
     RC<AstPrototypeSpecification> CloneImpl() const
     {
         return RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
-            CloneAstNode(m_proto),
+            CloneAstNode(m_expr),
             m_location
         ));
     }

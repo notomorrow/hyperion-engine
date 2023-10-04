@@ -14,14 +14,14 @@ void CodeGenerator::Visit(BytecodeChunk *chunk)
     BuildParams new_params;
     new_params.block_offset = build_params.block_offset + m_ibs.GetSize();
 
-    CodeGenerator chunk_generator(new_params);
+    CodeGenerator code_generator(new_params);
 
     for (auto &buildable : chunk->buildables) {
-        chunk_generator.BuildableVisitor::Visit(buildable.get());
+        code_generator.BuildableVisitor::Visit(buildable.get());
     }
 
     // bake the chunk's byte stream
-    const Array<UByte> &chunk_bytes = chunk_generator.GetInternalByteStream().Bake();
+    const Array<UByte> &chunk_bytes = code_generator.GetInternalByteStream().Bake();
 
     // append bytes to this chunk's InternalByteStream
     m_ibs.Put(chunk_bytes.Data(), chunk_bytes.Size());

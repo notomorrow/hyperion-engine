@@ -22,7 +22,7 @@ AstPrototypeSpecification::AstPrototypeSpecification(
     const RC<AstExpression> &proto,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_proto(proto)
+    m_expr(proto)
 {
 }
 
@@ -31,10 +31,10 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     AssertThrow(visitor != nullptr);
     AssertThrow(mod != nullptr);
 
-    AssertThrow(m_proto != nullptr);
-    m_proto->Visit(visitor, mod);
+    AssertThrow(m_expr != nullptr);
+    m_expr->Visit(visitor, mod);
 
-    const AstExpression *value_of = m_proto->GetDeepValueOf(); // GetDeepValueOf() returns the non-wrapped generic AstTypeObject*
+    const AstExpression *value_of = m_expr->GetDeepValueOf(); // GetDeepValueOf() returns the non-wrapped generic AstTypeObject*
     AssertThrow(value_of != nullptr);
 
     const AstTypeObject *type_obj = nullptr;
@@ -63,7 +63,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     if (unaliased->IsAnyType()) {
         // it is a dynamic type
         m_symbol_type = BuiltinTypes::ANY;
-        m_prototype_type = BuiltinTypes::ANY_TYPE;
+        m_prototype_type = BuiltinTypes::ANY;
         m_default_value = BuiltinTypes::ANY->GetDefaultValue();
 
         return;
@@ -130,14 +130,14 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstPrototypeSpecification::Build(AstVisitor *visitor, Module *mod)
 {
-    AssertThrow(m_proto != nullptr);
-    return m_proto->Build(visitor, mod);
+    AssertThrow(m_expr != nullptr);
+    return m_expr->Build(visitor, mod);
 }
 
 void AstPrototypeSpecification::Optimize(AstVisitor *visitor, Module *mod)
 {
-    AssertThrow(m_proto != nullptr);
-    m_proto->Optimize(visitor, mod);
+    AssertThrow(m_expr != nullptr);
+    m_expr->Optimize(visitor, mod);
 }
 
 bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbol_type)
@@ -176,13 +176,14 @@ Tribool AstPrototypeSpecification::IsTrue() const
 
 bool AstPrototypeSpecification::MayHaveSideEffects() const
 {
-    return false;
+    AssertThrow(m_expr != nullptr);
+    return m_expr->MayHaveSideEffects();
 }
 
 SymbolTypePtr_t AstPrototypeSpecification::GetExprType() const
 {
-    if (m_proto != nullptr) {
-        return m_proto->GetExprType();
+    if (m_expr != nullptr) {
+        return m_expr->GetExprType();
     }
 
     return nullptr;
@@ -190,8 +191,8 @@ SymbolTypePtr_t AstPrototypeSpecification::GetExprType() const
 
 const AstExpression *AstPrototypeSpecification::GetValueOf() const
 {
-    if (m_proto != nullptr) {
-        return m_proto->GetValueOf();
+    if (m_expr != nullptr) {
+        return m_expr->GetValueOf();
     }
 
     return AstExpression::GetValueOf();
@@ -199,8 +200,8 @@ const AstExpression *AstPrototypeSpecification::GetValueOf() const
 
 const AstExpression *AstPrototypeSpecification::GetDeepValueOf() const
 {
-    if (m_proto != nullptr) {
-        return m_proto->GetDeepValueOf();
+    if (m_expr != nullptr) {
+        return m_expr->GetDeepValueOf();
     }
 
     return AstExpression::GetDeepValueOf();

@@ -53,6 +53,8 @@ const HashMap<ErrorMessage, String> CompilerError::error_message_strings {
     { Msg_too_few_generic_args, "Too few generic arguments provided: % required, found %" },
     { Msg_no_substitution_for_generic_arg, "No substitution found for generic parameter %"},
     { Msg_enum_assignment_not_constant, "Assignment for enum member '%' is not a constant." },
+    { Msg_break_outside_loop, "'break' cannot be used outside of a loop or switch statement" },
+    { Msg_continue_outside_loop, "'continue' cannot be used outside of a loop" },
     { Msg_multiple_return_types, "Function has more than one possible return type" },
     { Msg_mismatched_return_type, "Function is marked to return '%', cannot return '%'" },
     { Msg_must_be_explicitly_marked_any, "Function must be explicitly marked to return 'Any'" },

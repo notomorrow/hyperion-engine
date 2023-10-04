@@ -71,6 +71,10 @@ enum ErrorMessage
     Msg_no_substitution_for_generic_arg,
     Msg_enum_assignment_not_constant,
 
+    /* LOOPS */
+    Msg_break_outside_loop,
+    Msg_continue_outside_loop,
+
     /* FUNCTIONS */
     Msg_multiple_return_types,
     Msg_mismatched_return_type,

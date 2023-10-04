@@ -132,7 +132,6 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         }
 
         chunk->Append(Compiler::PopStack(visitor, m_num_used_initializers));
-
     } else if (condition_is_true) {
         if (m_decl_part != nullptr) {
             chunk->Append(m_decl_part->Build(visitor, mod));

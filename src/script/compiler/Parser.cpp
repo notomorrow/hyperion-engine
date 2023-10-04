@@ -425,6 +425,10 @@ RC<AstStatement> Parser::ParseStatement(
             res = ParseWhileLoop();
         } else if (MatchKeyword(Keyword_for, false)) {
             res = ParseForLoop();
+        } else if (MatchKeyword(Keyword_break, false)) {
+            res = ParseBreakStatement();
+        } else if (MatchKeyword(Keyword_continue, false)) {
+            res = ParseBreakContinue();
         } else if (MatchKeyword(Keyword_try, false)) {
             res = ParseTryCatchStatement();
         } else if (MatchKeyword(Keyword_return, false)) {
@@ -618,7 +622,7 @@ RC<AstExpression> Parser::ParseTerm(
     while (expr != nullptr && (
         Match(TK_DOT) ||
         (!override_parentheses && Match(TK_OPEN_PARENTH)) ||
-        (!override_fat_arrows && Match(TK_FAT_ARROW)) ||
+        //(!override_fat_arrows && Match(TK_FAT_ARROW)) ||
         (!override_square_brackets && Match(TK_OPEN_BRACKET)) ||
         // (!override_angle_brackets && MatchOperator("<")) ||
         MatchKeyword(Keyword_has) ||
@@ -1396,6 +1400,7 @@ RC<AstStatement> Parser::ParseForLoop()
         }
 
         RC<AstBlock> block;
+
         if (!(block = ParseBlock())) {
             return nullptr;
         }
@@ -1405,6 +1410,28 @@ RC<AstStatement> Parser::ParseForLoop()
             condition_part,
             increment_part,
             block,
+            token.GetLocation()
+        ));
+    }
+
+    return nullptr;
+}
+
+RC<AstStatement> Parser::ParseBreakStatement()
+{
+    if (Token token = ExpectKeyword(Keyword_break, true)) {
+        return RC<AstBreakStatement>(new AstBreakStatement(
+            token.GetLocation()
+        ));
+    }
+
+    return nullptr;
+}
+
+RC<AstStatement> Parser::ParseContinueStatement()
+{
+    if (Token token = ExpectKeyword(Keyword_continue, true)) {
+        return RC<AstContinueStatement>(new AstContinueStatement(
             token.GetLocation()
         ));
     }
@@ -1894,7 +1921,7 @@ RC<AstFunctionExpression> Parser::ParseFunctionExpression(
 
         RC<AstPrototypeSpecification> type_spec;
 
-        if (Match(TK_COLON, true)) {
+        if (Match(TK_RIGHT_ARROW, true)) {
             // read return type for functions
             type_spec = ParsePrototypeSpecification();
         }

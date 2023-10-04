@@ -11,13 +11,14 @@
 
 namespace hyperion::compiler {
 
-class InternalByteStream {
+class InternalByteStream
+{
 public:
     struct Fixup
     {
-        LabelId label_id;
-        SizeType position;
-        SizeType offset;
+        LabelId     label_id = LabelId(-1);
+        SizeType    position = SizeType(-1);
+        SizeType    offset = SizeType(-1);
     };
 
     SizeType GetSize() const
@@ -39,9 +40,9 @@ public:
     Array<UByte> &Bake();
 
 private:
-    std::map<LabelId, LabelInfo> m_labels;
-    Array<UByte> m_stream;
-    Array<Fixup> m_fixups;
+    std::map<LabelId, LabelInfo>    m_labels;
+    Array<UByte>                    m_stream;
+    Array<Fixup>                    m_fixups;
 };
 
 } // namespace hyperion::compiler

@@ -150,7 +150,7 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
     if (!base_found) { // no custom 'base' member, add default
         m_symbol_type->AddMember(SymbolMember_t {
             "base",
-            base_type,
+            BuiltinTypes::CLASS_TYPE,
             m_base_specification != nullptr
                 ? CloneAstNode(m_base_specification->GetExpr())
                 : RC<AstExpression>(new AstVariable(BuiltinTypes::CLASS_TYPE->GetName(), m_location))

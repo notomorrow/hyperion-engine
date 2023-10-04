@@ -32,16 +32,10 @@ const SymbolTypePtr_t BuiltinTypes::UNDEFINED = SymbolType::Primitive(
     BuiltinTypes::PRIMITIVE_TYPE
 );
 
-const SymbolTypePtr_t BuiltinTypes::ANY_TYPE = SymbolType::Primitive(
-    "__any",
-    RC<AstUndefined>(new AstUndefined(SourceLocation::eof)),
-    BuiltinTypes::PRIMITIVE_TYPE
-);
-
 const SymbolTypePtr_t BuiltinTypes::ANY = SymbolType::Primitive(
     "Any",
     RC<AstNil>(new AstNil(SourceLocation::eof)),
-    BuiltinTypes::ANY_TYPE
+    nullptr
 );
 
 const SymbolTypePtr_t BuiltinTypes::PLACEHOLDER = SymbolType::Primitive(
@@ -80,11 +74,11 @@ const SymbolTypePtr_t BuiltinTypes::CLASS_TYPE = SymbolType::Extend(
                 SourceLocation::eof
             )),
         }
-        // SymbolMember_t {
-        //     "name",
-        //     BuiltinTypes::STRING,
-        //     RC<AstString>(new AstString("Class", SourceLocation::eof))
-        // },
+        /*SymbolMember_t {
+            "name",
+            BuiltinTypes::ANY, // Set to any until this is refactored - string relies on class
+            RC<AstString>(new AstString("Class", SourceLocation::eof))
+        }*/
     }
 );
 
@@ -156,7 +150,7 @@ const SymbolTypePtr_t BuiltinTypes::STRING = SymbolType::Extend(
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__String", nullptr
+                "EmptyStringLiteral", nullptr
             ),
             RC<AstString>(new AstString("", SourceLocation::eof))
         },
@@ -178,7 +172,7 @@ const SymbolTypePtr_t BuiltinTypes::FUNCTION = SymbolType::Generic(
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "FunctionInstance", nullptr
+                "EmptyFunctionLiteral", nullptr
             ),
             RC<AstFunctionExpression>(new AstFunctionExpression(
                 {},
@@ -207,7 +201,7 @@ const SymbolTypePtr_t BuiltinTypes::ARRAY = SymbolType::Generic(
         SymbolMember_t {
             "$proto",
             SymbolType::Primitive(
-                "__Array", nullptr
+                "EmptyArrayLiteral", nullptr
             ),
             RC<AstArrayExpression>(new AstArrayExpression(
                 {}, SourceLocation::eof
@@ -279,20 +273,6 @@ const SymbolTypePtr_t BuiltinTypes::BOXED_TYPE = SymbolType::Generic(
     {},
     GenericTypeInfo { 1 },
     BuiltinTypes::TRAIT_TYPE
-);
-
-const SymbolTypePtr_t BuiltinTypes::CONST_TYPE_TYPE = SymbolType::Primitive(
-    "ConstType",
-    RC<AstUndefined>(new AstUndefined(SourceLocation::eof)),
-    BuiltinTypes::PRIMITIVE_TYPE
-);
-
-const SymbolTypePtr_t BuiltinTypes::CONST_TYPE = SymbolType::Generic(
-    "Const",
-    nullptr,
-    {},
-    GenericTypeInfo { 1 },
-    BuiltinTypes::CONST_TYPE_TYPE
 );
 
 const SymbolTypePtr_t BuiltinTypes::CLOSURE_TYPE = SymbolType::Generic(

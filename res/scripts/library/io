@@ -11,12 +11,12 @@ public:
     path : String = "";
 
 private:
-    func IsOpen(self : File) : Bool
+    func IsOpen(self : File) -> Bool
     {
         return self.id != -1;
     }
 
-    func Close(self : File)
+    func Close(self : File) -> void
     {
         if (self.IsOpen()) {
             return;

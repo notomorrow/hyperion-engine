@@ -1,5 +1,5 @@
-#ifndef AST_TRY_CATCH_HPP
-#define AST_TRY_CATCH_HPP
+#ifndef AST_BREAK_STATEMENT_HPP
+#define AST_BREAK_STATEMENT_HPP
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstExpression.hpp>
@@ -9,13 +9,11 @@
 
 namespace hyperion::compiler {
 
-class AstTryCatch : public AstStatement
+class AstBreakStatement : public AstStatement
 {
 public:
-    AstTryCatch(const RC<AstBlock> &try_block,
-        const RC<AstBlock> &catch_block,
-        const SourceLocation &location);
-    virtual ~AstTryCatch() = default;
+    AstBreakStatement(const SourceLocation &location);
+    virtual ~AstBreakStatement() = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -24,14 +22,11 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    RC<AstBlock> m_try_block;
-    RC<AstBlock> m_catch_block;
+    UInt m_num_pops;
 
-    RC<AstTryCatch> CloneImpl() const
+    RC<AstBreakStatement> CloneImpl() const
     {
-        return RC<AstTryCatch>(new AstTryCatch(
-            CloneAstNode(m_try_block),
-            CloneAstNode(m_catch_block),
+        return RC<AstBreakStatement>(new AstBreakStatement(
             m_location
         ));
     }

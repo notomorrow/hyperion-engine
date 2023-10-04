@@ -8,9 +8,20 @@
 #include <script/compiler/emit/BytecodeChunk.hpp>
 #include <script/compiler/emit/BytecodeUtil.hpp>
 
+#include <script/Script.hpp>
+#include <script/SourceFile.hpp>
+
 #include <system/Debug.hpp>
 
+#include <asset/ByteReader.hpp>
+#include <core/lib/UniquePtr.hpp>
+
+#include "AstFalse.hpp"
+#include "AstTrue.hpp"
+
 namespace hyperion::compiler {
+
+using v2::Script;
 
 AstSymbolQuery::AstSymbolQuery(
     const String &command_name,
@@ -33,7 +44,7 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
         SymbolTypePtr_t expr_type = m_expr->GetExprType();
         AssertThrow(expr_type != nullptr);
 
-        m_string_result_value = RC<AstString>::Construct(expr_type->ToString(), m_location);
+        m_result_value = RC<AstString>::Construct(expr_type->ToString(), m_location);
     } else if (m_command_name == "log") {
         const auto *value_of = m_expr->GetDeepValueOf();
 
@@ -60,15 +71,50 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
                     field_names.PushBack(RC<AstString>::Construct(std::get<0>(member), m_location));
                 }
 
-                m_array_result_value = RC<AstArrayExpression>(new AstArrayExpression(
+                m_result_value = RC<AstArrayExpression>(new AstArrayExpression(
                     field_names,
                     m_location
                 ));
 
-                m_array_result_value->Visit(visitor, mod);
+                m_result_value->Visit(visitor, mod);
                 
            // }
         //}
+    } else if (m_command_name == "compiles") {
+        const auto *value_of = m_expr->GetDeepValueOf();
+        const AstString *string_value = nullptr;
+
+        if (value_of) {
+            string_value = dynamic_cast<const AstString *>(value_of);
+        }
+
+        if (!string_value) {
+            visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
+                LEVEL_ERROR,
+                Msg_internal_error,
+                m_location
+            ));
+
+            return;
+        }
+
+        String value = string_value->GetValue();
+
+        ByteBuffer byte_buffer;
+        byte_buffer.SetData(value.Size(), value.Data());
+
+        SourceFile source_file(value, value.Size());
+        source_file.ReadIntoBuffer(byte_buffer);
+
+        UniquePtr<Script> script(new Script(source_file));
+
+        if (script->Compile()) {
+            script->Bake();
+
+            m_result_value = RC<AstTrue>(new AstTrue(m_location));
+        } else {
+            m_result_value = RC<AstFalse>(new AstFalse(m_location));
+        }
     } else {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
@@ -81,10 +127,8 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstSymbolQuery::Build(AstVisitor *visitor, Module *mod)
 {
-    if (m_string_result_value != nullptr) {
-        return m_string_result_value->Build(visitor, mod);
-    } else if (m_array_result_value != nullptr) {
-        return m_array_result_value->Build(visitor, mod);
+    if (m_result_value != nullptr) {
+        return m_result_value->Build(visitor, mod);
     }
 
     return nullptr;
@@ -111,10 +155,8 @@ bool AstSymbolQuery::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstSymbolQuery::GetExprType() const
 {
-    if (m_string_result_value != nullptr) {
-        return m_string_result_value->GetExprType();
-    } else if (m_array_result_value != nullptr) {
-        return m_array_result_value->GetExprType();
+    if (m_result_value != nullptr) {
+        return m_result_value->GetExprType();
     }
 
     return BuiltinTypes::UNDEFINED;
@@ -122,10 +164,8 @@ SymbolTypePtr_t AstSymbolQuery::GetExprType() const
 
 const AstExpression *AstSymbolQuery::GetValueOf() const
 {
-    if (m_string_result_value != nullptr) {
-        return m_string_result_value.Get();
-    } else if (m_array_result_value != nullptr) {
-        return m_array_result_value.Get();
+    if (m_result_value != nullptr) {
+        return m_result_value.Get();
     }
 
     return this;

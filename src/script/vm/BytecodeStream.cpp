@@ -7,7 +7,7 @@ namespace vm {
 
 BytecodeStream BytecodeStream::FromSourceFile(SourceFile &file)
 {
-    return BytecodeStream(file.GetBuffer(), file.GetSize());
+    return BytecodeStream(file.GetBuffer(), 0);
 }
 
 BytecodeStream::BytecodeStream()
@@ -22,6 +22,8 @@ BytecodeStream::BytecodeStream(const UByte *buffer, SizeType size, SizeType posi
 }
 
 BytecodeStream::BytecodeStream(const ByteBuffer &byte_buffer, SizeType position)
+    : m_byte_buffer(byte_buffer),
+      m_position(position)
 {
     
 }

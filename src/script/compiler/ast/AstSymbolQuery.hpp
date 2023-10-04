@@ -35,8 +35,7 @@ private:
 
     // set while analyzing
     SymbolTypePtr_t         m_symbol_type;
-    RC<AstString>           m_string_result_value;
-    RC<AstArrayExpression>  m_array_result_value;
+    RC<AstExpression>       m_result_value;
 
     RC<AstSymbolQuery> CloneImpl() const
     {

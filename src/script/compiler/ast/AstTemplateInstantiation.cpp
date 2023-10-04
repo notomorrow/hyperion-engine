@@ -115,11 +115,20 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
 
     m_block->AddChild(m_inner_expr);
     m_block->Visit(visitor, mod);
+    
+    AssertThrow(m_inner_expr->GetExprType() != nullptr);
 
     // If the current return type is a placeholder, we need to set it to the inner expression's implicit return type
     if (m_expr_type->IsPlaceholderType()) {
         m_expr_type = m_inner_expr->GetExprType();
-        AssertThrow(m_expr_type != nullptr);
+    } else {
+        SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
+            visitor,
+            mod,
+            m_inner_expr->GetExprType(),
+            m_expr_type,
+            m_location
+        );
     }
 }
 

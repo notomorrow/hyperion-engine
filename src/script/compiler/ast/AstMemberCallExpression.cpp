@@ -89,6 +89,13 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
 
     if (substituted.first != nullptr) {
         m_return_type = substituted.first;
+
+        if (m_return_type->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
+            // error occured during parsing.
+
+            return;
+        }
+
         // change args to be newly ordered vector
         m_substituted_args = CloneAllAstNodes(substituted.second);
 

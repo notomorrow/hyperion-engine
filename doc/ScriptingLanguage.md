@@ -17,18 +17,18 @@ Variables may also be given the type `any`, to signify that they may be assigned
 Functions are typically defined in this manner:
 
 ```
-func MyFunction(x : Int, y : Int) : Int {
+func MyFunction(x : Int, y : Int) -> Int {
     return x + y;
 }
 ```
 
-Note that the ` : Int` after the function parameters signifies the return type of the function. If it is not provided, the return type will be deduced using the common type of all `return` statements in the function.
+Note that the ` -> Int` after the function parameters signifies the return type of the function. If it is not provided, the return type will be deduced using the common type of all `return` statements in the function.
 
 Functions may be stored as a variable, so you can change the function a variable holds.
 
 Example:
 ```
-do_thing : Function = func (x : Int) : Int {
+do_thing : Function = func (x : Int) -> Int {
     return x * 2;
 };
 
@@ -36,7 +36,7 @@ do_thing : Function = func (x : Int) : Int {
 // which is a more broad-scope type than the actual type of the first function (`Function(Int) -> Int`),
 // we can reassign to a function with different parameters, return type, etc.
 
-do_thing = func () : String {
+do_thing = func () -> String {
     return "Hello world";
 };
 ```

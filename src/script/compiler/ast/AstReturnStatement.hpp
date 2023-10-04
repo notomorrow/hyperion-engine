@@ -27,8 +27,8 @@ public:
 private:
     RC<AstExpression> m_expr;
 
-    int m_num_pops;
-    bool m_is_visited = false;
+    UInt m_num_pops;
+    Bool m_is_visited = false;
 
     RC<AstReturnStatement> CloneImpl() const
     {

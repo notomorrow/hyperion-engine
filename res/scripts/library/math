@@ -1,15 +1,18 @@
 const PI : Float = 3.14159265;
 const NaN : Float = global::NaN;
 
-func Sign<T>(num : T) {
+func Sign<T>(num : T)
+{
     return (num > 0) ? 1 : ((num < 0) ? -1 : 0);
 }
 
-func Abs<T>(num : T) {
+func Abs<T>(num : T)
+{
     return num < 0 ? -num : num;
 }
 
-func Floor<T>(num : T) {
+func Floor<T>(num : T)
+{
     if num >= 0 {
         return num - (num % 1);
     }
@@ -17,7 +20,8 @@ func Floor<T>(num : T) {
     return num - 1 - (num % 1);
 }
 
-func Ceil<T>(num : T) {
+func Ceil<T>(num : T)
+{
     if num >= 0 {
         return num + 1 - (num % 1);
     }

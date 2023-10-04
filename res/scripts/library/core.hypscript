@@ -9,14 +9,16 @@ module engine {
 
     export _engine : EngineWrapper = new EngineWrapper();
 
-    func CreateEntity() : Entity {
+    func CreateEntity() -> Entity
+    {
         return Engine_CreateEntity(_engine.handle);
     }
 }
 
 //extern func HashFNV1(str : String);
 
-func AssertEqual(lhs, rhs, msg = "") {
+func AssertEqual(lhs, rhs, msg = "")
+{
     Print("Check % == %\t%\n", lhs, rhs, msg);
 
     if (!(lhs == rhs)) {
@@ -28,7 +30,8 @@ func AssertEqual(lhs, rhs, msg = "") {
     return true;
 }
 
-func AssertNotEqual(lhs, rhs, msg = "") {
+func AssertNotEqual(lhs, rhs, msg = "")
+{
     Print("Check % != %\t%\n", lhs, rhs, msg);
 
     if (lhs == rhs) {

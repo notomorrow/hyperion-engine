@@ -3,6 +3,8 @@
 
 #include <script/compiler/emit/Instruction.hpp>
 #include <core/lib/DynArray.hpp>
+#include <core/lib/Optional.hpp>
+#include <core/Name.hpp>
 
 #include <system/Debug.hpp>
 
@@ -29,16 +31,32 @@ struct BytecodeChunk final : public Buildable
     LabelId NewLabel()
     {
         LabelId index = labels.Size();
-        labels.PushBack(LabelInfo { });
+        labels.PushBack(LabelInfo { UInt32(-1), HYP_NAME(Unnamed Label) });
         return index;
     }
 
-    /*inline void MarkLabel(LabelId label_id)
+    LabelId NewLabel(Name name, Bool is_external = false)
     {
-        AssertThrow(label_id < labels.Size());
-        labels[label_id].position = chunk_size;
-    }*/
-    
+        AssertThrowMsg(!FindLabelByName(name).HasValue(), "Cannot duplicate label identifier");
+
+        LabelId index = labels.Size();
+        labels.PushBack(LabelInfo { UInt32(-1), name, is_external });
+        return index;
+    }
+
+    Optional<LabelId> FindLabelByName(Name name) const
+    {
+        const auto it = labels.FindIf([name](const LabelInfo &label_info) {
+            return label_info.name == name;
+        });
+
+        if (it == labels.End()) {
+            return Optional<LabelId> { };
+        }
+
+        return std::distance(labels.Begin(), it);
+    }
+
     Array<std::unique_ptr<Buildable>> buildables;
 };
 

@@ -101,7 +101,6 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     generic_param_types.Reserve(m_generic_param_placeholders.Size() + 1); // anotha one
     
     SymbolTypePtr_t expr_return_type;
-    //SymbolTypePtr_t implicit_return_type = m_expr->GetExprType();
     SymbolTypePtr_t explicit_return_type = m_return_type_specification != nullptr
         ? m_return_type_specification->GetHeldType()
         : nullptr;
@@ -110,18 +109,11 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     // if it's compatible with the expression
     if (m_return_type_specification != nullptr) {
         AssertThrow(explicit_return_type != nullptr);
-
-        /*SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
-            visitor,
-            mod,
-            explicit_return_type,
-            implicit_return_type,
-            m_return_type_specification->GetLocation()
-        );*/
+        
 
         expr_return_type = explicit_return_type;
     } else {
-        expr_return_type = BuiltinTypes::PLACEHOLDER;//implicit_return_type;
+        expr_return_type = BuiltinTypes::PLACEHOLDER;
     }
 
     generic_param_types.PushBack({

@@ -245,21 +245,6 @@ bool SymbolType::TypeCompatible(
 
                 return true;
             } else {
-                // allow boxing/unboxing for 'Const(T)' type
-                if (base->TypeEqual(*BuiltinTypes::CONST_TYPE)) {
-                    // strict_const means you can't assign a const (left) to non-const (right)
-                    if (strict_const) {
-                        return false;
-                    }
-
-                    const SymbolTypePtr_t &held_type = m_generic_instance_info.m_generic_args[0].m_type;
-                    AssertThrow(held_type != nullptr);
-                    return held_type->TypeCompatible(
-                        right,
-                        strict_numbers
-                    );
-                }
-
                 return false;
             }
 
@@ -456,7 +441,7 @@ bool SymbolType::IsObject() const
 
 bool SymbolType::IsAnyType() const
 {
-    return IsOrHasBase(*BuiltinTypes::ANY) || IsOrHasBase(*BuiltinTypes::ANY_TYPE);
+    return IsOrHasBase(*BuiltinTypes::ANY);
 }
 
 bool SymbolType::IsPlaceholderType() const
@@ -771,6 +756,9 @@ SymbolTypePtr_t SymbolType::GenericInstance(
     const Array<SymbolMember_t> &members
 )
 {
+    AssertThrowMsg(info.m_generic_args.Size() >= 1,
+        "Generic Instances must have at least 1 argument (@return is the first argument and must always be present)");
+
     AssertThrow(base != nullptr);
     AssertThrow(base->GetTypeClass() == TYPE_GENERIC_INSTANCE || base->GetTypeClass() == TYPE_GENERIC);
 

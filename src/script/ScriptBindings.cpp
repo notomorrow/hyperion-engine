@@ -1360,6 +1360,8 @@ static HYP_SCRIPT_FUNCTION(Entity_GetWorldAABB)
 
 static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
 {
+    static const UInt32 invoke_hash = hash_fnv_1("$invoke");
+
     HYP_SCRIPT_CHECK_ARGS(==, 1);
 
     // get value
@@ -1368,16 +1370,27 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
 
     String bytecode_str;
 
-    if (target_ptr->m_type != vm::Value::FUNCTION) {
-        if (target_ptr->m_type == vm::Value::NATIVE_FUNCTION) {
+    vm::Value value = *target_ptr;
+
+    { // If the value holds an object, look for $invoke
+        VMObject *object_ptr = nullptr;
+        Member *member_ptr = nullptr;
+
+        if (value.GetPointer<VMObject>(&object_ptr) && (member_ptr = object_ptr->LookupMemberFromHash(invoke_hash))) {
+            value = member_ptr->value;
+        }
+    }
+
+    if (value.m_type != vm::Value::FUNCTION) {
+        if (value.m_type == vm::Value::NATIVE_FUNCTION) {
             bytecode_str = "<Native Code>";
-        } else {
+        } {
             char buffer[256];
 
             std::sprintf(
                 buffer,
                 "cannot convert type '%s' to bytecode",
-                target_ptr->GetTypeString()
+                value.GetTypeString()
             );
 
             params.handler->state->ThrowException(
@@ -1388,7 +1401,7 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
     } else {
         AssertThrow(params.handler->bs != nullptr);
 
-        const SizeType pos = target_ptr->m_value.func.m_addr;
+        const SizeType pos = value.m_value.func.m_addr;
         AssertThrow(pos < params.handler->bs->Size());
         
         SourceFile source_file(
@@ -1409,13 +1422,20 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
         utf::utf8_stringstream ss;
 
         UInt8 code;
+        UInt depth = 1;
 
         do {
             byte_stream.Read(&code);
 
             // decompile the instruction
             dec.DecodeNext(code, byte_stream, is, &ss);
-        } while (code != RET && !byte_stream.Eof());
+
+            if (code == RET) {
+                if (!(--depth)) {
+                    break;
+                }
+            }
+        } while (!byte_stream.Eof());
         
         bytecode_str += HYP_UTF8_TOMULTIBYTE(ss.str().data());
     }

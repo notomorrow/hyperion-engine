@@ -9,7 +9,8 @@
 
 namespace hyperion::compiler {
 
-class AstTypeHolder : public AstExpression {
+class AstTypeHolder : public AstExpression
+{
 public:
     AstTypeHolder(const SourceLocation &location);
     virtual ~AstTypeHolder() = default;

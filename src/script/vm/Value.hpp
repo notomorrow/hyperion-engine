@@ -126,40 +126,37 @@ struct Value
 
     union ValueData
     {
-        // internal only, for now
-        Int8 i8;
-        UInt8 u8;
-        Int16 i16;
-        UInt16 u16;
-        // -----
+        Int8        i8;
+        UInt8       u8;
+        Int16       i16;
+        UInt16      u16;
+        Int32       i32;
+        Int64       i64;
+        UInt32      u32;
+        UInt64      u64;
+        Float       f;
+        Double      d;
 
-        Int32 i32;
-        Int64 i64;
-        UInt32 u32;
-        UInt64 u64;
-        Float f;
-        Double d;
+        Bool        b;
 
-        bool b;
+        Value       *value_ref;
 
-        Value *value_ref;
-
-        HeapValue *ptr;
+        HeapValue   *ptr;
 
         struct
         {
-            BCAddress m_addr;
-            UInt8 m_nargs;
-            UInt8 m_flags;
+            BCAddress   m_addr;
+            UInt8       m_nargs;
+            UInt8       m_flags;
         } func;
 
         NativeFunctionPtr_t native_func;
-        UserData_t user_data;
+        UserData_t          user_data;
         
         struct
         {
-            BCAddress return_address;
-            Int32 varargs_push;
+            BCAddress   return_address;
+            Int32       varargs_push;
         } call;
 
         BCAddress addr;

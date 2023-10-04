@@ -2,11 +2,8 @@
 #define BUILDABLE_HPP
 
 #include <core/lib/DynArray.hpp>
+#include <core/Name.hpp>
 #include <Types.hpp>
-
-#include <streambuf>
-#include <vector>
-#include <cstdint>
 
 namespace hyperion::compiler {
 
@@ -19,14 +16,20 @@ using LabelId = SizeType;
 
 struct LabelInfo
 {
-    LabelPosition position;
+    LabelPosition   position;
+    Name            name;
+
+    /**
+     * Used in the case of 'break', 'continue' statements, to refer to the nearest label with the same name.
+     */
+    Bool            is_external = false;
 };
 
 struct BuildParams
 {
-    SizeType block_offset = 0;
-    SizeType local_offset = 0;
-    Array<LabelInfo> labels;
+    SizeType            block_offset = 0;
+    SizeType            local_offset = 0;
+    Array<LabelInfo>    labels;
 };
 
 struct Buildable

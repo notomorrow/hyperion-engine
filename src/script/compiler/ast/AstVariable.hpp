@@ -11,7 +11,7 @@ class AstVariable : public AstIdentifier
 {
 public:
     AstVariable(const String &name, const SourceLocation &location);
-    virtual ~AstVariable() = default;
+    virtual ~AstVariable() override = default;
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;

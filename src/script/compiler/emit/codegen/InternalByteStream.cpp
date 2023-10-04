@@ -15,9 +15,9 @@ void InternalByteStream::MarkLabel(LabelId label_id)
 void InternalByteStream::AddFixup(LabelId label_id, SizeType offset)
 {
     Fixup fixup;
-    fixup.label_id = label_id;
-    fixup.position = m_stream.Size();
-    fixup.offset = offset;
+    fixup.label_id  = label_id;
+    fixup.position  = m_stream.Size();
+    fixup.offset    = offset;
 
     m_fixups.PushBack(fixup);
 
@@ -29,6 +29,7 @@ void InternalByteStream::AddFixup(LabelId label_id, SizeType offset)
 
 Array<UByte> &InternalByteStream::Bake()
 {
+
     for (const Fixup &fixup : m_fixups) {
         auto it = m_labels.find(fixup.label_id);
         AssertThrowMsg(it != m_labels.end(), "No label with fixup ID was found");

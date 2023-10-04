@@ -135,6 +135,8 @@ private:
     RC<AstIfStatement> ParseIfStatement();
     RC<AstWhileLoop> ParseWhileLoop();
     RC<AstStatement> ParseForLoop();
+    RC<AstStatement> ParseBreakStatement();
+    RC<AstStatement> ParseContinueStatement();
     RC<AstTryCatch> ParseTryCatchStatement();
     RC<AstThrowExpression> ParseThrowExpression();
     RC<AstExpression> ParseBinaryExpression(
