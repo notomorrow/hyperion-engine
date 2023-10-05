@@ -92,6 +92,10 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
         chunk->TakeOwnershipOfLabel(break_label);
 
+        // the label to for 'continue' statement
+        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continue_label);
+
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -114,6 +118,9 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
+
+        // where 'continue' jumps to
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
 
         if (m_increment_part != nullptr) {
             chunk->Append(m_increment_part->Build(visitor, mod));
@@ -149,6 +156,10 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         // the label to jump to the end to BREAK
         LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
 
+        // the label to jump to for 'continue' statement
+        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continue_label);
+
         chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
 
         // the condition has been determined to be true
@@ -160,6 +171,9 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
+
+        // where 'continue' jumps to
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
 
         if (m_increment_part != nullptr) {
             chunk->Append(m_increment_part->Build(visitor, mod));

@@ -67,6 +67,10 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
         chunk->TakeOwnershipOfLabel(break_label);
 
+        // the label to jump to the end to CONTINUE
+        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continue_label);
+
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -85,6 +89,9 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
 
+        // where 'continue' jumps to
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
+
         // pop all local variables off the stack
         for (int i = 0; i < m_num_locals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
@@ -102,11 +109,15 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
         chunk->TakeOwnershipOfLabel(top_label);
 
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
-
         // the label to jump to the end to BREAK
         LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
         chunk->TakeOwnershipOfLabel(break_label);
+
+        // the label to jump to the end to CONTINUE
+        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continue_label);
+
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
 
         // the condition has been determined to be true
         if (m_conditional->MayHaveSideEffects()) {
@@ -117,6 +128,9 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
+
+        // where 'continue' jumps to
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
 
         // pop all local variables off the stack
         for (int i = 0; i < m_num_locals; i++) {

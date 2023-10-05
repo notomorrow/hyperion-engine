@@ -74,7 +74,7 @@ public:
 
     Parser(const Parser &other);
 
-    void Parse(bool expect_module_decl = true);
+    void Parse(Bool expect_module_decl = true);
 
 private:
     int m_template_argument_depth = 0; // until a better way is found..
@@ -83,46 +83,48 @@ private:
     TokenStream *m_token_stream;
     CompilationUnit *m_compilation_unit;
 
-    Token Match(TokenClass token_class, bool read = false);
+    Token Match(TokenClass token_class, Bool read = false);
     Token MatchAhead(TokenClass token_class, int n);
-    Token MatchKeyword(Keywords keyword, bool read = false);
+    Token MatchKeyword(Keywords keyword, Bool read = false);
     Token MatchKeywordAhead(Keywords keyword, int n);
-    Token MatchOperator(const String &op, bool read = false);
+    Token MatchOperator(const String &op, Bool read = false);
     Token MatchOperatorAhead(const String &op, int n);
-    Token Expect(TokenClass token_class, bool read = false);
-    Token ExpectKeyword(Keywords keyword, bool read = false);
-    Token ExpectOperator(const String &op, bool read = false);
-    Token MatchIdentifier(bool allow_keyword = false, bool read = false);
-    Token ExpectIdentifier(bool allow_keyword = false, bool read = false);
-    bool ExpectEndOfStmt();
+    Token Expect(TokenClass token_class, Bool read = false);
+    Token ExpectKeyword(Keywords keyword, Bool read = false);
+    Token ExpectOperator(const String &op, Bool read = false);
+    Token MatchIdentifier(Bool allow_keyword = false, Bool read = false);
+    Token ExpectIdentifier(Bool allow_keyword = false, Bool read = false);
+    Bool ExpectEndOfStmt();
     SourceLocation CurrentLocation() const;
     void SkipStatementTerminators();
-    int OperatorPrecedence(const Operator *&out);
+    Int OperatorPrecedence(const Operator *&out);
 
     RC<AstStatement> ParseStatement(
-        bool top_level = false,
-        bool read_terminators = true
+        Bool top_level = false,
+        Bool read_terminators = true
     );
     RC<AstModuleDeclaration> ParseModuleDeclaration();
     RC<AstDirective> ParseDirective();
     RC<AstExpression> ParseTerm(
-        bool override_commas = false,
-        bool override_fat_arrows = false,
-        bool override_angle_brackets = false,
-        bool override_square_brackets = false,
-        bool override_parentheses = false,
-        bool override_question_mark = false
+        Bool override_commas = false,
+        Bool override_fat_arrows = false,
+        Bool override_angle_brackets = false,
+        Bool override_square_brackets = false,
+        Bool override_parentheses = false,
+        Bool override_question_mark = false
     );
     RC<AstExpression> ParseParentheses();
     RC<AstExpression> ParseAngleBrackets(RC<AstIdentifier> target);
     RC<AstConstant> ParseIntegerLiteral();
     RC<AstFloat> ParseFloatLiteral();
     RC<AstString> ParseStringLiteral();
-    RC<AstIdentifier> ParseIdentifier(bool allow_keyword = false);
+    RC<AstIdentifier> ParseIdentifier(Bool allow_keyword = false);
     RC<AstArgument> ParseArgument(RC<AstExpression> expr);
-    RC<AstArgumentList> ParseArguments(bool require_parentheses = true);
-    RC<AstCallExpression> ParseCallExpression(RC<AstExpression> target,
-        bool require_parentheses = true);
+    RC<AstArgumentList> ParseArguments(Bool require_parentheses = true);
+    RC<AstCallExpression> ParseCallExpression(
+        RC<AstExpression> target,
+        Bool require_parentheses = true
+    );
     RC<AstModuleAccess> ParseModuleAccess();
     RC<AstModuleProperty> ParseModuleProperty();
     RC<AstMember> ParseMemberExpression(RC<AstExpression> target);
@@ -142,7 +144,7 @@ private:
     RC<AstTryCatch> ParseTryCatchStatement();
     RC<AstThrowExpression> ParseThrowExpression();
     RC<AstExpression> ParseBinaryExpression(
-        int expr_prec,
+        Int expr_prec,
         RC<AstExpression> left
     );
     RC<AstExpression> ParseUnaryExpressionPrefix();
@@ -151,21 +153,21 @@ private:
         const RC<AstExpression> &conditional
     );
     RC<AstExpression> ParseExpression(
-        bool override_commas = false,
-        bool override_fat_arrows = false,
-        bool override_angle_brackets = false,
-        bool override_question_mark = false
+        Bool override_commas = false,
+        Bool override_fat_arrows = false,
+        Bool override_angle_brackets = false,
+        Bool override_question_mark = false
     );
     RC<AstPrototypeSpecification> ParsePrototypeSpecification();
     RC<AstExpression> ParseAssignment();
     RC<AstVariableDeclaration> ParseVariableDeclaration(
-        bool allow_keyword_names = false,
-        bool allow_quoted_names = false,
+        Bool allow_keyword_names = false,
+        Bool allow_quoted_names = false,
         IdentifierFlagBits flags = 0
     );
-    RC<AstStatement> ParseFunctionDefinition(bool require_keyword = true);
+    RC<AstStatement> ParseFunctionDefinition(Bool require_keyword = true);
     RC<AstFunctionExpression> ParseFunctionExpression(
-        bool require_keyword = true,
+        Bool require_keyword = true,
         Array<RC<AstParameter>> params = {}
     );
     RC<AstArrayExpression> ParseArrayExpression();
@@ -175,22 +177,22 @@ private:
     Array<RC<AstParameter>> ParseGenericParameters();
     RC<AstStatement> ParseTypeDefinition();
     RC<AstTypeExpression> ParseTypeExpression(
-        bool require_keyword = true,
-        bool allow_identifier = true,
-        bool is_proxy_class = false,
+        Bool require_keyword = true,
+        Bool allow_identifier = true,
+        Bool is_proxy_class = false,
         String type_name = "<Anonymous Type>"
     );
     RC<AstStatement> ParseEnumDefinition();
     RC<AstEnumExpression> ParseEnumExpression(
-        bool require_keyword = true,
-        bool allow_identifier = true,
+        Bool require_keyword = true,
+        Bool allow_identifier = true,
         String enum_name = "<Anonymous Enum>"
     );
     RC<AstImport> ParseImport();
     RC<AstExportStatement> ParseExportStatement();
     RC<AstFileImport> ParseFileImport();
     RC<AstModuleImport> ParseModuleImport();
-    RC<AstModuleImportPart> ParseModuleImportPart(bool allow_braces = false);
+    RC<AstModuleImportPart> ParseModuleImportPart(Bool allow_braces = false);
     RC<AstReturnStatement> ParseReturnStatement();
     RC<AstExpression> ParseMetaProperty();
 };

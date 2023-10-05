@@ -846,7 +846,7 @@ Test("Loops", func (Unit : Function) {
         Expect(result == 15);
     });
 
-    /*Unit("for loop works with continue", func () {
+    Unit("for loop works with continue", func () {
         result := 0;
 
         for (i := 0; i < 10; i++) {
@@ -906,7 +906,7 @@ Test("Loops", func (Unit : Function) {
         Expect(result == 40);
     });
 
-    Unit("do-while loop works", func () {
+    /*Unit("do-while loop works", func () {
         result := 0;
         i := 0;
 

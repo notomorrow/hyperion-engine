@@ -20,7 +20,7 @@ AstBreakStatement::AstBreakStatement(const SourceLocation &location)
 
 void AstBreakStatement::Visit(AstVisitor *visitor, Module *mod)
 {
-    bool in_loop = false;
+    Bool in_loop = false;
 
     TreeNode<Scope> *top = mod->m_scopes.TopNode();
 

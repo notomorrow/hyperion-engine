@@ -22,6 +22,8 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
+    UInt m_num_pops;
+
     RC<AstContinueStatement> CloneImpl() const
     {
         return RC<AstContinueStatement>(new AstContinueStatement(
