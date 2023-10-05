@@ -27,7 +27,7 @@ CompilationUnit::CompilationUnit()
     top.GetIdentifierTable().BindTypeToIdentifier("Any", BuiltinTypes::ANY);
     top.GetIdentifierTable().BindTypeToIdentifier("Closure", BuiltinTypes::CLOSURE_TYPE);
 
-    m_module_tree.TopNode()->m_value = m_global_module.Get();
+    m_module_tree.TopNode()->Get() = m_global_module.Get();
 }
 
 CompilationUnit::~CompilationUnit() = default;
@@ -77,15 +77,15 @@ Module *CompilationUnit::LookupModule(const String &name)
     TreeNode<Module *> *top = m_module_tree.TopNode();
 
     while (top != nullptr) {
-        if (top->m_value != nullptr && top->m_value->GetName() == name) {
-            return top->m_value;
+        if (top->Get() != nullptr && top->Get()->GetName() == name) {
+            return top->Get();
         }
 
         // look up module names in the top module's siblings
         for (auto &sibling : top->m_siblings) {
-            if (sibling != nullptr && sibling->m_value != nullptr) {
-                if (sibling->m_value->GetName() == name) {
-                    return sibling->m_value;
+            if (sibling != nullptr && sibling->Get() != nullptr) {
+                if (sibling->Get()->GetName() == name) {
+                    return sibling->Get();
                 }
             }
         }

@@ -428,7 +428,7 @@ RC<AstStatement> Parser::ParseStatement(
         } else if (MatchKeyword(Keyword_break, false)) {
             res = ParseBreakStatement();
         } else if (MatchKeyword(Keyword_continue, false)) {
-            res = ParseBreakContinue();
+            res = ParseContinueStatement();
         } else if (MatchKeyword(Keyword_try, false)) {
             res = ParseTryCatchStatement();
         } else if (MatchKeyword(Keyword_return, false)) {

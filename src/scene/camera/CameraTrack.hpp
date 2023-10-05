@@ -41,8 +41,8 @@ public:
     void AddPivot(const CameraTrackPivot &pivot);
 
 private:
-    Double m_duration;
-    SortedArray<CameraTrackPivot> m_pivots;
+    Double                          m_duration;
+    SortedArray<CameraTrackPivot>   m_pivots;
 };
 
 } // namespace hyperion::v2

@@ -150,8 +150,10 @@ void Script::Bake(BuildParams &build_params)
 
     CodeGenerator code_generator(build_params);
     code_generator.Visit(&m_bytecode_chunk);
+    code_generator.Bake();
 
-    m_baked_bytes = code_generator.GetInternalByteStream().Bake();
+    m_baked_bytes = code_generator.GetInternalByteStream().GetData();
+
     m_bs = BytecodeStream(m_baked_bytes.Data(), m_baked_bytes.Size());
 }
 

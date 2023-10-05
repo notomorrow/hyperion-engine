@@ -72,6 +72,11 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 {
     AssertThrow(m_condition_part != nullptr);
 
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_LOOP
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Int condition_is_true = m_condition_part->IsTrue();
@@ -80,10 +85,12 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
         // the condition cannot be determined at compile time
         UInt8 rp;
 
-        LabelId top_label = chunk->NewLabel();
+        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(top_label);
 
         // the label to jump to the end to BREAK
-        LabelId break_label = chunk->NewLabel();
+        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(break_label);
 
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -137,7 +144,11 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
             chunk->Append(m_decl_part->Build(visitor, mod));
         }
 
-        LabelId top_label = chunk->NewLabel();
+        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
+
+        // the label to jump to the end to BREAK
+        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
+
         chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
 
         // the condition has been determined to be true
@@ -163,6 +174,9 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 
         // jump back to top here
         chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+
+        // Break is after the JMP instruction to go back to the top
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
 
         // pop all initializers off the stack
         for (Int i = 0; i < m_num_used_initializers; i++) {

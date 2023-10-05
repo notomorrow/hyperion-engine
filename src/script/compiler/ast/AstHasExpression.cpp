@@ -82,6 +82,11 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *
 {
     AssertThrow(m_target != nullptr);
 
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (!m_is_expr) {
@@ -105,9 +110,12 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *
         const HashFNV1 hash = hash_fnv_1(m_field_name.Data());
 
         // the label to jump to the very end
-        LabelId end_label = chunk->NewLabel();
+        LabelId end_label = context_guard->NewLabel();
+        chunk->TakeOwnershipOfLabel(end_label);
+
         // the label to jump to the else-part
-        LabelId else_label = chunk->NewLabel();
+        LabelId else_label = context_guard->NewLabel();
+        chunk->TakeOwnershipOfLabel(else_label);
         
         chunk->Append(m_target->Build(visitor, mod));
 

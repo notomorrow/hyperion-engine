@@ -22,7 +22,7 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
 private:
-    RC<AstTryCatch> CloneImpl() const
+    RC<AstContinueStatement> CloneImpl() const
     {
         return RC<AstContinueStatement>(new AstContinueStatement(
             m_location

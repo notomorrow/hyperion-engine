@@ -36,6 +36,8 @@
 #include <script/compiler/ast/AstModuleAccess.hpp>
 #include <script/compiler/ast/AstModuleProperty.hpp>
 #include <script/compiler/ast/AstMember.hpp>
+#include <script/compiler/ast/AstBreakStatement.hpp>
+#include <script/compiler/ast/AstContinueStatement.hpp>
 #include <script/compiler/ast/AstMemberCallExpression.hpp>
 #include <script/compiler/ast/AstArrayAccess.hpp>
 #include <script/compiler/ast/AstHasExpression.hpp>

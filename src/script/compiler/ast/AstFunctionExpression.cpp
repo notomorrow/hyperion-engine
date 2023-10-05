@@ -319,6 +319,11 @@ void AstFunctionExpression::Visit(AstVisitor *visitor, Module *mod)
 std::unique_ptr<Buildable> AstFunctionExpression::Build(AstVisitor *visitor, Module *mod)
 {
     AssertThrow(m_block_with_parameters != nullptr);
+
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
     
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
@@ -358,8 +363,11 @@ std::unique_ptr<Buildable> AstFunctionExpression::Build(AstVisitor *visitor, Mod
     }
 
     // the label to jump to the very end
-    LabelId end_label = chunk->NewLabel();
-    LabelId func_addr = chunk->NewLabel();
+    LabelId end_label = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(end_label);
+
+    LabelId func_addr = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(func_addr);
 
     // jump to end as to not execute the function body
     chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, end_label));

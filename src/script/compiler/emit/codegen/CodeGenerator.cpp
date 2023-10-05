@@ -12,7 +12,16 @@ CodeGenerator::CodeGenerator(BuildParams &build_params)
 void CodeGenerator::Visit(BytecodeChunk *chunk)
 {
     BuildParams new_params;
-    new_params.block_offset = build_params.block_offset + m_ibs.GetSize();
+    new_params.block_offset = build_params.block_offset + m_ibs.GetPosition();
+    new_params.labels       = build_params.labels;
+
+    for (const LabelId label_id : chunk->labels) {
+        new_params.labels.Insert({
+            label_id,
+            LabelPosition(-1),
+            HYP_NAME(LabelNameRemoved)
+        });
+    }
 
     CodeGenerator code_generator(new_params);
 
@@ -21,15 +30,43 @@ void CodeGenerator::Visit(BytecodeChunk *chunk)
     }
 
     // bake the chunk's byte stream
-    const Array<UByte> &chunk_bytes = code_generator.GetInternalByteStream().Bake();
+    //code_generator.GetInternalByteStream().Bake(new_params);
+
+    const Array<UByte> &bytes = code_generator.GetInternalByteStream().GetData();
+    const Array<Fixup> &fixups = code_generator.GetInternalByteStream().GetFixups();
+
+    const SizeType fixup_offset = m_ibs.GetPosition();
 
     // append bytes to this chunk's InternalByteStream
-    m_ibs.Put(chunk_bytes.Data(), chunk_bytes.Size());
+    m_ibs.Put(bytes.Data(), bytes.Size());
+
+    // Copy fixups from the chunk's InternalByteStream to this one's
+    for (const Fixup &fixup : fixups) {
+        m_ibs.AddFixup(fixup.label_id, fixup.position + fixup_offset, fixup.offset);
+    }
+
+    build_params.labels = new_params.labels;
+}
+
+void CodeGenerator::Bake()
+{
+    m_ibs.Bake(build_params);
 }
 
 void CodeGenerator::Visit(LabelMarker *node)
 {
-    m_ibs.MarkLabel(node->id);
+    const LabelId label_id = node->id;
+
+    const auto it = build_params.labels.FindIf([label_id](const LabelInfo &label_info)
+    {
+        return label_info.label_id == label_id;
+    });
+
+    AssertThrowMsg(it != build_params.labels.End(), "Label with ID %d not found", label_id);
+
+    AssertThrowMsg(it->position == LabelPosition(-1), "Label position already set");
+
+    it->position = LabelPosition(m_ibs.GetPosition() + build_params.block_offset);
 }
 
 void CodeGenerator::Visit(Jump *node)

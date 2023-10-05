@@ -20,9 +20,9 @@ FlatSet<String> Module::GenerateAllScanPaths() const
     TreeNode<Module*> *top = m_tree_link;
     
     while (top != nullptr) {
-        AssertThrow(top->m_value != nullptr);
+        AssertThrow(top->Get() != nullptr);
 
-        for (const auto &other_scan_path : top->m_value->GetScanPaths()) {
+        for (const auto &other_scan_path : top->Get()->GetScanPaths()) {
             all_scan_paths.Insert(other_scan_path);
         }
 
@@ -41,10 +41,10 @@ String Module::GenerateFullModuleName() const
         SizeType size = 0;
 
         do {
-            AssertThrow(top->m_value != nullptr);
+            AssertThrow(top->Get() != nullptr);
 
-            parts.PushBack(top->m_value->GetName());
-            size += top->m_value->GetName().Size();
+            parts.PushBack(top->Get()->GetName());
+            size += top->Get()->GetName().Size();
 
             top = top->m_parent;
         } while (top != nullptr);
@@ -76,7 +76,7 @@ bool Module::IsInScopeOfType(ScopeType scope_type) const
     const TreeNode<Scope> *top = m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (top->m_value.GetScopeType() == scope_type) {
+        if (top->Get().GetScopeType() == scope_type) {
             return true;
         }
         
@@ -91,7 +91,7 @@ bool Module::IsInScopeOfType(ScopeType scope_type, UInt scope_flags) const
     const TreeNode<Scope> *top = m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (top->m_value.GetScopeType() == scope_type && bool(UInt(top->m_value.GetScopeFlags()) & scope_flags)) {
+        if (top->Get().GetScopeType() == scope_type && bool(UInt(top->Get().GetScopeFlags()) & scope_flags)) {
             return true;
         }
         
@@ -109,10 +109,10 @@ Module *Module::LookupNestedModule(const String &name)
     // rather than global lookup.
     for (auto *sibling : m_tree_link->m_siblings) {
         AssertThrow(sibling != nullptr);
-        AssertThrow(sibling->m_value != nullptr);
+        AssertThrow(sibling->Get() != nullptr);
         
-        if (sibling->m_value->GetName() == name) {
-            return sibling->m_value;
+        if (sibling->Get()->GetName() == name) {
+            return sibling->Get();
         }
     }
 
@@ -129,9 +129,9 @@ Array<Module *> Module::CollectNestedModules() const
     // rather than global lookup.
     for (auto *sibling : m_tree_link->m_siblings) {
         AssertThrow(sibling != nullptr);
-        AssertThrow(sibling->m_value != nullptr);
+        AssertThrow(sibling->Get() != nullptr);
 
-        nested_modules.PushBack(sibling->m_value);
+        nested_modules.PushBack(sibling->Get());
     }
 
     return nested_modules;
@@ -142,7 +142,7 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only
     TreeNode<Scope> *top = m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (RC<Identifier> result = top->m_value.GetIdentifierTable().LookUpIdentifier(name)) {
+        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
             // a result was found
             return result;
         }
@@ -156,7 +156,7 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only
 
     if (outside_modules) {
         if (m_tree_link != nullptr && m_tree_link->m_parent != nullptr) {
-            if (Module *other = m_tree_link->m_parent->m_value) {
+            if (Module *other = m_tree_link->m_parent->Get()) {
                 if (other->GetLocation().GetFileName() == m_location.GetFileName()) {
                     return other->LookUpIdentifier(name, false);
                 } else {
@@ -167,10 +167,10 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only
                         mod_link = mod_link->m_parent;
                     }
 
-                    AssertThrow(mod_link->m_value != nullptr);
-                    AssertThrow(mod_link->m_value->GetName() == Config::global_module_name);
+                    AssertThrow(mod_link->Get() != nullptr);
+                    AssertThrow(mod_link->Get()->GetName() == Config::global_module_name);
 
-                    return mod_link->m_value->LookUpIdentifier(name, false);
+                    return mod_link->Get()->LookUpIdentifier(name, false);
                 }
             }
         }
@@ -184,7 +184,7 @@ RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depth_level
     TreeNode<Scope> *top = m_scopes.TopNode();
 
     for (int i = 0; top != nullptr && i < depth_level; i++) {
-        if (RC<Identifier> result = top->m_value.GetIdentifierTable().LookUpIdentifier(name)) {
+        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
             return result;
         }
 
@@ -198,7 +198,7 @@ SymbolTypePtr_t Module::LookupSymbolType(const String &name)
 {
     return PerformLookup(
         [&name](TreeNode<Scope> *top) {
-            return top->m_value.GetIdentifierTable().LookupSymbolType(name);
+            return top->Get().GetIdentifierTable().LookupSymbolType(name);
         },
         [&name](Module *mod) {
             return mod->LookupSymbolType(name);
@@ -212,7 +212,7 @@ SymbolTypePtr_t Module::LookupGenericInstance(
 {
     return PerformLookup(
         [&base, &params](TreeNode<Scope> *top) {
-            return top->m_value.GetIdentifierTable().LookupGenericInstance(base, params);
+            return top->Get().GetIdentifierTable().LookupGenericInstance(base, params);
         },
         [&base, &params](Module *mod) {
             return mod->LookupGenericInstance(base, params);
@@ -236,7 +236,7 @@ SymbolTypePtr_t Module::PerformLookup(
     }
 
     if (m_tree_link && m_tree_link->m_parent) {
-        if (Module *other = m_tree_link->m_parent->m_value) {
+        if (Module *other = m_tree_link->m_parent->Get()) {
             if (other->GetLocation().GetFileName() == m_location.GetFileName()) {
                 return pred2(other);
             } else {
@@ -247,10 +247,10 @@ SymbolTypePtr_t Module::PerformLookup(
                     link = link->m_parent;
                 }
 
-                AssertThrow(link->m_value != nullptr);
-                AssertThrow(link->m_value->GetName() == Config::global_module_name);
+                AssertThrow(link->Get() != nullptr);
+                AssertThrow(link->Get()->GetName() == Config::global_module_name);
 
-                return pred2(link->m_value);
+                return pred2(link->Get());
             }
         }
     }

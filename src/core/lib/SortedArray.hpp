@@ -66,6 +66,13 @@ public:
         Base::Begin(),
         Base::End()
     )
+
+private:
+    // Make these Array<T> methods private, so that they can't be used to break the sorted invariant
+    using Base::PushBack;
+    using Base::PushFront;
+    using Base::PopBack;
+    using Base::PopFront;
 };
 
 template <class T>

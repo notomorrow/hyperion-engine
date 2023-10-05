@@ -47,6 +47,11 @@ void AstWhileLoop::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
 {
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_LOOP
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const Tribool condition_is_true = m_conditional->IsTrue();
@@ -55,10 +60,12 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         // the condition cannot be determined at compile time
         UInt8 rp;
 
-        LabelId top_label = chunk->NewLabel();
+        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(top_label);
 
         // the label to jump to the end to BREAK
-        LabelId break_label = chunk->NewLabel();
+        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(break_label);
 
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -92,8 +99,14 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         // so we can skip it if the condition is false
         chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
     } else if (condition_is_true == TRI_TRUE) {
-        LabelId top_label = chunk->NewLabel();
+        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(top_label);
+
         chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
+
+        // the label to jump to the end to BREAK
+        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(break_label);
 
         // the condition has been determined to be true
         if (m_conditional->MayHaveSideEffects()) {
@@ -114,6 +127,9 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
 
         // jump back to top here
         chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+
+        // Add break label after the top label
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
     } else { // false
         // the condition has been determined to be false
         if (m_conditional->MayHaveSideEffects()) {

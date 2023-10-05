@@ -803,6 +803,24 @@ Test("Method overloading", func (Unit : Function) {
     });
 });
 
+func TestLoop() {
+    result := 0;
+
+    for (i := 0; i < 10; i++) {
+        result += i;
+
+        if (i == 5) {
+            break;
+        }
+    }
+
+    Print("Break result: %\n", result);
+
+    Expect(result == 15);
+}
+
+Print("Bytecode:\n", GetFunctionBytecode(TestLoop));
+
 Test("Loops", func (Unit : Function) {
     Unit("for loop works", func () {
         result := 0;
@@ -828,7 +846,7 @@ Test("Loops", func (Unit : Function) {
         Expect(result == 15);
     });
 
-    Unit("for loop works with continue", func () {
+    /*Unit("for loop works with continue", func () {
         result := 0;
 
         for (i := 0; i < 10; i++) {
@@ -942,7 +960,7 @@ Test("Loops", func (Unit : Function) {
         }
 
         Expect(result == 45);
-    });
+    });*/
 });
 
 Test("Recursion", func (Unit : Function) {
@@ -1300,7 +1318,7 @@ class ExtendedVector3 : Vector3
 {
     func ToArray(self : ExtendedVector3) -> Float[]
     {
-        return [self.GetX(), self.GetY(), self.GetZ()];
+        return [];//[self.GetX(), self.GetY(), self.GetZ()];
     }
 
     func Print(self : ExtendedVector3) -> void

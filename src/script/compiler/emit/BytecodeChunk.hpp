@@ -15,7 +15,7 @@ namespace hyperion::compiler {
 
 struct BytecodeChunk final : public Buildable
 {
-    Array<LabelInfo> labels;
+    Array<LabelId> labels;
 
     BytecodeChunk();
     BytecodeChunk(const BytecodeChunk &other) = delete;
@@ -28,33 +28,9 @@ struct BytecodeChunk final : public Buildable
         }
     }
 
-    LabelId NewLabel()
+    void TakeOwnershipOfLabel(LabelId label_id)
     {
-        LabelId index = labels.Size();
-        labels.PushBack(LabelInfo { UInt32(-1), HYP_NAME(Unnamed Label) });
-        return index;
-    }
-
-    LabelId NewLabel(Name name, Bool is_external = false)
-    {
-        AssertThrowMsg(!FindLabelByName(name).HasValue(), "Cannot duplicate label identifier");
-
-        LabelId index = labels.Size();
-        labels.PushBack(LabelInfo { UInt32(-1), name, is_external });
-        return index;
-    }
-
-    Optional<LabelId> FindLabelByName(Name name) const
-    {
-        const auto it = labels.FindIf([name](const LabelInfo &label_info) {
-            return label_info.name == name;
-        });
-
-        if (it == labels.End()) {
-            return Optional<LabelId> { };
-        }
-
-        return std::distance(labels.Begin(), it);
+        labels.PushBack(label_id);
     }
 
     Array<std::unique_ptr<Buildable>> buildables;

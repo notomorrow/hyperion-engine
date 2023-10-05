@@ -25,18 +25,18 @@ void AstBreakStatement::Visit(AstVisitor *visitor, Module *mod)
     TreeNode<Scope> *top = mod->m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (top->m_value.GetScopeType() == SCOPE_TYPE_LOOP) {
+        m_num_pops += top->Get().GetIdentifierTable().CountUsedVariables();
+
+        if (top->Get().GetScopeType() == SCOPE_TYPE_LOOP) {
             in_loop = true;
 
             break;
         }
 
-        m_num_pops += top->m_value.GetIdentifierTable().CountUsedVariables();
         top = top->m_parent;
     }
 
     if (!in_loop) {
-        // error; 'return' not allowed outside of a function
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_break_outside_loop,
@@ -49,13 +49,21 @@ std::unique_ptr<Buildable> AstBreakStatement::Build(AstVisitor *visitor, Module 
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    visitor->GetCompilationUnit()->GetInstructionStream().
+    const auto *closest_loop = visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree().FindClosestMatch([](const InstructionStreamContext &context) {
+        return context.GetType() == INSTRUCTION_STREAM_CONTEXT_LOOP;
+    });
 
-    const auto end_label_id = chunk->NewLabel();
+    AssertThrowMsg(closest_loop != nullptr, "No loop context found");
+
+    const Optional<LabelId> label_id = closest_loop->FindLabelByName(HYP_NAME(LoopBreakLabel));
+    AssertThrowMsg(label_id.HasValue(), "Break label not found in loop context");
+
+    chunk->Append(BytecodeUtil::Make<Comment>("Break out of loop"));
 
     chunk->Append(Compiler::PopStack(visitor, m_num_pops));
+    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, label_id.Get()));
 
-    return nullptr;
+    return chunk;
 }
 
 void AstBreakStatement::Optimize(AstVisitor *visitor, Module *mod)

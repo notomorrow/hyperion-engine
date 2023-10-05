@@ -250,6 +250,11 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
     }
 #endif
 
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Compiler::ExprInfo info {
@@ -314,8 +319,11 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
         if (m_op->GetOperatorType() == Operators::OP_logical_and) {
             UInt8 rp;
 
-            LabelId false_label = chunk->NewLabel();
-            LabelId true_label = chunk->NewLabel();
+            LabelId false_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(false_label);
+
+            LabelId true_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(true_label);
 
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -405,8 +413,11 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
         } else if (m_op->GetOperatorType() == Operators::OP_logical_or) {
             UInt8 rp;
 
-            LabelId false_label = chunk->NewLabel();
-            LabelId true_label = chunk->NewLabel();
+            LabelId false_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(false_label);
+
+            LabelId true_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(true_label);
 
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -522,8 +533,11 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
         if (m_right != nullptr) {
             UInt8 r0, r1;
 
-            LabelId true_label = chunk->NewLabel();
-            LabelId false_label = chunk->NewLabel();
+            LabelId true_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(true_label);
+
+            LabelId false_label = context_guard->NewLabel();
+            chunk->TakeOwnershipOfLabel(false_label);
 
             if (left_as_binop == nullptr && right_as_binop != nullptr) {
                 // if the right hand side is a binary operation,

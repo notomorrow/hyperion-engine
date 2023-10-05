@@ -1239,6 +1239,8 @@ void VM::Execute(BytecodeStream *bs)
             HandleException(&handler);
 
             if (!handler.state->good) {
+                DebugLog(LogType::Error, "Unhandled exception in VM, stopping execution...\n");
+
                 break;
             }
         }

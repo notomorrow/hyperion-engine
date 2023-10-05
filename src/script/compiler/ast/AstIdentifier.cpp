@@ -45,11 +45,11 @@ void AstIdentifier::CheckInFunction(AstVisitor *visitor, Module *mod)
     while (top != nullptr) {
         m_properties.m_depth++;
 
-        if (top->m_value.GetScopeType() == SCOPE_TYPE_FUNCTION) {
-            m_properties.m_function_scope = &top->m_value;
+        if (top->Get().GetScopeType() == SCOPE_TYPE_FUNCTION) {
+            m_properties.m_function_scope = &top->Get();
             m_properties.m_is_in_function = true;
 
-            if (top->m_value.GetScopeFlags() & ScopeFunctionFlags::PURE_FUNCTION_FLAG) {
+            if (top->Get().GetScopeFlags() & ScopeFunctionFlags::PURE_FUNCTION_FLAG) {
                 m_properties.m_is_in_pure_function = true;
             }
             

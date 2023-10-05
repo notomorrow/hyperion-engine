@@ -109,34 +109,18 @@ private:
     );
 };
 
-struct ScopeGuard
+struct ScopeGuard : TreeNodeGuard<Scope>
 {
-    Module *m_module;
-    TreeNode<Scope> *m_scope;
-
     ScopeGuard(Module *mod, ScopeType scope_type, int scope_flags)
-        : m_module(mod),
-          m_scope(nullptr)
+        : TreeNodeGuard(&mod->m_scopes, scope_type, scope_flags)
     {
-        m_module->m_scopes.Open(Scope(scope_type, scope_flags));
-        m_scope = m_module->m_scopes.TopNode();
     }
 
     ScopeGuard(const ScopeGuard &other) = delete;
     ScopeGuard &operator=(const ScopeGuard &other) = delete;
     ScopeGuard(ScopeGuard &&other) noexcept = delete;
     ScopeGuard &operator=(ScopeGuard &&other) noexcept = delete;
-
-    ~ScopeGuard()
-    {
-        m_module->m_scopes.Close();
-    }
-
-    Scope *operator->()
-        { return &m_scope->m_value; }
-
-    const Scope *operator->() const
-        { return &m_scope->m_value; }
+    ~ScopeGuard() = default;
 };
 
 } // namespace hyperion::compiler

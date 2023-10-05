@@ -31,13 +31,20 @@ void AstTryCatch::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
 {
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // the label to jump to the very end
-    LabelId end_label = chunk->NewLabel();
+    LabelId end_label = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(end_label);
 
     // the label to jump to the catch-block
-    LabelId catch_label = chunk->NewLabel();
+    LabelId catch_label = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(catch_label);
 
     { // send the instruction to enter the try-block
         auto instr_begin_try = BytecodeUtil::Make<BuildableTryCatch>();

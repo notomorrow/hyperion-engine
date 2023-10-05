@@ -1425,6 +1425,8 @@ static HYP_SCRIPT_FUNCTION(Runtime_GetFunctionBytecode)
         UInt depth = 1;
 
         do {
+            ss << std::hex << (pos + byte_stream.Position()) << std::dec << '\t';
+
             byte_stream.Read(&code);
 
             // decompile the instruction
@@ -1520,7 +1522,6 @@ static HYP_SCRIPT_FUNCTION(LoadModule)
 
             if (script->Compile()) {
                 script->Bake();
-                script->Decompile(&utf::cout);
                 script->Run();
             } else {
                 DebugLog(

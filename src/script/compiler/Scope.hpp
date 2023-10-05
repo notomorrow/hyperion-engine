@@ -84,7 +84,7 @@ public:
 private:
     IdentifierTable                 m_identifier_table;
     ScopeType                       m_scope_type;
-    int                             m_scope_flags;
+    Int                             m_scope_flags;
     Array<ReturnType_t>             m_return_types;
     HashMap<String, RC<Identifier>> m_closure_captures;
 };

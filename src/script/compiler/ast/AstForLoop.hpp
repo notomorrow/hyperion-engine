@@ -12,7 +12,8 @@
 
 namespace hyperion::compiler {
 
-class AstForLoop : public AstStatement {
+class AstForLoop : public AstStatement
+{
 public:
     AstForLoop(
         const RC<AstStatement> &decl_part,

@@ -147,12 +147,20 @@ std::unique_ptr<Buildable> Compiler::CreateConditional(
     AssertThrow(cond != nullptr);
     AssertThrow(then_part != nullptr);
 
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     UInt8 rp;
 
-    LabelId end_label = chunk->NewLabel();
-    LabelId else_label = chunk->NewLabel();
+    LabelId end_label = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(end_label);
+
+    LabelId else_label = context_guard->NewLabel();
+    chunk->TakeOwnershipOfLabel(else_label);
 
     // get current register index
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

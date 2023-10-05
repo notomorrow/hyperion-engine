@@ -2,6 +2,7 @@
 #define BUILDABLE_HPP
 
 #include <core/lib/DynArray.hpp>
+#include <core/lib/SortedArray.hpp>
 #include <core/Name.hpp>
 #include <Types.hpp>
 
@@ -16,20 +17,26 @@ using LabelId = SizeType;
 
 struct LabelInfo
 {
-    LabelPosition   position;
-    Name            name;
+    LabelId         label_id = LabelId(-1);
+    LabelPosition   position = LabelPosition(-1);
+    Name            name     = HYP_NAME(LabelNameNotSet);
 
-    /**
-     * Used in the case of 'break', 'continue' statements, to refer to the nearest label with the same name.
-     */
-    Bool            is_external = false;
+    Bool operator==(const LabelInfo &other) const
+    {
+        return label_id == other.label_id
+            && position == other.position
+            && name == other.name;
+    }
+
+    Bool operator<(const LabelInfo &other) const
+        { return label_id < other.label_id; }
 };
 
 struct BuildParams
 {
-    SizeType            block_offset = 0;
-    SizeType            local_offset = 0;
-    Array<LabelInfo>    labels;
+    SizeType                block_offset = 0;
+    SizeType                local_offset = 0;
+    SortedArray<LabelInfo>  labels;
 };
 
 struct Buildable

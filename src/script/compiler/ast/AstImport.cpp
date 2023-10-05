@@ -55,23 +55,23 @@ void AstImport::CopyModules(
     // function to copy nested modules 
     std::function<void(TreeNode<Module *> *)> copy_nodes = [visitor, &copy_nodes, &update_tree_link](TreeNode<Module*> *link) {
         AssertThrow(link != nullptr);
-        AssertThrow(link->m_value != nullptr);
+        AssertThrow(link->Get() != nullptr);
 
         for (auto *sibling : link->m_siblings) {
             AssertThrow(sibling != nullptr);
 
-            if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(sibling->m_value->GetName()) != nullptr) {
+            if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(sibling->Get()->GetName()) != nullptr) {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_module_already_defined,
-                    sibling->m_value->GetLocation(),
-                    sibling->m_value->GetName()
+                    sibling->Get()->GetLocation(),
+                    sibling->Get()->GetName()
                 ));
             } else {
-                visitor->GetCompilationUnit()->m_module_tree.Open(sibling->m_value);
+                visitor->GetCompilationUnit()->m_module_tree.Open(sibling->Get());
 
                 if (update_tree_link) {
-                    sibling->m_value->SetImportTreeLink(sibling);
+                    sibling->Get()->SetImportTreeLink(sibling);
                 }
 
                 copy_nodes(sibling);

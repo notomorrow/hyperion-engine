@@ -3,6 +3,7 @@
 
 #include <script/compiler/emit/BuildableVisitor.hpp>
 #include <script/compiler/emit/codegen/InternalByteStream.hpp>
+#include <core/lib/FlatMap.hpp>
 
 #include <system/Debug.hpp>
 
@@ -21,6 +22,8 @@ public:
 
     InternalByteStream &GetInternalByteStream() { return m_ibs; }
     const InternalByteStream &GetInternalByteStream() const { return m_ibs; }
+
+    void Bake();
 
     virtual void Visit(BytecodeChunk *);
     virtual void Visit(LabelMarker *);

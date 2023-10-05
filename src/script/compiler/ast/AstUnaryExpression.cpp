@@ -156,6 +156,11 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module *mod)
 {
+    InstructionStreamContextGuard context_guard(
+        &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT
+    );
+
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     UInt8 rp;
@@ -204,8 +209,11 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
         } else if (m_op->GetType() & LOGICAL) {
             if (m_op->GetOperatorType() == Operators::OP_logical_not) {
                 // the label to jump to the very end, and set the result to false
-                LabelId false_label = chunk->NewLabel();
-                LabelId true_label = chunk->NewLabel();
+                LabelId false_label = context_guard->NewLabel();
+                chunk->TakeOwnershipOfLabel(false_label);
+
+                LabelId true_label = context_guard->NewLabel();
+                chunk->TakeOwnershipOfLabel(true_label);
 
                 // compare lhs to 0 (false)
                 chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));

@@ -7,35 +7,51 @@ namespace hyperion::compiler {
 
 void InternalByteStream::MarkLabel(LabelId label_id)
 {
-    m_labels[label_id] = LabelInfo {
-        LabelPosition(m_stream.Size())
-    };
+    //m_labels[label_id] = LabelInfo {
+    //    LabelPosition(m_stream.Size())
+    //};
+}
+
+void InternalByteStream::AddFixup(LabelId label_id, SizeType position, SizeType offset)
+{
+    Fixup fixup;
+    fixup.label_id = label_id;
+    fixup.position = position;
+    fixup.offset   = offset;
+
+    m_fixups.PushBack(fixup);
+
+    AssertThrowMsg(m_stream.Size() >= position + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
+
+    // advance position by adding placeholder bytes
+    for (SizeType i = 0; i < sizeof(LabelPosition); i++) {
+        m_stream[position + i] = UByte(-1);
+    }
 }
 
 void InternalByteStream::AddFixup(LabelId label_id, SizeType offset)
 {
-    Fixup fixup;
-    fixup.label_id  = label_id;
-    fixup.position  = m_stream.Size();
-    fixup.offset    = offset;
+    const SizeType position = m_stream.Size();
 
-    m_fixups.PushBack(fixup);
+    m_stream.Resize(m_stream.Size() + sizeof(LabelPosition));
 
-    // advance position by adding placeholder bytes
-    for (SizeType i = 0; i < sizeof(LabelPosition); i++) {
-        m_stream.PushBack(UByte(-1));
-    }
+    AddFixup(label_id, position, offset);
 }
 
-Array<UByte> &InternalByteStream::Bake()
+void InternalByteStream::Bake(const BuildParams &build_params)
 {
 
     for (const Fixup &fixup : m_fixups) {
-        auto it = m_labels.find(fixup.label_id);
-        AssertThrowMsg(it != m_labels.end(), "No label with fixup ID was found");
+        auto it = build_params.labels.FindIf([label_id = fixup.label_id](const LabelInfo &label_info)
+        {
+            return label_info.label_id == label_id;
+        });
 
-        LabelPosition label_position = it->second.position;
-        label_position += fixup.offset;
+        AssertThrowMsg(it != build_params.labels.End(), "No label with fixup ID was found");
+
+        LabelPosition label_position = it->position;
+        AssertThrowMsg(label_position != LabelPosition(-1), "Label position not set!");
+        //label_position += fixup.offset;
 
         const SizeType fixup_position = fixup.position;
         
@@ -52,9 +68,6 @@ Array<UByte> &InternalByteStream::Bake()
 
     // clear fixups vector, no more work to do
     m_fixups.Clear();
-
-    // return the modified stream
-    return m_stream;
 }
 
 } // namespace hyperion::compiler
