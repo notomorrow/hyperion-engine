@@ -195,7 +195,7 @@ public:
     template <class ... SeparatorType>
     Array<DynString> Split(SeparatorType ... separators) const 
     {
-        hyperion::FixedArray<WidestCharType, sizeof...(separators)> separator_values { separators... };
+        hyperion::FixedArray<WidestCharType, sizeof...(separators)> separator_values { WidestCharType(separators)... };
 
         const auto *data = Base::Data();
         const auto size = Size();

@@ -6,6 +6,7 @@
 #include <core/lib/String.hpp>
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
+#include <math/MathUtil.hpp>
 #include <util/ByteUtil.hpp>
 #include <util/img/WriteBitmap.hpp>
 #include <Types.hpp>
@@ -15,29 +16,54 @@ namespace hyperion::v2 {
 template <UInt NumComponents>
 struct Pixel
 {
-    static constexpr UInt byte_size = NumComponents;
+    static constexpr UInt byte_size = NumComponents > 1 ? NumComponents : 1;
 
     UByte bytes[byte_size];
 
     Pixel() = default;
+    
 
-    template <class ValueType, typename = typename std::enable_if_t<std::is_same_v<std::true_type, std::conditional_t<(NumComponents == 1), std::true_type, std::false_type>>>>
-    Pixel(ValueType value)
+    void SetR(Float r)
     {
-        if constexpr (std::is_same_v<ValueType, Float32>) {
-            bytes[0] = static_cast<UByte>(value * 255.0f);
-        } else if constexpr (std::is_same_v<ValueType, UByte>) {
-            bytes[0] = value;
-        } else {
-            static_assert(resolution_failure<ValueType>, "Invalid type to pass to Pixel constructor");
+        bytes[0] = static_cast<UByte>(r * 255.0f);
+    }
+
+    void SetRG(Float r, Float g)
+    {
+        bytes[0] = static_cast<UByte>(r * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<UByte>(g * 255.0f);
         }
     }
 
-    template <class Vector, typename = typename std::enable_if_t<std::is_same_v<std::true_type, std::conditional_t<(NumComponents == Vector::size), std::true_type, std::false_type>>>>
-    Pixel(const Vector &color)
+    void SetRGB(Float r, Float g, Float b)
     {
-        for (UInt i = 0; i < MathUtil::Min(byte_size, Vector::size); i++) {
-            bytes[byte_size - i - 1] = static_cast<UByte>(color[i] * 255.0f);
+        bytes[0] = static_cast<UByte>(r * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<UByte>(g * 255.0f);
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = static_cast<UByte>(b * 255.0f);
+        }
+    }
+
+    void SetRGBA(Float r, Float g, Float b, Float a)
+    {
+        bytes[0] = static_cast<UByte>(r * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<UByte>(g * 255.0f);
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = static_cast<UByte>(b * 255.0f);
+        }
+
+        if constexpr (byte_size >= 4) {
+            bytes[3] = static_cast<UByte>(a * 255.0f);
         }
     }
 
@@ -226,9 +252,9 @@ public:
     }
 
 private:
-    UInt m_width;
-    UInt m_height;
-    Array<Pixel> m_pixels;
+    UInt            m_width;
+    UInt            m_height;
+    Array<Pixel>    m_pixels;
 
 };
 

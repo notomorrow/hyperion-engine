@@ -12,6 +12,7 @@
 #include <functional>
 #include <unordered_set>
 #include <unordered_map>
+#include <ctime>
 
 namespace hyperion {
 namespace renderer {

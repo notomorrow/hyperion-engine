@@ -5,6 +5,7 @@
 #include <math/Vector3.hpp>
 #include <math/Quaternion.hpp>
 
+#ifdef HYP_BULLET_PHYSICS
 #include "btBulletDynamicsCommon.h"
 
 namespace hyperion::v2::physics {
@@ -268,5 +269,6 @@ void BulletPhysicsAdapter::ApplyForceToBody(const RigidBody *rigid_body, const V
     internal_data->rigid_body->applyCentralForce(ToBtVector(force));
 }
 
-
 } // namespace hyperion::v2::physics
+
+#endif

@@ -363,7 +363,7 @@ public:
         thread->m_regs[reg].AssignValue(state->m_static_memory[index], false);
     }
 
-    HYP_FORCE_INLINE void LoadString(BCRegister reg, UInt32 len, const char *str)
+    HYP_FORCE_INLINE void LoadConstantString(BCRegister reg, UInt32 len, const char *str)
     {
         if (HeapValue *hv = state->HeapAlloc(thread)) {
             hv->Assign(VMString(str));

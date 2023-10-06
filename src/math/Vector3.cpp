@@ -7,10 +7,14 @@
 
 namespace hyperion {
 
+template<>
 const Vec3<Int> math::detail::Vec3<Int>::zero = { 0, 0, 0 };
+template<>
 const Vec3<Int> math::detail::Vec3<Int>::one = { 1, 1, 1 };
 
+template<>
 const Vec3<UInt> math::detail::Vec3<UInt>::zero = { 0, 0, 0 };
+template<>
 const Vec3<UInt> math::detail::Vec3<UInt>::one = { 1, 1, 1 };
 
 const Vec3<Float> math::detail::Vec3<Float>::zero = { 0, 0, 0 };
@@ -89,21 +93,25 @@ Vec3<Float> &math::detail::Vec3<Float>::operator*=(const Quaternion &quat)
     return operator=(operator*(quat));
 }
 
+template<>
 Int math::detail::Vec3<Int>::Max() const
 {
     return MathUtil::Max(x, MathUtil::Max(y, z));
 }
 
+template<>
 Int math::detail::Vec3<Int>::Min() const
 {
     return MathUtil::Min(x, MathUtil::Min(y, z));
 }
 
+template<>
 UInt math::detail::Vec3<UInt>::Max() const
 {
     return MathUtil::Max(x, MathUtil::Max(y, z));
 }
 
+template<>
 UInt math::detail::Vec3<UInt>::Min() const
 {
     return MathUtil::Min(x, MathUtil::Min(y, z));

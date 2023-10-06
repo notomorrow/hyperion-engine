@@ -24,8 +24,6 @@ link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
 
 find_package(Threads REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(Bullet REQUIRED)
-find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
 
@@ -43,7 +41,6 @@ set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${OPENAL_INCLUDE_DIR}
-    ${BULLET_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
 )
@@ -59,8 +56,6 @@ set(COMMON_LIBRARIES
     ${CMAKE_THREADS_LIBS_INIT}
     ${OPENAL_LIBRARY}
     ${Vulkan_LIBRARIES}
-    ${BULLET_LIBRARIES}
-    glfw
     ${SDL2_LIBRARIES}
 )
 

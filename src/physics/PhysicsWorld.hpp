@@ -104,6 +104,14 @@ namespace hyperion::v2 {
 using PhysicsWorld = physics::PhysicsWorld<physics::BulletPhysicsAdapter>;
 } // namespace hyperion::v2
 
+#else
+
+#include <physics/null/Adapter.hpp>
+
+namespace hyperion::v2 {
+using PhysicsWorld = physics::PhysicsWorld<physics::NullPhysicsAdapter>;
+} // na
+
 #endif
 
 #endif

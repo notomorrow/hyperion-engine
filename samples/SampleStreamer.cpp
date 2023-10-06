@@ -334,21 +334,21 @@ void SampleStreamer::InitGame()
 
         batch->LoadAsync();
 
-        auto loaded_assets = batch->AwaitResults();
+        AssetMap loaded_assets = batch->AwaitResults();
 
         auto cameras_json = loaded_assets["cameras json"].Get<json::JSONValue>();
         AssertThrow(loaded_assets["cameras json"].result.status == LoaderResult::Status::OK);
 
         struct GaussianSplattingCameraDefinition
         {
-            String id;
-            String img_name;
-            UInt32 width;
-            UInt32 height;
+            String  id;
+            String  img_name;
+            UInt32  width;
+            UInt32  height;
             Vector3 position;
             Matrix3 rotation;
-            Float fx;
-            Float fy;
+            Float   fx;
+            Float   fy;
         };
 
         Array<GaussianSplattingCameraDefinition> camera_definitions;
@@ -358,32 +358,32 @@ void SampleStreamer::InitGame()
 
             for (const auto &item : cameras_json->AsArray()) {
                 GaussianSplattingCameraDefinition definition;
-                definition.id = (*item)["id"].ToString();
+                definition.id       = (*item)["id"].ToString();
                 definition.img_name = (*item)["img_name"].ToString();
-                definition.width = MathUtil::Floor((*item)["width"].ToNumber());
-                definition.height = MathUtil::Floor((*item)["height"].ToNumber());
-                definition.fx = (*item)["fx"].ToNumber();
-                definition.fy = (*item)["fy"].ToNumber();
+                definition.width    = MathUtil::Floor((*item)["width"].ToNumber());
+                definition.height   = MathUtil::Floor((*item)["height"].ToNumber());
+                definition.fx       = Float((*item)["fx"].ToNumber());
+                definition.fy       = Float((*item)["fy"].ToNumber());
 
                 if ((*item)["position"].IsArray()) {
                     definition.position = Vector3(
-                        (*item)["position"][0].ToNumber(),
-                        (*item)["position"][1].ToNumber(),
-                        (*item)["position"][2].ToNumber()
+                        Float((*item)["position"][0].ToNumber()),
+                        Float((*item)["position"][1].ToNumber()),
+                        Float((*item)["position"][2].ToNumber())
                     );
                 }
 
                 if ((*item)["rotation"].IsArray()) {
-                    float v[9] = {
-                        (*item)["rotation"][0][0].ToNumber(),
-                        (*item)["rotation"][0][1].ToNumber(),
-                        (*item)["rotation"][0][2].ToNumber(),
-                        (*item)["rotation"][1][0].ToNumber(),
-                        (*item)["rotation"][1][1].ToNumber(),
-                        (*item)["rotation"][1][2].ToNumber(),
-                        (*item)["rotation"][2][0].ToNumber(),
-                        (*item)["rotation"][2][1].ToNumber(),
-                        (*item)["rotation"][2][2].ToNumber()
+                    Float v[9] = {
+                        Float((*item)["rotation"][0][0].ToNumber()),
+                        Float((*item)["rotation"][0][1].ToNumber()),
+                        Float((*item)["rotation"][0][2].ToNumber()),
+                        Float((*item)["rotation"][1][0].ToNumber()),
+                        Float((*item)["rotation"][1][1].ToNumber()),
+                        Float((*item)["rotation"][1][2].ToNumber()),
+                        Float((*item)["rotation"][2][0].ToNumber()),
+                        Float((*item)["rotation"][2][1].ToNumber()),
+                        Float((*item)["rotation"][2][2].ToNumber())
                     };
 
                     definition.rotation = Matrix3(v);
@@ -408,7 +408,7 @@ void SampleStreamer::InitGame()
         if (all_up_directions.Size() != 0) {
             up_direction = Vector3::Zero();
 
-            for (const auto &camera_up_direction : all_up_directions) {
+            for (const Vector3 &camera_up_direction : all_up_directions) {
                 up_direction += camera_up_direction;
             }
 
@@ -435,20 +435,20 @@ void SampleStreamer::InitGame()
         gaussian_splatting_model->points.Resize(num_points);
         gaussian_splatting_model->transform.SetRotation(Quaternion(Vector3(1, 0, 0), M_PI));
 
-        const bool has_rotations = ply_model->custom_data.Contains("rot_0")
+        const Bool has_rotations = ply_model->custom_data.Contains("rot_0")
             && ply_model->custom_data.Contains("rot_1")
             && ply_model->custom_data.Contains("rot_2")
             && ply_model->custom_data.Contains("rot_3");
 
-        const bool has_scales = ply_model->custom_data.Contains("scale_0")
+        const Bool has_scales = ply_model->custom_data.Contains("scale_0")
             && ply_model->custom_data.Contains("scale_1")
             && ply_model->custom_data.Contains("scale_2");
 
-        const bool has_sh = ply_model->custom_data.Contains("f_dc_0")
+        const Bool has_sh = ply_model->custom_data.Contains("f_dc_0")
             && ply_model->custom_data.Contains("f_dc_1")
             && ply_model->custom_data.Contains("f_dc_2");
 
-        const bool has_opacity = ply_model->custom_data.Contains("opacity");
+        const Bool has_opacity = ply_model->custom_data.Contains("opacity");
 
         for (SizeType index = 0; index < num_points; index++) {
             auto &out_point = gaussian_splatting_model->points[index];
@@ -475,11 +475,7 @@ void SampleStreamer::InitGame()
                 ply_model->custom_data["scale_1"].Read(index * sizeof(Float), &scale.y);
                 ply_model->custom_data["scale_2"].Read(index * sizeof(Float), &scale.z);
 
-                //scale = Vector3(MathUtil::Exp(scale.x), MathUtil::Exp(scale.y), MathUtil::Exp(scale.z));
-
                 out_point.scale = Vector4(scale, 1.0f);
-
-                // DebugLog(LogType::Debug, "Scale %u = %f, %f, %f\n", index, out_point.scale.x, out_point.scale.y, out_point.scale.z);
             }
 
             if (has_sh) {
@@ -620,15 +616,7 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
 // not overloading; just creating a method to handle camera movement
 void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
 {
-    bool moving = false;
-
-    Vector3 dir;
-
     if (m_input_manager->IsKeyDown(KEY_W)) {
-        dir = GetScene()->GetCamera()->GetDirection();
-
-        moving = true;
-
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_FORWARD } }
@@ -636,10 +624,6 @@ void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
     }
 
     if (m_input_manager->IsKeyDown(KEY_S)) {
-        dir = GetScene()->GetCamera()->GetDirection() * -1.0f;
-
-        moving = true;
-
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_BACKWARD } }
@@ -647,10 +631,6 @@ void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
     }
 
     if (m_input_manager->IsKeyDown(KEY_A)) {
-        dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector()) * -1.0f;
-
-        moving = true;
-
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_LEFT } }
@@ -658,10 +638,6 @@ void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
     }
 
     if (m_input_manager->IsKeyDown(KEY_D)) {
-        dir = GetScene()->GetCamera()->GetDirection().Cross(GetScene()->GetCamera()->GetUpVector());
-
-        moving = true;
-
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_RIGHT } }

@@ -21,7 +21,7 @@ Bitmap<1> NoiseGenerator::CreateBitmap(UInt width, UInt height, Float scale)
     for (UInt x = 0; x < width; x++) {
         for (UInt y = 0; y < height; y++) {
             const auto noise_value = GetNoise(Vector2(static_cast<Float>(x), static_cast<Float>(y)) * scale);
-            bitmap.GetPixel(x, y) = static_cast<Float>(noise_value) * 0.5f + 0.5f;
+            bitmap.GetPixel(x, y).SetR(static_cast<Float>(noise_value) * 0.5f + 0.5f);
         }
     }
 

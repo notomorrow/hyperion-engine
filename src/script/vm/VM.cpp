@@ -100,7 +100,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
         delete[] type_name;
         
         // delete the names
-        for (size_t i = 0; i < size; i++) {
+        for (UInt16 i = 0; i < size; i++) {
             delete[] names[i];
         }
 
@@ -217,7 +217,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
         str[len] = '\0';
         bs->Read(str, len);
 
-        handler.LoadString(
+        handler.LoadConstantString(
             reg,
             len,
             str
@@ -268,7 +268,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
         char **names = new char*[size];
         
         // load each name
-        for (int i = 0; i < size; i++) {
+        for (UInt16 i = 0; i < size; i++) {
             UInt16 length;
             bs->Read(&length);
 
@@ -1144,8 +1144,8 @@ void VM::CreateStackTrace(ExecutionThread *thread, StackTrace *out)
 {
     const SizeType max_stack_trace_size = std::size(out->call_addresses);
 
-    for (auto &call_addresse : out->call_addresses) {
-        call_addresse = -1;
+    for (Int &call_address : out->call_addresses) {
+        call_address = -1;
     }
 
     SizeType num_recorded_call_addresses = 0;
@@ -1158,7 +1158,7 @@ void VM::CreateStackTrace(ExecutionThread *thread, StackTrace *out)
         const Value &top = thread->m_stack[sp - 1];
 
         if (top.m_type == Value::FUNCTION_CALL) {
-            out->call_addresses[num_recorded_call_addresses++] = static_cast<int>(top.m_value.call.return_address);
+            out->call_addresses[num_recorded_call_addresses++] = static_cast<Int>(top.m_value.call.return_address);
         }
     }
 }
