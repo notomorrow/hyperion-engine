@@ -786,17 +786,17 @@ ParseResult JSON::Parse(const String &json_string)
     CompilationUnit unit;
 
     const auto HandleErrors = [&]() -> ParseResult {
-        if (unit.GetErrorList().HasFatalErrors()) {
-            String error_message;
+        AssertThrow(unit.GetErrorList().HasFatalErrors());
 
-            for (SizeType index = 0; index < unit.GetErrorList().Size(); index++) {
-                error_message += String::ToString(unit.GetErrorList()[index].GetLocation().GetLine() + 1)
-                    + "," + String::ToString(unit.GetErrorList()[index].GetLocation().GetColumn() + 1)
-                    + ": " + unit.GetErrorList()[index].GetText() + "\n";
-            }
+        String error_message;
 
-            return { false, error_message, JSONValue() };
+        for (SizeType index = 0; index < unit.GetErrorList().Size(); index++) {
+            error_message += String::ToString(unit.GetErrorList()[index].GetLocation().GetLine() + 1)
+                + "," + String::ToString(unit.GetErrorList()[index].GetLocation().GetColumn() + 1)
+                + ": " + unit.GetErrorList()[index].GetText() + "\n";
         }
+
+        return { false, error_message, JSONValue() };
     };
 
     Lexer lexer(SourceStream(&source_file), &token_stream, &unit);

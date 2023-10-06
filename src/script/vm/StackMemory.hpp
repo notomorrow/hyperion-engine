@@ -87,8 +87,8 @@ public:
         m_sp -= count;
     }
 
-    HeapArray<Value, STACK_SIZE> m_data;
-    SizeType m_sp;
+    HeapArray<Value, STACK_SIZE>    m_data;
+    SizeType                        m_sp;
 };
 
 } // namespace vm

@@ -117,6 +117,8 @@ void Value::Mark()
                 ptr->Mark();
             }
         }
+
+        break;
     }
 
     default:
@@ -305,50 +307,50 @@ void Value::ToRepresentation(
 ) const
 {
     switch (m_type) {
-        case Value::VALUE_REF:
-            AssertThrow(m_value.value_ref != nullptr);
+    case Value::VALUE_REF:
+        AssertThrow(m_value.value_ref != nullptr);
 
-            if (m_value.value_ref == this) {
-                ss << "<Circular Reference>";
-            } else {
-                m_value.value_ref->ToRepresentation(
-                    ss,
-                    add_type_name,
-                    depth - 1
-                );
+        if (m_value.value_ref == this) {
+            ss << "<Circular Reference>";
+        } else {
+            m_value.value_ref->ToRepresentation(
+                ss,
+                add_type_name,
+                depth - 1
+            );
+        }
+
+        return;
+
+    case Value::HEAP_POINTER:
+        if (m_value.ptr == nullptr) {
+            ss << "null";
+        } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
+            ss << '\"';
+            ss << string->GetData();
+            ss << '\"';
+        } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
+            array->GetRepresentation(ss, add_type_name, depth - 1);
+        } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
+            slice->GetRepresentation(ss, add_type_name, depth - 1);
+        } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
+            object->GetRepresentation(ss, add_type_name, depth - 1);
+        } else {
+            if (add_type_name) {
+                ss << GetTypeString();
+                ss << '(';
             }
-
-            return;
-
-        case Value::HEAP_POINTER:
-            if (m_value.ptr == nullptr) {
-                ss << "null";
-            } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
-                ss << '\"';
-                ss << string->GetData();
-                ss << '\"';
-            } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
-                array->GetRepresentation(ss, add_type_name, depth - 1);
-            } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
-                slice->GetRepresentation(ss, add_type_name, depth - 1);
-            } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
-                object->GetRepresentation(ss, add_type_name, depth - 1);
-            } else {
-                if (add_type_name) {
-                    ss << GetTypeString();
-                    ss << '(';
-                }
-                
-                ss << ToString().GetData();
-
-                if (add_type_name) {
-                    ss << ')';
-                }
-            }
-
-            break;
-        default:
+            
             ss << ToString().GetData();
+
+            if (add_type_name) {
+                ss << ')';
+            }
+        }
+
+        break;
+    default:
+        ss << ToString().GetData();
     }
 }
 

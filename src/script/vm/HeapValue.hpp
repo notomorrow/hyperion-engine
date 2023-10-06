@@ -45,7 +45,8 @@ public:
     HeapValue_Impl(const HeapValue_Impl &other) = delete;
     HeapValue_Impl &operator=(const HeapValue_Impl &other) = delete;
     ~HeapValue_Impl() = default;
-    
+
+    HYP_FORCE_INLINE
     TypeID GetTypeID() const
     {
         TypeID type_id = m_variant.GetTypeID();
@@ -56,15 +57,18 @@ public:
 
         return type_id;
     }
-
+    
     template <class T>
+    HYP_FORCE_INLINE
     bool Is() const
         { return GetTypeID() == TypeID::ForType<T>(); }
-
+    
+    HYP_FORCE_INLINE
     bool HasValue() const
         { return m_variant.IsValid(); }
 
     template <typename T>
+    HYP_FORCE_INLINE
     T &Get()
     {
         if constexpr (IS_INLINE_TYPE(T)) {
@@ -75,6 +79,7 @@ public:
     }
 
     template <typename T>
+    HYP_FORCE_INLINE
     const T &Get() const
     {
         if constexpr (IS_INLINE_TYPE(T)) {
@@ -83,7 +88,8 @@ public:
             return m_variant.Get<Any>().Get<T>();
         }
     }
-
+    
+    HYP_FORCE_INLINE
     void *GetRawPointer()
     {
         const TypeID type_id = m_variant.GetTypeID();
@@ -94,7 +100,8 @@ public:
 
         return m_variant.GetPointer();
     }
-
+    
+    HYP_FORCE_INLINE
     const void *GetRawPointer() const
     {
         const TypeID type_id = m_variant.GetTypeID();
@@ -107,6 +114,7 @@ public:
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     T *GetPointer()
     {
         if constexpr (IS_INLINE_TYPE(T)) {
@@ -121,6 +129,7 @@ public:
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     void Assign(const T &value)
     {
         if constexpr (IS_INLINE_TYPE(T)) {
@@ -131,6 +140,7 @@ public:
     }
 
     template <typename T>
+    HYP_FORCE_INLINE
     void Assign(T &&value)
     {
         if constexpr (IS_INLINE_TYPE(T)) {
@@ -150,54 +160,68 @@ public:
     HeapValue(const HeapValue &other) = delete;
     HeapValue &operator=(const HeapValue &other) = delete;
     ~HeapValue();
-
+    
+    HYP_FORCE_INLINE
     TypeID GetTypeID() const
         { return m_impl.GetTypeID(); }
-
+    
+    HYP_FORCE_INLINE
     int &GetFlags()
         { return m_flags; }
-
+    
+    HYP_FORCE_INLINE
     int GetFlags() const
         { return m_flags; }
 
     template <class T>
+    HYP_FORCE_INLINE
     bool Is() const
         { return m_impl.Is<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     bool TypeCompatible() const 
         { return m_impl.Is<T>(); }
-
+    
+    HYP_FORCE_INLINE
     bool HasValue() const
         { return m_impl.HasValue(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     void Assign(const T &value)
         { m_impl.Assign(value); debug_name = typeid(T).name(); }
 
     template <typename T>
+    HYP_FORCE_INLINE
     void Assign(T &&value)
         { m_impl.Assign(std::forward<T>(value)); debug_name = typeid(T).name(); }
 
     template <typename T>
+    HYP_FORCE_INLINE
     T &Get()
         { return m_impl.Get<T>(); }
 
     template <typename T>
+    HYP_FORCE_INLINE
     const T &Get() const
         { return m_impl.Get<T>(); }
-
+    
+    HYP_FORCE_INLINE
     void *GetRawPointer()
         { return m_impl.GetRawPointer(); }
-
+    
+    HYP_FORCE_INLINE
     const void *GetRawPointer() const
         { return m_impl.GetRawPointer(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     T *GetPointer()
         { return m_impl.GetPointer<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     const T *GetPointer() const
         { return m_impl.GetPointer<T>(); }
 

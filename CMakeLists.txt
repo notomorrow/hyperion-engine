@@ -104,8 +104,10 @@ if(WIN32)
     endif()
 endif()
 
+set(HYPERION_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
+    ${HYPERION_INCLUDE_DIR}
     ${OPENAL_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
@@ -127,6 +129,4 @@ target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
 
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
-# sample subdir
 add_subdirectory(samples)
-

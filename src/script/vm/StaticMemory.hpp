@@ -22,13 +22,15 @@ public:
 
     /** Delete everything in static memory */
     void Purge();
-
+    
+    HYP_FORCE_INLINE
     Value &operator[](SizeType index)
     {
         AssertThrowMsg(index < static_size, "out of bounds");
         return m_data[index];
     }
-
+    
+    HYP_FORCE_INLINE
     const Value &operator[](SizeType index) const
     {
         AssertThrowMsg(index < static_size, "out of bounds");
@@ -36,10 +38,11 @@ public:
     }
 
     // move a value to static memory
-    void Store(Value &&value)
+    HYP_FORCE_INLINE
+    void Store(Value value)
     {
         AssertThrowMsg(m_sp < static_size, "not enough static memory");
-        m_data[m_sp++] = std::move(value);
+        m_data[m_sp++] = value;
     }
 
 private:

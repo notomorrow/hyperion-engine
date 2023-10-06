@@ -30,7 +30,9 @@ RUN set -e; \
     cd build; \
     cmake ..; \
     make -j4; \
-    cd ..;
+    cd ..; 
 
+RUN rm -rf src include samples libdatachannel zlib build.sh CMakeLists.txt
+RUN apt-get remove -y clang make cmake
 # Command to run when the container starts
 CMD ["./build/samples/hyperion-sample"]

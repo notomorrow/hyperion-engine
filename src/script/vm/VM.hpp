@@ -14,14 +14,6 @@
 
 #define MAIN_THREAD m_threads[0]
 
-#define IS_VALUE_STRING(value, out) \
-    ((value).m_type == Value::HEAP_POINTER && \
-    (out = (value).m_value.ptr->GetPointer<ImmutableString>()))
-
-#define IS_VALUE_ARRAY(value, out) \
-    ((value).m_type == Value::HEAP_POINTER && \
-    (out = (value).m_value.ptr->GetPointer<Array>()))
-
 #define MATCH_TYPES(left_type, right_type) \
     ((left_type) < (right_type)) ? (right_type) : (left_type)
 

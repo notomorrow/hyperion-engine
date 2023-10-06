@@ -17,7 +17,7 @@ public:
     ByteWriter() = default;
     ByteWriter(const ByteWriter &other) = delete;
     ByteWriter &operator=(const ByteWriter &other) = delete;
-    virtual ~ByteWriter() {}
+    virtual ~ByteWriter() = default;
 
     void Write(const void *ptr, SizeType size)
     {
@@ -55,36 +55,28 @@ protected:
     virtual void WriteBytes(const char *ptr, SizeType size) = 0;
 };
 
-// TEMP
 class MemoryByteWriter : public ByteWriter
 {
 public:
-    MemoryByteWriter()
-        : m_pos(0)
-    {
-        
-    }
+    MemoryByteWriter() : m_pos(0) { }
 
-    virtual ~MemoryByteWriter() override
-    {
-    }
+    virtual ~MemoryByteWriter() override = default;
 
     virtual std::streampos Position() const override
     {
         return std::streampos(m_pos);
     }
 
-    virtual void Close() override
-    {
-    }
+    virtual void Close() override { }
 
-    const Array<UByte> &GetData() const { return m_data; }
+    const Array<UByte> &GetData() const
+        { return m_data; }
 
 private:
-    Array<UByte> m_data;
-    SizeType m_pos;
+    Array<UByte>    m_data;
+    SizeType        m_pos;
 
-    void WriteBytes(const char *ptr, SizeType size)
+    virtual void WriteBytes(const char *ptr, SizeType size) override
     {
         m_data.Reserve(m_data.Size() + size);
 
@@ -118,9 +110,7 @@ public:
             return *this;
         }
 
-        if (file) {
-            delete file;
-        }
+        delete file;
 
         file = other.file;
         other.file = nullptr;
@@ -135,22 +125,30 @@ public:
 
     virtual std::streampos Position() const override
     {
+        AssertThrow(file != nullptr);
+
         return file->tellp();
     }
 
     virtual void Close() override
     {
+        if (!file) {
+            return;
+        }
+
         file->close();
     }
 
     bool IsOpen() const
-        { return file->is_open(); }
+        { return file != nullptr && file->is_open(); }
 
 private:
     std::ofstream *file;
 
     virtual void WriteBytes(const char *ptr, SizeType size) override
     {
+        AssertThrow(file != nullptr);
+
         file->write(ptr, size);
     }
 };

@@ -12,9 +12,9 @@
 #include <script/Instructions.hpp>
 #include <system/Debug.hpp>
 
-#include <Types.hpp>
+#include <core/lib/FlatSet.hpp>
 
-#include <unordered_set>
+#include <Types.hpp>
 
 namespace hyperion::compiler {
 
@@ -29,23 +29,23 @@ AstArrayExpression::AstArrayExpression(
 
 void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
 {
-    std::unordered_set<SymbolTypePtr_t> held_types;
+    FlatSet<SymbolTypePtr_t> held_types;
 
     for (auto &member : m_members) {
         AssertThrow(member != nullptr);
         member->Visit(visitor, mod);
 
         if (member->GetExprType() != nullptr) {
-            held_types.insert(member->GetExprType());
+            held_types.Insert(member->GetExprType());
         } else {
-            held_types.insert(BuiltinTypes::ANY);
+            held_types.Insert(BuiltinTypes::ANY);
         }
     }
 
     for (const auto &it : held_types) {
         AssertThrow(it != nullptr);
 
-        if (m_held_type == BuiltinTypes::UNDEFINED) {
+        if (m_held_type->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
             // `Undefined` invalidates the array type
             break;
         }
@@ -67,7 +67,7 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    const bool has_side_effects = MayHaveSideEffects();
+    const Bool has_side_effects = MayHaveSideEffects();
     const UInt32 array_size = UInt32(m_members.Size());
     
     // get active register
@@ -81,7 +81,7 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
         chunk->Append(std::move(instr_new_array));
     }
     
-    int stack_size_before = 0;
+    Int stack_size_before = 0;
 
     if (has_side_effects) {
         // move to stack temporarily
@@ -104,7 +104,8 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
     }
 
     // assign all array items
-    int index = 0;
+    Int index = 0;
+
     for (auto &member : m_members) {
         chunk->Append(member->Build(visitor, mod));
 
@@ -116,15 +117,15 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
             // get active register
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-            int stack_size_after = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-            int diff = stack_size_after - stack_size_before;
+            const Int stack_size_after = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+            const Int diff = stack_size_after - stack_size_before;
             AssertThrow(diff == 1);
 
             { // load array from stack back into register
                 auto instr_load_offset = BytecodeUtil::Make<RawOperation<>>();
                 instr_load_offset->opcode = LOAD_OFFSET;
                 instr_load_offset->Accept<UInt8>(rp);
-                instr_load_offset->Accept<UInt16>(diff);
+                instr_load_offset->Accept<UInt16>(UInt16(diff));
                 chunk->Append(std::move(instr_load_offset));
             }
 

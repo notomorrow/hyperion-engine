@@ -214,7 +214,7 @@ public:
     {
     }
 
-    HYP_FORCE_INLINE void StoreStaticString(uint32_t len, const char *str)
+    HYP_FORCE_INLINE void StoreStaticString(UInt32 len, const char *str)
     {
         // the value will be freed on
         // the destructor call of state->m_static_memory
@@ -237,9 +237,11 @@ public:
         state->m_static_memory.Store(std::move(sv));
     }
 
-    HYP_FORCE_INLINE void StoreStaticFunction(BCAddress addr,
-        uint8_t nargs,
-        uint8_t flags)
+    HYP_FORCE_INLINE void StoreStaticFunction(
+        BCAddress addr,
+        UInt8 nargs,
+        UInt8 flags
+    )
     {
         Value sv;
         sv.m_type = Value::FUNCTION;
@@ -250,9 +252,11 @@ public:
         state->m_static_memory.Store(std::move(sv));
     }
 
-    HYP_FORCE_INLINE void StoreStaticType(const char *type_name,
-        uint16_t size,
-        char **names)
+    HYP_FORCE_INLINE void StoreStaticType(
+        const char *type_name,
+        UInt16 size,
+        char **names
+    )
     {
         // the value will be freed on
         // the destructor call of state->m_static_memory
@@ -388,10 +392,12 @@ public:
         thread->m_regs[reg].AssignValue(v, false);
     }
 
-    HYP_FORCE_INLINE void LoadFunc(BCRegister reg,
+    HYP_FORCE_INLINE void LoadFunc(
+        BCRegister reg,
         BCAddress addr,
-        uint8_t nargs,
-        uint8_t flags)
+        UInt8 nargs,
+        UInt8 flags
+    )
     {
         Value v;
         v.m_type = Value::FUNCTION;
@@ -441,7 +447,7 @@ public:
         hv->Mark();
     }
 
-    HYP_FORCE_INLINE void LoadMem(BCRegister dst, BCRegister src, uint8_t index)
+    HYP_FORCE_INLINE void LoadMem(BCRegister dst, BCRegister src, UInt8 index)
     {
         Value &sv = thread->m_regs[src];
         
@@ -468,7 +474,7 @@ public:
         );
     }
 
-    HYP_FORCE_INLINE void LoadMemHash(BCRegister dst_reg, BCRegister src_reg, uint32_t hash)
+    HYP_FORCE_INLINE void LoadMemHash(BCRegister dst_reg, BCRegister src_reg, UInt32 hash)
     {
         Value &sv = thread->m_regs[src_reg];
 
@@ -684,20 +690,12 @@ public:
 
     HYP_FORCE_INLINE void LoadTrue(BCRegister reg)
     {
-        Value v;
-        v.m_type = Value::BOOLEAN;
-        v.m_value.b = true;
-
-        thread->m_regs[reg].AssignValue(v, false);
+        thread->m_regs[reg].AssignValue(Value(Value::ValueType::BOOLEAN, { .b = true }), false);
     }
 
     HYP_FORCE_INLINE void LoadFalse(BCRegister reg)
     {
-        Value v;
-        v.m_type = Value::BOOLEAN;
-        v.m_value.b = false;
-
-        thread->m_regs[reg].AssignValue(v, false);
+        thread->m_regs[reg].AssignValue(Value(Value::ValueType::BOOLEAN, { .b = false }), false);
     }
 
     HYP_FORCE_INLINE void MovOffset(UInt16 offset, BCRegister reg)
@@ -709,7 +707,6 @@ public:
     HYP_FORCE_INLINE void MovIndex(UInt16 index, BCRegister reg)
     {
         // copy value from register to stack value at index
-        // NOTE: storing on main thread
         state->MAIN_THREAD->m_stack[index].AssignValue(thread->m_regs[reg], true);
     }
 
@@ -1123,28 +1120,28 @@ public:
 
     HYP_FORCE_INLINE void Je(BCAddress addr)
     {
-        if (thread->m_regs.m_flags == EQUAL) {
+        if (thread->m_regs.m_flags & EQUAL) {
             bs->Seek(addr);
         }
     }
 
     HYP_FORCE_INLINE void Jne(BCAddress addr)
     {
-        if (thread->m_regs.m_flags != EQUAL) {
+        if (thread->m_regs.m_flags & ~EQUAL) {
             bs->Seek(addr);
         }
     }
 
     HYP_FORCE_INLINE void Jg(BCAddress addr)
     {
-        if (thread->m_regs.m_flags == GREATER) {
+        if (thread->m_regs.m_flags & GREATER) {
             bs->Seek(addr);
         }
     }
 
     HYP_FORCE_INLINE void Jge(BCAddress addr)
     {
-        if (thread->m_regs.m_flags == GREATER || thread->m_regs.m_flags == EQUAL) {
+        if (thread->m_regs.m_flags & (GREATER | EQUAL)) {
             bs->Seek(addr);
         }
     }
@@ -1208,7 +1205,6 @@ public:
         Array<Span<Member>> member_spans;
 
         HeapValue *base_ptr = class_ptr;
-        HeapValue *topmost_proto_member_ptr = nullptr;
         UInt depth = 0;
 
         Value &res = thread->m_regs[dst];
@@ -1252,10 +1248,6 @@ public:
                 );
 
                 return;
-            }
-
-            if (depth == 0) {
-                topmost_proto_member_ptr = proto_mem->value.m_value.ptr;
             }
 
             member_spans.PushBack({ proto_member_object->GetMembers(), proto_member_object->GetSize() });
@@ -1414,9 +1406,11 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE void Add(BCRegister lhs_reg,
+    HYP_FORCE_INLINE void Add(
+        BCRegister lhs_reg,
         BCRegister rhs_reg,
-        BCRegister dst_reg)
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1445,9 +1439,11 @@ public:
         thread->m_regs[dst_reg] = result;
     }
 
-    HYP_FORCE_INLINE void Sub(BCRegister lhs_reg,
+    HYP_FORCE_INLINE void Sub(
+        BCRegister lhs_reg,
         BCRegister rhs_reg,
-        BCRegister dst_reg)
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1476,9 +1472,11 @@ public:
         thread->m_regs[dst_reg] = result;
     }
 
-    HYP_FORCE_INLINE void Mul(BCRegister lhs_reg,
+    HYP_FORCE_INLINE void Mul(
+        BCRegister lhs_reg,
         BCRegister rhs_reg,
-        BCRegister dst_reg)
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1507,7 +1505,11 @@ public:
         thread->m_regs[dst_reg] = result;
     }
 
-    HYP_FORCE_INLINE void Div(BCRegister lhs_reg, BCRegister rhs_reg, BCRegister dst_reg)
+    HYP_FORCE_INLINE void Div(
+        BCRegister lhs_reg,
+        BCRegister rhs_reg,
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1520,6 +1522,20 @@ public:
 
         if (lhs->GetNumber(&a) && rhs->GetNumber(&b)) {
             switch (result.m_type) {
+            case Value::I8:
+                if (b.i == 0) {
+                    state->ThrowException(thread, Exception::DivisionByZeroException());
+                    break;
+                }
+                result.m_value.i8 = static_cast<Int8>(a.i / b.i);
+                break;
+            case Value::I16:
+                if (b.i == 0) {
+                    state->ThrowException(thread, Exception::DivisionByZeroException());
+                    break;
+                }
+                result.m_value.i16 = static_cast<Int16>(a.i / b.i);
+                break;
             case Value::I32:
                 if (b.i == 0) {
                     state->ThrowException(thread, Exception::DivisionByZeroException());
@@ -1533,6 +1549,46 @@ public:
                     break;
                 }
                 result.m_value.i64 = a.i / b.i;
+                break;
+            case Value::U8:
+                if (a.flags & Number::FLAG_SIGNED) {
+                    result.m_value.u8 = static_cast<UInt8>(a.i);
+                } else {
+                    result.m_value.u8 = static_cast<UInt8>(a.u);
+                }
+                if (b.flags & Number::FLAG_SIGNED) {
+                    if (b.i == 0) {
+                        state->ThrowException(thread, Exception::DivisionByZeroException());
+                        break;
+                    }
+                    result.m_value.u8 = result.m_value.u8 / static_cast<UInt8>(b.i);
+                } else {
+                    if (b.u == 0) {
+                        state->ThrowException(thread, Exception::DivisionByZeroException());
+                        break;
+                    }
+                    result.m_value.u8 = result.m_value.u8 / static_cast<UInt8>(b.u);
+                }
+                break;
+            case Value::U16:
+                if (a.flags & Number::FLAG_SIGNED) {
+                    result.m_value.u16 = static_cast<UInt16>(a.i);
+                } else {
+                    result.m_value.u16 = static_cast<UInt16>(a.u);
+                }
+                if (b.flags & Number::FLAG_SIGNED) {
+                    if (b.i == 0) {
+                        state->ThrowException(thread, Exception::DivisionByZeroException());
+                        break;
+                    }
+                    result.m_value.u16 = result.m_value.u16 / static_cast<UInt16>(b.i);
+                } else {
+                    if (b.u == 0) {
+                        state->ThrowException(thread, Exception::DivisionByZeroException());
+                        break;
+                    }
+                    result.m_value.u16 = result.m_value.u16 / static_cast<UInt16>(b.u);
+                }
                 break;
             case Value::U32:
                 if (a.flags & Number::FLAG_SIGNED) {
@@ -1626,7 +1682,11 @@ public:
         thread->m_regs[dst_reg] = result;
     }
 
-    HYP_FORCE_INLINE void Mod(BCRegister lhs_reg, BCRegister rhs_reg, BCRegister dst_reg)
+    HYP_FORCE_INLINE void Mod(
+        BCRegister lhs_reg,
+        BCRegister rhs_reg,
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1799,9 +1859,11 @@ public:
         thread->m_regs[dst_reg] = result;
     }
 
-    HYP_FORCE_INLINE void And(BCRegister lhs_reg,
+    HYP_FORCE_INLINE void And(
+        BCRegister lhs_reg,
         BCRegister rhs_reg,
-        BCRegister dst_reg)
+        BCRegister dst_reg
+    )
     {
         // load values from registers
         Value *lhs = &thread->m_regs[lhs_reg];
@@ -1964,7 +2026,7 @@ public:
         Value *value = &thread->m_regs[reg];
 
         union {
-            Int64 i;
+            Int64  i;
             UInt64 u;
         };
 
@@ -2002,6 +2064,8 @@ public:
         // load value from register
         Value *value = &thread->m_regs[reg];
 
+        // @TODO Allow throwing the arugment
+
         state->ThrowException(
             thread,
             Exception("User exception")
@@ -2023,39 +2087,9 @@ public:
         // load value from register
         Value *value = &thread->m_regs[reg];
 
-        union {
-            Int64 i;
-            UInt64 u;
-            Float64 f;
-        };
+        Number num;
 
-        if (value->GetInteger(&i)) {
-            if (value->m_type == Value::I32) {
-                value->m_value.i32 = -static_cast<Int32>(i);
-            } else if (value->m_type == Value::I16) {
-                value->m_value.i16 = -static_cast<Int16>(i);
-            } else if (value->m_type == Value::I8) {
-                value->m_value.i8 = -static_cast<Int8>(i);
-            } else {
-                value->m_value.i64 = -i;
-            }
-        } else if (value->GetUnsigned(&u)) {
-            if (value->m_type == Value::U32) {
-                value->m_value.u32 = -static_cast<UInt32>(u);
-            } else if (value->m_type == Value::U16) {
-                value->m_value.u16 = -static_cast<UInt16>(u);
-            } else if (value->m_type == Value::U8) {
-                value->m_value.u8 = -static_cast<UInt8>(u);
-            } else {
-                value->m_value.u64 = -u;
-            }
-        } else if (value->GetFloatingPoint(&f)) {
-            if (value->m_type == Value::F32) {
-                value->m_value.f = -static_cast<Float32>(f);
-            } else {
-                value->m_value.d = -f;
-            }
-        } else {
+        if (!value->GetNumber(&num)) {
             state->ThrowException(
                 thread,
                 Exception::InvalidOperationException(
@@ -2063,7 +2097,36 @@ public:
                     value->GetTypeString()
                 )
             );
+
             return;
+        }
+
+        if (num.flags & Number::FLAG_UNSIGNED) {
+            if (value->m_type == Value::U32) {
+                value->m_value.u32 = -static_cast<UInt32>(num.u);
+            } else if (value->m_type == Value::I16) {
+                value->m_value.u16 = -static_cast<UInt16>(num.u);
+            } else if (value->m_type == Value::I8) {
+                value->m_value.u8 = -static_cast<UInt8>(num.u);
+            } else {
+                value->m_value.u64 = -num.u;
+            }
+        } else if (num.flags & Number::FLAG_SIGNED) {
+            if (value->m_type == Value::I32) {
+                value->m_value.i32 = -static_cast<Int32>(num.i);
+            } else if (value->m_type == Value::I16) {
+                value->m_value.i16 = -static_cast<Int16>(num.i);
+            } else if (value->m_type == Value::I8) {
+                value->m_value.i8 = -static_cast<Int8>(num.i);
+            } else {
+                value->m_value.i64 = -num.i;
+            }
+        } else {
+            if (value->m_type == Value::F32) {
+                value->m_value.f = -static_cast<Float32>(num.f);
+            } else {
+                value->m_value.d = -num.f;
+            }
         }
     }
 };

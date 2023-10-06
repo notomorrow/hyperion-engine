@@ -39,7 +39,7 @@ file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
+    ${HYPERION_INCLUDE_DIR}
     ${OPENAL_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src

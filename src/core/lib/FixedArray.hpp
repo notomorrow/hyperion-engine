@@ -35,7 +35,7 @@ public:
     using Iterator = T *;
     using ConstIterator = const T *;
 
-    using KeyType = UInt;
+    using KeyType = SizeType;
 
     static constexpr SizeType size = Sz;
 

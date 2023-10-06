@@ -208,13 +208,16 @@ public:
             Helper::Destruct(m_current_type_id, m_storage.GetPointer());
         }
     }
-
+    
+    HYP_FORCE_INLINE
     const TypeID &GetTypeID() const
         { return m_current_type_id; }
-
+    
+    HYP_FORCE_INLINE
     void *GetPointer()
         { return m_storage.GetPointer(); }
-
+    
+    HYP_FORCE_INLINE
     const void *GetPointer() const
         { return m_storage.GetPointer(); }
 
@@ -232,13 +235,16 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE bool Is() const
+    HYP_FORCE_INLINE
+    bool Is() const
         { return m_current_type_id == TypeID::ForType<NormalizedType<T>>(); }
 
-    HYP_FORCE_INLINE bool IsValid() const
+    HYP_FORCE_INLINE
+    bool IsValid() const
         { return m_current_type_id != invalid_type_id; }
 
     template <class T, class ReturnType = NormalizedType<T>>
+    HYP_FORCE_INLINE
     bool Get(ReturnType *out_value) const
     {
         AssertThrow(out_value != nullptr);
@@ -253,6 +259,7 @@ public:
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     T &Get()
     {
         AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
@@ -261,6 +268,7 @@ public:
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     const T &Get() const
     {
         AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
@@ -514,13 +522,16 @@ struct Variant
         : m_holder(std::forward<T>(value))
     {
     }
-
+    
+    HYP_FORCE_INLINE
     const TypeID &GetTypeID() const
         { return m_holder.GetTypeID(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const Variant &other) const
         { return m_holder == other.m_holder; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const Variant &other) const
         { return !(m_holder == other.m_holder); }
 
@@ -541,30 +552,37 @@ struct Variant
         { return m_holder.GetPointer(); }
 
     template <class T, class ReturnType = NormalizedType<T>>
+    HYP_FORCE_INLINE
     bool Get(ReturnType *out_value) const
         { return m_holder.template Get<T, ReturnType>(out_value); }
 
     template <class T>
+    HYP_FORCE_INLINE
     T &Get()
         { return m_holder.template Get<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     const T &Get() const
         { return m_holder.template Get<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     T *TryGet()
         { return m_holder.template TryGet<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     const T *TryGet() const
         { return m_holder.template TryGet<T>(); }
 
     template <class T>
+    HYP_FORCE_INLINE
     void Set(const T &value)
         { m_holder.template Set<T>(value); }
 
     template <class T>
+    HYP_FORCE_INLINE
     void Set(T &&value)
         { return m_holder.template Set<T>(std::forward<T>(value)); }
     
@@ -572,9 +590,11 @@ struct Variant
     /*! \brief Resets the Variant into an invalid state.
      * If there is any present value, it will be destructed
      */
+    HYP_FORCE_INLINE
     void Reset()
         { m_holder.Reset(); }
-
+    
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
         { return m_holder.GetHashCode(); }
 
