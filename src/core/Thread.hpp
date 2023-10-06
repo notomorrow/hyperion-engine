@@ -3,12 +3,12 @@
 
 #include <core/lib/FixedString.hpp>
 #include <core/lib/AtomicVar.hpp>
+#include <core/Name.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
 #include <thread>
 #include <type_traits>
-#include <tuple>
 
 namespace hyperion::v2 {
 
@@ -16,20 +16,29 @@ struct ThreadID
 {
     static const ThreadID invalid;
 
-    UInt value;
-    StringView name;
+    static ThreadID CreateDynamicThreadID(Name name);
 
-    HYP_FORCE_INLINE bool operator==(const ThreadID &other) const
+    UInt32  value;
+    Name    name;
+
+    HYP_FORCE_INLINE
+    Bool operator==(const ThreadID &other) const
         { return value == other.value; }
 
-    HYP_FORCE_INLINE bool operator!=(const ThreadID &other) const
+    HYP_FORCE_INLINE
+    Bool operator!=(const ThreadID &other) const
         { return value != other.value; }
 
-    HYP_FORCE_INLINE bool operator<(const ThreadID &other) const
-        { return std::tie(value, name) < std::tie(other.value, other.name); }
+    HYP_FORCE_INLINE
+    Bool operator<(const ThreadID &other) const
+        { return value < other.value; }
 
-    HYP_FORCE_INLINE UInt operator~() const
+    // Not valid for DYNAMIC thread IDs.
+    HYP_FORCE_INLINE
+    UInt operator~() const
         { return ~value; }
+    
+    Bool IsDynamic() const;
 };
 
 static_assert(std::is_trivially_destructible_v<ThreadID>,
@@ -45,6 +54,8 @@ public:
     using Task = typename Scheduler::Task;
     using TaskID = typename Scheduler::TaskID;
 
+    // Dynamic thread
+    Thread(Name dynamic_thread_name);
     Thread(const ThreadID &id);
     Thread(const Thread &other) = delete;
     Thread &operator=(const Thread &other) = delete;
@@ -99,6 +110,13 @@ protected:
 private:
     std::thread *m_thread;
 };
+
+template <class SchedulerType, class ...Args>
+Thread<SchedulerType, Args...>::Thread(Name dynamic_thread_name)
+    : m_id(ThreadID::CreateDynamicThreadID(dynamic_thread_name)),
+      m_thread(nullptr)
+{
+}
 
 template <class SchedulerType, class ...Args>
 Thread<SchedulerType, Args...>::Thread(const ThreadID &id)

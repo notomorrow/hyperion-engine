@@ -1,0 +1,109 @@
+#include <rtc/RTCClient.hpp>
+#include <rtc/RTCServer.hpp>
+
+#include <util/json/JSON.hpp>
+
+#include "rtc/configuration.hpp"
+#include "rtc/peerconnection.hpp"
+
+#ifdef HYP_LIBDATACHANNEL
+#include <variant>
+#endif // HYP_LIBDATACHANNEL
+
+namespace hyperion::v2 {
+
+NullRTCClient::NullRTCClient(String id, RTCServer *server)
+    : RTCClient(std::move(id), server)
+{
+}
+
+void NullRTCClient::InitPeerConnection()
+{
+}
+
+void NullRTCClient::SetRemoteDescription(const String &type, const String &sdp)
+{
+}
+
+#ifdef HYP_LIBDATACHANNEL
+
+LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer *server)
+    : RTCClient(std::move(id), server)
+{
+}
+
+void LibDataChannelRTCClient::InitPeerConnection()
+{
+    const char stun_server[] = "stun:stun.l.google.com:19302";
+
+    rtc::Configuration rtc_configuration;
+    rtc_configuration.iceServers.emplace_back(stun_server);
+    rtc_configuration.disableAutoNegotiation = true;
+
+    RC<rtc::PeerConnection> peer_connection;
+    peer_connection.Reset(new rtc::PeerConnection(rtc_configuration));
+
+    peer_connection->onStateChange([this, id = m_id](rtc::PeerConnection::State state)
+    {
+        switch (state) {
+        case rtc::PeerConnection::State::Disconnected: // fallthrough
+        case rtc::PeerConnection::State::Failed:
+        case rtc::PeerConnection::State::Closed:
+            m_server->GetClientList().Remove(id);
+
+            break;
+        default:
+            break;
+        }
+    });
+
+    peer_connection->onGatheringStateChange([this, id = m_id, pc_weak = Weak<rtc::PeerConnection>(peer_connection)](rtc::PeerConnection::GatheringState state)
+    {
+        if (auto peer_connection = pc_weak.Lock()) {
+            auto description = peer_connection->localDescription();
+
+            const json::JSONValue message_json(json::JSONObject({
+                { "id", id },
+                { "type", description->typeString().c_str() },
+                { "sdp", String(std::string(description.value()).c_str()) }
+            }));
+
+            const String message_string = message_json.ToString();
+            
+            m_server->SendToSignallingServer(ByteBuffer(message_string.Size(), message_string.Data()));
+        }
+    });
+
+    peer_connection->setLocalDescription();
+
+    auto data_channel = peer_connection->createDataChannel("data");
+
+    data_channel->onOpen([data_channel_weak = std::weak_ptr<rtc::DataChannel>(data_channel)]
+    {
+        if (auto data_channel = data_channel_weak.lock()) {
+            data_channel->send("Ping");
+        }
+    });
+
+    data_channel->onMessage([data_channel_weak = std::weak_ptr<rtc::DataChannel>(data_channel)](rtc::binary)
+    {
+        if (auto data_channel = data_channel_weak.lock()) {
+            data_channel->send("Ping");
+        }
+    }, nullptr);
+
+    m_data_channel = std::move(data_channel);
+
+    m_peer_connection = std::move(peer_connection);
+}
+
+void LibDataChannelRTCClient::SetRemoteDescription(const String &type, const String &sdp)
+{
+    AssertThrow(m_peer_connection != nullptr);
+
+    m_peer_connection->setRemoteDescription(rtc::Description(sdp.Data(), type.Data()));
+}
+
+#endif // HYP_LIBDATACHANNEL
+
+}  // namespace hyperion::v2

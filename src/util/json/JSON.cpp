@@ -193,7 +193,7 @@ JSONSubscriptWrapper<JSONValue> JSONSubscriptWrapper<JSONValue>::operator[](UInt
             return { nullptr };
         }
 
-        return { as_array[index].Get() };
+        return { &as_array[index] };
     }
 
     return { nullptr };
@@ -211,7 +211,7 @@ JSONSubscriptWrapper<JSONValue> JSONSubscriptWrapper<JSONValue>::operator[](cons
     }
 
     if (value->IsObject()) {
-        auto as_object = value->AsObject();
+        JSONObject &as_object = value->AsObject();
 
         auto it = as_object.Find(key);
 
@@ -219,7 +219,7 @@ JSONSubscriptWrapper<JSONValue> JSONSubscriptWrapper<JSONValue>::operator[](cons
             return { nullptr };
         }
 
-        return { it->value.Get() };
+        return { &it->value };
     }
 
     return { nullptr };
@@ -360,13 +360,13 @@ JSONSubscriptWrapper<const JSONValue> JSONSubscriptWrapper<const JSONValue>::ope
     }
 
     if (value->IsArray()) {
-        auto as_array = value->AsArray();
+        const JSONArray &as_array = value->AsArray();
 
         if (index >= as_array.Size()) {
             return { nullptr };
         }
 
-        return { as_array[index].Get() };
+        return { &as_array[index] };
     }
 
     return { nullptr };
@@ -379,7 +379,7 @@ JSONSubscriptWrapper<const JSONValue> JSONSubscriptWrapper<const JSONValue>::ope
     }
 
     if (value->IsObject()) {
-        auto as_object = value->AsObject();
+        const JSONObject &as_object = value->AsObject();
 
         auto it = as_object.Find(key);
 
@@ -387,7 +387,7 @@ JSONSubscriptWrapper<const JSONValue> JSONSubscriptWrapper<const JSONValue>::ope
             return { nullptr };
         }
 
-        return { it->value.Get() };
+        return { &it->value };
     }
 
     return { nullptr };
@@ -496,7 +496,7 @@ private:
                     break;
                 }
 
-                array.PushBack(RC<JSONValue>::Construct(ParseValue()));
+                array.PushBack(ParseValue());
             } while (Match(TokenClass::TK_COMMA, true));
 
             Expect(TokenClass::TK_CLOSE_BRACKET, true);
@@ -519,7 +519,7 @@ private:
                     const JSONString key = ParseString();
 
                     if (Expect(TokenClass::TK_COLON, true)) {
-                        object[key] = RC<JSONValue>::Construct(ParseValue());
+                        object[key] = ParseValue();
                     }
                 }
             } while (Match(TokenClass::TK_COMMA, true));

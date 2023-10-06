@@ -58,6 +58,9 @@
 #include <mutex>
 #include <ui/controllers/UIButtonController.hpp>
 
+#include <rtc/RTCClientList.hpp>
+#include <rtc/RTCClient.hpp>
+
 class FramebufferCaptureRenderComponent : public RenderComponent<FramebufferCaptureRenderComponent>
 {
     Extent2D        m_window_size;
@@ -161,6 +164,12 @@ private:
 class WebSocketMessageQueue
 {
 public:
+    struct Message
+    {
+        Weak<rtc::WebSocket>    ws;
+        json::JSONValue         message;        
+    };
+
     WebSocketMessageQueue() = default;
     WebSocketMessageQueue(const WebSocketMessageQueue &other) = delete;
     WebSocketMessageQueue &operator=(const WebSocketMessageQueue &other) = delete;
@@ -213,13 +222,13 @@ void SampleStreamer::InitGame()
     
     m_rtc_instance.Reset(new RTCInstance(
         RTCServerParams {
-            RTCServerAddress { "ws://127.0.0.1", 9945 }
+            RTCServerAddress { "ws://127.0.0.1", 9945, "/server" }
         }
     ));
 
     AssertThrow(m_rtc_instance->GetServer() != nullptr);
 
-    if (RTCServer *server = m_rtc_instance->GetServer()) {
+    if (const RC<RTCServer> &server = m_rtc_instance->GetServer()) {
         server->GetCallbacks().On(RTCServerCallbackMessages::SERVER_ERROR, [](RTCServerCallbackData data) {
             DebugLog(LogType::Error, "Server error: %s\n", data.error.HasValue() ? data.error.Get().message.Data() : "<unknown>");
         });
@@ -241,8 +250,6 @@ void SampleStreamer::InitGame()
         });
 
         server->GetCallbacks().On(RTCServerCallbackMessages::CLIENT_MESSAGE, [this](RTCServerCallbackData data) {
-            DebugLog(LogType::Debug, "Got client message");
-
             using namespace hyperion::json;
 
             if (!data.bytes.HasValue()) {
@@ -263,6 +270,8 @@ void SampleStreamer::InitGame()
 
             JSONValue &json_value = json_parse_result.value;
 
+            DebugLog(LogType::Debug, " -> %s\n", json_value.ToString().Data());
+            
             m_message_queue->Push(std::move(json_value));
         });
 
@@ -356,34 +365,34 @@ void SampleStreamer::InitGame()
         if (cameras_json && cameras_json->IsArray()) {
             camera_definitions.Reserve(cameras_json->AsArray().Size());
 
-            for (const auto &item : cameras_json->AsArray()) {
+            for (const json::JSONValue &item : cameras_json->AsArray()) {
                 GaussianSplattingCameraDefinition definition;
-                definition.id       = (*item)["id"].ToString();
-                definition.img_name = (*item)["img_name"].ToString();
-                definition.width    = MathUtil::Floor((*item)["width"].ToNumber());
-                definition.height   = MathUtil::Floor((*item)["height"].ToNumber());
-                definition.fx       = Float((*item)["fx"].ToNumber());
-                definition.fy       = Float((*item)["fy"].ToNumber());
+                definition.id       = item["id"].ToString();
+                definition.img_name = item["img_name"].ToString();
+                definition.width    = MathUtil::Floor(item["width"].ToNumber());
+                definition.height   = MathUtil::Floor(item["height"].ToNumber());
+                definition.fx       = Float(item["fx"].ToNumber());
+                definition.fy       = Float(item["fy"].ToNumber());
 
-                if ((*item)["position"].IsArray()) {
+                if (item["position"].IsArray()) {
                     definition.position = Vector3(
-                        Float((*item)["position"][0].ToNumber()),
-                        Float((*item)["position"][1].ToNumber()),
-                        Float((*item)["position"][2].ToNumber())
+                        Float(item["position"][0].ToNumber()),
+                        Float(item["position"][1].ToNumber()),
+                        Float(item["position"][2].ToNumber())
                     );
                 }
 
-                if ((*item)["rotation"].IsArray()) {
+                if (item["rotation"].IsArray()) {
                     Float v[9] = {
-                        Float((*item)["rotation"][0][0].ToNumber()),
-                        Float((*item)["rotation"][0][1].ToNumber()),
-                        Float((*item)["rotation"][0][2].ToNumber()),
-                        Float((*item)["rotation"][1][0].ToNumber()),
-                        Float((*item)["rotation"][1][1].ToNumber()),
-                        Float((*item)["rotation"][1][2].ToNumber()),
-                        Float((*item)["rotation"][2][0].ToNumber()),
-                        Float((*item)["rotation"][2][1].ToNumber()),
-                        Float((*item)["rotation"][2][2].ToNumber())
+                        Float(item["rotation"][0][0].ToNumber()),
+                        Float(item["rotation"][0][1].ToNumber()),
+                        Float(item["rotation"][0][2].ToNumber()),
+                        Float(item["rotation"][1][0].ToNumber()),
+                        Float(item["rotation"][1][1].ToNumber()),
+                        Float(item["rotation"][1][2].ToNumber()),
+                        Float(item["rotation"][2][0].ToNumber()),
+                        Float(item["rotation"][2][1].ToNumber()),
+                        Float(item["rotation"][2][2].ToNumber())
                     };
 
                     definition.rotation = Matrix3(v);
@@ -539,12 +548,27 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
         const json::JSONValue message = m_message_queue->Pop();
 
         const String message_type = message["type"].ToString();
-
+        const String id = message["id"].ToString();
+        
         if (message_type == "Ping") {
-            String response_string = "{\"type\": \"Pong\"}";
+            json::JSONValue response(json::JSONObject({
+                { "type", "Pong" }
+            }));
+
+            String response_string = response.ToString();
 
             // Send `Pong` message back
             m_rtc_instance->GetServer()->SendToSignallingServer(ByteBuffer(response_string.Size(), response_string.Data()));
+        } else if (message_type == "request") {
+            RC<RTCClient> client = m_rtc_instance->GetServer()->CreateClient(id);
+            client->InitPeerConnection();
+
+        } else if (message_type == "answer") {
+            if (const Optional<RC<RTCClient>> client = m_rtc_instance->GetServer()->GetClientList().Get(id)) {
+                client.Get()->SetRemoteDescription("answer", message["sdp"].ToString());
+            } else {
+                DebugLog(LogType::Warn, "Client with ID %s not found\n", id.Data());
+            }
         }
     }
 

@@ -1,13 +1,16 @@
 #ifndef HYPERION_V2_RTC_CLIENT_LIST_HPP
 #define HYPERION_V2_RTC_CLIENT_LIST_HPP
 
-#include <rtc/RTCClient.hpp>
-
 #include <core/lib/String.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/lib/FlatMap.hpp>
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/Optional.hpp>
+
+#include <mutex>
 
 namespace hyperion::v2 {
+
+class RTCClient;
 
 class RTCClientList
 {
@@ -15,24 +18,21 @@ public:
     RTCClientList() = default;
     RTCClientList(const RTCClientList &other) = delete;
     RTCClientList &operator=(const RTCClientList &other) = delete;
-    RTCClientList(RTCClientList &&other) = default;
-    RTCClientList &operator=(RTCClientList &&other) = default;
+    RTCClientList(RTCClientList &&other) noexcept = delete;
+    RTCClientList &operator=(RTCClientList &&other) noexcept = delete;
     ~RTCClientList() = default;
 
-    RTCClient *GetClient(const String &id) const
-    {
-        const auto it = m_clients.Find(id);
-
-        if (it == m_clients.End()) {
-            return nullptr;
-        }
-
-        return it->value.Get();
-    }
+    void Add(const String &id, RC<RTCClient> client);
+    void Remove(String id);
+    Optional<RC<RTCClient>> Get(const String &id) const;
+    Bool Has(const String &id) const;
 
 private:
-    HashMap<String, RC<RTCClient>> m_clients;
+    mutable std::mutex m_mutex;
+
+    FlatMap<String, RC<RTCClient>> m_clients;
 };
+
 
 } // namespace hyperion::v2
 

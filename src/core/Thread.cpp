@@ -1,4 +1,4 @@
-#include "Thread.hpp"
+#include <core/Thread.hpp>
 #include <Threads.hpp>
 #include <util/Defines.hpp>
 #include <util/UTF8.hpp>
@@ -13,7 +13,29 @@
 
 namespace hyperion::v2 {
 
-const ThreadID ThreadID::invalid = ThreadID { ~0u, "INVALID" };
+const ThreadID ThreadID::invalid = ThreadID { ~0u, HYP_NAME(InvalidThreadID) };
+
+ThreadID ThreadID::CreateDynamicThreadID(Name name)
+{
+    struct ThreadIDGenerator
+    {
+        AtomicVar<UInt32> counter { 0 };
+
+        UInt32 Next()
+        {
+            return counter.Increment(1, MemoryOrder::SEQUENTIAL) + 1;
+        }
+    };
+
+    static ThreadIDGenerator generator;
+
+    return { generator.Next() << 16u, name };
+}
+
+Bool ThreadID::IsDynamic() const
+{
+    return THREAD_DYNAMIC & value;
+}
 
 void SetCurrentThreadID(const ThreadID &thread_id)
 {
@@ -24,20 +46,20 @@ void SetCurrentThreadID(const ThreadID &thread_id)
 #ifdef HYP_WINDOWS
     HRESULT set_thread_result = SetThreadDescription(
         GetCurrentThread(),
-        &utf::ToWide(thread_id.name.Data())[0]
+        &HYP_UTF8_TOWIDE(thread_id.name.LookupString().Data())[0]
     );
 
     if (FAILED(set_thread_result)) {
         DebugLog(
             LogType::Warn,
             "Failed to set Win32 thread name for thread %s\n",
-            thread_id.name.Data()
+            thread_id.name.LookupString().Data()
         );
     }
 #elif defined(HYP_MACOS)
-    pthread_setname_np(thread_id.name.Data());
+    pthread_setname_np(thread_id.name.LookupString().Data());
 #elif defined(HYP_LINUX)
-    pthread_setname_np(pthread_self(), thread_id.name.Data());
+    pthread_setname_np(pthread_self(), thread_id.name.LookupString().Data());
 #endif
 }
 

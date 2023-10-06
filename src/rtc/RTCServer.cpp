@@ -1,4 +1,7 @@
 #include <rtc/RTCServer.hpp>
+#include <rtc/RTCClientList.hpp>
+#include <rtc/RTCClient.hpp>
+#include <rtc/RTCServerThread.hpp>
 
 #include <core/lib/CMemory.hpp>
 
@@ -19,9 +22,24 @@ class WebSocket { };
 namespace hyperion::v2 {
 
 RTCServer::RTCServer(RTCServerParams params)
-    : m_params(std::move(params))
+    : m_params(std::move(params)),
+      m_thread(new RTCServerThread())
 {
 }
+
+RTCServer::~RTCServer()
+{
+    if (m_thread) {
+        if (m_thread->IsRunning()) {
+            m_thread->Stop();
+        }
+
+        if (m_thread->CanJoin()) {
+            m_thread->Join();
+        }
+    }
+}
+
 
 // null (stubbed) implementation
 
@@ -54,6 +72,14 @@ void NullRTCServer::Stop()
     });
 }
 
+RC<RTCClient> NullRTCServer::CreateClient(String id)
+{
+    RC<RTCClient> client = RC<NullRTCClient>::Construct(id, this);
+    m_client_list.Add(id, client);
+
+    return client;
+}
+
 void NullRTCServer::SendToSignallingServer(const ByteBuffer &bytes)
 {
     AssertThrowMsg(m_is_running, "NullRTCServer::SendToSignallingServer() called, but server is not running!");
@@ -61,8 +87,16 @@ void NullRTCServer::SendToSignallingServer(const ByteBuffer &bytes)
     // Do nothing
 }
 
+void NullRTCServer::SendToClient(String client_id, const ByteBuffer &bytes)
+{
+    AssertThrowMsg(m_is_running, "NullRTCServer::SendToClient() called, but server is not running!");
+
+    // Do nothing
+}
 
 // libdatachannel implementation
+
+#ifdef HYP_LIBDATACHANNEL
 
 LibDataChannelRTCServer::LibDataChannelRTCServer(RTCServerParams params)
     : RTCServer(std::move(params))
@@ -73,112 +107,127 @@ LibDataChannelRTCServer::~LibDataChannelRTCServer() = default;
 
 void LibDataChannelRTCServer::Start()
 {
-    AssertThrowMsg(!m_is_running, "LibDataChannelRTCServer::Start() called, but server is already running!");
+    AssertThrowMsg(!m_thread->IsRunning(), "LibDataChannelRTCServer::Start() called, but server is already running!");
 
-#ifdef HYP_LIBDATACHANNEL
     AssertThrowMsg(m_websocket == nullptr, "LibDataChannelRTCServer::Start() called, but m_websocket is not nullptr!");
 
     m_websocket.Reset(new rtc::WebSocket());
 
-    m_websocket->onOpen([this]() {
-        m_is_running = true;
-
-        m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STARTED, {
-            Optional<ByteBuffer>(),
-            Optional<RTCServerError>()
-        });
-    });
-
-    m_websocket->onClosed([this]() {
-        m_is_running = false;
-
-        m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STOPPED, {
-            Optional<ByteBuffer>(),
-            Optional<RTCServerError>()
-        });
-    });
-
-    m_websocket->onError([this](const std::string &error) {
-        m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
-            Optional<ByteBuffer>(),
-            Optional<RTCServerError>(RTCServerError { error.c_str() })
-        });
-    });
-
-    m_websocket->onMessage([this](const std::variant<rtc::binary, std::string> &data) {
-        if (std::holds_alternative<rtc::binary>(data)) {
-            const rtc::binary &bytes = std::get<rtc::binary>(data);
-
-            m_callbacks.Trigger(RTCServerCallbackMessages::CLIENT_MESSAGE, {
-                Optional<ByteBuffer>(ByteBuffer(bytes.size(), bytes.data())),
+    m_thread->Start(this);
+    m_thread->GetScheduler().Enqueue([this]()
+    {
+        m_websocket->onOpen([this]() {
+            m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STARTED, {
+                Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
             });
-        } else {
-            const std::string &str = std::get<std::string>(data);
+        });
 
-            m_callbacks.Trigger(RTCServerCallbackMessages::CLIENT_MESSAGE, {
-                Optional<ByteBuffer>(ByteBuffer(str.size(), str.data())),
+        m_websocket->onClosed([this]() {
+            Stop();
+
+            m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STOPPED, {
+                Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
             });
-        }
+        });
+
+        m_websocket->onError([this](const std::string &error) {
+            m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
+                Optional<ByteBuffer>(),
+                Optional<RTCServerError>(RTCServerError { error.c_str() })
+            });
+        });
+
+        m_websocket->onMessage([this](const std::variant<rtc::binary, std::string> &data) {
+            if (std::holds_alternative<rtc::binary>(data)) {
+                const rtc::binary &bytes = std::get<rtc::binary>(data);
+
+                m_callbacks.Trigger(RTCServerCallbackMessages::CLIENT_MESSAGE, {
+                    Optional<ByteBuffer>(ByteBuffer(bytes.size(), bytes.data())),
+                    Optional<RTCServerError>()
+                });
+            } else {
+                const std::string &str = std::get<std::string>(data);
+
+                m_callbacks.Trigger(RTCServerCallbackMessages::CLIENT_MESSAGE, {
+                    Optional<ByteBuffer>(ByteBuffer(str.size(), str.data())),
+                    Optional<RTCServerError>()
+                });
+            }
+        });
+
+        const String websocket_url = m_params.address.host + ":"
+            + String::ToString(m_params.address.port)
+            + (m_params.address.path.StartsWith("/")
+                ? m_params.address.path
+                : "/" + m_params.address.path);
+
+        DebugLog(LogType::Debug, "Attempting to connect websocket server to url: %s\n", websocket_url.Data());
+
+        m_websocket->open(websocket_url.Data());
     });
-
-    const String websocket_url = m_params.address.host + ":" + String::ToString(m_params.address.port);
-
-    DebugLog(LogType::Debug, "Attempting to connect websocket server to url: %s\n", websocket_url.Data());
-
-    m_websocket->open(websocket_url.Data());
-#else
-    DebugLog(LogType::Error, "LibDataChannelRTCServer::Start() called, but HYP_LIBDATACHANNEL is not defined!");
-    
-    m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
-        Optional<ByteBuffer>(),
-        Optional<RTCServerError>(RTCServerError { "LibDataChannelRTCServer::Start() called, but HYP_LIBDATACHANNEL is not defined!" })
-    });
-#endif
 }
 
 void LibDataChannelRTCServer::Stop()
 {
-    AssertThrowMsg(m_is_running, "LibDataChannelRTCServer::Stop() called, but server is not running!");
-    
-#ifdef HYP_LIBDATACHANNEL
-    AssertThrow(m_websocket != nullptr);
-    AssertThrowMsg(m_websocket->isOpen(), "Expected websocket to be open");
-    
-    m_websocket->close();
-#else
-    m_is_running = false;
+    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::Stop() called, but server is not running!");
 
-    m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STOPPED, {
-        Optional<ByteBuffer>(),
-        Optional<RTCServerError>()
-    });
-#endif
+    if (m_websocket != nullptr) {
+        m_thread->GetScheduler().Enqueue([this]
+        {
+            if (m_websocket->isOpen()) {
+                m_websocket->close();
+            }
+        });
+    }
+
+    m_thread->Stop();
+    m_thread->Join();
+
+    m_websocket.Reset();
+}
+
+RC<RTCClient> LibDataChannelRTCServer::CreateClient(String id)
+{
+    RC<RTCClient> client = RC<LibDataChannelRTCClient>::Construct(id, this);
+    m_client_list.Add(id, client);
+
+    return client;
 }
 
 void LibDataChannelRTCServer::SendToSignallingServer(const ByteBuffer &bytes)
 {
-    AssertThrowMsg(m_is_running, "LibDataChannelRTCServer::SendToSignallingServer() called, but server is not running!");
+    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToSignallingServer() called, but server is not running!");
  
-#ifdef HYP_LIBDATACHANNEL
     AssertThrow(m_websocket != nullptr);
     AssertThrowMsg(m_websocket->isOpen(), "Expected websocket to be open");
 
-    rtc::binary bin;
-    bin.resize(bytes.Size());
+    m_thread->GetScheduler().Enqueue([this, byte_buffer = std::move(bytes)]() mutable
+    {
+        rtc::binary bin;
+        bin.resize(byte_buffer.Size());
 
-    Memory::MemCpy(bin.data(), bytes.Data(), bytes.Size());
+        Memory::MemCpy(bin.data(), byte_buffer.Data(), byte_buffer.Size());
 
-    if (!m_websocket->send(std::move(bin))) {
-        m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
-            Optional<ByteBuffer>(),
-            Optional<RTCServerError>(RTCServerError { "Message could not be sent" })
-        });
-    }
-#else
-    DebugLog(LogType::Error, "LibDataChannelRTCServer::SendToSignallingServer() called, but HYP_LIBDATACHANNEL is not defined!");
-#endif
+        if (!m_websocket->send(std::move(bin))) {
+            m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_ERROR, {
+                Optional<ByteBuffer>(),
+                Optional<RTCServerError>(RTCServerError { "Message could not be sent" })
+            });
+        }
+    });
 }
+
+void LibDataChannelRTCServer::SendToClient(String client_id, const ByteBuffer &bytes)
+{
+    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToClient() called, but server is not running!");
+
+    //if (Optional<RC<RTCClient>> client = m_client_list.Get(client_id)) {
+    //    client.Get()->Send(bytes);
+    //}
+}
+
+#endif // HYP_LIBDATACHANNEL
 
 } // namespace hyperion::v2

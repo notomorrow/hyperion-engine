@@ -294,7 +294,7 @@ Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definiti
         LogType::Debug,
         "Locking ShaderManager for ShaderDefinition with hash %llu from thread %s\n",
         definition.GetHashCode().Value(),
-        Threads::CurrentThreadID().name.Data()
+        Threads::CurrentThreadID().name.LookupString().Data()
     );
 
     std::lock_guard guard(m_mutex);

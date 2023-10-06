@@ -174,56 +174,6 @@ struct RENDER_COMMAND(CopyBackbufferToCPU) : RenderCommand
 
 #pragma endregion
 
-void StreamerData::Create()
-{
-    m_texture = CreateObject<Texture>(Texture2D(
-        Extent2D { 256, 256 },
-        InternalFormat::RGBA8,
-        FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-        nullptr
-    ));
-
-    AssertThrow(InitObject(m_texture));
-
-    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_buffers[frame_index] = RenderObjects::Make<GPUBuffer>(GPUBufferType::STAGING_BUFFER);
-
-        HYPERION_ASSERT_RESULT(m_buffers[frame_index]->Create(
-            g_engine->GetGPUDevice(),
-            m_texture->GetImage()->GetByteSize()
-        ));
-    }
-}
-
-void StreamerData::CopyBackbufferImage(Frame *frame, const ImageRef &backbuffer_image)
-{
-    // ### TEMP: Copy backbuffer to a texture which will be sent to the connected client
-
-    const ImageRef &result_image = m_texture->GetImage();
-
-    // put src image in state for copying from
-    backbuffer_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_SRC);
-    // put dst image in state for copying to
-    result_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_DST);
-
-    // Blit into the streamer image
-    result_image->Blit(
-        frame->GetCommandBuffer(),
-        backbuffer_image
-    );
-
-    HYPERION_ASSERT_RESULT(result_image->GenerateMipmaps(
-        g_engine->GetGPUDevice(),
-        frame->GetCommandBuffer()
-    ));
-
-    // put src image in state for reading
-    backbuffer_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-
-    result_image->CopyToBuffer(frame->GetCommandBuffer(), m_buffers[frame->GetFrameIndex()]);
-}
-
 Engine::Engine()
     : shader_globals(nullptr)
 {
@@ -1015,8 +965,6 @@ void Engine::Initialize(RC<Application> application)
     PrepareFinalPass();
 
     Compile();
-
-    m_streamer_data.Create();
 }
 
 void Engine::Compile()
@@ -1055,8 +1003,6 @@ void Engine::Compile()
         /* Finalize instance batch data */
         shader_globals->entity_instance_batches.UpdateBuffer(m_instance->GetDevice(), i);
     }
-
-    callbacks.TriggerPersisted(EngineCallback::CREATE_DESCRIPTOR_SETS, this);
     
     m_deferred_renderer.Create();
     
@@ -1070,7 +1016,6 @@ void Engine::Compile()
     HYP_SYNC_RENDER();
 
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 
     HYP_SYNC_RENDER();
@@ -1196,7 +1141,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
         LogType::Debug,
         "Created RenderGroup for RenderableAttributeSet with hash %llu from thread %s\n",
         renderable_attributes.GetHashCode().Value(),
-        Threads::CurrentThreadID().name.Data()
+        Threads::CurrentThreadID().name.LookupString().Data()
     );
 
     std::lock_guard guard(m_render_group_mapping_mutex);
@@ -1353,11 +1298,5 @@ void Engine::RenderFinalPass(Frame *frame)
     m_full_screen_quad->Render(frame->GetCommandBuffer());
     
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(0, frame->GetCommandBuffer());
-
-    // TEMP
-    m_streamer_data.CopyBackbufferImage(
-        frame,
-        m_root_pipeline->GetFramebuffers()[acquired_image_index]->GetAttachmentUsages()[0]->GetAttachment()->GetImage()
-    );
 }
 } // namespace hyperion::v2

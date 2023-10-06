@@ -205,7 +205,7 @@ public:
             // this does require that there are > 1 task thread in the pool.
             do {
                 if (num_spins >= 1) {
-                    DebugLog(LogType::Warn, "Task thread %s: %u spins\n", current_thread_id.name.Data(), num_spins);
+                    DebugLog(LogType::Warn, "Task thread %s: %u spins\n", current_thread_id.name.LookupString().Data(), num_spins);
 
                     if (num_spins >= max_spins) {
                         DebugLog(
@@ -213,7 +213,7 @@ public:
                             "On task thread %s: All other task threads busy while enqueing a batch from within another task thread! "
                             "The task will instead be executed inline on the current task thread."
                             "\n\tReduce usage of batching within batches?\n",
-                            current_thread_id.name.Data()
+                            current_thread_id.name.LookupString().Data()
                         );
 
                         was_busy = true;

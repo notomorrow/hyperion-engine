@@ -3,21 +3,21 @@
 namespace hyperion::v2 {
 
 const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
-    decltype(thread_ids)::KeyValuePair { THREAD_MAIN, ThreadID { UInt(THREAD_MAIN), StringView("MainThread") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_GAME, ThreadID { UInt(THREAD_GAME), StringView("GameThread") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TERRAIN, ThreadID { UInt(THREAD_TERRAIN), StringView("TerrainGenerationThread") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_0, ThreadID { UInt(THREAD_TASK_0), StringView("TaskThread0") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_1, ThreadID { UInt(THREAD_TASK_1), StringView("TaskThread1") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_2, ThreadID { UInt(THREAD_TASK_2), StringView("TaskThread2") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_3, ThreadID { UInt(THREAD_TASK_3), StringView("TaskThread3") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_4, ThreadID { UInt(THREAD_TASK_4), StringView("TaskThread4") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_5, ThreadID { UInt(THREAD_TASK_5), StringView("TaskThread5") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_6, ThreadID { UInt(THREAD_TASK_6), StringView("TaskThread6") } },
-    decltype(thread_ids)::KeyValuePair { THREAD_TASK_7, ThreadID { UInt(THREAD_TASK_7), StringView("TaskThread7") } },
+    { THREAD_MAIN, ThreadID { UInt(THREAD_MAIN), HYP_NAME(MainThread) }},
+    { THREAD_GAME, ThreadID { UInt(THREAD_GAME), HYP_NAME(GameThread) } },
+    { THREAD_TERRAIN, ThreadID { UInt(THREAD_TERRAIN), HYP_NAME(TerrainGenerationThread) } },
+    { THREAD_TASK_0, ThreadID { UInt(THREAD_TASK_0), HYP_NAME(TaskThread0) } },
+    { THREAD_TASK_1, ThreadID { UInt(THREAD_TASK_1), HYP_NAME(TaskThread1) } },
+    { THREAD_TASK_2, ThreadID { UInt(THREAD_TASK_2), HYP_NAME(TaskThread2) } },
+    { THREAD_TASK_3, ThreadID { UInt(THREAD_TASK_3), HYP_NAME(TaskThread3) } },
+    { THREAD_TASK_4, ThreadID { UInt(THREAD_TASK_4), HYP_NAME(TaskThread4) } },
+    { THREAD_TASK_5, ThreadID { UInt(THREAD_TASK_5), HYP_NAME(TaskThread5) } },
+    { THREAD_TASK_6, ThreadID { UInt(THREAD_TASK_6), HYP_NAME(TaskThread6) } },
+    { THREAD_TASK_7, ThreadID { UInt(THREAD_TASK_7), HYP_NAME(TaskThread7) } },
 };
 
 #ifdef HYP_ENABLE_THREAD_ID
-thread_local ThreadID current_thread_id = ThreadID { UInt(THREAD_MAIN), StringView("MainThread") };//Threads::thread_ids.At(THREAD_MAIN);
+thread_local ThreadID current_thread_id = ThreadID { UInt(THREAD_MAIN), HYP_NAME(MainThread) };
 #else
 static const ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif
@@ -41,7 +41,7 @@ void Threads::AssertOnThread(ThreadMask mask, const char *message)
         "Expected current thread to be in mask %u, but got %u (%s). Message: %s",
         mask,
         current.value,
-        current.name.Data(),
+        current.name.LookupString().Data(),
         message ? message : "(no message)"
     );
 
@@ -64,9 +64,9 @@ void Threads::AssertOnThread(const ThreadID &thread_id, const char *message)
         thread_id == current,
         "Expected current thread to be %u (%s), but got %u (%s). Message: %s",
         thread_id.value,
-        thread_id.name.Data(),
+        thread_id.name.LookupString().Data(),
         current.value,
-        current.name.Data(),
+        current.name.LookupString().Data(),
         message ? message : "(no message)"
     );
 #else

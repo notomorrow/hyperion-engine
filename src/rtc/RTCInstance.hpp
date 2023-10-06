@@ -4,6 +4,8 @@
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCServer.hpp>
 
+#include <core/lib/RefCountedPtr.hpp>
+
 namespace hyperion::v2 {
 
 class RTCInstance
@@ -16,18 +18,11 @@ public:
     RTCInstance &operator=(RTCInstance &&other) = delete;
     ~RTCInstance() = default;
 
-    RTCClientList &GetClientList()
-        { return m_client_list; }
-
-    const RTCClientList &GetClientList() const
-        { return m_client_list; }
-
-    RTCServer *GetServer() const
-        { return m_server.Get(); }
+    const RC<RTCServer> &GetServer() const
+        { return m_server; }
 
 private:
-    RTCClientList           m_client_list;
-    UniquePtr<RTCServer>    m_server;
+    RC<RTCServer> m_server;
 };
 
 } // namespace hyperion::v2

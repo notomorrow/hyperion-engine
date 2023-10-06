@@ -29,9 +29,12 @@ enum ThreadName : ThreadMask
     THREAD_TASK_6 = 0x400,
     THREAD_TASK_7 = 0x800,
 
-    THREAD_TASK = 0xFF0,
+    THREAD_TASK = 0xFF0u,
 
-    THREAD_PHYSICS = THREAD_GAME // for now
+    THREAD_PHYSICS = THREAD_GAME, // for now
+
+    THREAD_STATIC  = 0xFFFFu,
+    THREAD_DYNAMIC = 0xFFFFu << 16u
 };
 
 // Used for having 1 value of something per thread,

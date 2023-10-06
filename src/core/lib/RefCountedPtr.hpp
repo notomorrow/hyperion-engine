@@ -18,11 +18,11 @@ namespace detail {
 template <class CountType = UInt>
 struct RefCountData
 {
-    void *value;
-    TypeID type_id;
-    CountType strong_count;
-    CountType weak_count;
-    void (*dtor)(void *);
+    void        *value;
+    TypeID      type_id;
+    CountType   strong_count;
+    CountType   weak_count;
+    void        (*dtor)(void *);
 
 #ifdef HYP_DEBUG_MODE
     ~RefCountData()
@@ -150,27 +150,35 @@ public:
         DropRefCount();
     }
 
-    HYP_FORCE_INLINE void *Get() const
+    HYP_FORCE_INLINE
+    void *Get() const
         { return m_ref ? m_ref->value : nullptr; }
-
+    
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return Get() != nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!() const
         { return Get() == nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const RefCountedPtrBase &other) const
         { return Get() == other.Get(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return Get() == nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const RefCountedPtrBase &other) const
         { return Get() != other.Get(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return Get() != nullptr; }
-
+    
+    HYP_FORCE_INLINE
     const TypeID &GetTypeID() const
         { return m_ref ? m_ref->type_id : TypeID::ForType<void>(); }
 
@@ -179,7 +187,8 @@ public:
      * no conversion is performed and an empty RefCountedPtr is returned.
      */
     template <class T>
-    HYP_FORCE_INLINE RefCountedPtr<T, CountType> Cast()
+    HYP_FORCE_INLINE
+    RefCountedPtr<T, CountType> Cast()
     {
         if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
             return CastUnsafe<T>();
@@ -189,14 +198,17 @@ public:
     }
 
     /*! \brief Drops the reference to the currently held value, if any.  */
+    HYP_FORCE_INLINE
     void Reset()
         { DropRefCount(); }
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
+    HYP_FORCE_INLINE
     RefCountDataType *GetRefCountData() const
         { return m_ref; }
 
     template <class T>
+    HYP_FORCE_INLINE
     RefCountedPtr<T, CountType> CastUnsafe()
     {
         RefCountedPtr<T, CountType> rc;
@@ -214,10 +226,13 @@ protected:
         : m_ref(ref)
     {
     }
-
+    
+    HYP_FORCE_INLINE
     void IncRefCount()
     {
+#ifdef HYP_DEBUG_MODE
         AssertThrow(m_ref != nullptr);
+#endif
 
         if constexpr (std::is_integral_v<CountType>) {
             ++m_ref->strong_count;
@@ -225,7 +240,8 @@ protected:
             m_ref->strong_count.fetch_add(1u, std::memory_order_relaxed);
         }
     }
-
+    
+    HYP_FORCE_INLINE
     void DropRefCount()
     {
         if (m_ref) {
@@ -259,7 +275,8 @@ protected:
 template <class T, class CountType = UInt>
 class RefCountedPtr : public RefCountedPtrBase<CountType>
 {
-    friend class WeakRefCountedPtr<T, CountType>;
+    friend class WeakRefCountedPtr<std::remove_const_t<T>, CountType>;
+    friend class WeakRefCountedPtr<std::add_const_t<T>, CountType>;
 
 protected:
     using Base = RefCountedPtrBase<CountType>;
@@ -355,34 +372,44 @@ public:
 
     ~RefCountedPtr() = default;
 
-    HYP_FORCE_INLINE T *Get() const
+    HYP_FORCE_INLINE
+    T *Get() const
         { return Base::m_ref ? static_cast<T *>(Base::m_ref->value) : nullptr; }
 
-    HYP_FORCE_INLINE T *operator->() const
+    HYP_FORCE_INLINE
+    T *operator->() const
         { return Get(); }
 
-    HYP_FORCE_INLINE T &operator*()
+    HYP_FORCE_INLINE
+    T &operator*()
         { return *Get(); }
 
-    HYP_FORCE_INLINE const T &operator*() const
+    HYP_FORCE_INLINE
+    const T &operator*() const
         { return *Get(); }
 
-    HYP_FORCE_INLINE operator bool() const
+    HYP_FORCE_INLINE
+    operator bool() const
         { return Base::operator bool(); }
 
-    HYP_FORCE_INLINE bool operator!() const
+    HYP_FORCE_INLINE
+    bool operator!() const
         { return Base::operator!(); }
 
-    HYP_FORCE_INLINE bool operator==(const RefCountedPtr &other) const
+    HYP_FORCE_INLINE
+    bool operator==(const RefCountedPtr &other) const
         { return Base::operator==(other); }
 
-    HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
+    HYP_FORCE_INLINE
+    bool operator==(std::nullptr_t) const
         { return Base::operator==(nullptr); }
 
-    HYP_FORCE_INLINE bool operator!=(const RefCountedPtr &other) const
+    HYP_FORCE_INLINE
+    bool operator!=(const RefCountedPtr &other) const
         { return Base::operator!=(other); }
 
-    HYP_FORCE_INLINE bool operator!=(std::nullptr_t) const
+    HYP_FORCE_INLINE
+    bool operator!=(std::nullptr_t) const
         { return Base::operator!=(nullptr); }
 
     void Set(const T &value)
@@ -481,25 +508,32 @@ public:
 
     ~RefCountedPtr() = default;
 
-    HYP_FORCE_INLINE void *Get() const
+    HYP_FORCE_INLINE
+    void *Get() const
         { return Base::Get(); }
     
-    HYP_FORCE_INLINE operator bool() const
+    HYP_FORCE_INLINE
+    operator bool() const
         { return Base::operator bool(); }
 
-    HYP_FORCE_INLINE bool operator!() const
+    HYP_FORCE_INLINE
+    bool operator!() const
         { return Base::operator!(); }
 
-    HYP_FORCE_INLINE bool operator==(const RefCountedPtr &other) const
+    HYP_FORCE_INLINE
+    bool operator==(const RefCountedPtr &other) const
         { return Base::operator==(other); }
 
-    HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
+    HYP_FORCE_INLINE
+    bool operator==(std::nullptr_t) const
         { return Base::operator==(nullptr); }
 
-    HYP_FORCE_INLINE bool operator!=(const RefCountedPtr &other) const
+    HYP_FORCE_INLINE
+    bool operator!=(const RefCountedPtr &other) const
         { return Base::operator!=(other); }
 
-    HYP_FORCE_INLINE bool operator!=(std::nullptr_t) const
+    HYP_FORCE_INLINE
+    bool operator!=(std::nullptr_t) const
         { return Base::operator!=(nullptr); }
 
     template <class T>
@@ -622,41 +656,53 @@ public:
         DropRefCount();
     }
 
-    HYP_FORCE_INLINE void *Get() const
+    HYP_FORCE_INLINE
+    void *Get() const
         { return m_ref ? m_ref->value : nullptr; }
-
+    
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return Get() != nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!() const
         { return Get() == nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const RefCountedPtrBase<CountType> &other) const
         { return m_ref == other.m_ref; }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const WeakRefCountedPtrBase &other) const
         { return m_ref == other.m_ref; }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return Get() == nullptr; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const RefCountedPtrBase<CountType> &other) const
         { return m_ref != other.m_ref; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const WeakRefCountedPtrBase &other) const
         { return m_ref != other.m_ref; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return Get() != nullptr; }
-
+    
+    HYP_FORCE_INLINE
     const TypeID &GetTypeID() const
         { return m_ref ? m_ref->type_id : TypeID::ForType<void>(); }
 
     /*! \brief Drops the reference to the currently held value, if any.  */
+    HYP_FORCE_INLINE
     void Reset()
         { DropRefCount(); }
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
+    HYP_FORCE_INLINE
     RefCountDataType *GetRefCountData() const
         { return m_ref; }
 
@@ -665,7 +711,8 @@ protected:
         : m_ref(ref)
     {
     }
-
+    
+    HYP_FORCE_INLINE
     void DropRefCount()
     {
         if (m_ref) {
@@ -748,9 +795,11 @@ public:
 
     ~WeakRefCountedPtr() = default;
 
-    HYP_FORCE_INLINE T *Get() const
+    HYP_FORCE_INLINE
+    T *Get() const
         { return Base::m_ref ? static_cast<T *>(Base::m_ref->value) : nullptr; }
-
+    
+    HYP_FORCE_INLINE
     RefCountedPtr<T, CountType> Lock()
     {
         RefCountedPtr<T, CountType> rc;
@@ -762,7 +811,8 @@ public:
 
         return rc;
     }
-
+    
+    HYP_FORCE_INLINE
     RefCountedPtr<const T, CountType> Lock() const
     {
         RefCountedPtr<const T, CountType> rc;
@@ -782,7 +832,7 @@ class RefCountedRef
     struct Data
     {
         ValueStorage<T> storage;
-        CountType count { 0 };
+        CountType       count { 0 };
 
         template <class ...Args>
         void Construct(Args &&... args)

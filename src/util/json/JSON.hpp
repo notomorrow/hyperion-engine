@@ -21,8 +21,10 @@ class JSONValue;
 using JSONString = String;
 using JSONNumber = Double;
 using JSONBool = Bool;
-using JSONArray = Array<RC<JSONValue>>;
-using JSONObject = HashMap<JSONString, RC<JSONValue>>;
+using JSONArray = Array<JSONValue>;
+using JSONObject = HashMap<JSONString, JSONValue>;
+using JSONArrayRef = RC<JSONArray>;
+using JSONObjectRef = RC<JSONObject>;
 struct JSONNull { };
 struct JSONUndefined { };
 
@@ -166,7 +168,7 @@ struct JSONSubscriptWrapper<JSONValue>
     bool IsUndefined() const;
 
     JSONString &AsString();
-    const JSONString &AsString() const;;
+    const JSONString &AsString() const;
     JSONString ToString() const;
 
     JSONNumber &AsNumber();
@@ -194,7 +196,7 @@ struct JSONSubscriptWrapper<JSONValue>
 class JSONValue
 {
 private:
-    using InnerType = Variant<JSONString, JSONNumber, JSONBool, JSONArray, JSONObject, JSONNull, JSONUndefined>;
+    using InnerType = Variant<JSONString, JSONNumber, JSONBool, JSONArrayRef, JSONObjectRef, JSONNull, JSONUndefined>;
 
 public:
     JSONValue()
@@ -218,12 +220,12 @@ public:
     }
 
     JSONValue(JSONArray array)
-        : m_inner(std::move(array))
+        : m_inner(JSONArrayRef::Construct(std::move(array)))
     {
     }
 
     JSONValue(JSONObject object)
-        : m_inner(std::move(object))
+        : m_inner(JSONObjectRef::Construct(std::move(object)))
     {
     }
 
@@ -280,12 +282,12 @@ public:
 
     bool IsArray() const
     {
-        return m_inner.Is<JSONArray>();
+        return m_inner.Is<JSONArrayRef>();
     }
 
     bool IsObject() const
     {
-        return m_inner.Is<JSONObject>();
+        return m_inner.Is<JSONObjectRef>();
     }
 
     bool IsNull() const
@@ -344,7 +346,7 @@ public:
             String result = "[";
 
             for (SizeType index = 0; index < as_array.Size(); index++) {
-                result += as_array[index]->ToString(true);
+                result += as_array[index].ToString(true);
 
                 if (index != as_array.Size() - 1) {
                     result += ", ";
@@ -362,11 +364,7 @@ public:
             Array<Pair<JSONString, JSONValue>> members;
 
             for (const auto &member : as_object) {
-                if (!member.value) {
-                    continue;
-                }
-
-                members.PushBack({ member.key, *member.value });
+                members.PushBack({ member.key, member.value });
             }
 
             String result = "{";
@@ -471,14 +469,14 @@ public:
     {
         AssertThrow(IsArray());
 
-        return m_inner.Get<JSONArray>();
+        return *m_inner.Get<JSONArrayRef>();
     }
 
     const JSONArray &AsArray() const
     {
         AssertThrow(IsArray());
 
-        return m_inner.Get<JSONArray>();
+        return *m_inner.Get<JSONArrayRef>();
     }
 
     JSONArray ToArray() const
@@ -494,14 +492,14 @@ public:
     {
         AssertThrow(IsObject());
 
-        return m_inner.Get<JSONObject>();
+        return *m_inner.Get<JSONObjectRef>();
     }
 
     const JSONObject &AsObject() const
     {
         AssertThrow(IsObject());
 
-        return m_inner.Get<JSONObject>();
+        return *m_inner.Get<JSONObjectRef>();
     }
 
     JSONObject ToObject() const

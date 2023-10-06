@@ -5,11 +5,16 @@
 #include <core/lib/ByteBuffer.hpp>
 #include <core/lib/Optional.hpp>
 
+#include <rtc/RTCClientList.hpp>
+
 namespace rtc {
 class WebSocket;
 } // namespace rtc
 
 namespace hyperion::v2 {
+
+class RTCClient;
+class RTCServerThread;
 
 enum class RTCServerCallbackMessages : UInt32
 {
@@ -42,6 +47,7 @@ struct RTCServerAddress
 {
     String host;
     UInt16 port;
+    String path;
 };
 
 struct RTCServerParams
@@ -57,12 +63,15 @@ public:
     RTCServer &operator=(const RTCServer &other)    = delete;
     RTCServer(RTCServer &&other)                    = delete;
     RTCServer &operator=(RTCServer &&other)         = delete;
-    virtual ~RTCServer()                            = default;
+    virtual ~RTCServer();
 
     virtual void Start() = 0;
     virtual void Stop() = 0;
 
+    virtual RC<RTCClient> CreateClient(String id) = 0;
+
     virtual void SendToSignallingServer(const ByteBuffer &bytes) = 0;
+    virtual void SendToClient(String client_id, const ByteBuffer &bytes) = 0;
 
     const RTCServerParams &GetParams() const
         { return m_params; }
@@ -73,9 +82,17 @@ public:
     const RTCServerCallbacks &GetCallbacks() const
         { return m_callbacks; }
 
+    RTCClientList &GetClientList()
+        { return m_client_list; }
+
+    const RTCClientList &GetClientList() const
+        { return m_client_list; }
+
 protected:
-    RTCServerParams     m_params;
-    RTCServerCallbacks  m_callbacks;
+    RTCServerParams             m_params;
+    RTCServerCallbacks          m_callbacks;
+    RTCClientList               m_client_list;
+    UniquePtr<RTCServerThread>  m_thread;
 };
 
 class NullRTCServer : public RTCServer
@@ -86,16 +103,21 @@ public:
     NullRTCServer &operator=(const NullRTCServer &other)    = delete;
     NullRTCServer(NullRTCServer &&other)                    = delete;
     NullRTCServer &operator=(NullRTCServer &&other)         = delete;
-    virtual ~NullRTCServer()                                = default;
+    virtual ~NullRTCServer() override                       = default;
 
     virtual void Start() override;
     virtual void Stop() override;
 
+    virtual RC<RTCClient> CreateClient(String id) override;
+
     virtual void SendToSignallingServer(const ByteBuffer &bytes) override;
+    virtual void SendToClient(String client_id, const ByteBuffer &bytes) override;
 
 private:
     bool m_is_running = false;
 };
+
+#ifdef HYP_LIBDATACHANNEL
 
 class LibDataChannelRTCServer : public RTCServer
 {
@@ -110,12 +132,20 @@ public:
     virtual void Start() override;
     virtual void Stop() override;
 
+    virtual RC<RTCClient> CreateClient(String id) override;
+
     virtual void SendToSignallingServer(const ByteBuffer &bytes) override;
+    virtual void SendToClient(String client_id, const ByteBuffer &bytes) override;
 
 private:
-    bool                        m_is_running = false;
     UniquePtr<rtc::WebSocket>   m_websocket;
 };
+
+#else
+
+using LibDataChannelRTCServer = NullRTCServer;
+
+#endif // HYP_LIBDATACHANNEL
 
 } // namespace hyperion::v2
 
