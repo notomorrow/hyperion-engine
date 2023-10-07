@@ -421,49 +421,49 @@ private:
     JSONValue ParseValue()
     {
         if (Match(TokenClass::TK_OPEN_BRACE, false)) {
-            return ParseObject();
+            return JSONValue(ParseObject());
         }
 
         if (Match(TokenClass::TK_OPEN_BRACKET, false)) {
-            return ParseArray();
+            return JSONValue(ParseArray());
         }
 
         if (Match(TokenClass::TK_STRING, false)) {
-            return ParseString();
+            return JSONValue(ParseString());
         }
 
         if (Match(TokenClass::TK_INTEGER, false) || Match(TokenClass::TK_FLOAT, false)) {
-            return ParseNumber();
+            return JSONValue(ParseNumber());
         }
 
         if (MatchOperator("-", true)) {
             const auto num = ParseNumber();
 
-            return JSONNumber(num * -1);
+            return JSONValue(num * -1);
         }
 
         if (MatchKeyword(Keywords::Keyword_true, true)) {
-            return JSONBool(true);
+            return JSONValue(true);
         }
 
         if (MatchKeyword(Keywords::Keyword_false, true)) {
-            return JSONBool(false);
+            return JSONValue(false);
         }
 
         if (MatchKeyword(Keywords::Keyword_null, true)) {
-            return JSONNull();
+            return JSONValue(JSONNull());
         }
 
-        return JSONValue();
+        return JSONValue(JSONUndefined());
     }
 
     JSONString ParseString()
     {
         if (Token token = Expect(TokenClass::TK_STRING, true)) {
-            return JSONString(token.GetValue());
+            return token.GetValue();
         }
 
-        return JSONString("");
+        return "";
     }
 
     JSONNumber ParseNumber()

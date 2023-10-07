@@ -171,7 +171,7 @@ class Callbacks
         bool Valid() const        { return id != empty_id; }
         void Reset()              { id = empty_id; }
 
-        UInt NumCalls() const { return num_calls; }
+        UInt NumCalls() const     { return num_calls; }
         
         template <class ...OtherArgs>
         void Call(OtherArgs &&... args)

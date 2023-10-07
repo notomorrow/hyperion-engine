@@ -17,6 +17,7 @@ class DataChannel;
 namespace hyperion::v2 {
 
 class RTCServer;
+class RTCStream;
 
 class RTCClient
 {
@@ -33,8 +34,12 @@ public:
     RTCClient &operator=(RTCClient &&other) noexcept = default;
     virtual ~RTCClient() = default;
 
-    virtual void InitPeerConnection() = 0;
+    virtual void Connect() = 0;
+    virtual void Disconnect() = 0;
+
     virtual void SetRemoteDescription(const String &type, const String &sdp) = 0;
+
+    virtual void AddStream(RC<RTCStream> stream) = 0;
 
 protected:
     String      m_id;
@@ -51,8 +56,12 @@ public:
     NullRTCClient &operator=(NullRTCClient &&other) noexcept = default;
     virtual ~NullRTCClient() override = default;
 
-    virtual void InitPeerConnection() override;
+    virtual void Connect() override;
+    virtual void Disconnect() override;
+
     virtual void SetRemoteDescription(const String &type, const String &sdp) override;
+
+    virtual void AddStream(RC<RTCStream> stream) override;
 };
 
 #ifdef HYP_LIBDATACHANNEL
@@ -67,8 +76,12 @@ public:
     LibDataChannelRTCClient &operator=(LibDataChannelRTCClient &&other) noexcept = default;
     virtual ~LibDataChannelRTCClient() override = default;
 
-    virtual void InitPeerConnection() override;
+    virtual void Connect() override;
+    virtual void Disconnect() override;
+
     virtual void SetRemoteDescription(const String &type, const String &sdp) override;
+
+    virtual void AddStream(RC<RTCStream> stream) override;
 
 private:
     RC<rtc::PeerConnection>             m_peer_connection;

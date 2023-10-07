@@ -17,9 +17,9 @@ class AssetManager;
 
 struct EnqueuedAsset
 {
-    String path;
-    LoaderResult result;
-    AssetValue value;
+    String          path;
+    LoaderResult    result;
+    AssetValue      value;
 
     /*! \brief Retrieve the value of the loaded asset. If the requested type does not match
         the type of the value, if any, held within the variant, no error should occur and an 
@@ -42,6 +42,41 @@ struct EnqueuedAsset
 
 using AssetMap = FlatMap<String, EnqueuedAsset>;
 
+enum AssetBatchCallbackMessages
+{
+    ASSET_BATCH_ITEM_COMPLETE   = 1,
+    ASSET_BATCH_ITEM_FAILED     = 2
+};
+
+struct AssetBatchCallbackData
+{
+    using EnqueuedAssetDataType = Pair<std::reference_wrapper<const String>, std::reference_wrapper<EnqueuedAsset>>;
+    using DataType              = Variant<EnqueuedAssetDataType, std::reference_wrapper<AssetMap>>;
+
+    DataType data;
+
+    AssetBatchCallbackData() = default;
+
+    AssetBatchCallbackData(const String &asset_key, EnqueuedAsset &asset)
+        : data { EnqueuedAssetDataType { asset_key, asset } }
+    {
+    }
+
+    AssetBatchCallbackData(const AssetBatchCallbackData &) = default;
+    AssetBatchCallbackData &operator=(const AssetBatchCallbackData &) = default;
+    AssetBatchCallbackData(AssetBatchCallbackData &&) noexcept = default;
+    AssetBatchCallbackData &operator=(AssetBatchCallbackData &&) noexcept = default;
+    ~AssetBatchCallbackData() = default;
+
+    const String &GetAssetKey()
+        { return data.Get<EnqueuedAssetDataType>().first.get(); }
+
+    const EnqueuedAsset &GetAsset()
+        { return data.Get<EnqueuedAssetDataType>().second.get(); }
+};
+
+using AssetBatchCallbacks = Callbacks<AssetBatchCallbackMessages, AssetBatchCallbackData>;
+
 struct AssetBatch : private TaskBatch
 {
 private:
@@ -55,16 +90,23 @@ private:
         HYP_FORCE_INLINE void operator()(
             AssetManager *asset_manager,
             AssetMap *map,
-            const String &key
+            const String &key,
+            AssetBatchCallbacks *callbacks
         )
         {
             EnqueuedAsset &asset = (*map)[key];
 
-            asset.value.Set(AssetLoaderWrapper<T>::MakeResultType(
-                asset_manager->template Load<T>(asset.path, asset.result)
-            ));
+            asset.value.Set(AssetLoaderWrapper<T>::MakeResultType(asset_manager->template Load<T>(asset.path, asset.result)));
 
-            if (asset.result != LoaderResult::Status::OK) {
+            if (asset.result == LoaderResult::Status::OK) {
+                if (callbacks) {
+                    callbacks->Trigger(ASSET_BATCH_ITEM_COMPLETE, AssetBatchCallbackData(key, asset));
+                }
+            } else {
+                if (callbacks) {
+                    callbacks->Trigger(ASSET_BATCH_ITEM_FAILED, AssetBatchCallbackData(key, asset));
+                }
+
                 asset.value.Reset();
             }
         }
@@ -98,6 +140,12 @@ public:
         }
     }
 
+    AssetBatchCallbacks &GetCallbacks()
+        { return callbacks; }
+
+    const AssetBatchCallbacks &GetCallbacks() const
+        { return callbacks; }
+
     /*! \brief Enqueue an asset of type T to be loaded in this batch.
         Only call this method before LoadAsync() is called. */
     template <class T>
@@ -115,15 +163,16 @@ public:
 
         struct Functor
         {
-            String key;
+            String              key;
+            AssetBatchCallbacks *callbacks;
 
             void operator()(AssetManager *asset_manager, AssetMap *asset_map)
             {
-                LoadObjectWrapper<T>()(asset_manager, asset_map, key);
+                LoadObjectWrapper<T>()(asset_manager, asset_map, key, callbacks);
             }
         };
 
-        procs.PushBack(Functor { key });
+        procs.PushBack(Functor { key, &callbacks });
     }
 
     /*! \brief Begin loading this batch asynchronously. Note that
@@ -135,7 +184,8 @@ public:
     AssetManager *asset_manager;
 
 private:
-    Array<Proc<void, AssetManager *, AssetMap *>> procs;
+    Array<Proc<void, AssetManager *, AssetMap *>>   procs;
+    AssetBatchCallbacks                             callbacks;
 };
 
 } // namespace hyperion::V2

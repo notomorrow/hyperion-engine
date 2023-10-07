@@ -176,6 +176,10 @@ void LibDataChannelRTCServer::Stop()
     if (m_websocket != nullptr) {
         m_thread->GetScheduler().Enqueue([this]
         {
+            for (const auto &client : m_client_list) {
+                client.second->Disconnect();
+            }
+
             if (m_websocket->isOpen()) {
                 m_websocket->close();
             }

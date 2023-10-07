@@ -191,6 +191,8 @@ public:
     DynString TrimmedRight() const;
 
     DynString Substr(SizeType first, SizeType last = MathUtil::MaxSafeValue<SizeType>()) const;
+
+    DynString Escape() const;
     
     template <class ... SeparatorType>
     Array<DynString> Split(SeparatorType ... separators) const 
@@ -319,22 +321,16 @@ public:
         AssertThrow(result_size >= 1);
 
         DynString result;
+        result.Reserve(result_size - 1);  // String class automatically adds 1 for null character
 
-        // if constexpr (is_ansi) { // can write into memory direct without allocating any more
-        //     result.Resize(result_size - 1); // String class automatically adds 1 for null character
-        //     utf::utf_to_str<Integral, T>(value, result_size, result.Data());
-        // } else {
-            result.Reserve(result_size - 1);  // String class automatically adds 1 for null character
+        T *data = new T[result_size];
+        utf::utf_to_str<Integral, T>(value, result_size, data);
 
-            T *data = new T[result_size];
-            utf::utf_to_str<Integral, T>(value, result_size, data);
+        for (SizeType i = 0; i < result_size - 1; i++) {
+            result.Append(data[i]);
+        }
 
-            for (SizeType i = 0; i < result_size - 1; i++) {
-                result.Append(data[i]);
-            }
-
-            delete[] data;
-        // }
+        delete[] data;
 
         return result;
     }
@@ -868,6 +864,125 @@ auto DynString<T, IsUtf8>::TrimmedRight() const -> DynString
 
     return res;
 }
+
+template <class T, bool IsUtf8>
+DynString<T, IsUtf8> DynString<T, IsUtf8>::Escape() const
+{
+    const SizeType size = Size();
+    const auto *data = Base::Data();
+
+    DynString result;
+    result.Reserve(size);
+
+    if (!is_utf8 || m_length == size) {
+        for (SizeType i = 0; i < size; i++) {
+            auto ch = data[i];
+
+            switch (ch) {
+            case '\n':
+                result.Append("\\n");
+                break;
+            case '\r':
+                result.Append("\\r");
+                break;
+            case '\t':
+                result.Append("\\t");
+                break;
+            case '\v':
+                result.Append("\\v");
+                break;
+            case '\b':
+                result.Append("\\b");
+                break;
+            case '\f':
+                result.Append("\\f");
+                break;
+            case '\a':
+                result.Append("\\a");
+                break;
+            case '\\':
+                result.Append("\\\\");
+                break;
+            case '\"':
+                result.Append("\\\"");
+                break;
+            case '\'':
+                result.Append("\\\'");
+                break;
+            default:
+                result.Append(ch);
+                break;
+            }
+        }
+    } else {
+        for (SizeType i = 0; i < size;) {
+            UInt8 num_bytes_read = 0;
+
+            union { UInt32 char_u32; UInt8 char_u8[sizeof(utf::u32char)]; };
+            char_u32 = 0;
+
+            char_u32 = utf::char8to32(
+                Data() + i,
+                MathUtil::Min(sizeof(utf::u32char), size - i),
+                &num_bytes_read
+            );
+
+            i += num_bytes_read;
+
+            switch (char_u32) {
+            case UInt32('\n'):
+                result.Append("\\n");
+                break;
+            case UInt32('\r'):
+                result.Append("\\r");
+                break;
+            case UInt32('\t'):
+                result.Append("\\t");
+                break;
+            case UInt32('\v'):
+                result.Append("\\v");
+                break;
+            case UInt32('\b'):
+                result.Append("\\b");
+                break;
+            case UInt32('\f'):
+                result.Append("\\f");
+                break;
+            case UInt32('\a'):
+                result.Append("\\a");
+                break;
+            case UInt32('\\'):
+                result.Append("\\\\");
+                break;
+            case UInt32('\"'):
+                result.Append("\\\"");
+                break;
+            case UInt32('\''):
+                result.Append("\\\'");
+                break;
+            default:
+                result.Append(char_u8[0]);
+
+                if (num_bytes_read >= 2) {
+                    result.Append(char_u8[1]);
+                }
+                
+                if (num_bytes_read >= 3) {
+                    result.Append(char_u8[2]);
+                }
+
+                if (num_bytes_read == 4) {
+                    result.Append(char_u8[3]);
+                }
+
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
 
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::Substr(SizeType first, SizeType last) const -> DynString

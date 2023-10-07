@@ -27,6 +27,7 @@ public:
     virtual void OnFrameEnd(Frame *frame) override;
 
 private:
+    void HandleCompletedAssetBatch(Name, const RC<AssetBatch> &);
     void HandleCameraMovement(GameCounter::TickUnit delta);
 
     UniquePtr<RTCInstance>              m_rtc_instance;
@@ -34,6 +35,8 @@ private:
 
     Handle<Texture>                     m_texture;
     ByteBuffer                          m_screen_buffer;
+
+    FlatMap<Name, RC<AssetBatch>>       m_asset_batches;
 
     UInt                                m_counter = 0;
 };

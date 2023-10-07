@@ -106,7 +106,7 @@ public:
         return m_map.Find(type_id);
     }
 
-    bool Erase(Iterator it)
+    Iterator Erase(ConstIterator it)
     {
         return m_map.Erase(it);
     }

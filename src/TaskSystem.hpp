@@ -49,7 +49,7 @@ struct TaskBatch
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
     Array<TaskRef>                      task_refs;
-    
+
     /*! \brief Add a task to be ran with this batch. Note: adding a task while the batch is already running
      * does not mean the newly added task will be ran! You'll need to re-enqueue the batch after the previous one has been completed.
      */

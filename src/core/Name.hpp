@@ -28,7 +28,7 @@ struct Name
 
     NameID hash_code;
     
-    Name()
+    constexpr Name()
         : hash_code(0)
     {
     }
@@ -49,8 +49,11 @@ struct Name
     constexpr bool IsValid() const
         { return hash_code != 0; }
 
-    constexpr explicit operator bool() const
+    constexpr explicit operator Bool() const
         { return IsValid(); }
+
+    constexpr explicit operator UInt64() const
+        { return hash_code; }
     
     constexpr bool operator==(const Name &other) const
         { return hash_code == other.hash_code; }

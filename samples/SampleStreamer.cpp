@@ -98,6 +98,8 @@ public:
 
         m_buffer = RenderObjects::Make<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
         HYPERION_ASSERT_RESULT(m_buffer->Create(g_engine->GetGPUDevice(), m_texture->GetImage()->GetByteSize()));
+        m_buffer->SetResourceState(renderer::ResourceState::COPY_DST);
+        m_buffer->GetMapping(g_engine->GetGPUDevice());
     }
 
     void InitGame()
@@ -317,11 +319,6 @@ void SampleStreamer::InitGame()
 
     m_scene->GetEnvironment()->AddRenderComponent<FramebufferCaptureRenderComponent>(HYP_NAME(StreamingCapture), window_size);
 
-    RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
-    camera_track->SetDuration(60.0);
-
-    //m_scene->GetCamera()->SetCameraController(UniquePtr<CameraTrackController>::Construct(camera_track));
-
     {
         auto sun = CreateObject<Entity>();
         sun->SetName(HYP_NAME(Sun));
@@ -341,10 +338,35 @@ void SampleStreamer::InitGame()
         batch->Add<json::JSONValue>("cameras json", "models/gaussian_splatting/cameras.json");
         batch->Add<PLYModelLoader::PLYModel>("ply model", "models/gaussian_splatting/point_cloud.ply");
 
+        batch->GetCallbacks().On(ASSET_BATCH_ITEM_COMPLETE, [](AssetBatchCallbackData data)
+        {
+            const String &key = data.GetAssetKey();
+            
+            DebugLog(LogType::Debug, "Asset %s loaded\n", key.Data());
+        });
+
         batch->LoadAsync();
 
-        AssetMap loaded_assets = batch->AwaitResults();
+        m_asset_batches.Insert(HYP_NAME(GaussianSplatting), std::move(batch));
+    }
+}
 
+void SampleStreamer::InitRender()
+{
+    Game::InitRender();
+}
+
+void SampleStreamer::Teardown()
+{
+    Game::Teardown();
+}
+
+void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &batch)
+{
+    // Should already be completed.
+    AssetMap loaded_assets = batch->AwaitResults();
+
+    if (name == HYP_NAME(GaussianSplatting)) {
         auto cameras_json = loaded_assets["cameras json"].Get<json::JSONValue>();
         AssertThrow(loaded_assets["cameras json"].result.status == LoaderResult::Status::OK);
 
@@ -513,6 +535,11 @@ void SampleStreamer::InitGame()
         }
         
         UInt camera_definition_index = 0;
+        
+        RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
+        camera_track->SetDuration(60.0);
+
+        //m_scene->GetCamera()->SetCameraController(UniquePtr<CameraTrackController>::Construct(camera_track));
 
         for (const auto &camera_definition : camera_definitions) {
             camera_track->AddPivot({
@@ -532,37 +559,28 @@ void SampleStreamer::InitGame()
     }
 }
 
-void SampleStreamer::InitRender()
-{
-    Game::InitRender();
-}
-
-void SampleStreamer::Teardown()
-{
-    Game::Teardown();
-}
 
 void SampleStreamer::Logic(GameCounter::TickUnit delta)
 {
+    for (auto it = m_asset_batches.Begin(); it != m_asset_batches.End();) {
+        if (it->second->IsCompleted()) {
+            HandleCompletedAssetBatch(it->first, it->second);
+
+            it = m_asset_batches.Erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     while (!m_message_queue->Empty()) {
         const json::JSONValue message = m_message_queue->Pop();
 
         const String message_type = message["type"].ToString();
         const String id = message["id"].ToString();
         
-        if (message_type == "Ping") {
-            json::JSONValue response(json::JSONObject({
-                { "type", "Pong" }
-            }));
-
-            String response_string = response.ToString();
-
-            // Send `Pong` message back
-            m_rtc_instance->GetServer()->SendToSignallingServer(ByteBuffer(response_string.Size(), response_string.Data()));
-        } else if (message_type == "request") {
+        if (message_type == "request") {
             RC<RTCClient> client = m_rtc_instance->GetServer()->CreateClient(id);
-            client->InitPeerConnection();
-
+            client->Connect();
         } else if (message_type == "answer") {
             if (const Optional<RC<RTCClient>> client = m_rtc_instance->GetServer()->GetClientList().Get(id)) {
                 client.Get()->SetRemoteDescription("answer", message["sdp"].ToString());
@@ -584,7 +602,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 
 void SampleStreamer::OnFrameEnd(Frame *frame)
 {
-    if (!m_scene && !m_scene->IsReady()) {
+    if (!m_scene || !m_scene->IsReady()) {
         return;
     }
 
@@ -607,33 +625,34 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
         if (m_counter % 100 != 99) {
             return;
         }
-        
-        char name_buffer[255] = { '\0' };
-        std::snprintf(name_buffer, 255, "screencap_%u.png", m_counter / 100);
 
-        const Handle<Texture> &texture = framebuffer_capture->GetTexture();
+        const Handle<Texture> texture = framebuffer_capture->GetTexture();
 
-        Bitmap<3> bitmap(texture->GetExtent().width, texture->GetExtent().height);
+        // Fire and forget
+        TaskSystem::GetInstance().ScheduleTask([screen_buffer = std::move(m_screen_buffer), format = texture->GetFormat(), extent = texture->GetExtent()]() mutable
+        {
+            Bitmap<3> bitmap(extent.width, extent.height);
 
-        const UInt num_components = NumComponents(texture->GetFormat());
+            const UInt num_components = renderer::NumComponents(format);
 
-        for (UInt pixel = 0; pixel < m_screen_buffer.Size() / num_components; pixel++) {
-            UByte components[4];
+            for (UInt pixel = 0; pixel < screen_buffer.Size() / num_components; pixel++) {
+                UByte components[4] = { 0 };
 
-            for (UInt comp = 0; comp < MathUtil::Min(num_components, std::size(components)); comp++) {
-                components[comp] = m_screen_buffer.Data()[(pixel * num_components) + comp];
+                for (UInt comp = 0; comp < MathUtil::Min(num_components, std::size(components)); comp++) {
+                    components[comp] = screen_buffer.Data()[(pixel * num_components) + comp];
+                }
+
+                bitmap.GetPixelAtIndex(pixel).SetRGB(Vector3(
+                    static_cast<Float>(components[0]) / 255.0f,
+                    static_cast<Float>(components[1]) / 255.0f,
+                    static_cast<Float>(components[2]) / 255.0f
+                ));
             }
 
-            bitmap.GetPixelAtIndex(pixel).SetRGB(Vector3(
-                static_cast<Float>(components[0]) / 255.0f,
-                static_cast<Float>(components[1]) / 255.0f,
-                static_cast<Float>(components[2]) / 255.0f
-            ));
-        }
+            bitmap.FlipVertical();
 
-        bitmap.FlipVertical();
-
-        bitmap.Write(name_buffer);
+            bitmap.Write("screencap.bmp");
+        }, THREAD_POOL_BACKGROUND);
     }
 }
 

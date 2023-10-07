@@ -209,6 +209,11 @@ public:
     {
     }
 
+    JSONValue(const char *string)
+        : JSONValue(JSONString(string))
+    {
+    }
+
     JSONValue(JSONNumber number)
         : m_inner(number)
     {
@@ -318,7 +323,7 @@ public:
     {
         if (IsString()) {
             if (representation) {
-                return "\"" + String(StringUtil::ReplaceAll(AsString().Data(), "\"", "\\\"").c_str()) + "\"";
+                return "\"" + AsString().Escape() + "\"";
             } else {
                 return AsString();
             }
@@ -370,7 +375,7 @@ public:
             String result = "{";
 
             for (SizeType index = 0; index < members.Size(); index++) {
-                result += "\"" + String(StringUtil::ReplaceAll(members[index].first.Data(), "\"", "\\\"").c_str()) + "\": ";
+                result += "\"" + members[index].first.Escape() + "\": ";
 
                 result += members[index].second.ToString(true);
 

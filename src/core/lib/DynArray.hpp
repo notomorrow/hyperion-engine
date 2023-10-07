@@ -1007,11 +1007,19 @@ DynArray<T, NumInlineBytes> DynArray<T, NumInlineBytes>::Slice(Int first, Int la
 template <class T, SizeType NumInlineBytes>
 auto DynArray<T, NumInlineBytes>::Erase(ConstIterator iter) -> Iterator
 {
-    const SizeType dist = iter - Begin();
+    const Iterator begin = Begin();
+    const Iterator end = End();
+    const SizeType size_offset = Size();
+
+    if (iter < begin || iter >= end) {
+        return end;
+    }
+
+    const SizeType dist = iter - begin;
 
     auto *buffer = GetStorage();
 
-    for (SizeType index = dist; index < Size() - 1; ++index) {
+    for (SizeType index = dist; index < size_offset - 1; ++index) {
         if constexpr (std::is_move_assignable_v<T>) {
             buffer[m_start_offset + index].Get() = std::move(buffer[m_start_offset + index + 1].Get());
         } else if constexpr (std::is_move_constructible_v<T>) {
@@ -1025,7 +1033,7 @@ auto DynArray<T, NumInlineBytes>::Erase(ConstIterator iter) -> Iterator
     Memory::Destruct(buffer[m_size - 1].Get());
     --m_size;
     
-    return Begin() + dist;
+    return begin + dist;
 }
 
 template <class T, SizeType NumInlineBytes>

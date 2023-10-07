@@ -67,7 +67,7 @@ public:
     InsertResult Emplace(const Key &key, Args &&... args)
         { return Insert(key, Value(std::forward<Args>(args)...)); }
 
-    bool Erase(Iterator it);
+    Iterator Erase(ConstIterator it);
     bool Erase(const Key &key);
 
     [[nodiscard]] SizeType Size() const { return m_vector.Size(); }
@@ -274,15 +274,9 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 }
 
 template <class Key, class Value>
-bool FlatMap<Key, Value>::Erase(Iterator it)
+auto FlatMap<Key, Value>::Erase(ConstIterator it) -> Iterator
 {
-    if (it == End()) {
-        return false;
-    }
-
-    m_vector.Erase(it);
-
-    return true;
+    return m_vector.Erase(it);
 }
 
 template <class Key, class Value>

@@ -67,10 +67,15 @@ struct RefCountData
         AssertThrow(strong_count == 0);
 #endif
 
-        dtor(value);
-        type_id = TypeID::ForType<void>();
+        void *current_value = value;
         value = nullptr;
+
+        void (*current_dtor)(void *) = dtor;
         dtor = nullptr;
+
+        type_id = TypeID::ForType<void>();
+
+        current_dtor(current_value);
     }
 };
 

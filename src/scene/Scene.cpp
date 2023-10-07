@@ -542,7 +542,7 @@ bool Scene::RemoveLight(ID<Light> id)
         it->second->EnqueueUnbind();
     }
 
-    return m_lights.Erase(it);
+    return m_lights.Erase(it) != m_lights.End();
 }
 
 bool Scene::AddEnvProbe(Handle<EnvProbe> &&env_probe)
@@ -607,7 +607,7 @@ bool Scene::RemoveEnvProbe(ID<EnvProbe> id)
         it->second->EnqueueUnbind();
     }
 
-    return m_env_probes.Erase(it);
+    return m_env_probes.Erase(it) != m_env_probes.End();
 }
 
 void Scene::ForceUpdate()

@@ -73,11 +73,14 @@ public:
     ByteBuffer(ByteBuffer &&other) noexcept
         : m_internal(std::move(other.m_internal))
     {
+        other.m_internal.Set<InternalArray>({ });
     }
 
     ByteBuffer &operator=(ByteBuffer &&other) noexcept
     {
         m_internal = std::move(other.m_internal);
+
+        other.m_internal.Set<InternalArray>({ });
 
         return *this;
     }
@@ -255,6 +258,10 @@ public:
     
     void SetSize(SizeType count)
     {
+        if (count == Size()) {
+            return;
+        }
+
         if (count > InternalArray::num_inline_elements) {
             m_internal.Set(RefCountedPtr<InternalArray>(new InternalArray()));
 

@@ -15,6 +15,9 @@ class RTCClient;
 class RTCClientList
 {
 public:
+    using Iterator = typename FlatMap<String, RC<RTCClient>>::Iterator;
+    using ConstIterator = typename FlatMap<String, RC<RTCClient>>::ConstIterator;
+
     RTCClientList() = default;
     RTCClientList(const RTCClientList &other) = delete;
     RTCClientList &operator=(const RTCClientList &other) = delete;
@@ -26,6 +29,11 @@ public:
     void Remove(String id);
     Optional<RC<RTCClient>> Get(const String &id) const;
     Bool Has(const String &id) const;
+
+    HYP_DEF_STL_BEGIN_END(
+        m_clients.Begin(),
+        m_clients.End()
+    )
 
 private:
     mutable std::mutex m_mutex;
