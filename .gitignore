@@ -295,5 +295,4 @@ project/**/*
 xcode_project/**/*
 CMakeFiles/**/*
 
-glslang/**/*
-zlib/**/*
+submodules/**/*

@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.5)
 
 set(BUILD_NAME hyperion)
 
-#set(VCPKG_ROOT "$ENV{VKPKG_INSTALLED_DIR}/..")
-#set(vcpkg_path "$ENV{VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
+set(vcpkg_path "$ENV{VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
 #set(CMAKE_TOOLCHAIN_FILE ${vcpkg_path} CACHE STRING "CMake toolchain file")
 #set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
-
+#set(VCPKG_LIBRARY_LINKAGE dynamic)
+#set(VCPKG_BUILD_TYPE release)
 project(${BUILD_NAME} CXX C)
 
 if(MSVC)
@@ -29,12 +29,19 @@ endif()
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
-link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib $ENV{VCPKG_INSTALLED_DIR})
+link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib ${VCPKG_INSTALLED_DIR}/x64-windows/lib)
+
+find_package(PkgConfig)
+
+pkg_check_modules(GST gstreamer-1.0>=1.4
+                      gstreamer-sdp-1.0>=1.4
+                      gstreamer-video-1.0>=1.4
+                      gstreamer-app-1.0>=1.4
+                      libpcre2-8)
 
 find_package(Threads REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
-
 find_package(OpenAL)
 
 if(${OpenAL_FOUND})
@@ -58,11 +65,11 @@ if(Bullet_FOUND)
 endif()
 
 # if glslang folder exists, link with it.
-if(EXISTS "${CMAKE_SOURCE_DIR}/glslang/glslang/CMakeLists.txt")
+if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/glslang/glslang/CMakeLists.txt")
     add_definitions(-DHYP_GLSLANG=1)
 
-    include_directories(BEFORE glslang)
-    add_subdirectory(glslang)
+    include_directories(BEFORE submodules/glslang)
+    add_subdirectory(submodules/glslang)
 
     set(COMMON_LIBRARIES
         ${COMMON_LIBRARIES}
@@ -71,11 +78,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/glslang/glslang/CMakeLists.txt")
     )
 endif()
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/zlib/CMakeLists.txt")
+if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt")
     add_definitions(-DHYP_ZLIB=1)
 
-    include_directories(zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
-    add_subdirectory(zlib)
+    include_directories(submodules/zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
+    add_subdirectory(submodules/zlib)
     
     set(COMMON_LIBRARIES
         ${COMMON_LIBRARIES}
@@ -84,15 +91,29 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/zlib/CMakeLists.txt")
 endif()
 
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/libdatachannel/CMakeLists.txt")
+if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/libdatachannel/CMakeLists.txt")
     add_definitions(-DHYP_LIBDATACHANNEL=1)
 
-    include_directories(libdatachannel PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/libdatachannel/include")
-    add_subdirectory(libdatachannel)
+    include_directories(submodules/libdatachannel PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/libdatachannel/include")
+    add_subdirectory(submodules/libdatachannel)
     
     set(COMMON_LIBRARIES
         ${COMMON_LIBRARIES}
         datachannel-static
+    )
+endif()
+
+if(GST_FOUND)
+    add_definitions(-DHYP_GSTREAMER=1)
+
+    include_directories(${GST_INCLUDE_DIRS})
+
+    # target_link_libraries(${BUILD_NAME} PRIVATE ${GST_LIBRARIES})
+
+    
+    set(COMMON_LIBRARIES
+        ${COMMON_LIBRARIES}
+        ${GST_LIBRARIES}
     )
 endif()
 
@@ -124,8 +145,7 @@ set(COMMON_LIBRARIES
 )
 
 
-
-target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
+target_link_libraries(${BUILD_NAME} PRIVATE ${COMMON_LIBRARIES})
 
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 

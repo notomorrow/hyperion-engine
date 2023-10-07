@@ -436,7 +436,9 @@ const HashBucket<KeyType, ValueType> *HashMap<KeyType, ValueType>::GetBucketForH
 template <class KeyType, class ValueType>
 void HashMap<KeyType, ValueType>::CheckAndRebuildBuckets()
 {
-#if 0 // TODO
+    // Check load factor, if currently load factor is greater than `load_factor`,
+    // Rehash.
+#if 0
     SizeType total_elements = 0;
 
     for (const auto &bucket : m_buckets) {
@@ -449,11 +451,13 @@ void HashMap<KeyType, ValueType>::CheckAndRebuildBuckets()
 
     if (current_load_factor > load_factor) {
         const Double load_factor_div = current_load_factor / load_factor;
-
-
+        
         Array<HashBucket<KeyType, ValueType>> new_buckets;
+        new_buckets.Resize(SizeType(Double(m_buckets.Size()) * load_factor_div));
+
+
     }
-#endif
+#endif 
 }
 
 template <class KeyType, class ValueType>

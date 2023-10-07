@@ -6,12 +6,53 @@
 
 namespace hyperion::v2 {
 
+class RTCStreamVideoEncoder
+{
+public:
+    RTCStreamVideoEncoder()                                                     = default;
+    RTCStreamVideoEncoder(const RTCStreamVideoEncoder &other)                   = delete;
+    RTCStreamVideoEncoder &operator=(const RTCStreamVideoEncoder &other)        = delete;
+    RTCStreamVideoEncoder(RTCStreamVideoEncoder &&other) noexcept               = default;
+    RTCStreamVideoEncoder &operator=(RTCStreamVideoEncoder &&other) noexcept    = default;
+    virtual ~RTCStreamVideoEncoder()                                            = default;
+};
+
+class NullRTCStreamVideoEncoder : public RTCStreamVideoEncoder
+{
+public:
+    NullRTCStreamVideoEncoder()                                                         = default;
+    NullRTCStreamVideoEncoder(const NullRTCStreamVideoEncoder &other)                   = delete;
+    NullRTCStreamVideoEncoder &operator=(const NullRTCStreamVideoEncoder &other)        = delete;
+    NullRTCStreamVideoEncoder(NullRTCStreamVideoEncoder &&other) noexcept               = default;
+    NullRTCStreamVideoEncoder &operator=(NullRTCStreamVideoEncoder &&other) noexcept    = default;
+    virtual ~NullRTCStreamVideoEncoder()                                                = default;
+};
+
+#ifdef HYP_GSTREAMER
+
+class GStreamerRTCStreamVideoEncoder : public RTCStreamVideoEncoder
+{
+public:
+    GStreamerRTCStreamVideoEncoder()                                                            = default;
+    GStreamerRTCStreamVideoEncoder(const GStreamerRTCStreamVideoEncoder &other)                 = delete;
+    GStreamerRTCStreamVideoEncoder &operator=(const GStreamerRTCStreamVideoEncoder &other)      = delete;
+    GStreamerRTCStreamVideoEncoder(GStreamerRTCStreamVideoEncoder &&other) noexcept             = default;
+    GStreamerRTCStreamVideoEncoder &operator=(GStreamerRTCStreamVideoEncoder &&other) noexcept  = default;
+    virtual ~GStreamerRTCStreamVideoEncoder()                                                   = default;
+};
+
+#else
+
+using GStreamerRTCStreamVideoEncoder = NullRTCStreamVideoEncoder;
+
+#endif
+
+
 enum RTCStreamType
 {
     RTC_STREAM_TYPE_UNKNOWN = 0,
     RTC_STREAM_TYPE_AUDIO,
     RTC_STREAM_TYPE_VIDEO
-};
 };
 
 class RTCStream
