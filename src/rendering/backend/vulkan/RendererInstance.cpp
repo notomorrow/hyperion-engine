@@ -7,6 +7,8 @@
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/lib/DynArray.hpp>
+
 #include <system/Debug.hpp>
 #include <system/vma/VmaUsage.hpp>
 #include <util/Defines.hpp>
@@ -32,13 +34,19 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
     );
 }
 
-Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
+// Returns supported vulkan debug layers
+static Array<const char *> CheckValidationLayerSupport(const Array<const char *> &requested_layers)
 {
-    uint32_t layers_count;
+    Array<const char *> supported_layers;
+    supported_layers.Reserve(requested_layers.Size());
+
+    UInt32 layers_count;
     vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
 
-    std::vector<VkLayerProperties> available_layers(layers_count);
-    vkEnumerateInstanceLayerProperties(&layers_count, available_layers.data());
+    Array<VkLayerProperties> available_layers;
+    available_layers.Resize(layers_count);
+
+    vkEnumerateInstanceLayerProperties(&layers_count, available_layers.Data());
 
     for (const char *request : requested_layers) {
         bool layer_found = false;
@@ -50,24 +58,24 @@ Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &re
             }
         }
 
-        if (!layer_found) {
+        if (layer_found) {
+            supported_layers.PushBack(request);
+        } else {
             DebugLog(LogType::Warn, "Validation layer %s is unavailable!\n", request);
-
-            return {Result::RENDERER_ERR, "Requested validation layer was unavailable; check debug log for the name of the requested layer"};
         }
     }
 
-    HYPERION_RETURN_OK;
+    return supported_layers;
 }
 
 ExtensionMap Instance::GetExtensionMap()
 {
     return {
 #if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
-        {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false},
-        {VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false},
-        {VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false},
-        {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, false},
+        { VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false },
+        { VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false },
+        { VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false },
+        { VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, false },
 #endif
         { VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, true },
         { VK_KHR_SPIRV_1_4_EXTENSION_NAME, false },
@@ -77,9 +85,9 @@ ExtensionMap Instance::GetExtensionMap()
     };
 }
 
-void Instance::SetValidationLayers(std::vector<const char *> _layers)
+void Instance::SetValidationLayers(Array<const char *> validation_layers)
 {
-    this->validation_layers = _layers;
+    this->validation_layers = std::move(validation_layers);
 }
 
 #ifndef HYPERION_BUILD_RELEASE
@@ -135,16 +143,16 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 
 Result Instance::SetupDebug()
 {
-    static const std::vector<const char *> layers {
+    static const Array<const char *> layers {
         "VK_LAYER_KHRONOS_validation"
 #if !defined(HYP_APPLE) || !HYP_APPLE
         , "VK_LAYER_LUNARG_monitor"
 #endif
     };
 
-    HYPERION_BUBBLE_ERRORS(CheckValidationLayerSupport(layers));
+    Array<const char *> supported_layers = CheckValidationLayerSupport(layers);
 
-    SetValidationLayers(layers);
+    SetValidationLayers(std::move(supported_layers));
 
     HYPERION_RETURN_OK;
 }
@@ -216,10 +224,8 @@ Result Instance::Initialize(bool load_debug_layers)
 
     VkInstanceCreateInfo create_info { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     create_info.pApplicationInfo = &app_info;
-
-    // Setup validation layers
-    create_info.enabledLayerCount = uint32_t(this->validation_layers.size());
-    create_info.ppEnabledLayerNames = this->validation_layers.data();
+    create_info.enabledLayerCount   = UInt32(validation_layers.Size());
+    create_info.ppEnabledLayerNames = validation_layers.Data();
     create_info.flags = 0;
 
 #if VK_HEADER_VERSION >= 216
@@ -234,7 +240,6 @@ Result Instance::Initialize(bool load_debug_layers)
     if (!m_application->GetVkExtensions(extension_names)) {
         return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
     }
-
 
 #ifndef HYPERION_BUILD_RELEASE
     extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

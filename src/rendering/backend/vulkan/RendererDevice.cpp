@@ -24,9 +24,6 @@ Device::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
 {
     this->features->SetPhysicalDevice(physical);
     this->queue_family_indices = FindQueueFamilies(this->physical, this->surface);
-
-    static int x = 0;
-    DebugLog(LogType::Debug, "Created Device [%d]\n", x++);
 }
 
 Device::~Device()
@@ -374,14 +371,24 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
         }
     );
 
+    DebugLog(LogType::RenDebug, "Required vulkan extensions:\n");
+
+    DebugLog(LogType::RenDebug, "-----\n");
+
+    for (const char *str : required_extensions_linear) {
+        DebugLog(LogType::RenDebug, "\t%s\n", str);
+    }
+
+    DebugLog(LogType::RenDebug, "-----\n");
+
     VkDeviceCreateInfo create_info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     create_info.pQueueCreateInfos       = queue_create_info_vec.data();
-    create_info.queueCreateInfoCount    = uint32_t(queue_create_info_vec.size());
+    create_info.queueCreateInfoCount    = UInt32(queue_create_info_vec.size());
     // Setup Device extensions
-    create_info.enabledExtensionCount   = uint32_t(required_extensions_linear.size());
+    create_info.enabledExtensionCount   = UInt32(required_extensions_linear.size());
     create_info.ppEnabledExtensionNames = required_extensions_linear.data();
     // Setup Device Features
-    create_info.pEnabledFeatures        = &features->GetPhysicalDeviceFeatures();
+    //create_info.pEnabledFeatures        = &features->GetPhysicalDeviceFeatures();
     create_info.pNext                   = &features->GetPhysicalDeviceFeatures2();
 
     HYPERION_VK_CHECK_MSG(

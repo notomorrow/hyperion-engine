@@ -29,6 +29,25 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
 
         AssertThrow(m_features.samplerAnisotropy);
 
+        auto AddToFeaturesChain = [this](auto next_feature)
+        {
+            using T = decltype(next_feature);
+
+            VkBaseOutStructure *chain_top = m_features_chain.Empty()
+                ? nullptr
+                : m_features_chain.Back().Get();
+
+            m_features_chain.PushBack(UniquePtr<VkBaseOutStructure>::Construct(new T(next_feature)));
+
+            if (chain_top != nullptr) {
+                chain_top->pNext = m_features_chain.Back().Get();
+            }
+
+            chain_top = m_features_chain.Back().Get();
+        };
+
+        // features
+
 #if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
         m_buffer_device_address_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
@@ -110,7 +129,9 @@ void Features::LoadDynamicFunctions(Device *device)
 {
 #define HYP_LOAD_FN(name) do { \
         auto proc_addr = vkGetDeviceProcAddr(device->GetDevice(), #name); \
-        AssertThrowMsg(proc_addr != nullptr, "Failed to load dynamic function " #name "\n"); \
+        if (proc_addr == nullptr) { \
+            DebugLog(LogType::Error, "Failed to load dynamic function " #name "\n"); \
+        } \
         dyn_functions.name = reinterpret_cast<PFN_##name>(proc_addr); \
     } while (0)
 

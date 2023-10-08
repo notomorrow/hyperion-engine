@@ -1090,6 +1090,7 @@ void VM::InvokeNow(
 )
 {
     ExecutionThread *thread = m_state.MAIN_THREAD;
+    
     const SizeType position_before = bs->Position();
     const UInt original_function_depth = thread->m_func_depth;
     const SizeType stack_size_before = thread->GetStack().GetStackPointer();

@@ -151,7 +151,8 @@ public:
                 m_buffer
             );
 
-            attachment->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, previous_resource_state);
+            
+            attachment->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
             m_buffer->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
         } else {
             DebugLog(LogType::Error, "Could not get attachment\n");
@@ -571,6 +572,8 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 {
     for (auto it = m_asset_batches.Begin(); it != m_asset_batches.End();) {
         if (it->second->IsCompleted()) {
+            DebugLog(LogType::Debug, "Handle completed asset batch %s\n", it->first.LookupString().Data());
+
             HandleCompletedAssetBatch(it->first, it->second);
 
             it = m_asset_batches.Erase(it);

@@ -232,7 +232,7 @@
         #endif
     #endif
 #else
-    #define HYP_FEATURES_ENABLE_RAYTRACING 1
+    #define HYP_FEATURES_ENABLE_RAYTRACING 0
     #define HYP_FEATURES_BINDLESS_TEXTURES 1
 
     #if defined(HYP_VULKAN) && HYP_VULKAN

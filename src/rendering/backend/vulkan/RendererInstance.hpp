@@ -32,7 +32,6 @@ namespace renderer {
 
 class Instance
 {
-    static Result CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
     static ExtensionMap GetExtensionMap();
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
@@ -79,7 +78,7 @@ public:
 
     helpers::SingleTimeCommands GetSingleTimeCommands();
 
-    void SetValidationLayers(std::vector<const char *> _layers);
+    void SetValidationLayers(Array<const char *> validation_layers);
 
     Device *GetDevice();
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
@@ -112,7 +111,7 @@ private:
         queue_present,
         queue_compute;
     
-    std::vector<const char *> validation_layers;
+    Array<const char *> validation_layers;
 
     StagingBufferPool m_staging_buffer_pool;
 

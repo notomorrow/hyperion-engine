@@ -6,6 +6,9 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
+#include <core/lib/UniquePtr.hpp>
+#include <core/lib/DynArray.hpp>
+
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -447,6 +450,8 @@ private:
     VkPhysicalDeviceProperties2 m_properties2;
 
     VkPhysicalDeviceMemoryProperties m_memory_properties;
+
+    Array<UniquePtr<VkBaseOutStructure>> m_features_chain;
 
     bool m_is_raytracing_disabled { false };
 };

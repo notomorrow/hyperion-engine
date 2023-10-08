@@ -404,11 +404,9 @@ void Engine::PrepareFinalPass()
 
         ++iteration;
     }
-
-    callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list_container.AddFramebuffersToPipelines();
-        InitObject(m_root_pipeline);
-    });
+    
+    m_render_list_container.AddFramebuffersToPipelines();
+    InitObject(m_root_pipeline);
 }
 
 void Engine::Initialize(RC<Application> application)

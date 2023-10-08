@@ -120,7 +120,7 @@ class IndirectDrawState;
 class Engine
 {
 #ifdef HYP_DEBUG_MODE
-    static constexpr bool use_debug_layers = false;
+    static constexpr bool use_debug_layers = true;
 #else
     static constexpr bool use_debug_layers = false;
 #endif

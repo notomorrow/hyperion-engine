@@ -103,7 +103,10 @@ LibDataChannelRTCServer::LibDataChannelRTCServer(RTCServerParams params)
 {
 }
 
-LibDataChannelRTCServer::~LibDataChannelRTCServer() = default;
+LibDataChannelRTCServer::~LibDataChannelRTCServer()
+{
+    Stop();
+}
 
 void LibDataChannelRTCServer::Start()
 {
@@ -124,12 +127,15 @@ void LibDataChannelRTCServer::Start()
         });
 
         m_websocket->onClosed([this]() {
-            Stop();
+            // Stupid test
+            AssertThrow(this != nullptr);
 
             m_callbacks.Trigger(RTCServerCallbackMessages::SERVER_STOPPED, {
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
             });
+
+            Stop();
         });
 
         m_websocket->onError([this](const std::string &error) {
@@ -171,23 +177,22 @@ void LibDataChannelRTCServer::Start()
 
 void LibDataChannelRTCServer::Stop()
 {
-    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::Stop() called, but server is not running!");
+    if (m_thread != nullptr) {
+        if (m_websocket != nullptr) {
+            m_thread->GetScheduler().Enqueue([this]
+            {
+                for (const auto &client : m_client_list) {
+                    client.second->Disconnect();
+                }
 
-    if (m_websocket != nullptr) {
-        m_thread->GetScheduler().Enqueue([this]
-        {
-            for (const auto &client : m_client_list) {
-                client.second->Disconnect();
-            }
+                if (m_websocket->isOpen()) {
+                    m_websocket->close();
+                }
+            });
+        }
 
-            if (m_websocket->isOpen()) {
-                m_websocket->close();
-            }
-        });
+        // Parent destructor will flush thread tasks and join
     }
-
-    m_thread->Stop();
-    m_thread->Join();
 
     m_websocket.Reset();
 }

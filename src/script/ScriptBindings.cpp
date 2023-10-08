@@ -510,7 +510,7 @@ static HYP_SCRIPT_FUNCTION(VM_ReadStackVar)
 
     const UInt32 index = GetArgument<0, UInt32>(params);
 
-    const auto &stk = params.handler->state->MAIN_THREAD->m_stack;
+    const auto &stk = params.handler->thread->m_stack;
 
     if (index >= stk.GetStackPointer()) {
         params.handler->state->ThrowException(params.handler->thread, vm::Exception("Stack index out of bounds"));
