@@ -295,4 +295,4 @@ project/**/*
 xcode_project/**/*
 CMakeFiles/**/*
 
-submodules/**/*
+submodules/**/**/*

@@ -1,9 +1,9 @@
-[submodule "glslang"]
+[submodule "submodules/glslang"]
 	path = submodules/glslang
 	url = https://github.com/KhronosGroup/glslang
-[submodule "zlib"]
-	path = submodules/zlib
-	url = https://github.com/madler/zlib
-[submodule "libdatachannel"]
+[submodule "submodules/libdatachannel"]
 	path = submodules/libdatachannel
 	url = https://github.com/paullouisageneau/libdatachannel
+[submodule "submodules/zlib"]
+	path = submodules/zlib
+	url = https://github.com/madler/zlib
