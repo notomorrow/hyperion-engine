@@ -228,6 +228,13 @@ void SampleStreamer::InitGame()
         }
     ));
 
+    m_rtc_stream = m_rtc_instance->CreateStream(
+        RTCStreamType::RTC_STREAM_TYPE_VIDEO,
+        UniquePtr<RTCStreamEncoder>(new GStreamerRTCStreamVideoEncoder())
+    );
+
+    m_rtc_stream->Start();
+
     AssertThrow(m_rtc_instance->GetServer() != nullptr);
 
     if (const RC<RTCServer> &server = m_rtc_instance->GetServer()) {
@@ -581,6 +588,9 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
         if (message_type == "request") {
             RC<RTCClient> client = m_rtc_instance->GetServer()->CreateClient(id);
             client->Connect();
+            
+            client->AddTrack(m_rtc_instance->CreateTrack(RTCTrackType::RTC_TRACK_TYPE_VIDEO));
+
         } else if (message_type == "answer") {
             if (const Optional<RC<RTCClient>> client = m_rtc_instance->GetServer()->GetClientList().Get(id)) {
                 client.Get()->SetRemoteDescription("answer", message["sdp"].ToString());
@@ -588,6 +598,26 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
                 DebugLog(LogType::Warn, "Client with ID %s not found\n", id.Data());
             }
         }
+    }
+
+    // Just a test -- will optimize by doing this on another thread.
+    {
+        Array<RC<RTCTrack>> tracks;
+
+        for (const auto &client : m_rtc_instance->GetServer()->GetClientList()) {
+            if (client.second->GetState() != RTC_CLIENT_STATE_CONNECTED) {
+                continue;
+            }
+
+            for (const auto &track : client.second->GetTracks()) {
+                tracks.PushBack(track);
+            }
+        }
+        
+        RTCStreamDestination dest;
+        dest.tracks = std::move(tracks);
+
+        m_rtc_stream->SendSample(dest);
     }
 
     m_ui.Update(delta);
@@ -620,6 +650,9 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
         }
         
 
+        m_rtc_stream->GetEncoder()->PushData(std::move(m_screen_buffer));
+        
+#if 0
         m_counter++;
 
         if (m_counter % 100 != 99) {
@@ -627,6 +660,7 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
         }
 
         const Handle<Texture> texture = framebuffer_capture->GetTexture();
+
 
         // Fire and forget
         TaskSystem::GetInstance().ScheduleTask([screen_buffer = std::move(m_screen_buffer), format = texture->GetFormat(), extent = texture->GetExtent()]() mutable
@@ -653,6 +687,8 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
 
             bitmap.Write("screencap.bmp");
         }, THREAD_POOL_BACKGROUND);
+
+#endif
     }
 }
 

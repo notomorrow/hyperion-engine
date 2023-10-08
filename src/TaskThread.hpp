@@ -33,12 +33,12 @@ public:
     {
     }
 
-    virtual ~TaskThread() = default;
+    virtual ~TaskThread() override = default;
 
     HYP_FORCE_INLINE bool IsRunning() const
         { return m_is_running.Get(MemoryOrder::RELAXED); }
 
-    HYP_FORCE_INLINE void Stop()
+    virtual void Stop()
         { m_is_running.Set(false, MemoryOrder::RELAXED); }
 
     HYP_FORCE_INLINE bool IsFree() const

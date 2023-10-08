@@ -31,6 +31,7 @@ private:
     void HandleCameraMovement(GameCounter::TickUnit delta);
 
     UniquePtr<RTCInstance>              m_rtc_instance;
+    RC<RTCStream>                       m_rtc_stream;
     UniquePtr<WebSocketMessageQueue>    m_message_queue;
 
     Handle<Texture>                     m_texture;

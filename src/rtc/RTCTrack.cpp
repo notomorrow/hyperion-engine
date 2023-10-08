@@ -1,0 +1,90 @@
+#include <rtc/RTCTrack.hpp>
+#include <rtc/RTCClient.hpp>
+
+#ifdef HYP_LIBDATACHANNEL
+#include <rtc/description.hpp>
+#include <rtc/peerconnection.hpp>
+#include <rtc/rtppacketizationconfig.hpp>
+#include <rtc/h264rtppacketizer.hpp>
+#include <rtc/h264packetizationhandler.hpp>
+#include <rtc/rtcpsrreporter.hpp>
+#include <rtc/rtcpnackresponder.hpp>
+#endif // HYP_LIBDATACHANNEL
+
+namespace hyperion::v2 {
+
+void NullRTCTrack::SendData(const ByteBuffer &data)
+{
+}
+
+void NullRTCTrack::PrepareTrack(RTCClient *client)
+{
+}
+
+
+#ifdef HYP_LIBDATACHANNEL
+
+void LibDataChannelRTCTrack::PrepareTrack(RTCClient *client)
+{
+    AssertThrow(client != nullptr);
+
+    const auto *lib_data_channel_client = dynamic_cast<LibDataChannelRTCClient *>(client);
+    AssertThrowMsg(lib_data_channel_client != nullptr,
+        "client must be a LibDataChannelRTCClient instance to use on LibDataChannelRTCTrack");
+
+    switch (m_track_type) {
+    case RTC_TRACK_TYPE_AUDIO:
+        break;
+    case RTC_TRACK_TYPE_VIDEO: {
+        auto video_description = rtc::Description::Video();
+        video_description.addH264Codec(102);
+        video_description.addSSRC(1, "video-stream", "stream1");
+
+        m_track = lib_data_channel_client->m_peer_connection->addTrack(video_description);
+
+        auto rtp_config = std::make_shared<rtc::RtpPacketizationConfig>(1, "video-stream", 102, rtc::H264RtpPacketizer::defaultClockRate);
+        auto packetizer = std::make_shared<rtc::H264RtpPacketizer>(rtc::NalUnit::Separator::Length, rtp_config);
+        auto h264_handler = std::make_shared<rtc::H264PacketizationHandler>(packetizer);
+
+        m_rtcp_sr_reporter = std::make_shared<rtc::RtcpSrReporter>(rtp_config);
+        h264_handler->addToChain(m_rtcp_sr_reporter);
+
+        auto nack_responder = std::make_shared<rtc::RtcpNackResponder>();
+        h264_handler->addToChain(nack_responder);
+
+        m_track->setMediaHandler(h264_handler);
+        m_track->onOpen([this]
+        {
+            DebugLog(LogType::Debug, "Video channel opened\n");
+        });
+
+        break;
+    }
+
+    default:
+        AssertThrowMsg(false, "Invalid track type");
+    }
+}
+
+
+void LibDataChannelRTCTrack::SendData(const ByteBuffer &data)
+{
+    if (!m_track) {
+        DebugLog(LogType::Warn, "Track in undefined state, not sending data\n");
+
+        return;
+    }
+
+    if (!m_track->isOpen()) {
+        DebugLog(LogType::Warn, "Track closed, not sending data\n");
+
+        return;
+    }
+
+    m_track->send(reinterpret_cast<const rtc::byte *>(data.Data()), data.Size());
+}
+
+
+#endif // HYP_LIBDATACHANNEL
+
+}  // namespace hyperion::v2

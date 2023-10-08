@@ -9,6 +9,8 @@ set(vcpkg_path "$ENV{VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
 #set(VCPKG_BUILD_TYPE release)
 project(${BUILD_NAME} CXX C)
 
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 if(MSVC)
     message(STATUS "Building on MSVC, checking toolchain is set (should be set to `<vcpkg root path>/scripts/buildsystems/vcpkg.cmake`)")
 
@@ -29,7 +31,7 @@ endif()
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
-link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib ${VCPKG_INSTALLED_DIR}/x64-windows/lib)
+link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib ${VCPKG_INSTALLED_DIR}/x64-windows/lib "Z:/gstreamer/1.0/msvc_x86_64/lib")
 
 find_package(PkgConfig)
 
@@ -105,6 +107,7 @@ endif()
 
 if(GST_FOUND)
     add_definitions(-DHYP_GSTREAMER=1)
+    add_definitions(-DHYP_GSTREAMER_BIN_DIR="Z:/gstreamer/1.0/msvc_x86_64/bin")
 
     include_directories(${GST_INCLUDE_DIRS})
 

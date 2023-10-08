@@ -1,20 +1,39 @@
-#include <rtc/RTCClient.hpp>
+#include <rtc/RTCStream.hpp>
 #include <rtc/RTCServer.hpp>
+#include <rtc/RTCStreamEncoder.hpp>
+#include <rtc/RTCTrack.hpp>
 
-#include <util/json/JSON.hpp>
-
-#ifdef HYP_GSTREAMER
-
-#include <gst/gst.h>
-
-#endif
+#include <TaskThread.hpp>
 
 namespace hyperion::v2 {
 
-#ifdef HYP_GSTREAMER
+void RTCStream::Start()
+{
+    if (m_encoder) {
+        m_encoder->Start();
+    }
+}
 
+void RTCStream::Stop()
+{
+    if (m_encoder) {
+        m_encoder->Stop();
+    }
+}
 
+void RTCStream::SendSample(const RTCStreamDestination &destination)
+{
+    if (!m_encoder) {
+        DebugLog(LogType::Warn, "SendSample() called but encoder is not set\n");
 
-#endif // HYP_GSTREAMER
+        return;
+    }
+
+    while (auto sample = m_encoder->PullData()) {
+        for (const RC<RTCTrack> &track : destination.tracks) {
+            track->SendData(sample.Get());
+        }
+    }
+}
 
 }  // namespace hyperion::v2

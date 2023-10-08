@@ -3,8 +3,12 @@
 
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCServer.hpp>
+#include <rtc/RTCTrack.hpp>
+#include <rtc/RTCStream.hpp>
+#include <rtc/RTCStreamEncoder.hpp>
 
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/UniquePtr.hpp>
 
 namespace hyperion::v2 {
 
@@ -20,6 +24,9 @@ public:
 
     const RC<RTCServer> &GetServer() const
         { return m_server; }
+
+    RC<RTCTrack> CreateTrack(RTCTrackType track_type);
+    RC<RTCStream> CreateStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder> &&encoder);
 
 private:
     RC<RTCServer> m_server;

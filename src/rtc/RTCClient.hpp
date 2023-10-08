@@ -18,13 +18,27 @@ namespace hyperion::v2 {
 
 class RTCServer;
 class RTCStream;
+class RTCTrack;
+
+#ifdef HYP_LIBDATACHANNEL
+class LibDataChannelRTCTrack;
+#endif // HYP_LIBDATACHANNEL
+
+enum RTCClientState
+{
+    RTC_CLIENT_STATE_UNKNOWN = 0,
+    RTC_CLIENT_STATE_CONNECTING,
+    RTC_CLIENT_STATE_CONNECTED,
+    RTC_CLIENT_STATE_DISCONNECTED
+};
 
 class RTCClient
 {
 public:
     RTCClient(String id, RTCServer *server)
         : m_id(std::move(id)),
-          m_server(server)
+          m_server(server),
+          m_state(RTC_CLIENT_STATE_DISCONNECTED)
     {
     }
 
@@ -34,16 +48,26 @@ public:
     RTCClient &operator=(RTCClient &&other) noexcept = default;
     virtual ~RTCClient() = default;
 
+    RTCClientState GetState() const
+        { return m_state; }
+
+    const Array<RC<RTCTrack>> &GetTracks() const
+        { return m_tracks; }
+
     virtual void Connect() = 0;
     virtual void Disconnect() = 0;
 
     virtual void SetRemoteDescription(const String &type, const String &sdp) = 0;
 
-    virtual void AddStream(RC<RTCStream> stream) = 0;
+    virtual void AddTrack(RC<RTCTrack> track);
 
 protected:
-    String      m_id;
-    RTCServer   *m_server;
+    virtual void PrepareTracks();
+
+    String              m_id;
+    RTCServer           *m_server;
+    RTCClientState      m_state;
+    Array<RC<RTCTrack>> m_tracks;
 };
 
 class NullRTCClient : public RTCClient
@@ -60,14 +84,14 @@ public:
     virtual void Disconnect() override;
 
     virtual void SetRemoteDescription(const String &type, const String &sdp) override;
-
-    virtual void AddStream(RC<RTCStream> stream) override;
 };
 
 #ifdef HYP_LIBDATACHANNEL
 
 class LibDataChannelRTCClient : public RTCClient
 {
+    friend class LibDataChannelRTCTrack;
+
 public:
     LibDataChannelRTCClient(String id, RTCServer *server);
     LibDataChannelRTCClient(const LibDataChannelRTCClient &other) = delete;
@@ -80,8 +104,6 @@ public:
     virtual void Disconnect() override;
 
     virtual void SetRemoteDescription(const String &type, const String &sdp) override;
-
-    virtual void AddStream(RC<RTCStream> stream) override;
 
 private:
     RC<rtc::PeerConnection>             m_peer_connection;

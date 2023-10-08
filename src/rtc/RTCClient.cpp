@@ -1,16 +1,36 @@
 #include <rtc/RTCClient.hpp>
 #include <rtc/RTCServer.hpp>
+#include <rtc/RTCTrack.hpp>
 
 #include <util/json/JSON.hpp>
 
-#include "rtc/configuration.hpp"
-#include "rtc/peerconnection.hpp"
-
 #ifdef HYP_LIBDATACHANNEL
+
+#include <rtc/configuration.hpp>
+#include <rtc/peerconnection.hpp>
+
 #include <variant>
 #endif // HYP_LIBDATACHANNEL
 
 namespace hyperion::v2 {
+
+void RTCClient::AddTrack(RC<RTCTrack> track)
+{
+    if (m_state == RTC_CLIENT_STATE_CONNECTED || m_state == RTC_CLIENT_STATE_CONNECTING) {
+        // Already connected/connecting, prepare the track immediately
+        track->PrepareTrack(this);
+    }
+
+    m_tracks.PushBack(std::move(track));
+}
+
+void RTCClient::PrepareTracks()
+{
+    for (const RC<RTCTrack> &track : m_tracks) {
+        track->PrepareTrack(this);
+    }
+}
+
 
 NullRTCClient::NullRTCClient(String id, RTCServer *server)
     : RTCClient(std::move(id), server)
@@ -26,10 +46,6 @@ void NullRTCClient::Disconnect()
 }
 
 void NullRTCClient::SetRemoteDescription(const String &type, const String &sdp)
-{
-}
-
-void NullRTCClient::AddStream(RC<RTCStream> stream)
 {
 }
 
@@ -56,20 +72,27 @@ void LibDataChannelRTCClient::Connect()
         switch (state) {
         case rtc::PeerConnection::State::Disconnected:
             DebugLog(LogType::Debug, "Client with ID %s disconnected\n", id.Data());
-
+            
+            m_state = RTC_CLIENT_STATE_DISCONNECTED;
             m_server->GetClientList().Remove(id);
 
             break;
         case rtc::PeerConnection::State::Failed:
             DebugLog(LogType::Debug, "Client with ID %s connection failed\n", id.Data());
-
+            
+            m_state = RTC_CLIENT_STATE_DISCONNECTED;
             m_server->GetClientList().Remove(id);
 
             break;
         case rtc::PeerConnection::State::Closed:
             DebugLog(LogType::Debug, "Client with ID %s connection closed\n", id.Data());
-
+            
+            m_state = RTC_CLIENT_STATE_DISCONNECTED;
             m_server->GetClientList().Remove(id);
+
+            break;
+        case rtc::PeerConnection::State::Connected:
+            m_state = RTC_CLIENT_STATE_CONNECTED;
 
             break;
         default:
@@ -121,6 +144,10 @@ void LibDataChannelRTCClient::Connect()
     m_data_channel = std::move(data_channel);
 
     m_peer_connection = std::move(peer_connection);
+
+    m_state = RTC_CLIENT_STATE_CONNECTING;
+
+    PrepareTracks();
 }
 
 void LibDataChannelRTCClient::Disconnect()
@@ -130,6 +157,8 @@ void LibDataChannelRTCClient::Disconnect()
     }
 
     m_peer_connection->close();
+
+    m_state = RTC_CLIENT_STATE_DISCONNECTED;
 }
 
 
@@ -138,15 +167,6 @@ void LibDataChannelRTCClient::SetRemoteDescription(const String &type, const Str
     AssertThrow(m_peer_connection != nullptr);
 
     m_peer_connection->setRemoteDescription(rtc::Description(sdp.Data(), type.Data()));
-}
-
-void LibDataChannelRTCClient::AddStream(RC<RTCStream> stream)
-{
-    AssertThrow(stream != nullptr);
-    
-    AssertThrow(m_peer_connection != nullptr);
-
-    // @TODO
 }
 
 #endif // HYP_LIBDATACHANNEL

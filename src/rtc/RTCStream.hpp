@@ -2,51 +2,15 @@
 #define HYPERION_V2_RTC_STREAM_HPP
 
 #include <core/lib/String.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/ByteBuffer.hpp>
+#include <core/lib/UniquePtr.hpp>
 
 namespace hyperion::v2 {
 
-class RTCStreamVideoEncoder
-{
-public:
-    RTCStreamVideoEncoder()                                                     = default;
-    RTCStreamVideoEncoder(const RTCStreamVideoEncoder &other)                   = delete;
-    RTCStreamVideoEncoder &operator=(const RTCStreamVideoEncoder &other)        = delete;
-    RTCStreamVideoEncoder(RTCStreamVideoEncoder &&other) noexcept               = default;
-    RTCStreamVideoEncoder &operator=(RTCStreamVideoEncoder &&other) noexcept    = default;
-    virtual ~RTCStreamVideoEncoder()                                            = default;
-};
+class TaskThread;
 
-class NullRTCStreamVideoEncoder : public RTCStreamVideoEncoder
-{
-public:
-    NullRTCStreamVideoEncoder()                                                         = default;
-    NullRTCStreamVideoEncoder(const NullRTCStreamVideoEncoder &other)                   = delete;
-    NullRTCStreamVideoEncoder &operator=(const NullRTCStreamVideoEncoder &other)        = delete;
-    NullRTCStreamVideoEncoder(NullRTCStreamVideoEncoder &&other) noexcept               = default;
-    NullRTCStreamVideoEncoder &operator=(NullRTCStreamVideoEncoder &&other) noexcept    = default;
-    virtual ~NullRTCStreamVideoEncoder()                                                = default;
-};
-
-#ifdef HYP_GSTREAMER
-
-class GStreamerRTCStreamVideoEncoder : public RTCStreamVideoEncoder
-{
-public:
-    GStreamerRTCStreamVideoEncoder()                                                            = default;
-    GStreamerRTCStreamVideoEncoder(const GStreamerRTCStreamVideoEncoder &other)                 = delete;
-    GStreamerRTCStreamVideoEncoder &operator=(const GStreamerRTCStreamVideoEncoder &other)      = delete;
-    GStreamerRTCStreamVideoEncoder(GStreamerRTCStreamVideoEncoder &&other) noexcept             = default;
-    GStreamerRTCStreamVideoEncoder &operator=(GStreamerRTCStreamVideoEncoder &&other) noexcept  = default;
-    virtual ~GStreamerRTCStreamVideoEncoder()                                                   = default;
-};
-
-#else
-
-using GStreamerRTCStreamVideoEncoder = NullRTCStreamVideoEncoder;
-
-#endif
-
+class RTCStreamEncoder;
+class RTCTrack;
 
 enum RTCStreamType
 {
@@ -55,11 +19,17 @@ enum RTCStreamType
     RTC_STREAM_TYPE_VIDEO
 };
 
+struct RTCStreamDestination
+{
+    Array<RC<RTCTrack>> tracks;
+};
+
 class RTCStream
 {
 public:
-    RTCStream(RTCStreamType stream_type)
-        : m_stream_type(stream_type)
+    RTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder> &&encoder)
+        : m_stream_type(stream_type),
+          m_encoder(std::move(encoder))
     {
     }
 
@@ -72,15 +42,24 @@ public:
     RTCStreamType GetStreamType() const
         { return m_stream_type; }
 
+    const UniquePtr<RTCStreamEncoder> &GetEncoder() const
+        { return m_encoder; }
+
+    virtual void SendSample(const RTCStreamDestination &destination);
+
+    virtual void Start();
+    virtual void Stop();
+
 protected:
-    RTCStreamType m_stream_type;
+    RTCStreamType               m_stream_type;
+    UniquePtr<RTCStreamEncoder> m_encoder;
 };
 
 class NullRTCStream : public RTCStream
 {
 public:
-    NullRTCStream(RTCStreamType stream_type)
-        : RTCStream(stream_type)
+    NullRTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder> &&encoder)
+        : RTCStream(stream_type, std::move(encoder))
     {
     }
 
@@ -96,8 +75,8 @@ public:
 class LibDataChannelRTCStream : public RTCStream
 {
 public:
-    LibDataChannelRTCStream(RTCStreamType stream_type)
-        : RTCStream(stream_type)
+    LibDataChannelRTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder> &&encoder)
+        : RTCStream(stream_type, std::move(encoder))
     {
     }
 
