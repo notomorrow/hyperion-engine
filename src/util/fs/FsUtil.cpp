@@ -70,10 +70,33 @@ bool FileSystem::DirExists(const std::string &path)
 int FileSystem::MkDir(const std::string &path)
 {
 #if HYP_WINDOWS
-    return ::_mkdir(path.c_str());
+    #define MKDIR_FUNCTION(path, mode) ::_mkdir(path)
 #else
-    return ::mkdir(path.c_str(), 0755);
+    #define MKDIR_FUNCTION(path, mode) ::mkdir(path, mode)
 #endif
+
+    struct stat st;
+
+    int status = 0;
+    for (SizeType pos = 0; pos < path.length(); ++pos) {
+        if (path[pos] == '/' || pos == path.length() - 1) {
+            std::string subdir = path.substr(0, pos + 1);
+            if (stat(subdir.c_str(), &st) != 0) {
+                // Directory doesn't exist
+                if (MKDIR_FUNCTION(subdir.c_str(), 0755) != 0 && errno != EEXIST) {
+                    status = -1;
+                    break;
+                }
+            } else if (!S_ISDIR(st.st_mode)) {
+                status = -1;
+                break;
+            }
+        }
+    }
+
+    return status;
+
+#undef MKDIR_FUNCTION
 }
 
 std::string FileSystem::CurrentPath()

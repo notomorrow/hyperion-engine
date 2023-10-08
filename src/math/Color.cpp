@@ -104,19 +104,19 @@ Color &Color::operator*=(const Color &other)
 Color Color::operator/(const Color &other) const
 {
     return Color(
-        GetRed() / MathUtil::Max(other.GetRed(), MathUtil::epsilon<Float>),
-        GetGreen() / MathUtil::Max(other.GetGreen(), MathUtil::epsilon<Float>),
-        GetBlue() / MathUtil::Max(other.GetBlue(), MathUtil::epsilon<Float>),
-        GetAlpha() / MathUtil::Max(other.GetAlpha(), MathUtil::epsilon<Float>)
+        GetRed() / MathUtil::Max(other.GetRed(), MathUtil::epsilon_f),
+        GetGreen() / MathUtil::Max(other.GetGreen(), MathUtil::epsilon_f),
+        GetBlue() / MathUtil::Max(other.GetBlue(), MathUtil::epsilon_f),
+        GetAlpha() / MathUtil::Max(other.GetAlpha(), MathUtil::epsilon_f)
     );
 }
 
 Color &Color::operator/=(const Color &other)
 {
-    SetRed(GetRed() / MathUtil::Max(other.GetRed(), MathUtil::epsilon<Float>));
-    SetGreen(GetGreen() / MathUtil::Max(other.GetGreen(), MathUtil::epsilon<Float>));
-    SetBlue(GetBlue() / MathUtil::Max(other.GetBlue(), MathUtil::epsilon<Float>));
-    SetAlpha(GetAlpha() / MathUtil::Max(other.GetAlpha(), MathUtil::epsilon<Float>));
+    SetRed(GetRed() / MathUtil::Max(other.GetRed(), MathUtil::epsilon_f));
+    SetGreen(GetGreen() / MathUtil::Max(other.GetGreen(), MathUtil::epsilon_f));
+    SetBlue(GetBlue() / MathUtil::Max(other.GetBlue(), MathUtil::epsilon_f));
+    SetAlpha(GetAlpha() / MathUtil::Max(other.GetAlpha(), MathUtil::epsilon_f));
 
     return *this;
 }

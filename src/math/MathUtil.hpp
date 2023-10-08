@@ -83,14 +83,9 @@ public:
     template <class T>
     static constexpr T pi = T(3.14159265358979);
 
-    template <class T>
-    static constexpr T epsilon = T(FLT_EPSILON);
+    static constexpr float epsilon_f = FLT_EPSILON;
 
-    template<>
-    static constexpr float epsilon<float> = FLT_EPSILON;
-
-    template<>
-    static constexpr float epsilon<double> = DBL_EPSILON;
+    static constexpr float epsilon_d = DBL_EPSILON;
 
     template <class T>
     static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) MaxSafeValue()
@@ -135,10 +130,10 @@ public:
 
     template <class T>
     static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b)
-        { return a.DistanceSquared(b) < epsilon<std::remove_all_extents_t<decltype(T::values)>>; }
+        { return a.DistanceSquared(b) < std::is_same_v<std::remove_all_extents_t<decltype(T::values)>, Double> ? epsilon_d : epsilon_f; }
 
     template <class T>
-    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b, T eps = epsilon<T>)
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) ApproxEqual(T a, T b, T eps = std::is_same_v<T, Double> ? epsilon_d : epsilon_f)
         { return Abs(a - b) <= eps; }
 
     template <class T>
@@ -154,7 +149,7 @@ public:
     }
 
     template <class T>
-    static HYP_ENABLE_IF(!is_math_vector_v<T>, T) RandRange(const T &a, const T &b)
+    static HYP_ENABLE_IF(!is_math_vector_v<T>, T) RandRange(T a, T b)
     {
         const auto random = T(rand()) / T(RAND_MAX);
         const auto diff = b - a;

@@ -22,8 +22,6 @@ struct Name
 {
     static const Name invalid;
 
-    static UniquePtr<NameRegistry> registry;
-
     static NameRegistry *GetRegistry();
 
     NameID hash_code;
@@ -91,13 +89,19 @@ public:
     NameRegistry &operator=(NameRegistry &&other) noexcept = delete;
     ~NameRegistry() = default;
 
-    Name RegisterName(NameID id, const ANSIString &str)
+    Name RegisterName(NameID id, const ANSIString &str, bool lock)
     {
         Name name(id);
 
-        std::lock_guard guard(m_mutex);
+        if (lock) {
+            m_mutex.lock();
+        }
 
         m_name_map.Set(id, str);
+
+        if (lock) {
+            m_mutex.unlock();
+        }
 
         return name;
     }
@@ -119,16 +123,9 @@ public:
         return it->value;
     }
 
-    HashMap<NameID, ANSIString> GetNameMapCopy() const
-    {
-        std::lock_guard guard(m_mutex);
-
-        return m_name_map;
-    }
-
 private:
     HashMap<NameID, ANSIString> m_name_map;
-    mutable std::mutex m_mutex;
+    mutable std::mutex          m_mutex;
 };
 
 struct NameRegistration
@@ -155,11 +152,11 @@ struct NameRegistration
     }
 
     template <class HashedName>
-    static NameRegistration FromHashedName(HashedName &&hashed_name)
+    static NameRegistration FromHashedName(HashedName &&hashed_name, bool lock = true)
     {
         static constexpr NameID name_id = HashedName::hash_code.Value();
 
-        Name::GetRegistry()->RegisterName(name_id, hashed_name.data);
+        Name::GetRegistry()->RegisterName(name_id, hashed_name.data, lock);
 
         return NameRegistration { name_id };
     }
@@ -168,7 +165,7 @@ struct NameRegistration
     {
         const NameID id = GenerateID(str);
 
-        Name::GetRegistry()->RegisterName(id, str);
+        Name::GetRegistry()->RegisterName(id, str, true);
 
         return NameRegistration { id };
     }
@@ -178,12 +175,25 @@ struct NameRegistration
  * \brief Creates a Name from a static string. The string must be a compile-time constant.
  */
 template <class HashedName>
-static inline Name CreateNameFromStaticString(HashedName &&hashed_name)
+static inline Name CreateNameFromStaticString_WithLock(HashedName &&hashed_name)
 {
-    static const NameRegistration name_registration = NameRegistration::FromHashedName(std::forward<HashedName>(hashed_name));
+    static const NameRegistration name_registration = NameRegistration::FromHashedName(std::forward<HashedName>(hashed_name), true);
 
     return Name(name_registration.id);
 }
+
+/**
+ * \brief Creates a Name from a static string. The string must be a compile-time constant.
+ * Use in contexts where thread-safety is not an issue such as static initialization.
+ */
+template <class HashedName>
+static inline Name CreateNameFromStaticString_NoLock(HashedName &&hashed_name)
+{
+    static const NameRegistration name_registration = NameRegistration::FromHashedName(std::forward<HashedName>(hashed_name), false);
+
+    return Name(name_registration.id);
+}
+
 
 /**
  * \brief Creates a Name from a dynamic string.
@@ -199,9 +209,10 @@ struct HashedName
     static constexpr const char *data = Sequence::Data();
 };
 
-#define HYP_HASHED_NAME(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
-#define HYP_NAME(name)        ::hyperion::CreateNameFromStaticString(HYP_HASHED_NAME(name))
-#define HYP_WEAK_NAME(name)   ::hyperion::Name(HYP_HASHED_NAME(name).hash_code.Value())
+#define HYP_HASHED_NAME(name)   ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
+#define HYP_NAME(name)          ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME(name))
+#define HYP_NAME_UNSAFE(name)   ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME(name))
+#define HYP_WEAK_NAME(name)     ::hyperion::Name(HYP_HASHED_NAME(name).hash_code.Value())
 
 } // namespace hyperion
 

@@ -905,7 +905,7 @@ void DeferredRenderer::ApplyCameraJitter()
 
     static const Float jitter_scale = 0.25f;
 
-    if (camera.projection[3][3] < MathUtil::epsilon<Float>) {
+    if (camera.projection[3][3] < MathUtil::epsilon_f) {
         Matrix4::Jitter(frame_counter, camera.dimensions.width, camera.dimensions.height, jitter);
 
         g_engine->GetRenderData()->cameras.Get(camera_id.ToIndex()).jitter = jitter * jitter_scale;

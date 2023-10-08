@@ -70,7 +70,7 @@ public:
 
         UniquePtr<Handle<Camera>> camera_handle;
 
-        if (camera_params.fov > MathUtil::epsilon<Float>) {
+        if (camera_params.fov > MathUtil::epsilon_f) {
             camera_handle = UniquePtr<Handle<Camera>>::Construct(
                 CreateObject<Camera>(
                     camera_params.fov,

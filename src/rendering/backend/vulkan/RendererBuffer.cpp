@@ -186,7 +186,7 @@ UInt GPUMemory::FindMemoryType(Device *device, UInt vk_type_filter, VkMemoryProp
         }
     }
 
-    AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
+    AssertThrowMsg(false, "Could not find suitable memory type!\n");
 }
 
 VkImageLayout GPUMemory::GetImageLayout(ResourceState state)

@@ -4,6 +4,7 @@
 #include <core/lib/FixedString.hpp>
 #include <core/lib/AtomicVar.hpp>
 #include <core/Name.hpp>
+#include <core/Task.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -51,8 +52,7 @@ class Thread
 {
 public:
     using Scheduler = SchedulerType;
-    using Task = typename Scheduler::Task;
-    using TaskID = typename Scheduler::TaskID;
+    using Task      = typename Scheduler::Task;
 
     // Dynamic thread
     Thread(Name dynamic_thread_name);

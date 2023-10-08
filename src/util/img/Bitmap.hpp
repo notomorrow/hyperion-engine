@@ -119,7 +119,7 @@ struct Pixel
 template <UInt NumComponents>
 class Bitmap
 {
-    using Pixel = Pixel<NumComponents>;
+    using PixelType = Pixel<NumComponents>;
 
 public:
     Bitmap()
@@ -182,13 +182,13 @@ public:
             * static_cast<SizeType>(NumComponents);
     }
 
-    Pixel &GetPixelAtIndex(UInt index)
+    PixelType &GetPixelAtIndex(UInt index)
         { return m_pixels[index]; }
 
-    const Pixel &GetPixelAtIndex(UInt index) const
+    const PixelType &GetPixelAtIndex(UInt index) const
         { return m_pixels[index]; }
 
-    Pixel &GetPixel(UInt x, UInt y)
+    PixelType &GetPixel(UInt x, UInt y)
     {
         const UInt index = ((x + m_width) % m_width)
             + (((m_height - y) + m_height) % m_height) * m_width;
@@ -196,15 +196,15 @@ public:
         return m_pixels[index];
     }
 
-    const Pixel &GetPixel(UInt x, UInt y) const
+    const PixelType &GetPixel(UInt x, UInt y) const
         { return const_cast<const Bitmap *>(this)->GetPixel(x, y); }
 
     void GetUnpackedBytes(Array<UByte> &out)
     {
-        out.Resize(m_pixels.Size() * Pixel::byte_size);
+        out.Resize(m_pixels.Size() * PixelType::byte_size);
 
-        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += Pixel::byte_size, j++) {
-            for (UInt k = 0; k < Pixel::byte_size; k++) {
+        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += PixelType::byte_size, j++) {
+            for (UInt k = 0; k < PixelType::byte_size; k++) {
                 out[i + k] = m_pixels[j].bytes[k];
             }
         }
@@ -212,10 +212,10 @@ public:
 
     void GetUnpackedFloats(Array<Float> &out)
     {
-        out.Resize(m_pixels.Size() * Pixel::byte_size);
+        out.Resize(m_pixels.Size() * PixelType::byte_size);
 
-        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += Pixel::byte_size, j++) {
-            for (UInt k = 0; k < Pixel::byte_size; k++) {
+        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += PixelType::byte_size, j++) {
+            for (UInt k = 0; k < PixelType::byte_size; k++) {
                 out[i + k] = static_cast<Float>(m_pixels[j].bytes[k]) / 255.0f;
             }
         }
@@ -252,9 +252,9 @@ public:
     }
 
 private:
-    UInt            m_width;
-    UInt            m_height;
-    Array<Pixel>    m_pixels;
+    UInt                m_width;
+    UInt                m_height;
+    Array<PixelType>    m_pixels;
 
 };
 

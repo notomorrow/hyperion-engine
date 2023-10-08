@@ -1,9 +1,10 @@
 #ifndef HYPERION_V2_LIB_CONTAINER_BASE_H
 #define HYPERION_V2_LIB_CONTAINER_BASE_H
 
-#include "Pair.hpp"
+#include <core/lib/Pair.hpp>
 #include <util/Defines.hpp>
 #include <HashCode.hpp>
+#include <Types.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -17,7 +18,6 @@ class ContainerBase
 protected:
     using Base = ContainerBase;
 public:
-    using SizeType = SizeType;
     using KeyType = Key;
 
     ContainerBase() { }

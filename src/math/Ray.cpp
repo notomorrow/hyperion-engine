@@ -94,7 +94,7 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
 	float det = v0v1.Dot(pvec);
 
 	// ray and triangle are parallel if det is close to 0
-	if (std::fabs(det) < MathUtil::epsilon<float>) {
+	if (std::fabs(det) < MathUtil::epsilon_f) {
         return false;
     }
 

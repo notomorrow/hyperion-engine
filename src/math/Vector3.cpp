@@ -143,12 +143,12 @@ Float math::detail::Vec3<Float>::Distance(const Vec3f &other) const
 
 Vec3<Float> math::detail::Vec3<Float>::Normalized() const
 {
-    return *this / MathUtil::Max(Length(), MathUtil::epsilon<float>);
+    return *this / MathUtil::Max(Length(), MathUtil::epsilon_f);
 }
 
 Vec3<Float> &math::detail::Vec3<Float>::Normalize()
 {
-    return *this /= MathUtil::Max(Length(), MathUtil::epsilon<float>);
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilon_f);
 }
 
 Vec3<Float> math::detail::Vec3<Float>::Cross(const Vec3<Float> &other) const

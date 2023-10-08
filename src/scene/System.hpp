@@ -142,7 +142,7 @@ ControllerType *ComponentContainer<ControllerType>::Get(ID<Entity> id)
         return nullptr;
     }
 
-    return static_cast<ControllerType *>(it.second.Get());
+    return static_cast<ControllerType *>(it->second.Get());
 }
 
 template <class ControllerType>
@@ -157,7 +157,7 @@ void ComponentContainer<ControllerType>::Update(GameCounter::TickUnit delta)
 
 struct RegisteredController
 {
-    using ControllerCreateFunction = std::add_pointer_t<UniquePtr<Controller>(void)>;
+    typedef UniquePtr<Controller>(*ControllerCreateFunction)(void);
 
     TypeID type_id;
     ANSIString name;

@@ -20,10 +20,10 @@ template <class Key, class Value>
 class ArrayMap : public ContainerBase<ArrayMap<Key, Value>, Key>
 {
 public:
-    using KeyValuePair = KeyValuePair<Key, Value>;
+    using KeyValuePairType = KeyValuePair<Key, Value>;
 
 private:
-    Array<KeyValuePair> m_vector;
+    Array<KeyValuePairType> m_vector;
 
 public:
     using Base = ContainerBase<ArrayMap<Key, Value>, Key>;
@@ -36,7 +36,7 @@ public:
     using InsertResult = std::pair<Iterator, bool>; // iterator, was inserted
 
     ArrayMap();
-    ArrayMap(std::initializer_list<KeyValuePair> initializer_list)
+    ArrayMap(std::initializer_list<KeyValuePairType> initializer_list)
         : m_vector(initializer_list)
     {
     }
@@ -69,17 +69,17 @@ public:
     bool Erase(const Key &key);
 
     [[nodiscard]] SizeType Size() const { return m_vector.Size(); }
-    [[nodiscard]] KeyValuePair *Data() { return m_vector.Data(); }
-    [[nodiscard]] KeyValuePair * const Data() const { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePairType *Data() { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePairType * const Data() const { return m_vector.Data(); }
     [[nodiscard]] bool Any() const { return m_vector.Any(); }
     [[nodiscard]] bool Empty() const { return m_vector.Empty(); }
 
     void Clear()                                        { m_vector.Clear(); }
     
-    [[nodiscard]] KeyValuePair &Front()                 { return m_vector.Front(); }
-    [[nodiscard]] const KeyValuePair &Front() const     { return m_vector.Front(); }
-    [[nodiscard]] KeyValuePair &Back()                  { return m_vector.Back(); }
-    [[nodiscard]] const KeyValuePair &Back() const      { return m_vector.Back(); }
+    [[nodiscard]] KeyValuePairType &Front()             { return m_vector.Front(); }
+    [[nodiscard]] const KeyValuePairType &Front() const { return m_vector.Front(); }
+    [[nodiscard]] KeyValuePairType &Back()              { return m_vector.Back(); }
+    [[nodiscard]] const KeyValuePairType &Back() const  { return m_vector.Back(); }
 
     template <class Lambda>
     [[nodiscard]] bool Any(Lambda &&lambda) const

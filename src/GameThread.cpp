@@ -53,7 +53,7 @@ void GameThread::operator()(Game *game)
 
     // flush scheduler
     m_scheduler.Flush([](auto &fn) {
-        fn(MathUtil::epsilon<GameCounter::TickUnit>);
+        fn(MathUtil::epsilon_f);
     });
 
     game->Teardown();

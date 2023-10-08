@@ -17,10 +17,10 @@ template <class Key, class Value>
 class FlatMap : public ContainerBase<FlatMap<Key, Value>, Key>
 {
 public:
-    using KeyValuePair = KeyValuePair<Key, Value>;
+    using KeyValuePairType = KeyValuePair<Key, Value>;
 
 private:
-    Array<KeyValuePair> m_vector;
+    Array<KeyValuePairType> m_vector;
 
 public:
     using Base = ContainerBase<FlatMap<Key, Value>, Key>;
@@ -33,7 +33,7 @@ public:
     using InsertResult = std::pair<Iterator, bool>; // iterator, was inserted
 
     FlatMap();
-    FlatMap(std::initializer_list<KeyValuePair> initializer_list)
+    FlatMap(std::initializer_list<KeyValuePairType> initializer_list)
         : m_vector(initializer_list)
     {
         std::sort(
@@ -71,17 +71,17 @@ public:
     bool Erase(const Key &key);
 
     [[nodiscard]] SizeType Size() const { return m_vector.Size(); }
-    [[nodiscard]] KeyValuePair *Data() { return m_vector.Data(); }
-    [[nodiscard]] KeyValuePair * const Data() const { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePairType *Data() { return m_vector.Data(); }
+    [[nodiscard]] KeyValuePairType * const Data() const { return m_vector.Data(); }
     [[nodiscard]] bool Any() const { return m_vector.Any(); }
     [[nodiscard]] bool Empty() const { return m_vector.Empty(); }
 
     void Clear()                                        { m_vector.Clear(); }
     
-    [[nodiscard]] KeyValuePair &Front()                 { return m_vector.Front(); }
-    [[nodiscard]] const KeyValuePair &Front() const     { return m_vector.Front(); }
-    [[nodiscard]] KeyValuePair &Back()                  { return m_vector.Back(); }
-    [[nodiscard]] const KeyValuePair &Back() const      { return m_vector.Back(); }
+    [[nodiscard]] KeyValuePairType &Front()             { return m_vector.Front(); }
+    [[nodiscard]] const KeyValuePairType &Front() const { return m_vector.Front(); }
+    [[nodiscard]] KeyValuePairType &Back()              { return m_vector.Back(); }
+    [[nodiscard]] const KeyValuePairType &Back() const  { return m_vector.Back(); }
 
     [[nodiscard]] FlatSet<Key> Keys() const;
     [[nodiscard]] FlatSet<Value> Values() const;
@@ -107,8 +107,11 @@ public:
     }
 #endif
 
-    [[nodiscard]] KeyValuePair &AtIndex(SizeType index)             { AssertThrowMsg(index < Size(), "Out of bounds"); return *(Data() + index); }
-    [[nodiscard]] const KeyValuePair &AtIndex(SizeType index) const { AssertThrowMsg(index < Size(), "Out of bounds"); return *(Data() + index); }
+    [[nodiscard]] KeyValuePairType &AtIndex(SizeType index)
+        { AssertThrowMsg(index < Size(), "Out of bounds"); return *(Data() + index); }
+
+    [[nodiscard]] const KeyValuePairType &AtIndex(SizeType index) const
+        { AssertThrowMsg(index < Size(), "Out of bounds"); return *(Data() + index); }
 
     template <class Lambda>
     [[nodiscard]] bool Any(Lambda &&lambda) const
@@ -205,7 +208,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, value });
+        auto it = m_vector.Insert(lower_bound, KeyValuePairType { key, value });
 
         return { it, true };
     }
@@ -219,7 +222,7 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::move(value) });
+        auto it = m_vector.Insert(lower_bound, KeyValuePairType { key, std::move(value) });
 
         return { it, true };
     }
@@ -247,7 +250,7 @@ auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, value });
+        auto it = m_vector.Insert(lower_bound, KeyValuePairType { key, value });
 
         return { it, true };
     }
@@ -263,7 +266,7 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = m_vector.LowerBound(key);//FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.Insert(lower_bound, KeyValuePair { key, std::move(value) });
+        auto it = m_vector.Insert(lower_bound, KeyValuePairType { key, std::move(value) });
 
         return { it, true };
     }

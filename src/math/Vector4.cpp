@@ -186,12 +186,12 @@ float Vector4::Distance(const Vector4 &other) const
 
 Vector4 Vector4::Normalized() const
 {
-    return *this / MathUtil::Max(Length(), MathUtil::epsilon<float>);
+    return *this / MathUtil::Max(Length(), MathUtil::epsilon_f);
 }
 
 Vector4 &Vector4::Normalize()
 {
-    return *this /= MathUtil::Max(Length(), MathUtil::epsilon<float>);
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilon_f);
 }
 
 Vector4 &Vector4::Rotate(const Vector3 &axis, float radians)

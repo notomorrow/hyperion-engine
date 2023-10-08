@@ -64,7 +64,7 @@ void Animation::ApplyBlended(Float time, Float blend)
             continue;
         }
 
-        if (blend <= MathUtil::epsilon<Float>) {
+        if (blend <= MathUtil::epsilon_f) {
             track.bone->ClearPose();
         }
 

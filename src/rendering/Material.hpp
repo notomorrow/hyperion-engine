@@ -164,7 +164,7 @@ public:
             std::memcpy(values.int_values, v, count * sizeof(Int32));
         }
 
-        explicit Parameter(const Parameter &other)
+        Parameter(const Parameter &other)
             : type(other.type)
         {
             std::memcpy(&values, &other.values, sizeof(values));

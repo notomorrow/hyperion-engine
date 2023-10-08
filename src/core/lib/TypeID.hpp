@@ -8,6 +8,14 @@
 
 namespace hyperion {
 
+struct TypeIDGeneratorBase
+{
+    static inline std::atomic<UInt> counter { 0u };
+};
+
+template <class T>
+struct TypeIDGenerator;
+
 struct TypeID
 {
     using Value = UInt;
@@ -19,33 +27,6 @@ private:
         change between implementations, or depending on the order of which
         TypeIDs are instantiated. */
     Value value;
-
-    struct TypeIDGeneratorBase
-    {
-        static inline std::atomic<Value> counter { 0u };
-    };
-
-    template <class T>
-    struct TypeIDGenerator : TypeIDGeneratorBase
-    {
-        static const TypeID &GetID()
-        {
-            static const TypeID id = TypeID { ++TypeIDGeneratorBase::counter };
-
-            return id;
-        }
-    };
-
-    template <>
-    struct TypeIDGenerator<void> : TypeIDGeneratorBase
-    {
-        static const TypeID &GetID()
-        {
-            static const TypeID id = TypeID { 0u };
-
-            return id;
-        }
-    };
 
 public:
     template <class T>
@@ -106,6 +87,28 @@ public:
         hc.Add(value);
 
         return hc;
+    }
+};
+
+template <class T>
+struct TypeIDGenerator : TypeIDGeneratorBase
+{
+    static const TypeID &GetID()
+    {
+        static const TypeID id = TypeID { ++TypeIDGeneratorBase::counter };
+
+        return id;
+    }
+};
+
+template <>
+struct TypeIDGenerator<void> : TypeIDGeneratorBase
+{
+    static const TypeID &GetID()
+    {
+        static const TypeID id = TypeID { 0u };
+
+        return id;
     }
 };
 

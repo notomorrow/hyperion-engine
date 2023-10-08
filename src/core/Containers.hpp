@@ -458,8 +458,8 @@ template <class CallbacksClass>
 class CallbackTrackable
 {
 public:
-    using Callbacks = CallbacksClass;
-    using CallbackRef = CallbackRef<typename Callbacks::CallbackGroup>;
+    using Callbacks         = CallbacksClass;
+    using CallbackRefType   = CallbackRef<typename Callbacks::CallbackGroup>;
 
     CallbackTrackable() = default;
     CallbackTrackable(const CallbackTrackable &other) = delete;
@@ -495,7 +495,7 @@ protected:
      * callback refs will be removed, so as to not have a dangling callback.
      * @param callback_ref The callback reference, obtained via Once() or On()
      */
-    void OnInit(CallbackRef &&callback_ref)
+    void OnInit(CallbackRefType &&callback_ref)
     {
         if (m_init_callback.Valid()) {
             DebugLog(LogType::Warn, "OnInit callback overwritten.\n");
@@ -516,15 +516,15 @@ protected:
      * needs to perform some operation on this object.
      * @param callback_ref The callback reference, obtained via Once() or On()
      */
-    void AttachCallback(CallbackRef &&callback_ref)
+    void AttachCallback(CallbackRefType &&callback_ref)
     {
         m_owned_callbacks.push_back(std::move(callback_ref));
     }
 
 private:
-    CallbackRef m_init_callback;
-    Proc<void> m_teardown;
-    std::vector<CallbackRef> m_owned_callbacks;
+    CallbackRefType                 m_init_callback;
+    Proc<void>                      m_teardown;
+    std::vector<CallbackRefType>    m_owned_callbacks;
 };
 
 enum class EngineCallback
