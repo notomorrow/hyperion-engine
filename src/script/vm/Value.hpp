@@ -86,7 +86,7 @@ TypeID GetTypeIDForHeapValue(const HeapValue *);
 void *GetRawPointerForHeapValue(HeapValue *);
 const void *GetRawPointerForHeapValue(const HeapValue *);
 
-enum CompareFlags : Int
+enum CompareFlags : UInt8
 {
     NONE    = 0x00,
     EQUAL   = 0x01,

@@ -1127,7 +1127,7 @@ public:
 
     HYP_FORCE_INLINE void Jne(BCAddress addr)
     {
-        if (thread->m_regs.m_flags & ~EQUAL) {
+        if (!(thread->m_regs.m_flags & EQUAL)) {
             bs->Seek(addr);
         }
     }
