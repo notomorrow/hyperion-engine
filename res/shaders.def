@@ -48,10 +48,15 @@ comp = cull/generate_depth_pyramid.comp
 vert = PostEffect.vert
 frag = GenerateMipmaps.frag
 
-[FinalOutput]
+[Composite]
 permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
-frag = FinalOutput.frag
-vert = FinalOutput.vert
+frag = Composite.frag
+vert = PostEffect.vert
+
+[Blit]
+permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
+frag = Blit.frag
+vert = PostEffect.vert
 
 [CubemapRenderer]
 permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
