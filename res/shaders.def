@@ -54,7 +54,6 @@ frag = Composite.frag
 vert = PostEffect.vert
 
 [Blit]
-permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
 frag = Blit.frag
 vert = PostEffect.vert
 
