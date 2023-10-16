@@ -125,7 +125,7 @@ void Image<Platform::VULKAN>::SetIsSRGB(bool srgb)
 }
 
 Result Image<Platform::VULKAN>::CreateImage(
-    Device *device,
+    Device<Platform::VULKAN> *device,
     VkImageLayout initial_layout,
     VkImageCreateInfo *out_image_info
 )
@@ -265,14 +265,14 @@ Result Image<Platform::VULKAN>::CreateImage(
     HYPERION_RETURN_OK;
 }
 
-Result Image<Platform::VULKAN>::Create(Device *device)
+Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     VkImageCreateInfo image_info;
 
     return CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info);
 }
 
-Result Image<Platform::VULKAN>::Create(Device *device, Instance *instance, ResourceState state)
+Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance, ResourceState state)
 {
     auto result = Result::OK;
 
@@ -390,7 +390,7 @@ Result Image<Platform::VULKAN>::Create(Device *device, Instance *instance, Resou
     return result;
 }
 
-Result Image<Platform::VULKAN>::Destroy(Device *device)
+Result Image<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     auto result = Result::OK;
 
@@ -409,7 +409,7 @@ Result Image<Platform::VULKAN>::Destroy(Device *device)
 }
 
 Result Image<Platform::VULKAN>::Blit(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src
 )
 {
@@ -432,7 +432,7 @@ Result Image<Platform::VULKAN>::Blit(
 }
 
 Result Image<Platform::VULKAN>::Blit(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
     Rect src_rect,
     Rect dst_rect
@@ -504,7 +504,7 @@ Result Image<Platform::VULKAN>::Blit(
 }
 
 Result Image<Platform::VULKAN>::Blit(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
     Rect src_rect,
     Rect dst_rect,
@@ -578,8 +578,8 @@ Result Image<Platform::VULKAN>::Blit(
 }
 
 Result Image<Platform::VULKAN>::GenerateMipmaps(
-    Device *device,
-    CommandBuffer *command_buffer
+    Device<Platform::VULKAN> *device,
+    CommandBuffer<Platform::VULKAN> *command_buffer
 )
 {
     if (m_image == nullptr) {
@@ -684,7 +684,7 @@ Result Image<Platform::VULKAN>::GenerateMipmaps(
 }
 
 void Image<Platform::VULKAN>::CopyFromBuffer(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const GPUBuffer<Platform::VULKAN> *src_buffer
 ) const
 {
@@ -725,7 +725,7 @@ void Image<Platform::VULKAN>::CopyFromBuffer(
 }
 
 void Image<Platform::VULKAN>::CopyToBuffer(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     GPUBuffer<Platform::VULKAN> *dst_buffer
 ) const
 {
@@ -765,7 +765,7 @@ void Image<Platform::VULKAN>::CopyToBuffer(
     }
 }
 
-ByteBuffer Image<Platform::VULKAN>::ReadBack(Device *device, Instance *instance) const
+ByteBuffer Image<Platform::VULKAN>::ReadBack(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance) const
 {
     StagingBuffer<Platform::VULKAN> staging_buffer;
 
@@ -804,7 +804,7 @@ ByteBuffer Image<Platform::VULKAN>::ReadBack(Device *device, Instance *instance)
 }
 
 Result Image<Platform::VULKAN>::ConvertTo32BPP(
-    Device *device,
+    Device<Platform::VULKAN> *device,
     VkImageType image_type,
     VkImageCreateFlags image_create_flags,
     VkImageFormatProperties *out_image_format_properties,

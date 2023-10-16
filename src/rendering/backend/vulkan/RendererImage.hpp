@@ -18,10 +18,17 @@ namespace renderer {
 using v2::StreamedData;
 using v2::MemoryStreamedData;
 
-class Instance;
-class Device;
 
 namespace platform {
+
+template <PlatformType PLATFORM>
+class Device;
+
+template <PlatformType PLATFORM>
+class Instance;
+
+template <PlatformType PLATFORM>
+class CommandBuffer;
 
 template <>
 class Image<Platform::VULKAN>
@@ -52,28 +59,28 @@ public:
     /*
      * Create the image. No texture data will be copied.
      */
-    Result Create(Device *device);
+    Result Create(Device<Platform::VULKAN> *device);
 
     /* Create the image and transfer the provided texture data into it if given.
      * The image is transitioned into the given state.
      */
-    Result Create(Device *device, Instance *instance, ResourceState state);
-    Result Destroy(Device *device);
+    Result Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance, ResourceState state);
+    Result Destroy(Device<Platform::VULKAN> *device);
 
     Result Blit(
-        CommandBuffer *command_buffer,
+        CommandBuffer<Platform::VULKAN> *command_buffer,
         const Image *src
     );
 
     Result Blit(
-        CommandBuffer *command_buffer,
+        CommandBuffer<Platform::VULKAN> *command_buffer,
         const Image *src,
         Rect src_rect,
         Rect dst_rect
     );
 
     Result Blit(
-        CommandBuffer *command_buffer,
+        CommandBuffer<Platform::VULKAN> *command_buffer,
         const Image *src,
         Rect src_rect,
         Rect dst_rect,
@@ -82,21 +89,21 @@ public:
     );
 
     Result GenerateMipmaps(
-        Device *device,
-        CommandBuffer *command_buffer
+        Device<Platform::VULKAN> *device,
+        CommandBuffer<Platform::VULKAN> *command_buffer
     );
 
     void CopyFromBuffer(
-        CommandBuffer *command_buffer,
+        CommandBuffer<Platform::VULKAN> *command_buffer,
         const GPUBuffer<Platform::VULKAN> *src_buffer
     ) const;
 
     void CopyToBuffer(
-        CommandBuffer *command_buffer,
+        CommandBuffer<Platform::VULKAN> *command_buffer,
         GPUBuffer<Platform::VULKAN> *dst_buffer
     ) const;
 
-    ByteBuffer ReadBack(Device *device, Instance *instance) const;
+    ByteBuffer ReadBack(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance) const;
     
     const StreamedData *GetStreamedData() const
         { return m_streamed_data.Get(); }
@@ -186,13 +193,13 @@ protected:
     
 private:
     Result CreateImage(
-        Device *device,
+        Device<Platform::VULKAN> *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info
     );
 
     Result ConvertTo32BPP(
-        Device *device,
+        Device<Platform::VULKAN> *device,
         VkImageType image_type,
         VkImageCreateFlags image_create_flags,
         VkImageFormatProperties *out_image_format_properties,

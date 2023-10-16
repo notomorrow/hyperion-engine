@@ -17,7 +17,7 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
-UInt GPUMemory<Platform::VULKAN>::FindMemoryType(Device *device, UInt vk_type_filter, VkMemoryPropertyFlags properties)
+UInt GPUMemory<Platform::VULKAN>::FindMemoryType(Device<Platform::VULKAN> *device, UInt vk_type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(device->GetPhysicalDevice(), &mem_properties);
@@ -201,18 +201,18 @@ GPUMemory<Platform::VULKAN>::~GPUMemory()
 {
 }
 
-void GPUMemory<Platform::VULKAN>::Map(Device *device, void **ptr) const
+void GPUMemory<Platform::VULKAN>::Map(Device<Platform::VULKAN> *device, void **ptr) const
 {
     vmaMapMemory(device->GetAllocator(), allocation, ptr);
 }
 
-void GPUMemory<Platform::VULKAN>::Unmap(Device *device) const
+void GPUMemory<Platform::VULKAN>::Unmap(Device<Platform::VULKAN> *device) const
 {
     vmaUnmapMemory(device->GetAllocator(), allocation);
     map = nullptr;
 }
 
-void GPUMemory<Platform::VULKAN>::Memset(Device *device, SizeType count, UByte value)
+void GPUMemory<Platform::VULKAN>::Memset(Device<Platform::VULKAN> *device, SizeType count, UByte value)
 {    
     if (map == nullptr) {
         Map(device, &map);
@@ -221,7 +221,7 @@ void GPUMemory<Platform::VULKAN>::Memset(Device *device, SizeType count, UByte v
     std::memset(map, value, count);
 }
 
-void GPUMemory<Platform::VULKAN>::Copy(Device *device, SizeType count, const void *ptr)
+void GPUMemory<Platform::VULKAN>::Copy(Device<Platform::VULKAN> *device, SizeType count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
@@ -230,7 +230,7 @@ void GPUMemory<Platform::VULKAN>::Copy(Device *device, SizeType count, const voi
     Memory::MemCpy(map, ptr, count);
 }
 
-void GPUMemory<Platform::VULKAN>::Copy(Device *device, SizeType offset, SizeType count, const void *ptr)
+void GPUMemory<Platform::VULKAN>::Copy(Device<Platform::VULKAN> *device, SizeType offset, SizeType count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
@@ -239,7 +239,7 @@ void GPUMemory<Platform::VULKAN>::Copy(Device *device, SizeType offset, SizeType
     Memory::MemCpy(reinterpret_cast<void *>(uintptr_t(map) + offset), ptr, count);
 }
 
-void GPUMemory<Platform::VULKAN>::Read(Device *device, SizeType count, void *out_ptr) const
+void GPUMemory<Platform::VULKAN>::Read(Device<Platform::VULKAN> *device, SizeType count, void *out_ptr) const
 {
     if (map == nullptr) {
         Map(device, &map);
@@ -366,7 +366,7 @@ GPUBuffer<Platform::VULKAN>::~GPUBuffer()
     AssertThrowMsg(buffer == VK_NULL_HANDLE, "buffer should have been destroyed!");
 }
 
-VkBufferCreateInfo GPUBuffer<Platform::VULKAN>::GetBufferCreateInfo(Device *device) const
+VkBufferCreateInfo GPUBuffer<Platform::VULKAN>::GetBufferCreateInfo(Device<Platform::VULKAN> *device) const
 {
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
     const UInt buffer_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
@@ -380,7 +380,7 @@ VkBufferCreateInfo GPUBuffer<Platform::VULKAN>::GetBufferCreateInfo(Device *devi
     return vk_buffer_info;
 }
 
-VmaAllocationCreateInfo GPUBuffer<Platform::VULKAN>::GetAllocationCreateInfo(Device *device) const
+VmaAllocationCreateInfo GPUBuffer<Platform::VULKAN>::GetAllocationCreateInfo(Device<Platform::VULKAN> *device) const
 {
     VmaAllocationCreateInfo alloc_info { };
     alloc_info.flags = vma_allocation_create_flags;
@@ -390,7 +390,7 @@ VmaAllocationCreateInfo GPUBuffer<Platform::VULKAN>::GetAllocationCreateInfo(Dev
     return alloc_info;
 }
 
-Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(Device *device, SizeType size) const
+Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const
 {
     const auto create_info = GetBufferCreateInfo(device);
     const auto alloc_info = GetAllocationCreateInfo(device);
@@ -398,7 +398,7 @@ Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(Device *device, SizeType si
     return CheckCanAllocate(device, create_info, alloc_info, this->size);
 }
 
-UInt64 GPUBuffer<Platform::VULKAN>::GetBufferDeviceAddress(Device *device) const
+UInt64 GPUBuffer<Platform::VULKAN>::GetBufferDeviceAddress(Device<Platform::VULKAN> *device) const
 {
     AssertThrowMsg(
         device->GetFeatures().GetBufferDeviceAddressFeatures().bufferDeviceAddress,
@@ -417,7 +417,7 @@ UInt64 GPUBuffer<Platform::VULKAN>::GetBufferDeviceAddress(Device *device) const
 }
 
 Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(
-    Device *device,
+    Device<Platform::VULKAN> *device,
     const VkBufferCreateInfo &buffer_create_info,
     const VmaAllocationCreateInfo &allocation_create_info,
     SizeType size
@@ -455,7 +455,7 @@ Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(
     return result;
 }
 
-void GPUBuffer<Platform::VULKAN>::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const
+void GPUBuffer<Platform::VULKAN>::InsertBarrier(CommandBuffer<Platform::VULKAN> *command_buffer, ResourceState new_state) const
 {
     if (buffer == nullptr) {
         DebugLog(
@@ -489,7 +489,7 @@ void GPUBuffer<Platform::VULKAN>::InsertBarrier(CommandBuffer *command_buffer, R
 }
 
 void GPUBuffer<Platform::VULKAN>::CopyFrom(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const GPUBuffer *src_buffer,
     SizeType count
 )
@@ -510,12 +510,12 @@ void GPUBuffer<Platform::VULKAN>::CopyFrom(
 }
 
 Result GPUBuffer<Platform::VULKAN>::CopyStaged(
-    Instance *instance,
+    Instance<Platform::VULKAN> *instance,
     const void *ptr,
     SizeType count
 )
 {
-    Device *device = instance->GetDevice();
+    Device<Platform::VULKAN> *device = instance->GetDevice();
 
     return instance->GetStagingBufferPool().Use(device, [&](StagingBufferPool::Context &holder) {
         auto commands = instance->GetSingleTimeCommands();
@@ -523,7 +523,7 @@ Result GPUBuffer<Platform::VULKAN>::CopyStaged(
         auto *staging_buffer = holder.Acquire(count);
         staging_buffer->Copy(device, count, ptr);
         
-        commands.Push([&](CommandBuffer *cmd) {
+        commands.Push([&](CommandBuffer<Platform::VULKAN> *cmd) {
             CopyFrom(cmd, staging_buffer, count);
 
             HYPERION_RETURN_OK;
@@ -534,19 +534,19 @@ Result GPUBuffer<Platform::VULKAN>::CopyStaged(
 }
 
 Result GPUBuffer<Platform::VULKAN>::ReadStaged(
-    Instance *instance,
+    Instance<Platform::VULKAN> *instance,
     SizeType count,
     void *out_ptr
 ) const
 {
-    Device *device = instance->GetDevice();
+    Device<Platform::VULKAN> *device = instance->GetDevice();
 
     return instance->GetStagingBufferPool().Use(device, [&](StagingBufferPool::Context &holder) {
         auto commands = instance->GetSingleTimeCommands();
 
         auto *staging_buffer = holder.Acquire(count);
         
-        commands.Push([&](CommandBuffer *cmd) {
+        commands.Push([&](CommandBuffer<Platform::VULKAN> *cmd) {
             staging_buffer->CopyFrom(
                 cmd,
                 this,
@@ -570,7 +570,7 @@ Result GPUBuffer<Platform::VULKAN>::ReadStaged(
     });
 }
 
-Result GPUBuffer<Platform::VULKAN>::Create(Device *device, SizeType size, SizeType alignment)
+Result GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, SizeType size, SizeType alignment)
 {
     if (buffer != nullptr) {
         DebugLog(
@@ -642,7 +642,7 @@ Result GPUBuffer<Platform::VULKAN>::Create(Device *device, SizeType size, SizeTy
     HYPERION_RETURN_OK;
 }
 
-Result GPUBuffer<Platform::VULKAN>::Destroy(Device *device)
+Result GPUBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     GPUMemory<Platform::VULKAN>::Destroy();
 
@@ -658,7 +658,7 @@ Result GPUBuffer<Platform::VULKAN>::Destroy(Device *device)
 }
 
 Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
-    Device *device,
+    Device<Platform::VULKAN> *device,
     SizeType minimum_size,
     bool *out_size_changed
 )
@@ -667,7 +667,7 @@ Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
 }
 
 Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
-    Device *device,
+    Device<Platform::VULKAN> *device,
     SizeType minimum_size,
     SizeType alignment,
     bool *out_size_changed
@@ -706,9 +706,9 @@ Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
 
 #ifdef HYP_DEBUG_MODE
 
-void GPUBuffer<Platform::VULKAN>::DebugLogBuffer(Instance *instance) const
+void GPUBuffer<Platform::VULKAN>::DebugLogBuffer(Instance<Platform::VULKAN> *instance) const
 {
-    auto *device = instance->GetDevice();
+    Device<Platform::VULKAN> *device = instance->GetDevice();
 
     if (size % sizeof(UInt32) == 0) {
         const auto data = DebugReadBytes<UInt32>(instance, device);
@@ -740,7 +740,7 @@ void GPUBuffer<Platform::VULKAN>::DebugLogBuffer(Instance *instance) const
 #endif
 
 template <>
-void VertexBuffer<Platform::VULKAN>::Bind(CommandBuffer *cmd)
+void VertexBuffer<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
 {
     const VkBuffer vertex_buffers[] = { buffer };
     const VkDeviceSize offsets[]    = { 0 };
@@ -749,7 +749,7 @@ void VertexBuffer<Platform::VULKAN>::Bind(CommandBuffer *cmd)
 }
 
 template <>
-void IndexBuffer<Platform::VULKAN>::Bind(CommandBuffer *cmd)
+void IndexBuffer<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
 {
     vkCmdBindIndexBuffer(
         cmd->GetCommandBuffer(),
@@ -760,7 +760,7 @@ void IndexBuffer<Platform::VULKAN>::Bind(CommandBuffer *cmd)
 }
 
 template <>
-void IndirectBuffer<Platform::VULKAN>::DispatchIndirect(CommandBuffer *command_buffer, SizeType offset) const
+void IndirectBuffer<Platform::VULKAN>::DispatchIndirect(CommandBuffer<Platform::VULKAN> *command_buffer, SizeType offset) const
 {
     vkCmdDispatchIndirect(
         command_buffer->GetCommandBuffer(),
@@ -795,7 +795,7 @@ void GPUImageMemory<Platform::VULKAN>::SetResourceState(ResourceState new_state)
 }
 
 void GPUImageMemory<Platform::VULKAN>::InsertBarrier(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     ResourceState new_state,
     ImageSubResourceFlagBits flags
 )
@@ -812,7 +812,7 @@ void GPUImageMemory<Platform::VULKAN>::InsertBarrier(
 }
 
 void GPUImageMemory<Platform::VULKAN>::InsertBarrier(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const ImageSubResource &sub_resource,
     ResourceState new_state
 )
@@ -867,7 +867,7 @@ void GPUImageMemory<Platform::VULKAN>::InsertBarrier(
 }
 
 void GPUImageMemory<Platform::VULKAN>::InsertSubResourceBarrier(
-    CommandBuffer *command_buffer,
+    CommandBuffer<Platform::VULKAN> *command_buffer,
     const ImageSubResource &sub_resource,
     ResourceState new_state
 )
@@ -940,7 +940,7 @@ void GPUImageMemory<Platform::VULKAN>::SetSubResourceState(const ImageSubResourc
     sub_resources[sub_resource] = new_state;
 }
 
-Result GPUImageMemory<Platform::VULKAN>::Create(Device *device, PlatformImage new_image)
+Result GPUImageMemory<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, PlatformImage new_image)
 {
     if (image != VK_NULL_HANDLE) {
         DebugLog(
@@ -966,7 +966,7 @@ Result GPUImageMemory<Platform::VULKAN>::Create(Device *device, PlatformImage ne
     HYPERION_RETURN_OK;
 }
 
-Result GPUImageMemory<Platform::VULKAN>::Create(Device *device, SizeType size, VkImageCreateInfo *image_info)
+Result GPUImageMemory<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, SizeType size, VkImageCreateInfo *image_info)
 {
     if (image != VK_NULL_HANDLE) {
         DebugLog(
@@ -1009,7 +1009,7 @@ Result GPUImageMemory<Platform::VULKAN>::Create(Device *device, SizeType size, V
     HYPERION_RETURN_OK;
 }
 
-Result GPUImageMemory<Platform::VULKAN>::Destroy(Device *device)
+Result GPUImageMemory<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (is_image_owned) {
         GPUMemory<Platform::VULKAN>::Destroy();

@@ -1,5 +1,5 @@
-#ifndef HYPERION_RENDERER_DESCRIPTOR_SET_H
-#define HYPERION_RENDERER_DESCRIPTOR_SET_H
+#ifndef HYPERION_RENDERER_BACKEND_VULKAN_DESCRIPTOR_SET_HPP
+#define HYPERION_RENDERER_BACKEND_VULKAN_DESCRIPTOR_SET_HPP
 
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RenderObject.hpp>
@@ -31,8 +31,19 @@
 namespace hyperion {
 namespace renderer {
 
+namespace platform {
+
+template <PlatformType PLATFORM>
 class Device;
+
+template <PlatformType PLATFORM>
 class CommandBuffer;
+
+} // namespace platform
+
+using Device        = platform::Device<Platform::VULKAN>;
+using CommandBuffer = platform::CommandBuffer<Platform::VULKAN>;
+
 class Pipeline;
 class GraphicsPipeline;
 class ComputePipeline;
