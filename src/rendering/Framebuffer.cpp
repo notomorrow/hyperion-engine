@@ -95,7 +95,7 @@ struct RENDER_COMMAND(CreateAttachmentMap) : RenderCommand
             AssertThrow(def.attachment.IsValid());
             HYPERION_BUBBLE_ERRORS(def.attachment->Create(g_engine->GetGPUDevice()));
 
-            def.attachment_usage = RenderObjects::Make<AttachmentUsage>(
+            def.attachment_usage = MakeRenderObject<AttachmentUsage>(
                 def.attachment.Get(),
                 def.load_op,
                 def.store_op
@@ -123,7 +123,7 @@ AttachmentMap::~AttachmentMap()
 Framebuffer::Framebuffer(
     Extent2D extent,
     RenderPassStage stage,
-    RenderPass::Mode render_pass_mode,
+    RenderPassMode render_pass_mode,
     UInt num_multiview_layers
 ) : Framebuffer(Extent3D(extent), stage, render_pass_mode, num_multiview_layers)
 {
@@ -132,14 +132,14 @@ Framebuffer::Framebuffer(
 Framebuffer::Framebuffer(
     Extent3D extent,
     RenderPassStage stage,
-    RenderPass::Mode render_pass_mode,
+    RenderPassMode render_pass_mode,
     UInt num_multiview_layers
 ) : EngineComponentBase(),
     m_extent(extent),
     m_render_pass(stage, render_pass_mode, num_multiview_layers)
 {
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_framebuffers[frame_index] = RenderObjects::Make<renderer::FramebufferObject>(m_extent);
+        m_framebuffers[frame_index] = MakeRenderObject<renderer::FramebufferObject>(m_extent);
     }
 }
 

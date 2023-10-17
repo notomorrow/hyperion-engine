@@ -52,12 +52,12 @@ void PostFXPass::CreateDescriptors()
 {
     Threads::AssertOnThread(THREAD_RENDER);
     
-    if (!m_framebuffer->GetAttachmentUsages().empty()) {
+    if (!m_framebuffer->GetAttachmentUsages().Empty()) {
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
             auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(m_descriptor_key);
 
-            AssertThrowMsg(m_framebuffer->GetAttachmentUsages().size() == 1, "> 1 attachments not supported currently for full screen passes");
+            AssertThrowMsg(m_framebuffer->GetAttachmentUsages().Size() == 1, "> 1 attachments not supported currently for full screen passes");
 
             for (const auto *attachment_usage : m_framebuffer->GetAttachmentUsages()) {
                 m_sub_descriptor_index = descriptor->SetSubDescriptor({
@@ -282,7 +282,7 @@ void PostProcessing::CreateUniformBuffer()
     
     const PostProcessingUniforms post_processing_uniforms = GetUniforms();
 
-    m_uniform_buffer = RenderObjects::Make<GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER);
+    m_uniform_buffer = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER);
     HYPERION_ASSERT_RESULT(m_uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(post_processing_uniforms)));
 
     m_uniform_buffer->Copy(

@@ -207,14 +207,14 @@ void ShadowPass::CreateFramebuffer()
     m_framebuffer = CreateObject<Framebuffer>(
         m_dimensions,
         renderer::RenderPassStage::SHADER,
-        renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
+        renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
     AttachmentUsage *attachment_usage;
 
     { // depth, depth^2 texture (for variance shadow map)
-        m_attachments.PushBack(RenderObjects::Make<renderer::Attachment>(
-            RenderObjects::Make<Image>(renderer::FramebufferImage2D(
+        m_attachments.PushBack(MakeRenderObject<renderer::Attachment>(
+            MakeRenderObject<Image>(renderer::FramebufferImage2D(
                 m_dimensions,
                 InternalFormat::RG32F,
                 FilterMode::TEXTURE_FILTER_NEAREST
@@ -233,8 +233,8 @@ void ShadowPass::CreateFramebuffer()
     }
 
     { // standard depth texture
-        m_attachments.PushBack(RenderObjects::Make<renderer::Attachment>(
-            RenderObjects::Make<Image>(renderer::FramebufferImage2D(
+        m_attachments.PushBack(MakeRenderObject<renderer::Attachment>(
+            MakeRenderObject<Image>(renderer::FramebufferImage2D(
                 m_dimensions,
                 g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
@@ -272,12 +272,12 @@ void ShadowPass::CreateDescriptors()
 
 void ShadowPass::CreateShadowMap()
 {
-    m_shadow_map_image = RenderObjects::Make<Image>(StorageImage2D(
+    m_shadow_map_image = MakeRenderObject<Image>(StorageImage2D(
         m_dimensions,
         InternalFormat::RG32F
     ));
 
-    m_shadow_map_image_view = RenderObjects::Make<ImageView>();
+    m_shadow_map_image_view = MakeRenderObject<ImageView>();
 
     RenderCommands::Push<RENDER_COMMAND(CreateShadowMapImage)>(m_shadow_map_image, m_shadow_map_image_view);
 }
@@ -287,10 +287,10 @@ void ShadowPass::CreateComputePipelines()
     // have to create descriptor sets specifically for compute shader,
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_blur_descriptor_sets[i] = RenderObjects::Make<renderer::DescriptorSet>();
+        m_blur_descriptor_sets[i] = MakeRenderObject<renderer::DescriptorSet>();
 
         m_blur_descriptor_sets[i]->AddDescriptor<ImageDescriptor>(0)
-            ->SetElementSRV(0, m_framebuffer->GetAttachmentUsages().front()->GetImageView());
+            ->SetElementSRV(0, m_framebuffer->GetAttachmentUsages().Front()->GetImageView());
 
         m_blur_descriptor_sets[i]->AddDescriptor<SamplerDescriptor>(1)
             ->SetElementSampler(0, &g_engine->GetPlaceholderData().GetSamplerLinear());

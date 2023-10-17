@@ -11,13 +11,15 @@
 namespace hyperion {
 namespace renderer {
 
-class Swapchain;
 class Fence;
 struct DeviceQueue;
 
 using ::hyperion::non_owning_ptr;
 
 namespace platform {
+
+template <PlatformType PLATFORM>
+class Swapchain;
 
 template <PlatformType PLATFORM>
 class CommandBuffer;
@@ -29,7 +31,13 @@ template <PlatformType PLATFORM>
 class Frame
 {
 public:
-    static Frame TemporaryFrame(CommandBuffer<PLATFORM> *command_buffer, UInt frame_index = 0);
+    static Frame TemporaryFrame(CommandBuffer<PLATFORM> *command_buffer, UInt frame_index = 0)
+    {
+        Frame frame;
+        frame.m_command_buffer = command_buffer;
+        frame.m_frame_index = frame_index;
+        return frame;
+    }
 
     explicit Frame();
     Frame(UInt frame_index);

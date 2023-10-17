@@ -415,7 +415,7 @@ void VoxelConeTracing::CreateFramebuffer()
     m_framebuffer = CreateObject<Framebuffer>(
         Extent2D(voxel_map_extent),
         RenderPassStage::SHADER,
-        renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
+        renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
     InitObject(m_framebuffer);
@@ -432,7 +432,7 @@ void VoxelConeTracing::CreateDescriptors()
 
             for (UInt mip_level = 0; mip_level < num_mip_levels; mip_level++) {
                 // create descriptor sets for mip generation.
-                auto mip_descriptor_set = RenderObjects::Make<renderer::DescriptorSet>();
+                auto mip_descriptor_set = MakeRenderObject<renderer::DescriptorSet>();
 
                 auto *mip_in = mip_descriptor_set
                     ->AddDescriptor<renderer::ImageDescriptor>(0);
