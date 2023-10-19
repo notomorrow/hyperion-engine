@@ -18,7 +18,7 @@ constexpr bool vct_manual_mipmap_generation = true;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(DestroyVCT) : RenderCommand
+struct RENDER_COMMAND(DestroyVCT) : renderer::RenderCommand
 {
     VoxelConeTracing &vct;
 
@@ -92,7 +92,7 @@ void VoxelConeTracing::Init()
 
     m_camera = CreateObject<Camera>(voxel_map_extent.width, voxel_map_extent.height);
     m_camera->SetFramebuffer(m_framebuffer);
-    m_camera->SetCameraController(UniquePtr<OrthoCameraController>::Construct(
+    m_camera->SetCameraController(RC<OrthoCameraController>::Construct(
         -Float(voxel_map_extent[0]) * 0.5f, Float(voxel_map_extent[0]) * 0.5f,
         -Float(voxel_map_extent[1]) * 0.5f, Float(voxel_map_extent[1]) * 0.5f,
         -Float(voxel_map_extent[2]) * 0.5f, Float(voxel_map_extent[2]) * 0.5f
@@ -115,7 +115,7 @@ void VoxelConeTracing::Init()
             SafeRelease(std::move(m_generate_mipmap_descriptor_sets[i]));
         }
 
-        RenderCommands::Push<RENDER_COMMAND(DestroyVCT)>(*this);
+        PUSH_RENDER_COMMAND(DestroyVCT, *this);
         
         HYP_SYNC_RENDER();
 
@@ -328,7 +328,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
         }
     }
 
-    struct RENDER_COMMAND(CreateVCTImagesAndBuffers) : RenderCommand
+    struct RENDER_COMMAND(CreateVCTImagesAndBuffers) : renderer::RenderCommand
     {
         VoxelConeTracing &vct;
 
@@ -373,7 +373,7 @@ void VoxelConeTracing::CreateImagesAndBuffers()
         }
     };
 
-    RenderCommands::Push<RENDER_COMMAND(CreateVCTImagesAndBuffers)>(*this);
+    PUSH_RENDER_COMMAND(CreateVCTImagesAndBuffers, *this);
 }
 
 void VoxelConeTracing::CreateComputePipelines()
@@ -458,7 +458,7 @@ void VoxelConeTracing::CreateDescriptors()
         }
     }
 
-    struct RENDER_COMMAND(CreateVCTDescriptors) : RenderCommand
+    struct RENDER_COMMAND(CreateVCTDescriptors) : renderer::RenderCommand
     {
         VoxelConeTracing &vct;
 

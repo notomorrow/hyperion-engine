@@ -127,9 +127,6 @@ void LibDataChannelRTCServer::Start()
         });
 
         m_websocket->onClosed([this]() {
-            // Stupid test
-            AssertThrow(this != nullptr);
-
             m_callbacks.Trigger(RTCServerCallbackMessages::DISCONNECTED, {
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
@@ -180,23 +177,21 @@ void LibDataChannelRTCServer::Start()
 void LibDataChannelRTCServer::Stop()
 {
     if (m_thread != nullptr) {
-        if (m_websocket != nullptr) {
-            m_thread->GetScheduler().Enqueue([this]
-            {
-                for (const auto &client : m_client_list) {
-                    client.second->Disconnect();
-                }
+        m_thread->GetScheduler().Enqueue([this, ws = std::move(m_websocket)](...) mutable
+        {
+            for (const auto &client : m_client_list) {
+                client.second->Disconnect();
+            }
 
-                if (m_websocket->isOpen()) {
-                    m_websocket->close();
+            if (ws != nullptr) {
+                if (ws->isOpen()) {
+                    ws->close();
                 }
-            });
-        }
-
-        // Parent destructor will flush thread tasks and join
+            }
+        });
+    } else {
+        m_websocket.Reset();
     }
-
-    m_websocket.Reset();
 }
 
 RC<RTCClient> LibDataChannelRTCServer::CreateClient(String id)
