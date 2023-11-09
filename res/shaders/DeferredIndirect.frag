@@ -169,6 +169,9 @@ void main()
         ApplyFog(position.xyz, final_result);
         result = final_result.rgb;
 
+        // TEMP -- debugging
+        // result = normal.rgb;
+
 #ifdef PATHTRACER
         result = CalculatePathTracing(deferred_params, texcoord).rgb;
 #elif defined(DEBUG_REFLECTIONS)

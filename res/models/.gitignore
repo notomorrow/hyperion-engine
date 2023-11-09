@@ -30,3 +30,5 @@ interior4/**/*
 interior5/**/*
 test_structure/**/*
 archviz/**/*
+test_revit/**/*
+foo.*.text
