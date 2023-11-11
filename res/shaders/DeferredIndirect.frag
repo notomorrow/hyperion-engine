@@ -170,7 +170,7 @@ void main()
         result = final_result.rgb;
 
         // TEMP -- debugging
-        // result = normal.rgb;
+        // result = albedo.rgb;
 
 #ifdef PATHTRACER
         result = CalculatePathTracing(deferred_params, texcoord).rgb;
