@@ -71,8 +71,8 @@ void RefractionSolidSphere(
 
 void main()
 {
-    vec4 indirect_lighting = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
-    indirect_lighting.a = 1.0;
+    vec4 lit_result = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
+    lit_result.a = 1.0;
 
     vec4 forward_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
     vec3 albedo = forward_result.rgb;
@@ -108,9 +108,7 @@ void main()
     //     1.0
     // );
 
-    vec4 result = indirect_lighting;
-
-    vec4 forward_lit_result = vec4(0.0, 0.0, 0.0, forward_result.a);
+    vec4 result = lit_result;
 
     if (bool(object_mask & (0x02 | 0x400))) {
         result.rgb = (pow(forward_result.rgb, vec3(2.2)) * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
