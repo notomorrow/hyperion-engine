@@ -25,7 +25,7 @@ layout(std140, set = 0, binding = 0) buffer SHGridBuffer {
 
 layout(set = 0, binding = 1) uniform sampler sampler_nearest;
 
-layout(set = 0, binding = 2, rgba16f) uniform image3D sh_clipmaps[9];
+layout(set = 0, binding = 2, rgba8) uniform image2DArray sh_clipmaps;
 
 layout(set = 0, binding = 3) uniform texture2D gbuffer_depth_texture;
 
@@ -75,15 +75,15 @@ float GetViewSpaceDepth(vec2 uv, float depth)
 
 void SetSH9InClipmap(uvec3 position, const in SH9 sh)
 {
-    imageStore(sh_clipmaps[0], ivec3(position), vec4(sh.values[0], 1.0));
-    imageStore(sh_clipmaps[1], ivec3(position), vec4(sh.values[1], 1.0));
-    imageStore(sh_clipmaps[2], ivec3(position), vec4(sh.values[2], 1.0));
-    imageStore(sh_clipmaps[3], ivec3(position), vec4(sh.values[3], 1.0));
-    imageStore(sh_clipmaps[4], ivec3(position), vec4(sh.values[4], 1.0));
-    imageStore(sh_clipmaps[5], ivec3(position), vec4(sh.values[5], 1.0));
-    imageStore(sh_clipmaps[6], ivec3(position), vec4(sh.values[6], 1.0));
-    imageStore(sh_clipmaps[7], ivec3(position), vec4(sh.values[7], 1.0));
-    imageStore(sh_clipmaps[8], ivec3(position), vec4(sh.values[8], 1.0));
+    // Image size is 1024 x 32 (32x32x32 expressed as 2d)
+    // Create a storage position, which is the position in the textureArray
+    uint storage_index = position.x + (position.y * clipmap_dimensions.x) + (position.z * clipmap_dimensions.x * clipmap_dimensions.y);
+    uvec2 storage_position_2d = uvec2(storage_index % clipmap_dimensions.x, storage_index / clipmap_dimensions.x);
+
+    // Write into the textureArray
+    for (int i = 0; i < 9; i++) {
+        imageStore(sh_clipmaps, ivec3(storage_position_2d, i), vec4(sh.values[i], 0.0));
+    }
 }
 
 void main(void)

@@ -78,5 +78,5 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_color_buffer, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, light_field_color_buffer, v_texcoord0).rgb;
 }

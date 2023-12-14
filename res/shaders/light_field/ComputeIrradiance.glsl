@@ -2,6 +2,9 @@
 #define COMPUTE_IRRADIANCE_GLSL
 
 #include "Shared.glsl"
+#include "../include/noise.inc"
+
+#define HYP_LIGHT_FIELD_PROBE_MAX_RADIANCE_SAMPLES 8
 
 ivec3 GetGridCoord(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
@@ -24,6 +27,14 @@ int GridCoordToProbeIndex(ivec3 grid_coord, ivec3 grid_size)
         + int(grid_coord.z) + 1 /* + 1 because the first element is always the reflection probe */;
 }
 
+vec3 GridPositionToWorldPosition(ivec3 pos, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
+{
+    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+
+    return size_of_probe * vec3(pos) + (grid_center - (grid_aabb_extent * 0.5));
+}
+
+
 vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, ivec3 grid_size)
 {
     vec2 normalizedOctCoord = EncodeOctahedralCoord(normalize(dir));
@@ -39,28 +50,88 @@ vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimension
 
     vec2 normalizedProbeTopLeftPosition = vec2(probeTopLeftPosition) / vec2(image_dimensions);
 
-    //return vec2(normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions);
+    return vec2(normalizedProbeTopLeftPosition + octCoordNormalizedToTextureDimensions);
 
-    const uvec3 position_in_grid = uvec3(env_probes[probe_index].position_in_grid.xyz);
+    // const uvec3 position_in_grid = uvec3(env_probes[probe_index].position_in_grid.xyz);
 
-    const uvec2 probe_offset_coord = uvec2(
-        PROBE_SIDE_LENGTH_BORDER * (position_in_grid.x * grid_size.y + position_in_grid.y),
-        PROBE_SIDE_LENGTH_BORDER * position_in_grid.z
-    ) + uvec2(2);
+    // const uvec2 probe_offset_coord = uvec2(
+    //     PROBE_SIDE_LENGTH_BORDER * (position_in_grid.x * grid_size.y + position_in_grid.y),
+    //     PROBE_SIDE_LENGTH_BORDER * position_in_grid.z
+    // ) + uvec2(2);
 
 
-    return vec2(((vec2(probe_offset_coord) + 0.5) / vec2(image_dimensions)) + octCoordNormalizedToTextureDimensions);
+    // return vec2(((vec2(probe_offset_coord) + 0.5) / vec2(image_dimensions)) + octCoordNormalizedToTextureDimensions);
 }
 
 
+
+int GetLocalEnvProbeIndex(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, out ivec3 unit_diff)
+{
+    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+    const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
+    const ivec3 position_offset = position_units % grid_size;
+
+    unit_diff = position_offset;
+
+    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
+
+    return probe_index_at_point;
+}
+
+// vec3 ComputeLightFieldProbeRay(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
+// {
+
+// }
+
+// vec3 ComputeLightFieldProbeRadiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, inout uint seed)
+// {
+//     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+
+//     ivec3 base_grid_coord;
+//     const int base_probe_index_indirect = GetLocalEnvProbeIndex(world_position, grid_center, grid_aabb_extent, grid_size, base_grid_coord) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+//     const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_indirect);
+
+//     if (base_probe_index == ~0u) {
+//         return vec3(0.0);
+//     }
+
+//     const vec3 base_probe_position_world = (env_probes[base_probe_index].aabb_max.xyz + env_probes[base_probe_index].aabb_min.xyz) * 0.5;
+
+//     vec3 alpha = clamp((world_position - base_probe_position_world) / size_of_probe, vec3(0.0), vec3(1.0));
+
+//     vec3 total_radiance = vec3(0.0);
+
+//     for (int i = 0; i < HYP_LIGHT_FIELD_PROBE_MAX_RADIANCE_SAMPLES; i++) {
+//         vec2 rand_value = vec2(RandomFloat(seed), RandomFloat(seed));
+
+//         vec3 H = ImportanceSampleGGX(rand_value, N, 0.0);
+//         vec3 L = reflect(-V, H);
+
+//         vec3 bounce_color = 
+//     }
+
+//     return total_radiance / vec3(float(HYP_LIGHT_FIELD_PROBE_MAX_RADIANCE_SAMPLES));
+// }
+
+ivec3 BaseGridCoord(vec3 P, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
+{
+    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+
+    return clamp(ivec3(max(vec3(0.0), P - grid_center) / size_of_probe), ivec3(0), grid_size - ivec3(1));
+}
 
 vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
 
-    const ivec3 base_grid_coord = GetGridCoord(world_position, grid_center, grid_aabb_extent, grid_size);
-    const int base_probe_index_indirect = GridCoordToProbeIndex(base_grid_coord, grid_size) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;//& (HYP_MAX_BOUND_LIGHT_FIELD_PROBES - 1);
+    ivec3 base_grid_coord;
+    const int base_probe_index_indirect = GetLocalEnvProbeIndex(world_position, grid_center, grid_aabb_extent, grid_size, base_grid_coord) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
     const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_indirect);
+
+    // const ivec3 base_grid_coord = BaseGridCoord(world_position, grid_center, grid_aabb_extent, grid_size);
+    // const vec3 base_probe_position_world = GridPositionToWorldPosition(base_grid_coord, grid_center, grid_aabb_extent, grid_size);
 
     if (base_probe_index == ~0u) {
         return vec3(0.0);
@@ -68,7 +139,10 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
 
     const vec3 base_probe_position_world = env_probes[base_probe_index].world_position.xyz;
 
+    // vec3 alpha = clamp((world_position - base_probe_position_world) / size_of_probe, vec3(0.0), vec3(1.0));
+
     vec3 alpha = clamp((world_position - base_probe_position_world) / size_of_probe, vec3(0.0), vec3(1.0));
+    
 
     vec3 total_irradiance = vec3(0.0);
     float total_weight = 0.0;
@@ -76,16 +150,22 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
     // iterate over probe cage
     for (int i = 0; i < 8; i++) {
         ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
+
         ivec3 neighbor_grid_coord = clamp(base_grid_coord + offset, ivec3(0), ivec3(grid_size) - 1);
 
         const int neighbor_probe_index_indirect = GridCoordToProbeIndex(neighbor_grid_coord, grid_size) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
         const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_indirect);
 
+        // vec3 neighbor_probe_position_world = base_probe_position_world + (vec3(offset) * size_of_probe);
+        
+        // const int neighbor_probe_index_indirect = GetLocalEnvProbeIndex(neighbor_probe_position_world, grid_center, grid_aabb_extent, grid_size, base_grid_coord) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+        // const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_indirect);
+
         if (neighbor_probe_index == ~0u) {
             continue;
         }
 
-        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
+        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, offset);
         float weight = trilinear.x * trilinear.y * trilinear.z;
 
         const vec3 probe_position_world = env_probes[neighbor_probe_index].world_position.xyz;
@@ -119,9 +199,9 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         const vec3 texel_size = vec3(1.0) / vec3(probe_grid_dimensions);
         vec3 coord = (vec3(vec3(probe_offset_coord) + pos_fract)) * texel_size;*/
 
-        const vec2 depth_uv = (vec2(probe_offset_coord) + (octahedral_dir * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
+        // const vec2 depth_uv = (vec2(probe_offset_coord) + (octahedral_dir * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
 
-        //const vec2 depth_uv = TextureCoordFromDirection(-dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
+        const vec2 depth_uv = TextureCoordFromDirection(-dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
 
         const vec2 moments = Texture2DLod(sampler_linear, light_field_depth_buffer, depth_uv, 0.0).rg;
         const float mean = moments.x;
@@ -135,14 +215,12 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         weight *= (probe_distance <= mean) ? 1.0 : chebyshev;
         weight = max(0.0001, weight);
 
-        const vec3 irradiance_dir = N;
+        const vec3 irradiance_dir = normalize(N);
 
         const vec2 color_octahedral_uv = EncodeOctahedralCoord(irradiance_dir) * 0.5 + 0.5;
-        const vec2 irradiance_uv = (vec2(probe_offset_coord) + (color_octahedral_uv * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
-
-        //vec2 irradiance_uv = TextureCoordFromDirection(irradiance_dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
+        
+        vec2 irradiance_uv = TextureCoordFromDirection(irradiance_dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
         vec3 irradiance = Texture2DLod(sampler_linear, light_field_color_buffer, depth_uv, 0.0).rgb;
-
             
         const float crush_threshold = 0.2;
         if (weight < crush_threshold) {
@@ -151,10 +229,7 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
 
         irradiance = sqrt(irradiance);
 
-        //weight = 1.0 / 8.0;
-        
         total_irradiance += irradiance * weight;
-        //total_irradiance += vec3(neighbor_grid_coord) * 0.2 * weight;
         total_weight += weight;
     }
 

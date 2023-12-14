@@ -5,8 +5,9 @@
 
 #include "Shared.glsl"
 
-#define GROUP_SIZE_X PROBE_SIDE_LENGTH
-#define GROUP_SIZE_Y PROBE_SIDE_LENGTH
+#define GROUP_SIZE_X 32
+#define GROUP_SIZE_Y 32
+#define PIXELS_PER_WORKGROUP (PROBE_SIDE_LENGTH / GROUP_SIZE_X)
 
 layout(local_size_x = GROUP_SIZE_X, local_size_y = GROUP_SIZE_Y, local_size_z = 1) in;
 
@@ -27,7 +28,7 @@ layout(push_constant) uniform PushConstant
     uvec2 grid_dimensions;
 };
 
-#if 0
+#if PROBE_SIDE_LENGTH == 32
 
 const ivec4 g_offsets[132] = ivec4[](
     ivec4(32, 1, 1, 0),
@@ -164,7 +165,9 @@ const ivec4 g_offsets[132] = ivec4[](
     ivec4(1, 1, 33, 33)
 );
 
-#else
+#define OFFSETS_OK
+
+#elif PROBE_SIDE_LENGTH == 16
 
 
 const ivec4 g_offsets[68] = ivec4[](
@@ -238,28 +241,43 @@ const ivec4 g_offsets[68] = ivec4[](
     ivec4(1, 1, 17, 17)
 );
 
+#define OFFSETS_OK
+
 #endif
 
 void copy_texel(ivec2 current_coord, uint index)
 {
+#ifdef OFFSETS_OK
     ivec2 src_coord = current_coord + g_offsets[index].xy;
     ivec2 dst_coord = current_coord + g_offsets[index].zw;
 
     imageStore(OUTPUT_IMAGE, dst_coord, imageLoad(OUTPUT_IMAGE, src_coord));
+#endif
 }
 
 void main()
 {
-    const ivec2 current_coord = ivec2(probe_offset_coord) + 1;
-    const uint index = gl_GlobalInvocationID.y * GROUP_SIZE_X + gl_GlobalInvocationID.x;
+#if PIXELS_PER_WORKGROUP == 1
+    ivec2 current_coord = ivec2(probe_offset_coord) + ivec2(1);
 
     copy_texel(current_coord, gl_LocalInvocationIndex);
 
-    if (gl_LocalInvocationIndex < 4)
+    if (gl_LocalInvocationIndex < 4) {
         copy_texel(current_coord, (GROUP_SIZE_X * GROUP_SIZE_Y) + gl_LocalInvocationIndex);
+    }
+#else
+    for (int x = 0; x < PIXELS_PER_WORKGROUP / 2; x++) {
+        for (int y = 0; y < PIXELS_PER_WORKGROUP / 2; y++) {
+            ivec2 current_coord = ivec2(probe_offset_coord) * PIXELS_PER_WORKGROUP + ivec2(x, y) + ivec2(1);
 
-    //copy_texel(current_coord, index);
-    //copy_texel(current_coord, index + (GROUP_SIZE_X * GROUP_SIZE_Y));
+            copy_texel(current_coord, gl_LocalInvocationIndex * PIXELS_PER_WORKGROUP + (x * PIXELS_PER_WORKGROUP + y));
+
+            if (gl_LocalInvocationIndex < 4) {
+                copy_texel(current_coord, (GROUP_SIZE_X * GROUP_SIZE_Y) + gl_LocalInvocationIndex * PIXELS_PER_WORKGROUP + (x * PIXELS_PER_WORKGROUP + y));
+            }
+        }
+    }
+#endif
 }
 
 

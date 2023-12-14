@@ -67,7 +67,9 @@ struct SH9
         };
 
         //layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
-        layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture3D sh_clipmaps[9];
+
+        // texturearray
+        layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture2DArray sh_clipmaps;
     #endif
 
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
