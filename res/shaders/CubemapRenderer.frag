@@ -44,8 +44,8 @@ layout(location=1) out vec2 output_moments;
 #define HYP_CUBEMAP_AMBIENT 0.08
 
 #ifdef MODE_AMBIENT
-//    #define LIGHTING
-//     #define SHADOWS
+    #define LIGHTING
+    #define SHADOWS
 #endif
 
 #ifdef MODE_REFLECTION
@@ -90,7 +90,10 @@ void main()
         
     // write out distance
     const vec3 env_probe_center = (current_env_probe.aabb_max.xyz + current_env_probe.aabb_min.xyz) * 0.5;
-    const float shadow_depth = length(v_position.xyz);//distance(v_position.xyz, env_probe_center);
+
+    // TEMP - Light field probes need distance from the start of the probe, not the center. 
+    // Correct this by making a macro
+    const float shadow_depth = distance(v_position.xyz, current_env_probe.world_position.xyz);//length(v_position.xyz);
 
     vec2 moments = vec2(shadow_depth, HYP_FMATH_SQR(shadow_depth));
 

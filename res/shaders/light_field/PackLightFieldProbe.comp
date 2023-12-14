@@ -3,11 +3,12 @@
 
 #extension GL_GOOGLE_include_directive : require
 
+#include "Shared.glsl"
 
-#define PROBE_SIDE_LENGTH 16
-#define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + 2)
+#define WORKGROUP_SIZE 32
+#define PIXELS_PER_WORKGROUP (PROBE_SIDE_LENGTH / WORKGROUP_SIZE)
 
-layout(local_size_x = PROBE_SIDE_LENGTH, local_size_y = PROBE_SIDE_LENGTH, local_size_z = 1) in;
+layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -15,8 +16,6 @@ layout(local_size_x = PROBE_SIDE_LENGTH, local_size_y = PROBE_SIDE_LENGTH, local
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/env_probe.inc"
-
-#include "../include/Octahedron.glsl"
 
 layout(set = 0, binding = 0) uniform textureCube color_texture;
 layout(set = 0, binding = 1) uniform textureCube normals_texture;
@@ -74,30 +73,13 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
     return (vec2(oct_frag_coord) + vec2(0.5)) * (2.0 / float(PROBE_SIDE_LENGTH)) - vec2(1.0);
 }
 
-void main(void)
+void DoPixel(uvec2 coord)
 {
-    const uvec2 coord = probe_offset_coord + uvec2(gl_GlobalInvocationID.xy) + 2;
-
-
-
-   /* const vec2 size_per_sample = vec2(cubemap_dimensions.xy) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
-    const vec2 sample_fract = size_per_sample * vec2(sample_index);
-
-    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
-    const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
-    const vec2 sample_point = uv * 2.0 - 1.0;
-    
-    const vec3 dir = MapXYSToDirection(face_index, sample_point);
-    */
-
-    
     const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
 
     const vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;
     const vec2 depth_sample = TextureCube(sampler_linear, depth_texture, dir).rg;
-
-    // const float depth_sample_squared = depth_sample * depth_sample;
 
     imageStore(
         color_image,
@@ -116,7 +98,9 @@ void main(void)
         ivec2(coord),
         vec4(depth_sample, 0.0, 0.0)
     );
+}
 
-
-    
+void main(void)
+{
+    DoPixel(probe_offset_coord + gl_GlobalInvocationID.xy + PROBE_BORDER_LENGTH);
 }

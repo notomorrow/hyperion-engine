@@ -46,7 +46,9 @@ void main()
 
 
 #ifdef USE_CLIPMAP
-    const ivec3 cage_size = textureSize(sampler3D(sh_clipmaps[0], sampler_linear), 0);
+    // Get probe cage size using textureSize of the clipmap texturearray.
+    // The actual 3d size will be the height, cubed.
+    const ivec3 cage_size = textureSize(sampler2D(sampler_linear, sh_clipmaps)).yyy;
 
     const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(cage_size.xyz);
     const vec3 camera_position_snapped = (floor(camera.position.xyz / scale) + 0.5) * scale;
@@ -74,7 +76,7 @@ void main()
     irradiance = vec3(0.0);
 
     for (int i = 0; i < 9; i++) {
-        irradiance += Texture3D(sampler_linear, sh_clipmaps[i], cage_coord).rgb * bands[i];
+        irradiance += bands[i] * texture(sampler2D(sampler_linear, sh_clipmaps), vec3(cage_coord.xy, float(i))).rgb;
     }
 
     irradiance = max(irradiance, vec3(0.0));
