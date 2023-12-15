@@ -24,15 +24,24 @@ layout(set = 0, binding = 2) uniform textureCube depth_texture;
 layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 
+// #define USE_TEXTURE_ARRAY
+
+#ifdef USE_TEXTURE_ARRAY
+layout(set = 0, binding = 5, rgba16f) uniform writeonly image2DArray color_image;
+layout(set = 0, binding = 6, rg16f) uniform writeonly image2DArray normals_image;
+layout(set = 0, binding = 7, rg16f) uniform writeonly image2DArray depth_image;
+#else
 layout(set = 0, binding = 5, rgba16f) uniform writeonly image2D color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2D normals_image;
 layout(set = 0, binding = 7, rg16f) uniform writeonly image2D depth_image;
+#endif
 
 layout(push_constant) uniform PushConstant
 {
     uvec4 probe_grid_position;
     uvec4 cubemap_dimensions;
-    uvec2 probe_offset_coord;
+    uvec4 probe_offset_coord;
+    uvec2 grid_dimensions;
 };
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
@@ -73,34 +82,46 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
     return (vec2(oct_frag_coord) + vec2(0.5)) * (2.0 / float(PROBE_SIDE_LENGTH)) - vec2(1.0);
 }
 
-void DoPixel(uvec2 coord)
+void DoPixel(uint probe_index, uvec2 coord)
 {
+#ifndef USE_TEXTURE_ARRAY
+    coord = probe_offset_coord.xy + uvec2(gl_GlobalInvocationID.xy) + 2;
+#endif
+
     const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
 
     const vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;
     const vec2 depth_sample = TextureCube(sampler_linear, depth_texture, dir).rg;
 
+#ifdef USE_TEXTURE_ARRAY
+    ivec3 storage_coord = ivec3(coord, int(probe_index));
+#else
+    ivec2 storage_coord = ivec2(coord);
+#endif
+
     imageStore(
         color_image,
-        ivec2(coord),
+        storage_coord,
         color_sample
     );
 
     imageStore(
         normals_image,
-        ivec2(coord),
+        storage_coord,
         vec4(normals_sample, 0.0, 0.0)
     );
 
     imageStore(
         depth_image,
-        ivec2(coord),
+        storage_coord,
         vec4(depth_sample, 0.0, 0.0)
     );
 }
 
 void main(void)
 {
-    DoPixel(probe_offset_coord + gl_GlobalInvocationID.xy + PROBE_BORDER_LENGTH);
+    const uint probe_index = probe_offset_coord.z;
+
+    DoPixel(probe_index, gl_GlobalInvocationID.xy);
 }
