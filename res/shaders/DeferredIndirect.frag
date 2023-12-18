@@ -17,7 +17,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_resu
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 57) uniform texture2D env_grid_irradiance_texture;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 58) uniform texture2D reflection_probes_texture;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 58) uniform texture2D env_grid_radiance_texture;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 59) uniform texture2D reflection_probes_texture;
 
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
@@ -131,7 +132,9 @@ void main()
 #ifdef SSR_ENABLED
         CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
 #endif
-
+        vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_LINEAR, env_grid_radiance_texture, texcoord);
+        ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb);
+        
         irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
 #ifdef RT_REFLECTIONS_ENABLED

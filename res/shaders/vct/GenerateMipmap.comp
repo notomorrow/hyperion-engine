@@ -19,11 +19,9 @@ layout(push_constant) uniform VoxelMipData
     uint mip_level;
 };
 
-vec4 GetVoxelAtTexel(vec3 texcoord, ivec3 offset)
+vec4 GetVoxelAtTexel(vec3 texcoord)
 {
-    const vec3 offset_coord = texcoord + (vec3(offset) * (vec3(1.0) / prev_mip_dimensions.xyz));
-
-    return Texture3DLod(voxel_map_sampler, mip_in, offset_coord, 0.0);
+    return Texture3DLod(voxel_map_sampler, mip_in, texcoord, 0.0);
 
     // const ivec3 texel_position = clamp(ivec3(texcoord * vec3(mip_dimensions.xyz) - 0.5), ivec3(0), ivec3(mip_dimensions.xyz) - 1);
 
@@ -43,7 +41,7 @@ void main()
 
     const vec3 texcoord = (vec3(coord) + 0.5) / vec3(mip_dimensions.xyz);
 
-    vec4 color = GetVoxelAtTexel(texcoord, ivec3(0));
+    vec4 color = GetVoxelAtTexel(texcoord);
     vec4 final_color = color;
 
     imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1.0)), final_color);

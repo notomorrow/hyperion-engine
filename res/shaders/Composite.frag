@@ -25,12 +25,16 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_textu
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_vectors_result;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 59) uniform texture2D reflection_probes_texture;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 79) uniform texture2D dof_blur_blended;
 
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_color_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_depth_buffer_lowres;
+
 
 layout(location=0) out vec4 out_color;
 
@@ -50,7 +54,7 @@ void main()
     out_color = SampleLastEffectInChain(HYP_STAGE_POST, v_texcoord0, out_color);
 
     const bool is_sky = bool(VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0)) & 0x10);
-    out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
+    // out_color = vec4(mix(out_color.rgb, Tonemap(out_color.rgb), bvec3(!is_sky)), 1.0);
 
     // out_color = vec4(Tonemap(out_color.rgb), 1.0);
 
@@ -75,10 +79,13 @@ void main()
 #endif
     out_color.a = 1.0;
 
+
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
+
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, light_field_color_buffer, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, light_field_depth_buffer, v_texcoord0).rrr;
 
-    // out_color.rgb = texture(sampler2DArray(light_field_color_buffer, HYP_SAMPLER_LINEAR), vec3(v_texcoord0, 155)).rgb;
+    // out_color.rgb = texture(sampler2DArray(light_field_color_buffer, HYP_SAMPLER_LINEAR), vec3(v_texcoord0, 5)).rgb;
 }

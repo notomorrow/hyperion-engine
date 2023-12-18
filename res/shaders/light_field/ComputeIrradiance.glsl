@@ -8,12 +8,17 @@
 
 #define HYP_LIGHT_FIELD_PROBE_MAX_RADIANCE_SAMPLES 8
 
+#define TraceResult int
+#define TRACE_RESULT_MISS 0
+#define TRACE_RESULT_HIT 1
+#define TRACE_RESULT_UNKNOWN 2
+
 const float minThickness = 0.03; // meters
 const float maxThickness = 0.50; // meters
-const float rayBumpEpsilon = 0.001; // meters
+const float rayBumpEpsilon = 0.01; // meters
 
-const vec2 TEX_SIZE = vec2(PROBE_BORDER_LENGTH);
-const vec2 TEX_SIZE_SMALL = vec2(PROBE_BORDER_LENGTH); // temp until we have a small depth buffer
+const vec2 TEX_SIZE = vec2(PROBE_SIDE_LENGTH);
+const vec2 TEX_SIZE_SMALL = vec2(PROBE_SIDE_LENGTH_LOWRES); // temp until we have a small depth buffer
 
 const vec2 INV_TEX_SIZE = vec2(1.0) / TEX_SIZE;
 const vec2 INV_TEX_SIZE_SMALL = vec2(1.0) / TEX_SIZE_SMALL;
@@ -34,6 +39,13 @@ ivec3 GetGridCoord(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent,
     return position_offset;
 }
 
+vec3 GridCoordToWorldPosition(ivec3 grid_coord, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
+{
+    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+
+    return size_of_probe * vec3(grid_coord) + (grid_center - (grid_aabb_extent * 0.5));
+}
+
 int GridCoordToProbeIndex(ivec3 grid_coord, ivec3 grid_size)
 {
     return (int(grid_coord.x) * int(grid_size.y) * int(grid_size.z))
@@ -43,22 +55,33 @@ int GridCoordToProbeIndex(ivec3 grid_coord, ivec3 grid_size)
 
 ivec3 BaseGridCoord(vec3 P, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
-    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
-
-    return clamp(ivec3(max(vec3(0.0), P - grid_center) / size_of_probe), ivec3(0), grid_size - ivec3(1));
+    vec3 grid_start_position = grid_center - (grid_aabb_extent * 0.5);
+    vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+    
+    return clamp(ivec3((P - grid_start_position) / size_of_probe),
+        ivec3(0),
+        grid_size - ivec3(1));
 }
 
 int NearestProbeIndex(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, vec3 world_position)
 {
     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
-    const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
-    const ivec3 position_offset = position_units % ivec3(grid_size);
 
-    const int probe_index_at_point = (int(position_offset.x) * int(grid_size.y) * int(grid_size.z))
-        + (int(position_offset.y) * int(grid_size.z))
-        + int(position_offset.z) + 1 /* + 1 because the first element is always the reflection probe */;
+    vec3 probe_start_position = grid_center - (grid_aabb_extent * 0.5);
+    vec3 probe_coords = clamp(round((world_position - probe_start_position) / size_of_probe),
+        vec3(0.0),
+        vec3(grid_size) - vec3(1.0));
 
-    return probe_index_at_point;
+    return GridCoordToProbeIndex(ivec3(probe_coords), grid_size);
+
+    // const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
+    // const ivec3 position_offset = position_units % ivec3(grid_size);
+
+    // const int probe_index_at_point = (int(position_offset.x) * int(grid_size.y) * int(grid_size.z))
+    //     + (int(position_offset.y) * int(grid_size.z))
+    //     + int(position_offset.z) + 1 /* + 1 because the first element is always the reflection probe */;
+
+    // return probe_index_at_point;
 }
 
 /**
@@ -121,13 +144,26 @@ uint GetNearestProbeIndices(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_
 }
 
 int RelativeProbeIndex(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, int baseProbeIndex, int relativeIndex) {
-    // Guaranteed to be a power of 2
+    // // Guaranteed to be a power of 2
     int numProbes = grid_size.x * grid_size.y * grid_size.z;
 
     ivec3 offset = ivec3(relativeIndex & 1, (relativeIndex >> 1) & 1, (relativeIndex >> 2) & 1);
     ivec3 stride = ivec3(1, grid_size.x, grid_size.x * grid_size.y);
 
     return (baseProbeIndex + idot(offset, stride)) & (numProbes - 1);
+
+    // ivec3 offset = ivec3(relativeIndex, relativeIndex >> 1, relativeIndex >> 2) & ivec3(1);
+
+    // const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+
+    // ivec3 base_probe_position_in_grid = ivec3(env_probes[baseProbeIndex].position_in_grid.xyz);
+
+    // ivec3 neighbor_grid_coord = clamp(base_probe_position_in_grid + offset, ivec3(0), ivec3(grid_size) - 1);
+
+    // const int neighbor_probe_index_indirect = GridCoordToProbeIndex(neighbor_grid_coord, grid_size) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+    // const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_indirect);
+
+    // return neighbor_probe_index;
 }
 
 vec3 GridPositionToWorldPosition(ivec3 pos, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
@@ -148,27 +184,46 @@ vec3 ProbeLocation(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, uin
     //     return vec3(0.0);
     // }
 
-    // return env_probes[real_probe_index].world_position.xyz;
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
 
-    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
-    const ivec3 position_in_grid = ivec3(env_probes[probe_index].position_in_grid.xyz);
+    return env_probes[probe_index].world_position.xyz;
 
-    return size_of_probe * vec3(position_in_grid) + (grid_center - (grid_aabb_extent * 0.5));
+    // const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+    // const ivec3 position_in_grid = ivec3(env_probes[probe_index].position_in_grid.xyz);
+
+    // return size_of_probe * vec3(position_in_grid) + (grid_center - (grid_aabb_extent * 0.5));
 }
 
 vec2 LocalTexCoordToProbeTexCoord(vec2 uv, uint probe_index, uvec2 image_dimensions, ivec3 grid_size)
 {
-    vec2 normalized_coord_to_texture_dimensions = (uv * float(PROBE_SIDE_LENGTH)) / vec2(image_dimensions);
 
-    uint probes_per_row = (image_dimensions.x - 2) / uint(PROBE_SIDE_LENGTH_BORDER);
+    const uvec3 position_in_grid = uvec3(env_probes[probe_index].position_in_grid.xyz);
 
-    // border around texture and further 1 pix border around top left probe.
-    vec2 probe_top_left_position = vec2(mod(probe_index, probes_per_row) * PROBE_SIDE_LENGTH_BORDER,
-        (probe_index / probes_per_row) * PROBE_SIDE_LENGTH_BORDER) + vec2(2.0f, 2.0f);
+    const uvec2 probe_offset_coord = uvec2(
+        PROBE_SIDE_LENGTH_BORDER * (position_in_grid.y * grid_size.x + position_in_grid.x),
+        PROBE_SIDE_LENGTH_BORDER * position_in_grid.z
+    ) + PROBE_BORDER_LENGTH;
 
-    vec2 normalized_probe_top_left_position = vec2(probe_top_left_position) / vec2(image_dimensions);
+    const uvec2 probe_grid_dimensions = uvec2(
+        PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + PROBE_BORDER_LENGTH,
+        PROBE_SIDE_LENGTH_BORDER * grid_size.z + PROBE_BORDER_LENGTH
+    );
 
-    return vec2(normalized_probe_top_left_position + normalized_coord_to_texture_dimensions);
+    uvec2 coord = uvec2(uv * float(PROBE_SIDE_LENGTH)) - 1;
+
+    return ((vec2(probe_offset_coord) + vec2(coord) + 1) + 0.5) / vec2(image_dimensions);
+
+    // vec2 normalized_coord_to_texture_dimensions = (uv * float(PROBE_SIDE_LENGTH)) / vec2(image_dimensions);
+
+    // uint probes_per_row = (image_dimensions.x - 2) / uint(PROBE_SIDE_LENGTH_BORDER);
+
+    // // border around texture and further 1 pix border around top left probe.
+    // vec2 probe_top_left_position = vec2(mod(probe_index, probes_per_row) * PROBE_SIDE_LENGTH_BORDER,
+    //     (probe_index / probes_per_row) * PROBE_SIDE_LENGTH_BORDER) + vec2(2.0f, 2.0f);
+
+    // vec2 normalized_probe_top_left_position = vec2(probe_top_left_position) / vec2(image_dimensions);
+
+    // return vec2(normalized_probe_top_left_position + normalized_coord_to_texture_dimensions);
 }
 
 vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, ivec3 grid_size)
@@ -266,17 +321,21 @@ uvec2 GetProbeOffsetCoord(uint probe_index, uvec2 image_dimensions, ivec3 grid_s
 
 vec3 ReadProbeColor(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 grid_size)
 {
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+
 #ifdef USE_TEXTURE_ARRAY
-    return texture(sampler2DArray(light_field_color_buffer, sampler_nearest), vec3(uv, float(probe_index)), 0.0).rgb;
+    return texture(sampler2DArray(light_field_color_buffer, sampler_linear), vec3(uv, float(probe_index)), 0.0).rgb;
 #else
     const vec2 probe_uv = LocalTexCoordToProbeTexCoord(uv, probe_index, image_dimensions, grid_size);
 
-    return texture(sampler2D(light_field_color_buffer, sampler_nearest), probe_uv, 0.0).rgb;
+    return texture(sampler2D(light_field_color_buffer, sampler_linear), probe_uv, 0.0).rgb;
 #endif
 }
 
 vec3 ReadProbeNormals(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 grid_size)
 {
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+
 #ifdef USE_TEXTURE_ARRAY
     return UnpackNormalVec2(texture(sampler2DArray(light_field_normals_buffer, sampler_nearest), vec3(uv, float(probe_index)), 0.0).rg);
 #else
@@ -288,6 +347,8 @@ vec3 ReadProbeNormals(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 g
 
 float ReadProbeDepth(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 grid_size)
 {
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+
 #ifdef USE_TEXTURE_ARRAY
     return texture(sampler2DArray(light_field_depth_buffer, sampler_nearest), vec3(uv, float(probe_index)), 0.0).r;
 #else
@@ -297,31 +358,58 @@ float ReadProbeDepth(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 gr
 #endif
 }
 
+vec3 ReadProbeColorLowRes(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 grid_size)
+{
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+
+#ifdef USE_TEXTURE_ARRAY
+    return texture(sampler2DArray(light_field_depth_buffer, sampler_nearest), vec3(uv, float(probe_index)), 0.0).rgb;
+#else
+    const vec2 probe_uv = LocalTexCoordToProbeTexCoord(uv, probe_index, image_dimensions, grid_size);
+
+    return texture(sampler2D(light_field_color_buffer_lowres, sampler_nearest), probe_uv, 0.0).rgb;
+#endif
+}
+
+float ReadProbeDepthLowRes(uint probe_index, vec2 uv, uvec2 image_dimensions, ivec3 grid_size)
+{
+    probe_index = probe_index % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+
+#ifdef USE_TEXTURE_ARRAY
+    return texture(sampler2DArray(light_field_depth_buffer, sampler_nearest), vec3(uv, float(probe_index)), 0.0).r;
+#else
+    const vec2 probe_uv = LocalTexCoordToProbeTexCoord(uv, probe_index, image_dimensions, grid_size);
+
+    return texture(sampler2D(light_field_depth_buffer_lowres, sampler_nearest), probe_uv, 0.0).r;
+#endif
+}
+
 vec3 ComputeLightFieldProbeRadiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size);
 
 vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
+    return vec3(0.0);
+    // return SampleRadiance(world_position, N, V, grid_center, grid_aabb_extent, grid_size);
+
     // // TEMP test
     // return ComputeLightFieldProbeRadiance(world_position, N, V, grid_center, grid_aabb_extent, grid_size);
-
+    // return TraceRadiance2(world_position, N, V, grid_center, grid_aabb_extent, grid_size);
 
     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
 
-    ivec3 base_grid_coord;
-    const int base_probe_index_indirect = GetLocalEnvProbeIndex(world_position, grid_center, grid_aabb_extent, grid_size, base_grid_coord) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+    ivec3 base_probe_position_in_grid;
+    const int base_probe_index_indirect = GetLocalEnvProbeIndex(world_position, grid_center, grid_aabb_extent, grid_size, base_probe_position_in_grid) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
     const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_indirect);
 
-    // const ivec3 base_grid_coord = BaseGridCoord(world_position, grid_center, grid_aabb_extent, grid_size);
+    const ivec3 base_grid_coord = BaseGridCoord(world_position, grid_center, grid_aabb_extent, grid_size);
+    vec3 grid_start_position = GridCoordToWorldPosition(base_grid_coord, grid_center, grid_aabb_extent, grid_size);
     // const vec3 base_probe_position_world = GridPositionToWorldPosition(base_grid_coord, grid_center, grid_aabb_extent, grid_size);
 
     if (base_probe_index == ~0u) {
         return vec3(0.0);
     }
 
-    const vec3 base_probe_position_world = env_probes[base_probe_index].world_position.xyz;
-
-    vec3 alpha = clamp((world_position - base_probe_position_world) / size_of_probe, vec3(0.0), vec3(1.0));
-    
+    vec3 alpha = clamp((world_position - grid_start_position) / size_of_probe, vec3(0.0), vec3(1.0));
 
     vec3 total_irradiance = vec3(0.0);
     float total_weight = 0.0;
@@ -330,7 +418,7 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
     for (int i = 0; i < 8; i++) {
         ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
 
-        ivec3 neighbor_grid_coord = clamp(base_grid_coord + offset, ivec3(0), ivec3(grid_size) - 1);
+        ivec3 neighbor_grid_coord = clamp(base_probe_position_in_grid + offset, ivec3(0), ivec3(grid_size) - 1);
 
         const int neighbor_probe_index_indirect = GridCoordToProbeIndex(neighbor_grid_coord, grid_size) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
         const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_indirect);
@@ -339,7 +427,7 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
             continue;
         }
 
-        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, offset);
+        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
         float weight = trilinear.x * trilinear.y * trilinear.z;
 
         const vec3 probe_position_world = env_probes[neighbor_probe_index].world_position.xyz;
@@ -352,16 +440,25 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
 
         const uvec3 position_in_grid = uvec3(env_probes[neighbor_probe_index].position_in_grid.xyz);
 
-#ifdef USE_TEXTURE_ARRAY
-        const vec2 depth_uv = EncodeOctahedralCoord(-dir) * 0.5 + 0.5;;
-        const vec2 moments = texture(sampler2DArray(light_field_depth_buffer, sampler_linear), vec3(depth_uv, float(neighbor_probe_index)), 0.0).rg;
-#else
+        const uvec2 probe_offset_coord = uvec2(
+            PROBE_SIDE_LENGTH_BORDER * (position_in_grid.y * grid_size.x + position_in_grid.x),
+            PROBE_SIDE_LENGTH_BORDER * position_in_grid.z
+        ) + PROBE_BORDER_LENGTH;
+
         const uvec2 probe_grid_dimensions = uvec2(
             PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + PROBE_BORDER_LENGTH,
             PROBE_SIDE_LENGTH_BORDER * grid_size.z + PROBE_BORDER_LENGTH
         );
 
-        const vec2 depth_uv = TextureCoordFromDirection(-dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
+        const vec2 octahedral_dir = EncodeOctahedralCoord(-dir) * 0.5 + 0.5;
+
+#ifdef USE_TEXTURE_ARRAY
+        const vec2 depth_uv = ((octahedral_dir * PROBE_SIDE_LENGTH) + 0.5) / vec2(PROBE_SIDE_LENGTH);
+        const vec2 moments = texture(sampler2DArray(light_field_depth_buffer, sampler_linear), vec3(depth_uv, float(neighbor_probe_index)), 0.0).rg;
+#else
+
+        const vec2 depth_uv = (vec2(probe_offset_coord) + (octahedral_dir * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
+        // const vec2 depth_uv = TextureCoordFromDirection(-dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
         const vec2 moments = Texture2DLod(sampler_linear, light_field_depth_buffer, depth_uv, 0.0).rg;
 #endif
 
@@ -377,13 +474,13 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         weight = max(0.0001, weight);
 
         const vec3 irradiance_dir = normalize(N);
+        vec2 irradiance_uv = EncodeOctahedralCoord(irradiance_dir) * 0.5 + 0.5;
 
 #ifdef USE_TEXTURE_ARRAY
-        vec2 irradiance_uv = EncodeOctahedralCoord(normalize(irradiance_dir)) * 0.5 + 0.5;
-        vec3 irradiance = texture(sampler2DArray(light_field_color_buffer, sampler_linear), vec3(irradiance_uv, float(neighbor_probe_index)), 0.0).rgb;
+        vec3 irradiance = texture(sampler2DArray(light_field_color_buffer_lowres, sampler_nearest), vec3(irradiance_uv, float(neighbor_probe_index)), 0.0).rgb;
 #else
-        vec2 irradiance_uv = TextureCoordFromDirection(irradiance_dir, neighbor_probe_index, probe_grid_dimensions, grid_size);
-        vec3 irradiance = Texture2DLod(sampler_linear, light_field_color_buffer, depth_uv, 0.0).rgb;
+        irradiance_uv = (vec2(probe_offset_coord) + (irradiance_uv * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
+        vec3 irradiance = Texture2DLod(sampler_linear, light_field_color_buffer, irradiance_uv /* debug */, 0.0).rgb;
 #endif
 
         const float crush_threshold = 0.2;
@@ -417,10 +514,23 @@ bool Trace(
 
 vec3 ComputeLightFieldProbeRadiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
+    ivec3 grid_coord = GetGridCoord(world_position, grid_center, grid_aabb_extent, grid_size);
+    uint seed = uint(grid_coord.x) * uint(grid_size.y) * uint(grid_size.z) + uint(grid_coord.y) * uint(grid_size.z) + uint(grid_coord.z);
+    vec2 rand_value = vec2(RandomFloat(seed), RandomFloat(seed));
+    
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(N, tangent, bitangent);
+    
+    vec3 H = ImportanceSampleGGX(rand_value, N, 0.5);
+    // H = tangent * H.x + bitangent * H.y + N * H.z;
+
+    // return H;
+
     const vec3 R = reflect(-V, N);
 
     Ray ray;
-    ray.origin = world_position + R * rayBumpEpsilon;
+    ray.origin = world_position + N * 0.25;
     ray.direction = R;
 
     float hit_distance = 10000.0;
@@ -438,6 +548,29 @@ vec3 ComputeLightFieldProbeRadiance(vec3 world_position, vec3 N, vec3 V, vec3 gr
     );
 
     vec3 radiance = ReadProbeColor(hit_probe_index, hit_probe_texcoord, probe_grid_dimensions, grid_size);
+
+    // Render a debug color for the probe using the hit index.
+
+    const vec3 debug_colors[16] = {
+        vec3(1.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        vec3(0.0, 0.0, 1.0),
+        vec3(1.0, 1.0, 0.0),
+        vec3(0.0, 1.0, 1.0),
+        vec3(1.0, 0.0, 1.0),
+        vec3(1.0, 1.0, 1.0),
+        vec3(0.0, 0.0, 0.0),
+        vec3(0.5, 0.0, 0.0),
+        vec3(0.0, 0.5, 0.0),
+        vec3(0.0, 0.0, 0.5),
+        vec3(0.5, 0.5, 0.0),
+        vec3(0.0, 0.5, 0.5),
+        vec3(0.5, 0.0, 0.5),
+        vec3(0.5, 0.5, 0.5),
+        vec3(0.0, 0.0, 0.0)
+    };
+
+    // return debug_colors[hit_probe_index % 16];
 
     return radiance;
 }
@@ -487,11 +620,6 @@ float DistanceToIntersection(in Ray R, vec3 v) {
 
     return numer / denom;
 }
-
-#define TraceResult int
-#define TRACE_RESULT_HIT 0
-#define TRACE_RESULT_MISS 1
-#define TRACE_RESULT_UNKNOWN 2
 
 TraceResult HighResolutionTraceOneRaySegment(
     vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size,
@@ -616,7 +744,6 @@ bool LowResolutionTraceOneSegment(
     inout vec2 endHighResTexCoord
 )
 {
-
     const uvec2 probe_grid_dimensions = uvec2(
         PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + PROBE_BORDER_LENGTH,
         PROBE_SIDE_LENGTH_BORDER * grid_size.z + PROBE_BORDER_LENGTH
@@ -651,7 +778,7 @@ bool LowResolutionTraceOneSegment(
     vec3 initialDirectionFromProbe = DecodeOctahedralCoord(texCoord * 2.0 - 1.0);
     float prevRadialDistMaxEstimate = max(0.0, DistanceToIntersection(probeSpaceRay, initialDirectionFromProbe));
     // Slide P from P0 to P1
-    float  end = P1.x * stepDir;
+    float end = P1.x * stepDir;
 
     float absInvdPY = 1.0 / abs(dP.y);
 
@@ -662,8 +789,7 @@ bool LowResolutionTraceOneSegment(
     for (vec2 P = P0; ((P.x * sign(delta.x)) <= end); ) {
         vec2 hitPixel = permute ? P.yx : P;
 
-        // @TODO Low-res texture
-        float sceneRadialDistMin = ReadProbeDepth(probeIndex, hitPixel, probe_grid_dimensions, grid_size);
+        float sceneRadialDistMin = ReadProbeDepthLowRes(probeIndex, hitPixel * INV_TEX_SIZE_SMALL, probe_grid_dimensions, grid_size);
 
         // Distance along each axis to the edge of the low-res texel
         vec2 intersectionPixelDistance = (sign(delta) * 0.5 + 0.5) - sign(delta) * fract(P);
@@ -747,9 +873,9 @@ TraceResult TraceOneRaySegment
 
     // Texture coordinates on [0, 1]
     vec2 texCoord = startOctCoord * 0.5 + 0.5;
-    vec2 segmentEndTexCoord = endOctCoord   * 0.5 + 0.5;
+    vec2 segmentEndTexCoord = endOctCoord * 0.5 + 0.5;
 
-    const int max_iterations = 1000;
+    const int max_iterations = 150;
 
     for (int i = 0; i < max_iterations; ++i) {
         vec2 endTexCoord;
@@ -789,7 +915,7 @@ TraceResult TraceOneRaySegment
             // instead of getting stuck back on the low-res texel we just verified...but, if that fails on the
             // very first texel, we'll want to restart the high-res trace exactly where we left off, so
             // don't bump by an entire high-res texel
-            texCoord = endTexCoord + texCoordRayDirection * /*invSize(lightFieldSurface.distanceProbeGrid)*/ INV_TEX_SIZE.x * 0.01;
+            texCoord = endTexCoord + texCoordRayDirection * /*invSize(lightFieldSurface.distanceProbeGrid)*/ INV_TEX_SIZE.x * 0.1;
         }
     } // while low-resolution trace
 
@@ -864,7 +990,16 @@ bool Trace(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size,
 
     hitProbeIndex = ~0u;
 
-    uint base_probe_index = GET_GRID_PROBE_INDEX(GridCoordToProbeIndex(BaseGridCoord(worldSpaceRay.origin, grid_center, grid_aabb_extent, grid_size), grid_size));
+    // ivec3 base_grid_coord;
+    // const int base_probe_index_indirect = GetLocalEnvProbeIndex(worldSpaceRay.origin, grid_center, grid_aabb_extent, grid_size, base_grid_coord) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES;
+    // const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_indirect);
+
+    // if (base_probe_index == ~0u) {
+    //     return false;
+    // }
+
+    int base_probe_index_indirect = NearestProbeIndex(grid_center, grid_aabb_extent, grid_size, worldSpaceRay.origin);
+    const uint base_probe_index = 0;//GET_GRID_PROBE_INDEX(base_probe_index_indirect);
 
     uint probe_indices[8];
     uint i = GetNearestProbeIndices(grid_center, grid_aabb_extent, grid_size, worldSpaceRay.origin, probe_indices);
@@ -872,14 +1007,21 @@ bool Trace(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size,
     int probesLeft = 8;
     float tMin = 0.0;
 
-    while (probesLeft > 0) {
-        uint probe_index = GET_GRID_PROBE_INDEX(RelativeProbeIndex(grid_center, grid_aabb_extent, grid_size, int(base_probe_index), int(i)));
+    // hitProbeIndex = NearestProbeIndex(grid_center, grid_aabb_extent, grid_size, worldSpaceRay.origin);
+    // hitProbeIndex = GET_GRID_PROBE_INDEX(hitProbeIndex);
+    // hitProbeTexCoord = EncodeOctahedralCoord(worldSpaceRay.direction) * 0.5 + 0.5;
 
-        if (probe_index == ~0u) {
-            --probesLeft;
-            i = NEXT_CYCLE_INDEX(i);
-            continue;
-        }
+    // float probeDistance = ReadProbeDepth(hitProbeIndex, hitProbeTexCoord, probe_grid_dimensions, grid_size);
+
+    // if (probeDistance < 10000.0) {
+    //     vec3 hitLocation = ProbeLocation(grid_center, grid_aabb_extent, grid_size, hitProbeIndex) + worldSpaceRay.direction * probeDistance;
+    //     tMax = length(worldSpaceRay.origin - hitLocation);
+    //     return true;
+    // }
+
+    while (probesLeft > 0) {
+        int probe_index_indirect = RelativeProbeIndex(grid_center, grid_aabb_extent, grid_size, int(base_probe_index_indirect), int(i));
+        uint probe_index = GET_GRID_PROBE_INDEX(probe_index_indirect);
 
         TraceResult result = TraceOneProbeOct(
             grid_center, grid_aabb_extent, grid_size,
@@ -890,39 +1032,18 @@ bool Trace(vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size,
         );
         
         if (result == TRACE_RESULT_UNKNOWN) {
-            --probesLeft;
             i = NEXT_CYCLE_INDEX(i);
+            --probesLeft;
         } else {
             if (result == TRACE_RESULT_HIT) {
-                probe_index = GET_GRID_PROBE_INDEX(RelativeProbeIndex(grid_center, grid_aabb_extent, grid_size, int(base_probe_index), int(i)));
-
-                if (probe_index == ~0u) {
-                    --probesLeft;
-                    i = NEXT_CYCLE_INDEX(i);
-                    continue;
-                }
-
-                hitProbeIndex = probe_index;
+                int hit_probe_index_indirect = RelativeProbeIndex(grid_center, grid_aabb_extent, grid_size, int(base_probe_index_indirect), int(i));
+                hitProbeIndex = GET_GRID_PROBE_INDEX(hit_probe_index_indirect);
             }
             // Found the hit point
             break;
         }
     }
-
-    if ((hitProbeIndex == -1) && fillHoles) {
-        hitProbeIndex = GET_GRID_PROBE_INDEX(NearestProbeIndex(grid_center, grid_aabb_extent, grid_size, worldSpaceRay.origin));
-        hitProbeTexCoord = EncodeOctahedralCoord(worldSpaceRay.direction) * 0.5 + 0.5;
-
-        float probeDistance = ReadProbeDepth(hitProbeIndex, hitProbeTexCoord, probe_grid_dimensions, grid_size);
-
-        if (probeDistance < 10000.0) {
-            vec3 hitLocation = ProbeLocation(grid_center, grid_aabb_extent, grid_size, hitProbeIndex) + worldSpaceRay.direction * probeDistance;
-            tMax = length(worldSpaceRay.origin - hitLocation);
-            return true;
-        }
-    }
-
-    return (hitProbeIndex != -1);
+    return (hitProbeIndex != ~0u);
 }
 
 #endif
