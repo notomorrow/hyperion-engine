@@ -34,13 +34,13 @@ layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 layout(set = 0, binding = 5, rgba16f) uniform writeonly image2DArray color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2DArray normals_image;
 layout(set = 0, binding = 7, rg16f) uniform writeonly image2DArray depth_image;
-layout(set = 0, binding = 8, rgba16f) uniform writeonly image2DArray color_image_lowres;
+layout(set = 0, binding = 8, rgba8) uniform writeonly image2DArray irradiance_image;
 layout(set = 0, binding = 9, r32f) uniform writeonly image2DArray depth_image_lowres;
 #else
 layout(set = 0, binding = 5, rgba16f) uniform writeonly image2D color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2D normals_image;
 layout(set = 0, binding = 7, rg16f) uniform writeonly image2D depth_image;
-layout(set = 0, binding = 8, rgba16f) uniform writeonly image2D color_image_lowres;
+layout(set = 0, binding = 8, rgba8) uniform writeonly image2D irradiance_image;
 layout(set = 0, binding = 9, r32f) uniform writeonly image2D depth_image_lowres;
 #endif
 
@@ -50,7 +50,7 @@ layout(push_constant) uniform PushConstant
     uvec4 cubemap_dimensions;
     uvec4 probe_offset_coord;
     uvec4 probe_offset_coord_lowres;
-    uvec2 grid_dimensions;
+    uvec4 grid_dimensions;
 };
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
@@ -99,7 +99,7 @@ struct ConvolutionResult
 
 ConvolutionResult ConvoleProbe(uint probe_index, vec3 dir)
 {
-    const int num_samples = 64;
+    const int num_samples = 256;
     const float lobe_size = 0.96;
 
     vec3 sum_radiance = vec3(0.0);
@@ -153,57 +153,68 @@ ConvolutionResult ConvoleProbe(uint probe_index, vec3 dir)
 
 void DoPixel(uint probe_index, uvec2 coord)
 {
-#ifndef USE_TEXTURE_ARRAY
-    coord = probe_offset_coord.xy + uvec2(gl_GlobalInvocationID.xy) + 2;
+    uvec2 irradiance_downsample = max(uvec2(1), uvec2(PROBE_SIDE_LENGTH / PROBE_SIDE_LENGTH_IRRADIANCE));
+
+#ifdef USE_TEXTURE_ARRAY
+    uvec2 radiance_coord = coord;
+    uvec2 irradiance_coord = coord / irradiance_downsample;
+#else
+    uvec2 radiance_coord = probe_offset_coord.xy + coord + 2;
+    uvec2 irradiance_coord = probe_offset_coord.zw + (coord / irradiance_downsample) + 2;
 #endif
 
-    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
+    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(radiance_coord)));
 
     const vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;
     const vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
 
 #ifdef USE_TEXTURE_ARRAY
-    ivec3 storage_coord = ivec3(coord, int(probe_index));
+    ivec3 storage_coord_radiance = ivec3(radiance_coord, int(probe_index));
+    ivec3 storage_coord_irradiance = ivec3(irradiance_coord, int(probe_index));
 #else
-    ivec2 storage_coord = ivec2(coord);
+    ivec2 storage_coord_radiance = ivec2(radiance_coord);
+    ivec2 storage_coord_irradiance = ivec2(irradiance_coord);
 #endif
 
     imageStore(
         color_image,
-        storage_coord,
+        storage_coord_radiance,
         color_sample
     );
 
     imageStore(
         normals_image,
-        storage_coord,
+        storage_coord_radiance,
         vec4(normals_sample, 0.0, 0.0)
     );
 
     imageStore(
         depth_image,
-        storage_coord,
+        storage_coord_radiance,
         vec4(depth_sample, 0.0, 0.0)
     );
 
+
+    if (mod(coord, irradiance_downsample) == uvec2(0)) {
+        ConvolutionResult irradiance_result = ConvoleProbe(probe_index, dir);
+
+        imageStore(
+            irradiance_image,
+            storage_coord_irradiance,
+            vec4(irradiance_result.color, 1.0)
+        );
+    }
+
     if (mod(coord, uvec2(LOWRES_DITHER)) == uvec2(0)) {
-        uvec2 lowres_local_coord = uvec2(gl_GlobalInvocationID.xy) / uvec2(LOWRES_DITHER);
-        uvec2 lowres_coord = uvec2(probe_offset_coord_lowres.xy + lowres_local_coord + 2);
+        uvec2 lowres_local_coord = coord / uvec2(LOWRES_DITHER);
+        uvec2 lowres_coord = uvec2(probe_offset_coord_lowres.xy + lowres_local_coord + 1);
 
         #ifdef USE_TEXTURE_ARRAY
             ivec3 storage_coord_lowres = ivec3(lowres_coord, int(probe_index));
         #else
             ivec2 storage_coord_lowres = ivec2(lowres_coord);
         #endif
-
-        ConvolutionResult result = ConvoleProbe(probe_index, dir);
-        
-        imageStore(
-            color_image_lowres,
-            storage_coord_lowres,
-            vec4(result.color, 1.0)
-        );
 
         imageStore(
             depth_image_lowres,
@@ -215,7 +226,7 @@ void DoPixel(uint probe_index, uvec2 coord)
 
 void main(void)
 {
-    const uint probe_index = probe_offset_coord.z;
+    const uint probe_index = probe_grid_position.w;
 
     DoPixel(probe_index, gl_GlobalInvocationID.xy);
 }

@@ -367,7 +367,7 @@ vec3 ReadProbeColorLowRes(uint probe_index, vec2 uv, uvec2 image_dimensions, ive
 #else
     const vec2 probe_uv = LocalTexCoordToProbeTexCoord(uv, probe_index, image_dimensions, grid_size);
 
-    return texture(sampler2D(light_field_color_buffer_lowres, sampler_nearest), probe_uv, 0.0).rgb;
+    return texture(sampler2D(light_field_irradiance_buffer, sampler_nearest), probe_uv, 0.0).rgb;
 #endif
 }
 
@@ -388,7 +388,6 @@ vec3 ComputeLightFieldProbeRadiance(vec3 world_position, vec3 N, vec3 V, vec3 gr
 
 vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
-    return vec3(0.0);
     // return SampleRadiance(world_position, N, V, grid_center, grid_aabb_extent, grid_size);
 
     // // TEMP test
@@ -443,7 +442,7 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         const uvec2 probe_offset_coord = uvec2(
             PROBE_SIDE_LENGTH_BORDER * (position_in_grid.y * grid_size.x + position_in_grid.x),
             PROBE_SIDE_LENGTH_BORDER * position_in_grid.z
-        ) + PROBE_BORDER_LENGTH;
+        ) + 2;
 
         const uvec2 probe_grid_dimensions = uvec2(
             PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + PROBE_BORDER_LENGTH,
@@ -477,10 +476,10 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         vec2 irradiance_uv = EncodeOctahedralCoord(irradiance_dir) * 0.5 + 0.5;
 
 #ifdef USE_TEXTURE_ARRAY
-        vec3 irradiance = texture(sampler2DArray(light_field_color_buffer_lowres, sampler_nearest), vec3(irradiance_uv, float(neighbor_probe_index)), 0.0).rgb;
+        vec3 irradiance = texture(sampler2DArray(light_field_color_buffer, sampler_linear), vec3(irradiance_uv, float(neighbor_probe_index)), 0.0).rgb;
 #else
         irradiance_uv = (vec2(probe_offset_coord) + (irradiance_uv * PROBE_SIDE_LENGTH) + 0.5) / vec2(probe_grid_dimensions);
-        vec3 irradiance = Texture2DLod(sampler_linear, light_field_color_buffer, irradiance_uv /* debug */, 0.0).rgb;
+        vec3 irradiance = Texture2DLod(sampler_linear, light_field_color_buffer, depth_uv /* debug */, 0.0).rgb;
 #endif
 
         const float crush_threshold = 0.2;

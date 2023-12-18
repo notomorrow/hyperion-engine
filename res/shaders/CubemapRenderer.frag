@@ -46,9 +46,9 @@ layout(location=1) out vec2 output_moments;
 #define HYP_CUBEMAP_AMBIENT 0.08
 
 #ifdef MODE_AMBIENT
-    #define LIGHTING
-    #define SHADOWS
-    #define TONEMAP
+    // #define LIGHTING
+    // #define SHADOWS
+    // #define TONEMAP
 #endif
 
 #ifdef MODE_REFLECTION

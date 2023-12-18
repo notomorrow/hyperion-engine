@@ -48,7 +48,7 @@ layout(push_constant) uniform PushConstant
     uvec4 cubemap_dimensions;
     uvec4 probe_offset_coord;
     uvec4 probe_offset_coord_lowres;
-    uvec2 grid_dimensions;
+    uvec4 grid_dimensions;
 };
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
@@ -106,7 +106,13 @@ void DoPixel(uint probe_index, uvec2 coord)
 
     const vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample.r;
 
-    const vec3 scaled_position = (point_world_position - env_grid.center.xyz) / env_grid.aabb_extent.xyz;
+    // Voxel grid aabb must be 1:1:1 cube
+    const vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));
+    const vec3 voxel_grid_aabb_max = vec3(max(env_grid.aabb_max.x, max(env_grid.aabb_max.y, env_grid.aabb_max.z)));
+    const vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
+    const vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
+
+    const vec3 scaled_position = (point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
     const ivec3 voxel_storage_position = ivec3(((scaled_position * 0.5 + 0.5) * 256.0));
 
     if (voxel_storage_position.x < 0 || voxel_storage_position.x >= 256 ||
@@ -116,12 +122,12 @@ void DoPixel(uint probe_index, uvec2 coord)
         return;
     }
 
-    imageStore(voxel_grid_image, voxel_storage_position, vec4(color_sample.rgb, 1.0));
+    imageStore(voxel_grid_image, voxel_storage_position, color_sample);
 }
 
 void main(void)
 {
-    const uint probe_index = probe_offset_coord.z;
+    const uint probe_index = probe_grid_position.w;
 
     DoPixel(probe_index, gl_GlobalInvocationID.xy);
 }
