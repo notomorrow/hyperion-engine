@@ -17,6 +17,7 @@ layout(location=11) in flat uint v_object_index;
 layout(location=12) in flat vec3 v_env_probe_extent;
 layout(location=13) in flat uint v_cube_face_index;
 layout(location=14) in vec2 v_cube_face_uv;
+layout(location=15) in vec4 v_view_space_position;
 
 // #ifndef MODE_SHADOWS
 layout(location=0) out vec4 output_color;
@@ -38,6 +39,7 @@ layout(location=1) out vec2 output_moments;
 #include "include/material.inc"
 #include "include/gbuffer.inc"
 #include "include/env_probe.inc"
+#include "include/Octahedron.glsl"
 #include "include/object.inc"
 #include "include/packing.inc"
 
@@ -46,6 +48,7 @@ layout(location=1) out vec2 output_moments;
 #ifdef MODE_AMBIENT
     #define LIGHTING
     #define SHADOWS
+    #define TONEMAP
 #endif
 
 #ifdef MODE_REFLECTION
@@ -71,6 +74,7 @@ void main()
     // view_position.xyz /= view_position.w;
 
     const float min_extent = min(abs(v_env_probe_extent.x), min(abs(v_env_probe_extent.y), abs(v_env_probe_extent.z))) * 0.5;
+    const vec3 env_probe_center = current_env_probe.world_position.xyz;
 
     vec4 albedo = CURRENT_MATERIAL.albedo;
 
@@ -89,22 +93,17 @@ void main()
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
         
     // write out distance
-    const vec3 env_probe_center = (current_env_probe.aabb_max.xyz + current_env_probe.aabb_min.xyz) * 0.5;
+    const float dist = distance(v_position, env_probe_center);
 
-    // TEMP - Light field probes need distance from the start of the probe, not the center. 
-    // Correct this by making a macro
-    const float shadow_depth = distance(v_position.xyz, current_env_probe.world_position.xyz);//length(v_position.xyz);
-
-    vec2 moments = vec2(shadow_depth, HYP_FMATH_SQR(shadow_depth));
-
+    vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
 #endif
 
 #ifdef MODE_SHADOWS
-
-    float dx = dFdx(shadow_depth);
-    float dy = dFdy(shadow_depth);
+    float dx = dFdx(dist);
+    float dy = dFdy(dist);
     
     moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
+
     output_color = vec4(moments, 0.0, 0.0);
 #else
 

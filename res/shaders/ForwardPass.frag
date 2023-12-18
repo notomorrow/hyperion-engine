@@ -26,6 +26,7 @@ layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
 layout(location=6) out vec4 gbuffer_ws_normals;
+layout(location=7) out vec4 gbuffer_ws_positions;
 
 #define PARALLAX_ENABLED 1
 #define HAS_REFRACTION 1
@@ -251,10 +252,13 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
+    // gbuffer_albedo.rgb = P;
+
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);
+    gbuffer_ws_positions = vec4(v_position, 1.0);
 }

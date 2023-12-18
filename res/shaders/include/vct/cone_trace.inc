@@ -34,7 +34,9 @@ const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
 };
 
 #if HYP_VCT_MODE == HYP_VCT_MODE_TEXTURE
+#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
+#endif
 
     vec4 FetchVoxel(vec3 position, float lod)
     {
@@ -44,8 +46,9 @@ const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
     }
 
 #elif HYP_VCT_MODE == HYP_VCT_MODE_SVO
-
+#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 40) readonly buffer uuOctree { uvec2 uOctree[]; };
+#endif
 
     const float uVolumeDimension = 1024.0;
     #define VCT_ORIGIN_OFFSET 0.4

@@ -9,11 +9,12 @@ frag = DeferredDirect.frag
 vert = Deferred.vert
 
 [DeferredCombine]
-permute = SSR_ENABLED,  REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_REFLECTIONS_ENABLED, RT_GI_ENABLED, HBIL_ENABLED, HBAO_EABLED
+permute = SSR_ENABLED, REFLECTION_PROBE_ENABLED, ENV_GRID_ENABLED, RT_REFLECTIONS_ENABLED, RT_GI_ENABLED, HBIL_ENABLED, HBAO_EABLED
 frag = deferred/DeferredCombine.frag
 vert = PostEffect.vert
 
 [ApplyEnvGrid]
+permute = MODE(RADIANCE IRRADIANCE)
 frag = deferred/ApplyEnvGrid.frag
 vert = Deferred.vert
 
@@ -72,6 +73,9 @@ comp = sh/ComputeSHClipmap.comp
 
 [PackLightFieldProbe]
 comp = light_field/PackLightFieldProbe.comp
+
+[LightField_VoxelizeProbe]
+comp = light_field/VoxelizeProbe.comp.glsl
 
 [LightField_CopyBorderTexels]
 permute = DEPTH

@@ -14,6 +14,8 @@
 
 #define fmod(x, y) ((x) - (y) * floor((x) / (y)))
 
+#define round(x) floor((x) + 0.5)
+
 //#define rcp(x) (1.0 / (x))
 
 float Luminance(vec3 color)
