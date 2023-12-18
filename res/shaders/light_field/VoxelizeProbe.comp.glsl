@@ -99,7 +99,7 @@ void DoPixel(uint probe_index, uvec2 coord)
 
     const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
 
-    const vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
+    const vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
     const vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
 
     // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);

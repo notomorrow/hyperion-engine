@@ -57,7 +57,7 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
     const float greatest_extent = 256.0;
     const float voxel_size = 1.0 / greatest_extent;
 
-    return ConeTrace(voxel_size, voxel_coord + N * voxel_size, R, RoughnessToConeAngle(roughness), 0.65, false);
+    return ConeTrace(voxel_size, voxel_coord + N * max(0.01, voxel_size), R, RoughnessToConeAngle(roughness), 0.65, false);
 }
 
 vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
