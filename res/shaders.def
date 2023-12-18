@@ -75,6 +75,7 @@ comp = sh/ComputeSHClipmap.comp
 comp = light_field/PackLightFieldProbe.comp
 
 [LightField_VoxelizeProbe]
+permute = MODE(CLEAR VOXELIZE)
 comp = light_field/VoxelizeProbe.comp.glsl
 
 [LightField_CopyBorderTexels]

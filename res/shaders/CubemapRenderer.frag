@@ -48,7 +48,7 @@ layout(location=1) out vec2 output_moments;
 #ifdef MODE_AMBIENT
     #define LIGHTING
     #define SHADOWS
-    #define TONEMAP
+    // #define TONEMAP
 #endif
 
 #ifdef MODE_REFLECTION

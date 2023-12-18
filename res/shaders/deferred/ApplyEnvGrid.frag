@@ -35,13 +35,13 @@ layout(location=0) out vec4 color_output;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2DArray light_field_color_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2DArray light_field_normals_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2DArray light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2DArray light_field_color_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2DArray light_field_irradiance_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2DArray light_field_depth_buffer_lowres;
 #else
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_color_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_irradiance_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_depth_buffer_lowres;
 #endif
 
