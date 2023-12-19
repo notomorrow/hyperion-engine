@@ -1,7 +1,9 @@
 #ifndef ENV_GRID_RADIANCE_GLSL
 #define ENV_GRID_RADIANCE_GLSL
 
-
+#include "../include/brdf.inc"
+#include "../include/noise.inc"
+#include "../include/BlueNoise.glsl"
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -65,9 +67,29 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
     return ConeTrace(voxel_size, voxel_coord + N * max(0.01, voxel_size), R, RoughnessToConeAngle(roughness), 0.65, false);
 }
 
-vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
+vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size)
 {
-    const vec3 R = normalize(reflect(-V, N));
+    roughness = clamp(roughness, 0.01, 0.99);
+
+    vec2 blue_noise_sample = vec2(
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 0),
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
+    );
+
+    vec2 blue_noise_scaled = blue_noise_sample + float(frame_counter % 256) * 1.618;
+    vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+
+    // uint seed = pcg_hash(pixel_coord.x + pixel_coord.y * screen_resolution.x);
+    // vec2 rnd = vec2(RandomFloat(seed), RandomFloat(seed));
+
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(N, tangent, bitangent);
+
+    vec3 H = ImportanceSampleGGX(rnd, N, roughness);
+    H = tangent * H.x + bitangent * H.y + N * H.z;
+
+    const vec3 R = normalize(reflect(-V, H));
 
     return ConeTraceSpecular(world_position, N, R, roughness);
 }

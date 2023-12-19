@@ -38,10 +38,6 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 
-#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
-    #include "include/vct/cone_trace.inc"
-#endif
-
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
@@ -81,11 +77,6 @@ void main()
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
-    
-#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
-    vec4 vct_specular = vec4(0.0);
-    vec4 vct_diffuse = vec4(0.0);
-#endif
 
     if (perform_lighting) {
         const float roughness = material.r;
@@ -102,27 +93,6 @@ void main()
         const vec3 dfg = CalculateDFG(F, roughness, NdotV);
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
-
-#if defined(VCT_ENABLED_TEXTURE) || defined(VCT_ENABLED_SVO)
-#ifdef VCT_ENABLED_TEXTURE
-        #define VCT_RENDER_COMPONENT_INDEX HYP_RENDER_COMPONENT_VCT
-#else
-        #define VCT_RENDER_COMPONENT_INDEX HYP_RENDER_COMPONENT_SVO
-#endif
-
-        // if (IsRenderComponentEnabled(VCT_RENDER_COMPONENT_INDEX)) {
-            vct_specular = ConeTraceSpecular(position.xyz, N, R, perceptual_roughness);
-            vct_diffuse = ConeTraceDiffuse(position.xyz, N, T, B, perceptual_roughness);
-
-#if HYP_VCT_INDIRECT_ENABLED
-            irradiance = vct_diffuse.rgb;
-#endif
-
-#if HYP_VCT_REFLECTIONS_ENABLED
-            reflections = vct_specular;
-#endif
-        // }
-#endif
 
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);

@@ -15,6 +15,13 @@ float SimpleNoise(vec2 n)
     return mix(mix(rand(b), rand(b + d.yx), f.x), mix(rand(b + d.xy), rand(b + d.yy), f.x), f.y);
 }
 
+uint pcg_hash(uint in_value)
+{
+    uint state = in_value * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
 vec2 VogelDisk(int sample_index, int num_samples, float phi)
 {
     const float golden_angle = 2.4;
