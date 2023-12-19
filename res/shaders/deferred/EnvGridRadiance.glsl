@@ -6,7 +6,7 @@
 vec4 FetchVoxel(vec3 position, float lod)
 {
     vec4 rgba = textureLod(sampler3D(voxel_image, sampler_linear), position, lod);
-    rgba.rgb = ReverseTonemapReinhardSimple(rgba.rgb);
+    // rgba.rgb = ReverseTonemapReinhardSimple(rgba.rgb);
     return rgba;
 }
 

@@ -159,11 +159,11 @@ void DoPixel(uint probe_index, uvec2 coord)
     uvec2 radiance_coord = coord;
     uvec2 irradiance_coord = coord / irradiance_downsample;
 #else
-    uvec2 radiance_coord = probe_offset_coord.xy + coord + 2;
-    uvec2 irradiance_coord = probe_offset_coord.zw + (coord / irradiance_downsample) + 2;
+    uvec2 radiance_coord = probe_offset_coord.xy + coord + 1;
+    uvec2 irradiance_coord = probe_offset_coord.zw + (coord / irradiance_downsample) + 1;
 #endif
 
-    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(radiance_coord)));
+    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
 
     const vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;

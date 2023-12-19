@@ -94,26 +94,24 @@ void DoPixel(uint probe_index, uvec2 coord)
     EnvProbe env_probe = env_probes[(probe_index + 1) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES];
 
 #ifndef USE_TEXTURE_ARRAY
-    coord = probe_offset_coord.xy + uvec2(gl_GlobalInvocationID.xy) + 2;
+    coord = probe_offset_coord.xy + uvec2(gl_GlobalInvocationID.xy) + 1;
 #endif
 
-    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
-
-    const vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
-    const vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
+    vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
+    vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
 
     // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
 
-    const vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample.r;
+    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample.r;
 
     // Voxel grid aabb must be 1:1:1 cube
-    const vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));
-    const vec3 voxel_grid_aabb_max = vec3(max(env_grid.aabb_max.x, max(env_grid.aabb_max.y, env_grid.aabb_max.z)));
-    const vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
-    const vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
+    vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));
+    vec3 voxel_grid_aabb_max = vec3(max(env_grid.aabb_max.x, max(env_grid.aabb_max.y, env_grid.aabb_max.z)));
+    vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
+    vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
 
-    const vec3 scaled_position = (point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
-    const ivec3 voxel_storage_position = ivec3(((scaled_position * 0.5 + 0.5) * 256.0));
+    vec3 scaled_position = (point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
+    ivec3 voxel_storage_position = ivec3(((scaled_position * 0.5 + 0.5) * 255.0));
 
     if (voxel_storage_position.x < 0 || voxel_storage_position.x >= 256 ||
         voxel_storage_position.y < 0 || voxel_storage_position.y >= 256 ||
@@ -122,7 +120,14 @@ void DoPixel(uint probe_index, uvec2 coord)
         return;
     }
 
+
+#ifdef MODE_VOXELIZE
+    vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
+
     imageStore(voxel_grid_image, voxel_storage_position, color_sample);
+#elif defined(MODE_CLEAR)
+    imageStore(voxel_grid_image, voxel_storage_position, vec4(0.0));
+#endif
 }
 
 void main(void)

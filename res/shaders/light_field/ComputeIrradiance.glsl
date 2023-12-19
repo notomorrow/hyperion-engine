@@ -445,8 +445,8 @@ vec3 ComputeLightFieldProbeIrradiance(vec3 world_position, vec3 N, vec3 V, vec3 
         ) + 2;
 
         const uvec2 probe_grid_dimensions = uvec2(
-            PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + PROBE_BORDER_LENGTH,
-            PROBE_SIDE_LENGTH_BORDER * grid_size.z + PROBE_BORDER_LENGTH
+            PROBE_SIDE_LENGTH_BORDER * (grid_size.x * grid_size.y) + 1,
+            PROBE_SIDE_LENGTH_BORDER * grid_size.z + 1
         );
 
         const vec2 octahedral_dir = EncodeOctahedralCoord(-dir) * 0.5 + 0.5;
