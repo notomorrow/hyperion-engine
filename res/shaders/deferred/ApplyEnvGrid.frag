@@ -135,7 +135,11 @@ void main()
     const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
-    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
+    uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 1.0);
+    uvec2 screen_resolution = uvec2(camera.dimensions.xy);
+    uint frame_counter = scene.frame_counter;
+
+    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
 
     color_output = radiance;
 #endif
