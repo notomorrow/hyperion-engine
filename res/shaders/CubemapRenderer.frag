@@ -93,7 +93,7 @@ void main()
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
         
     // write out distance
-    const float dist = distance(v_position, env_probe_center);
+    const float dist = length(v_view_space_position.xyz / v_view_space_position.w);
 
     vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
 #endif

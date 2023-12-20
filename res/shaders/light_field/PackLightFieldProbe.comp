@@ -17,6 +17,7 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 #include "../include/tonemap.inc"
 #include "../include/brdf.inc"
 #include "../include/noise.inc"
+#include "../include/packing.inc"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/env_probe.inc"
@@ -33,15 +34,17 @@ layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 #ifdef USE_TEXTURE_ARRAY
 layout(set = 0, binding = 5, rgba16f) uniform writeonly image2DArray color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2DArray normals_image;
-layout(set = 0, binding = 7, rg16f) uniform writeonly image2DArray depth_image;
-layout(set = 0, binding = 8, rgba8) uniform writeonly image2DArray irradiance_image;
-layout(set = 0, binding = 9, r32f) uniform writeonly image2DArray depth_image_lowres;
+layout(set = 0, binding = 7, r32f) uniform writeonly image2DArray depth_image;
+layout(set = 0, binding = 8, r32f) uniform writeonly image2DArray depth_image_lowres;
+layout(set = 0, binding = 9, rgba16f) uniform writeonly image2DArray irradiance_image;
+layout(set = 0, binding = 10, rg16f) uniform writeonly image2DArray filtered_distance_image;
 #else
 layout(set = 0, binding = 5, rgba16f) uniform writeonly image2D color_image;
 layout(set = 0, binding = 6, rg16f) uniform writeonly image2D normals_image;
-layout(set = 0, binding = 7, rg16f) uniform writeonly image2D depth_image;
-layout(set = 0, binding = 8, rgba8) uniform writeonly image2D irradiance_image;
-layout(set = 0, binding = 9, r32f) uniform writeonly image2D depth_image_lowres;
+layout(set = 0, binding = 7, r32f) uniform writeonly image2D depth_image;
+layout(set = 0, binding = 8, r32f) uniform writeonly image2D depth_image_lowres;
+layout(set = 0, binding = 9, rgba16f) uniform writeonly image2D irradiance_image;
+layout(set = 0, binding = 10, rg16f) uniform writeonly image2D filtered_distance_image;
 #endif
 
 layout(push_constant) uniform PushConstant
@@ -99,14 +102,13 @@ struct ConvolutionResult
 
 ConvolutionResult ConvoleProbe(uint probe_index, vec3 dir)
 {
-    const int num_samples = 256;
+    const int num_samples = 4096;
     const float lobe_size = 0.96;
 
     vec3 sum_radiance = vec3(0.0);
-    float sum_distance = 0.0;
-    float sum_square_distance = 0.0;
+    vec2 sum_distance = vec2(0.0);
 
-    uint seed = probe_index * 0x1f1f1f1f;
+    uint seed = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 1000 + probe_index * 1000000;
 
     for (int i = 0; i < num_samples; i++) {
         // vec2 hammersley = Hammersley(i, num_samples);
@@ -116,6 +118,8 @@ ConvolutionResult ConvoleProbe(uint probe_index, vec3 dir)
 
         vec3 radiance = TextureCube(sampler_linear, color_texture, sample_dir).rgb;
         sum_radiance += radiance;
+
+        sum_distance += TextureCube(sampler_linear, depth_texture, sample_dir).rg;
 
         // float phi = hammersley.y * 2.0 * HYP_FMATH_PI;
         // float cos_theta = hammersley.x * 2.0 - 1.0;
@@ -146,6 +150,7 @@ ConvolutionResult ConvoleProbe(uint probe_index, vec3 dir)
 
     ConvolutionResult result;
     result.color = sum_radiance / float(num_samples);
+    result.dist_dist2 = sum_distance / float(num_samples);
     // result.dist_dist2 = vec2(sum_distance, sum_square_distance) / float(num_samples * 0.5);
 
     return result;
@@ -163,9 +168,9 @@ void DoPixel(uint probe_index, uvec2 coord)
     uvec2 irradiance_coord = probe_offset_coord.zw + (coord / irradiance_downsample) + 1;
 #endif
 
-    const vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
+    const vec3 dir = DecodeOctahedralCoord(NormalizeOctahedralCoord(coord));
 
-    const vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
+    const vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
     const vec2 normals_sample = TextureCube(sampler_nearest, normals_texture, dir).rg;
     const vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
 
@@ -192,9 +197,8 @@ void DoPixel(uint probe_index, uvec2 coord)
     imageStore(
         depth_image,
         storage_coord_radiance,
-        vec4(depth_sample, 0.0, 0.0)
+        vec4(depth_sample.x, 0.0, 0.0, 0.0)
     );
-
 
     if (mod(coord, irradiance_downsample) == uvec2(0)) {
         ConvolutionResult irradiance_result = ConvoleProbe(probe_index, dir);
@@ -203,6 +207,12 @@ void DoPixel(uint probe_index, uvec2 coord)
             irradiance_image,
             storage_coord_irradiance,
             vec4(irradiance_result.color, 1.0)
+        );
+
+        imageStore(
+            filtered_distance_image,
+            storage_coord_irradiance,
+            vec4(irradiance_result.dist_dist2, 0.0, 1.0)
         );
     }
 
@@ -219,7 +229,7 @@ void DoPixel(uint probe_index, uvec2 coord)
         imageStore(
             depth_image_lowres,
             storage_coord_lowres,
-            vec4(depth_sample.r, 0.0, 0.0, 1.0)
+            vec4(depth_sample.x, 0.0, 0.0, 1.0)
         );
     }
 }

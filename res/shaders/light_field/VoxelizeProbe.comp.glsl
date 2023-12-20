@@ -30,14 +30,14 @@ layout(set = 0, binding = 4) uniform sampler sampler_nearest;
 
 // #define USE_TEXTURE_ARRAY
 
-layout(set = 0, binding = 10, rgba16f) uniform writeonly image3D voxel_grid_image;
+layout(set = 0, binding = 11, rgba16f) uniform writeonly image3D voxel_grid_image;
 
-layout(std140, set = 0, binding = 11) uniform EnvGridBuffer
+layout(std140, set = 0, binding = 12) uniform EnvGridBuffer
 {
     EnvGrid env_grid;
 };
 
-layout(std430, set = 0, binding = 12, row_major) readonly buffer EnvProbesBuffer
+layout(std430, set = 0, binding = 13, row_major) readonly buffer EnvProbesBuffer
 {
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
@@ -98,11 +98,11 @@ void DoPixel(uint probe_index, uvec2 coord)
 #endif
 
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
-    vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
+    float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
 
     // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
 
-    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample.r;
+    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample;
 
     // Voxel grid aabb must be 1:1:1 cube
     vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));
