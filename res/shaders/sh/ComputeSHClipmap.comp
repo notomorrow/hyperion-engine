@@ -46,7 +46,8 @@ layout(std430, set = 0, binding = 7, row_major) readonly buffer EnvProbesBuffer 
     EnvProbe env_probes[];
 };
 
-layout(push_constant) uniform PushConstant {
+layout(push_constant) uniform PushConstant
+{
     uvec4 clipmap_dimensions;
     vec4 cage_center_world;
 };

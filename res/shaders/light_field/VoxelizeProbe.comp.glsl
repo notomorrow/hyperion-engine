@@ -8,7 +8,6 @@
 #define LOWRES_DITHER (PROBE_SIDE_LENGTH / PROBE_SIDE_LENGTH_LOWRES)
 
 #define WORKGROUP_SIZE 32
-#define PIXELS_PER_WORKGROUP (PROBE_SIDE_LENGTH / WORKGROUP_SIZE)
 
 layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 
@@ -21,23 +20,21 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/env_probe.inc"
 
-layout(set = 0, binding = 0) uniform textureCube color_texture;
-layout(set = 0, binding = 1) uniform textureCube normals_texture;
-layout(set = 0, binding = 2) uniform textureCube depth_texture;
+HYP_DESCRIPTOR_SRV(VoxelizeProbeDescriptorSet, InColorImage) uniform textureCube color_texture;
+HYP_DESCRIPTOR_SRV(VoxelizeProbeDescriptorSet, InNormalsImage) uniform textureCube normals_texture;
+HYP_DESCRIPTOR_SRV(VoxelizeProbeDescriptorSet, InDepthImage) uniform textureCube depth_texture;
 
-layout(set = 0, binding = 3) uniform sampler sampler_linear;
-layout(set = 0, binding = 4) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
 
-// #define USE_TEXTURE_ARRAY
+HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage) uniform writeonly image3D voxel_grid_image;
 
-layout(set = 0, binding = 10, rgba16f) uniform writeonly image3D voxel_grid_image;
-
-layout(std140, set = 0, binding = 11) uniform EnvGridBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer
 {
     EnvGrid env_grid;
 };
 
-layout(std430, set = 0, binding = 12, row_major) readonly buffer EnvProbesBuffer
+HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer
 {
     EnvProbe env_probes[HYP_MAX_ENV_PROBES];
 };
@@ -46,9 +43,6 @@ layout(push_constant) uniform PushConstant
 {
     uvec4 probe_grid_position;
     uvec4 cubemap_dimensions;
-    uvec4 probe_offset_coord;
-    uvec4 probe_offset_coord_lowres;
-    uvec4 grid_dimensions;
 };
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
@@ -84,25 +78,21 @@ vec3 MapXYSToDirection(uint face_index, vec2 uv) {
 
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {
-    ivec2 oct_frag_coord = ivec2((int(coord.x) - 2) % PROBE_SIDE_LENGTH_BORDER, (int(coord.y) - 2) % PROBE_SIDE_LENGTH_BORDER);
+    ivec2 oct_coord = ivec2(coord) % ivec2(cubemap_dimensions.xy);
     
-    return (vec2(oct_frag_coord) + vec2(0.5)) * (2.0 / float(PROBE_SIDE_LENGTH)) - vec2(1.0);
+    return (vec2(oct_coord) + vec2(0.5)) * (2.0 / vec2(cubemap_dimensions.xy)) - vec2(1.0);
 }
 
 void DoPixel(uint probe_index, uvec2 coord)
 {
-    EnvProbe env_probe = env_probes[(probe_index + 1) % HYP_MAX_BOUND_LIGHT_FIELD_PROBES];
-
-#ifndef USE_TEXTURE_ARRAY
-    coord = probe_offset_coord.xy + uvec2(gl_GlobalInvocationID.xy) + 1;
-#endif
+    EnvProbe env_probe = env_probes[(probe_index + 1) % HYP_MAX_BOUND_AMBIENT_PROBES];
 
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
-    vec2 depth_sample = TextureCube(sampler_nearest, depth_texture, dir).rg;
+    float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
 
     // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
 
-    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample.r;
+    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample;
 
     // Voxel grid aabb must be 1:1:1 cube
     vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));

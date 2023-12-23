@@ -13,7 +13,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_PROBE_MULTIPLIER 1.0
+#define ENV_PROBE_MULTIPLIER 3.0
 
 struct DeferredParams
 {
@@ -255,61 +255,83 @@ float[9] ProjectSHBands(vec3 N)
 //     // return irradiance / HYP_FMATH_PI;
 // }
 
-float CalculateEnvProbeIrradiance(vec3 P, vec3 N, inout vec3 irradiance)
+vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
 {
-    ivec3 probe_position;
-    int probe_index_at_point = int(GetLocalEnvProbeIndex(P, probe_position));
+    ivec3 base_probe_coord;
+    int base_probe_index_at_point = int(GetLocalEnvProbeIndex(P, base_probe_coord));
 
-    if (probe_index_at_point < 1 || probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
-        return 0.0;
+    if (base_probe_index_at_point < 1 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+        return vec3(0.0);
     }
 
-    const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
+    const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_at_point);
 
+    if (base_probe_index == ~0u) {
+        return vec3(0.0);
+    }
+
+    // const vec3 base_probe_position = env_grid.aabb_min.xyz + (size_of_probe * vec3(base_probe_coord)) + (size_of_probe * 0.5);
+
+    const vec3 base_probe_position = env_probes[base_probe_index].world_position.xyz;
+
+    const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+    const vec3 alpha = clamp((P - base_probe_position) / size_of_probe + 0.5, vec3(0.0), vec3(1.0));
+    
     SH9 sh9;
 
-    if (probe_index != ~0u) {
-        EnvProbe probe = env_probes[probe_index];
-        const int storage_index = probe.position_in_grid.w * 9;
+    vec3 total_irradiance = vec3(0.0);
+    float total_weight = 0.0;
 
-        for (int i = 0; i < 9; i++) {
-            sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+     // iterate over probe cage
+    for (int i = 0; i < 8; i++) {
+        ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
+
+        vec3 neighbor_probe_position = base_probe_position + (size_of_probe * vec3(offset));
+
+        ivec3 neighbor_probe_coord;
+        int neighbor_probe_index_at_point = int(GetLocalEnvProbeIndex(neighbor_probe_position, neighbor_probe_coord));
+
+        if (neighbor_probe_index_at_point < 1 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+            continue;
         }
 
-        irradiance += SphericalHarmonicsSample(sh9, N);
+        const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_at_point);
 
+        if (neighbor_probe_index == ~0u) {
+            continue;
+        }
 
-        // const ivec3 image_size = textureSize(sampler3D(spherical_harmonics_volumes[0], sampler_linear), 0);
-        // const vec3 texel_size = vec3(1.0) / vec3(image_size);
+        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
+        float weight = trilinear.x * trilinear.y * trilinear.z;
 
-        // EnvProbe probe = env_probes[probe_index];
-        // ivec3 probe_stored_position = probe.position_in_grid.xyz;
+        const int storage_index = env_probes[neighbor_probe_index].position_in_grid.w * 9;
 
-        // const vec3 probe_aabb_min = env_grid.aabb_min.xyz + (vec3(probe_position) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
-        // const vec3 probe_aabb_max = env_grid.aabb_min.xyz + (vec3(probe_position + ivec3(1)) * (env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz)));
+        for (int j = 0; j < 9; j++) {
+            sh9.values[j] = sh_grid_buffer[min(storage_index + j, SH_GRID_BUFFER_SIZE - 1)].rgb;
+        }
 
-        // const vec3 extent = (probe_aabb_max - probe_aabb_min);
-        // const vec3 extent_unpadded = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-        // const vec3 center = (probe_aabb_max + probe_aabb_min) * 0.5;
-
-        // // + 0.5 takes it from -0.5,0.5 to 0.0,1.0
-        // const vec3 pos_fract = fract(((P - center) / extent) + 0.5);
-
-        // // const ivec3 diff = probe_stored_position - probe_position;
-
-        // // instead of using +0.5 to get center of the cell, we add pos_relative_to_probe,
-        // // which has been transformed from 0.0,1.0 range. so samplers at the edge of the cell will offset by
-        // // 0.0, at the middle will offset by 0.5, etc.
-        // // vec3 coord = (vec3(probe_position) + pos_relative_to_probe) * texel_size;
-        // // vec3 coord = (vec3(probe_stored_position) + pos_relative_to_probe) * texel_size;
-        // vec3 coord = (vec3(probe_stored_position + pos_fract)) * texel_size;
-
-        // irradiance += SphericalHarmonicsSample(N, coord);
-
-        return 1.0;
+        total_irradiance += SphericalHarmonicsSample(sh9, N) * weight;
+        total_weight += weight;
     }
 
-    return 0.0;
+    // const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
+
+
+
+    // if (probe_index != ~0u) {
+    //     EnvProbe probe = env_probes[probe_index];
+    //     const int storage_index = probe.position_in_grid.w * 9;
+
+    //     for (int i = 0; i < 9; i++) {
+    //         sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+    //     }
+
+    //     irradiance += SphericalHarmonicsSample(sh9, N);
+
+    //     return 1.0;
+    // }
+
+    return 0.5 * HYP_FMATH_PI * total_irradiance / max(total_weight, 0.0001);
 }
 
 #endif
