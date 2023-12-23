@@ -29,26 +29,28 @@ layout(location=0) out vec4 color_output;
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
 
-// #define USE_TEXTURE_ARRAY
+#define USE_TEXTURE_ARRAY
 
 #ifdef USE_TEXTURE_ARRAY
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2DArray light_field_color_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2DArray light_field_normals_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2DArray light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2DArray light_field_irradiance_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2DArray light_field_depth_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2DArray light_field_depth_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2DArray light_field_irradiance_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2DArray light_field_filtered_distance_buffer;
 #else
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_irradiance_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_depth_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_depth_buffer_lowres;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_irradiance_buffer;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2D light_field_filtered_distance_buffer;
 #endif
 
 #if MODE == 0
 #include "../light_field/ComputeIrradiance.glsl"
 #elif MODE == 1
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture3D voxel_image;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 69) uniform texture3D voxel_image;
 
 #include "./EnvGridRadiance.glsl"
 #endif
@@ -63,7 +65,7 @@ int CubeRoot(int x)
     return int(round(pow(float(x), 1.0 / 3.0)));
 }
 
-#define USE_CLIPMAP
+// #define USE_CLIPMAP
 
 void main()
 {
@@ -76,15 +78,15 @@ void main()
 
 #if MODE == 0
 
-#if 0
+#if 1
 
 #ifdef USE_CLIPMAP
     // Get probe cage size using textureSize of the clipmap texturearray.
     // The actual 3d size will be the height, cubed.
-    const ivec2 image_dimensions = textureSize(sampler2D(sampler_linear, sh_clipmaps)).xy;
-    const int product = image_dimensions.x * image_dimensions.y;
-    const int cube_root = CubeRoot(product);
-    const ivec3 cage_size = ivec3(cube_root, cube_root, cube_root);
+    // const ivec2 image_dimensions = textureSize(sampler2DArray(sh_clipmaps, sampler_linear), 0).xy;
+    // const int product = image_dimensions.x * image_dimensions.y;
+    // const int cube_root = CubeRoot(product);
+    const ivec3 cage_size = ivec3(32, 32, 32);//cube_root, cube_root, cube_root);
 
     const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(cage_size.xyz);
     const vec3 camera_position_snapped = (floor(camera.position.xyz / scale) + 0.5) * scale;
@@ -112,7 +114,7 @@ void main()
     irradiance = vec3(0.0);
 
     for (int i = 0; i < 9; i++) {
-        irradiance += bands[i] * texture(sampler2D(sampler_linear, sh_clipmaps), vec3(cage_coord.xy, float(i))).rgb;
+        irradiance += bands[i] * texture(sampler2DArray(sh_clipmaps, sampler_linear), vec3(cage_coord.xy, float(i))).rgb;
     }
 
     irradiance = max(irradiance, vec3(0.0));
@@ -120,7 +122,7 @@ void main()
 
     color_output = vec4(irradiance, 1.0);
 #else
-    float weight = CalculateEnvProbeIrradiance(P, N, irradiance);
+    irradiance = CalculateEnvProbeIrradiance(P, N);
 
     color_output = vec4(irradiance, 1.0);
 #endif

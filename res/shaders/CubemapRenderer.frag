@@ -43,7 +43,7 @@ layout(location=1) out vec2 output_moments;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.08
+#define HYP_CUBEMAP_AMBIENT 0.1
 
 #ifdef MODE_AMBIENT
     #define LIGHTING
@@ -91,8 +91,7 @@ void main()
     }
 
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
-        
-    // write out distance
+    // Write distance, mean distance for variance.
     const float dist = distance(v_position, env_probe_center);
 
     vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
