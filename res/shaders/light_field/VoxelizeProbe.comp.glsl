@@ -85,7 +85,7 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
 
 void DoPixel(uint probe_index, uvec2 coord)
 {
-    EnvProbe env_probe = env_probes[(probe_index + 1) % HYP_MAX_BOUND_AMBIENT_PROBES];
+    EnvProbe env_probe = env_probes[probe_index % HYP_MAX_ENV_PROBES];
 
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
     float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
