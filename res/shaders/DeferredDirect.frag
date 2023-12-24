@@ -150,7 +150,7 @@ void main()
         result = albedo;
     }
 
-    // result = (result * (1.0 - light_rays.a)) + light_rays;
+    result = (result * (1.0 - light_rays.a)) + light_rays;
 
 #if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE) || defined(PATHTRACER)
     output_color = vec4(0.0);
