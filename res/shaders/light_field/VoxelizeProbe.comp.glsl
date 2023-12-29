@@ -7,9 +7,17 @@
 
 #define LOWRES_DITHER (PROBE_SIDE_LENGTH / PROBE_SIDE_LENGTH_LOWRES)
 
-#define WORKGROUP_SIZE 32
+#ifdef MODE_OFFSET
 
+#define WORKGROUP_SIZE 8
+layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE, local_size_z = WORKGROUP_SIZE) in;
+
+#else
+
+#define WORKGROUP_SIZE 32
 layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
+
+#endif
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -27,7 +35,7 @@ HYP_DESCRIPTOR_SRV(VoxelizeProbeDescriptorSet, InDepthImage) uniform textureCube
 HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
 
-HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage) uniform writeonly image3D voxel_grid_image;
+HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage, format = rgba8) uniform image3D voxel_grid_image;
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer
 {
@@ -43,6 +51,9 @@ layout(push_constant) uniform PushConstant
 {
     uvec4 probe_grid_position;
     uvec4 cubemap_dimensions;
+#ifdef MODE_OFFSET
+    ivec4 offset;
+#endif
 };
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
@@ -83,11 +94,31 @@ vec2 NormalizeOctahedralCoord(uvec2 coord)
     return (vec2(oct_coord) + vec2(0.5)) * (2.0 / vec2(cubemap_dimensions.xy)) - vec2(1.0);
 }
 
-void DoPixel(uint probe_index, uvec2 coord)
+#ifdef MODE_OFFSET
+
+void DoPixel(uint _unused, uvec3 coord)
+{
+    // What is the size of one probe in the voxel grid?
+    const ivec3 size_of_probe_in_voxel_grid = ivec3(256) / ivec3(env_grid.density.xyz);
+
+
+
+    // Copy pixels at the current position over to the offset position
+    const ivec3 current_position = ivec3(coord);
+    const ivec3 offset_position = imod(current_position + (offset.xyz * size_of_probe_in_voxel_grid), ivec3(256));
+
+    const vec4 current_pixel = imageLoad(voxel_grid_image, current_position);
+
+    imageStore(voxel_grid_image, offset_position, current_pixel);
+}
+
+#else
+
+void DoPixel(uint probe_index, uvec3 coord)
 {
     EnvProbe env_probe = env_probes[probe_index % HYP_MAX_ENV_PROBES];
 
-    vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord)));
+    vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord.xy)));
     float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
 
     // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
@@ -120,9 +151,11 @@ void DoPixel(uint probe_index, uvec2 coord)
 #endif
 }
 
+#endif
+
 void main(void)
 {
     const uint probe_index = probe_grid_position.w;
 
-    DoPixel(probe_index, gl_GlobalInvocationID.xy);
+    DoPixel(probe_index, gl_GlobalInvocationID.xyz);
 }

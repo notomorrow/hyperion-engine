@@ -12,6 +12,26 @@
 #define float3x3 mat3
 #define float4x4 mat4
 
+int imod(int a, int b)
+{
+    return (a % b + b) % b;
+}
+
+ivec2 imod(ivec2 a, ivec2 b)
+{
+    return (a % b + b) % b;
+}
+
+ivec3 imod(ivec3 a, ivec3 b)
+{
+    return (a % b + b) % b;
+}
+
+ivec4 imod(ivec4 a, ivec4 b)
+{
+    return (a % b + b) % b;
+}
+
 #define fmod(x, y) ((x) - (y) * floor((x) / (y)))
 
 #define round(x) floor((x) + 0.5)
