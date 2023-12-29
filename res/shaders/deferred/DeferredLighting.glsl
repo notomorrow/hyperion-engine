@@ -116,6 +116,8 @@ vec3 CalculateRefraction(
 
 int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
 {
+    const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
+    
     const vec3 diff = world_position - env_grid.center.xyz;
     const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
 
@@ -128,7 +130,7 @@ int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
+        + int(unit_diff.z);
 
     return probe_index_at_point;
 }
@@ -260,7 +262,7 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
     ivec3 base_probe_coord;
     int base_probe_index_at_point = int(GetLocalEnvProbeIndex(P, base_probe_coord));
 
-    if (base_probe_index_at_point < 1 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+    if (base_probe_index_at_point < 0 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
         return vec3(0.0);
     }
 
@@ -291,7 +293,7 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
         ivec3 neighbor_probe_coord;
         int neighbor_probe_index_at_point = int(GetLocalEnvProbeIndex(neighbor_probe_position, neighbor_probe_coord));
 
-        if (neighbor_probe_index_at_point < 1 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+        if (neighbor_probe_index_at_point < 0 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
             continue;
         }
 
@@ -330,6 +332,29 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
 
     //     return 1.0;
     // }
+
+    const vec3 debug_colors[16] = {
+        vec3(1.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        vec3(0.0, 0.0, 1.0),
+        vec3(1.0, 1.0, 0.0),
+        vec3(1.0, 0.0, 1.0),
+        vec3(0.0, 1.0, 1.0),
+        vec3(1.0, 1.0, 1.0),
+        vec3(0.5, 0.0, 0.0),
+        vec3(0.0, 0.5, 0.0),
+        vec3(0.0, 0.0, 0.5),
+        vec3(0.5, 0.5, 0.0),
+        vec3(0.5, 0.0, 0.5),
+        vec3(0.0, 0.5, 0.5),
+        vec3(0.5, 0.5, 0.5),
+        vec3(0.25, 0.0, 0.0),
+        vec3(0.0, 0.25, 0.0)
+    };
+
+    // return debug_colors[base_probe_index % 16];
+
+    // return UINT_TO_VEC4(base_probe_index).rgb;
 
     return 0.5 * HYP_FMATH_PI * total_irradiance / max(total_weight, 0.0001);
 }

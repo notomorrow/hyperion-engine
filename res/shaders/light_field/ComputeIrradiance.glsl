@@ -266,7 +266,7 @@ int GetLocalEnvProbeIndex(vec3 world_position, vec3 grid_center, vec3 grid_aabb_
 
     int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
         + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z) + 1 /* + 1 because the first element is always the reflection probe */;
+        + int(unit_diff.z);
 
     return probe_index_at_point;
 }
