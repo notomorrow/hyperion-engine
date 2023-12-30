@@ -25,7 +25,7 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
 HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
-#if defined(SKINNING) && defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
+#if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
     #define VERTEX_SKINNING_ENABLED
 #endif
 

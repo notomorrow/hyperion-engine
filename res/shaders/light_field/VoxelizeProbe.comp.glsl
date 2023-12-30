@@ -53,6 +53,8 @@ layout(push_constant) uniform PushConstant
     uvec4 cubemap_dimensions;
 #ifdef MODE_OFFSET
     ivec4 offset;
+#else
+    vec4  world_position;
 #endif
 };
 
@@ -119,11 +121,11 @@ void DoPixel(uint probe_index, uvec3 coord)
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord.xy)));
     float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
 
-    vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample;
+    vec3 point_world_position = world_position.xyz + dir * depth_sample;
 
     // Voxel grid aabb must be 1:1:1 cube
-    vec3 voxel_grid_aabb_min = vec3(min(env_grid.aabb_min.x, min(env_grid.aabb_min.y, env_grid.aabb_min.z)));
-    vec3 voxel_grid_aabb_max = vec3(max(env_grid.aabb_max.x, max(env_grid.aabb_max.y, env_grid.aabb_max.z)));
+    vec3 voxel_grid_aabb_min = vec3(min(env_grid.voxel_grid_aabb_min.x, min(env_grid.voxel_grid_aabb_min.y, env_grid.voxel_grid_aabb_min.z)));
+    vec3 voxel_grid_aabb_max = vec3(max(env_grid.voxel_grid_aabb_max.x, max(env_grid.voxel_grid_aabb_max.y, env_grid.voxel_grid_aabb_max.z)));
     vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
     vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
 

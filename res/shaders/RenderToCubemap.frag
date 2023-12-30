@@ -43,7 +43,7 @@ layout(location=1) out vec2 output_moments;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.01
+#define HYP_CUBEMAP_AMBIENT 0.05
 
 #ifdef MODE_AMBIENT
     #define LIGHTING
@@ -54,7 +54,7 @@ layout(location=1) out vec2 output_moments;
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
-    #define TONEMAP
+    // #define TONEMAP
 #endif
 
 #ifdef TONEMAP
@@ -69,7 +69,7 @@ void main()
 {
     vec3 V = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
-    // vec3 R = reflect(-V, N);
+    vec3 R = reflect(-V, N);
 
     // Get the sky color.
     // vec3 ibl = TextureCubeLod(HYP_SAMPLER_LINEAR, environment_maps[0], R, 9.0).rgb;
@@ -153,7 +153,6 @@ void main()
 #ifdef TONEMAP
     output_color.rgb = TonemapReinhardSimple(output_color.rgb);
 #endif
-
     output_color.a = 1.0;
 
 #endif

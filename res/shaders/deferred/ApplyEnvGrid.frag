@@ -81,8 +81,6 @@ int CubeRoot(int x)
     return int(round(pow(float(x), 1.0 / 3.0)));
 }
 
-// #define USE_CLIPMAP
-
 void main()
 {
     vec3 irradiance = vec3(0.0);
@@ -94,55 +92,10 @@ void main()
 
 #if MODE == 0
 
-#if 0
-
-#ifdef USE_CLIPMAP
-    // Get probe cage size using textureSize of the clipmap texturearray.
-    // The actual 3d size will be the height, cubed.
-    // const ivec2 image_dimensions = textureSize(sampler2DArray(sh_clipmaps, sampler_linear), 0).xy;
-    // const int product = image_dimensions.x * image_dimensions.y;
-    // const int cube_root = CubeRoot(product);
-    const ivec3 cage_size = ivec3(32, 32, 32);//cube_root, cube_root, cube_root);
-
-    const vec3 scale = vec3(PROBE_CAGE_VIEW_RANGE) / vec3(cage_size.xyz);
-    const vec3 camera_position_snapped = (floor(camera.position.xyz / scale) + 0.5) * scale;
-
-    vec3 relative_position = P - camera_position_snapped;
-
-    vec3 cage_size_world = vec3(cage_size) * PROBE_CAGE_VIEW_RANGE;
-    vec3 cage_coord = (relative_position / PROBE_CAGE_VIEW_RANGE) + 0.5;
-
-    const float cos_a0 = HYP_FMATH_PI;
-    const float cos_a1 = (2.0 * HYP_FMATH_PI) / 3.0;
-    const float cos_a2 = HYP_FMATH_PI * 0.25;
-
-    float bands[9] = ProjectSHBands(N);
-    bands[0] *= cos_a0;
-    bands[1] *= cos_a1;
-    bands[2] *= cos_a1;
-    bands[3] *= cos_a1;
-    bands[4] *= cos_a2;
-    bands[5] *= cos_a2;
-    bands[6] *= cos_a2;
-    bands[7] *= cos_a2;
-    bands[8] *= cos_a2;
-
-    irradiance = vec3(0.0);
-
-    for (int i = 0; i < 9; i++) {
-        irradiance += bands[i] * texture(sampler2DArray(sh_clipmaps, sampler_linear), vec3(cage_coord.xy, float(i))).rgb;
-    }
-
-    irradiance = max(irradiance, vec3(0.0));
-    irradiance /= HYP_FMATH_PI;
-
-    color_output = vec4(irradiance, 1.0);
-#else
+#if 1
     irradiance = CalculateEnvProbeIrradiance(P, N);
 
     color_output = vec4(irradiance, 1.0);
-#endif
-
 #else
     irradiance = ComputeLightFieldProbeIrradiance(P, N, V, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
 
@@ -158,8 +111,8 @@ void main()
     uint frame_counter = scene.frame_counter;
 
     AABB voxel_grid_aabb;
-    voxel_grid_aabb.min = env_grid.aabb_min.xyz;
-    voxel_grid_aabb.max = env_grid.aabb_max.xyz;
+    voxel_grid_aabb.min = env_grid.voxel_grid_aabb_min.xyz;
+    voxel_grid_aabb.max = env_grid.voxel_grid_aabb_max.xyz;
 
     // vec4 radiance = ComputeProbeReflection(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
     vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
