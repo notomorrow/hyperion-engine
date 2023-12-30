@@ -3,8 +3,8 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define NUM_SAMPLES_X 4
-#define NUM_SAMPLES_Y 4
+#define NUM_SAMPLES_X 16
+#define NUM_SAMPLES_Y 16
 
 struct SHTile
 {
@@ -25,13 +25,14 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 #include "../include/env_probe.inc"
 
 layout(set = 0, binding = 0) uniform textureCube cubemap;
-layout(set = 0, binding = 1) uniform sampler sampler_linear;
+layout(set = 0, binding = 1) uniform textureCube environment_map;
+layout(set = 0, binding = 2) uniform sampler sampler_linear;
 
-layout(std140, set = 0, binding = 2) buffer SHTilesBuffer {
+layout(std140, set = 0, binding = 3) buffer SHTilesBuffer {
     SHTile sh_tiles[6 * NUM_SAMPLES_X * NUM_SAMPLES_Y];
 };
 
-layout(std140, set = 0, binding = 3) buffer SHGridBuffer {
+layout(std140, set = 0, binding = 4) buffer SHGridBuffer {
     vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
 };
 
@@ -156,9 +157,12 @@ void main(void)
     
     const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
+    vec4 environment_map_sample = TextureCube(sampler_linear, environment_map, dir);
     vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
 
-    float sh_values[27] = ProjectOntoSH9Color(dir, cubemap_sample.rgb);
+    vec4 combined_sample = environment_map_sample * (1.0 - cubemap_sample.a) + (vec4(cubemap_sample.rgb, 1.0) * cubemap_sample.a);
+
+    float sh_values[27] = ProjectOntoSH9Color(dir, combined_sample.rgb);
 
     float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
     float weight = TexelSolidAngle(sample_point);

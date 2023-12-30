@@ -186,7 +186,7 @@ void main()
     sky_color = 1.0 - exp(-1.0 * sky_color);
 
     // // sky will not be tonemapped outside of this:
-    sky_color = Tonemap(sky_color);
+    // sky_color = Tonemap(sky_color);
 
     output_color = vec4(sky_color, 1.0);
 }
