@@ -67,8 +67,12 @@ layout(location=1) out vec2 output_moments;
 
 void main()
 {
-    vec3 view_vector = normalize(v_camera_position - v_position);
+    vec3 V = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
+    // vec3 R = reflect(-V, N);
+
+    // Get the sky color.
+    // vec3 ibl = TextureCubeLod(HYP_SAMPLER_LINEAR, environment_maps[0], R, 9.0).rgb;
 
     // vec4 view_position = camera.view * vec4(v_position, 1.0);
     // view_position.xyz /= view_position.w;
