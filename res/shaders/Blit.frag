@@ -11,7 +11,6 @@ layout(location=2) in vec2 v_texcoord0;
 
 #include "include/gbuffer.inc"
 #include "include/shared.inc"
-#include "include/tonemap.inc"
 #include "include/PostFXSample.inc"
 #include "include/rt/probe/probe_uniforms.inc"
 

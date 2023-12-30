@@ -58,10 +58,14 @@ vert = PostEffect.vert
 frag = Blit.frag
 vert = PostEffect.vert
 
-[CubemapRenderer]
+[RenderToCubemap]
 permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
-frag = CubemapRenderer.frag
-vert = CubemapRenderer.vert
+frag = RenderToCubemap.frag
+vert = RenderToCubemap.vert
+
+[RenderToCubemap_Skydome]
+frag = sky/RenderToCubemap.frag
+vert = RenderToCubemap.vert
 
 [ComputeSH]
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)

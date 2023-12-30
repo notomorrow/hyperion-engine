@@ -101,8 +101,6 @@ void DoPixel(uint _unused, uvec3 coord)
     // What is the size of one probe in the voxel grid?
     const ivec3 size_of_probe_in_voxel_grid = ivec3(256) / ivec3(env_grid.density.xyz);
 
-
-
     // Copy pixels at the current position over to the offset position
     const ivec3 current_position = ivec3(coord);
     const ivec3 offset_position = imod(current_position + (offset.xyz * size_of_probe_in_voxel_grid), ivec3(256));
@@ -120,8 +118,6 @@ void DoPixel(uint probe_index, uvec3 coord)
 
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord.xy)));
     float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
-
-    // const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
 
     vec3 point_world_position = env_probe.world_position.xyz + dir * depth_sample;
 

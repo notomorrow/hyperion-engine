@@ -48,6 +48,7 @@ layout(push_constant) uniform PushConstant
 void main()
 {
     vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
+    uint mask = VEC4_TO_UINT(SampleGBuffer(gbuffer_mask_texture, texcoord));
     vec4 normal = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
 
     vec4 tangents_buffer = SampleGBuffer(gbuffer_tangents_texture, texcoord);
@@ -78,7 +79,7 @@ void main()
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
-    if (perform_lighting) {
+    if (perform_lighting && !bool(mask & 0x10)) {
         const float roughness = material.r;
         const float metalness = material.g;
 
@@ -94,9 +95,12 @@ void main()
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
+        // @TODO: Add check
+        ibl.rgb = TextureCube(HYP_SAMPLER_LINEAR, environment_maps[0], R).rgb;
+
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
-        ibl.rgb = reflection_probes_color.rgb * reflection_probes_color.a;
+        ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb);
 #endif
 
 #ifdef SSR_ENABLED

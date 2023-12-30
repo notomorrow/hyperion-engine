@@ -40,8 +40,8 @@ struct EnvGrid
     uvec4 density;
     uvec4 enabled_indices_mask;
 
-    vec4 _pad0;
-    vec4 _pad1;
+    vec4 voxel_grid_aabb_max;
+    vec4 voxel_grid_aabb_min;
 };
 
 struct SH9

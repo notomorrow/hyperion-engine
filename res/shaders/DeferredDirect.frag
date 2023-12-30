@@ -40,6 +40,7 @@ layout(push_constant) uniform PushConstant
 void main()
 {
     vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);
+    uint mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
     vec4 normal = vec4(DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord)), 1.0);
 
     vec4 tangents_buffer = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_tangents_texture, texcoord);
@@ -114,7 +115,7 @@ void main()
 #endif
     }
 
-    if (perform_lighting) {
+    if (perform_lighting && !bool(mask & 0x10)) {
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
