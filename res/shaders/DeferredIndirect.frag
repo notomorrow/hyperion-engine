@@ -96,7 +96,8 @@ void main()
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
         // @TODO: Add check
-        ibl.rgb = TextureCube(HYP_SAMPLER_LINEAR, environment_maps[0], R).rgb;
+        // const float environment_map_lod = float(9.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+        // ibl.rgb = TextureCubeLod(HYP_SAMPLER_LINEAR, environment_maps[0], R, environment_map_lod).rgb;
 
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);

@@ -155,7 +155,7 @@ vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
     return SUN_INTENSITY * (pRlh * RAYLEIGH_SCATTER_COEFF * total_rayleigh + pMie * MIE_SCATTER_COEFF * total_mie);
 }
 
-#define CUTOFF -0.25
+// #define CUTOFF -0.25
 
 void main()
 {
@@ -186,7 +186,7 @@ void main()
     sky_color = 1.0 - exp(-1.0 * sky_color);
 
     // // sky will not be tonemapped outside of this:
-    // sky_color = Tonemap(sky_color);
+    sky_color = TonemapReinhardSimple(sky_color);
 
     output_color = vec4(sky_color, 1.0);
 }
