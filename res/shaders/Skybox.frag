@@ -27,7 +27,7 @@ void main()
     vec3 normal = normalize(v_normal);
 
 //#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-    gbuffer_albedo = vec4(SAMPLE_TEXTURE_CUBE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb /*SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0).rgb*/, 0.0 /* just for now to tell deferred to not perform lighting */);
+    gbuffer_albedo = vec4(SAMPLE_TEXTURE_CUBE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
 //#else
  //   gbuffer_albedo = vec4(0.0);
 //#endif

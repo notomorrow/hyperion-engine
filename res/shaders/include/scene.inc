@@ -108,6 +108,8 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
 
+layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 20) uniform textureCube environment_maps[];
+
 
 // RenderComponentName enum
 #define HYP_RENDER_COMPONENT_VCT 0

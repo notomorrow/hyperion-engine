@@ -22,6 +22,7 @@ layout(location=0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
+#include "../include/aabb.inc"
 
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 #define HYP_DEFERRED_NO_SSR // temp
@@ -46,6 +47,21 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_fi
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_irradiance_buffer;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2D light_field_filtered_distance_buffer;
 #endif
+
+int GetLocalEnvProbeIndex(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, out ivec3 unit_diff)
+{
+    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+    const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
+    const ivec3 position_offset = position_units % grid_size;
+
+    unit_diff = position_offset;
+
+    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z);
+
+    return probe_index_at_point;
+}
 
 #if MODE == 0
 #include "../light_field/ComputeIrradiance.glsl"
@@ -78,7 +94,7 @@ void main()
 
 #if MODE == 0
 
-#if 1
+#if 0
 
 #ifdef USE_CLIPMAP
     // Get probe cage size using textureSize of the clipmap texturearray.
@@ -135,13 +151,18 @@ void main()
 
 #else // Radiance
     const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
-    const float roughness = 0.15;//material.r;
+    const float roughness = material.r;
 
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 1.0);
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
     uint frame_counter = scene.frame_counter;
 
-    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
+    AABB voxel_grid_aabb;
+    voxel_grid_aabb.min = env_grid.aabb_min.xyz;
+    voxel_grid_aabb.max = env_grid.aabb_max.xyz;
+
+    // vec4 radiance = ComputeProbeReflection(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
+    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 
     color_output = radiance;
 #endif

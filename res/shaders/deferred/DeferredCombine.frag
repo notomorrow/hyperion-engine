@@ -110,10 +110,10 @@ void main()
 
     vec4 result = lit_result;
 
-    if (bool(object_mask & (0x02 | 0x400))) {
-        result.rgb = (pow(forward_result.rgb, vec3(2.2)) * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
+    if (bool(object_mask & (0x02 | 0x400)) && !bool(object_mask & 0x10)) {
+        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
     } else {
-        result.rgb += pow(forward_result.rgb, vec3(2.2)) * forward_result.a;
+        result.rgb += forward_result.rgb * forward_result.a;
     }
 
     // result.rgb = forward_result.aaa;
