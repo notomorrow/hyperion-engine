@@ -27,6 +27,7 @@ layout(location=0) out vec4 output_color;
 #include "../include/gbuffer.inc"
 #include "../include/env_probe.inc"
 #include "../include/tonemap.inc"
+#include "../include/noise.inc"
 #include "../include/Octahedron.glsl"
 #include "../include/object.inc"
 #include "../include/packing.inc"
@@ -44,8 +45,8 @@ layout(location=0) out vec4 output_color;
 #define MIE_SCATTER_HEIGHT 1.2e3
 #define MIE_SCATTER_DIRECTION 0.758
 
-#define NUM_STEPS_X 4
-#define NUM_STEPS_Y 4
+#define NUM_STEPS_X 16
+#define NUM_STEPS_Y 16
 
 vec2 RaySphereIntersection(vec3 r0, vec3 rd, float sr)
 {
@@ -155,13 +156,11 @@ vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
     return SUN_INTENSITY * (pRlh * RAYLEIGH_SCATTER_COEFF * total_rayleigh + pMie * MIE_SCATTER_COEFF * total_mie);
 }
 
-// #define CUTOFF -0.25
-
 void main()
 {
     vec3 normal = normalize(v_normal);
 
-    vec3 sky_color;
+    vec4 sky_color = vec4(0.0);
     
 #ifdef CUTOFF
     const vec3 sky_color_bottom = vec3(0.0);
@@ -170,12 +169,35 @@ void main()
 
     if (v_position.y >= CUTOFF) {
 #endif
+        float dist = length(v_position);
+
+        // vec3 ro, rd;
+        // ro = v_camera_position;
+        // rd = normalize(v_position - ro);
+
+        // if( rd.y > 0. ) {
+        //     // clouds
+        //     sky_color = renderClouds(ro, rd, dist);
+        //     float fogAmount = 1.-(.1 + exp(-dist*0.0001));
+        //     sky_color.rgb = mix(sky_color.rgb, getSkyColor(rd)*(1.-sky_color.a), fogAmount);
+        // } else {
+        //     // cloud layer below horizon
+        //     sky_color = renderCloudLayer(ro, rd, dist);
+        //     // height based fog, see https://iquilezles.org/articles/fog
+        //     float fogAmount = HEIGHT_BASED_FOG_C * 
+        //         (1.-exp( -dist*rd.y*(INV_SCENE_SCALE*HEIGHT_BASED_FOG_B)))/rd.y;
+        //     sky_color.rgb = mix(sky_color.rgb, getSkyColor(rd)*(1.-sky_color.a), clamp(fogAmount,0.,1.));
+        // }
+
         vec3 light_direction = normalize(light.position_intensity.xyz);
         vec3 ray_direction = normalize(v_position);
 
+        // float L = escape(v_camera_position, ray_direction, Ra);
+        // sky_color = vec4(scatter(v_camera_position, ray_direction, L, sky_color.rgb), 1.0);
+
         vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
 
-        sky_color = atmosphere;
+        sky_color = vec4(atmosphere, 1.0);
 #ifdef CUTOFF
     }
 
@@ -183,10 +205,10 @@ void main()
 #endif
 
     // exposure
-    sky_color = 1.0 - exp(-1.0 * sky_color);
+    // sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
 
     // // sky will not be tonemapped outside of this:
-    sky_color = TonemapReinhardSimple(sky_color);
+    // sky_color = TonemapReinhardSimple(sky_color);
 
-    output_color = vec4(sky_color, 1.0);
+    output_color = sky_color;
 }

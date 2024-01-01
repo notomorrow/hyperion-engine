@@ -99,10 +99,6 @@ vert = Vegetation.vert
 frag = Skybox.frag
 vert = Skybox.vert
 
-[Skydome]
-frag = Skydome.frag
-vert = Skybox.vert
-
 [Terrain]
 frag = Terrain.frag
 vert = Default.vert

@@ -72,6 +72,7 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
 {
     roughness = clamp(roughness, 0.01, 0.99);
 
+#if 0
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 0),
         SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
@@ -79,9 +80,6 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
 
     vec2 blue_noise_scaled = blue_noise_sample + float(frame_counter % 256) * 1.618;
     vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
-
-    // uint seed = pcg_hash(pixel_coord.x + pixel_coord.y * screen_resolution.x);
-    // vec2 rnd = vec2(RandomFloat(seed), RandomFloat(seed));
 
     vec3 tangent;
     vec3 bitangent;
@@ -91,6 +89,9 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     const vec3 R = normalize(reflect(-V, H));
+#else
+    const vec3 R = normalize(reflect(-V, N));
+#endif
 
     return ConeTraceSpecular(world_position, N, R, roughness, voxel_grid_aabb);
 }
