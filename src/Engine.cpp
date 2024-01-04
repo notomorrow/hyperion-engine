@@ -24,6 +24,8 @@
 #include <ui/controllers/UIButtonController.hpp>
 #include <ui/controllers/UIContainerController.hpp>
 
+#include <scene/ecs/systems/VisibilityStateUpdaterSystem.hpp>
+
 #include <Game.hpp>
 
 #include <util/MeshBuilder.hpp>
@@ -133,6 +135,8 @@ void Engine::RegisterComponents()
     m_components.Register<LightController>();
     m_components.Register<UIButtonController>();
     m_components.Register<UIContainerController>();
+
+    EntityManager::GetInstance().AddSystem<VisibilityStateUpdaterSystem>();
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -931,6 +935,7 @@ void Engine::RenderNextFrame(Game *game)
 Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &renderable_attributes)
 {
     const ShaderDefinition &shader_definition = renderable_attributes.GetShaderDefinition();
+    AssertThrowMsg(shader_definition, "Shader definition is unset");
 
     Handle<Shader> shader = g_shader_manager->GetOrCreate(shader_definition);
 
@@ -953,7 +958,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
         LogType::Debug,
         "Created RenderGroup for RenderableAttributeSet with hash %llu from thread %s\n",
         renderable_attributes.GetHashCode().Value(),
-        Threads::CurrentThreadID().name.LookupString().Data()
+        Threads::CurrentThreadID().name.LookupString()
     );
 
     std::lock_guard guard(m_render_group_mapping_mutex);

@@ -17,6 +17,11 @@
 #include <scene/controllers/AabbDebugController.hpp>
 #include <scene/controllers/AnimationController.hpp>
 #include <scene/skydome/controllers/SkydomeController.hpp>
+#include <scene/ecs/components/MeshComponent.hpp>
+#include <scene/ecs/components/TransformComponent.hpp>
+#include <scene/ecs/components/BoundingBoxComponent.hpp>
+#include <scene/ecs/components/VisibilityStateComponent.hpp>
+#include <scene/ecs/components/SceneComponent.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointShadowRenderer.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -206,6 +211,37 @@ void SampleStreamer::InitGame()
         auto btn_node = GetUI().GetScene()->GetRoot().AddChild();
         btn_node.SetEntity(CreateObject<Entity>());
         btn_node.GetEntity()->SetTranslation(Vector3(0.0f, 1.0f, 0.0f));
+
+        auto entity_id = EntityManager::GetInstance().AddEntity();
+        EntityManager::GetInstance().AddComponent(entity_id, SceneComponent {
+        });
+
+        auto cube = MeshBuilder::NormalizedCubeSphere(8);
+        InitObject(cube);
+
+        constexpr auto temp_typename = TypeName<MeshComponent>();
+        DebugLog(LogType::Debug, "Type name: %s\n", temp_typename.data);
+        
+        EntityManager::GetInstance().AddComponent(entity_id, MeshComponent {
+            cube,
+            g_material_system->GetOrCreate({ .bucket = Bucket::BUCKET_OPAQUE }),
+            g_shader_manager->GetOrCreate(HYP_NAME(Forward), ShaderProperties(renderer::static_mesh_vertex_attributes))
+        });
+        EntityManager::GetInstance().AddComponent(entity_id, BoundingBoxComponent {
+            BoundingBox(Vec3f(0.0f) + Vec3f(-1.0f), Vec3f(0.0f) + Vec3f(1.0f))
+        });
+        EntityManager::GetInstance().AddComponent(entity_id, TransformComponent {
+            Transform(
+                Vec3f(0.0f, 0.0f, 0.0f),
+                Vec3f::one,
+                Quaternion::Identity()
+            )
+        });
+        EntityManager::GetInstance().AddComponent(entity_id, VisibilityStateComponent {
+
+        });
+        // TEMP
+        // g_engine->GetWorld()->GetOctree().Insert(Handle<Entity>(entity_id).Get());
 
         if (auto *controller = g_engine->GetComponents().Add<UIButtonController>(btn_node.GetEntity(), UniquePtr<UIButtonController>::Construct())) {
             controller->SetScript(g_asset_manager->Load<Script>("scripts/examples/ui_controller.hypscript"));
@@ -679,7 +715,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 {
     for (auto it = m_asset_batches.Begin(); it != m_asset_batches.End();) {
         if (it->second->IsCompleted()) {
-            DebugLog(LogType::Debug, "Handle completed asset batch %s\n", it->first.LookupString().Data());
+            DebugLog(LogType::Debug, "Handle completed asset batch %s\n", it->first.LookupString());
 
             HandleCompletedAssetBatch(it->first, it->second);
 
