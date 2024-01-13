@@ -138,9 +138,9 @@ void main()
         CalculateRaytracingReflection(deferred_params, texcoord, reflections);
 #endif
 
-#ifdef RT_GI_ENABLED
+//#ifdef RT_GI_ENABLED
         irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
-#endif
+//#endif
 
 #ifdef HBIL_ENABLED
         CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);

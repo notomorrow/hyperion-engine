@@ -6,7 +6,7 @@
 #define CACHE_SIZE 64
 #define EPS 0.00001
 #define ENERGY_CONSERVATION 0.95
-#define MAX_DISTANCE (probe_system.probe_distance * 1.5)
+#define MAX_DISTANCE 200.0//(probe_system.probe_distance * 1.5)
 
 #if DEPTH
     #define PROBE_SIDE_LENGTH PROBE_SIDE_LENGTH_DEPTH
@@ -140,7 +140,7 @@ void main()
 
     vec3 colors[2] = vec3[](imageLoad(OUTPUT_IMAGE, coord).rgb, result);
 
-    float hysteresis = 0.98;
+    float hysteresis = 0.99;
 
     float alpha = 1.0 - hysteresis;
 
