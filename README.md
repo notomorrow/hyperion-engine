@@ -7,7 +7,9 @@ Hyperion Engine is a 3D game engine written in C++, rendering on Vulkan. Current
 
 The goal of Hyperion is to be easy to understand and build games with, while still giving you ample control over the game engine.
 
-![Hyperion Engine screenshot](/screenshots/chapel.jpg)
+Dynamic Diffuse Global Illumination (DDGI) | GPU Particles
+:-----------------------------------------:|:-------------------------:
+![DDG(](/screenshots/ddgi.gif)             | ![GPU particles](/screenshots/particles.gif)
 
 ### Current features include:
 * Highly multi-threaded
