@@ -252,7 +252,7 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
-    // gbuffer_albedo.rgb = P;
+    // gbuffer_albedo = vec4(P, 1.0);
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
