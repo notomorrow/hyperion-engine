@@ -158,4 +158,6 @@ void main()
 #else
     output_color = vec4(result);
 #endif
+
+    // output_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[0], texcoord).rg, 0.0, 1.0);
 }
