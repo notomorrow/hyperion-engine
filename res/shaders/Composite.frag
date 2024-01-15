@@ -83,8 +83,8 @@ void main()
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, v_texcoord0).rgb;
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, ssr_uv_texture, v_texcoord0).rgb;
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_filtered_distance_buffer, v_texcoord0 * 2.0).rrr;
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_irradiance_buffer, v_texcoord0).rgb;

@@ -278,7 +278,7 @@ void SampleStreamer::InitGame()
             sun
         });
 
-        m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent { });
+        // m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent { });
 
         // auto sun = CreateObject<Entity>();
         // sun->SetName(HYP_NAME(Sun));
@@ -423,6 +423,8 @@ void SampleStreamer::InitGame()
 
     //     m_asset_batches.Insert(HYP_NAME(TestVoxelizerModel), std::move(batch));
     // }
+
+    m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
 }
 
 void SampleStreamer::InitRender()

@@ -85,9 +85,12 @@ void main()
 {
     vec3 irradiance = vec3(0.0);
 
+    const mat4 inverse_proj = inverse(camera.projection);
+    const mat4 inverse_view = inverse(camera.view);
+
     const float depth = SampleGBuffer(gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = normalize(DecodeNormal(SampleGBuffer(gbuffer_ws_normals_texture, v_texcoord)));
-    const vec3 P = SampleGBuffer(gbuffer_ws_positions_texture, v_texcoord).xyz;
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, v_texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
 #if MODE == 0
