@@ -18,5 +18,5 @@ DebugHBAO = false
 DebugHBIL = false
 DebugReflections = false
 DebugIrradiance = false
-DebugEnvGridProbes = false
+DebugEnvGridProbes = true
 PathTracer = false

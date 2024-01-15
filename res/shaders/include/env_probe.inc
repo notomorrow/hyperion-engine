@@ -65,11 +65,6 @@ struct SH9
         layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) buffer SHGridBuffer {
             vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
         };
-
-        //layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) uniform texture3D spherical_harmonics_volumes[9];
-
-        // texturearray
-        layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 62) uniform texture2DArray sh_clipmaps;
     #endif
 
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];

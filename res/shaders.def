@@ -71,10 +71,6 @@ vert = RenderToCubemap.vert
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
 comp = sh/ComputeSH.comp
 
-[ComputeSHClipmap]
-permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE), MODIFY_ENV_PROBE
-comp = sh/ComputeSHClipmap.comp
-
 [PackLightFieldProbe]
 comp = light_field/PackLightFieldProbe.comp
 
