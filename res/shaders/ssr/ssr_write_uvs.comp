@@ -113,7 +113,7 @@ void main(void)
     const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
     const float perceptual_roughness = sqrt(roughness);
 
-    const float depth = SampleDepth(texcoord);
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
     if (depth > 0.9995) {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
@@ -168,6 +168,8 @@ void main(void)
 
     alpha *= float(hit_pixel == saturate(hit_pixel));
     hit_pixel *= float(alpha > HYP_FMATH_EPSILON);
+
+    //vec4(Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).rgb, 1.0)
 
     imageStore(ssr_uvs, ivec2(coord), vec4(hit_pixel, 0.0, alpha));
 }

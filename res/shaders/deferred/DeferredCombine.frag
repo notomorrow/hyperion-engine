@@ -84,17 +84,19 @@ void main()
     const float ao = material.a;
     const float perceptual_roughness = sqrt(roughness);
 
+    const mat4 inverse_proj = inverse(camera.projection);
+    const mat4 inverse_view = inverse(camera.view);
+
     const vec3 N = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
     const float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
-    const vec4 position = SampleGBuffer(gbuffer_ws_positions_texture, texcoord);
-    const vec3 P = position.xyz;
-    const vec3 V = normalize(camera.position.xyz - position.xyz);
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
+    const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
 
     const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
     vec3 L = light.position_intensity.xyz;
-    L -= position.xyz * float(min(light.type, 1));
+    L -= P * float(min(light.type, 1));
     L = normalize(L);
 
     const vec3 H = normalize(L + V);
