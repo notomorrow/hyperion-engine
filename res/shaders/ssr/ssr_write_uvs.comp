@@ -169,5 +169,5 @@ void main(void)
     alpha *= float(hit_pixel == saturate(hit_pixel));
     hit_pixel *= float(alpha > HYP_FMATH_EPSILON);
 
-    imageStore(ssr_uvs, ivec2(coord), vec4(Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).rgb, 1.0));//vec4(hit_pixel, 0.0, alpha));
+    imageStore(ssr_uvs, ivec2(coord), vec4(hit_pixel, 0.0, alpha));
 }
