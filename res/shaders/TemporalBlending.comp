@@ -4,6 +4,8 @@
 #extension GL_EXT_scalar_block_layout  : require
 #extension GL_EXT_nonuniform_qualifier : require
 
+// #define PASSTHROUGH
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 #ifndef OUTPUT_FORMAT
@@ -25,7 +27,7 @@ layout(set = 0, binding = 1) uniform texture2D prev_input_texture;
 layout(set = 0, binding = 2) uniform texture2D velocity_texture;
 layout(set = 0, binding = 3) uniform sampler sampler_linear;
 layout(set = 0, binding = 4) uniform sampler sampler_nearest;
-layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D blur_output_image;
+layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D output_image;
 
 #ifdef TEMPORAL_BLEND_TECHNIQUE_0
     #define TEMPORAL_BLEND_TECHNIQUE 0
@@ -87,7 +89,7 @@ void main(void)
     const vec2 uv = (vec2(coord) + 0.5) / vec2(output_dimensions);
     const vec2 texel_size = vec2(1.0) / vec2(output_dimensions);
 
-    vec4 color = Texture2D(sampler_linear, input_texture, uv);
+    vec4 color = Texture2D(sampler_nearest, input_texture, uv);
 
     vec2 velocity;
     float view_space_depth;
@@ -103,7 +105,9 @@ void main(void)
         view_space_depth
     );
 
-
+#ifdef PASSTHROUGH
+    imageStore(output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);
+#else
 #if TEMPORAL_BLEND_TECHNIQUE == 0
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv - velocity);
 
@@ -193,5 +197,6 @@ void main(void)
     color = TemporalBlendVarying(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 #endif
 
-    imageStore(blur_output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);
+    imageStore(output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);
+#endif
 }

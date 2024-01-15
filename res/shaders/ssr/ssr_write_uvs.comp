@@ -119,12 +119,16 @@ void main(void)
         return;
     }
 
-    vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)));
+    vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
 
     vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     vec3 V = normalize(vec3(0.0) - P);
-    vec3 view_space_normal = normalize((view * vec4(N, 0.0)).xyz);
-    vec3 world_space_position = (inverse_view * vec4(P, 1.0)).xyz;
+    vec3 view_space_normal = (view * vec4(N, 0.0)).xyz;
+
+    // vec4 world_space_position = (inverse_view * vec4(P, 1.0));
+    // world_space_position /= world_space_position.w;
+
+    vec4 world_space_position = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth);
 
     vec3 tangent;
     vec3 bitangent;
@@ -133,8 +137,7 @@ void main(void)
     const vec2 texel_size = vec2(1.0) / vec2(ssr_params.dimension.xy);
     const float texel_size_max = max(texel_size.x, texel_size.y);
 
-    //vec3 ray_origin = (view * vec4(world_space_position + N * 0.25, 1.0)).xyz;//
-    vec3 ray_origin = P;// + view_space_normal * texel_size_max;
+    vec3 ray_origin = P + view_space_normal * texel_size_max;
     
 #ifdef ROUGHNESS_SCATTERING
     vec2 blue_noise_sample = vec2(
@@ -142,21 +145,13 @@ void main(void)
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)
     );
 
-    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 8) * 1.618;
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
     vec3 H = ImportanceSampleGGX(rnd, N, roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
-    // vec4 HV = view * vec4(H, 0.0);
-    // HV = normalize(HV);
-
-    vec3 ray_direction = (view * vec4(reflect(-normalize(camera.position.xyz - world_space_position), H), 0.0)).xyz;
-
-    // uint seed = uint(coord.x) * uint(ssr_params.dimension.y) + uint(coord.y);
-    // vec3 rnd = vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed));
-
-    // vec3 ray_direction = normalize(mix(RandomInHemisphere(rnd, view_space_normal), reflect(-V, view_space_normal), roughness));
+    vec3 ray_direction = reflect(-V, normalize((view * vec4(H, 0.0)).xyz));
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);
 #endif
@@ -173,6 +168,7 @@ void main(void)
     float alpha = CalculateAlpha(num_iterations, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
 
     alpha *= float(hit_pixel == saturate(hit_pixel));
+    hit_pixel = saturate(hit_pixel);
     hit_pixel *= float(alpha > HYP_FMATH_EPSILON);
 
     imageStore(ssr_uvs, ivec2(coord), vec4(hit_pixel, 0.0, alpha));
