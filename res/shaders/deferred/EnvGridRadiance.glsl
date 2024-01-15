@@ -23,7 +23,7 @@ vec3 VctWorldToTexCoord(vec3 world_position, in AABB voxel_grid_aabb)
     const vec3 scaled_position = (world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
     const vec3 voxel_storage_position = (scaled_position * 0.5 + 0.5);
 
-    return voxel_storage_position;
+    return clamp(voxel_storage_position, vec3(0.0), vec3(1.0));
 }
 
 vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max_dist, bool include_lighting)
