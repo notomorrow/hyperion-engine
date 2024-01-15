@@ -71,12 +71,12 @@ void main()
 
 #if defined(DEBUG_SSR)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0).rgb;
-    out_color.rgb = Tonemap(out_color.rgb);
 #elif defined(DEBUG_HBAO)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).aaa;
 #elif defined(DEBUG_HBIL)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).rgb;
-    out_color.rgb = pow(out_color.rgb, vec3(2.2));
+
+    // out_color.rgb = (Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb - vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr)) * 6.0;
 #endif
     out_color.a = 1.0;
 
@@ -84,7 +84,7 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr;
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, ssr_uv_texture, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, ssr_result, v_texcoord0).rgb;
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_filtered_distance_buffer, v_texcoord0 * 2.0).rrr;
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_irradiance_buffer, v_texcoord0).rgb;
