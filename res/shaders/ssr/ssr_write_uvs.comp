@@ -9,6 +9,11 @@ layout(set = 0, binding = 0, UV_FORMAT) uniform writeonly image2D ssr_uvs;
 
 #include "../include/Temporal.glsl"
 
+mat4 view = camera.view;
+mat4 proj = camera.projection;
+mat4 inverse_proj = inverse(proj);
+mat4 inverse_view = inverse(view);
+
 bool TraceRays(
     vec3 ray_origin,
     vec3 ray_direction,
@@ -29,8 +34,6 @@ bool TraceRays(
     float depth_from_screen;
     float step_delta;
 
-    const mat4 inverse_proj = inverse(camera.projection);
-
     vec4 view_space_position;
 
     int i = 0;
@@ -38,7 +41,7 @@ bool TraceRays(
     for (; i < ssr_params.num_iterations; i++) {
         marching_position += ray_step;
 
-        hit_pixel = GetProjectedPositionFromView(camera.projection, marching_position);
+        hit_pixel = GetProjectedPositionFromView(proj, marching_position);
         view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
 
         step_delta = marching_position.z - view_space_position.z;
@@ -57,7 +60,7 @@ bool TraceRays(
             ray_step *= 0.5;
             marching_position = marching_position - ray_step * sign(step_delta);
 
-            hit_pixel = GetProjectedPositionFromView(camera.projection, marching_position);
+            hit_pixel = GetProjectedPositionFromView(proj, marching_position);
             view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
             
             step_delta = abs(marching_position.z) - view_space_position.z;
@@ -107,13 +110,9 @@ void main(void)
 
     vec2 texcoord = saturate((vec2(coord) + 0.5) / vec2(ssr_params.dimension.xy));
 
-    const mat4 inverse_proj = inverse(camera.projection);
-    const mat4 inverse_view = inverse(camera.view);
-
     const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
-    const float perceptual_roughness = sqrt(roughness);
 
-    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
+    const float depth = SampleDepth(texcoord);
 
     if (depth > 0.9995) {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
@@ -124,7 +123,7 @@ void main(void)
 
     vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     vec3 V = normalize(vec3(0.0) - P);
-    vec3 view_space_normal = normalize((camera.view * vec4(N, 0.0)).xyz);
+    vec3 view_space_normal = normalize((view * vec4(N, 0.0)).xyz);
     vec3 world_space_position = (inverse_view * vec4(P, 1.0)).xyz;
 
     vec3 tangent;
@@ -134,8 +133,8 @@ void main(void)
     const vec2 texel_size = vec2(1.0) / vec2(ssr_params.dimension.xy);
     const float texel_size_max = max(texel_size.x, texel_size.y);
 
-    //vec3 ray_origin = (camera.view * vec4(world_space_position + N * 0.25, 1.0)).xyz;//
-    vec3 ray_origin = P + N;// + view_space_normal * texel_size_max;
+    //vec3 ray_origin = (view * vec4(world_space_position + N * 0.25, 1.0)).xyz;//
+    vec3 ray_origin = P;// + view_space_normal * texel_size_max;
     
 #ifdef ROUGHNESS_SCATTERING
     vec2 blue_noise_sample = vec2(
@@ -143,14 +142,21 @@ void main(void)
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)
     );
 
-    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 8) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
     vec3 H = ImportanceSampleGGX(rnd, N, roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
-    vec3 ray_direction = reflect(-V, normalize((camera.view * vec4(H, 0.0)).xyz));
+    // vec4 HV = view * vec4(H, 0.0);
+    // HV = normalize(HV);
 
+    vec3 ray_direction = (view * vec4(reflect(-normalize(camera.position.xyz - world_space_position), H), 0.0)).xyz;
+
+    // uint seed = uint(coord.x) * uint(ssr_params.dimension.y) + uint(coord.y);
+    // vec3 rnd = vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed));
+
+    // vec3 ray_direction = normalize(mix(RandomInHemisphere(rnd, view_space_normal), reflect(-V, view_space_normal), roughness));
 #else
     vec3 ray_direction = reflect(normalize(ray_origin), view_space_normal);
 #endif
