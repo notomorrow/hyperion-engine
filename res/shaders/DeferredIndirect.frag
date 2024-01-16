@@ -104,16 +104,17 @@ void main()
         ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb);
 #endif
 
-#ifdef SSR_ENABLED
-        CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
-#endif
         vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_LINEAR, env_grid_radiance_texture, texcoord);
         ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb);
         
         irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
+#ifdef SSR_ENABLED
+        CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
+#endif
+
 #ifdef RT_REFLECTIONS_ENABLED
-        CalculateRaytracingReflection(deferred_params, texcoord, reflections);
+        CalculateRaytracingReflection(deferred_params, texcoord, ibl);
 #endif
 
 #ifdef RT_GI_ENABLED
@@ -129,8 +130,7 @@ void main()
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         specular_ao *= energy_compensation;
 
-        vec3 reflection_combined = (ibl.rgb * (1.0 - reflections.a)) + (reflections.rgb);
-        vec3 Fr = reflection_combined * E * specular_ao;
+        vec3 Fr = ibl * E * specular_ao;
 
         vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
         Fd *= multibounce;
@@ -151,7 +151,7 @@ void main()
 #ifdef PATHTRACER
         result = CalculatePathTracing(deferred_params, texcoord).rgb;
 #elif defined(DEBUG_REFLECTIONS)
-        result = reflection_combined.rgb;
+        result = ibl.rgb;
 #elif defined(DEBUG_IRRADIANCE)
         result = irradiance.rgb;
 #endif

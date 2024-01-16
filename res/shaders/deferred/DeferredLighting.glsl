@@ -405,7 +405,7 @@ vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, v
 
 #ifndef HYP_DEFERRED_NO_SSR
 #ifdef SSR_ENABLED
-void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, float depth, inout vec4 reflections)
+void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, float depth, inout vec3 reflections)
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
 
@@ -417,7 +417,7 @@ void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, flo
     screen_space_reflections.a = saturate(screen_space_reflections.a * float(enabled));
     // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
     // screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
-    reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+    reflections = mix(reflections, screen_space_reflections.rgb, screen_space_reflections.a);
 }
 #endif
 #endif
@@ -431,13 +431,13 @@ vec4 CalculatePathTracing(DeferredParams deferred_params, vec2 uv)
 #endif
 
 #ifdef RT_REFLECTIONS_ENABLED
-void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
+void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec3 reflections)
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_RT_RADIANCE_ENABLED);
 
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
     rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
-    reflections = mix(reflections, rt_radiance, min(rt_radiance.a * float(enabled), 1.0));
+    reflections = mix(reflections, rt_radiance.rgb, min(rt_radiance.a * float(enabled), 1.0));
 }
 #endif
 #endif

@@ -100,13 +100,19 @@ void main(void)
 {
     // Checkerboard pattern -- we dispatch half the number of threads as the image resolution,
     // and alternate between even and odd pixels each frame.
-    uvec2 coord = uvec2(gl_GlobalInvocationID.xy * 2) + uvec2(scene.frame_counter & 1u);
+    const uint pixel_index = (gl_GlobalInvocationID.x * 2) + (scene.frame_counter & 1);
+    const uvec2 coord = uvec2(
+        pixel_index % ssr_params.dimension.x,
+        pixel_index / ssr_params.dimension.x
+    );
 
     if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
         return;
     }
 
-    vec2 texcoord = saturate((vec2(gl_GlobalInvocationID.xy) + 0.5) / (vec2(ssr_params.dimension.xy) * 0.5));
+    vec2 texcoord = saturate((vec2(coord) + 0.5) / (vec2(ssr_params.dimension.xy)));
+    
+        //saturate((vec2(gl_GlobalInvocationID.xy) + 0.5) / (vec2(ssr_params.dimension.xy) * 0.5));
 
     const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
 

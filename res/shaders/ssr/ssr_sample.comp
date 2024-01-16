@@ -31,7 +31,11 @@ float IsoscelesTriangleNextAdjacent(float adjacent_length, float incircle_radius
 
 void main(void)
 {
-    const uvec2 coord = uvec2(gl_GlobalInvocationID.xy * 2) + uvec2(scene.frame_counter & 1u);
+    const uint pixel_index = (gl_GlobalInvocationID.x * 2) + (scene.frame_counter & 1);
+    const uvec2 coord = uvec2(
+        pixel_index % ssr_params.dimension.x,
+        pixel_index / ssr_params.dimension.x
+    );
 
     if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
         return;
@@ -39,7 +43,7 @@ void main(void)
 
     const vec2 ssr_image_dimensions = vec2(ssr_params.dimension.xy);
 
-	vec2 texcoord = saturate((vec2(coord) + 0.5) / ssr_image_dimensions);
+    const vec2 texcoord = (vec2(coord) + vec2(0.5)) / ssr_image_dimensions;
 
     vec4 uv_sample = imageLoad(ssr_uv_image, ivec2(coord));
     const vec2 uv = uv_sample.xy;
