@@ -7,7 +7,6 @@ protected:
 class File : Resource
 {
 public:
-
     path : String = "";
 
 private:
@@ -33,7 +32,6 @@ private:
         }
 
         self.id = fopen(self.path, args);
-        Print("Opened file, id = %\n", self.id);
     }
 
 public:
@@ -45,8 +43,6 @@ public:
 
     static func Open(self, path : String, args : String = "rw+")
     {
-        Print("Open file %\n", path);
-
         let file : Any = new File(path);
         file.OpenWithArgs(args);
 
