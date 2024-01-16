@@ -254,7 +254,7 @@ void main()
     // gbuffer_albedo = vec4(P, 1.0);
 
     gbuffer_normals = EncodeNormal(N);
-    gbuffer_material = vec4(roughness, metalness, transmission, ao);
+    gbuffer_material = vec4(0.05, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);

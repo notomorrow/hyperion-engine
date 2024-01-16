@@ -139,8 +139,6 @@ void main()
         // Fr *= exposure * IBL_INTENSITY;
         // Fd *= exposure * IBL_INTENSITY;
 
-        // IntegrateReflections(Fr, reflections);
-
         result = Fd + Fr;
 
         vec4 final_result = vec4(result, 1.0);
