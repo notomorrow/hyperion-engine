@@ -31,7 +31,7 @@ float IsoscelesTriangleNextAdjacent(float adjacent_length, float incircle_radius
 
 void main(void)
 {
-    const uvec2 coord = uvec2(gl_GlobalInvocationID.xy);
+    const uvec2 coord = uvec2(gl_GlobalInvocationID.xy * 2) + uvec2(scene.frame_counter & 1u);
 
     if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
         return;
