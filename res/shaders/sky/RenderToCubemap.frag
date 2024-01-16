@@ -205,10 +205,10 @@ void main()
 #endif
 
     // exposure
-    // sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
+    sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
 
     // // sky will not be tonemapped outside of this:
-    // sky_color = TonemapReinhardSimple(sky_color);
+    sky_color.rgb = TonemapReinhardSimple(sky_color.rgb);
 
     output_color = sky_color;
 }
