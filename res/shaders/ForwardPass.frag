@@ -163,7 +163,7 @@ void main()
 #endif
 
 // #ifdef ENV_GRID_ENABLED
-            CalculateEnvProbeIrradiance(P, N, irradiance);
+            // CalculateEnvProbeIrradiance(P, N, irradiance);
 // #endif
 
             Fd = gbuffer_albedo.rgb * irradiance * (1.0 - E) * ao;
