@@ -281,8 +281,6 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
             : R,
         lod
     );
-
-    // ibl.rgb = ReverseTonemapReinhardSimple(ibl.rgb);
 }
 
 vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
