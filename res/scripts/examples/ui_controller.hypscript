@@ -1,8 +1,8 @@
 #importpath "../" "../library";
 
-class TestClass
+class TestClass<T>
 {
-    func TestFunc<T>(self : TestClass, a : T, b : T) -> T
+    func TestFunc(self, a : T, b : T) -> T
     {
         return a + b;
     }
@@ -24,8 +24,12 @@ class TestScript
     {
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
 
-        Print("TestFunc(1, 2) = %\n", new TestClass().TestFunc<Int>(1, 2));
+        Print("TestFunc(1, 2) = %\n", new TestClass<Int>().TestFunc(1, 2));
+        Print("typeof(TestFunc(1, 2)) = %\n", typeof(new TestClass<Int>().TestFunc(1, 2)));
+        Print("typeof(TestFunc(1, 2)) = %\n", typeof(new TestClass<Float>().TestFunc(1.0, 2.5)));
         Print("TestFunc2(1, 2) = %\n", TestFunc2<Int>(1, 2));
+        Print("typeof(TestFunc2(1, 2)) = %\n", typeof(TestFunc2<Int>(1, 2)));
+
         // scene.GetComponent<TransformComponent>(entity).SetTranslation(new Vec3f(0.0, 0.0, 0.0));s
         // scene.GetComponent(entity, "Transform").SetTranslation(new Vec3f(0.0, 0.0, 0.0));
     }
