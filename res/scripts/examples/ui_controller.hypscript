@@ -1,32 +1,43 @@
 #importpath "../" "../library";
 
-import core::engine;
-import core::{ AssertEqual, AssertNotEqual };
-import scene::{ EntityProxy, Controller };
-import containers::{ Struct };
-import math;
-import io::File;
+class TestClass
+{
+    func TestFunc<T>(self : TestClass, a : T, b : T) -> T
+    {
+        return a + b;
+    }
+}
+
+func TestFunc2<T>(a : T, b : T) -> T
+{
+    Print("T = %\n", T);
+    return a + b;
+}
 
 class TestScript
 {
-    entity : EntityProxy;
-
     TestScript(self : TestScript)
     {
     }
 
-    func OnAdded(self : TestScript, entity : EntityProxy)
+    func OnAdded(self : TestScript, scene : Scene, entity : UInt)
     {
-        Print("Test script added, self = %, entity = %\n", self, entity);
+        Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
+
+        Print("TestFunc(1, 2) = %\n", new TestClass().TestFunc<Int>(1, 2));
+        Print("TestFunc2(1, 2) = %\n", TestFunc2<Int>(1, 2));
+        // scene.GetComponent<TransformComponent>(entity).SetTranslation(new Vec3f(0.0, 0.0, 0.0));s
+        // scene.GetComponent(entity, "Transform").SetTranslation(new Vec3f(0.0, 0.0, 0.0));
     }
 
     func OnRemoved(self : TestScript)
     {
     }
 
-    // func OnTick(self : TestScript, delta : Float)
-    // {
-    // }
-};
+    func OnTick(self : TestScript, delta : Float)
+    {
+        Print("Test script tick, self = %, delta = %\n", self, delta);
+    }
+}
 
 export const controller = new TestScript();

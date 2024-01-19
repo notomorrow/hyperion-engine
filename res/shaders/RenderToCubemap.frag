@@ -71,12 +71,6 @@ void main()
     vec3 N = normalize(v_normal);
     vec3 R = reflect(-V, N);
 
-    // Get the sky color.
-    // vec3 ibl = TextureCubeLod(HYP_SAMPLER_LINEAR, environment_maps[0], R, 9.0).rgb;
-
-    // vec4 view_position = camera.view * vec4(v_position, 1.0);
-    // view_position.xyz /= view_position.w;
-
     const float min_extent = min(abs(v_env_probe_extent.x), min(abs(v_env_probe_extent.y), abs(v_env_probe_extent.z))) * 0.5;
     const vec3 env_probe_center = current_env_probe.world_position.xyz;
 

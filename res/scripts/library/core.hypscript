@@ -8,11 +8,6 @@ module engine {
     };
 
     export _engine : EngineWrapper = new EngineWrapper();
-
-    func CreateEntity() -> Entity
-    {
-        return Engine_CreateEntity(_engine.handle);
-    }
 }
 
 //extern func HashFNV1(str : String);

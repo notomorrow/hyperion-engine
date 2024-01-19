@@ -1,12 +1,3 @@
-
-proxy class EntityProxy {
-    func SetTranslation(self : EntityProxy, pos : Vector3) -> void => Entity_SetTranslation(self, pos);
-
-    func GetTranslation(self : EntityProxy) -> Vector3 => Entity_GetTranslation(self);
-
-    func GetWorldAABB(self : EntityProxy) -> BoundingBox => Entity_GetWorldAABB(self);
-}
-
 class Controller
 {
     receives_update : Bool = true;
