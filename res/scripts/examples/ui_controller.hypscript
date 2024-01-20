@@ -8,36 +8,61 @@ class TestClass<T>
     end
 
     func TestFunc2<T2>(self, a : T2, b : T2) -> Function
+        Print("TestFunc2<T2>(a, b) called with a = %, b = %, self = %\n", a, b, self)
+
         return func ()
             return a + b
         end
     end
+
+    // static $invoke(self : Class)
+    //     return new TestClass()
+    // end
 end
 
 func TestFunc3<T>(a : T, b : T) -> T
-    return a + b;
+    return a + b
 end
 
 class FooComponent
-    static native_type_id = 3432u;
+    static native_type_id = 3432u
+    test_var := 3.1415
 
-    test_var : float;
+    FooComponent(self: FooComponent, a : int, b : int)
+        Print("FooComponent constructor, self = %, a = %, b = %\n", self, a, b);
+    end
+
+    static $invoke(self : Class, a : int, b : int)
+        return new FooComponent(a, b)
+    end
 end
 
 class SceneHelper
-    static func GetComponent<Component>(self : Class, scene : Scene, entity : uint) -> Component
+    static func GetComponent<Component>(self: Class, scene : Scene, entity : uint) -> Component
         Print("SceneHelper.GetComponent<Component>(entity) called with entity = % and Component = %\n", entity, Component);
 
         return scene.GetComponent(Component.native_type_id, entity);
     end
 end
 
+enum FooEnum : int
+    FOO = 0,
+    BAR = 1,
+    BAZ = 2
+end
+
+func FunctionTakingEnum(e : FooEnum) -> FooEnum
+    Print("FunctionTakingEnum(e) called with e = %\n", e)
+
+    return e + 1
+end
+
 class TestScript
-    TestScript(self : TestScript)
+    TestScript(self: TestScript)
         Print("Test script constructor, self = %\n", self);
     end
 
-    func OnAdded(self : TestScript, scene : Scene, entity : uint)
+    OnAdded(self: TestScript, scene : Scene, entity : uint)
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
 
         Print("Scene type ID = %\n", Scene.native_type_id);
@@ -55,10 +80,22 @@ class TestScript
 
         // Print("Scene.GetComponent<Foo>(entity) = %\n", scene.GetComponent<Foo>(entity));
 
-        // scene.GetComponent<TransformComponent>(entity).SetTranslation(new Vec3f(0.0, 0.0, 0.0));s
-        // scene.GetComponent(entity, "Transform").SetTranslation(new Vec3f(0.0, 0.0, 0.0));
+        test_class := new TestClass<float>();
+        // Print("typeof(test_class) = %\n", typeof(test_class));
+        Print("test_class.TestFunc(1.0, 2.0) = %\n", test_class.TestFunc(1.0, 2.0));
+        // Print("test_class.TestFunc2<int>(1, 2)() = %\n", test_class.TestFunc2<int>(1, 2)());
 
-        test_struct := Struct.make([
+        // scene.GetComponent<TransformComponent>(entity).SetTranslation(Vec3f(0.0, 0.0, 0.0));s
+        // scene.GetComponent(entity, "Transform").SetTranslation(Vec3f(0.0, 0.0, 0.0));
+
+        Print("FooEnum = %\n", FooEnum);
+        Print("FooEnum.FOO = %\n", FooEnum.FOO);
+        Print("FooEnum.BAR = %\n", FooEnum.BAR);
+        Print("typeof(FooEnum) = %\n", typeof(FooEnum));
+        Print("typeof(FooEnum.FOO) = %\n", typeof(FooEnum.FOO));
+        Print("FunctionTakingEnum(FooEnum.FOO) = %\n", FunctionTakingEnum(FooEnum.FOO));
+
+        test_struct := Struct([
             ["i32", "foo", 1234],
             ["f32", "bar", 2.5],
         ])
@@ -67,14 +104,15 @@ class TestScript
         Print("test_struct.bar = %\n", test_struct.get("bar"));
 
         Print("typeof(test_struct) = %\n", typeof(test_struct));
+        Print("FooComponent(1234, 5678) = %\n", FooComponent(1234, 5678));
     end
 
-    func OnRemoved(self : TestScript)
+    OnRemoved(self: TestScript)
     end
 
-    func OnTick(self : TestScript, delta : float)
+    OnTick(self: TestScript, delta : float)
         Print("Test script tick, self = %, delta = %\n", self, delta);
     end
 end
 
-export const controller = new TestScript();
+export const controller = new TestScript()

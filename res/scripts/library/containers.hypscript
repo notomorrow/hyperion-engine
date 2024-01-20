@@ -1,8 +1,8 @@
 proxy class Struct
-    static make(self : Class, members : any[]) -> Struct => MakeStruct(members)
+    static $invoke(self: Class, members : any[]) -> Struct => MakeStruct(members)
 
-    func get(self : Struct, name : string) => GetStructMember(self, name)
-    func set(self : Struct, name : string, value : any) -> bool => SetStructMember(self, name, value)
+    func get(self: Struct, name : string) => GetStructMember(self, name)
+    func set(self: Struct, name : string, value : any) -> bool => SetStructMember(self, name, value)
 
-    func to_memory_buffer(self : Struct) => GetStructMemoryBuffer(self)
+    func to_memory_buffer(self: Struct) => GetStructMemoryBuffer(self)
 end
