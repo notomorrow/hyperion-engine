@@ -1,48 +1,8 @@
-class Stack<StkType> {
-    ary: StkType[];
-
-    Stack(self)
-    {
-    }
-
-    func Push(self, value : StkType)
-    {
-        ArrayPush(self.ary, value);
-    }
-
-    func Pop(self) -> StkType
-    {
-        return ArrayPop(self.ary);
-    }
-
-    func Size(const self) -> Int
-    {
-        return ArraySize(self.ary);
-    }
-
-    func Top(const self) -> StkType
-    {
-        return self.ary[ArraySize(self.ary) - 1];
-    }
-
-    func Empty(const self) -> Bool
-    {
-        return ArraySize(self.ary) == 0;
-    }
-
-    func Any(const self) -> Bool
-    {
-        return ArraySize(self.ary) != 0;
-    }
-}
-
 proxy class Struct
-{
-    func Get(self : Struct, name : String) => GetStructMember(self, name);
+    static make(self : Class, members : any[]) -> Struct => MakeStruct(members)
 
-    func Set(self : Struct, name : String, value : Any) -> Bool => SetStructMember(self, name, value);
+    func get(self : Struct, name : string) => GetStructMember(self, name)
+    func set(self : Struct, name : string, value : any) -> bool => SetStructMember(self, name, value)
 
-    func ToMemoryBuffer(self : Struct) => GetStructMemoryBuffer(self);
-
-    static Make(self : Class, members : Any[]) -> Struct => MakeStruct(members);
-}
+    func to_memory_buffer(self : Struct) => GetStructMemoryBuffer(self)
+end

@@ -1,54 +1,43 @@
 #importpath "../" "../library";
 
+import containers::{Struct}
+
 class TestClass<T>
-{
     func TestFunc(self, a : T, b : T) -> T
-    {
-        return a + b;
-    }
+        return a + b
+    end
 
     func TestFunc2<T2>(self, a : T2, b : T2) -> Function
-    {
-        return func () {
-            return a + b;
-        };
-    }
-}
+        return func ()
+            return a + b
+        end
+    end
+end
 
 func TestFunc3<T>(a : T, b : T) -> T
-{
     return a + b;
-}
+end
 
-// func GetComponent<Component>(scene : Scene, entity : UInt) -> Component
-// {
-//     return scene.GetComponent(Component.native_type_id, entity);
-// }
 class FooComponent
-{
     static native_type_id = 3432u;
 
-    test_var : Float;
-}
+    test_var : float;
+end
 
 class SceneHelper
-{
-    static func GetComponent<Component>(self : Class, scene : Scene, entity : UInt) -> Component
-    {
+    static func GetComponent<Component>(self : Class, scene : Scene, entity : uint) -> Component
         Print("SceneHelper.GetComponent<Component>(entity) called with entity = % and Component = %\n", entity, Component);
 
         return scene.GetComponent(Component.native_type_id, entity);
-    }
-}
+    end
+end
 
 class TestScript
-{
     TestScript(self : TestScript)
-    {
-    }
+        Print("Test script constructor, self = %\n", self);
+    end
 
-    func OnAdded(self : TestScript, scene : Scene, entity : UInt)
-    {
+    func OnAdded(self : TestScript, scene : Scene, entity : uint)
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
 
         Print("Scene type ID = %\n", Scene.native_type_id);
@@ -68,16 +57,24 @@ class TestScript
 
         // scene.GetComponent<TransformComponent>(entity).SetTranslation(new Vec3f(0.0, 0.0, 0.0));s
         // scene.GetComponent(entity, "Transform").SetTranslation(new Vec3f(0.0, 0.0, 0.0));
-    }
+
+        test_struct := Struct.make([
+            ["i32", "foo", 1234],
+            ["f32", "bar", 2.5],
+        ])
+
+        Print("test_struct.foo = %\n", test_struct.get("foo"));
+        Print("test_struct.bar = %\n", test_struct.get("bar"));
+
+        Print("typeof(test_struct) = %\n", typeof(test_struct));
+    end
 
     func OnRemoved(self : TestScript)
-    {
-    }
+    end
 
-    func OnTick(self : TestScript, delta : Float)
-    {
+    func OnTick(self : TestScript, delta : float)
         Print("Test script tick, self = %, delta = %\n", self, delta);
-    }
-}
+    end
+end
 
 export const controller = new TestScript();

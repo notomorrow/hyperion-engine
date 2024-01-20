@@ -7,10 +7,10 @@ import scene::{ EntityProxy, Controller };
 import math;
 import io::File;
 
-export const Foo : Int = 123;
+export const Foo : int = 123;
 
 
-func Expect( cond : Bool ) -> Bool
+func Expect( cond : bool ) -> bool
 {
     if (!cond) {
         throw "Assertion failed!";
@@ -29,7 +29,7 @@ func Test(name : String, block : Function)
         block(func (unit_name : String, unit_block : Function) {
             Print("Unit \"%\" ... ", unit_name);
             
-            passed : Bool = false;
+            passed : bool = false;
 
             try {
                 //unit_block(func () { passed = true; }, func () { throw "Fail"; });
@@ -57,11 +57,11 @@ Expect(math::NaN != math::NaN);
 // Print("NaN = %\n", math::NaN);
 
 class MyClass {
-    j : Float = 4.5;
+    j : float = 4.5;
 }
 
 class TempClass : MyClass {
-    i : Int = 4;
+    i : int = 4;
     static name : String = "TempClass";
 
     TempClass(self: TempClass)
@@ -82,13 +82,13 @@ class TempClass : MyClass {
 }
 
 func Foo() {
-    let outer : Int = 179;
+    let outer : int = 179;
 
     class NestedClass {
-        ref ref_member : Int = outer;
+        ref ref_member : int = outer;
     }
 
-    func MakeNewObjectWithTemplate<T = UInt, U = Float, Other...>()
+    func MakeNewObjectWithTemplate<T = uint, U = float, Other...>()
     {
         Print("Hello Foo\n");
         let x : T;
@@ -111,7 +111,7 @@ func Foo() {
     MakeNewObject(TempClass);
     // MakeNewObjectWithTemplate<TempClass>();
 
-    //Print("MakeNewObjectWithTemplate<Int, String, Float>() = %\n", MakeNewObjectWithTemplate<Int, "Hello World", Float>());
+    //Print("MakeNewObjectWithTemplate<int, String, float>() = %\n", MakeNewObjectWithTemplate<int, "Hello World", float>());
 
     let nested_object = new NestedClass;
     outer = 999;
@@ -152,19 +152,19 @@ func GetIAndJ(obj : TempClass)
     Print("obj has $construct? %\n", obj has '$construct');
 
     Print("obj IsInstance of TempClass? %\n", IsInstance(obj, TempClass));
-    Print("obj IsInstance of Int? %\n", IsInstance(obj, Int));
-    Print("5 IsInstance of Int? %\n", IsInstance(5, Int));
-    Print("0 IsInstance of Int? %\n", IsInstance(0, Int));
-    Print("null IsInstance of Int? %\n", IsInstance(null, Int));
+    Print("obj IsInstance of int? %\n", IsInstance(obj, int));
+    Print("5 IsInstance of int? %\n", IsInstance(5, int));
+    Print("0 IsInstance of int? %\n", IsInstance(0, int));
+    Print("null IsInstance of int? %\n", IsInstance(null, int));
     Print("obj IsInstance of new TempClass? %\n", IsInstance(obj, new TempClass));
 }
 
-func GenericFunction2 <T> (t : T, cond : Bool) -> T
+func GenericFunction2 <T> (t : T, cond : bool) -> T
 {
     return cond ? t : t - 1;
 }
-AssertEqual(typeof(GenericFunction2<Int>(2, true)), "Int");
-AssertEqual(typeof(GenericFunction2<Float>(2.0, true)), "Float");
+AssertEqual(typeof(GenericFunction2<int>(2, true)), "int");
+AssertEqual(typeof(GenericFunction2<float>(2.0, true)), "float");
 //Print(typeof(GenericFunction2<9>));
 
 GetIAndJ(t);
@@ -172,24 +172,24 @@ GetIAndJ(t);
 Print("File.class == %\n", io::File.class);
 Print("File.base == %\n", io::File.base);
 Print("File is class? %\n", IsInstance(io::File, Class));
-Print("Int = %\n", Int);
+Print("int = %\n", int);
 Print("(new io::File).class = %\n", (new io::File("test.txt")).class);
 Print("File.class = %\n", io::File.class);
 Print("typeof(io::File) = %\n", typeof(io::File));
 Expect(IsInstance(io::File, Class));
 Expect(IsInstance(new io::File("test.txt"), io::File));
 
-Expect(typeof([1,2,3]) == "Int[]");
-Expect(typeof([1.0,2.0,3.0]) == "Float[]");
+Expect(typeof([1,2,3]) == "int[]");
+Expect(typeof([1.0,2.0,3.0]) == "float[]");
 Expect(typeof([]) == "Any[]");
 Expect(IsInstance([1,2,3], Array));
-AssertEqual(typeof([0, 1, 2, 3]), "Int[]");
-AssertEqual(typeof([0, 1, 2, 3][0]), "Int");
+AssertEqual(typeof([0, 1, 2, 3]), "int[]");
+AssertEqual(typeof([0, 1, 2, 3][0]), "int");
 Expect(IsInstance([1, 2, 3], Array));
-Expect(IsInstance([1, 2, 3], Array<Int>));
+Expect(IsInstance([1, 2, 3], Array<int>));
 
-AssertEqual(typeof(1u), "UInt");
-Expect(1u is UInt);
+AssertEqual(typeof(1u), "uint");
+Expect(1u is uint);
 Expect(null is Object);
 //io::out.Printf("typeof(null) = %\n", typeof(null));
 //io::out.Printf("Number = %\n", Number);
@@ -251,15 +251,15 @@ Expect(!(foo_bar is Class));
 Print("t.j = %\n", t.j);
 Print("typeof(t.j) = %\n", typeof(t.j));
 
-Expect(math::Sign<Int>(100) == 1);
-Expect(math::Sign<Int>(-100) == -1);
-Print("abs : %\n", math::Abs<Int>(-3434));
-Expect(math::Abs<Int>(-4343) == 4343);
-Expect(math::Floor<Float>(0.998) == 0.0);
-Expect(math::Ceil<Float>(0.998) == 1.0);
+Expect(math::Sign<int>(100) == 1);
+Expect(math::Sign<int>(-100) == -1);
+Print("abs : %\n", math::Abs<int>(-3434));
+Expect(math::Abs<int>(-4343) == 4343);
+Expect(math::Floor<float>(0.998) == 0.0);
+Expect(math::Ceil<float>(0.998) == 1.0);
 Expect(math::PI >= 3.14 && math::PI < 3.15);
 
-test_uint : UInt = 0u;
+test_uint : uint = 0u;
 test_uint -= 1;
 Print("test_uint = %\n", test_uint);
 Print("0xFFFFFFFFu = %\n", 0xFFFFFFFFu);
@@ -269,7 +269,7 @@ Print("0u - 1 = %\n", 0u - 1);
 
 let test_float = 200f;
 Print("test_float = %\n", test_float);
-Expect(test_float is Float);
+Expect(test_float is float);
 Expect(test_float == 200.0);
 
 test_vector_0 : Vector3 = new Vector3(2.0, 4.0, 6.0);
@@ -300,7 +300,7 @@ Expect(test_vector_0.Normalized().Length() > 0.999);
 test_vector_0.Normalize();
 Expect(test_vector_0.Length() > 0.999);
 
-class ClassWithDefaultGenericArgs< T = Int, U = String >
+class ClassWithDefaultGenericArgs< T = int, U = String >
 {
     t: T;
     u: U;
@@ -311,89 +311,89 @@ Test("Generics - members being set properly", func (Unit : Function) {
         test := new ClassWithDefaultGenericArgs < >;
         Print("ClassWithDefaultGenericArgs < >%\n", test);
 
-        Expect(test.t is Int);
+        Expect(test.t is int);
         Expect(test.u is String);
     });
 
     Unit("generics have members set properly when some generic parameters are left off", func () {
-        test := new ClassWithDefaultGenericArgs < Int >;
-        Print("ClassWithDefaultGenericArgs < Int >%\n", test);
+        test := new ClassWithDefaultGenericArgs < int >;
+        Print("ClassWithDefaultGenericArgs < int >%\n", test);
 
-        Expect(test.t is Int);
+        Expect(test.t is int);
         Expect(test.u is String);
     });
 
     Unit("generics have members set properly when generic parameters are provided", func () {
-        test := new ClassWithDefaultGenericArgs < String, Int >;
-        Print("ClassWithDefaultGenericArgs < String, Int >%\n", test);
+        test := new ClassWithDefaultGenericArgs < String, int >;
+        Print("ClassWithDefaultGenericArgs < String, int >%\n", test);
 
         Expect(test.t is String);
-        Expect(test.u is Int);
+        Expect(test.u is int);
     });
 
     Unit("generics have members set properly when generic parameters are provided named (in order)", func () {
-        test := new ClassWithDefaultGenericArgs < T : String, U : Int >;
-        Print("ClassWithDefaultGenericArgs < T : String, U : Int >%\n", test);
+        test := new ClassWithDefaultGenericArgs < T : String, U : int >;
+        Print("ClassWithDefaultGenericArgs < T : String, U : int >%\n", test);
 
         Expect(test.t is String);
-        Expect(test.u is Int);
+        Expect(test.u is int);
     });
 
     Unit("generics have members set properly when generic parameters are provided named (out of order)", func () {
-        test := new ClassWithDefaultGenericArgs < U : String, T : Int >;
-        Print("ClassWithDefaultGenericArgs < U : String, T : Int >%\n", test);
+        test := new ClassWithDefaultGenericArgs < U : String, T : int >;
+        Print("ClassWithDefaultGenericArgs < U : String, T : int >%\n", test);
 
-        Expect(test.t is Int);
+        Expect(test.t is int);
         Expect(test.u is String);
     });
 });
 
-func GenericFunction <T> (t : T, cond : Bool) -> T
+func GenericFunction <T> (t : T, cond : bool) -> T
 {
     return cond ? t : t - 1;
 }
 
-func GenericFunctionWithImplicitReturnType<T>(t : T, cond : Bool)
+func GenericFunctionWithImplicitReturnType<T>(t : T, cond : bool)
 {
     return cond ? t : t - 1;
 }
 
 Test("Generic function return type", func (Unit : Function) {
-    Unit("GenericFunction<Int> returns Int", func {
-        Expect(GenericFunction<Int>(5, true) is Int);
+    Unit("GenericFunction<int> returns int", func {
+        Expect(GenericFunction<int>(5, true) is int);
     });
 
-    Unit("typeof GenericFunction<Int> is Function(Int, Bool) -> Int", func {
-        Expect(typeof(GenericFunction<Int>) == "Function(Int, Bool) -> Int");
+    Unit("typeof GenericFunction<int> is Function(int, bool) -> int", func {
+        Expect(typeof(GenericFunction<int>) == "Function(int, bool) -> int");
     });
 
-    Unit("typeof GenericFunction<Int>(5, true) is Int", func {
-        Expect(typeof(GenericFunction<Int>(5, true)) == "Int");
+    Unit("typeof GenericFunction<int>(5, true) is int", func {
+        Expect(typeof(GenericFunction<int>(5, true)) == "int");
     });
 
-    Unit("GenericFunction<Float> returns Float", func {
-        Expect(GenericFunction<Float>(5.0, true) is Float);
+    Unit("GenericFunction<float> returns float", func {
+        Expect(GenericFunction<float>(5.0, true) is float);
     });
 
-    Unit("typeof GenericFunction<Float> is Function(Float, Bool) -> Float", func {
-        Expect(typeof(GenericFunction<Float>) == "Function(Float, Bool) -> Float");
+    Unit("typeof GenericFunction<float> is Function(float, bool) -> float", func {
+        Expect(typeof(GenericFunction<float>) == "Function(float, bool) -> float");
     });
 
-    Unit("typeof GenericFunction<Float>(5.0, true) is Float", func {
-        Expect(typeof(GenericFunction<Float>(5.0, true)) == "Float");
+    Unit("typeof GenericFunction<float>(5.0, true) is float", func {
+        Expect(typeof(GenericFunction<float>(5.0, true)) == "float");
     });
 
-    Unit("GenericFunctionWithImplicitReturnType<Int> returns Int", func {
-        Expect(GenericFunctionWithImplicitReturnType<Int>(5, true) is Int);
+    Unit("GenericFunctionWithImplicitReturnType<int> returns int", func {
+        Expect(GenericFunctionWithImplicitReturnType<int>(5, true) is int);
     });
 
-    Unit("typeof GenericFunctionWithImplicitReturnType<Int> is Function(Int, Bool) -> Int", func {
-        Expect(typeof(GenericFunctionWithImplicitReturnType<Int>) == "Function(Int, Bool) -> Int");
+    Unit("typeof GenericFunctionWithImplicitReturnType<int> is Function(int, bool) -> int", func {
+        Expect(typeof(GenericFunctionWithImplicitReturnType<int>) == "Function(int, bool) -> int");
     });
 });
 
 
-func GenericFunctionWithDefault <T = Int> (t : T, cond : Bool)
+func GenericFunctionWithDefault <T = int> (t : T, cond : bool)
 {
     return cond ? t : t + 1;
 }
@@ -408,23 +408,23 @@ class GenericClass<T>
 }
 
 Test("Generic Class Methods", func (Unit : Function) {
-    Unit("GenericClass<Int>.DoThing() returns Int", func () {
-        test := new GenericClass<Int>();
-        Expect(test.DoThing(1, 1) is Int);
+    Unit("GenericClass<int>.DoThing() returns int", func () {
+        test := new GenericClass<int>();
+        Expect(test.DoThing(1, 1) is int);
     });
 
-    Unit("GenericClass<Int>.DoThing() returns 2", func () {
-        test := new GenericClass<Int>();
+    Unit("GenericClass<int>.DoThing() returns 2", func () {
+        test := new GenericClass<int>();
         Expect(test.DoThing(1, 1) == 2);
     });
 
-    Unit("GenericClass<Float>.DoThing() returns Float", func () {
-        test := new GenericClass<Float>();
-        Expect(test.DoThing(1.0, 1.0) is Float);
+    Unit("GenericClass<float>.DoThing() returns float", func () {
+        test := new GenericClass<float>();
+        Expect(test.DoThing(1.0, 1.0) is float);
     });
 
-    Unit("GenericClass<Float>.DoThing() returns 2.0", func () {
-        test := new GenericClass<Float>();
+    Unit("GenericClass<float>.DoThing() returns 2.0", func () {
+        test := new GenericClass<float>();
         Expect(test.DoThing(1.0, 1.0) == 2.0);
     });
 });
@@ -437,92 +437,92 @@ class GenericClass2 <T>
 const pi <T> : T = 3.1415;
 
 Test("Generic variables", func (Unit : Function) {
-    Unit("pi<Float> is Float", func () {
-        Expect(pi<Float> is Float);
+    Unit("pi<float> is float", func () {
+        Expect(pi<float> is float);
     });
 
-    Unit("typeof(pi<Float>) is Float", func () {
-        Expect(typeof(pi<Float>) == "Float");
+    Unit("typeof(pi<float>) is float", func () {
+        Expect(typeof(pi<float>) == "float");
     });
 
-    Unit("pi<Float> == 3.1415", func () {
-        Expect(pi<Float> == 3.1415);
+    Unit("pi<float> == 3.1415", func () {
+        Expect(pi<float> == 3.1415);
     });
 
-    Unit("pi<Int> is Int", func () {
-        Expect(pi<Int> is Int);
+    Unit("pi<int> is int", func () {
+        Expect(pi<int> is int);
     });
 
-    Unit("typeof(pi<Int>) is Int", func () {
-        Expect(typeof(pi<Int>) == "Int");
+    Unit("typeof(pi<int>) is int", func () {
+        Expect(typeof(pi<int>) == "int");
     });
 
-    Unit("pi<Int> == 3", func () {
-        Expect(pi<Int> == 3);
+    Unit("pi<int> == 3", func () {
+        Expect(pi<int> == 3);
     });
 });
 
 Test("Generic class type specifications", func (Unit : Function) {
     Unit("'is' check resolves properly", func () {
-        const test1 = new GenericClass2<Int>();
+        const test1 = new GenericClass2<int>();
 
-        Expect(test1 is GenericClass2<Int>);
+        Expect(test1 is GenericClass2<int>);
     });
 
     Unit("Members resolve properly (type)", func () {
-        const test1 = new GenericClass2<Int>();
+        const test1 = new GenericClass2<int>();
 
-        Expect(test1.val is Int);
+        Expect(test1.val is int);
     });
 
     Unit("Members resolve properly (value)", func () {
-        const test1 = new GenericClass2<Int>();
+        const test1 = new GenericClass2<int>();
 
         Expect(test1.val == 0);
     });
 
-    Unit("GenericClass2<Int> is GenericClass2<Int>", func () {
-        const test1 = new GenericClass2<Int>();
+    Unit("GenericClass2<int> is GenericClass2<int>", func () {
+        const test1 = new GenericClass2<int>();
 
-        Expect(test1 is GenericClass2<Int>);
+        Expect(test1 is GenericClass2<int>);
     });
 
-    Unit("GenericClass2<Int> is not GenericClass2<Float>", func () {
-        const test1 = new GenericClass2<Int>();
+    Unit("GenericClass2<int> is not GenericClass2<float>", func () {
+        const test1 = new GenericClass2<int>();
 
-        Expect(!(test1 is GenericClass2<Float>));
+        Expect(!(test1 is GenericClass2<float>));
     });
 
-    Unit("GenericClass2<Float> is not GenericClass2<Int>", func () {
-        const test1 = new GenericClass2<Float>();
+    Unit("GenericClass2<float> is not GenericClass2<int>", func () {
+        const test1 = new GenericClass2<float>();
 
-        Expect(!(test1 is GenericClass2<Int>));
+        Expect(!(test1 is GenericClass2<int>));
     });
 
-    Unit("GenericClass2<Int> is not GenericClass2<String>", func () {
-        const test1 = new GenericClass2<Int>();
+    Unit("GenericClass2<int> is not GenericClass2<String>", func () {
+        const test1 = new GenericClass2<int>();
 
         Expect(!(test1 is GenericClass2<String>));
     });
 
-    Unit("GenericClass2<Float> is not GenericClass2<String>", func () {
-        const test1 = new GenericClass2<Float>();
+    Unit("GenericClass2<float> is not GenericClass2<String>", func () {
+        const test1 = new GenericClass2<float>();
 
         Expect(!(test1 is GenericClass2<String>));
     });
 });
 
 Test("Generic function return types", func (Unit : Function) {
-    Unit("GenericFunction<Int> returns Int", func () {
-        Expect(GenericFunction<Int>(5, true) is Int);
+    Unit("GenericFunction<int> returns int", func () {
+        Expect(GenericFunction<int>(5, true) is int);
     });
 
-    Unit("GenericFunction<Int> returns 5 when called with true", func () {
-        Expect(GenericFunction<Int>(5, true) == 5);
+    Unit("GenericFunction<int> returns 5 when called with true", func () {
+        Expect(GenericFunction<int>(5, true) == 5);
     });
 
-    Unit("GenericFunction<Int> returns 6 when called with false", func () {
-        Expect(GenericFunction<Int>(5, false) == 6);
+    Unit("GenericFunction<int> returns 6 when called with false", func () {
+        Expect(GenericFunction<int>(5, false) == 6);
     });
 
     Unit("Default provided args", func () {
@@ -536,10 +536,10 @@ Test("Generic function return types", func (Unit : Function) {
 
 class ClassWithConstructor
 {
-    i : Int = 0;
-    items : Int[];
+    i : int = 0;
+    items : int[];
 
-    ClassWithConstructor(self : ClassWithConstructor, int_value : Int)
+    ClassWithConstructor(self : ClassWithConstructor, int_value : int)
     {
         Print("This = %\n", ClassWithConstructor);
         Print("self = %\n", self);
@@ -553,7 +553,7 @@ class ClassWithConstructor
         return t * 5.0;
     }
 
-    func MakeNew(self : ClassWithConstructor, i : Int) -> ClassWithConstructor
+    func MakeNew(self : ClassWithConstructor, i : int) -> ClassWithConstructor
     {
         Print("self = %\n", self);
 
@@ -571,7 +571,7 @@ class Derived : ClassWithConstructor
     }
 }
 
-func VarArgsFunc(foo : Int, args : String...) -> Bool
+func VarArgsFunc(foo : int, args : String...) -> bool
 {
     Print("in varargs function\n");
 
@@ -602,8 +602,8 @@ Test("Variadic functions", func (Unit : Function) {
 
 
 class ClassWithConstMember {
-    const mem : Int;
-    const other : UInt = -1;
+    const mem : int;
+    const other : uint = -1;
 }
 
 Test("Const class members", func (Unit : Function) {
@@ -618,7 +618,7 @@ Test("Const class members", func (Unit : Function) {
         Expect(value.mem == 0);
     });
 
-    Unit("ClassWithConstMember.$proto.other is set to UInt(-1)", func () {
+    Unit("ClassWithConstMember.$proto.other is set to uint(-1)", func () {
         value := new ClassWithConstMember();
         Expect(value.other == -1);
     });
@@ -626,7 +626,7 @@ Test("Const class members", func (Unit : Function) {
 
 Test("Named arguments", func (Unit : Function) {
     Unit("Named arguments work", func () {
-        func NamedArgsFunc(foo : Int, bar : Int, baz : Int) -> Int
+        func NamedArgsFunc(foo : int, bar : int, baz : int) -> int
         {
             return foo + bar + baz;
         }
@@ -650,7 +650,7 @@ Test("Named arguments", func (Unit : Function) {
 
 Test("Array item mutation", func (Unit : Function) {
     Unit("Changing an item works", func () {
-        ary : Int[] = [1,2,3,4];
+        ary : int[] = [1,2,3,4];
         ary[0]++;
         Expect(ary == [2,2,3,4]);
     });
@@ -681,25 +681,25 @@ Test("Derived classes", func (Unit : Function) {
 });
 
 class MyObject {
-    val : Int;
+    val : int;
 
     // because we type it with `Function`, we are able to
     // change it to any other `Function` type later
-    proc : Function = func (self : MyObject, thing : Float) {
+    proc : Function = func (self : MyObject, thing : float) {
         return self.val + thing;
     };
 
     // this one gets a more specific type and cannot be changed,
     // except to one with the same args
-    proc2 = func (self : MyObject, thing : Float) {
+    proc2 = func (self : MyObject, thing : float) {
         return self.val + thing;
     };
 
-    func operator==(self : MyObject, other : MyObject) -> Bool {
+    func operator==(self : MyObject, other : MyObject) -> bool {
         return self.val == other.val;
     }
 
-    // func operator!=(self : MyObject, other : MyObject) -> Bool {
+    // func operator!=(self : MyObject, other : MyObject) -> bool {
     //     return !self.operator==(other);
     // }
 };
@@ -715,8 +715,8 @@ Test("Type specification", func (Unit : Function) {
         Expect(my_object.proc is Function);
     });
 
-    Unit("typeof(my_object.proc2) == 'Function(MyObject, Float) -> Number'", func () {
-        Expect(typeof(my_object.proc2) == "Function(MyObject, Float) -> Number");
+    Unit("typeof(my_object.proc2) == 'Function(MyObject, float) -> Number'", func () {
+        Expect(typeof(my_object.proc2) == "Function(MyObject, float) -> Number");
     });
 
     Unit("my_object.proc2 is Function", func () {
@@ -781,7 +781,7 @@ class ClassWithGenericMember <T> {
     member : T;
 };
 
-class ClassWithToStringOverload <T = Int> {
+class ClassWithToStringOverload <T = int> {
     val : T;
 
     func ClassWithToStringOverload(self, val : T) {
@@ -963,7 +963,7 @@ Test("Loops", func (Unit : Function) {
 
 Test("Recursion", func (Unit : Function) {
     Unit("Recursion works", func () {
-        func Recurse(times: Int) {
+        func Recurse(times: int) {
             if (times > 0) {
                 return Recurse(times - 1);
             }
@@ -976,9 +976,9 @@ Test("Recursion", func (Unit : Function) {
 });
 
 func MakeClosure() -> Function {
-    captured_var : Int = 5;
+    captured_var : int = 5;
 
-    return func (x : Int) {
+    return func (x : int) {
         return captured_var * x;
     };
 }
@@ -992,9 +992,9 @@ Test("Closures", func (Unit : Function) {
 
     Unit("Can access closure variables", func () {
         func MakeClosure() -> Function {
-            captured_var : Int = 5;
+            captured_var : int = 5;
 
-            return func (x : Int) {
+            return func (x : int) {
                 return captured_var * x;
             };
         }
@@ -1007,9 +1007,9 @@ Test("Closures", func (Unit : Function) {
 
 class Callable
 {
-    i: Int;
+    i: int;
 
-    Callable(self : Callable, i : Int)
+    Callable(self : Callable, i : int)
     {
         self.i = i;
     }
@@ -1079,8 +1079,8 @@ Test("Logical operators", func (Unit : Function) {
     });
 
     Unit("Logical operators work with variables", func () {
-        x : Int = 1;
-        y : Int = 0;
+        x : int = 1;
+        y : int = 0;
 
         Expect(x && x);
         Expect(!(x && y));
@@ -1094,8 +1094,8 @@ Test("Logical operators", func (Unit : Function) {
     });
 
     Unit("Logical operators work with constants", func () {
-        const x : Int = 1;
-        const y : Int = 0;
+        const x : int = 1;
+        const y : int = 0;
 
         Expect(x && x);
         Expect(!(x && y));
@@ -1147,16 +1147,16 @@ Test("Logical operators", func (Unit : Function) {
 
 // test references
 Test("Ref function parameters", func (Unit : Function) {
-    func DoNotModifyReference(j : Int) {
+    func DoNotModifyReference(j : int) {
         j++;
     }
 
-    func ModifyReference(ref j : Int, k : Float) {
+    func ModifyReference(ref j : int, k : float) {
         j++;
         k++;
     }
     
-    func PassConstReference(const ref x : Int) {
+    func PassConstReference(const ref x : int) {
         // illegal
         //x++;
 
@@ -1164,14 +1164,14 @@ Test("Ref function parameters", func (Unit : Function) {
     }
 
     Unit("Can pass any value to a non-ref parameter", func () {
-        x : Int = 5;
+        x : int = 5;
         DoNotModifyReference(x);
         Expect(x == 5);
     });
 
     Unit("Modifying ref of x modifes the original var", func () {
-        x : Int = 5;
-        ref y : Int = x;
+        x : int = 5;
+        ref y : int = x;
         y++;
 
         Expect(x == 6);
@@ -1179,8 +1179,8 @@ Test("Ref function parameters", func (Unit : Function) {
     });
 
     Unit("Can pass ref to a function", func () {
-        x : Int = 5;
-        ref y : Int = x;
+        x : int = 5;
+        ref y : int = x;
         y++;
 
         ModifyReference(x, y);
@@ -1190,7 +1190,7 @@ Test("Ref function parameters", func (Unit : Function) {
     });
 
     Unit("Cannot modify a constant", func () {
-        const const_var : Int = 123;
+        const const_var : int = 123;
 
         // legal
         PassConstReference(const_var);
@@ -1207,7 +1207,7 @@ import containers::Stack;
 
 Test("Stack container", func (Unit : Function) {
     Unit("Stack.Push() works", func () {
-        stk : Stack<Int> = new Stack<Int>;
+        stk : Stack<int> = new Stack<int>;
 
         stk.Push(5);
         Expect(stk.Top() == 5);
@@ -1216,7 +1216,7 @@ Test("Stack container", func (Unit : Function) {
     });
 
     Unit("Stack.Pop() works", func () {
-        stk : Stack<Int> = new Stack<Int>;
+        stk : Stack<int> = new Stack<int>;
 
         stk.Push(5);
         stk.Push(6);
@@ -1227,7 +1227,7 @@ Test("Stack container", func (Unit : Function) {
     });
 
     Unit("Stack.Empty() works", func () {
-        stk : Stack<Int> = new Stack<Int>;
+        stk : Stack<int> = new Stack<int>;
 
         Expect(stk.Empty());
         stk.Push(5);
@@ -1237,7 +1237,7 @@ Test("Stack container", func (Unit : Function) {
     });
 
     Unit("Stack.Size() works", func () {
-        stk : Stack<Int> = new Stack<Int>;
+        stk : Stack<int> = new Stack<int>;
 
         Expect(stk.Size() == 0);
         stk.Push(5);
@@ -1256,8 +1256,8 @@ Test("Array types", func (Unit : Function) {
         AssertEqual(typeof([]), "Any[]");
     });
 
-    Unit("[1,2,3] has type Int[]", func () {
-        AssertEqual(typeof([1,2,3]), "Int[]");
+    Unit("[1,2,3] has type int[]", func () {
+        AssertEqual(typeof([1,2,3]), "int[]");
     });
 
     Unit("[1,2,3.0] has type Number[]", func () {
@@ -1269,31 +1269,31 @@ Test("Array types", func (Unit : Function) {
     });
 
     Unit("Generic types fall to common type", func () {
-        AssertEqual(typeof([func (x : String) {}, func (y : Float) {}]), "Function[]");
+        AssertEqual(typeof([func (x : String) {}, func (y : float) {}]), "Function[]");
     });
 });
 
 Test("Prefix and postfix ++ operators", func (Unit : Function) {
     Unit("Check postfix ++ returns original value", func () {
-        i : Int = 0;
+        i : int = 0;
         AssertEqual(i++, 0);
         AssertEqual(i, 1);
     });
 
     Unit("Check prefix ++ returns modified value", func () {
-        i : Int = 0;
+        i : int = 0;
         AssertEqual(++i, 1);
         AssertEqual(i, 1);
     });
 
     Unit("Check += returns modified value", func () {
-        i : Int = 0;
+        i : int = 0;
         AssertEqual(i += 1, 1);
         AssertEqual(i, 1);
     });
 });
 
-func f1(a : Float, b : Int, blah = "test")
+func f1(a : float, b : int, blah = "test")
 {
     return a + b;
 }
@@ -1314,7 +1314,7 @@ Test("Function default arguments", func (Unit : Function) {
 
 class ExtendedVector3 : Vector3
 {
-    func ToArray(self : ExtendedVector3) -> Float[]
+    func ToArray(self : ExtendedVector3) -> float[]
     {
         return [];//[self.GetX(), self.GetY(), self.GetZ()];
     }
@@ -1339,12 +1339,12 @@ Test("Extending classes", func (Unit : Function) {
         Expect(!(new ExtendedVector3() is String));
     });
 
-    Unit("ExtendedVector3 is not Int", func () {
-        Expect(!(new ExtendedVector3() is Int));
+    Unit("ExtendedVector3 is not int", func () {
+        Expect(!(new ExtendedVector3() is int));
     });
 
-    Unit("ExtendedVector3 is not Float", func () {
-        Expect(!(new ExtendedVector3() is Float));
+    Unit("ExtendedVector3 is not float", func () {
+        Expect(!(new ExtendedVector3() is float));
     });
 
     Unit("ExtendedVector3.ToArray() works", func () {
