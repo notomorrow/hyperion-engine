@@ -6,12 +6,39 @@ class TestClass<T>
     {
         return a + b;
     }
+
+    func TestFunc2<T2>(self, a : T2, b : T2) -> Function
+    {
+        return func () {
+            return a + b;
+        };
+    }
 }
 
-func TestFunc2<T>(a : T, b : T) -> T
+func TestFunc3<T>(a : T, b : T) -> T
 {
-    Print("T = %\n", T);
     return a + b;
+}
+
+// func GetComponent<Component>(scene : Scene, entity : UInt) -> Component
+// {
+//     return scene.GetComponent(Component.native_type_id, entity);
+// }
+class FooComponent
+{
+    static native_type_id = 3432u;
+
+    test_var : Float;
+}
+
+class SceneHelper
+{
+    static func GetComponent<Component>(self : Class, scene : Scene, entity : UInt) -> Component
+    {
+        Print("SceneHelper.GetComponent<Component>(entity) called with entity = % and Component = %\n", entity, Component);
+
+        return scene.GetComponent(Component.native_type_id, entity);
+    }
 }
 
 class TestScript
@@ -24,11 +51,20 @@ class TestScript
     {
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
 
-        Print("TestFunc(1, 2) = %\n", new TestClass<Int>().TestFunc(1, 2));
-        Print("typeof(TestFunc(1, 2)) = %\n", typeof(new TestClass<Int>().TestFunc(1, 2)));
-        Print("typeof(TestFunc(1, 2)) = %\n", typeof(new TestClass<Float>().TestFunc(1.0, 2.5)));
-        Print("TestFunc2(1, 2) = %\n", TestFunc2<Int>(1, 2));
-        Print("typeof(TestFunc2(1, 2)) = %\n", typeof(TestFunc2<Int>(1, 2)));
+        Print("Scene type ID = %\n", Scene.native_type_id);
+        Print("scene.GetID() = %\n", scene.GetID());
+
+        // Print("TestSceneFunction<T>() = %\n", TestSceneFunction<Foo>());
+
+        Print("mock_scene.GetComponent<FooComponent>(entity) = %\n", SceneHelper.GetComponent<FooComponent>(scene, entity));
+
+        // Print("GetComponent<FooComponent>(scene, entity) = %\n", scene.GetComponent<FooComponent>(entity));
+
+        // fn := scene.GetComponent<Foo>;
+        // Print("typeof(Scene.GetComponent<Foo>()) = %\n", fn());
+
+
+        // Print("Scene.GetComponent<Foo>(entity) = %\n", scene.GetComponent<Foo>(entity));
 
         // scene.GetComponent<TransformComponent>(entity).SetTranslation(new Vec3f(0.0, 0.0, 0.0));s
         // scene.GetComponent(entity, "Transform").SetTranslation(new Vec3f(0.0, 0.0, 0.0));
