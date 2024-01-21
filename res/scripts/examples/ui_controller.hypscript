@@ -3,7 +3,7 @@
 import containers::{Struct}
 
 class OtherGenericClass<U>
-    test_field: U = 123.0
+    test_field: U = 123.0 as U
 end
 
 class TestClass<T>
@@ -104,12 +104,14 @@ class TestScript
         Print("test_object2 = %\n", test_object2);
         Print("test_object2.multiply<float>(1, 2) = %\n", test_object2.multiply<float>(1.0, 2.0));
 
+        Print("123.4 as int = %\n", 123.4 as int);
+        
         test_class := new TestClass<float>();
         Print("test_member = %\n", TestClass2().test_member);
         // Print("typeof(TestClass<int>.$invoke) = %\n", typeof(TestClass<int>.$invoke));
         // Print("TestClass<float>() = %\n", TestClass<float>());
         // Print("test_class.$invoke() = %\n", test_class.$invoke(new OtherGenericClass<int>()));
-        Print("test_class() = %\n", test_class(new OtherGenericClass<int>()));
+        Print("test_class() = %\n", test_class(new OtherGenericClass<float>()));
         // Print("typeof(test_class) = %\n", typeof(test_class));
         // Print("TestClass<float>.$invoke() = %\n", TestClass<float>.$invoke());
         // Print("test_class.TestFunc(1.0, 2.0) = %\n", test_class.TestFunc(1.0, 2.0));
