@@ -1,5 +1,5 @@
 proxy class Struct
-    static $invoke(self: Class, members : any[]) -> Struct => MakeStruct(members)
+    static $invoke(self: Class, members /*: any[]*/) -> Struct => MakeStruct(members)
 
     func get(self: Struct, name : string) => GetStructMember(self, name)
     func set(self: Struct, name : string, value : any) -> bool => SetStructMember(self, name, value)

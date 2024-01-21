@@ -2,12 +2,16 @@
 
 import containers::{Struct}
 
+class OtherGenericClass<U>
+    test_field: U = 123.0
+end
+
 class TestClass<T>
-    func TestFunc(self, a : T, b : T) -> T
+    TestFunc(self, a : T, b : T) -> T
         return a + b
     end
 
-    func TestFunc2<T2>(self, a : T2, b : T2)
+    TestFunc2<T2>(self, a : T2, b : T2)
         Print("TestFunc2<T2>(a, b) called with a = %, b = %, self = %\n", a, b, self)
 
         return func ()
@@ -15,8 +19,8 @@ class TestClass<T>
         end
     end
 
-    func $invoke(self)
-        Print("TestClass instance $invoke() called with self = %\n", self)
+    $invoke(self, other: OtherGenericClass<T>)
+        Print("TestClass instance $invoke() called with self = %, other = %, T = %\n", self, other, T)
     end
 
     static $invoke(self : Class)
@@ -42,6 +46,12 @@ func TestFunc3<T>(a : T, b : T) -> T
     return a + b
 end
 
+func GetComponent<Component>(scene : Scene, entity : uint) -> Component
+    Print("SceneHelper.GetComponent<Component>(entity) called for scene % with entity = % and Component = %\n", scene, entity, Component);
+    $meta::log($meta::inspect_type(Component))
+    return scene.GetComponent(Component.native_type_id, entity);
+end
+
 class FooComponent
     static native_type_id = 3432u
     test_var := 3.1415
@@ -52,14 +62,6 @@ class FooComponent
 
     static $invoke(self : Class, a : int, b : int)
         return new FooComponent(a, b)
-    end
-end
-
-class SceneHelper
-    static func GetComponent<Component>(self: Class, scene : Scene, entity : uint) -> Component
-        Print("SceneHelper.GetComponent<Component>(entity) called with entity = % and Component = %\n", entity, Component);
-
-        return scene.GetComponent(Component.native_type_id, entity);
     end
 end
 
@@ -88,7 +90,7 @@ class TestScript
 
         // Print("TestSceneFunction<T>() = %\n", TestSceneFunction<Foo>());
 
-        Print("mock_scene.GetComponent<FooComponent>(entity) = %\n", SceneHelper.GetComponent<FooComponent>(scene, entity));
+        Print("mock_scene.GetComponent<FooComponent>(entity) = %\n", GetComponent<FooComponent>(scene, entity));
 
         // Print("GetComponent<FooComponent>(scene, entity) = %\n", scene.GetComponent<FooComponent>(entity));
 
@@ -100,20 +102,20 @@ class TestScript
 
         test_object2 := TestClass2()
         Print("test_object2 = %\n", test_object2);
-        Print("test_object2.multiply<float>(1, 2) = %\n", test_object2.multiply<float>(1, 2));
+        Print("test_object2.multiply<float>(1, 2) = %\n", test_object2.multiply<float>(1.0, 2.0));
 
         test_class := new TestClass<float>();
         Print("test_member = %\n", TestClass2().test_member);
-        Print("typeof(TestClass<int>.$invoke) = %\n", typeof(TestClass<int>.$invoke));
-        Print("TestClass<float>() = %\n", TestClass<float>());
-        Print("test_class.$invoke() = %\n", test_class.$invoke());
-        Print("typeof(test_class) = %\n", typeof(test_class));
-        Print("TestClass<float>.$invoke() = %\n", TestClass<float>.$invoke());
-        Print("test_class() = %\n", test_class());
-        Print("test_class.TestFunc(1.0, 2.0) = %\n", test_class.TestFunc(1.0, 2.0));
-        Print("typeof(test_class.TestFunc2<int>) = %\n", typeof(test_class.TestFunc2<int>));
-        Print("typeof(test_class.TestFunc2<int>(1, 2)) = %\n", typeof(test_class.TestFunc2<int>(1, 2)));
-        Print("typeof(test_class.TestFunc2<int>(1, 2)()) = %\n", typeof(test_class.TestFunc2<int>(1, 2)()));
+        // Print("typeof(TestClass<int>.$invoke) = %\n", typeof(TestClass<int>.$invoke));
+        // Print("TestClass<float>() = %\n", TestClass<float>());
+        // Print("test_class.$invoke() = %\n", test_class.$invoke(new OtherGenericClass<int>()));
+        Print("test_class() = %\n", test_class(new OtherGenericClass<int>()));
+        // Print("typeof(test_class) = %\n", typeof(test_class));
+        // Print("TestClass<float>.$invoke() = %\n", TestClass<float>.$invoke());
+        // Print("test_class.TestFunc(1.0, 2.0) = %\n", test_class.TestFunc(1.0, 2.0));
+        // Print("typeof(test_class.TestFunc2<int>) = %\n", typeof(test_class.TestFunc2<int>));
+        // Print("typeof(test_class.TestFunc2<int>(1, 2)) = %\n", typeof(test_class.TestFunc2<int>(1, 2)));
+        // Print("typeof(test_class.TestFunc2<int>(1, 2)()) = %\n", typeof(test_class.TestFunc2<int>(1, 2)()));
         Print("test_class.TestFunc2<int>(1, 2)() = %\n", test_class.TestFunc2<int>(1, 2)());
 
         // scene.GetComponent<TransformComponent>(entity).SetTranslation(Vec3f(0.0, 0.0, 0.0));s
