@@ -2,9 +2,18 @@
 
 class TestGenericClass<T>
     test_field : T = 1.1515 as T
+    static test_static_field : T = 1.1515 as T
 
-    TestGenericClass(self)
-        Print("TestGenericClass = %\n", self)
+    TestGenericClass(self: SelfType)
+        Print("TestGenericClass = %\n", TestGenericClass)
+        Print("typeof self = %\n", typeof self)
+        // Print("Self = %\n", Self)
+
+        Print("TestGenericClass.test_static_field = %\n", TestGenericClass.test_static_field)
+    end
+
+    static $invoke(self: Class) -> SelfType
+        return new SelfType()
     end
 end
 
@@ -23,7 +32,9 @@ class TestScript
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity))
 
         Print("new TestOtherClass = %\n", new TestOtherClass)
-        Print("new TestGenericClass = %\n", new TestGenericClass<float>)
+        Print("new TestGenericClass = %\n", TestGenericClass<int>())
+        Print("typeof(new TestGenericClass) = %\n", typeof(TestGenericClass<int>()))
+
     end
 
     OnRemoved(self)
