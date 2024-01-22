@@ -30,7 +30,7 @@ class TestScript
         Print("Test script constructor, self = %\n", self)
     end
 
-    OnAdded(self, scene : Scene, entity : uint)
+    OnAdded(self: TestScript, scene : Scene, entity : uint)
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity))
 
         Print("new TestOtherClass = %\n", TestOtherClass())
@@ -38,6 +38,10 @@ class TestScript
         Print("typeof(new TestGenericClass) = %\n", typeof(TestGenericClass<int>()))
 
         Print("GetComponent<TestOtherClass> = %\n", SceneHelper.GetComponent<TestOtherClass>(scene, entity))
+
+        for (let i = 0; i < 100; i += 1)
+            Print("i = %\n", i)
+        end
     end
 
     OnRemoved(self)
