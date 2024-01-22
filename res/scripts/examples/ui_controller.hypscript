@@ -4,22 +4,24 @@ class TestGenericClass<T>
     test_field : T = 1.1515 as T
     static test_static_field : T = 1.1515 as T
 
-    TestGenericClass(self: SelfType)
+    TestGenericClass(self: TestGenericClass)
         Print("TestGenericClass = %\n", TestGenericClass)
         Print("typeof self = %\n", typeof self)
-        // Print("Self = %\n", Self)
-
         Print("TestGenericClass.test_static_field = %\n", TestGenericClass.test_static_field)
-    end
-
-    static $invoke(self: Class) -> SelfType
-        return new SelfType()
     end
 end
 
 class TestOtherClass
+    static native_type_id : uint = 123u
+
     TestOtherClass(self: TestOtherClass)
         Print("TestOtherClass = %\n", self)
+    end
+end
+
+class SceneHelper
+    static GetComponent<T>(self: typeof SelfType, scene : Scene, entity : uint) -> T
+        return scene.GetComponent(T.native_type_id, entity)
     end
 end
 
@@ -31,10 +33,11 @@ class TestScript
     OnAdded(self, scene : Scene, entity : uint)
         Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity))
 
-        Print("new TestOtherClass = %\n", new TestOtherClass)
+        Print("new TestOtherClass = %\n", TestOtherClass())
         Print("new TestGenericClass = %\n", TestGenericClass<int>())
         Print("typeof(new TestGenericClass) = %\n", typeof(TestGenericClass<int>()))
 
+        Print("GetComponent<TestOtherClass> = %\n", SceneHelper.GetComponent<TestOtherClass>(scene, entity))
     end
 
     OnRemoved(self)
