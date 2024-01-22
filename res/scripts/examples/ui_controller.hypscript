@@ -1,151 +1,35 @@
 #importpath "../" "../library";
 
-import containers::{Struct}
+class TestGenericClass<T>
+    test_field : T = 1.1515 as T
 
-class OtherGenericClass<U>
-    test_field: U = 123.0 as U
-end
-
-class TestClass<T>
-    TestFunc(self, a : T, b : T) -> T
-        return a + b
-    end
-
-    TestFunc2<T2>(self, a : T2, b : T2)
-        Print("TestFunc2<T2>(a, b) called with a = %, b = %, self = %\n", a, b, self)
-
-        return func ()
-            return a + b
-        end
-    end
-
-    $invoke(self, other: OtherGenericClass<T>)
-        Print("TestClass instance $invoke() called with self = %, other = %, T = %\n", self, other, T)
-    end
-
-    static $invoke(self : Class)
-        Print("TestClass class $invoke() called with self = %\n", self)
+    TestGenericClass(self)
+        Print("TestGenericClass = %\n", self)
     end
 end
 
-class TestClass2
-    test_member := 3.1415
-
-    func multiply<T>(self, a : T, b : T) -> T
-        return a * b
+class TestOtherClass
+    TestOtherClass(self: TestOtherClass)
+        Print("TestOtherClass = %\n", self)
     end
-
-    static $invoke(self : Class)
-        Print("TestClass2 class $invoke() called with self = %\n", self)
-
-        return new TestClass2()
-    end
-end
-
-func TestFunc3<T>(a : T, b : T) -> T
-    return a + b
-end
-
-func GetComponent<Component>(scene : Scene, entity : uint) -> Component
-    Print("SceneHelper.GetComponent<Component>(entity) called for scene % with entity = % and Component = %\n", scene, entity, Component);
-    $meta::log($meta::inspect_type(Component))
-    return scene.GetComponent(Component.native_type_id, entity);
-end
-
-class FooComponent
-    static native_type_id = 3432u
-    test_var := 3.1415
-
-    FooComponent(self: FooComponent, a : int, b : int)
-        Print("FooComponent constructor, self = %, a = %, b = %\n", self, a, b);
-    end
-
-    static $invoke(self : Class, a : int, b : int)
-        return new FooComponent(a, b)
-    end
-end
-
-enum FooEnum : int
-    FOO = 0,
-    BAR = 1,
-    BAZ = 2
-end
-
-func FunctionTakingEnum(e : FooEnum) -> FooEnum
-    Print("FunctionTakingEnum(e) called with e = %\n", e)
-
-    return e + 1
 end
 
 class TestScript
-    TestScript(self: TestScript)
-        Print("Test script constructor, self = %\n", self);
+    TestScript(self)
+        Print("Test script constructor, self = %\n", self)
     end
 
-    OnAdded(self: TestScript, scene : Scene, entity : uint)
-        Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity));
+    OnAdded(self, scene : Scene, entity : uint)
+        Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity))
 
-        Print("Scene type ID = %\n", Scene.native_type_id);
-        Print("scene.GetID() = %\n", scene.GetID());
-
-        // Print("TestSceneFunction<T>() = %\n", TestSceneFunction<Foo>());
-
-        Print("mock_scene.GetComponent<FooComponent>(entity) = %\n", GetComponent<FooComponent>(scene, entity));
-
-        // Print("GetComponent<FooComponent>(scene, entity) = %\n", scene.GetComponent<FooComponent>(entity));
-
-        // fn := scene.GetComponent<Foo>;
-        // Print("typeof(Scene.GetComponent<Foo>()) = %\n", fn());
-
-
-        // Print("Scene.GetComponent<Foo>(entity) = %\n", scene.GetComponent<Foo>(entity));
-
-        test_object2 := TestClass2()
-        Print("test_object2 = %\n", test_object2);
-        Print("test_object2.multiply<float>(1, 2) = %\n", test_object2.multiply<float>(1.0, 2.0));
-
-        Print("123.4 as int = %\n", 123.4 as int);
-        
-        test_class := new TestClass<float>();
-        Print("test_member = %\n", TestClass2().test_member);
-        // Print("typeof(TestClass<int>.$invoke) = %\n", typeof(TestClass<int>.$invoke));
-        // Print("TestClass<float>() = %\n", TestClass<float>());
-        // Print("test_class.$invoke() = %\n", test_class.$invoke(new OtherGenericClass<int>()));
-        Print("test_class() = %\n", test_class(new OtherGenericClass<float>()));
-        // Print("typeof(test_class) = %\n", typeof(test_class));
-        // Print("TestClass<float>.$invoke() = %\n", TestClass<float>.$invoke());
-        // Print("test_class.TestFunc(1.0, 2.0) = %\n", test_class.TestFunc(1.0, 2.0));
-        // Print("typeof(test_class.TestFunc2<int>) = %\n", typeof(test_class.TestFunc2<int>));
-        // Print("typeof(test_class.TestFunc2<int>(1, 2)) = %\n", typeof(test_class.TestFunc2<int>(1, 2)));
-        // Print("typeof(test_class.TestFunc2<int>(1, 2)()) = %\n", typeof(test_class.TestFunc2<int>(1, 2)()));
-        Print("test_class.TestFunc2<int>(1, 2)() = %\n", test_class.TestFunc2<int>(1, 2)());
-
-        // scene.GetComponent<TransformComponent>(entity).SetTranslation(Vec3f(0.0, 0.0, 0.0));s
-        // scene.GetComponent(entity, "Transform").SetTranslation(Vec3f(0.0, 0.0, 0.0));
-
-        Print("FooEnum = %\n", FooEnum);
-        Print("FooEnum.FOO = %\n", FooEnum.FOO);
-        Print("FooEnum.BAR = %\n", FooEnum.BAR);
-        Print("typeof(FooEnum) = %\n", typeof(FooEnum));
-        Print("typeof(FooEnum.FOO) = %\n", typeof(FooEnum.FOO));
-        Print("FunctionTakingEnum(FooEnum.FOO) = %\n", FunctionTakingEnum(FooEnum.FOO));
-
-        test_struct := Struct([
-            ["i32", "foo", 1234],
-            ["f32", "bar", 2.5],
-        ])
-
-        Print("test_struct.foo = %\n", test_struct.get("foo"));
-        Print("test_struct.bar = %\n", test_struct.get("bar"));
-
-        Print("typeof(test_struct) = %\n", typeof(test_struct));
-        Print("FooComponent(1234, 5678) = %\n", FooComponent(1234, 5678));
+        Print("new TestOtherClass = %\n", new TestOtherClass)
+        Print("new TestGenericClass = %\n", new TestGenericClass<float>)
     end
 
-    OnRemoved(self: TestScript)
+    OnRemoved(self)
     end
 
-    OnTick(self: TestScript, delta : float)
+    OnTick(self, delta : float)
         Print("Test script tick, self = %, delta = %\n", self, delta);
     end
 end
