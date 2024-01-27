@@ -11,8 +11,25 @@ class TestScript
     end
 
     func return_fn(x: int)
-        return func ()
-            return x //self.template_fun<int>() + x
+        Print("x 1 = %\n", x)
+        let f = func ()
+            Print("x 2 = %\n", x)
+            return self.template_fun<int>() + x
+        end
+
+        $meta::log($meta::inspect_type(typeof(f)))
+
+        return f
+    end
+
+    func loop_array(ary: array<int>)
+        Print("ary = %\n", ary)
+        len := ary.length()
+
+        Print("array length: %\n", len)
+
+        for (i := 0; i < len; i += 1)
+            Print("ary[%] = %\n", i, ary[i])
         end
     end
 end
@@ -23,13 +40,20 @@ end
 
 export const controller = new TestScript();
 let return_fn_result = controller.return_fn(5);
-$meta::log($meta::inspect_type(typeof(return_fn_result)));
+Print("return_fn_result = %\n", return_fn_result);
 Print("controller.return_fn(5) = %\n", return_fn_result);
 //Print("controller.return_fn(5).$invoke = %\n", return_fn_result.$invoke);
 Print("controller.return_fn(5)() = %\n", return_fn_result());
 let test_array = [1,2,3,4,5,6]
 Print("test_array.length() = %\n", test_array.length())
 let test_map = { "bleh" => "blah" };
-$meta::log($meta::inspect_type(typeof(test_map)));
 Print("test_map['bleh'] = %\n", test_map['bleh'])
 Print("foobar(9, 5.25) = %\n", foobar(9, 5.25))
+
+class FooClass
+    blah := "yo"
+end
+
+let test_array_2: array<int>
+controller.loop_array(test_array_2)
+//$meta::log($meta::inspect_type(typeof(test_array_2.push)))
