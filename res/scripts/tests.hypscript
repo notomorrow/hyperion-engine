@@ -2,12 +2,36 @@
 
 import math;
 import containers::{ Stack, Struct };
-import core::{ AssertEqual, AssertNotEqual };
 import scene::{ EntityProxy, Controller };
 import math;
 import io::File;
 
 export const Foo : int = 123;
+func AssertEqual(lhs, rhs, msg = "")
+{
+    Print("Check % == %\t%\n", lhs, rhs, msg);
+
+    if (!(lhs == rhs)) {
+        throw "Assertion failed!";
+
+        return false;
+    }
+
+    return true;
+}
+
+func AssertNotEqual(lhs, rhs, msg = "")
+{
+    Print("Check % != %\t%\n", lhs, rhs, msg);
+
+    if (lhs == rhs) {
+        throw "Assertion failed!";
+
+        return false;
+    }
+
+    return true;
+}
 
 
 func Expect( cond : bool ) -> bool
@@ -225,7 +249,7 @@ Print("new File = %\n", io::File.Open("foo.txt", "w+"));
 
 const struct_memory = GetStructMemoryBuffer(my_struct);
 Print("my_struct memory buffer = %\n", struct_memory);
-const struct_memory_length = ArraySize(struct_memory);
+const struct_memory_length = __array_size(struct_memory);
 Print("struct_memory size  = %\n", struct_memory_length);
 for (let i = 0; i < struct_memory_length; i++) {
     Print("% ", struct_memory[i]);
@@ -575,7 +599,7 @@ func VarArgsFunc(foo : int, args : String...) -> bool
 {
     Print("in varargs function\n");
 
-    if (foo != ArraySize(args)) {
+    if (foo != __array_size(args)) {
         return false;
     } else {
         return true;

@@ -1,55 +1,35 @@
 #importpath "../" "../library";
-
-class TestGenericClass<T>
-    test_field : T = 1.1515 as T
-    static test_static_field : T = 1.1515 as T
-
-    TestGenericClass(self: TestGenericClass)
-        Print("TestGenericClass = %\n", TestGenericClass)
-        Print("typeof self = %\n", typeof self)
-        Print("TestGenericClass.test_static_field = %\n", TestGenericClass.test_static_field)
-    end
-end
-
-class TestOtherClass
-    static native_type_id : uint = 123u
-
-    TestOtherClass(self: TestOtherClass)
-        Print("TestOtherClass = %\n", self)
-    end
-end
-
-class SceneHelper
-    static GetComponent<T>(self: typeof SelfType, scene : Scene, entity : uint) -> T
-        return scene.GetComponent(T.native_type_id, entity)
-    end
-end
-
 class TestScript
-    TestScript(self)
-        Print("Test script constructor, self = %\n", self)
+    hello_world()
+        Print("hello world!\n")
     end
 
-    OnAdded(self: TestScript, scene : Scene, entity : uint)
-        Print(Format("Test script added, self = %, scene = %, entity = %\n", self, scene.GetID(), entity))
+    func template_fun<T>()
+        Print("hello template function\n")
 
-        Print("new TestOtherClass = %\n", TestOtherClass())
-        Print("new TestGenericClass = %\n", TestGenericClass<int>())
-        Print("typeof(new TestGenericClass) = %\n", typeof(TestGenericClass<int>()))
+        return 123
+    end
 
-        Print("GetComponent<TestOtherClass> = %\n", SceneHelper.GetComponent<TestOtherClass>(scene, entity))
-
-        for (let i = 0; i < 100; i += 1)
-            Print("i = %\n", i)
+    func return_fn(x: int)
+        return func ()
+            return x //self.template_fun<int>() + x
         end
     end
-
-    OnRemoved(self)
-    end
-
-    OnTick(self, delta : float)
-        Print("Test script tick, self = %, delta = %\n", self, delta);
-    end
 end
 
-export const controller = new TestScript()
+func foobar(x: int, y: float)
+    return x * y
+end
+
+export const controller = new TestScript();
+let return_fn_result = controller.return_fn(5);
+$meta::log($meta::inspect_type(typeof(return_fn_result)));
+Print("controller.return_fn(5) = %\n", return_fn_result);
+//Print("controller.return_fn(5).$invoke = %\n", return_fn_result.$invoke);
+Print("controller.return_fn(5)() = %\n", return_fn_result());
+let test_array = [1,2,3,4,5,6]
+Print("test_array.length() = %\n", test_array.length())
+let test_map = { "bleh" => "blah" };
+$meta::log($meta::inspect_type(typeof(test_map)));
+Print("test_map['bleh'] = %\n", test_map['bleh'])
+Print("foobar(9, 5.25) = %\n", foobar(9, 5.25))
