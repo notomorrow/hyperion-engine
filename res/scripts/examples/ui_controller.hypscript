@@ -23,4 +23,6 @@ Scene.Foo();
 
 $meta::log($meta::inspect_type(typeof(Logger)));
 $meta::log($meta::inspect_type(typeof(Logger.log)));
-Logger.log(0u, "Hello, world! {0} {1}\n", 123, 456);
+
+
+Logger.log(Logger.DEBUG, "Hello, world! {0} {1}\n", 123, 456);
