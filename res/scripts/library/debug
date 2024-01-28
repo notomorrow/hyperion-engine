@@ -1,0 +1,10 @@
+import io;
+
+class Console
+{
+    func write_line(message: String) {
+        io::out.write_line(message);
+    }
+}
+
+const console = Console();

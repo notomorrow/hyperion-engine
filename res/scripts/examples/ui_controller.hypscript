@@ -1,59 +1,26 @@
-#importpath "../" "../library";
-class TestScript
-    hello_world()
-        Print("hello world!\n")
-    end
+$meta::log($meta::inspect_type(typeof(Scene.Foo)));
+$meta::log($meta::inspect_type(varargs<int>));
 
-    func template_fun<T>()
-        Print("hello template function\n")
+let foobar: function<int, String> = func (str: String) -> int {
+    return 42;
+};
 
-        return 123
-    end
+let varargs_function : function< int, int, String, varargs<int> > = func (a: int, b: String, args: int...) -> int {
+    Logger.log(Logger.DEBUG, "args: {}\n", args);
+    return 42;
+};
 
-    func return_fn(x: int)
-        Print("x 1 = %\n", x)
-        let f = func ()
-            Print("x 2 = %\n", x)
-            return self.template_fun<int>() + x
-        end
+Logger.set_channel_enabled(Logger.DEBUG, false);
+varargs_function(1, "hello", 4, 5, 6);
+Logger.set_channel_enabled(Logger.DEBUG, true);
 
-        $meta::log($meta::inspect_type(typeof(f)))
+// $meta::log($meta::inspect_type(function< int, String, float, int >));
+$meta::log($meta::inspect_type(typeof(varargs_function)));
 
-        return f
-    end
+foobar("hello");
+$meta::log($meta::fields(Scene))
+Scene.Foo();
 
-    func loop_array(ary: array<int>)
-        Print("ary = %\n", ary)
-        len := ary.length()
-
-        Print("array length: %\n", len)
-
-        for (i := 0; i < len; i += 1)
-            Print("ary[%] = %\n", i, ary[i])
-        end
-    end
-end
-
-func foobar(x: int, y: float)
-    return x * y
-end
-
-export const controller = new TestScript();
-let return_fn_result = controller.return_fn(5);
-Print("return_fn_result = %\n", return_fn_result);
-Print("controller.return_fn(5) = %\n", return_fn_result);
-//Print("controller.return_fn(5).$invoke = %\n", return_fn_result.$invoke);
-Print("controller.return_fn(5)() = %\n", return_fn_result());
-let test_array = [1,2,3,4,5,6]
-Print("test_array.length() = %\n", test_array.length())
-let test_map = { "bleh" => "blah" };
-Print("test_map['bleh'] = %\n", test_map['bleh'])
-Print("foobar(9, 5.25) = %\n", foobar(9, 5.25))
-
-class FooClass
-    blah := "yo"
-end
-
-let test_array_2: array<int>
-controller.loop_array(test_array_2)
-//$meta::log($meta::inspect_type(typeof(test_array_2.push)))
+$meta::log($meta::inspect_type(typeof(Logger)));
+$meta::log($meta::inspect_type(typeof(Logger.log)));
+Logger.log(0u, "Hello, world! {0} {1}\n", 123, 456);
