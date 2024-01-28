@@ -43,7 +43,6 @@ void main()
 
     const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
-    const float perceptual_roughness = sqrt(roughness);
 
     const float lod = float(9.0) * roughness * (2.0 - roughness);
 
