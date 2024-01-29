@@ -1,5 +1,4 @@
 const PI: float = 3.14159265;
-const NaN: float = global::NaN;
 
 func Sign<T>(num : T)
 {
