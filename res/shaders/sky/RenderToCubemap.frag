@@ -171,29 +171,8 @@ void main()
 #endif
         float dist = length(v_position);
 
-        // vec3 ro, rd;
-        // ro = v_camera_position;
-        // rd = normalize(v_position - ro);
-
-        // if( rd.y > 0. ) {
-        //     // clouds
-        //     sky_color = renderClouds(ro, rd, dist);
-        //     float fogAmount = 1.-(.1 + exp(-dist*0.0001));
-        //     sky_color.rgb = mix(sky_color.rgb, getSkyColor(rd)*(1.-sky_color.a), fogAmount);
-        // } else {
-        //     // cloud layer below horizon
-        //     sky_color = renderCloudLayer(ro, rd, dist);
-        //     // height based fog, see https://iquilezles.org/articles/fog
-        //     float fogAmount = HEIGHT_BASED_FOG_C * 
-        //         (1.-exp( -dist*rd.y*(INV_SCENE_SCALE*HEIGHT_BASED_FOG_B)))/rd.y;
-        //     sky_color.rgb = mix(sky_color.rgb, getSkyColor(rd)*(1.-sky_color.a), clamp(fogAmount,0.,1.));
-        // }
-
         vec3 light_direction = normalize(light.position_intensity.xyz);
         vec3 ray_direction = normalize(v_position);
-
-        // float L = escape(v_camera_position, ray_direction, Ra);
-        // sky_color = vec4(scatter(v_camera_position, ray_direction, L, sky_color.rgb), 1.0);
 
         vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
 

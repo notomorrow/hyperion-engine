@@ -1,19 +1,20 @@
+#importpath "../" "../library";
+
 class TestScript {
     scene: Scene = null;
     entity: uint = ~0u;
 
-    func OnAdded(scene: Scene, entity: uint) {
+    func on_added(scene: Scene, entity: uint) {
         self.scene = scene;
         self.entity = entity;
     }
 
-    func OnRemoved() {
+    func on_removed() {
         self.scene = null;
         self.entity = ~0u;
     }
 
-    func OnUpdate(dt: float) {
-        Logger.log(Logger.DEBUG, "Update entity {0} {1}", self.entity, dt);
+    func on_updated(delta: float) {
     }
 }
 
