@@ -1,52 +1,52 @@
-const width: Float = 180.0;
-const height: Float = 70.0;
-const zoom: Float = 0.7;
-const movex: Float = -0.5;
-const movey: Float = 0.0;
-const max_iters: Float = 15;
+const width: float = 180.0;
+const height: float = 70.0;
+const zoom: float = 0.7;
+const movex: float = -0.5;
+const movey: float = 0.0;
+const max_iters: float = 15;
 const shades: String[] = ['.', '$', '%'];
-let newre: Float = 0.0;
-let oldre: Float = 0.0;
-let newim: Float = 0.0;
-let oldim: Float = 0.0;
+let newre: float = 0.0;
+let oldre: float = 0.0;
+let newim: float = 0.0;
+let oldim: float = 0.0;
 
-func Mandelbrot(x: Float, y: Float)
+func Mandelbrot(x: float, y: float)
 {
     newre = 0.0;
     newim = 0.0;
 
-    const pr: Float = 1.5*(x - width/2.0)/(0.5*zoom*width)+movex;
-    const pi: Float = (y - height/2.0)/(0.5*zoom*height)+movey;
+    const pr: float = 1.5*(x - width/2.0)/(0.5*zoom*width)+movex;
+    const pi: float = (y - height/2.0)/(0.5*zoom*height)+movey;
 
-    for (let n: UInt = 0; n < max_iters; n += 1) {
+    for (let n: uint = 0; n < max_iters; n += 1) {
         oldre = newre;
         oldim = newim;
         newre = oldre*oldre-oldim*oldim+pr;
         newim = 2*oldre*oldim+pi;
 
-        const checkn: Float = newre*newre+newim*newim;
+        const checkn: float = newre*newre+newim*newim;
 
         if (checkn > 4.0) {
-            Print('%', shades[(n % 3)]);
+            Logger.print('%', shades[(n % 3)]);
 
             return;
         }
     }
 
-    Print(' ');
+    Logger.print(' ');
 }
 
 func MandelbrotLine()
 {
-    let x: Float = 0.0;
-    let y: Float = 0.0;
+    let x: float = 0.0;
+    let y: float = 0.0;
     while (y < height) {
         while (x < width) {
             Mandelbrot(x, y);
             x += 1;
         }
 
-        Puts('');
+        Logger.println('');
         x = 0;
         y += 1;
     }

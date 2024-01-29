@@ -1,83 +1,10 @@
-//class MyFunction<ReturnType, ArgType...>
-//    static $proto = () -> ReturnType {}
-//
-//    MyFunction(self)
-//    end
-//
-//    static create(self, fn) -> MyFunction
-//        let result = new SelfType()
-//        result = fn
-//        return my_fn
-//    end
-//
-//    static $invoke(self, args...)
-//        self(args)
-//    end
-//end
 
-class MyArray<T>
-    static $proto = []
-    
-    static push(self, arg: T) => __array_push(self, arg)
-    static pop(self) => __array_pop(self)
-    static length(self) -> uint => __array_size(self) as uint
 
-    static for_each(self, cb: Function)
-        len := __array_size(self) as uint
-
-        for (i := 0u; i < len; i += 1u)
-            cb(self[i], i)
-        end
-    end
-
-    static map<OtherType>(self, map_fn: Function)
-        other_array := new MyArray<OtherType>()
-
-        len := __array_size(self) as uint
-
-        for (i := 0u; i < len; i += 1u)
-            other_array.push(map_fn(self[i], i))
-        end
-
-        return other_array
-    end
-
-    static index(self, value: T) -> int
-        len := __array_size(self) as uint
-
-        for (i := 0u; i < len; i += 1u)
-            if self[i] == value
-                return i as int
-            end
-        end
-
-        return -1
-    end
-
-    static index_by(self, predicate: Function) -> int
-        len := __array_size(self) as uint
-
-        for (i := 0u; i < len; i += 1u)
-            if predicate(self[i], i)
-                return i as int
-            end
-        end
-
-        return -1
-    end
-end
-
-class MyString
-    static $proto = ""
-
-    static length(self) -> uint => __array_size(self) as uint
-end
-
-proxy class Struct
-    static $invoke(self: Class, members /*: any[]*/) -> Struct => MakeStruct(members)
-
-    func get(self: Struct, name : String) => GetStructMember(self, name)
-    func set(self: Struct, name : String, value : any) -> bool => SetStructMember(self, name, value)
-
-    func to_memory_buffer(self: Struct) => GetStructMemoryBuffer(self)
-end
+// proxy class Struct {
+//     static $invoke(self: Class, members /*: any[]*/) -> Struct => MakeStruct(members)
+// 
+//     func get(self: Struct, name : String) => GetStructMember(self, name)
+//     func set(self: Struct, name : String, value : any) -> bool => SetStructMember(self, name, value)
+// 
+//     func to_memory_buffer(self: Struct) => GetStructMemoryBuffer(self)
+// }
