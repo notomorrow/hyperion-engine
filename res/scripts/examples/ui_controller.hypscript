@@ -1,28 +1,20 @@
-$meta::log($meta::inspect_type(typeof(Scene.Foo)));
-$meta::log($meta::inspect_type(varargs<int>));
+class TestScript {
+    scene: Scene = null;
+    entity: uint = ~0u;
 
-let foobar: function<int, String> = func (str: String) -> int {
-    return 42;
-};
+    func OnAdded(scene: Scene, entity: uint) {
+        self.scene = scene;
+        self.entity = entity;
+    }
 
-let varargs_function : function< int, int, String, varargs<int> > = func (a: int, b: String, args: int...) -> int {
-    Logger.log(Logger.DEBUG, "args: {}\n", args);
-    return 42;
-};
+    func OnRemoved() {
+        self.scene = null;
+        self.entity = ~0u;
+    }
 
-Logger.set_channel_enabled(Logger.DEBUG, false);
-varargs_function(1, "hello", 4, 5, 6);
-Logger.set_channel_enabled(Logger.DEBUG, true);
+    func OnUpdate(dt: float) {
+        Logger.log(Logger.DEBUG, "Update entity {0} {1}", self.entity, dt);
+    }
+}
 
-// $meta::log($meta::inspect_type(function< int, String, float, int >));
-$meta::log($meta::inspect_type(typeof(varargs_function)));
-
-foobar("hello");
-$meta::log($meta::fields(Scene))
-Scene.Foo();
-
-$meta::log($meta::inspect_type(typeof(Logger)));
-$meta::log($meta::inspect_type(typeof(Logger.log)));
-
-
-Logger.log(Logger.DEBUG, "Hello, world! {0} {1}\n", 123, 456);
+export const controller = TestScript();
