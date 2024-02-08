@@ -5,10 +5,10 @@ const movex: float = -0.5;
 const movey: float = 0.0;
 const max_iters: float = 15;
 const shades: String[] = ['.', '$', '%'];
-let newre: float = 0.0;
-let oldre: float = 0.0;
-let newim: float = 0.0;
-let oldim: float = 0.0;
+var newre: float = 0.0;
+var oldre: float = 0.0;
+var newim: float = 0.0;
+var oldim: float = 0.0;
 
 func Mandelbrot(x: float, y: float)
 {
@@ -18,7 +18,7 @@ func Mandelbrot(x: float, y: float)
     const pr: float = 1.5*(x - width/2.0)/(0.5*zoom*width)+movex;
     const pi: float = (y - height/2.0)/(0.5*zoom*height)+movey;
 
-    for (let n: uint = 0; n < max_iters; n += 1) {
+    for (var n: uint = 0; n < max_iters; n += 1) {
         oldre = newre;
         oldim = newim;
         newre = oldre*oldre-oldim*oldim+pr;
@@ -38,8 +38,8 @@ func Mandelbrot(x: float, y: float)
 
 func MandelbrotLine()
 {
-    let x: float = 0.0;
-    let y: float = 0.0;
+    var x: float = 0.0;
+    var y: float = 0.0;
     while (y < height) {
         while (x < width) {
             Mandelbrot(x, y);
