@@ -8,7 +8,6 @@
 
 layout(set = 0, binding = 0, UV_FORMAT) uniform readonly image2D ssr_uv_image;
 layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D ssr_sample;
-layout(set = 0, binding = 2, r8) uniform writeonly image2D ssr_radius;
 
 float IsoscelesTriangleOpposite(float adjacent_length, float cone_theta)
 {
@@ -51,15 +50,11 @@ void main(void)
 
     vec4 reflection_sample = vec4(0.0);
     float roughness = 0.0;
-    float out_radius = 0.0;
-    float accum_radius = 0.0;
 
     float depth = SampleDepth(texcoord);
 
     if (depth > 0.9995) {
-        // TODO: Sky texture sample here.
         imageStore(ssr_sample, ivec2(coord), vec4(0.0));
-        imageStore(ssr_radius, ivec2(coord), vec4(0.0));
         return;
     }
 
@@ -125,10 +120,7 @@ void main(void)
 
             adjacent_length = IsoscelesTriangleNextAdjacent(adjacent_length, incircle_size);
             gloss_multiplier *= gloss;
-            accum_radius += incircle_size;
         }
-
-        accum_radius /= 14.0;
 #else
         accum_color = current_reflection_sample;
 #endif
@@ -138,8 +130,6 @@ void main(void)
         reflection_sample.a *= alpha;
     }
 
-    out_radius = accum_radius;
-
 
 // #ifdef OUTPUT_RGBA8
     // reflection_sample.rgb = TonemapReinhardSimple(reflection_sample.rgb);
@@ -147,6 +137,4 @@ void main(void)
 // #else
     imageStore(ssr_sample, ivec2(coord), vec4(reflection_sample));
 // #endif
-
-    imageStore(ssr_radius, ivec2(coord), vec4(out_radius / 255.0));
 }
