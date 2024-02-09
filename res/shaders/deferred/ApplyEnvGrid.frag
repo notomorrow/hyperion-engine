@@ -106,18 +106,32 @@ void main()
 #endif
 
 #else // Radiance
-    const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
-    const float roughness = material.r;
 
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 1.0);
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
+    uvec2 half_screen_resolution = uvec2(camera.dimensions.xy / 2);
     uint frame_counter = scene.frame_counter;
+
+    // // Checkerboard pattern -- we dispatch half the number of threads as the image resolution,
+    // // and alternate between even and odd pixels each frame.
+    // const uint pixel_index = pixel_coord.y * half_screen_resolution.x + pixel_coord.x;
+    // const uvec2 pixel_coord_checkerboard = uvec2(
+    //     pixel_index % half_screen_resolution.x,
+    //     pixel_index / half_screen_resolution.x
+    // );
+
+    // if (pixel_coord != pixel_coord_checkerboard)
+    // {
+    //     return;
+    // }
+
+    const vec4 material = SampleGBuffer(gbuffer_material_texture, v_texcoord); 
+    const float roughness = material.r;
 
     AABB voxel_grid_aabb;
     voxel_grid_aabb.min = env_grid.voxel_grid_aabb_min.xyz;
     voxel_grid_aabb.max = env_grid.voxel_grid_aabb_max.xyz;
 
-    // vec4 radiance = ComputeProbeReflection(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
     vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 
     color_output = radiance;

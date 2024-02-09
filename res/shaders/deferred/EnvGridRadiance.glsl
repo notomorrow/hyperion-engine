@@ -26,36 +26,43 @@ vec3 VctWorldToTexCoord(vec3 world_position, in AABB voxel_grid_aabb)
     return clamp(voxel_storage_position, vec3(0.0), vec3(1.0));
 }
 
-vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max_dist, bool include_lighting)
+vec4 ConeTrace(float voxel_size, vec3 origin, vec3 dir, float ratio, float max_dist, bool include_lighting)
 {
+    const float min_diameter = voxel_size;
     const float min_diameter_inv = 1.0 / min_diameter;
 
     vec4 accum = vec4(0.0);
-    vec3 sample_pos = origin;
-    float dist = 0.0;
+
+    float dist = min_diameter;
+
     float diameter = max(min_diameter, dist * ratio);
 
-    while (dist < max_dist && accum.a < 1.0) {
+    const uint max_iterations = 800;
+    uint iter = 0;
+
+    while (dist < max_dist && accum.a < 1.0 && iter < max_iterations) {
         float lod = log2(diameter * min_diameter_inv);
 
-        sample_pos = origin + dir * dist;
+        vec3 sample_pos = (origin + dir * dist);
 
         vec4 voxel_color = FetchVoxel(sample_pos, lod);
-        voxel_color.rgb *= mix(1.0, voxel_color.a, float(include_lighting));
+        // voxel_color.rgb *= mix(1.0, voxel_color.a, float(include_lighting));
         voxel_color.rgb *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
 
         float weight = (1.0 - accum.a);
         accum += voxel_color * weight;
 
         const float prev_dist = dist;
-        dist += max(diameter, min_diameter);
+        dist += diameter;
         diameter = dist * ratio;
+
+        iter++;
     }
 
     return accum;
 }
 
-vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness, in AABB voxel_grid_aabb)
+vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, vec3 V, float roughness, in AABB voxel_grid_aabb)
 {
     // if (roughness >= 1.0) {
     //     return vec4(0.0);
@@ -65,14 +72,14 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness, in AABB voxel_gr
     const float greatest_extent = 256.0;
     const float voxel_size = 1.0 / greatest_extent;
 
-    return ConeTrace(voxel_size, voxel_coord + N * max(0.01, voxel_size), R, RoughnessToConeAngle(roughness), 0.65, false);
+    return ConeTrace(voxel_size, voxel_coord + N * voxel_size, R, RoughnessToConeAngle(roughness), 0.65, false);
 }
 
 vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, ivec3 grid_size, in AABB voxel_grid_aabb)
 {
     roughness = clamp(roughness, 0.01, 0.99);
 
-#if 0
+#if 1
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 0),
         SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
@@ -93,7 +100,7 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
     const vec3 R = normalize(reflect(-V, N));
 #endif
 
-    return ConeTraceSpecular(world_position, N, R, roughness, voxel_grid_aabb);
+    return ConeTraceSpecular(world_position, N, R, V, roughness, voxel_grid_aabb);
 }
 
 bool RayTraceLocal(vec3 P, vec3 N, vec3 R, float roughness, ivec3 grid_size, in AABB aabb, out vec4 hit_color)
