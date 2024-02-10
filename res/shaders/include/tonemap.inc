@@ -2,13 +2,13 @@
 #define HYP_TONEMAP_GLSL
 
 #define HDR 1
-#define HDR_TONEMAP_UNCHARTED 1
+//#define HDR_TONEMAP_UNCHARTED 1
 //#define HDR_TONEMAP_FILMIC 1
-//#define HDR_TONEMAP_UNREAL 1
+#define HDR_TONEMAP_UNREAL 1
 //#define HDR_TONEMAP_REINHARD 1
 
 #ifndef HDR_EXPOSURE
-    #define HDR_EXPOSURE 9.0
+    #define HDR_EXPOSURE 12.0
 #endif
 
 const float A = 0.15;
@@ -70,12 +70,25 @@ vec3 TonemapACESFilmic(vec3 color)
     return color;
 }
 
-vec3 TonemapFilmic(vec3 x)
+vec3 _TonemapFilmic(vec3 x)
 {
-    //x = 1.0 - exp(-1.0 * x);
+    x = 1.0 - exp(-1.0 * x);
 
     vec3 X = max(vec3(0.0), x - 0.004);
     return (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+}
+
+vec3 TonemapFilmic(vec3 x)
+{
+    // x *= HDR_EXPOSURE;  // Hardcoded Exposure Adjustment
+
+    // const float ExposureBias = 2.0;
+    // x *= ExposureBias;
+
+    // vec3 whiteScale = 1.0 / _TonemapFilmic(vec3(W));
+    // return x * whiteScale;
+
+    return _TonemapFilmic(x);
 }
 
 vec3 TonemapUnreal(vec3 x)
@@ -117,7 +130,7 @@ vec3 ReverseTonemapReinhardSimple(vec3 x)
 vec3 Tonemap(vec3 x) {
 #if defined(HDR) && HDR
     #if HDR_TONEMAP_FILMIC
-        return TonemapACESFilmic(x);
+        return TonemapFilmic(x);//TonemapACESFilmic(x);
     #elif HDR_TONEMAP_UNREAL
         return TonemapUnreal(x);
     #elif HDR_TONEMAP_UNCHARTED

@@ -32,3 +32,4 @@ test_structure/**/*
 archviz/**/*
 test_revit/**/*
 foo.*.text
+test_model/**/*
