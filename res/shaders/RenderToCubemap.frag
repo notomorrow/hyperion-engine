@@ -43,7 +43,7 @@ layout(location=1) out vec2 output_moments;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.05
+#define HYP_CUBEMAP_AMBIENT 0.02
 
 #ifdef MODE_AMBIENT
     #define LIGHTING
