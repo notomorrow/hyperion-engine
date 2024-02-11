@@ -1,6 +1,8 @@
 #ifndef HYP_TONEMAP_GLSL
 #define HYP_TONEMAP_GLSL
 
+#include "shared.inc"
+
 #define HDR 1
 //#define HDR_TONEMAP_UNCHARTED 1
 //#define HDR_TONEMAP_FILMIC 1
