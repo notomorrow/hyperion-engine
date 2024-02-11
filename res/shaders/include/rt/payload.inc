@@ -8,6 +8,7 @@ struct RayPayload
     vec3 beta;
 	vec3 absorption;
 	vec3 dir;
+	bool stop;
 #endif
 };
 

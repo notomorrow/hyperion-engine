@@ -105,6 +105,9 @@ layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
 // for RT, all textures are bindless
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
+void CheckLightIntersection(const Light light, const vec3 position, const vec3 normal, const vec3 V, inout vec3 direct_lighting) {
+}
+
 void main()
 {
     MeshDescription mesh_description = mesh_descriptions[gl_InstanceCustomIndexEXT];
@@ -201,7 +204,7 @@ void main()
     material_color = material.albedo;
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord * material.uv_scale * vec2(1.0, -1.0));
+        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, vec2(texcoord.x, 1.0 - texcoord.y));
         
         material_color *= albedo_texture;
     }
@@ -209,7 +212,7 @@ void main()
     float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
+        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, vec2(texcoord.x, 1.0 - texcoord.y)).r;
         
         metalness = metalness_sample;
     }
@@ -217,7 +220,7 @@ void main()
     float roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
-        float roughness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ROUGHNESS_MAP, texcoord).r;
+        float roughness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ROUGHNESS_MAP, vec2(texcoord.x, 1.0 - texcoord.y)).r;
         
         roughness = roughness_sample;
     }
@@ -235,7 +238,7 @@ void main()
     vec4 F0 = vec4(material_color.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
     vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
 
-    /*for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
 
         const vec3 L = CalculateLightDirection(light, position);
@@ -275,35 +278,12 @@ void main()
         
         const vec4 direct_component = diffuse_lobe + specular_lobe;
         direct_lighting += (direct_component.rgb * NdotL * attenuation);
-    }*/
+    }
 
-    const vec3 L = reflect(-V, payload.dir);
-    const vec3 H = payload.dir;// normalize(L + V);
 
-    const float NdotL = max(0.0001, dot(normal, L));
-    const float NdotH = max(0.0001, dot(normal, H));
-    const float LdotH = max(0.0001, dot(L, H));
-    const float HdotV = max(0.0001, dot(H, V));
-        
-    const float D = CalculateDistributionTerm(roughness, NdotH);
-    const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
-    const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
-        
-    const vec4 dfg = CalculateDFG(F, roughness, NdotV);
-    const vec4 E = CalculateE(F0, dfg);
-    const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);
-        
-    const vec4 diffuse_color = CalculateDiffuseColor(material_color, metalness);
-    const vec4 specular_lobe = D * G * F;
-
-    vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
-        
-    const vec4 direct_component = diffuse_lobe + specular_lobe;
-    direct_lighting += (direct_component.rgb * NdotL);
-
-    payload.beta *= exp(-payload.absorption * gl_HitTEXT);
-    payload.color = direct_lighting * payload.beta;
-    payload.beta *= F.rgb * NdotL / ((NdotL * (1.0 / HYP_FMATH_PI)) + HYP_FMATH_EPSILON);
+    //payload.beta *= exp(-payload.absorption * gl_HitTEXT);
+    payload.color = direct_lighting;// * payload.beta;
+    //payload.beta *= F.rgb * NdotL / ((NdotL * (1.0 / HYP_FMATH_PI)) + HYP_FMATH_EPSILON);
 
 
     payload.distance = gl_HitTEXT;
