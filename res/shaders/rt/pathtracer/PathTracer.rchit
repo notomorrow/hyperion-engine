@@ -14,6 +14,7 @@
 #include "../../include/material.inc"
 #include "../../include/object.inc"
 #include "../../include/scene.inc"
+#include "../../include/noise.inc"
 
 #include "../../include/brdf.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -23,10 +24,10 @@
 #define PATHTRACER
 #include "../../include/rt/payload.inc"
 
-layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+layout(set = 0, binding = 10) uniform sampler sampler_nearest;
 #define HYP_SAMPLER_NEAREST sampler_nearest
 
-layout(set = 0, binding = 10) uniform sampler sampler_linear;
+layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 
@@ -56,9 +57,6 @@ layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
 
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
-
-#define HYP_GET_LIGHT(index) \
-    lights[rt_radiance_uniforms.light_indices[(index / 4)][index % 4]]
 
 struct PackedVertex
 {
@@ -97,7 +95,7 @@ layout(std430, set = 0, binding = 5) readonly buffer LightShaderData
     Light lights[];
 };
 
-layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
+layout(std140, set = 0, binding = 13, row_major) uniform RTRadianceUniformBuffer
 {
     RTRadianceUniforms rt_radiance_uniforms;
 };
@@ -105,7 +103,22 @@ layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
 // for RT, all textures are bindless
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
-void CheckLightIntersection(const Light light, const vec3 position, const vec3 normal, const vec3 V, inout vec3 direct_lighting) {
+float CheckLightIntersection(in Light light, in vec3 position, in vec3 R)
+{
+    vec3 L = CalculateLightDirection(light, position);
+
+    if (light.type == 0) { // directional handled by rmiss
+        return HYP_FMATH_INFINITY;
+    }
+
+    vec3 light_to_position = position - light.position_intensity.xyz;
+    float light_to_position_length = length(light_to_position);
+
+    if (light_to_position_length > light.radius) {
+        return HYP_FMATH_INFINITY;
+    }
+
+    return light_to_position_length;
 }
 
 void main()
@@ -193,6 +206,8 @@ void main()
     v1.position = (gl_ObjectToWorldEXT * vec4(v1.position, 1.0)).xyz;
     v2.position = (gl_ObjectToWorldEXT * vec4(v2.position, 1.0)).xyz;
 
+    const vec3 hit_position = (gl_WorldRayOriginEXT + gl_HitTEXT * gl_WorldRayDirectionEXT).xyz;
+
     vec4 material_color = vec4(1.0);
 
     const uint32_t material_index = mesh_description.material_index;
@@ -238,53 +253,40 @@ void main()
     vec4 F0 = vec4(material_color.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
     vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
 
+    float closest_light_dist = HYP_FMATH_INFINITY;
+    uint closest_light_index = ~0u;
+
     for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
 
-        const vec3 L = CalculateLightDirection(light, position);
-        const vec3 H = normalize(L + V);
+        float light_dist = CheckLightIntersection(light, hit_position, gl_WorldRayDirectionEXT);
 
-        const float NdotL = max(0.0001, dot(normal, L));
-        const float NdotH = max(0.0001, dot(normal, H));
-        const float LdotH = max(0.0001, dot(L, H));
-        const float HdotV = max(0.0001, dot(H, V));
-        
-        const float D = CalculateDistributionTerm(roughness, NdotH);
-        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
-        const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
-        
-        const vec4 dfg = CalculateDFG(F, roughness, NdotV);
-        const vec4 E = CalculateE(F0, dfg);
-        const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);
-        
-        const vec4 diffuse_color = CalculateDiffuseColor(material_color, metalness);
-        const vec4 specular_lobe = D * G * F;
-
-        vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
-        
-        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
-            : 1.0;
-
-        //vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(light.color_encoded).rgb;
-
-        //local_light *= light.position_intensity.w * attenuation;
-
-        //if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-        //    local_light *= GetShadowStandard(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
-        //}
-
-        //direct_lighting += material_color.rgb * local_light;
-        
-        const vec4 direct_component = diffuse_lobe + specular_lobe;
-        direct_lighting += (direct_component.rgb * NdotL * attenuation);
+        if (light_dist < closest_light_dist) {
+            closest_light_dist = light_dist;
+            closest_light_index = light_index;
+        }
     }
 
+    // russian roulette to select a light
 
-    //payload.beta *= exp(-payload.absorption * gl_HitTEXT);
-    payload.color = direct_lighting;// * payload.beta;
-    //payload.beta *= F.rgb * NdotL / ((NdotL * (1.0 / HYP_FMATH_PI)) + HYP_FMATH_EPSILON);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), gl_PrimitiveID);
 
+    if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
+        const Light light = HYP_GET_LIGHT(closest_light_index);
+
+        payload.distance = closest_light_dist;
+        payload.emissive = vec3(UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w);
+        payload.throughput = vec3(0.0);
+        payload.color = UINT_TO_VEC4(light.color_encoded).rgb;
+        payload.normal = normal;
+        payload.roughness = 0.0;
+
+        return;
+    }
+
+    payload.emissive = vec3(0.0);
+    payload.throughput *= material_color.rgb;
+    payload.color = material_color.rgb;
 
     payload.distance = gl_HitTEXT;
     payload.normal = normal;

@@ -48,9 +48,6 @@ layout(std140, set = 1, binding = 13, row_major) readonly buffer ShadowShaderDat
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
 
-#define HYP_GET_LIGHT(index) \
-    lights[rt_radiance_uniforms.light_indices[(index / 4)][index % 4]]
-
 struct PackedVertex
 {
     float position_x;
@@ -97,7 +94,7 @@ struct RTRadianceUniforms
     uvec4 light_indices[4];
 };
 
-layout(std140, set = 0, binding = 12, row_major) uniform RTRadianceUniformBuffer
+layout(std140, set = 0, binding = 13, row_major) uniform RTRadianceUniformBuffer
 {
     RTRadianceUniforms rt_radiance_uniforms;
 };

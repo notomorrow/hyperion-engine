@@ -86,7 +86,6 @@ layout(std140, set = 0, binding = 7) readonly buffer LightShaderData
     Light lights[];
 };
 
-
 #define HYP_GET_LIGHT(index) \
     lights[probe_system.light_indices[(index / 4)][index % 4]]
 
