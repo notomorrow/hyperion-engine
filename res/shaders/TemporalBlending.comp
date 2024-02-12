@@ -49,7 +49,6 @@ layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D output_ima
 #include "./include/shared.inc"
 #include "./include/scene.inc"
 
-// #define ADJUST_COLOR_HDR
 #define TEMPORAL_BLENDING_USE_YCoCg
 
 #if TEMPORAL_BLEND_TECHNIQUE == 0

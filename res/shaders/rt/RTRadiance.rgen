@@ -12,7 +12,7 @@
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 // radiance image
-layout(set = 0, binding = 1, rgba16f) uniform image2D image;
+layout(set = 0, binding = 1, rgba8) uniform image2D image;
 
 layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
@@ -57,9 +57,6 @@ layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
 
 #include "../include/rt/payload.inc"
 
-const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
-const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
-
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define RAY_OFFSET 0.25
 #define NUM_SAMPLES 1
@@ -67,14 +64,12 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 void main() 
 {
     const ivec2 resolution = imageSize(image);
-
-    const ivec2 storage_coord = clamp(ivec2(gl_LaunchIDEXT.xy), ivec2(0), resolution - ivec2(1));
-
-    const int pixel_index = storage_coord.y * resolution.x + storage_coord.x;
-
-    //if (pixel_index % 2 == 0) {
-    //    return;
-    //}
+    
+    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
+    const ivec2 storage_coord = ivec2(
+        pixel_index % resolution.x,
+        pixel_index / resolution.x
+    );
 
     const vec2 uv = (vec2(storage_coord) + 0.5) / vec2(resolution);
 
@@ -96,7 +91,7 @@ void main()
     const float tmin = 0.25;
     const float tmax = 10000.0;
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), scene.frame_counter % 256);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
 
     vec3 color = vec3(0.0);
 

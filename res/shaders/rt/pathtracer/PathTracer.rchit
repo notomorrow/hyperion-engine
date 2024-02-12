@@ -269,7 +269,7 @@ void main()
 
     // russian roulette to select a light
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), gl_PrimitiveID);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
     if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
         const Light light = HYP_GET_LIGHT(closest_light_index);
