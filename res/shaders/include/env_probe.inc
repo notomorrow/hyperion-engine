@@ -67,12 +67,12 @@ struct SH9
         };
     #endif
 
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
-    layout(std430, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 26, row_major) readonly buffer EnvProbesBuffer
+    layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
+    layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 26, row_major) readonly buffer EnvProbesBuffer
     {
         EnvProbe env_probes[HYP_MAX_ENV_PROBES];
     };
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 27) uniform textureCube point_shadow_maps[HYP_MAX_BOUND_POINT_SHADOW_MAPS];
+    layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 27) uniform textureCube point_shadow_maps[HYP_MAX_BOUND_POINT_SHADOW_MAPS];
 
     // Used for point light shadows
     layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer

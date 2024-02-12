@@ -168,20 +168,6 @@ comp = voxel/octree_write_mipmaps.comp
 [VCTGenerateMipmap]
 comp = vct/GenerateMipmap.comp
 
-[VCTClearVoxels]
-comp = vct/clear_voxels.comp
-
-[VCTVoxelizeWithGeometryShader]
-permute = MODE(TEXTURE_3D SVO)
-frag = vct/voxelize.frag
-geom = vct/voxelize.geom
-vert = vct/voxelize.vert
-
-[VCTVoxelizeWithoutGeometryShader]
-permute = MODE(TEXTURE_3D SVO)
-frag = vct/voxelize.frag
-vert = vct/voxelize.vert
-
 # RT
 
 [RTRadiance]
