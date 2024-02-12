@@ -1,10 +1,10 @@
-#ifndef SOURCE_LOCATION_HPP
-#define SOURCE_LOCATION_HPP
+#ifndef HYP_JSON_SOURCE_LOCATION_HPP
+#define HYP_JSON_SOURCE_LOCATION_HPP
 
 #include <core/lib/String.hpp>
 #include <HashCode.hpp>
 
-namespace hyperion {
+namespace hyperion::json {
 
 class SourceLocation
 {
@@ -41,6 +41,6 @@ private:
     String  m_filename;
 };
 
-} // namespace hyperion
+} // namespace hyperion::json
 
 #endif

@@ -1,11 +1,11 @@
-#ifndef SOURCE_FILE_HPP
-#define SOURCE_FILE_HPP
+#ifndef HYP_JSON_SOURCE_FILE_HPP
+#define HYP_JSON_SOURCE_FILE_HPP
 
 #include <Types.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/ByteBuffer.hpp>
 
-namespace hyperion {
+namespace hyperion::json {
 
 class SourceFile
 {
@@ -40,6 +40,6 @@ private:
     SizeType    m_position;
 };
 
-} // namespace hyperion
+} // namespace hyperion::json
 
 #endif

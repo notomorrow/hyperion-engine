@@ -1,9 +1,9 @@
 #ifndef HYP_JSON_LEXER_HPP
 #define HYP_JSON_LEXER_HPP
 
-#include <script/SourceStream.hpp>
+#include <util/json/parser/SourceStream.hpp>
 #include <util/json/parser/TokenStream.hpp>
-#include <script/SourceLocation.hpp>
+#include <util/json/parser/SourceLocation.hpp>
 #include <util/json/parser/CompilationUnit.hpp>
 
 #include <util/UTF8.hpp>

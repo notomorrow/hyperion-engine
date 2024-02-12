@@ -1,8 +1,7 @@
-#include <script/SourceStream.hpp>
+#include <util/json/parser/SourceStream.hpp>
+#include <system/Debug.hpp>
 
-#include <stdexcept>
-
-namespace hyperion {
+namespace hyperion::json {
 
 SourceStream::SourceStream(SourceFile *file)
     : m_file(file),
@@ -113,21 +112,18 @@ utf::u32char SourceStream::Next(int &pos_change)
 
 void SourceStream::GoBack(int n)
 {
-    if (((int)m_position - n) < 0) {
-        throw std::out_of_range("not large enough to go back");
-    }
+    AssertThrowMsg(((int)m_position - n) >= 0, "not large enough to go back");
+
     m_position -= n;
 }
 
 void SourceStream::Read(char *ptr, SizeType num_bytes)
 {
-    for (size_t i = 0; i < num_bytes; i++) {
-        if (m_position >= m_file->GetSize()) {
-            throw std::out_of_range("attempted to read past the limit");
-        }
-        
+    AssertThrowMsg(m_position + num_bytes < m_file->GetSize(), "attempted to read past the limit");
+
+    for (SizeType i = 0; i < num_bytes; i++) {
         ptr[i] = m_file->GetBuffer()[m_position++];
     }
 }
 
-} // namespace hyperion
+} // namespace hyperion::json

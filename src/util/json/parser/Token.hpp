@@ -1,7 +1,7 @@
 #ifndef HYP_JSON_TOKEN_HPP
 #define HYP_JSON_TOKEN_HPP
 
-#include <script/SourceLocation.hpp>
+#include <util/json/parser/SourceLocation.hpp>
 #include <core/lib/String.hpp>
 
 #include <string>

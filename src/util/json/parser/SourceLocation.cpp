@@ -1,6 +1,6 @@
-#include <script/SourceLocation.hpp>
+#include <util/json/parser/SourceLocation.hpp>
 
-namespace hyperion {
+namespace hyperion::json {
 
 const SourceLocation SourceLocation::eof(-1, -1, "<eof>");
 
@@ -42,4 +42,4 @@ bool SourceLocation::operator==(const SourceLocation &other) const
         m_line == other.m_line;
 }
 
-} // namespace hyperion
+} // namespace hyperion::json
