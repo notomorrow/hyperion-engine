@@ -10,4 +10,7 @@ struct RTRadianceUniforms
     uvec4 light_indices[4];
 };
 
+#define HYP_GET_LIGHT(index) \
+    lights[rt_radiance_uniforms.light_indices[(index / 4)][index % 4]]
+
 #endif

@@ -17,11 +17,12 @@ layout(set = 0, binding = 1, rgba16f) uniform image2D image;
 layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
 layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
+layout(set = 0, binding = 9) uniform texture2D gbuffer_albedo_texture;
 
-layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+layout(set = 0, binding = 10) uniform sampler sampler_nearest;
 #define HYP_SAMPLER_NEAREST sampler_nearest
 
-layout(set = 0, binding = 10) uniform sampler sampler_linear;
+layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -34,7 +35,7 @@ layout(set = 0, binding = 10) uniform sampler sampler_linear;
 
 /// Blue noise
 
-layout(std140, set = 0, binding = 11) readonly buffer BlueNoiseBuffer {
+layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
@@ -55,15 +56,24 @@ layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
     Camera camera;
 };
 
+layout(std430, set = 0, binding = 5) readonly buffer LightShaderData
+{
+    Light lights[];
+};
+
 #define PATHTRACER
+#include "../../include/rt/RTRadiance.inc"
 #include "../../include/rt/payload.inc"
 
-const float spatial_offsets[] = { 0.0, 0.5, 0.25, 0.75 };
-const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
+layout(std140, set = 0, binding = 13, row_major) uniform RTRadianceUniformBuffer
+{
+    RTRadianceUniforms rt_radiance_uniforms;
+};
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
+
 #define RAY_OFFSET 0.01
-#define NUM_SAMPLES 1
+#define NUM_SAMPLES 8
 #define NUM_BOUNCES 8
 
 void main() 
@@ -102,53 +112,75 @@ void main()
 
     vec3 color = vec3(0.0);
 
-    vec4 target = projection_inverse * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
-    vec3 direction = (view_inverse * vec4(normalize(target.xyz / target.w), 0.0)).xyz;//camera.direction.xyz;
-    vec3 origin = (view_inverse * vec4(0.0, 0.0, 0.0, 1.0)).xyz; //camera.position.xyz;
+    const vec4 target = projection_inverse * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+    const vec4 albedo = Texture2DLod(sampler_nearest, gbuffer_albedo_texture, uv, 0.0);
 
-    vec3 tangent;
-    vec3 bitangent;
-    ComputeOrthonormalBasis(normal, tangent, bitangent);
+    vec4 radiance = vec4(0.0, 0.0, 0.0, 1.0);
 
-    vec2 blue_noise_sample = vec2(
-        SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 0),
-        SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 1)
-    );
+    for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
+        vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
 
-    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
-    const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+        vec3 tangent;
+        vec3 bitangent;
+        ComputeOrthonormalBasis(normal, tangent, bitangent);
 
-    vec3 radiance = vec3(0.0);
+        vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
+        H = tangent * H.x + bitangent * H.y + normal * H.z;
 
-    payload.beta = vec3(1.0);
-    payload.absorption = vec3(0.0);
-    payload.stop = false;
+        vec3 direction = reflect(-V, H);
+        vec3 origin = position + normal * RAY_OFFSET;
 
-    for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
-        payload.dir = direction;
-        traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+        // vec2 blue_noise_sample = vec2(
+        //     SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 0),
+        //     SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 1)
+        // );
 
-        radiance += payload.color;
+        // vec2 blue_noise_scaled = blue_noise_sample + float((scene.frame_counter) % 256) * 1.618;
+        // const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
 
-        //if (payload.distance < 0.0) {
-        //    break;
-        //}
-    
-        vec3 hit_position = origin + direction * payload.distance;
 
-        ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+        payload.throughput = albedo.rgb;
+        payload.emissive = vec3(0.0);
 
-        vec3 H = ImportanceSampleGGX(rnd, payload.normal, roughness);
-        H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+        for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
+            vec3 throughput = payload.throughput;
+
+            payload.dir = direction;
+            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+
+            radiance.rgb += payload.emissive * throughput;
+
+            throughput = payload.throughput;
             
-        direction = reflect(direction, H);
+            // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
+            float p = max(throughput.r, max(throughput.g, throughput.b));
 
-        origin = hit_position + direction * RAY_OFFSET;
+            if (RandomFloat(ray_seed) > p) {
+                break;
+            }
+
+            payload.throughput /= max(p, 0.0001);
+        
+            ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+
+            H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
+            H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+                
+            direction = reflect(direction, H);
+
+            vec3 hit_position = origin + direction * payload.distance;
+            origin = hit_position + payload.normal * RAY_OFFSET;
+        }
     }
 
-    if (payload.distance >= tmin && payload.distance < tmax) {
-        color += radiance;
-    }
+    color = radiance.rgb / float(NUM_SAMPLES * NUM_BOUNCES);
+    
+    // float max_component = max(color.r, max(color.g, color.b));
+
+    // if (max_component < 0.0001) {
+    //     // Discard the pixel if the color is too dark so it can accumulate more samples
+    //     return;
+    // }
 
     imageStore(image, storage_coord, vec4(color, 1.0));
 }

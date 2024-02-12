@@ -5,10 +5,9 @@ struct RayPayload
 	vec3 normal;
 	float roughness;
 #ifdef PATHTRACER
-    vec3 beta;
-	vec3 absorption;
+	vec3 throughput;
+	vec3 emissive;
 	vec3 dir;
-	bool stop;
 #endif
 };
 

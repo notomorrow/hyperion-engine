@@ -18,10 +18,10 @@ layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
 layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
 layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
 
-layout(set = 0, binding = 9) uniform sampler sampler_nearest;
+layout(set = 0, binding = 10) uniform sampler sampler_nearest;
 #define HYP_SAMPLER_NEAREST sampler_nearest
 
-layout(set = 0, binding = 10) uniform sampler sampler_linear;
+layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -34,7 +34,7 @@ layout(set = 0, binding = 10) uniform sampler sampler_linear;
 
 /// Blue noise
 
-layout(std140, set = 0, binding = 11) readonly buffer BlueNoiseBuffer {
+layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
