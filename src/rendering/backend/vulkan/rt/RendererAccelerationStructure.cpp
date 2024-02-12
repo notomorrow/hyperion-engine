@@ -32,6 +32,40 @@ VkAccelerationStructureTypeKHR AccelerationStructure<Platform::VULKAN>::ToVkAcce
     }
 }
 
+// explicit specialization declarations
+
+template <>
+Result AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+
+template <>
+Result AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstancesBuffer(Instance<Platform::VULKAN> *instance);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
+
+template <>
+Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last);
+
+template <>
+Result BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+
+template <>
+Result BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+
+// explicit specialization definitions
+
 template <>
 AccelerationGeometry<Platform::VULKAN>::AccelerationGeometry(
     Array<PackedVertex> &&packed_vertices,

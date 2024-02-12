@@ -2,6 +2,7 @@
 #define HYPERION_V2_STREAMED_DATA_HPP
 
 #include <core/lib/ByteBuffer.hpp>
+#include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/UniqueID.hpp>
 #include <util/fs/FsUtil.hpp>
 
@@ -9,33 +10,23 @@ namespace hyperion::v2 {
 
 class StreamedData;
 
-namespace detail {
+/*! \brief Interface for a reference to a streamed data object.
 
-struct StreamedDataRefCount
-{
-    StreamedData    *owner;
-    uint            ref_count;
+    Used sort of like an RC pointer, but with some additional functionality.
+    Keeps track of the use count of the underlying streamed data object and
+    ensures that the data is loaded into memory when the reference is created.
 
-    StreamedDataRefCount(StreamedData *owner);
-    StreamedDataRefCount(const StreamedDataRefCount &other)                 = delete;
-    StreamedDataRefCount &operator=(const StreamedDataRefCount &other)      = delete;
-    StreamedDataRefCount(StreamedDataRefCount &&other) noexcept             = delete;
-    StreamedDataRefCount &operator=(StreamedDataRefCount &&other) noexcept  = delete;
-    ~StreamedDataRefCount();
-
-    void IncRef();
-    void DecRef();
-};
-
-} // namespace detail
-
+    When the reference is destroyed, the use count of the underlying streamed
+    data object is decremented. When the use count reaches zero, the data is
+    unpaged from memory.
+ */
 class StreamedDataRefBase
 {
 protected:
-    StreamedData    *m_owner { nullptr };
+    RC<StreamedData>    m_owner { nullptr };
 
 public:
-    StreamedDataRefBase(StreamedData *owner);
+    StreamedDataRefBase(RC<StreamedData> &&owner);
     StreamedDataRefBase(const StreamedDataRefBase &other);
     StreamedDataRefBase &operator=(const StreamedDataRefBase &other);
     StreamedDataRefBase(StreamedDataRefBase &&other) noexcept;
@@ -47,7 +38,7 @@ template <class T>
 class StreamedDataRef : public StreamedDataRefBase
 {
 public:
-    StreamedDataRef(T *owner)
+    StreamedDataRef(RC<T> &&owner)
         : StreamedDataRefBase(owner)
     {
     }
@@ -66,7 +57,6 @@ public:
     StreamedDataRef(StreamedDataRef &&other) noexcept
         : StreamedDataRefBase(static_cast<StreamedDataRefBase &&>(other))
     {
-        
     }
 
     StreamedDataRef &operator=(StreamedDataRefBase &&other) noexcept
@@ -78,17 +68,18 @@ public:
     ~StreamedDataRef() = default;
 
     T *operator->()
-        { return static_cast<T *>(m_owner); }
+        { return static_cast<T *>(m_owner.Get()); }
 
     const T *operator->() const
-        { return static_cast<const T *>(m_owner); }
+        { return static_cat<const T *>(m_owner.Get()); }
 };
 
-class StreamedData
+class StreamedData : public EnableRefCountedPtrFromThis<StreamedData>
 {
 public:
-    friend class StreamedDataRefBase;
+    friend class StreamedDataRefBase; // allow it to access m_use_count
 
+    StreamedData()          = default;
     virtual ~StreamedData() = default;
 
     virtual bool IsNull() const = 0;
@@ -97,16 +88,21 @@ public:
     virtual const ByteBuffer &Load() const = 0;
 
 private:
-    uint32  m_ref_count = 0;
+    uint32  m_use_count = 0;
 };
 
 class NullStreamedData : public StreamedData
 {
 public:
-    virtual ~NullStreamedData() override = default;
+    NullStreamedData()                                          = default;
+    NullStreamedData(const NullStreamedData &)                  = default;
+    NullStreamedData &operator=(const NullStreamedData &)       = default;
+    NullStreamedData(NullStreamedData &&) noexcept              = default;
+    NullStreamedData &operator=(NullStreamedData &&) noexcept   = default;
+    virtual ~NullStreamedData() override                        = default;
 
     StreamedDataRef<NullStreamedData> AcquireRef()
-        { return { this }; }
+        { return { RefCountedPtrFromThis().CastUnsafe<NullStreamedData>() }; }
 
     virtual bool IsNull() const override;
     virtual bool IsInMemory() const override;
@@ -122,14 +118,17 @@ class MemoryStreamedData : public StreamedData
 public:
     MemoryStreamedData(const ByteBuffer &byte_buffer);
     MemoryStreamedData(ByteBuffer &&byte_buffer);
-    MemoryStreamedData(const MemoryStreamedData &other) = delete;
-    MemoryStreamedData &operator=(const MemoryStreamedData &other) = delete;
+
+    MemoryStreamedData(const MemoryStreamedData &other)             = delete;
+    MemoryStreamedData &operator=(const MemoryStreamedData &other)  = delete;
+
     MemoryStreamedData(MemoryStreamedData &&other) noexcept;
     MemoryStreamedData &operator=(MemoryStreamedData &&other) noexcept;
-    virtual ~MemoryStreamedData() override = default;
+
+    virtual ~MemoryStreamedData() override  = default;
 
     StreamedDataRef<MemoryStreamedData> AcquireRef()
-        { return { this }; }
+        { return { RefCountedPtrFromThis().CastUnsafe<MemoryStreamedData>() }; }
 
     virtual bool IsNull() const override;
     virtual bool IsInMemory() const override;
@@ -146,8 +145,8 @@ class FileStreamedData : public StreamedData
 {
 public:
     FileStreamedData(const FilePath &filepath);
-    FileStreamedData(const FileStreamedData &other) = delete;
-    FileStreamedData &operator=(const FileStreamedData &other) = delete;
+    FileStreamedData(const FileStreamedData &other)             = delete;
+    FileStreamedData &operator=(const FileStreamedData &other)  = delete;
     FileStreamedData(FileStreamedData &&other) noexcept;
     FileStreamedData &operator=(FileStreamedData &&other) noexcept;
     virtual ~FileStreamedData() override = default;
@@ -156,7 +155,7 @@ public:
         { return m_filepath; }
 
     StreamedDataRef<FileStreamedData> AcquireRef()
-        { return { this }; }
+        { return { RefCountedPtrFromThis().CastUnsafe<FileStreamedData>() }; }
 
     virtual bool IsNull() const override;
     virtual bool IsInMemory() const override;

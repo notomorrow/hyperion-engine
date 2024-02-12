@@ -35,7 +35,7 @@ class FBOMObjectMarshalerBase : public FBOMMarshalerBase
 public:
     virtual ~FBOMObjectMarshalerBase() = default;
 
-    virtual FBOMType GetObjectType() const
+    virtual FBOMType GetObjectType() const override
         { return FBOMObjectType(TypeName<T>().Data()); }
 
     virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;

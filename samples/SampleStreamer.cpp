@@ -218,7 +218,7 @@ void SampleStreamer::InitGame()
             gun.SetLocalRotation(Quaternion(Vec3f(0.0f, 1.0f, 0.0f), M_PI));
             gun_parent.AddChild(gun);
 
-            m_scene->GetEntityManager()->AddComponent(gun[0].GetEntity(), BLASComponent { });
+            // m_scene->GetEntityManager()->AddComponent(gun[0].GetEntity(), BLASComponent { });
         }
     }
 
@@ -257,7 +257,7 @@ void SampleStreamer::InitGame()
             )
         });
 
-        m_scene->GetEntityManager()->AddComponent(entity_id, BLASComponent { });
+        // m_scene->GetEntityManager()->AddComponent(entity_id, BLASComponent { });
         
         m_scene->GetEntityManager()->AddComponent(entity_id, MeshComponent {
             cube,
@@ -553,7 +553,7 @@ void SampleStreamer::InitGame()
                 if (auto child_entity = node.GetEntity()) {
                     // Add BLASComponent
 
-                    m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
+                    // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
                 }
             }
         }
@@ -570,7 +570,7 @@ void SampleStreamer::InitGame()
                 if (auto child_entity = node.GetEntity()) {
                     // Add BLASComponent
 
-                    m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
+                    // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
                 }
             }
 

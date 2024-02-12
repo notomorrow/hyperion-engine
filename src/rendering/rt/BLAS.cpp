@@ -194,16 +194,14 @@ void BLAS::Init()
 
     InitObject(m_material);
     AssertThrow(InitObject(m_mesh));
-
-    AccelerationGeometryRef geometry = MakeRenderObject<AccelerationGeometry>(
+    
+    m_blas->SetTransform(m_transform.GetMatrix());
+    m_blas->AddGeometry(MakeRenderObject<AccelerationGeometry>(
         m_mesh->BuildPackedVertices(),
         m_mesh->BuildPackedIndices(),
         m_entity_id.ToIndex(),
         m_material.GetID().ToIndex()
-    );
-    
-    m_blas->SetTransform(m_transform.GetMatrix());
-    m_blas->AddGeometry(geometry);
+    ));
 
     DeferCreate(m_blas, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
 
