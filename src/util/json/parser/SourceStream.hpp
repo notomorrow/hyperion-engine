@@ -1,12 +1,12 @@
-#ifndef SOURCE_STREAM_HPP
-#define SOURCE_STREAM_HPP
+#ifndef HYP_JSON_SOURCE_STREAM_HPP
+#define HYP_JSON_SOURCE_STREAM_HPP
 
-#include <script/SourceFile.hpp>
+#include <util/json/parser/SourceFile.hpp>
 #include <util/UTF8.hpp>
 
 #include <cstddef>
 
-namespace hyperion {
+namespace hyperion::json {
 
 class SourceStream
 {
@@ -28,6 +28,6 @@ private:
     SizeType m_position;
 };
 
-} // namespace hyperion
+} // namespace hyperion::json
 
 #endif

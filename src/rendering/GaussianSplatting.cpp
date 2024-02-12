@@ -383,7 +383,8 @@ void GaussianSplattingInstance::Record(Frame *frame)
         AssertThrow(h < num_sortable_elements);
         AssertThrow(h % 2 == 0);
 
-        auto DoPass = [this, frame, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable {
+        auto DoPass = [this, frame, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable
+        {
             pc.stage = uint32(stage);
             pc.h = h;
 
