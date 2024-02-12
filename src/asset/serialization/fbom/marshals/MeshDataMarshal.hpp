@@ -60,7 +60,7 @@ public:
             }
         }
 
-        out_object = UniquePtr<MeshData>::Construct(MeshData {
+        out_object = UniquePtr<MeshData>(new MeshData {
             std::move(vertices),
             std::move(indices)
         });

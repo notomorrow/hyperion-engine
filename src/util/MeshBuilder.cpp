@@ -283,9 +283,9 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh *a, const Mesh *b, const Transform &a
     AssertThrow(streamed_mesh_datas[0] != nullptr);
     AssertThrow(streamed_mesh_datas[1] != nullptr);
 
-    StreamedDataRef<StreamedMeshData> streamed_mesh_data_refs[] = {
-        streamed_mesh_datas[0]->AcquireRef(),
-        streamed_mesh_datas[1]->AcquireRef()
+    RC<StreamedMeshData> streamed_mesh_data_refs[] = {
+        streamed_mesh_datas[0],
+        streamed_mesh_datas[1]
     };
     
     const auto merged_vertex_attributes = a->GetVertexAttributes() | b->GetVertexAttributes();

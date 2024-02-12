@@ -5,53 +5,13 @@
 
 namespace hyperion::v2 {
 
-namespace detail {
-
-StreamedDataRefCount::StreamedDataRefCount(StreamedData *owner)
-    : owner(owner),
-      ref_count(0)
-{
-    AssertThrowMsg(owner != nullptr, "StreamedDataRefCount: Owner is null");
-}
-
-StreamedDataRefCount::~StreamedDataRefCount()
-{
-    AssertThrowMsg(ref_count == 0, "StreamedDataRefCount: Ref count is not zero");
-
-    if (owner->IsInMemory()) {
-        owner->Unpage();
-    }
-}
-
-void StreamedDataRefCount::IncRef()
-{
-    ++ref_count;
-
-    if (!owner->IsInMemory()) {
-        (void)owner->Load();
-    }
-}
-
-void StreamedDataRefCount::DecRef()
-{
-    AssertThrowMsg(ref_count != 0, "StreamedDataRefCount: Ref count is zero");
-
-    if (--ref_count == 0) {
-        if (owner->IsInMemory()) {
-            owner->Unpage();
-        }
-    }
-}
-
-} // namespace detail
-
 // StreamedDataRefBase
 
-StreamedDataRefBase::StreamedDataRefBase(StreamedData *owner)
-    : m_owner(owner)
+StreamedDataRefBase::StreamedDataRefBase(RC<StreamedData> &&owner)
+    : m_owner(std::move(owner))
 {
     if (m_owner != nullptr) {
-        m_owner->m_ref_count++;
+        m_owner->m_use_count++;
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -63,7 +23,7 @@ StreamedDataRefBase::StreamedDataRefBase(const StreamedDataRefBase &other)
     : m_owner(other.m_owner)
 {
     if (m_owner != nullptr) {
-        m_owner->m_ref_count++;
+        m_owner->m_use_count++;
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -78,7 +38,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(const StreamedDataRefBase &o
     }
 
     if (m_owner != nullptr) {
-        if (--m_owner->m_ref_count == 0) {
+        if (--m_owner->m_use_count == 0) {
             m_owner->Unpage();
         }
     }
@@ -86,7 +46,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(const StreamedDataRefBase &o
     m_owner = other.m_owner;
 
     if (m_owner != nullptr) {
-        m_owner->m_ref_count++;
+        m_owner->m_use_count++;
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -109,7 +69,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(StreamedDataRefBase &&other)
     }
 
     if (m_owner != nullptr) {
-        if (--m_owner->m_ref_count == 0) {
+        if (--m_owner->m_use_count == 0) {
             m_owner->Unpage();
         }
     }
@@ -123,7 +83,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(StreamedDataRefBase &&other)
 StreamedDataRefBase::~StreamedDataRefBase()
 {
     if (m_owner != nullptr) {
-        if (--m_owner->m_ref_count == 0) {
+        if (--m_owner->m_use_count == 0) {
             m_owner->Unpage();
         }
     }

@@ -14,6 +14,13 @@
 #include <cstdlib>
 
 namespace hyperion {
+
+template <class CountType = std::atomic<uint>>
+class EnableRefCountedPtrFromThisBase;
+
+template <class T, class CountType = std::atomic<uint>>
+class EnableRefCountedPtrFromThis;
+
 namespace detail {
 
 template <class CountType = uint>
@@ -49,15 +56,42 @@ struct RefCountData
     void Construct(Args &&... args)
     {
         value = Memory::New<T>(std::forward<Args>(args)...);
-        dtor = &Memory::Delete<T>;
+
+        // Setup weak ptr for EnableRefCountedPtrFromThis
+        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>) {
+            static_cast<T *>(value)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
+
+            dtor = [](void *ptr)
+            {
+                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(nullptr, false);
+
+                Memory::Delete<T>(ptr);
+            };
+        } else {
+            dtor = &Memory::Delete<T>;
+        }
+
         type_id = TypeID::ForType<T>();
     }
 
     template <class T>
     void TakeOwnership(T *ptr)
     {
+        // Setup weak ptr for EnableRefCountedPtrFromThis
+        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>) {
+            ptr->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
+
+            dtor = [](void *ptr)
+            {
+                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(nullptr, false);
+
+                Memory::Delete<T>(ptr);
+            };
+        } else {
+            dtor = &Memory::Delete<T>;
+        }
+
         value = ptr;
-        dtor = &Memory::Delete<T>;
         type_id = TypeID::ForType<T>();
     }
 
@@ -202,6 +236,20 @@ public:
         return RefCountedPtr<T, CountType>();
     }
 
+    template <class T>
+    HYP_FORCE_INLINE
+    RefCountedPtr<T, CountType> CastUnsafe()
+    {
+        RefCountedPtr<T, CountType> rc;
+        rc.m_ref = m_ref;
+
+        if (m_ref) {
+            IncRefCount();
+        }
+
+        return rc;
+    }
+
     /*! \brief Drops the reference to the currently held value, if any.  */
     HYP_FORCE_INLINE
     void Reset()
@@ -222,20 +270,6 @@ public:
         if (inc_ref && m_ref != nullptr) {
             IncRefCount();
         }
-    }
-
-    template <class T>
-    HYP_FORCE_INLINE
-    RefCountedPtr<T, CountType> CastUnsafe()
-    {
-        RefCountedPtr<T, CountType> rc;
-        rc.m_ref = m_ref;
-
-        if (m_ref) {
-            IncRefCount();
-        }
-
-        return rc;
     }
 
     /*! \brief Releases the reference to the currently held value, if any, and returns it.
@@ -624,17 +658,13 @@ public:
     WeakRefCountedPtrBase(const RefCountedPtrBase<CountType> &other)
         : m_ref(other.m_ref)
     {
-        if (m_ref) {
-            ++m_ref->weak_count;
-        }
+        IncRefCount();
     }
 
     WeakRefCountedPtrBase(const WeakRefCountedPtrBase &other)
         : m_ref(other.m_ref)
     {
-        if (m_ref) {
-            ++m_ref->weak_count;
-        }
+        IncRefCount();
     }
 
     WeakRefCountedPtrBase &operator=(const RefCountedPtrBase<CountType> &other)
@@ -643,9 +673,7 @@ public:
 
         m_ref = other.m_ref;
 
-        if (m_ref) {
-            ++m_ref->weak_count;
-        }
+        IncRefCount();
 
         return *this;
     }
@@ -656,9 +684,7 @@ public:
 
         m_ref = other.m_ref;
 
-        if (m_ref) {
-            ++m_ref->weak_count;
-        }
+        IncRefCount();
 
         return *this;
     }
@@ -729,16 +755,66 @@ public:
     void Reset()
         { DropRefCount(); }
 
+    template <class T>
+    HYP_FORCE_INLINE
+    WeakRefCountedPtr<T, CountType> Cast()
+    {
+        if (GetTypeID() == TypeID::ForType<T>() || std::is_same_v<T, void>) {
+            return CastUnsafe<T>();
+        }
+
+        return WeakRefCountedPtr<T, CountType>();
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE
+    WeakRefCountedPtr<T, CountType> CastUnsafe()
+    {
+        WeakRefCountedPtr<T, CountType> rc;
+        rc.m_ref = m_ref;
+
+        if (m_ref) {
+            IncRefCount();
+        }
+
+        return rc;
+    }
+
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
     HYP_FORCE_INLINE
     RefCountDataType *GetRefCountData() const
         { return m_ref; }
 
+    /*! \brief Sets the internal reference to the given RefCountDataType. Only for internal use. */
+    HYP_FORCE_INLINE
+    void SetRefCountData(RefCountDataType *ref, bool inc_ref = true)
+    {
+        DropRefCount();
+        m_ref = ref;
+
+        if (inc_ref && m_ref != nullptr) {
+            IncRefCount();
+        }
+    }
 
 protected:
     explicit WeakRefCountedPtrBase(RefCountDataType *ref)
         : m_ref(ref)
     {
+    }
+
+    HYP_FORCE_INLINE
+    void IncRefCount()
+    {
+#ifdef HYP_DEBUG_MODE
+        AssertThrow(m_ref != nullptr);
+#endif
+
+        if constexpr (std::is_integral_v<CountType>) {
+            ++m_ref->weak_count;
+        } else {
+            m_ref->weak_count.fetch_add(1u, std::memory_order_relaxed);
+        }
     }
     
     HYP_FORCE_INLINE
@@ -842,154 +918,6 @@ public:
     }
 };
 
-template <class T, class CountType = uint>
-class RefCountedRef
-{
-    struct Data
-    {
-        ValueStorage<T> storage;
-        CountType       count { 0 };
-
-        template <class ...Args>
-        void Construct(Args &&... args)
-        {
-            storage.Construct(std::forward<Args>(args)...);
-        }
-
-        void Destruct()
-        {
-            storage.Destruct();
-        }
-
-        void IncRef()
-        {
-            if constexpr (std::is_integral_v<CountType>) {
-                ++count;
-            } else {
-                count.fetch_add(1u, std::memory_order_relaxed);
-            }
-        }
-
-        bool DecRef()
-        {
-            SizeType remaining = 0;
-
-            if constexpr (std::is_integral_v<CountType>) {
-                remaining = count--;
-            } else {
-                remaining = count.fetch_sub(1u);
-            }
-
-            if (remaining == 1) {
-                Destruct();
-
-                return true;
-            }
-
-            return false;
-        }
-    };
-
-    Data *m_data;
-
-public:
-
-    template <class ...Args>
-    RefCountedRef(Args &&... args)
-        : m_data(new Data)
-    {
-        m_data->IncRef();
-        m_data->Construct(std::forward<Args>(args)...);
-    }
-
-    RefCountedRef(const RefCountedRef &other)
-        : m_data(other.m_data)
-    {
-        if (m_data) {
-            m_data->IncRef();
-        }
-    }
-
-    RefCountedRef &operator=(const RefCountedRef &other) noexcept
-    {
-        if (m_data) {
-            if (m_data->DecRef()) {
-                delete m_data;
-            }
-
-            m_data = nullptr;
-        }
-
-        m_data = other.m_data;
-
-        if (m_data) {
-            m_data->IncRef();
-        }
-
-        return *this;
-    }
-
-
-    RefCountedRef(RefCountedRef &&other) noexcept
-        : m_data(other.m_data)
-    {
-        other.m_data = nullptr;
-    }
-
-    RefCountedRef &operator=(RefCountedRef &&other) noexcept
-    {
-        if (m_data) {
-            if (m_data->DecRef()) {
-                delete m_data;
-            }
-
-            m_data = nullptr;
-        }
-
-        std::swap(m_data, other.m_data);
-
-        return *this;
-    }
-
-    ~RefCountedRef()
-    {
-        if (m_data) {
-            if (m_data->DecRef()) {
-                delete m_data;
-            }
-        }
-    }
-
-    T &Get()
-    {
-        AssertThrow(m_data != nullptr);
-        
-        return m_data->storage.Get();
-    }
-
-    const T &Get() const
-    {
-        AssertThrow(m_data != nullptr);
-        
-        return m_data->storage.Get();
-    }
-
-    bool IsValid() const
-        { return m_data != nullptr; }
-
-    bool operator==(const RefCountedRef &other) const
-        { return m_data == other.m_data; }
-
-    bool operator!=(const RefCountedRef &other) const
-        { return m_data != other.m_data; }
-
-    bool operator==(std::nullptr_t) const
-        { return !IsValid(); }
-
-    bool operator!=(std::nullptr_t) const
-        { return IsValid(); }
-};
-
 } // namespace detail
 
 template <class T>
@@ -998,49 +926,70 @@ using AtomicRefCountedPtr = detail::RefCountedPtr<T, std::atomic<uint>>;
 template <class T>
 using RefCountedPtr = detail::RefCountedPtr<T, uint>;
 
-
 template <class T, class CountType = std::atomic<uint>>
 using Weak = detail::WeakRefCountedPtr<T, CountType>; 
 
 template <class T, class CountType = std::atomic<uint>>
 using RC = detail::RefCountedPtr<T, CountType>;
 
-template <class T, class CountType = std::atomic<uint>>
-using Ref = detail::RefCountedRef<T, CountType>;
+template <class CountType>
+class EnableRefCountedPtrFromThisBase
+{
+public:
+    friend struct detail::RefCountData<CountType>;
 
-// template <class T, class CountType = std::atomic<uint>>
-// class EnableRefCountedPtrFromThis
-// {
-// public:
-//     EnableRefCountedPtrFromThis() = default;
+    EnableRefCountedPtrFromThisBase() = default;
 
-//     EnableRefCountedPtrFromThis(const EnableRefCountedPtrFromThis &)
-//     {
-//         // Do not modify weak ptr
-//     }
+    EnableRefCountedPtrFromThisBase(const EnableRefCountedPtrFromThisBase &)
+    {
+        // Do not modify weak ptr
+    }
 
-//     EnableRefCountedPtrFromThis &operator=(const EnableRefCountedPtrFromThis &)
-//     {
-//         // Do not modify weak ptr
+    EnableRefCountedPtrFromThisBase &operator=(const EnableRefCountedPtrFromThisBase &)
+    {
+        // Do not modify weak ptr
 
-//         return *this;
-//     }
+        return *this;
+    }
 
-//     ~EnableRefCountedPtrFromThis() = default;
+    ~EnableRefCountedPtrFromThisBase() = default;
 
-// protected:
-//     RC<T, CountType> RefCountedPtrFromThis()
-//         { return weak.Lock(); }
+protected:
+    Weak<void, CountType>  weak;
+};
 
-//     RC<const T, CountType> RefCountedPtrFromThis() const
-//         { return weak.Lock(); }
+template <class T, class CountType>
+class EnableRefCountedPtrFromThis : public EnableRefCountedPtrFromThisBase<CountType>
+{
+    using Base = EnableRefCountedPtrFromThisBase<CountType>;
 
-//     Weak<T, CountType> WeakFromThis()
-//         { return weak; }
+public:
+    EnableRefCountedPtrFromThis() = default;
 
-// private:
-//     Weak<T, CountType> weak;
-// };
+    EnableRefCountedPtrFromThis(const EnableRefCountedPtrFromThis &)
+    {
+        // Do not modify weak ptr
+    }
+
+    EnableRefCountedPtrFromThis &operator=(const EnableRefCountedPtrFromThis &)
+    {
+        // Do not modify weak ptr
+
+        return *this;
+    }
+
+    ~EnableRefCountedPtrFromThis() = default;
+
+protected:
+    RC<T, CountType> RefCountedPtrFromThis()
+        { return Base::weak.Lock().template CastUnsafe<T>(); }
+
+    RC<const T, CountType> RefCountedPtrFromThis() const
+        { return Base::weak.Lock().template CastUnsafe<T>(); }
+
+    Weak<T, CountType> WeakFromThis()
+        { return Base::weak.template CastUnsafe<T>(); }
+};
 
 } // namespace hyperion
 

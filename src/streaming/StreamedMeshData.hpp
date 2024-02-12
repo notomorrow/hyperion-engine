@@ -34,7 +34,7 @@ public:
     const MeshData &GetMeshData() const;
 
     StreamedDataRef<StreamedMeshData> AcquireRef()
-        { return { this }; }
+        { return { RefCountedPtrFromThis().CastUnsafe<StreamedMeshData>() }; }
 
     virtual bool IsNull() const override;
     virtual bool IsInMemory() const override;
