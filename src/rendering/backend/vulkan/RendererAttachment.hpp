@@ -8,6 +8,8 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/Platform.hpp>
+
 #include <math/MathUtil.hpp>
 
 #include <HashCode.hpp>
@@ -15,77 +17,40 @@
 
 #include <vulkan/vulkan.h>
 
-#include <optional>
-#include <unordered_set>
-
 namespace hyperion {
 namespace renderer {
+namespace platform {
 
-struct AttachmentUsageInstance
+template <>
+class AttachmentUsage<Platform::VULKAN>
 {
-    const char *cls;
-    void *ptr;
-
-    bool operator==(const AttachmentUsageInstance &other) const
-    {
-        return ptr == other.ptr;
-    }
-
-    HashCode GetHashCode() const
-    {
-        HashCode hc;
-        hc.Add(cls);
-        hc.Add(ptr);
-
-        return hc;
-    }
-};
-
-} // namespace renderer
-} // namespace hyperion
-
-HYP_DEF_STL_HASH(hyperion::renderer::AttachmentUsageInstance);
-
-namespace hyperion {
-namespace renderer {
-
-class Attachment;
-class AttachmentUsage;
-
-// for making it easier to track holders
-#define HYP_ATTACHMENT_USAGE_INSTANCE \
-    ::hyperion::renderer::AttachmentUsageInstance { \
-        .cls = typeid(*this).name(),     \
-        .ptr = static_cast<void *>(this) \
-    }
-
-class AttachmentUsage
-{
-    friend class Attachment;
 public:
-
     AttachmentUsage(
-        Attachment *attachment,
+        AttachmentRef<Platform::VULKAN> attachment,
         LoadOperation load_operation = LoadOperation::CLEAR,
         StoreOperation store_operation = StoreOperation::STORE
     );
 
     AttachmentUsage(
-        Attachment *attachment,
-        ImageViewRef &&image_view,
-        SamplerRef &&sampler,
+        AttachmentRef<Platform::VULKAN> attachment,
+        ImageViewRef<Platform::VULKAN> image_view,
+        SamplerRef<Platform::VULKAN> sampler,
         LoadOperation load_operation = LoadOperation::CLEAR,
         StoreOperation store_operation = StoreOperation::STORE
     );
 
-    AttachmentUsage(const AttachmentUsage &other) = delete;
-    AttachmentUsage &operator=(const AttachmentUsage &other) = delete;
+    AttachmentUsage(const AttachmentUsage &other)               = delete;
+    AttachmentUsage &operator=(const AttachmentUsage &other)    = delete;
     ~AttachmentUsage();
 
-    Attachment *GetAttachment() const { return m_attachment; }
+    const AttachmentRef<Platform::VULKAN> &GetAttachment() const
+        { return m_attachment; }
 
-    const ImageViewRef &GetImageView() const { return m_image_view; }
-    const SamplerRef &GetSampler() const { return m_sampler; }
+    const ImageViewRef<Platform::VULKAN> &GetImageView() const
+        { return m_image_view; }
+
+    const SamplerRef<Platform::VULKAN> &GetSampler() const
+        { return m_sampler; }
 
     LoadOperation GetLoadOperation() const { return m_load_operation; }
     StoreOperation GetStoreOperation() const { return m_store_operation; }
@@ -105,135 +70,26 @@ public:
 
     VkAttachmentDescription GetAttachmentDescription() const;
     VkAttachmentReference GetHandle() const;
-
-    const AttachmentUsage *IncRef(AttachmentUsageInstance &&ins) const;
-    const AttachmentUsage *DecRef(AttachmentUsageInstance &&ins) const;
     
-    Result Create(Device *device);
-    Result Create(
-        Device *device,
-        VkImage image,
-        VkFormat format,
-        VkImageAspectFlags aspect_flags,
-        VkImageViewType view_type,
-        uint num_mipmaps,
-        uint num_faces
-    );
-
-    Result Destroy(Device *device);
-
-    Result AddAttachmentUsage(
-        Device *device,
-        StoreOperation store_operation,
-        AttachmentUsage **out = nullptr
-    );
-
-    Result RemoveSelf(Device *device);
+    Result Create(Device<Platform::VULKAN> *device);
+    Result Destroy(Device<Platform::VULKAN> *device);
 
 private:
-    struct RefCount
-    {
-        std::unordered_set<AttachmentUsageInstance> m_holder_instances;
-    };
-
-    static VkAttachmentLoadOp ToVkLoadOp(LoadOperation);
-    static VkAttachmentStoreOp ToVkStoreOp(StoreOperation);
+    AttachmentRef<Platform::VULKAN> m_attachment;
+    ImageViewRef<Platform::VULKAN>  m_image_view;
+    SamplerRef<Platform::VULKAN>    m_sampler;
     
-    VkImageLayout GetIntermediateLayout() const;
+    LoadOperation                   m_load_operation;
+    StoreOperation                  m_store_operation;
+    uint                            m_binding = MathUtil::MaxSafeValue<uint>();
 
-    Attachment *m_attachment;
-    ImageViewRef m_image_view;
-    SamplerRef m_sampler;
-    
-    LoadOperation m_load_operation;
-    StoreOperation m_store_operation;
-    uint m_binding = MathUtil::MaxSafeValue<uint>();
+    bool                            m_image_view_owned = false;
+    bool                            m_sampler_owned = false;
 
-    VkImageLayout m_initial_layout, m_final_layout;
-
-    RefCount *m_ref_count = nullptr;
-    bool m_is_created = false;
-
-    bool m_allow_blending = true;
+    bool                            m_allow_blending = true;
 };
 
-class Attachment
-{
-    friend class AttachmentUsage;
-
-public:
-    Attachment(ImageRef_VULKAN &&image, RenderPassStage stage);
-    Attachment(const Attachment &other) = delete;
-    Attachment &operator=(const Attachment &other) = delete;
-    ~Attachment();
-
-    const ImageRef_VULKAN &GetImage() const { return m_image; }
-
-    auto &GetAttachmentUsages() { return m_attachment_usages; }
-    const auto &GetAttachmentUsages() const { return m_attachment_usages; }
-
-    InternalFormat GetFormat() const
-        { return m_image ? m_image->GetTextureFormat() : InternalFormat::NONE; }
-
-    bool IsDepthAttachment() const
-        { return m_image ? m_image->IsDepthStencil() : false; }
-
-    void AddAttachmentUsage(AttachmentUsageRef &attachment_usage_ref);
-
-    Result AddAttachmentUsage(
-        Device *device,
-        LoadOperation load_operation,
-        StoreOperation store_operation,
-        AttachmentUsage **out = nullptr
-    );
-
-    Result AddAttachmentUsage(
-        Device *device,
-        VkImage image,
-        VkFormat format,
-        VkImageAspectFlags aspect_flags,
-        VkImageViewType view_type,
-        uint num_mipmaps,
-        uint num_faces,
-        LoadOperation load_operation,
-        StoreOperation store_operation,
-        AttachmentUsage **out = nullptr
-    );
-
-    Result RemoveAttachmentUsage(Device *device, AttachmentUsage *attachment_usage);
-
-    Result Create(Device *device);
-    Result Destroy(Device *device);
-
-private:
-
-    VkImageLayout GetInitialLayout() const
-        { return VK_IMAGE_LAYOUT_UNDEFINED; }
-
-    VkImageLayout GetFinalLayout() const
-    {
-        switch (m_stage) {
-        case RenderPassStage::NONE:
-            return VK_IMAGE_LAYOUT_UNDEFINED;
-        case RenderPassStage::PRESENT:
-            return IsDepthAttachment()
-                ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        case RenderPassStage::SHADER:
-            return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        default:
-            return VK_IMAGE_LAYOUT_UNDEFINED;
-        }
-    }
-
-    bool                                m_is_created;
-    ImageRef_VULKAN                     m_image;
-    RenderPassStage                     m_stage;
-
-    Array<AttachmentUsageRef>           m_attachment_usages;
-    Array<AttachmentUsage::RefCount *>  m_ref_counts;
-};
-
+} // namespace platform
 } // namespace renderer
 } // namespace hyperion
 

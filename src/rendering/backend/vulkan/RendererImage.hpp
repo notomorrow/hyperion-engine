@@ -66,6 +66,11 @@ public:
     ~Image();
 
     /*
+        Init the image using provided GPUImageMemory UnqiuePtr.
+    */
+    Result Create(UniquePtr<GPUImageMemory<Platform::VULKAN>> &&gpu_image_memory);
+
+    /*
      * Create the image. No texture data will be copied.
      */
     Result Create(Device<Platform::VULKAN> *device);
@@ -238,10 +243,10 @@ public:
         { return m_extent; }
 
     GPUImageMemory<Platform::VULKAN> *GetGPUImage()
-        { return m_image; }
+        { return m_image.Get(); }
 
     const GPUImageMemory<Platform::VULKAN> *GetGPUImage() const
-        { return m_image; }
+        { return m_image.Get(); }
 
     InternalFormat GetTextureFormat() const
         { return m_format; }
@@ -270,22 +275,22 @@ private:
         VkFormat *out_format
     );
 
-    Extent3D                            m_extent;
-    InternalFormat                      m_format;
-    ImageType                           m_type;
-    FilterMode                          m_filter_mode;
-    UniquePtr<StreamedData>             m_streamed_data;
+    Extent3D                                    m_extent;
+    InternalFormat                              m_format;
+    ImageType                                   m_type;
+    FilterMode                                  m_filter_mode;
+    UniquePtr<StreamedData>                     m_streamed_data;
 
-    bool                                m_is_blended;
-    uint                                m_num_layers;
-    bool                                m_is_rw_texture;
-    bool                                m_is_attachment_texture;
+    bool                                        m_is_blended;
+    uint                                        m_num_layers;
+    bool                                        m_is_rw_texture;
+    bool                                        m_is_attachment_texture;
 
-    InternalInfo                        m_internal_info;
+    InternalInfo                                m_internal_info;
 
-    SizeType                            m_size;
-    SizeType                            m_bpp; // bytes per pixel
-    GPUImageMemory<Platform::VULKAN>    *m_image;
+    SizeType                                    m_size;
+    SizeType                                    m_bpp; // bytes per pixel
+    UniquePtr<GPUImageMemory<Platform::VULKAN>> m_image;
 };
 
 template <>

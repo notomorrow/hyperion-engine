@@ -3,7 +3,6 @@
 
 #include <util/Defines.hpp>
 #include <core/lib/DynArray.hpp>
-#include <core/lib/FlatMap.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/Platform.hpp>
@@ -12,19 +11,6 @@
 
 namespace hyperion {
 namespace renderer {
-
-namespace platform {
-
-template <PlatformType PLATFORM>
-class Device;
-
-template <PlatformType PLATFORM>
-class Instance;
-
-} // namespace platform
-
-using Device    = platform::Device<Platform::CURRENT>;
-using Instance  = platform::Instance<Platform::CURRENT>;
 
 enum class RenderPassStage
 {
@@ -48,66 +34,124 @@ enum class StoreOperation
     STORE
 };
 
-class AttachmentSet
+namespace platform {
+
+template <PlatformType PLATFORM>
+class Device;
+
+template <PlatformType PLATFORM>
+class Instance;
+
+template <PlatformType PLATFORM>
+class Attachment
 {
 public:
-    AttachmentSet(RenderPassStage stage, Extent3D extent);
-    AttachmentSet(const AttachmentSet &other) = delete;
-    AttachmentSet &operator=(const AttachmentSet &other) = delete;
-    ~AttachmentSet();
+    Attachment(ImageRef<PLATFORM> image, RenderPassStage stage);
+    Attachment(const Attachment &other)             = delete;
+    Attachment &operator=(const Attachment &other)  = delete;
+    ~Attachment();
 
-    Extent3D GetExtent() const
-        { return m_extent; }
+    const ImageRef<PLATFORM> &GetImage() const
+        { return m_image; }
 
-    RenderPassStage GetStage() const
+    RenderPassStage GetRenderPassStage() const
         { return m_stage; }
 
-    bool Has(uint binding) const;
+    InternalFormat GetFormat() const
+        { return m_image ? m_image->GetTextureFormat() : InternalFormat::NONE; }
 
-    AttachmentUsage *Get(uint binding) const;
+    bool IsDepthAttachment() const
+        { return m_image ? m_image->IsDepthStencil() : false; }
 
-    /*! \brief Add a new owned attachment, constructed using the width/height provided to this class,
-     * along with the given format argument.
-     * @param binding The input attachment binding the attachment will take on
-     * @param format The image format of the newly constructed Image
-     */
-    Result Add(Device *device, uint binding, InternalFormat format);
-    /*! \brief Add a new owned attachment using the given image argument.
-     * @param binding The input attachment binding the attachment will take on
-     * @param image The unique pointer to a non-initialized (but constructed)
-     * Image which will be used to render to for this attachment.
-     */
-    Result Add(Device *device, uint binding, ImageRef &&image);
-
-    /*! \brief Add a reference to an existing attachment, not owned.
-     * An AttachmentUsage is created and its reference count incremented.
-     * @param binding The input attachment binding the attachment will take on
-     * @param attachment Pointer to an Attachment that exists elsewhere and will be used
-     * as an input for this set of attachments. The operation will be an OP_LOAD.
-     */
-    Result Add(Device *device, uint binding, AttachmentRef attachment);
-
-    /*! \brief Remove an attachment reference by the binding argument */
-    Result Remove(Device *device, uint binding);
-
-    Result Create(Device *device);
-    Result Destroy(Device *device);
+    Result Create(Device<PLATFORM> *device);
+    Result Destroy(Device<PLATFORM> *device);
 
 private:
-    Extent3D                            m_extent;
-    RenderPassStage                     m_stage;
-    Array<AttachmentRef>                m_attachments;
-    FlatMap<uint, AttachmentUsage *>    m_attachment_usages;
+    ImageRef<PLATFORM>  m_image;
+    RenderPassStage     m_stage;
 };
 
+template <PlatformType PLATFORM>
+class AttachmentUsage
+{
+public:
+    AttachmentUsage(
+        AttachmentRef<PLATFORM> attachment,
+        LoadOperation load_operation = LoadOperation::CLEAR,
+        StoreOperation store_operation = StoreOperation::STORE
+    );
+
+    AttachmentUsage(
+        AttachmentRef<PLATFORM> attachment,
+        ImageViewRef<PLATFORM> image_view,
+        SamplerRef<PLATFORM> sampler,
+        LoadOperation load_operation = LoadOperation::CLEAR,
+        StoreOperation store_operation = StoreOperation::STORE
+    );
+
+    AttachmentUsage(const AttachmentUsage &other)               = delete;
+    AttachmentUsage &operator=(const AttachmentUsage &other)    = delete;
+    ~AttachmentUsage();
+
+    const AttachmentRef<PLATFORM> &GetAttachment() const
+        { return m_attachment; }
+
+    const ImageViewRef<PLATFORM> &GetImageView() const
+        { return m_image_view; }
+
+    const SamplerRef<PLATFORM> &GetSampler() const
+        { return m_sampler; }
+
+    LoadOperation GetLoadOperation() const { return m_load_operation; }
+    StoreOperation GetStoreOperation() const { return m_store_operation; }
+
+    uint GetBinding() const { return m_binding; }
+    void SetBinding(uint binding) { m_binding = binding; }
+    bool HasBinding() const { return m_binding != UINT_MAX; }
+
+    InternalFormat GetFormat() const;
+    bool IsDepthAttachment() const;
+
+    bool AllowBlending() const
+        { return m_allow_blending; }
+
+    void SetAllowBlending(bool allow_blending)
+        { m_allow_blending = allow_blending; }
+    
+    Result Create(Device<PLATFORM> *device);
+    Result Destroy(Device<PLATFORM> *device);
+private:
+    AttachmentRef<PLATFORM> m_attachment;
+    ImageViewRef<PLATFORM>  m_image_view;
+    SamplerRef<PLATFORM>    m_sampler;
+    
+    LoadOperation           m_load_operation;
+    StoreOperation          m_store_operation;
+    uint                    m_binding = MathUtil::MaxSafeValue<uint>();
+
+    bool                    m_image_view_owned = false;
+    bool                    m_sampler_owned = false;
+
+    bool                    m_allow_blending = true;
+};
+
+} // namespace platform
 } // namespace renderer
 } // namespace hyperion
-
 
 #if HYP_VULKAN
 #include <rendering/backend/vulkan/RendererAttachment.hpp>
 #else
 #error Unsupported rendering backend
 #endif
+
+namespace hyperion {
+namespace renderer {
+
+using Attachment = platform::Attachment<Platform::CURRENT>;
+using AttachmentUsage = platform::AttachmentUsage<Platform::CURRENT>;
+
+} // namespace renderer
+} // namespace hyperion
 
 #endif

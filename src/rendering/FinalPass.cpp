@@ -113,41 +113,42 @@ void FinalPass::Create()
         HYPERION_ASSERT_RESULT(attachment->Create(g_engine->GetGPUDevice()));
     }
 
-    for (renderer::PlatformImage img : g_engine->GetGPUInstance()->GetSwapchain()->images) {
+    for (const ImageRef &image_ref : g_engine->GetGPUInstance()->GetSwapchain()->GetImages()) {
         auto fbo = CreateObject<Framebuffer>(
             g_engine->GetGPUInstance()->GetSwapchain()->extent,
             renderer::RenderPassStage::PRESENT,
             renderer::RenderPassMode::RENDER_PASS_INLINE
         );
 
-        renderer::AttachmentUsage *color_attachment_usage,
-            *depth_attachment_usage;
-
-        HYPERION_ASSERT_RESULT(m_attachments[0]->AddAttachmentUsage(
+        ImageViewRef color_attachment_image_view = MakeRenderObject<renderer::ImageView>();
+        HYPERION_ASSERT_RESULT(color_attachment_image_view->Create(
             g_engine->GetGPUDevice(),
-            img,
-            renderer::helpers::ToVkFormat(g_engine->GetGPUInstance()->GetSwapchain()->image_format),
-            VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
-            1, 1,
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &color_attachment_usage
+            image_ref.Get()
         ));
+
+        SamplerRef color_attachment_sampler_ref = g_engine->GetPlaceholderData()->GetSamplerLinear();
+
+        AttachmentUsageRef color_attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+            m_attachments[0],
+            std::move(color_attachment_image_view),
+            std::move(color_attachment_sampler_ref),
+            renderer::LoadOperation::CLEAR,
+            renderer::StoreOperation::STORE
+        );
 
         color_attachment_usage->SetBinding(0);
-
+        HYPERION_ASSERT_RESULT(color_attachment_usage->Create(g_engine->GetGPUDevice()));
         fbo->AddAttachmentUsage(color_attachment_usage);
 
-        HYPERION_ASSERT_RESULT(m_attachments[1]->AddAttachmentUsage(
-            g_engine->GetGPUDevice(),
+        AttachmentUsageRef depth_attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+            m_attachments[1],
             renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &depth_attachment_usage
-        ));
-
-        fbo->AddAttachmentUsage(depth_attachment_usage);
+            renderer::StoreOperation::STORE
+        );
 
         depth_attachment_usage->SetBinding(1);
+        HYPERION_ASSERT_RESULT(depth_attachment_usage->Create(g_engine->GetGPUDevice()));
+        fbo->AddAttachmentUsage(depth_attachment_usage);
 
         if (iteration == 0) {
             m_render_group = CreateObject<RenderGroup>(

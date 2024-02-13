@@ -25,7 +25,8 @@ VkSurfaceFormatKHR Swapchain<Platform::VULKAN>::ChooseSurfaceFormat(Device<Platf
         std::array {
             InternalFormat::BGRA8_SRGB
         },
-        [this](const VkSurfaceFormatKHR &format) {
+        [this](const VkSurfaceFormatKHR &format)
+        {
             if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 return false;
             }
@@ -50,7 +51,8 @@ VkSurfaceFormatKHR Swapchain<Platform::VULKAN>::ChooseSurfaceFormat(Device<Platf
             InternalFormat::RGBA16F,
             InternalFormat::RGBA32F
         },
-        [this](const VkSurfaceFormatKHR &format) {
+        [this](const VkSurfaceFormatKHR &format)
+        {
             this->surface_format = format;
 
             return true;
@@ -74,16 +76,38 @@ void Swapchain<Platform::VULKAN>::RetrieveSupportDetails(Device<Platform::VULKAN
 
 void Swapchain<Platform::VULKAN>::RetrieveImageHandles(Device<Platform::VULKAN> *device)
 {
+    Array<VkImage> vk_images;
     uint32 image_count = 0;
     /* Query for the size, as we will need to create swap chains with more images
      * in the future for more complex applications. */
     vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, nullptr);
     DebugLog(LogType::Warn, "image count %d\n", image_count);
 
-    images.Resize(image_count);
+    vk_images.Resize(image_count);
 
-    vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, images.Data());
+    vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, vk_images.Data());
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
+
+    m_images.Resize(image_count);
+
+    for (uint32 i = 0; i < image_count; i++) {
+        UniquePtr<GPUImageMemory<Platform::VULKAN>> gpu_image_memory(new GPUImageMemory<Platform::VULKAN>());
+        HYPERION_ASSERT_RESULT(gpu_image_memory->Create(
+            device,
+            vk_images[i]
+        ));
+
+        m_images[i] = MakeRenderObject<Image<Platform::VULKAN>>(
+            Extent3D { extent.width, extent.height, 1 },
+            image_format,
+            ImageType::TEXTURE_TYPE_2D,
+            FilterMode::TEXTURE_FILTER_NEAREST,
+            nullptr,
+            IMAGE_FLAGS_NONE
+        );
+
+        HYPERION_ASSERT_RESULT(m_images[i]->Create(std::move(gpu_image_memory)));
+    }
 }
 
 Result Swapchain<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, const VkSurfaceKHR &surface)
@@ -157,6 +181,8 @@ Result Swapchain<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, con
 
 Result Swapchain<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
+    SafeRelease(std::move(m_images));
+
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
     vkDestroySwapchainKHR(device->GetDevice(), this->swapchain, nullptr);

@@ -52,13 +52,13 @@ public:
     {
         friend class DeferredSystem;
 
-        Bucket                                  bucket { BUCKET_OPAQUE };
-        Handle<Framebuffer>                     framebuffer;
-        Array<std::unique_ptr<Attachment>>      attachments;
-        Array<Handle<RenderGroup>>              renderer_instances;
-        Array<Handle<RenderGroup>>              renderer_instances_pending_addition;
-        AtomicVar<bool>                         renderer_instances_changed;
-        std::mutex                              renderer_instances_mutex;
+        Bucket                      bucket { BUCKET_OPAQUE };
+        Handle<Framebuffer>         framebuffer;
+        Array<AttachmentRef>        attachments;
+        Array<Handle<RenderGroup>>  renderer_instances;
+        Array<Handle<RenderGroup>>  renderer_instances_pending_addition;
+        AtomicVar<bool>             renderer_instances_changed;
+        std::mutex                  renderer_instances_mutex;
 
     public:
         RenderGroupHolder();
@@ -77,7 +77,7 @@ public:
         Array<Handle<RenderGroup>> &GetRenderGroups() { return renderer_instances; }
         const Array<Handle<RenderGroup>> &GetRenderGroups() const { return renderer_instances; }
 
-        AttachmentUsage *GetGBufferAttachment(GBufferResourceName resource_name) const
+        const AttachmentUsageRef &GetGBufferAttachment(GBufferResourceName resource_name) const
         {
             AssertThrow(framebuffer.IsValid());
             AssertThrow(uint(resource_name) < uint(GBUFFER_RESOURCE_MAX));

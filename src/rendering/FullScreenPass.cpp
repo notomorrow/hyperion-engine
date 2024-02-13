@@ -145,29 +145,26 @@ void FullScreenPass::CreateFramebuffer()
         renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
-    renderer::AttachmentUsage *attachment_usage;
-
-    m_attachments.PushBack(MakeRenderObject<renderer::Attachment>(
+    AttachmentRef attachment = MakeRenderObject<renderer::Attachment>(
         MakeRenderObject<Image>(renderer::FramebufferImage2D(
             m_extent,
             m_image_format,
             nullptr
         )),
         renderer::RenderPassStage::SHADER
-    ));
+    );
 
-    HYPERION_ASSERT_RESULT(m_attachments.Back()->AddAttachmentUsage(
-        g_engine->GetGPUInstance()->GetDevice(),
+    DeferCreate(attachment, g_engine->GetGPUInstance()->GetDevice());
+    m_attachments.PushBack(attachment);
+
+    auto attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+        attachment,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
+        renderer::StoreOperation::STORE
+    );
 
+    DeferCreate(attachment_usage, g_engine->GetGPUInstance()->GetDevice());
     m_framebuffer->AddAttachmentUsage(attachment_usage);
-
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(g_engine->GetGPUInstance()->GetDevice()));
-    }
     
     InitObject(m_framebuffer);
 }
@@ -213,7 +210,6 @@ void FullScreenPass::CreateDescriptors()
 
 void FullScreenPass::Destroy()
 {
-    // TODO: Move all attachment ops into render thread
     for (auto &attachment : m_attachments) {
         m_framebuffer->RemoveAttachmentUsage(attachment);
     }

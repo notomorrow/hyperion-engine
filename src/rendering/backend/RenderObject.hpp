@@ -21,6 +21,16 @@
 namespace hyperion {
 namespace renderer {
 
+namespace platform {
+
+template <PlatformType PLATFORM>
+class RenderObject
+{
+protected:
+};
+
+} // namespace platform
+
 template <class T, PlatformType PLATFORM>
 struct RenderObjectDefinition;
 
@@ -636,7 +646,9 @@ static inline void DeferCreate(RefType ref, Args &&... args)
         {
         }
 
-        virtual renderer::Result operator()()
+        virtual ~RENDER_COMMAND(CreateRenderObject)() override = default;
+
+        virtual renderer::Result operator()() override
         {
             return std::apply([this]<class ...OtherArgs>(OtherArgs &&... args)
             {
@@ -667,8 +679,6 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 #endif
 
 DEF_RENDER_OBJECT(DescriptorSet,       4096);
-DEF_RENDER_OBJECT(Attachment,          4096);
-DEF_RENDER_OBJECT(AttachmentUsage,     8192);
 
 DEF_RENDER_PLATFORM_OBJECT(Device,                                          1);
 DEF_RENDER_PLATFORM_OBJECT(Image,                                           16384);
@@ -685,6 +695,8 @@ DEF_RENDER_PLATFORM_OBJECT(ShaderProgram,                                   2048
 DEF_RENDER_PLATFORM_OBJECT(AccelerationGeometry,                            8192);
 DEF_RENDER_PLATFORM_OBJECT(Fence,                                           16);
 DEF_RENDER_PLATFORM_OBJECT(Frame,                                           16);
+DEF_RENDER_PLATFORM_OBJECT(Attachment,                                      4096);
+DEF_RENDER_PLATFORM_OBJECT(AttachmentUsage,                                 8192);
 DEF_RENDER_PLATFORM_OBJECT(DescriptorSet2,                                  4096);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(BLAS, BottomLevelAccelerationStructure,    65536);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(TLAS, TopLevelAccelerationStructure,       16);
@@ -704,6 +716,8 @@ DEF_CURRENT_PLATFORM_RENDER_OBJECT(ShaderProgram);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(AccelerationGeometry);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(Fence);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(Frame);
+DEF_CURRENT_PLATFORM_RENDER_OBJECT(Attachment);
+DEF_CURRENT_PLATFORM_RENDER_OBJECT(AttachmentUsage);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorSet2);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(BLAS);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(TLAS);
@@ -910,5 +924,7 @@ static inline void SafeRelease(FixedArray<renderer::RenderObjectHandle_Strong<T,
 }
 
 } // namespace hyperion
+
+#define RENDER_OBJECT(CLASS, PLATFORM) CLASS : public platform::RenderObject<PLATFORM>
 
 #endif

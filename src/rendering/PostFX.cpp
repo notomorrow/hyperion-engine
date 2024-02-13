@@ -58,12 +58,12 @@ void PostFXPass::CreateDescriptors()
             DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
             auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(m_descriptor_key);
 
-            AssertThrowMsg(m_framebuffer->GetAttachmentUsages().Size() == 1, "> 1 attachments not supported currently for full screen passes");
+            AssertThrowMsg(m_framebuffer->GetAttachmentUsages().Size() == 1, "Only one attachment allowed for post processing passes");
 
-            for (const auto *attachment_usage : m_framebuffer->GetAttachmentUsages()) {
+            for (const AttachmentUsageRef &attachment_usage : m_framebuffer->GetAttachmentUsages()) {
                 m_sub_descriptor_index = descriptor->SetSubDescriptor({
-                    .element_index = m_sub_descriptor_index,
-                    .image_view = attachment_usage->GetImageView()
+                    .element_index  = m_sub_descriptor_index,
+                    .image_view     = attachment_usage->GetImageView()
                 });
             }
         }

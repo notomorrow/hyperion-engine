@@ -80,17 +80,7 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : renderer::RenderCommand
     {
         auto result = Result::OK;
 
-        if (env_probe.m_framebuffer != nullptr) {
-            for (auto &attachment : env_probe.m_attachments) {
-                env_probe.m_framebuffer->RemoveAttachmentUsage(attachment.get());
-            }
-        }
-
-        for (auto &attachment : env_probe.m_attachments) {
-            HYPERION_PASS_ERRORS(attachment->Destroy(g_engine->GetGPUInstance()->GetDevice()), result);
-        }
-
-        env_probe.m_attachments.clear();
+        // empty
 
         return result;
     }

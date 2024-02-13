@@ -42,17 +42,21 @@ public:
     Result Destroy(Device<Platform::VULKAN> *device);
 
     SizeType NumImages() const
-        { return images.Size(); }
+        { return m_images.Size(); }
 
-    VkSwapchainKHR          swapchain;
-    Extent2D                extent;
-    VkSurfaceFormatKHR      surface_format;
-    InternalFormat          image_format;
-    Array<PlatformImage>    images;
+    const Array<ImageRef<Platform::VULKAN>> &GetImages() const
+        { return m_images; }
+
+    VkSwapchainKHR                      swapchain;
+    Extent2D                            extent;
+    VkSurfaceFormatKHR                  surface_format;
+    InternalFormat                      image_format;
 
 private:
-    SwapchainSupportDetails support_details;
-    VkPresentModeKHR        present_mode;
+    Array<ImageRef<Platform::VULKAN>>   m_images;
+
+    SwapchainSupportDetails             support_details;
+    VkPresentModeKHR                    present_mode;
 };
 
 } // namespace platform

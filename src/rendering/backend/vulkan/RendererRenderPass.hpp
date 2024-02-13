@@ -51,33 +51,8 @@ public:
     uint NumMultiviewLayers() const
         { return m_num_multiview_layers; }
 
-    void AddAttachmentUsage(AttachmentUsage *attachment_usage)
-    {
-        attachment_usage->IncRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-
-        m_render_pass_attachment_usages.PushBack(attachment_usage);
-    }
-
-    bool RemoveAttachmentUsage(const Attachment *attachment)
-    {
-        const auto it = std::find_if(
-            m_render_pass_attachment_usages.Begin(),
-            m_render_pass_attachment_usages.End(),
-            [attachment](const AttachmentUsage *item) {
-                return item->GetAttachment() == attachment;
-            }
-        );
-
-        if (it == m_render_pass_attachment_usages.End()) {
-            return false;
-        }
-
-        (*it)->DecRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-
-        m_render_pass_attachment_usages.Erase(it);
-
-        return true;
-    }
+    void AddAttachmentUsage(AttachmentUsageRef<Platform::VULKAN> attachment_usage);
+    bool RemoveAttachmentUsage(const AttachmentRef<Platform::VULKAN> &attachment);
 
     auto &GetAttachmentUsages() { return m_render_pass_attachment_usages; }
     const auto &GetAttachmentUsages() const { return m_render_pass_attachment_usages; }
@@ -96,16 +71,16 @@ private:
     void AddDependency(const VkSubpassDependency &dependency)
         { m_dependencies.PushBack(dependency); }
 
-    RenderPassStage                     m_stage;
-    RenderPassMode                      m_mode;
-    uint                                m_num_multiview_layers;
+    RenderPassStage                             m_stage;
+    RenderPassMode                              m_mode;
+    uint                                        m_num_multiview_layers;
 
-    Array<AttachmentUsage *>            m_render_pass_attachment_usages;
+    Array<AttachmentUsageRef<Platform::VULKAN>> m_render_pass_attachment_usages;
 
-    Array<VkSubpassDependency>          m_dependencies;
-    Array<VkClearValue>                 m_clear_values;
+    Array<VkSubpassDependency>                  m_dependencies;
+    Array<VkClearValue>                         m_clear_values;
 
-    VkRenderPass                        m_handle;
+    VkRenderPass                                m_handle;
 };
 
 } // namespace platform

@@ -11,18 +11,17 @@ using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
 
 DepthPyramidRenderer::DepthPyramidRenderer()
-    : m_depth_attachment_usage(nullptr),
-      m_is_rendered(false)
+    : m_is_rendered(false)
 {
 }
 
 DepthPyramidRenderer::~DepthPyramidRenderer() = default;
 
-void DepthPyramidRenderer::Create(const AttachmentUsage *depth_attachment_usage)
+void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 {
     AssertThrow(m_depth_attachment_usage == nullptr);
     // AssertThrow(depth_attachment_usage->IsDepthAttachment());
-    m_depth_attachment_usage = depth_attachment_usage->IncRef(HYP_ATTACHMENT_USAGE_INSTANCE);
+    m_depth_attachment_usage = std::move(depth_attachment_usage);
 
     m_depth_pyramid_sampler = MakeRenderObject<renderer::Sampler>(
         FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,
@@ -87,7 +86,7 @@ void DepthPyramidRenderer::Create(const AttachmentUsage *depth_attachment_usage)
 
             if (mip_level == 0) {
                 // first mip level -- input is the actual depth image
-                depth_pyramid_in->SetElementSRV(0, depth_attachment_usage->GetImageView());
+                depth_pyramid_in->SetElementSRV(0, m_depth_attachment_usage->GetImageView());
             } else {
                 depth_pyramid_in->SetElementSRV(0, m_depth_pyramid_mips[mip_level - 1]);
             }
@@ -129,10 +128,7 @@ void DepthPyramidRenderer::Destroy()
 
     SafeRelease(std::move(m_depth_pyramid_sampler));
 
-    if (m_depth_attachment_usage != nullptr) {
-        m_depth_attachment_usage->DecRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-        m_depth_attachment_usage = nullptr;
-    }
+    SafeRelease(std::move(m_depth_attachment_usage));
 
     m_is_rendered = false;
 }
