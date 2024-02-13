@@ -431,23 +431,8 @@ void Node::SetEntity(ID<Entity> entity)
         return;
     }
 
-    if (m_entity.IsValid()) {
-        if (m_scene != nullptr) {
-            // m_scene->RemoveEntityInternal(m_entity);
-        }
-
-        // m_entity->SetIsAttachedToNode(this, false);
-    }
-
     if (entity.IsValid()) {
         m_entity = entity;
-        // InitObject(m_entity);
-
-        if (m_scene != nullptr) {
-            // m_scene->AddEntityInternal(Handle<Entity>(m_entity));
-        }
-
-        // m_entity->SetIsAttachedToNode(this, true);
 
         if (auto *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
             SetWorldTransform(transform_component->transform);
@@ -460,8 +445,6 @@ void Node::SetEntity(ID<Entity> entity)
         }
 
         RefreshEntityTransform();
-
-        // m_local_aabb = m_entity->GetLocalAABB();
     } else {
         m_local_aabb = BoundingBox::empty;
 

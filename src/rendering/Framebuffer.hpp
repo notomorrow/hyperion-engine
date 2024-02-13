@@ -21,10 +21,10 @@ using renderer::StoreOperation;
 
 struct AttachmentDef
 {
-    AttachmentRef attachment;
-    AttachmentUsageRef attachment_usage;
-    LoadOperation load_op;
-    StoreOperation store_op;
+    AttachmentRef       attachment;
+    AttachmentUsageRef  attachment_usage;
+    LoadOperation       load_op;
+    StoreOperation      store_op;
 };
 
 struct AttachmentMap
@@ -112,8 +112,8 @@ public:
         );
     }
 
-    void AddAttachmentUsage(AttachmentUsage *attachment);
-    void RemoveAttachmentUsage(const Attachment *attachment);
+    void AddAttachmentUsage(AttachmentUsageRef attachment);
+    void RemoveAttachmentUsage(const AttachmentRef &attachment);
 
     const RC<AttachmentMap> &GetAttachmentMap() const
         { return m_attachment_map; }

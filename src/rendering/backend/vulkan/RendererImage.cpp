@@ -47,7 +47,6 @@ Image<Platform::VULKAN>::Image(
     m_type(type),
     m_filter_mode(filter_mode),
     m_internal_info(internal_info),
-    m_image(nullptr),
     m_is_blended(false),
     m_is_rw_texture(false),
     m_is_attachment_texture(false),
@@ -68,14 +67,13 @@ Image<Platform::VULKAN>::Image(Image &&other) noexcept
       m_is_blended(other.m_is_blended),
       m_is_rw_texture(other.m_is_rw_texture),
       m_is_attachment_texture(other.m_is_attachment_texture),
-      m_image(other.m_image),
+      m_image(std::move(other.m_image)),
       m_size(other.m_size),
       m_bpp(other.m_bpp),
       m_streamed_data(std::move(other.m_streamed_data)),
       m_num_layers(other.m_num_layers),
       m_flags(other.m_flags)
 {
-    other.m_image = nullptr;
     other.m_is_blended = false;
     other.m_is_rw_texture = false;
     other.m_is_attachment_texture = false;
@@ -95,14 +93,13 @@ Image<Platform::VULKAN> &Image<Platform::VULKAN>::operator=(Image &&other) noexc
     m_is_blended = other.m_is_blended;
     m_is_rw_texture = other.m_is_rw_texture;
     m_is_attachment_texture = other.m_is_attachment_texture;
-    m_image = other.m_image;
+    m_image = std::move(other.m_image);
     m_size = other.m_size;
     m_bpp = other.m_bpp;
     m_streamed_data = std::move(other.m_streamed_data);
     m_num_layers = other.m_num_layers;
     m_flags = other.m_flags;
 
-    other.m_image = nullptr;
     other.m_is_blended = false;
     other.m_is_rw_texture = false;
     other.m_is_attachment_texture = false;
@@ -116,7 +113,7 @@ Image<Platform::VULKAN> &Image<Platform::VULKAN>::operator=(Image &&other) noexc
 
 Image<Platform::VULKAN>::~Image()
 {
-    AssertExit(m_image == nullptr);
+    AssertThrow(m_image == nullptr);
 }
 
 bool Image<Platform::VULKAN>::IsDepthStencil() const
@@ -309,11 +306,23 @@ Result Image<Platform::VULKAN>::CreateImage(
 
     *out_image_info = image_info;
 
-    m_image = new GPUImageMemory<Platform::VULKAN>();
+    m_image.Reset(new GPUImageMemory<Platform::VULKAN>());
 
     HYPERION_BUBBLE_ERRORS(m_image->Create(device, m_size, &image_info));
 
     HYPERION_RETURN_OK;
+}
+
+
+Result Image<Platform::VULKAN>::Create(UniquePtr<GPUImageMemory<Platform::VULKAN>> &&gpu_image_memory)
+{
+    AssertThrow(gpu_image_memory != nullptr);
+
+    AssertThrowMsg(m_image == nullptr, "Image already set, call Destroy() first");
+
+    m_image = std::move(gpu_image_memory);
+
+    return Result::OK;
 }
 
 Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
@@ -384,9 +393,9 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
         for (uint i = 0; i < num_faces; i++) {
             commands.Push([this, &staging_buffer, &image_info, i, buffer_offset_step](const CommandBufferRef_VULKAN &command_buffer)
             {
-                volatile uint buffer_size = staging_buffer.size;
-                volatile uint buffer_offset_step_ = buffer_offset_step;
-                volatile uint total_size = m_size;
+                const uint buffer_size = staging_buffer.size;
+                const uint buffer_offset_step_ = buffer_offset_step;
+                const uint total_size = m_size;
 
                 VkBufferImageCopy region { };
                 region.bufferOffset = i * buffer_offset_step;
@@ -462,8 +471,7 @@ Result Image<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
     if (m_image != nullptr) {
         HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
 
-        delete m_image;
-        m_image = nullptr;
+        m_image.Reset();
     }
 
     if (m_streamed_data) {

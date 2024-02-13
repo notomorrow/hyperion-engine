@@ -22,7 +22,7 @@ const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_
 static void AddOwnedAttachment(
     InternalFormat format,
     Handle<Framebuffer> &framebuffer,
-    Array<std::unique_ptr<Attachment>> &attachments,
+    Array<AttachmentRef> &attachments,
     Extent2D extent = Extent2D { 0, 0 }
 )
 {
@@ -30,34 +30,34 @@ static void AddOwnedAttachment(
         extent = g_engine->GetGPUInstance()->GetSwapchain()->extent;
     }
 
-    AttachmentUsage *attachment_usage;
-
-    attachments.PushBack(std::make_unique<renderer::Attachment>(
+    auto attachment = MakeRenderObject<renderer::Attachment>(
         MakeRenderObject<Image>(renderer::FramebufferImage2D(
             extent,
             format,
             nullptr
         )),
         RenderPassStage::SHADER
-    ));
+    );
 
-    HYPERION_ASSERT_RESULT(attachments.Back()->AddAttachmentUsage(
-        g_engine->GetGPUInstance()->GetDevice(),
+    HYPERION_ASSERT_RESULT(attachment->Create(g_engine->GetGPUInstance()->GetDevice()));
+    attachments.PushBack(attachment);
+
+    auto attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+        attachment,
         renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
+        renderer::StoreOperation::STORE
+    );
 
     // ALLOW alpha blending if a pipeline uses it, not neccessarily enabling it.
     attachment_usage->SetAllowBlending(true);
-
-    framebuffer->AddAttachmentUsage(attachment_usage);
+    HYPERION_ASSERT_RESULT(attachment_usage->Create(g_engine->GetGPUInstance()->GetDevice()));
+    framebuffer->AddAttachmentUsage(std::move(attachment_usage));
 }
 
 static void AddSharedAttachment(
     uint attachment_index,
     Handle<Framebuffer> &framebuffer,
-    Array<std::unique_ptr<Attachment>> &attachments
+    Array<AttachmentRef> &attachments
 )
 {
     auto &opaque_fbo = g_engine->GetDeferredSystem()[BUCKET_OPAQUE].GetFramebuffer();
@@ -65,21 +65,17 @@ static void AddSharedAttachment(
 
     AssertThrow(attachment_index < opaque_fbo->GetAttachmentUsages().Size());
 
-    renderer::AttachmentUsage *attachment_usage;
-
-    HYPERION_ASSERT_RESULT(opaque_fbo->GetAttachmentUsages()[attachment_index]->AddAttachmentUsage(
-        g_engine->GetGPUInstance()->GetDevice(),
-        renderer::StoreOperation::STORE,
-        &attachment_usage
-    ));
+    auto attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+        opaque_fbo->GetAttachmentUsages()[attachment_index]->GetAttachment(),
+        renderer::LoadOperation::LOAD,
+        renderer::StoreOperation::STORE
+    );
 
     attachment_usage->SetBinding(attachment_index);
+    attachment_usage->SetAllowBlending(false);
+    HYPERION_ASSERT_RESULT(attachment_usage->Create(g_engine->GetGPUInstance()->GetDevice()));
 
-    // if (attachment_index == 5) {//opaque_fbo->GetAttachmentUsages().at(attachment_index)->IsDepthAttachment()) {
-        attachment_usage->SetAllowBlending(false);
-    // }
-
-    framebuffer->AddAttachmentUsage(attachment_usage);
+    framebuffer->AddAttachmentUsage(std::move(attachment_usage));
 }
 
 static InternalFormat GetImageFormat(GBufferResourceName resource)
@@ -273,17 +269,11 @@ void DeferredSystem::RenderGroupHolder::CreateFramebuffer()
         }
     }
 
-    for (const auto &attachment : attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(g_engine->GetGPUInstance()->GetDevice()));
-    }
-
     InitObject(framebuffer);
 }
 
 void DeferredSystem::RenderGroupHolder::Destroy()
 {
-    auto result = renderer::Result::OK;
-
     renderer_instances.Clear();
 
     renderer_instances_mutex.lock();
@@ -292,14 +282,9 @@ void DeferredSystem::RenderGroupHolder::Destroy()
 
     framebuffer.Reset();
 
-    for (const auto &attachment : attachments) {
-        HYPERION_PASS_ERRORS(
-            attachment->Destroy(g_engine->GetGPUInstance()->GetDevice()),
-            result
-        );
+    for (AttachmentRef &attachment : attachments) {
+        SafeRelease(std::move(attachment));
     }
-
-    HYPERION_ASSERT_RESULT(result);
 }
 
 } // namespace hyperion::v2

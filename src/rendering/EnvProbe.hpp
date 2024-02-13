@@ -256,7 +256,6 @@ private:
 
     Handle<Texture>                                     m_texture;
     Handle<Framebuffer>                                 m_framebuffer;
-    std::vector<std::unique_ptr<Attachment>>            m_attachments;
     Handle<Shader>                                      m_shader;
     Handle<Camera>                                      m_camera;
     RenderList                                          m_render_list;

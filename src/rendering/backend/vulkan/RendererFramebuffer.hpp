@@ -9,9 +9,6 @@
 
 #include <Types.hpp>
 
-#include <memory>
-#include <vector>
-
 namespace hyperion {
 namespace renderer {
 namespace platform {
@@ -22,8 +19,8 @@ class FramebufferObject<Platform::VULKAN>
 public:
     FramebufferObject(Extent2D extent);
     FramebufferObject(Extent3D extent);
-    FramebufferObject(const FramebufferObject &other) = delete;
-    FramebufferObject &operator=(const FramebufferObject &other) = delete;
+    FramebufferObject(const FramebufferObject &other)               = delete;
+    FramebufferObject &operator=(const FramebufferObject &other)    = delete;
     ~FramebufferObject();
 
     VkFramebuffer GetHandle() const { return m_handle; }
@@ -31,21 +28,21 @@ public:
     Result Create(Device<Platform::VULKAN> *device, RenderPass<Platform::VULKAN> *render_pass);
     Result Destroy(Device<Platform::VULKAN> *device);
 
-    void AddAttachmentUsage(AttachmentUsage *attachment_usage);
-    bool RemoveAttachmentUsage(const Attachment *attachment);
+    void AddAttachmentUsage(AttachmentUsageRef<Platform::VULKAN> attachment_usage);
+    bool RemoveAttachmentUsage(const AttachmentRef<Platform::VULKAN> &attachment);
 
-    auto &GetAttachmentUsages() { return m_attachment_usages; }
-    const auto &GetAttachmentUsages() const { return m_attachment_usages; }
+    const Array<AttachmentUsageRef<Platform::VULKAN>> &GetAttachmentUsages() const
+        { return m_attachment_usages; }
 
     uint GetWidth() const { return m_extent.width; }
     uint GetHeight() const { return m_extent.height; }
 
 private:
-    Extent3D m_extent;
+    Extent3D                                    m_extent;
 
-    std::vector<AttachmentUsage *> m_attachment_usages;
+    Array<AttachmentUsageRef<Platform::VULKAN>> m_attachment_usages;
 
-    VkFramebuffer m_handle;
+    VkFramebuffer                               m_handle;
 };
 
 } // namespace platform

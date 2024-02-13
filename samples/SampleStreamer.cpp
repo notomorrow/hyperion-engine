@@ -379,7 +379,7 @@ void SampleStreamer::InitGame()
         });
 
         m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
-            .radius = 12.0f,
+            .radius = 15.0f,
             .resolution = { 2048, 2048 }
         });
 
@@ -455,7 +455,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");///living_room/living_room.obj");//sponza/sponza.obj");
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");///living_room/living_room.obj");
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -560,8 +560,8 @@ void SampleStreamer::InitGame()
 
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            node.Scale(3.0f);
-            //node.Scale(0.0125f);
+            // node.Scale(3.0f);
+            node.Scale(0.0125f);
             node.SetName("test_model");
             
             GetScene()->GetRoot().AddChild(node);
@@ -812,7 +812,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 
         const Quaternion rotation = Quaternion::LookAt(camera_direction, Vector3::UnitY());
 
-        Vec3f gun_offset = Vec3f(-0.18f, -0.2f, -0.3f);
+        Vec3f gun_offset = Vec3f(-0.18f, -0.3f, -0.3f);
         gun_node.SetLocalTranslation(camera_position + (camera_direction) + (Quaternion(rotation).Invert() * gun_offset));
         gun_node.SetLocalRotation(rotation);
     }

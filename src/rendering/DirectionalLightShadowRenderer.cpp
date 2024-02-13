@@ -210,51 +210,50 @@ void ShadowPass::CreateFramebuffer()
         renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
-    AttachmentUsage *attachment_usage;
-
     { // depth, depth^2 texture (for variance shadow map)
-        m_attachments.PushBack(MakeRenderObject<renderer::Attachment>(
+        auto attachment = MakeRenderObject<renderer::Attachment>(
             MakeRenderObject<Image>(renderer::FramebufferImage2D(
                 m_resolution,
                 InternalFormat::RG32F,
                 FilterMode::TEXTURE_FILTER_NEAREST
             )),
             RenderPassStage::SHADER
-        ));
+        );
 
-        HYPERION_ASSERT_RESULT(m_attachments.Back()->AddAttachmentUsage(
-            g_engine->GetGPUInstance()->GetDevice(),
+        DeferCreate(attachment, g_engine->GetGPUInstance()->GetDevice());
+        m_attachments.PushBack(attachment);
+
+        auto attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+            attachment,
             renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &attachment_usage
-        ));
+            renderer::StoreOperation::STORE
+        );
 
-        m_framebuffer->AddAttachmentUsage(attachment_usage);
+        DeferCreate(attachment_usage, g_engine->GetGPUInstance()->GetDevice());
+        m_framebuffer->AddAttachmentUsage(std::move(attachment_usage));
     }
 
     { // standard depth texture
-        m_attachments.PushBack(MakeRenderObject<renderer::Attachment>(
+        auto attachment = MakeRenderObject<renderer::Attachment>(
             MakeRenderObject<Image>(renderer::FramebufferImage2D(
                 m_resolution,
                 g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
             )),
             RenderPassStage::SHADER
-        ));
+        );
 
-        HYPERION_ASSERT_RESULT(m_attachments.Back()->AddAttachmentUsage(
-            g_engine->GetGPUInstance()->GetDevice(),
+        DeferCreate(attachment, g_engine->GetGPUInstance()->GetDevice());
+        m_attachments.PushBack(attachment);
+
+        auto attachment_usage = MakeRenderObject<renderer::AttachmentUsage>(
+            attachment,
             renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &attachment_usage
-        ));
+            renderer::StoreOperation::STORE
+        );
 
-        m_framebuffer->AddAttachmentUsage(attachment_usage);
-    }
-
-    // should be created in render thread
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(g_engine->GetGPUInstance()->GetDevice()));
+        DeferCreate(attachment_usage, g_engine->GetGPUInstance()->GetDevice());
+        m_framebuffer->AddAttachmentUsage(std::move(attachment_usage));
     }
 
     InitObject(m_framebuffer);

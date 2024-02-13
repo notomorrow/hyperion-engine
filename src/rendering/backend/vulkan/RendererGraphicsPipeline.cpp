@@ -235,7 +235,7 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
     Array<VkPipelineColorBlendAttachmentState> color_blend_attachments;
     color_blend_attachments.Reserve(m_construction_info.render_pass->GetAttachmentUsages().Size());
 
-    for (const auto *attachment_usage : m_construction_info.render_pass->GetAttachmentUsages()) {
+    for (const AttachmentUsageRef<Platform::VULKAN> &attachment_usage : m_construction_info.render_pass->GetAttachmentUsages()) {
         if (attachment_usage->IsDepthAttachment()) {
             continue;
         }

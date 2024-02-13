@@ -508,7 +508,7 @@ void DeferredRenderer::Create()
         m_translucent_fbo = g_engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffer();
     }
     
-    const auto *depth_attachment_usage = g_engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffer()->GetAttachmentUsages().Back();
+    const AttachmentUsageRef &depth_attachment_usage = g_engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffer()->GetAttachmentUsages().Back();
     AssertThrow(depth_attachment_usage != nullptr);
 
     m_dpr.Create(depth_attachment_usage);
@@ -572,7 +572,7 @@ void DeferredRenderer::CreateDescriptorSets()
         }
 
         // depth attachment goes into separate slot
-        auto *depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
+        const AttachmentUsageRef &depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
 
         /* Depth texture */
         descriptor_set_globals

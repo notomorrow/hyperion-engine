@@ -71,6 +71,29 @@ void RenderPass<Platform::VULKAN>::CreateDependencies()
     }
 }
 
+void RenderPass<Platform::VULKAN>::AddAttachmentUsage(AttachmentUsageRef<Platform::VULKAN> attachment_usage)
+{
+    m_render_pass_attachment_usages.PushBack(std::move(attachment_usage));
+}
+
+bool RenderPass<Platform::VULKAN>::RemoveAttachmentUsage(const AttachmentRef<Platform::VULKAN> &attachment)
+{
+    const auto it = m_render_pass_attachment_usages.FindIf([&attachment](const AttachmentUsageRef<Platform::VULKAN> &item)
+    {
+        return item->GetAttachment() == attachment;
+    });
+
+    if (it == m_render_pass_attachment_usages.End()) {
+        return false;
+    }
+
+    SafeRelease(std::move(*it));
+
+    m_render_pass_attachment_usages.Erase(it);
+
+    return true;
+}
+
 Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     CreateDependencies();
@@ -87,7 +110,7 @@ Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 
     uint next_binding = 0;
 
-    for (auto *attachment_usage : m_render_pass_attachment_usages) {
+    for (const AttachmentUsageRef<Platform::VULKAN> &attachment_usage : m_render_pass_attachment_usages) {
         if (!attachment_usage->HasBinding()) { // no binding has manually been set so we make one
             attachment_usage->SetBinding(next_binding);
         }
@@ -156,11 +179,7 @@ Result RenderPass<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
     vkDestroyRenderPass(device->GetDevice(), m_handle, nullptr);
     m_handle = nullptr;
 
-    for (const auto *attachment_usage : m_render_pass_attachment_usages) {
-        attachment_usage->DecRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-    }
-
-    m_render_pass_attachment_usages.Clear();
+    SafeRelease(std::move(m_render_pass_attachment_usages));
 
     return result;
 }

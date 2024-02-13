@@ -28,11 +28,11 @@ FramebufferObject<Platform::VULKAN>::~FramebufferObject()
 Result FramebufferObject<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, RenderPass<Platform::VULKAN> *render_pass)
 {
     Array<VkImageView> attachment_image_views;
-    attachment_image_views.Reserve(m_attachment_usages.size());
+    attachment_image_views.Reserve(m_attachment_usages.Size());
 
     uint num_layers = 1;
     
-    for (auto *attachment_usage : m_attachment_usages) {
+    for (const AttachmentUsageRef<Platform::VULKAN> &attachment_usage : m_attachment_usages) {
         AssertThrow(attachment_usage != nullptr);
         AssertThrow(attachment_usage->GetImageView() != nullptr);
         AssertThrow(attachment_usage->GetImageView()->GetImageView() != nullptr);
@@ -61,40 +61,31 @@ Result FramebufferObject<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *de
 
     vkDestroyFramebuffer(device->GetDevice(), m_handle, nullptr);
     m_handle = VK_NULL_HANDLE;
-    
-    for (auto *attachment_usage : m_attachment_usages) {
-        attachment_usage->DecRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-    }
 
-    m_attachment_usages.clear();
+    SafeRelease(std::move(m_attachment_usages));
 
     return result;
 }
 
-void FramebufferObject<Platform::VULKAN>::AddAttachmentUsage(AttachmentUsage *attachment_usage)
+void FramebufferObject<Platform::VULKAN>::AddAttachmentUsage(AttachmentUsageRef<Platform::VULKAN> attachment_usage)
 {
-    attachment_usage->IncRef(HYP_ATTACHMENT_USAGE_INSTANCE);
-
-    m_attachment_usages.push_back(attachment_usage);
+    m_attachment_usages.PushBack(std::move(attachment_usage));
 }
 
-bool FramebufferObject<Platform::VULKAN>::RemoveAttachmentUsage(const Attachment *attachment)
+bool FramebufferObject<Platform::VULKAN>::RemoveAttachmentUsage(const AttachmentRef<Platform::VULKAN> &attachment)
 {
-    const auto it = std::find_if(
-        m_attachment_usages.begin(),
-        m_attachment_usages.end(),
-        [attachment](const AttachmentUsage *item) {
-            return item->GetAttachment() == attachment;
-        }
-    );
+    const auto it = m_attachment_usages.FindIf([&attachment](const AttachmentUsageRef<Platform::VULKAN> &item)
+    {
+        return item->GetAttachment() == attachment;
+    });
 
-    if (it == m_attachment_usages.end()) {
+    if (it == m_attachment_usages.End()) {
         return false;
     }
 
-    (*it)->DecRef(HYP_ATTACHMENT_USAGE_INSTANCE);
+    SafeRelease(std::move(*it));
 
-    m_attachment_usages.erase(it);
+    m_attachment_usages.Erase(it);
 
     return true;
 }

@@ -39,13 +39,13 @@ public:
     bool IsRendered() const
         { return m_is_rendered; }
 
-    void Create(const AttachmentUsage *depth_attachment_usage);
+    void Create(AttachmentUsageRef depth_attachment_usage);
     void Destroy();
 
     void Render(Frame *frame);
 
 private:
-    const AttachmentUsage                                       *m_depth_attachment_usage;
+    AttachmentUsageRef                                          m_depth_attachment_usage;
 
     ImageRef                                                    m_depth_pyramid;
     ImageViewRef                                                m_depth_pyramid_view;
