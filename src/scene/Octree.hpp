@@ -14,7 +14,7 @@
 
 #include <Types.hpp>
 
-#define HYP_OCTREE_DEBUG 1
+// #define HYP_OCTREE_DEBUG 1
 
 namespace hyperion::v2 {
 
@@ -83,6 +83,34 @@ struct OctantID
         { return depth; }
 
     HYP_FORCE_INLINE
+    bool IsSiblingOf(OctantID other) const
+    {
+        return depth == other.depth && (index_bits & ~(~0ull << (uint64(depth) * 3ull))) == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull)));
+    }
+
+    HYP_FORCE_INLINE
+    bool IsChildOf(OctantID other) const
+    {
+        return depth > other.depth && (index_bits & ~(~0ull << (uint64(other.depth) * 3ull))) == other.index_bits;
+    }
+
+    HYP_FORCE_INLINE
+    bool IsParentOf(OctantID other) const
+    {
+        return depth < other.depth && index_bits == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull)));
+    }
+
+    HYP_FORCE_INLINE
+    OctantID GetParent() const
+    {
+        if (depth == 0) {
+            return OctantID::invalid;
+        }
+
+        return OctantID(index_bits & ~(~0ull << (uint64(depth) * 3ull)), depth - 1);
+    }
+
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -91,6 +119,20 @@ struct OctantID
 
         return hc;
     }
+};
+
+class Octree;
+
+struct OctreeState
+{
+    HashMap<ID<Entity>, Octree *>   node_to_octree;
+    uint8                           visibility_cursor { 0u };
+
+    // If any octants need to be rebuilt, their topmost parent that needs to be rebuilt will be stored here
+    OctantID                        rebuild_state = OctantID::invalid;
+
+    /*! \brief Mark the octant as dirty, meaning it needs to be rebuilt */
+    void MarkOctantDirty(OctantID octant_id);
 };
 
 class Octree
@@ -155,18 +197,8 @@ public:
             hc.Add(id.GetHashCode());
             hc.Add(aabb.GetHashCode());
 
-            // use .GetID() instead of ->GetID(), because they may not be set
-            // hc.Add(entity->GetMesh().GetID().GetHashCode());
-            // hc.Add(entity->GetMaterial().GetID().GetHashCode());
-
             return hc;
         }
-    };
-
-    struct Root
-    {
-        HashMap<ID<Entity>, Octree *>   node_to_octree;
-        std::atomic_uint8_t             visibility_cursor { 0u };
     };
 
     static bool IsVisible(
@@ -233,11 +265,12 @@ public:
     }
         
     void Clear();
-    InsertResult Insert(ID<Entity> id, const BoundingBox &aabb);
-    Result Remove(ID<Entity> id);
-    InsertResult Update(ID<Entity> id, const BoundingBox &aabb);
+    InsertResult Insert(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild);
+    Result Remove(ID<Entity> id, bool allow_rebuild);
+    InsertResult Update(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild);
+    InsertResult Rebuild();
     InsertResult Rebuild(const BoundingBox &new_aabb);
-
+    
     void CollectEntities(Array<ID<Entity>> &out) const;
     void CollectEntitiesInRange(const Vector3 &position, float radius, Array<ID<Entity>> &out) const;
     bool GetNearestOctants(const Vector3 &position, FixedArray<Octree *, 8> &out) const;
@@ -247,7 +280,11 @@ public:
     void NextVisibilityState();
     void CalculateVisibility(Camera *camera);
     uint8 LoadVisibilityCursor() const;
-    uint8 LoadPreviousVisibilityCursor() const;
+
+    void PerformUpdates();
+
+    OctreeState *GetState() const
+        { return m_state; }
 
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
@@ -257,10 +294,13 @@ private:
 
     void ClearInternal(Array<Node> &out_nodes);
     void Clear(Array<Node> &out_nodes);
-    InsertResult Move(ID<Entity> id, const BoundingBox &aabb, const Array<Node>::Iterator *it = nullptr);
+
+    /*! \brief Move the entity to a new octant. If allow_rebuild is true, the octree will be rebuilt if the entity doesn't fit in the new octant,
+        and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
+     */
+    InsertResult Move(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild, const Array<Node>::Iterator *it = nullptr);
 
     void ForceVisibilityStates();
-    void CopyVisibilityState(const VisibilityState &visibility_state);
 
     auto FindNode(ID<Entity> id)
     {
@@ -272,7 +312,6 @@ private:
 
     bool IsRoot() const { return m_parent == nullptr; }
     bool Empty() const { return m_nodes.Empty(); }
-    Root *GetRoot() const { return m_root; }
     
     void SetParent(Octree *parent);
     bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8 octant_mask = 0xff) const;
@@ -281,11 +320,13 @@ private:
     void Divide();
     void Undivide();
 
-    /* Remove any potentially empty octants above the node */
-    void CollapseParents();
+    /*! \brief If \ref{allow_rebuild} is true, removes any potentially empty octants above the node.
+        If \ref{allow_rebuild} is false, marks them as dirty so they get removed on the next call to PerformUpdates()
+    */
+    void CollapseParents(bool allow_rebuild);
     InsertResult InsertInternal(ID<Entity> id, const BoundingBox &aabb);
-    InsertResult UpdateInternal(ID<Entity> id, const BoundingBox &aabb);
-    Result RemoveInternal(ID<Entity> id);
+    InsertResult UpdateInternal(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild);
+    Result RemoveInternal(ID<Entity> id, bool allow_rebuild);
     InsertResult RebuildExtendInternal(const BoundingBox &extend_include_aabb);
     void UpdateVisibilityState(Camera *camera, uint8 cursor);
 
@@ -300,7 +341,7 @@ private:
     BoundingBox             m_aabb;
     FixedArray<Octant, 8>   m_octants;
     bool                    m_is_divided;
-    Root                    *m_root;
+    OctreeState             *m_state;
     VisibilityState         m_visibility_state;
     OctantID                m_octant_id;
 };

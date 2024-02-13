@@ -8,6 +8,12 @@ namespace hyperion::v2 {
 
 void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity_id)
 {
+    DebugLog(
+        LogType::Debug,
+        "VisibilityStateUpdaterSystem::OnEntityAdded(%u)\n",
+        entity_id.Value()
+    );
+
     VisibilityStateComponent &visibility_state_component = entity_manager.GetComponent<VisibilityStateComponent>(entity_id);
     BoundingBoxComponent &bounding_box_component = entity_manager.GetComponent<BoundingBoxComponent>(entity_id);
 
@@ -19,7 +25,8 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
 
     const Octree::InsertResult insert_result = octree.Insert(
         entity_id,
-        bounding_box_component.world_aabb
+        bounding_box_component.world_aabb,
+        false
     );
 
     if (insert_result.first) {
@@ -40,7 +47,7 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager
     if (visibility_state_component.octant_id != OctantID::invalid) {
         Octree &octree = entity_manager.GetScene()->GetOctree();
 
-        const Octree::Result remove_result = octree.Remove(entity_id);
+        const Octree::Result remove_result = octree.Remove(entity_id, false);
 
         if (!remove_result) {
             DebugLog(LogType::Warn, "Failed to remove entity %u from octree: %s\n", entity_id.Value(), remove_result.message);
@@ -60,8 +67,6 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
         bool needs_octree_update = false;
         
         if (visibility_state_component.octant_id == OctantID::invalid) {
-            
-
             needs_octree_update = true;
         }
         
@@ -69,7 +74,7 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
         needs_octree_update |= (aabb_hash_code != visibility_state_component.last_aabb_hash);
 
         if (needs_octree_update) {
-            auto update_result = octree.Update(entity_id, bounding_box_component.world_aabb);
+            auto update_result = octree.Update(entity_id, bounding_box_component.world_aabb, false);
 
             if (!update_result.first) {
                 DebugLog(LogType::Warn, "Failed to update entity %u in octree: %s\n", entity_id.Value(), update_result.first.message);
@@ -91,6 +96,9 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
             visibility_state_component.visibility_state.snapshots[visibility_cursor] = octant_visibility_state.snapshots[visibility_cursor];
         }
     }
+
+    // Rebuild any octants that have had structural changes
+    octree.PerformUpdates();
 }
 
 } // namespace hyperion::v2
