@@ -412,6 +412,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     }
     
     if (m_descriptor_writes.Any()) {
+        AssertThrow(m_set != VK_NULL_HANDLE);
         for (auto &write : m_descriptor_writes) {
             write.dstSet = m_set;
         }
@@ -616,6 +617,7 @@ void DescriptorSet::ApplyUpdates(Device *device)
     }
 
     if (m_descriptor_writes.Any()) {
+        AssertThrow(m_set != VK_NULL_HANDLE);
         for (VkWriteDescriptorSet &write : m_descriptor_writes) {
             write.dstSet = m_set;
         }

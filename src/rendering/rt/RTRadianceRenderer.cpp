@@ -69,27 +69,6 @@ struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateRTRadiancePipeline) : renderer::RenderCommand
-{
-    RaytracingPipelineRef pipeline;
-    ShaderProgramRef shader_program;
-
-    RENDER_COMMAND(CreateRTRadiancePipeline)(const RaytracingPipelineRef &pipeline, const ShaderProgramRef &shader_program)
-        : pipeline(pipeline),
-          shader_program(shader_program)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        return pipeline->Create(
-            g_engine->GetGPUDevice(),
-            shader_program,
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
-        );
-    }
-};
-
 struct RENDER_COMMAND(RemoveRTRadianceDescriptors) : renderer::RenderCommand
 {
     virtual Result operator()()
@@ -431,6 +410,7 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
     }
 
     m_raytracing_pipeline = MakeRenderObject<RaytracingPipeline>(
+        m_shader->GetShaderProgram(),
         Array<DescriptorSetRef> {
             m_descriptor_sets[0],
             g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
@@ -439,10 +419,10 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
     );
 
     g_engine->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](...) {
-        PUSH_RENDER_COMMAND(
-            CreateRTRadiancePipeline,
+        DeferCreate(
             m_raytracing_pipeline,
-            m_shader->GetShaderProgram()
+            g_engine->GetGPUDevice(),
+            &g_engine->GetGPUInstance()->GetDescriptorPool()
         );
     });
 }

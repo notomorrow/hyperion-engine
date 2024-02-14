@@ -130,8 +130,6 @@ void TemporalAA::CreateImages()
         SetTemporalAAResultInGlobalDescriptorSet,
         m_result_texture
     );
-
-    HYP_SYNC_RENDER();
 }
 
 void TemporalAA::CreateComputePipelines()

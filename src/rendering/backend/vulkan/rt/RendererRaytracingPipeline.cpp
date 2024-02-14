@@ -23,9 +23,18 @@ RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline()
 {
 }
 
-RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(
-    const Array<DescriptorSetRef> &used_descriptor_sets
-) : Pipeline(used_descriptor_sets)
+RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program))
+{
+}
+
+RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets)
+{
+}
+
+RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
+    : Pipeline<Platform::VULKAN>(used_descriptor_sets)
 {
 }
 
@@ -33,7 +42,6 @@ RaytracingPipeline<Platform::VULKAN>::~RaytracingPipeline() = default;
 
 Result RaytracingPipeline<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
-    ShaderProgram<Platform::VULKAN> *shader_program,
     DescriptorPool *descriptor_pool
 )
 {
@@ -41,7 +49,7 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
         return {Result::RENDERER_ERR, "Raytracing is not supported on this device"};
     }
 
-    AssertThrow(shader_program != nullptr);
+    AssertThrow(m_shader_program != nullptr);
 
     auto result = Result::OK;
 
@@ -68,7 +76,7 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
         return Result{Result::RENDERER_ERR, "Device max bound descriptor sets exceeded"};
     }
 
-    layout_info.setLayoutCount = static_cast<uint32>(used_layouts.size());
+    layout_info.setLayoutCount = uint32(used_layouts.size());
     layout_info.pSetLayouts = used_layouts.data();
     
     /* Push constants */
@@ -76,11 +84,11 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
         {
             .stageFlags = push_constant_stage_flags,
             .offset     = 0,
-            .size       = static_cast<uint32>(device->GetFeatures().PaddedSize<PushConstantData>())
+            .size       = uint32(device->GetFeatures().PaddedSize<PushConstantData>())
         }
     };
 
-    layout_info.pushConstantRangeCount = static_cast<uint32>(std::size(push_constant_ranges));
+    layout_info.pushConstantRangeCount = uint32(std::size(push_constant_ranges));
     layout_info.pPushConstantRanges = push_constant_ranges;
 
     HYPERION_VK_PASS_ERRORS(
@@ -96,8 +104,8 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
 
     VkRayTracingPipelineCreateInfoKHR pipeline_info{VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
 
-    const auto &stages = shader_program->GetShaderStages();
-    const auto &shader_groups = shader_program->GetShaderGroups();
+    const auto &stages = m_shader_program->GetShaderStages();
+    const auto &shader_groups = m_shader_program->GetShaderGroups();
 
     Array<VkRayTracingShaderGroupCreateInfoKHR> shader_group_create_infos;
     shader_group_create_infos.Resize(shader_groups.Size());
@@ -133,7 +141,7 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
         return result;
     }
 
-    HYPERION_PASS_ERRORS(CreateShaderBindingTables(device, shader_program), result);
+    HYPERION_PASS_ERRORS(CreateShaderBindingTables(device, m_shader_program), result);
     
     if (!result) {
         HYPERION_IGNORE_ERRORS(Destroy(device));

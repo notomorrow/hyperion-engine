@@ -82,10 +82,10 @@ public:
         }
 
         uint16 GetRefCountStrong() const
-            { return ref_count_strong.Get(MemoryOrder::SEQUENTIAL); }
+            { return ref_count_strong.Get(MemoryOrder::ACQUIRE); }
 
         uint16 GetRefCountWeak() const
-            { return ref_count_weak.Get(MemoryOrder::SEQUENTIAL); }
+            { return ref_count_weak.Get(MemoryOrder::ACQUIRE); }
 
         template <class ...Args>
         T *Construct(Args &&... args)
@@ -108,7 +108,7 @@ public:
 
             uint16 count;
 
-            if ((count = ref_count_strong.Decrement(1, MemoryOrder::SEQUENTIAL)) == 1) {
+            if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1) {
                 storage.Destruct();
                 has_value = false;
             }
@@ -123,14 +123,16 @@ public:
         {
             AssertThrow(GetRefCountWeak() != 0);
 
-            const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::SEQUENTIAL);
+            const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
 
             return uint(count) - 1;
         }
 
         HYP_FORCE_INLINE T &Get()
         {
+#ifdef HYP_DEBUG_MODE
             AssertThrowMsg(HasValue(), "Render object of type %s has no value!", GetNameForRenderObject<T, PLATFORM>().LookupString());
+#endif
 
             return storage.Get();
         }
@@ -402,11 +404,13 @@ public:
 
     void SetName(Name name)
     {
+        AssertThrowMsg(index != 0, "Render object is not valid");
         _container->SetDebugName(index - 1, name);
     }
 
     Name GetName() const
     {
+        AssertThrowMsg(index != 0, "Render object is not valid");
         return _container->GetDebugName(index - 1);
     }
 
@@ -664,10 +668,11 @@ static inline void DeferCreate(RefType ref, Args &&... args)
         return;
     }
 
-    if (v2::Threads::IsOnThread(v2::THREAD_RENDER)) {
-        HYPERION_ASSERT_RESULT(ref->Create(std::forward<Args>(args)...));
-        return;
-    }
+    // // If we are already on the render thread, create the object immediately.
+    // if (v2::Threads::IsOnThread(v2::THREAD_RENDER)) {
+    //     HYPERION_ASSERT_RESULT(ref->Create(std::forward<Args>(args)...));
+    //     return;
+    // }
 
     PUSH_RENDER_COMMAND(CreateRenderObject, std::move(ref), std::forward<Args>(args)...);
 }
@@ -907,6 +912,10 @@ AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::queue_index = { 0 };
 template <class T, renderer::PlatformType PLATFORM>
 static inline void SafeRelease(renderer::RenderObjectHandle_Strong<T, PLATFORM> &&handle)
 {
+    if (!handle.IsValid()) {
+        return;
+    }
+
     RenderObjectDeleter<PLATFORM>::template GetQueue<T>().Push(std::move(handle));
 }
 
@@ -914,6 +923,10 @@ template <class T, SizeType Sz, renderer::PlatformType PLATFORM>
 static inline void SafeRelease(Array<renderer::RenderObjectHandle_Strong<T, PLATFORM>, Sz> &&handles)
 {
     for (auto &it : handles) {
+        if (!it.IsValid()) {
+            continue;
+        }
+
         RenderObjectDeleter<PLATFORM>::template GetQueue<T>().Push(std::move(it));
     }
 }
@@ -922,6 +935,10 @@ template <class T, SizeType Sz, renderer::PlatformType PLATFORM>
 static inline void SafeRelease(FixedArray<renderer::RenderObjectHandle_Strong<T, PLATFORM>, Sz> &&handles)
 {
     for (auto &it : handles) {
+        if (!it.IsValid()) {
+            continue;
+        }
+
         RenderObjectDeleter<PLATFORM>::template GetQueue<T>().Push(std::move(it));
     }
 }

@@ -2,38 +2,11 @@
 #include "../Engine.hpp"
 
 namespace hyperion::v2 {
-
-#pragma region Render commands
-
-struct RENDER_COMMAND(CreateComputeShader) : renderer::RenderCommand
-{
-    ComputePipelineRef  pipeline;
-    ShaderProgramRef    shader_program;
-
-    RENDER_COMMAND(CreateComputeShader)(
-        const ComputePipelineRef &pipeline,
-        const ShaderProgramRef &shader_program
-    ) : pipeline(pipeline),
-        shader_program(shader_program)
-    {
-    }
-
-    virtual Result operator()() override
-    {
-        return pipeline->Create(
-            g_engine->GetGPUDevice(),
-            shader_program,
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
-        );
-    }
-};
-
-#pragma endregion
     
 ComputePipeline::ComputePipeline(Handle<Shader> shader)
     : BasicObject(),
       m_shader(std::move(shader)),
-      m_pipeline(MakeRenderObject<renderer::ComputePipeline>())
+      m_pipeline(MakeRenderObject<renderer::ComputePipeline>(m_shader->GetShaderProgram()))
 {
 }
 
@@ -42,7 +15,7 @@ ComputePipeline::ComputePipeline(
     const Array<DescriptorSetRef> &used_descriptor_sets
 ) : BasicObject(),
     m_shader(std::move(shader)),
-    m_pipeline(MakeRenderObject<renderer::ComputePipeline>(used_descriptor_sets))
+    m_pipeline(MakeRenderObject<renderer::ComputePipeline>(m_shader->GetShaderProgram(), used_descriptor_sets))
 {
 }
 
@@ -63,10 +36,10 @@ void ComputePipeline::Init()
     BasicObject::Init();
     
     if (InitObject(m_shader)) {
-        PUSH_RENDER_COMMAND(
-            CreateComputeShader,
+        DeferCreate(
             m_pipeline,
-            m_shader->GetShaderProgram()
+            g_engine->GetGPUDevice(),
+            &g_engine->GetGPUInstance()->GetDescriptorPool()
         );
 
         SetReady(true);

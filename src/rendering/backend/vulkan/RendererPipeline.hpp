@@ -23,6 +23,9 @@ namespace platform {
 template <PlatformType PLATFORM>
 class Device;
 
+template <PlatformType PLATFORM>
+class ShaderProgram;
+
 template <>
 class Pipeline<Platform::VULKAN>
 {
@@ -142,9 +145,15 @@ public:
     static_assert(sizeof(PushConstantData) <= 128);
 
     Pipeline();
+    Pipeline(ShaderProgramRef<Platform::VULKAN> shader);
     /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
         used with this pipeline.  */
     Pipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
+    Pipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
+
+    // new constructor
+    Pipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets);
+
     Pipeline(const Pipeline &other) = delete;
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
@@ -175,11 +184,19 @@ public:
 
 protected:
     void AssignDefaultDescriptorSets(DescriptorPool *descriptor_pool);
+
+    // For DescriptorSet2
+    Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
+
     std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device<Platform::VULKAN> *device, DescriptorPool *descriptor_pool);
 
-    VkPipeline                          pipeline;
-    bool                                m_has_custom_descriptor_sets;
-    Optional<Array<DescriptorSetRef>>   m_used_descriptor_sets;
+    ShaderProgramRef<Platform::VULKAN>                      m_shader_program;
+
+    bool                                                    m_has_custom_descriptor_sets;
+    Optional<Array<DescriptorSetRef>>                       m_used_descriptor_sets { };
+    Optional<Array<DescriptorSet2Ref<Platform::VULKAN>>>    m_used_descriptor_sets2 { };
+
+    VkPipeline                                              pipeline;
 };
 
 } // namespace platform

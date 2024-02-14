@@ -161,8 +161,6 @@ void Engine::Initialize(RC<Application> application)
 {
     Threads::AssertOnThread(THREAD_MAIN);
 
-    renderer::RenderCommands::SetOwnerThreadID(Threads::GetThreadID(THREAD_RENDER));
-
     game_thread.Reset(new GameThread);
 
     m_crash_handler.Initialize();

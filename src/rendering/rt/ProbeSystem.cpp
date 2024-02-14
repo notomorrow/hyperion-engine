@@ -184,27 +184,6 @@ struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridPipeline) : renderer::RenderCommand
-{
-    RaytracingPipelineRef pipeline;
-    ShaderProgramRef shader_program;
-
-    RENDER_COMMAND(CreateProbeGridPipeline)(const RaytracingPipelineRef &pipeline, const ShaderProgramRef &shader_program)
-        : pipeline(pipeline),
-          shader_program(shader_program)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        return pipeline->Create(
-            g_engine->GetGPUDevice(),
-            shader_program.Get(),
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
-        );
-    }
-};
-
 ProbeGrid::ProbeGrid(ProbeGridInfo &&grid_info)
     : m_grid_info(std::move(grid_info)),
       m_updates { PROBE_SYSTEM_UPDATES_NONE, PROBE_SYSTEM_UPDATES_NONE },
@@ -285,6 +264,7 @@ void ProbeGrid::CreatePipeline()
     InitObject(m_shader);
 
     m_pipeline = MakeRenderObject<RaytracingPipeline>(
+        m_shader->GetShaderProgram(),
         Array<DescriptorSetRef> {
             m_descriptor_sets[0],
             g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
@@ -292,10 +272,10 @@ void ProbeGrid::CreatePipeline()
         }
     );
 
-    PUSH_RENDER_COMMAND(
-        CreateProbeGridPipeline,
-        m_pipeline,
-        m_shader->GetShaderProgram()
+    DeferCreate(
+        m_pipeline, 
+        g_engine->GetGPUDevice(),
+        &g_engine->GetGPUInstance()->GetDescriptorPool()
     );
 }
 

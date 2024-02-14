@@ -17,13 +17,15 @@ public:
     {
     }
 
-    Optional(const T &value)
+    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
+    Optional(const Ty &value)
         : m_has_value(true)
     {
         new (&m_storage.data_buffer) T(value);
     }
 
-    Optional &operator=(const T &value)
+    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
+    Optional &operator=(const Ty &value)
     {
         if (m_has_value) {
             Get() = value;
@@ -35,19 +37,21 @@ public:
         return *this;
     }
 
-    Optional(T &&value) noexcept
+    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
+    Optional(Ty &&value) noexcept
         : m_has_value(true)
     {
-        new (&m_storage.data_buffer) T(std::forward<T>(value));
+        new (&m_storage.data_buffer) T(std::forward<Ty>(value));
     }
 
-    Optional &operator=(T &&value) noexcept
+    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
+    Optional &operator=(Ty &&value) noexcept
     {
         if (m_has_value) {
-            Get() = std::forward<T>(value);
+            Get() = std::forward<Ty>(value);
         } else {
             m_has_value = true;
-            new (&m_storage.data_buffer) T(std::forward<T>(value));
+            new (&m_storage.data_buffer) T(std::forward<Ty>(value));
         }
 
         return *this;

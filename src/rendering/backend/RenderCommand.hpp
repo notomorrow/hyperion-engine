@@ -47,7 +47,7 @@ using v2::Threads;
 constexpr SizeType max_render_command_types = 128;
 constexpr SizeType render_command_cache_size_bytes = 1 << 16;
 
-using RenderCommandRewindFunc = void(*)(void *);
+using RenderCommandFunc = void(*)(void * /*ptr */, uint /* buffer_index */);
 
 template <class T>
 struct RenderCommandList
@@ -67,26 +67,29 @@ struct RenderCommandList
 
     // Use a linked list so we can grow the container without invalidating pointers.
     // It's not frequent we'll be using more than just the first node, anyway.
-    LinkedList<Block> blocks;
+
+    // Use array of 2 so we can double buffer it
+    FixedArray<LinkedList<Block>, 2>    blocks;
 
     RenderCommandList()
     {
-        blocks.EmplaceBack();
+        blocks[0].EmplaceBack();
+        blocks[1].EmplaceBack();
     }
 
-    RenderCommandList(const RenderCommandList &other) = delete;
-    RenderCommandList &operator=(const RenderCommandList &other) = delete;
-
-    RenderCommandList(RenderCommandList &&other) noexcept = delete;
-    RenderCommandList &operator=(RenderCommandList &&other) noexcept = delete;
+    RenderCommandList(const RenderCommandList &other)                   = delete;
+    RenderCommandList &operator=(const RenderCommandList &other)        = delete;
+    RenderCommandList(RenderCommandList &&other) noexcept               = delete;
+    RenderCommandList &operator=(RenderCommandList &&other) noexcept    = delete;
 
     ~RenderCommandList() = default;
 
     HYP_FORCE_INLINE
-    void *AllocCommand()
+    void *AllocCommand(uint buffer_index)
     {
         // always guaranteed to have at least 1 block
-        Block *last_block = &blocks.Back();
+        auto &blocks_buffer = blocks[buffer_index];
+        Block *last_block = &blocks_buffer.Back();
 
         if (last_block->IsFull()) {
             DebugLog(
@@ -95,8 +98,8 @@ struct RenderCommandList
                 TypeName<T>().Data()
             );
 
-            blocks.EmplaceBack();
-            last_block = &blocks.Back();
+            blocks_buffer.EmplaceBack();
+            last_block = &blocks_buffer.Back();
         }
 
         const SizeType command_index = last_block->index++;
@@ -105,28 +108,28 @@ struct RenderCommandList
     }
 
     HYP_FORCE_INLINE
-    void Rewind()
+    void Rewind(uint buffer_index)
     {
+        auto &blocks_buffer = blocks[buffer_index];
         // Note: all items must have been destructed,
         // or undefined behavior will occur as the items are not properly destructed
-        while (blocks.Size() - 1) {
-            blocks.PopBack();
+        while (blocks_buffer.Size() - 1) {
+            blocks_buffer.PopBack();
         }
 
-        blocks.Front().index = 0;
+        blocks_buffer.Front().index = 0;
     }
     
-    HYP_FORCE_INLINE
-    static void RewindFunc(void *ptr)
+    static void RewindFunc(void *ptr, uint buffer_index)
     {
-        static_cast<RenderCommandList *>(ptr)->Rewind();
+        static_cast<RenderCommandList *>(ptr)->Rewind(buffer_index);
     }
 };
 
 struct RenderCommand
 {
 #ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
-    const char *_debug_name = "";
+    String _debug_name;
 #endif
 
     virtual ~RenderCommand() = default;
@@ -150,30 +153,19 @@ struct RenderScheduler
 
     std::mutex              m_mutex;
     AtomicVar<SizeType>     m_num_enqueued;
-    std::condition_variable m_flushed_cv;
-    ThreadID                m_owner_thread;
 
-    RenderScheduler()
-        : m_owner_thread(ThreadID::invalid)
-    {
-    }
-
-    ThreadID GetOwnerThreadID() const
-        { return m_owner_thread; }
-
-    void SetOwnerThreadID(ThreadID id)
-        { m_owner_thread = id; }
+    RenderScheduler() = default;
 
     void Commit(RenderCommand *command);
-
-    FlushResult Flush();
+    // FlushResult Flush();
+    void AcceptAll(Array<RenderCommand *> &out_container);
 };
 
 
 struct RenderCommandHolder
 {
-    void *render_command_list_ptr = nullptr;
-    RenderCommandRewindFunc rewind_func = nullptr;
+    void                *render_command_list_ptr = nullptr;
+    RenderCommandFunc   rewind_func = nullptr;
 };
 
 class RenderCommands
@@ -181,13 +173,14 @@ class RenderCommands
 private:
 
     // last item must always have render_command_list_ptr be nullptr
-    static FixedArray<RenderCommandHolder, max_render_command_types> holders;
-    static AtomicVar<SizeType> render_command_type_index;
+    static FixedArray<RenderCommandHolder, max_render_command_types>    holders;
+    static AtomicVar<SizeType>                                          render_command_type_index;
 
-    static std::mutex mtx;
-    static std::condition_variable flushed_cv;
+    static std::mutex                                                   mtx;
+    static std::condition_variable                                      flushed_cv;
+    static uint                                                         buffer_index;
 
-    static RenderScheduler scheduler;
+    static RenderScheduler                                              scheduler;
 
 public:
     template <class T, class ...Args>
@@ -196,7 +189,7 @@ public:
     {
         std::unique_lock lock(mtx);
         
-        void *mem = Alloc<T>();
+        void *mem = Alloc<T>(buffer_index);
         T *ptr = new (mem) T(std::forward<Args>(args)...);
 
 #ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
@@ -208,9 +201,6 @@ public:
         return ptr;
     }
 
-    static void SetOwnerThreadID(ThreadID id)
-        { scheduler.SetOwnerThreadID(id); }
-
     HYP_FORCE_INLINE static SizeType Count()
         { return scheduler.m_num_enqueued.Get(MemoryOrder::ACQUIRE); }
 
@@ -221,11 +211,12 @@ public:
 private:
     template <class T>
     HYP_FORCE_INLINE
-    static void *Alloc()
+    static void *Alloc(uint buffer_index)
     {
         struct Data
         {
-            RenderCommandRewindFunc rewind_func;
+            RenderCommandFunc       rewind_func;
+
             RenderCommandList<T>    command_list;
             SizeType                command_type_index;
 
@@ -247,11 +238,10 @@ private:
                 };
             }
 
-            Data(const Data &other) = delete;
-            Data &operator=(const Data &other) = delete;
-
-            Data(Data &&other) noexcept = delete;
-            Data &operator=(Data &&other) noexcept = delete;
+            Data(const Data &other)                 = delete;
+            Data &operator=(const Data &other)      = delete;
+            Data(Data &&other) noexcept             = delete;
+            Data &operator=(Data &&other) noexcept  = delete;
 
             ~Data()
             {
@@ -264,9 +254,10 @@ private:
 
         static Data data;
 
-        return data.command_list.AllocCommand();
+        return data.command_list.AllocCommand(buffer_index);
     }
 
+    static void SwapBuffers();
     static void Rewind();
 };
 
