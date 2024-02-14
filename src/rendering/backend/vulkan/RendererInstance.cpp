@@ -1,7 +1,3 @@
-//
-// Created by ethan on 2/5/22.
-//
-
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererSemaphore.hpp>
@@ -311,7 +307,7 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
         }
 #endif
 
-        descriptor_pool.AddDescriptorSet(
+        m_device->GetDescriptorPool()->AddDescriptorSet(
             GetDevice(),
             MakeRenderObject<renderer::DescriptorSet, Platform::VULKAN>(
                 slot,
@@ -364,9 +360,6 @@ Result Instance<Platform::VULKAN>::Destroy()
     for (auto &command_pool : queue_compute.command_pools) {
         vkDestroyCommandPool(m_device->GetDevice(), command_pool, nullptr);
     }
-
-    /* Destroy descriptor pool */
-    HYPERION_PASS_ERRORS(descriptor_pool.Destroy(m_device), result);
 
     m_device->DestroyAllocator();
 
@@ -487,7 +480,7 @@ Result Instance<Platform::VULKAN>::InitializeDevice(VkPhysicalDevice physical_de
     };
     
     /* Create a logical device to operate on */
-    HYPERION_BUBBLE_ERRORS(m_device->CreateLogicalDevice(required_queue_family_indices));
+    HYPERION_BUBBLE_ERRORS(m_device->Create(required_queue_family_indices));
 
     /* Get the internal queues from our device */
     this->queue_graphics = {

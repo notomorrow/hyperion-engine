@@ -581,19 +581,18 @@ struct DescriptorUsage
 {
     renderer::DescriptorSlot    slot;
     Name                        set_name;
-    Name                        descriptor_name;
+    String                      descriptor_name;
     DescriptorUsageFlags        flags;
     HashMap<String, String>     params;
 
     DescriptorUsage()
         : slot(renderer::DESCRIPTOR_SLOT_NONE),
           set_name(Name::invalid),
-          descriptor_name(Name::invalid),
           flags(DESCRIPTOR_USAGE_FLAG_NONE)
     {
     }
 
-    DescriptorUsage(renderer::DescriptorSlot slot, Name set_name, Name descriptor_name, DescriptorUsageFlags flags = DESCRIPTOR_USAGE_FLAG_NONE, HashMap<String, String> params = { })
+    DescriptorUsage(renderer::DescriptorSlot slot, Name set_name, const String &descriptor_name, DescriptorUsageFlags flags = DESCRIPTOR_USAGE_FLAG_NONE, HashMap<String, String> params = { })
         : slot(slot),
           set_name(set_name),
           descriptor_name(descriptor_name),
@@ -602,11 +601,11 @@ struct DescriptorUsage
     {
     }
 
-    DescriptorUsage(const DescriptorUsage &other) = default;
-    DescriptorUsage &operator=(const DescriptorUsage &other) = default;
-    DescriptorUsage(DescriptorUsage &&other) noexcept = default;
-    DescriptorUsage &operator=(DescriptorUsage &&other) noexcept = default;
-    ~DescriptorUsage() = default;
+    DescriptorUsage(const DescriptorUsage &other)                   = default;
+    DescriptorUsage &operator=(const DescriptorUsage &other)        = default;
+    DescriptorUsage(DescriptorUsage &&other) noexcept               = default;
+    DescriptorUsage &operator=(DescriptorUsage &&other) noexcept    = default;
+    ~DescriptorUsage()                                              = default;
 
     bool operator==(const DescriptorUsage &other) const
     {
@@ -913,7 +912,7 @@ public:
     {
         Name                                    name;
         String                                  entry_point_name = "main";
-        FlatMap<ShaderModuleType, SourceFile> sources;
+        FlatMap<ShaderModuleType, SourceFile>   sources;
         ShaderProperties                        versions; // permutations
         DescriptorUsageSet                      descriptor_usages;
 

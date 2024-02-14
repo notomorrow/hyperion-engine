@@ -25,6 +25,8 @@ constexpr uint max_bound_light_field_probes = max_bound_ambient_probes;
 constexpr uint max_bound_point_shadow_maps = 16;
 constexpr uint max_bound_environment_maps = 1;
 
+constexpr uint max_bindless_resources = 4096;
+
 constexpr uint num_gbuffer_textures = 6;
 
 constexpr bool use_indexed_array_for_object_data = true;

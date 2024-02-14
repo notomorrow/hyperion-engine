@@ -220,7 +220,7 @@ public:
 
         const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
-        AssertThrow(Helper::CopyConstruct(type_id, m_storage.GetPointer(), &value));
+        AssertThrow(Helper::CopyConstruct(type_id, m_storage.GetPointer(), std::addressof(value)));
         m_current_type_id = type_id;
     }
 
@@ -232,7 +232,7 @@ public:
 
         const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
-        AssertThrow(Helper::MoveConstruct(type_id, m_storage.GetPointer(), &value));
+        AssertThrow(Helper::MoveConstruct(type_id, m_storage.GetPointer(), std::addressof(value)));
         m_current_type_id = type_id;
     }
 

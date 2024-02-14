@@ -1203,7 +1203,7 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
             const DescriptorUsage usage {
                 slot,
                 CreateNameFromDynamicString(ANSIString(set_name)),
-                CreateNameFromDynamicString(ANSIString(descriptor_name)),
+                descriptor_name,
                 flags,
                 std::move(params)
             };
@@ -1443,16 +1443,16 @@ bool ShaderCompiler::CompileBundle(
 
     renderer::DescriptorTable descriptor_table = bundle.descriptor_usages.BuildDescriptorTable();
 
+    // Generate descriptor table defines
     for (renderer::DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetDescriptorSetDeclarations()) {
         descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(descriptor_set_declaration.set_index) + "\n";
 
         for (const Array<renderer::DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration.slots) {
             for (const renderer::DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
-                DebugLog(LogType::Debug, "Declaration : %s\n", descriptor_declaration.name.LookupString());
                 const uint flat_index = descriptor_set_declaration.CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
                 AssertThrow(flat_index != uint(-1));
 
-                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + "_" + descriptor_declaration.name.LookupString() + " " + String::ToString(flat_index) + "\n";
+                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + "_" + descriptor_declaration.name + " " + String::ToString(flat_index) + "\n";
             }
         }
     }
@@ -1460,7 +1460,8 @@ bool ShaderCompiler::CompileBundle(
     DebugLog(LogType::Debug, "Descriptor table defines = %s\n", descriptor_table_defines.Data());
 
     // compile shader with each permutation of properties
-    ForEachPermutation(final_versions, [&](const ShaderProperties &properties) {
+    ForEachPermutation(final_versions, [&](const ShaderProperties &properties)
+    {
         CompiledShader compiled_shader(
             ShaderDefinition {
                 bundle.name,

@@ -747,26 +747,6 @@ void GPUBuffer<Platform::VULKAN>::DebugLogBuffer(Instance<Platform::VULKAN> *ins
 #endif
 
 template <>
-void VertexBuffer<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
-{
-    const VkBuffer vertex_buffers[] = { buffer };
-    const VkDeviceSize offsets[]    = { 0 };
-
-    vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
-}
-
-template <>
-void IndexBuffer<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
-{
-    vkCmdBindIndexBuffer(
-        cmd->GetCommandBuffer(),
-        buffer,
-        0,
-        helpers::ToVkIndexType(GetDatumType())
-    );
-}
-
-template <>
 void IndirectBuffer<Platform::VULKAN>::DispatchIndirect(CommandBuffer<Platform::VULKAN> *command_buffer, SizeType offset) const
 {
     vkCmdDispatchIndirect(

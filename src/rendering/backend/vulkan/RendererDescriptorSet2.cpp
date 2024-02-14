@@ -1,4 +1,7 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDevice.hpp>
+
+#include <rendering/backend/RendererDescriptorSet.hpp> // For DescriptorSetDeclaration
 
 #include <math/MathUtil.hpp>
 
@@ -8,124 +11,524 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
-template <>
-DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::CreateDescriptorSet() const
+static VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
 {
-    auto ref = MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
+    switch (type) {
+    case DescriptorSetElementType::UNIFORM_BUFFER:         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    case DescriptorSetElementType::STORAGE_BUFFER:         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    case DescriptorSetElementType::IMAGE:                  return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case DescriptorSetElementType::SAMPLER:                return VK_DESCRIPTOR_TYPE_SAMPLER;
+    case DescriptorSetElementType::IMAGE_STORAGE:          return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case DescriptorSetElementType::TLAS:                   return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    default:
+        AssertThrowMsg(false, "Unsupported descriptor type for Vulkan");
+    }
+}
 
-    return ref;
+struct VulkanDescriptorElementInfo
+{
+    uint                binding;
+    uint                index;
+    VkDescriptorType    descriptor_type;
+
+    union {
+        VkDescriptorBufferInfo                          buffer_info;
+        VkDescriptorImageInfo                           image_info;
+        VkWriteDescriptorSetAccelerationStructureKHR    acceleration_structure_info;
+    };
+};
+
+struct VulkanDescriptorSetLayoutWrapper
+{
+    VkDescriptorSetLayout   vk_layout = VK_NULL_HANDLE;
+
+    Result Create(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout)
+    {
+        AssertThrow(vk_layout == VK_NULL_HANDLE);
+
+        static constexpr VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+
+        Array<VkDescriptorSetLayoutBinding> bindings;
+        bindings.Reserve(layout.GetElements().Size());
+
+        Array<VkDescriptorBindingFlags> binding_flags;
+        binding_flags.Reserve(layout.GetElements().Size());
+
+        for (const auto &it : layout.GetElements()) {
+            const String &name = it.first;
+            const DescriptorSetLayoutElement &element = it.second;
+
+            uint32 descriptor_count = element.count;
+
+            if (element.IsBindless()) {
+                descriptor_count = max_bindless_resources;
+            }
+
+            VkDescriptorSetLayoutBinding binding { };
+            binding.descriptorCount = descriptor_count;
+            binding.descriptorType = ToVkDescriptorType(element.type);
+            binding.pImmutableSamplers = nullptr;
+            binding.stageFlags = VK_SHADER_STAGE_ALL;
+            binding.binding = element.binding;
+
+            bindings.PushBack(binding);
+
+            VkDescriptorBindingFlags flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+            if (element.IsBindless()) {
+                flags |= bindless_flags;
+            }
+
+            binding_flags.PushBack(flags);
+        }
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        extended_info.bindingCount = uint32(binding_flags.Size());
+        extended_info.pBindingFlags = binding_flags.Data();
+
+        VkDescriptorSetLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        layout_info.pBindings = bindings.Data();
+        layout_info.bindingCount = uint32(bindings.Size());
+        layout_info.flags = 0;
+        layout_info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        layout_info.pNext = &extended_info;
+
+        HYPERION_VK_CHECK(vkCreateDescriptorSetLayout(
+            device->GetDevice(),
+            &layout_info,
+            nullptr,
+            &vk_layout
+        ));
+
+        return Result::OK;
+    }
+
+    Result Destroy(Device<Platform::VULKAN> *device)
+    {
+        AssertThrow(vk_layout != VK_NULL_HANDLE);
+
+        vkDestroyDescriptorSetLayout(
+            device->GetDevice(),
+            vk_layout,
+            nullptr
+        );
+
+        vk_layout = VK_NULL_HANDLE;
+
+        return Result::OK;
+    }
+};
+
+template <>
+DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDeclaration &decl)
+{
+    for (const Array<DescriptorDeclaration> &slot : decl.slots) {
+        for (const DescriptorDeclaration &descriptor : slot) {
+            const uint descriptor_index = decl.CalculateFlatIndex(descriptor.slot, descriptor.name);
+            AssertThrow(descriptor_index != uint(-1));
+
+            switch (descriptor.slot) {
+            case DescriptorSlot::DESCRIPTOR_SLOT_SRV:
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptor_index, 1);
+    
+                break;
+            case DescriptorSlot::DESCRIPTOR_SLOT_UAV:
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE_STORAGE, descriptor_index, 1);
+                    
+                break;
+            case DescriptorSlot::DESCRIPTOR_SLOT_CBUFF:
+                if (descriptor.is_dynamic) {
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, 1);
+                } else {
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, 1);
+                }
+                break;
+            case DescriptorSlot::DESCRIPTOR_SLOT_SSBO:
+                if (descriptor.is_dynamic) {
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, 1);
+                } else {
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, 1);
+                }
+                break;
+            case DescriptorSlot::DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE:
+                AddElement(descriptor.name, DescriptorSetElementType::TLAS, descriptor_index, 1);
+
+                break;
+            case DescriptorSlot::DESCRIPTOR_SLOT_SAMPLER:
+                AddElement(descriptor.name, DescriptorSetElementType::SAMPLER, descriptor_index, 1);
+
+                break;
+            default:
+                AssertThrowMsg(false, "Invalid descriptor slot");
+                break;
+            }
+        }
+    }
 }
 
 template <>
-DescriptorSet2Ref<Platform::VULKAN>::DescriptorSet2Ref(const DescriptorSetLayout<Platform::VULKAN> &layout)
+DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::CreateDescriptorSet() const
+{
+    return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
+}
+
+// DescriptorSet2
+
+DescriptorSet2<Platform::VULKAN>::DescriptorSet2(const DescriptorSetLayout<Platform::VULKAN> &layout)
     : m_layout(layout)
 {
     // Initial layout of elements
     for (auto &it : m_layout.GetElements()) {
         const String &name = it.first;
-        const DescriptorSetElementType type = it.second;
+        const DescriptorSetLayoutElement &element = it.second;
 
-        switch (type) {
+        switch (element.type) {
         case DescriptorSetElementType::UNIFORM_BUFFER:          // fallthrough
         case DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC:  // fallthrough
         case DescriptorSetElementType::STORAGE_BUFFER:          // fallthrough
         case DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC:  // fallthrough
-            SetElement(name, GPUBufferRef<Platform::VULKAN> { });
+            PrefillElements<GPUBufferRef<Platform::VULKAN>>(name, element.count);
 
             break;
         case DescriptorSetElementType::IMAGE:                   // fallthrough
         case DescriptorSetElementType::IMAGE_STORAGE:           // fallthrough
-            SetElement(name, ImageViewRef<Platform::VULKAN> { });
+            PrefillElements<ImageViewRef<Platform::VULKAN>>(name, element.count);
 
             break;
         case DescriptorSetElementType::SAMPLER:
-            SetElement(name, SamplerRef<Platform::VULKAN> { });
+            PrefillElements<SamplerRef<Platform::VULKAN>>(name, element.count);
 
             break;
         case DescriptorSetElementType::TLAS:
-            SetElement(name, TLASRef<Platform::VULKAN> { });
+            PrefillElements<TLASRef<Platform::VULKAN>>(name, element.count);
 
             break;
         default:
-            AssertThrowMsg(false, "Unhandled descriptor set element type in layout: %d", int(type));
+            AssertThrowMsg(false, "Unhandled descriptor set element type in layout: %d", int(element.type));
 
             break;
         }
     }
 }
 
-template <>
-DescriptorSet2Ref<Platform::VULKAN>::~DescriptorSet2Ref()
+DescriptorSet2<Platform::VULKAN>::~DescriptorSet2()
 {
 }
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, const GPUBufferRef<Platform::VULKAN> &ref)
+Result DescriptorSet2<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+{
+    AssertThrow(m_vk_descriptor_set == VK_NULL_HANDLE);
+
+    RC<VulkanDescriptorSetLayoutWrapper> vk_descriptor_set_layout = device->GetDescriptorSetManager()->GetOrCreateVkDescriptorSetLayout(device, m_layout);
+
+    return device->GetDescriptorSetManager()->CreateDescriptorSet(device, vk_descriptor_set_layout.Get(), m_vk_descriptor_set);
+}
+
+Result DescriptorSet2<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+{
+    AssertThrow(m_vk_descriptor_set != VK_NULL_HANDLE);
+
+    device->GetDescriptorSetManager()->DestroyDescriptorSet(device, m_vk_descriptor_set);
+
+    m_vk_descriptor_set = VK_NULL_HANDLE;
+
+    return Result::OK;
+}
+
+Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
+{
+    AssertThrow(m_vk_descriptor_set != VK_NULL_HANDLE);
+
+    Array<VulkanDescriptorElementInfo> descriptor_element_infos;
+
+    for (auto &it : m_elements) {
+        const String &name = it.first;
+        const DescriptorSetElement<Platform::VULKAN> &element = it.second;
+
+        if (!element.IsDirty()) {
+            continue;
+        }
+
+        const DescriptorSetLayoutElement *layout_element = m_layout.GetElement(name);
+        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.Data());
+
+        for (uint i = element.dirty_range.GetStart(); i < element.dirty_range.GetEnd(); i++) {
+            VulkanDescriptorElementInfo descriptor_element_info { };
+            descriptor_element_info.binding = layout_element->binding;
+            descriptor_element_info.index = i;
+            descriptor_element_info.descriptor_type = ToVkDescriptorType(layout_element->type);
+
+            const auto value_it = element.values.Find(i);
+
+            if (value_it == element.values.End()) {
+                continue;
+            }
+
+            if (value_it->second.Is<GPUBufferRef<Platform::VULKAN>>()) {
+                const bool is_dynamic = layout_element->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
+                    || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
+
+                const GPUBufferRef<Platform::VULKAN> &ref = value_it->second.Get<GPUBufferRef<Platform::VULKAN>>();
+
+                descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
+                    ref->buffer,
+                    0,
+                    element.buffer_size == 0
+                        ? ref->size
+                        : element.buffer_size
+                };
+            } else if (value_it->second.Is<ImageViewRef<Platform::VULKAN>>()) {
+                const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
+
+                const ImageViewRef<Platform::VULKAN> &ref = value_it->second.Get<ImageViewRef<Platform::VULKAN>>();
+
+                descriptor_element_info.image_info = VkDescriptorImageInfo {
+                    VK_NULL_HANDLE,
+                    ref->GetImageView(),
+                    is_storage_image
+                        ? VK_IMAGE_LAYOUT_GENERAL
+                        : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                };
+            } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
+                const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
+
+                descriptor_element_info.image_info = VkDescriptorImageInfo {
+                    ref->GetSampler(),
+                    VK_NULL_HANDLE,
+                    VK_IMAGE_LAYOUT_UNDEFINED
+                };
+            } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
+                const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
+
+                descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
+                    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+                    nullptr,
+                    1,
+                    &ref->GetAccelerationStructure()
+                };
+            } else {
+                AssertThrowMsg(false, "Unhandled descriptor set element type: %d", int(layout_element->type));
+            }
+
+            descriptor_element_infos.PushBack(descriptor_element_info);
+        }
+    }
+
+    Array<VkWriteDescriptorSet> vk_write_descriptor_sets;
+    vk_write_descriptor_sets.Resize(descriptor_element_infos.Size());
+
+    for (SizeType i = 0; i < vk_write_descriptor_sets.Size(); i++) {
+        const VulkanDescriptorElementInfo &descriptor_element_info = descriptor_element_infos[i];
+
+        VkWriteDescriptorSet &write = vk_write_descriptor_sets[i];
+        
+        write = VkWriteDescriptorSet { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        write.dstSet = m_vk_descriptor_set;
+        write.dstBinding = descriptor_element_info.binding;
+        write.dstArrayElement = descriptor_element_info.index;
+        write.descriptorCount = 1;
+        write.descriptorType = descriptor_element_info.descriptor_type;
+
+        if (descriptor_element_info.descriptor_type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+            write.pNext = &descriptor_element_info.acceleration_structure_info;
+        }
+        
+        write.pImageInfo = &descriptor_element_info.image_info;
+        write.pBufferInfo = &descriptor_element_info.buffer_info;
+    }
+
+    vkUpdateDescriptorSets(
+        device->GetDevice(),
+        uint32(vk_write_descriptor_sets.Size()),
+        vk_write_descriptor_sets.Data(),
+        0,
+        nullptr
+    );
+
+    for (auto &it : m_elements) {
+        DescriptorSetElement<Platform::VULKAN> &element = it.second;
+
+        element.dirty_range = { };
+    }
+    
+    return Result::OK;
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, const GPUBufferRef<Platform::VULKAN> &ref)
 {
     SetElement(name, 0, ref);
 }
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, uint index, const GPUBufferRef<Platform::VULKAN> &ref)
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, const GPUBufferRef<Platform::VULKAN> &ref)
 {
-    auto element = m_layout.GetElement(name);
-    AssertThrowMsg(element.HasValue(), "Invalid element: No item with name %s found", name.Data());
+    SetElement<GPUBufferRef<Platform::VULKAN>>(name, index, ref);
+}
 
-    static const uint32 mask = GetDescriptorSetElementTypeMask(
-        DescriptorSetElementType::UNIFORM_BUFFER,
-        DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC,
-        DescriptorSetElementType::STORAGE_BUFFER,
-        DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, uint buffer_size, const GPUBufferRef<Platform::VULKAN> &ref)
+{
+    DescriptorSetElement<Platform::VULKAN> &element = SetElement<GPUBufferRef<Platform::VULKAN>>(name, index, ref);
+
+    element.buffer_size = buffer_size;
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, const ImageViewRef<Platform::VULKAN> &ref)
+{
+    SetElement(name, 0, ref);
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, const ImageViewRef<Platform::VULKAN> &ref)
+{
+    SetElement<ImageViewRef<Platform::VULKAN>>(name, index, ref);
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, const SamplerRef<Platform::VULKAN> &ref)
+{
+    SetElement(name, 0, ref);
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, const SamplerRef<Platform::VULKAN> &ref)
+{
+    SetElement<SamplerRef<Platform::VULKAN>>(name, index, ref);
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, const TLASRef<Platform::VULKAN> &ref)
+{
+    SetElement(name, 0, ref);
+}
+
+void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, const TLASRef<Platform::VULKAN> &ref)
+{
+    SetElement<TLASRef<Platform::VULKAN>>(name, index, ref);
+}
+
+// DescriptorSetManager
+
+DescriptorSetManager<Platform::VULKAN>::DescriptorSetManager()
+    : m_vk_descriptor_pool(VK_NULL_HANDLE)
+{
+}
+
+DescriptorSetManager<Platform::VULKAN>::~DescriptorSetManager() = default;
+
+Result DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+{
+    static const Array<VkDescriptorPoolSize> pool_sizes = {
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
+        { VK_DESCRIPTOR_TYPE_SAMPLER,                    4096 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     4096 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              4096 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              32 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             64 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     64 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,             32 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     32 }
+    };
+
+    AssertThrow(m_vk_descriptor_pool == VK_NULL_HANDLE);
+
+    VkDescriptorPoolCreateInfo pool_info { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    pool_info.maxSets = max_descriptor_sets;
+    pool_info.poolSizeCount = uint32(pool_sizes.Size());
+    pool_info.pPoolSizes = pool_sizes.Data();
+
+    HYPERION_VK_CHECK(vkCreateDescriptorPool(
+        device->GetDevice(),
+        &pool_info,
+        nullptr,
+        &m_vk_descriptor_pool
+    ));
+
+    return Result::OK;
+}
+
+Result DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+{
+    Result result = Result::OK;
+
+    for (auto &it : m_vk_descriptor_set_layouts) {
+        HYPERION_PASS_ERRORS(
+            it.second->Destroy(device),
+            result
+        );
+    }
+
+    m_vk_descriptor_set_layouts.Clear();
+
+    if (m_vk_descriptor_pool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(
+            device->GetDevice(),
+            m_vk_descriptor_pool,
+            nullptr
+        );
+
+        m_vk_descriptor_pool = VK_NULL_HANDLE;
+    }
+
+    return result;
+}
+
+Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platform::VULKAN> *device, const VulkanDescriptorSetLayoutWrapper *layout, VkDescriptorSet &out_vk_descriptor_set)
+{
+    AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
+
+    AssertThrow(layout != nullptr);
+    AssertThrow(layout->vk_layout != VK_NULL_HANDLE);
+
+    VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    alloc_info.descriptorPool = m_vk_descriptor_pool;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &layout->vk_layout;
+
+    VkResult result = vkAllocateDescriptorSets(
+        device->GetDevice(),
+        &alloc_info,
+        &out_vk_descriptor_set
     );
 
-    AssertThrowMsg(mask & (1u << uint32(element.Get())), "Layout type for %s does not match given type", name.Data());
-
-    auto it = m_elements.Find(name);
-
-    if (it == m_elements.End()) {
-        m_elements.Insert({
-            name,
-            DescriptorSetElement<Platform::VULKAN>::ValueType(ref)
-        });
-    } else {
-        it->second = DescriptorSetElement<Platform::VULKAN>::ValueType(ref);
+    if (result != VK_SUCCESS) {
+        return { Result::RENDERER_ERR, "Failed to allocate descriptor set" };
     }
+
+    return Result::OK;
 }
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, const ImageViewRef<Platform::VULKAN> &ref)
+Result DescriptorSetManager<Platform::VULKAN>::DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set)
 {
-    
+    AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
+
+    AssertThrow(vk_descriptor_set != VK_NULL_HANDLE);
+
+    vkFreeDescriptorSets(
+        device->GetDevice(),
+        m_vk_descriptor_pool,
+        1,
+        &vk_descriptor_set
+    );
+
+    return Result::OK;
 }
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, uint index, const ImageViewRef<Platform::VULKAN> &ref)
+RC<VulkanDescriptorSetLayoutWrapper> DescriptorSetManager<Platform::VULKAN>::GetOrCreateVkDescriptorSetLayout(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout)
 {
-    
-}
+    const HashCode hash_code = layout.GetHashCode();
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, const SamplerRef<Platform::VULKAN> &ref)
-{
-    
-}
+    auto it = m_vk_descriptor_set_layouts.Find(hash_code);
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, uint index, const SamplerRef<Platform::VULKAN> &ref)
-{
-    
-}
+    if (it == m_vk_descriptor_set_layouts.End()) {
+        RC<VulkanDescriptorSetLayoutWrapper> vk_descriptor_set_layout;
+        vk_descriptor_set_layout.Reset(new VulkanDescriptorSetLayoutWrapper);
+        
+        HYPERION_ASSERT_RESULT(vk_descriptor_set_layout->Create(device, layout));
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, const TLASRef<Platform::VULKAN> &ref)
-{
-    
-}
+        m_vk_descriptor_set_layouts.Insert(hash_code, vk_descriptor_set_layout);
 
-template <>
-void DescriptorSet2Ref<Platform::VULKAN>::SetElement(const String &name, uint index, const TLASRef<Platform::VULKAN> &ref)
-{
-    
+        return vk_descriptor_set_layout;
+    }
+
+    return it->second;
 }
 
 } // namespace platform

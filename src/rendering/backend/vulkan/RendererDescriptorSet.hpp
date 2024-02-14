@@ -458,7 +458,7 @@ public:
     bool RemoveDescriptor(DescriptorKey key);
     bool RemoveDescriptor(uint binding);
 
-    bool HasDescriptorByName(Name name) const
+    bool HasDescriptorByName(const String &name) const
         { return m_declaration.FindDescriptorDeclaration(name) != nullptr; }
 
     template <SizeType Count>
@@ -476,7 +476,7 @@ public:
     Descriptor *GetDescriptor(DescriptorKey key) const;
     Descriptor *GetDescriptor(uint binding) const;
     /*! \brief Get a Descriptor by name -- must have a DescriptorSetDeclaration */
-    Descriptor *GetDescriptorByName(Name name) const;
+    Descriptor *GetDescriptorByName(const String &name) const;
 
     template <class DescriptorType>
     Descriptor *GetOrAddDescriptor(DescriptorKey key)

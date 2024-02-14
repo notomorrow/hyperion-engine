@@ -1,4 +1,6 @@
-#include "BlurRadiance.hpp"
+#include <rendering/rt/BlurRadiance.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <Engine.hpp>
 #include <Threads.hpp>
 

@@ -79,6 +79,7 @@ public:
     [[nodiscard]] bool Empty() const { return m_vector.Empty(); }
 
     void Clear()                                        { m_vector.Clear(); }
+    void Reserve(SizeType size)                         { m_vector.Reserve(size); }
     
     [[nodiscard]] KeyValuePairType &Front()             { return m_vector.Front(); }
     [[nodiscard]] const KeyValuePairType &Front() const { return m_vector.Front(); }

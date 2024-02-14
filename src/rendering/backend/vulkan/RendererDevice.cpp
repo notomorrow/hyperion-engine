@@ -1,10 +1,7 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <cstring>
 #include <algorithm>
@@ -22,7 +19,9 @@ Device<Platform::VULKAN>::Device(VkPhysicalDevice physical, VkSurfaceKHR surface
       m_physical(physical),
       m_surface(surface),
       m_allocator(VK_NULL_HANDLE),
-      m_features(UniquePtr<Features>::Construct())
+      m_features(UniquePtr<Features>::Construct()),
+      m_descriptor_set_manager(new DescriptorSetManager<Platform::VULKAN>),
+      m_descriptor_pool(new DescriptorPool)
 {
     m_features->SetPhysicalDevice(m_physical);
     m_queue_family_indices = FindQueueFamilies(m_physical, m_surface);
@@ -322,7 +321,7 @@ Result Device<Platform::VULKAN>::Wait() const
     HYPERION_RETURN_OK;
 }
 
-Result Device<Platform::VULKAN>::CreateLogicalDevice(const std::set<uint32> &required_queue_families)
+Result Device<Platform::VULKAN>::Create(const std::set<uint32> &required_queue_families)
 {
     DebugLog(LogType::Debug, "Memory properties:\n");
     const auto &memory_properties = m_features->GetPhysicalDeviceMemoryProperties();
@@ -416,6 +415,8 @@ Result Device<Platform::VULKAN>::CreateLogicalDevice(const std::set<uint32> &req
 
     DebugLog(LogType::Info, "Raytracing supported? : %d\n", m_features->IsRaytracingSupported());
 
+    HYPERION_BUBBLE_ERRORS(m_descriptor_set_manager->Create(this));
+
     HYPERION_RETURN_OK;
 }
 
@@ -431,6 +432,10 @@ VkQueue Device<Platform::VULKAN>::GetQueue(uint32 queue_family_index, uint32 que
 
 void Device<Platform::VULKAN>::Destroy()
 {
+    m_descriptor_set_manager->Destroy(this);
+
+    HYPERION_ASSERT_RESULT(m_descriptor_pool->Destroy(this));
+
     if (m_device != VK_NULL_HANDLE) {
         /* By the time this destructor is called there should never
          * be a running queue, but just in case we will wait until

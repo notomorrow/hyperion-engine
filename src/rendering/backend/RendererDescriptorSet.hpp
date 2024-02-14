@@ -159,9 +159,9 @@ enum DescriptorSlot : uint32
 
 struct DescriptorDeclaration
 {
-    DescriptorSlot  slot   = DESCRIPTOR_SLOT_NONE;
-    uint            index  = ~0u;
-    Name            name   = Name::invalid;
+    DescriptorSlot  slot = DESCRIPTOR_SLOT_NONE;
+    uint            index = ~0u;
+    String          name;
     bool            is_dynamic = false;
 };
 
@@ -202,9 +202,9 @@ struct DescriptorSetDeclaration
         return slots[uint(slot) - 1];
     }
 
-    void AddDescriptor(DescriptorSlot slot, Name name, bool is_dynamic = false)
+    void AddDescriptor(DescriptorSlot slot, const String &name, bool is_dynamic = false)
     {
-        DebugLog(LogType::Debug, "Add descriptor to slot %u with name %s (%u), dynamic: %d\n", slot, name.LookupString(), name.GetHashCode().Value(), is_dynamic);
+        DebugLog(LogType::Debug, "Add descriptor to slot %u with name %s (%u), dynamic: %d\n", slot, name.Data(), name.GetHashCode().Value(), is_dynamic);
 
         AssertThrow(slot != DESCRIPTOR_SLOT_NONE && slot < DESCRIPTOR_SLOT_MAX);
 
@@ -218,9 +218,9 @@ struct DescriptorSetDeclaration
 
     /*! \brief Calculate a flat index for a Descriptor that is part of this set.
         Returns -1 if not found */
-    uint CalculateFlatIndex(DescriptorSlot slot, Name name) const;
+    uint CalculateFlatIndex(DescriptorSlot slot, const String &name) const;
 
-    DescriptorDeclaration *FindDescriptorDeclaration(Name name) const;
+    DescriptorDeclaration *FindDescriptorDeclaration(const String &name) const;
 };
 
 class DescriptorTable
@@ -260,7 +260,7 @@ public:
 
     struct DeclareDescriptor
     {
-        DeclareDescriptor(DescriptorTable *table, uint set_index, DescriptorSlot slot_type, uint index, Name name)
+        DeclareDescriptor(DescriptorTable *table, uint set_index, DescriptorSlot slot_type, uint index, const String &name)
         {
             AssertThrow(table != nullptr);
             AssertThrow(set_index < table->declarations.Size());

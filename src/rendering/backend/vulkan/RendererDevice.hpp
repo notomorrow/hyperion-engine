@@ -17,7 +17,7 @@ namespace hyperion {
 namespace renderer {
 
 class Features;
-
+class DescriptorPool;
 
 using ExtensionMap = std::unordered_map<std::string, bool>;
 
@@ -25,6 +25,9 @@ namespace platform {
 
 template <PlatformType PLATFORM>
 class Instance;
+
+template <PlatformType PLATFORM>
+class DescriptorSetManager;
 
 template <>
 class Device<Platform::VULKAN>
@@ -41,6 +44,12 @@ public:
     void SetRenderSurface(const VkSurfaceKHR &surface);
     void SetRequiredExtensions(const ExtensionMap &extensions);
 
+    DescriptorPool *GetDescriptorPool() const
+        { return m_descriptor_pool.Get(); }
+
+    DescriptorSetManager<Platform::VULKAN> *GetDescriptorSetManager() const
+        { return m_descriptor_set_manager.Get(); }
+
     VkDevice GetDevice();
     VkSurfaceKHR GetRenderSurface();
     VkPhysicalDevice GetPhysicalDevice();
@@ -56,7 +65,7 @@ public:
 
     VkQueue GetQueue(uint32 queue_family_index, uint32 queue_index = 0);
 
-    Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families);
+    Result Create(const std::set<uint32_t> &required_queue_families);
     Result CheckDeviceSuitable(const ExtensionMap &unsupported_extensions);
 
     /*  Wait for the device to be idle */
@@ -68,15 +77,18 @@ public:
     Array<VkExtensionProperties> GetSupportedExtensions();
 
 private:
-    VkDevice            m_device;
-    VkPhysicalDevice    m_physical;
-    VkSurfaceKHR        m_surface;
-    VmaAllocator        m_allocator;
+    VkDevice                                            m_device;
+    VkPhysicalDevice                                    m_physical;
+    VkSurfaceKHR                                        m_surface;
+    VmaAllocator                                        m_allocator;
 
-    UniquePtr<Features> m_features;
-    QueueFamilyIndices  m_queue_family_indices;
+    UniquePtr<Features>                                 m_features;
+    QueueFamilyIndices                                  m_queue_family_indices;
 
-    ExtensionMap        m_required_extensions;
+    ExtensionMap                                        m_required_extensions;
+
+    UniquePtr<DescriptorPool>                           m_descriptor_pool;
+    UniquePtr<DescriptorSetManager<Platform::VULKAN>>   m_descriptor_set_manager;
 };
 
 } // namespace platform

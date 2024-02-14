@@ -81,7 +81,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
             // create descriptor sets for depth pyramid generation.
             DescriptorSetRef depth_pyramid_descriptor_set = MakeRenderObject<renderer::DescriptorSet>(*depth_pyramid_descriptor_set_decl);
 
-            auto *depth_pyramid_in = depth_pyramid_descriptor_set->GetDescriptorByName(HYP_NAME(InImage));
+            auto *depth_pyramid_in = depth_pyramid_descriptor_set->GetDescriptorByName("InImage");
             AssertThrow(depth_pyramid_in != nullptr);
 
             if (mip_level == 0) {
@@ -91,11 +91,11 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
                 depth_pyramid_in->SetElementSRV(0, m_depth_pyramid_mips[mip_level - 1]);
             }
 
-            auto *depth_pyramid_out = depth_pyramid_descriptor_set->GetDescriptorByName(HYP_NAME(OutImage));
+            auto *depth_pyramid_out = depth_pyramid_descriptor_set->GetDescriptorByName("OutImage");
             AssertThrow(depth_pyramid_out != nullptr);
             depth_pyramid_out->SetElementUAV(0, m_depth_pyramid_mips[mip_level]);
 
-            auto *depth_pyramid_sampler = depth_pyramid_descriptor_set->GetDescriptorByName(HYP_NAME(DepthPyramidSampler));
+            auto *depth_pyramid_sampler = depth_pyramid_descriptor_set->GetDescriptorByName("DepthPyramidSampler");
             AssertThrow(depth_pyramid_sampler != nullptr);
             depth_pyramid_sampler->SetElementSampler(0, m_depth_pyramid_sampler);
 
