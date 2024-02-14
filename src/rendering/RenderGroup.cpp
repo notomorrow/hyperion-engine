@@ -73,6 +73,46 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
     }
 };
 
+struct RENDER_COMMAND(CreateIndirectRenderer) : renderer::RenderCommand
+{
+    RC<IndirectRenderer> indirect_renderer;
+
+    RENDER_COMMAND(CreateIndirectRenderer)(RC<IndirectRenderer> indirect_renderer)
+        : indirect_renderer(std::move(indirect_renderer))
+    {
+        AssertThrow(this->indirect_renderer != nullptr);
+    }
+
+    virtual ~RENDER_COMMAND(CreateIndirectRenderer)() override = default;
+
+    virtual Result operator()() override
+    {
+        indirect_renderer->Create();
+
+        return renderer::Result::OK;
+    }
+};
+
+struct RENDER_COMMAND(DestroyIndirectRenderer) : renderer::RenderCommand
+{
+    RC<IndirectRenderer> indirect_renderer;
+
+    RENDER_COMMAND(DestroyIndirectRenderer)(RC<IndirectRenderer> indirect_renderer)
+        : indirect_renderer(std::move(indirect_renderer))
+    {
+        AssertThrow(this->indirect_renderer != nullptr);
+    }
+
+    virtual ~RENDER_COMMAND(DestroyIndirectRenderer)() override = default;
+
+    virtual Result operator()() override
+    {
+        indirect_renderer->Destroy();
+
+        return renderer::Result::OK;
+    }
+};
+
 #pragma endregion
 
 RenderGroup::RenderGroup(
@@ -124,7 +164,9 @@ void RenderGroup::Init()
 
     // create our indirect renderer
     // will be created with some initial size.
-    m_indirect_renderer.Create();
+    m_indirect_renderer.Reset(new IndirectRenderer());
+    m_indirect_renderer->Create();
+    // PUSH_RENDER_COMMAND(CreateIndirectRenderer, m_indirect_renderer);
 
     AssertThrow(m_fbos.Any());
 
@@ -190,9 +232,7 @@ void RenderGroup::Init()
         OnTeardown([this]() {
             SetReady(false);
 
-            m_indirect_renderer.Destroy(); // make sure we have the render queue flush at the end of
-                                                 // this, as the indirect renderer has a call back that needs to be exec'd
-                                                 // before the destructor is called
+            PUSH_RENDER_COMMAND(DestroyIndirectRenderer, std::move(m_indirect_renderer));
 
             m_shader.Reset();
 
@@ -219,7 +259,8 @@ void RenderGroup::CollectDrawCalls()
 
     AssertReady();
 
-    m_indirect_renderer.GetDrawState().Reset();
+    m_indirect_renderer->GetDrawState().ResetDrawState();
+
     m_divided_draw_calls.Clear();
 
     DrawCallCollection previous_draw_state = std::move(m_draw_state);
@@ -254,7 +295,7 @@ void RenderGroup::CollectDrawCalls()
     // register draw calls for indirect rendering
     for (DrawCall &draw_call : m_draw_state.draw_calls) {
         DrawCommandData draw_command_data;
-        m_indirect_renderer.GetDrawState().PushDrawCall(draw_call, draw_command_data);
+        m_indirect_renderer->GetDrawState().PushDrawCall(draw_call, draw_command_data);
         draw_call.draw_command_index = draw_command_data.draw_command_index;
     }
 
@@ -271,7 +312,7 @@ void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_dat
 
     AssertThrow(cull_data != nullptr);
 
-    m_indirect_renderer.ExecuteCullShaderInBatches(
+    m_indirect_renderer->ExecuteCullShaderInBatches(
         frame,
         *cull_data
     );
@@ -538,7 +579,7 @@ void RenderGroup::PerformRendering(Frame *frame)
         m_command_buffers,
         m_command_buffer_index,
         m_pipeline,
-        &m_indirect_renderer,
+        m_indirect_renderer.Get(),
         m_divided_draw_calls,
         m_draw_state
     );
@@ -558,7 +599,7 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
         m_command_buffers,
         m_command_buffer_index,
         m_pipeline,
-        &m_indirect_renderer,
+        m_indirect_renderer.Get(),
         m_divided_draw_calls,
         m_draw_state
     );

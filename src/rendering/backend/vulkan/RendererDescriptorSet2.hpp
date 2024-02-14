@@ -35,6 +35,18 @@ class Sampler;
 template <PlatformType PLATFORM>
 class TopLevelAccelerationStructure;
 
+template <PlatformType PLATFORM>
+class GraphicsPipeline;
+
+template <PlatformType PLATFORM>
+class ComputePipeline;
+
+template <PlatformType PLATFORM>
+class RaytracingPipeline;
+
+template <PlatformType PLATFORM>
+class CommandBuffer;
+
 struct VulkanDescriptorSetLayoutWrapper;
 
 template <>
@@ -48,9 +60,11 @@ public:
     DescriptorSet2 &operator=(DescriptorSet2 &&other) noexcept  = delete;
     ~DescriptorSet2();
 
+    const DescriptorSetLayout<Platform::VULKAN> &GetLayout() const
+        { return m_layout; }
+
     Result Create(Device<Platform::VULKAN> *device);
     Result Destroy(Device<Platform::VULKAN> *device);
-
     Result Update(Device<Platform::VULKAN> *device);
     
     void SetElement(const String &name, const GPUBufferRef<Platform::VULKAN> &ref);
@@ -65,6 +79,15 @@ public:
     
     void SetElement(const String &name, const TLASRef<Platform::VULKAN> &ref);
     void SetElement(const String &name, uint index, const TLASRef<Platform::VULKAN> &ref);
+
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const;
+
+    VkDescriptorSetLayout GetVkDescriptorSetLayout() const;
 
 private:
     template <class T>
@@ -179,6 +202,8 @@ private:
     DescriptorSetLayout<Platform::VULKAN>                       m_layout;
     ArrayMap<String, DescriptorSetElement<Platform::VULKAN>>    m_elements;
 
+    RC<VulkanDescriptorSetLayoutWrapper>                        m_vk_layout_wrapper;
+
     VkDescriptorSet                                             m_vk_descriptor_set;
 };
 
@@ -198,15 +223,15 @@ public:
     Result Create(Device<Platform::VULKAN> *device);
     Result Destroy(Device<Platform::VULKAN> *device);
 
-    Result CreateDescriptorSet(Device<Platform::VULKAN> *device, const VulkanDescriptorSetLayoutWrapper *layout, VkDescriptorSet &out_vk_descriptor_set);
+    Result CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set);
     Result DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set);
 
     RC<VulkanDescriptorSetLayoutWrapper> GetOrCreateVkDescriptorSetLayout(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout);
 
 private:
-    HashMap<HashCode, RC<VulkanDescriptorSetLayoutWrapper>> m_vk_descriptor_set_layouts;
+    HashMap<HashCode, Weak<VulkanDescriptorSetLayoutWrapper>>   m_vk_descriptor_set_layouts;
 
-    VkDescriptorPool                                        m_vk_descriptor_pool;
+    VkDescriptorPool                                            m_vk_descriptor_pool;
 };
 
 } // namespace platform

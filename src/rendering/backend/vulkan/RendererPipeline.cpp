@@ -1,4 +1,6 @@
 #include <rendering/backend/RendererPipeline.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/CMemory.hpp>
 
@@ -10,6 +12,35 @@ namespace platform {
 
 Pipeline<Platform::VULKAN>::Pipeline()
     : m_has_custom_descriptor_sets(false),
+      pipeline(VK_NULL_HANDLE),
+      layout(VK_NULL_HANDLE),
+      push_constants { }
+{
+}
+
+Pipeline<Platform::VULKAN>::Pipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
+    : m_shader_program(std::move(shader_program)),
+      m_has_custom_descriptor_sets(false),
+      pipeline(VK_NULL_HANDLE),
+      layout(VK_NULL_HANDLE),
+      push_constants { }
+{
+}
+
+Pipeline<Platform::VULKAN>::Pipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
+    : m_shader_program(std::move(shader_program)),
+      m_used_descriptor_sets(used_descriptor_sets),
+      m_has_custom_descriptor_sets(true),
+      pipeline(VK_NULL_HANDLE),
+      layout(VK_NULL_HANDLE),
+      push_constants { }
+{
+}
+
+Pipeline<Platform::VULKAN>::Pipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets)
+    : m_shader_program(std::move(shader_program)),
+      m_used_descriptor_sets2(used_descriptor_sets),
+      m_has_custom_descriptor_sets(true),
       pipeline(VK_NULL_HANDLE),
       layout(VK_NULL_HANDLE),
       push_constants { }
@@ -57,8 +88,29 @@ void Pipeline<Platform::VULKAN>::AssignDefaultDescriptorSets(DescriptorPool *des
 #endif
 }
 
+Array<VkDescriptorSetLayout> Pipeline<Platform::VULKAN>::GetDescriptorSetLayouts() const
+{
+    if (!m_used_descriptor_sets2.HasValue()) {
+        return { };
+    }
+
+    Array<VkDescriptorSetLayout> used_layouts;
+    used_layouts.Reserve(m_used_descriptor_sets2->Size());
+
+    for (const DescriptorSet2Ref<Platform::VULKAN> &descriptor_set : m_used_descriptor_sets2.Get()) {
+        AssertThrow(descriptor_set != nullptr);
+
+        used_layouts.PushBack(descriptor_set->GetVkDescriptorSetLayout());
+    }
+
+    return used_layouts;
+}
+
+// Transitional - remove when all pipelines use DescriptorSet2
 std::vector<VkDescriptorSetLayout> Pipeline<Platform::VULKAN>::GetDescriptorSetLayouts(Device<Platform::VULKAN> *device, DescriptorPool *descriptor_pool)
 {
+    AssertThrowMsg(!m_used_descriptor_sets2.HasValue(), "Use GetDescriptorSetLayouts() instead");
+
     // TODO: set specialization constants based on these values so the indices all match up
 
     if (m_used_descriptor_sets.HasValue()) {

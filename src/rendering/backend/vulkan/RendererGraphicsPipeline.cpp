@@ -26,6 +26,20 @@ GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline()
 {
 }
 
+GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program)),
+      viewport { },
+      scissor { }
+{
+}
+
+GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets),
+      viewport { },
+      scissor { }
+{
+}
+
 GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
     : Pipeline<Platform::VULKAN>(used_descriptor_sets),
       viewport { },

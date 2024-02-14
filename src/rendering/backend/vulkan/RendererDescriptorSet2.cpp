@@ -1,5 +1,9 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp> // For DescriptorSetDeclaration
 
@@ -39,7 +43,6 @@ struct VulkanDescriptorElementInfo
         VkWriteDescriptorSetAccelerationStructureKHR    acceleration_structure_info;
     };
 };
-
 struct VulkanDescriptorSetLayoutWrapper
 {
     VkDescriptorSetLayout   vk_layout = VK_NULL_HANDLE;
@@ -177,7 +180,8 @@ DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::Creat
 // DescriptorSet2
 
 DescriptorSet2<Platform::VULKAN>::DescriptorSet2(const DescriptorSetLayout<Platform::VULKAN> &layout)
-    : m_layout(layout)
+    : m_layout(layout),
+      m_vk_descriptor_set(VK_NULL_HANDLE)
 {
     // Initial layout of elements
     for (auto &it : m_layout.GetElements()) {
@@ -221,9 +225,9 @@ Result DescriptorSet2<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device
 {
     AssertThrow(m_vk_descriptor_set == VK_NULL_HANDLE);
 
-    RC<VulkanDescriptorSetLayoutWrapper> vk_descriptor_set_layout = device->GetDescriptorSetManager()->GetOrCreateVkDescriptorSetLayout(device, m_layout);
+    m_vk_layout_wrapper = device->GetDescriptorSetManager()->GetOrCreateVkDescriptorSetLayout(device, m_layout);
 
-    return device->GetDescriptorSetManager()->CreateDescriptorSet(device, vk_descriptor_set_layout.Get(), m_vk_descriptor_set);
+    return device->GetDescriptorSetManager()->CreateDescriptorSet(device, m_vk_layout_wrapper, m_vk_descriptor_set);
 }
 
 Result DescriptorSet2<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
@@ -231,8 +235,10 @@ Result DescriptorSet2<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *devic
     AssertThrow(m_vk_descriptor_set != VK_NULL_HANDLE);
 
     device->GetDescriptorSetManager()->DestroyDescriptorSet(device, m_vk_descriptor_set);
-
     m_vk_descriptor_set = VK_NULL_HANDLE;
+
+    // Release reference to layout
+    m_vk_layout_wrapper.Reset();
 
     return Result::OK;
 }
@@ -403,6 +409,99 @@ void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index
     SetElement<TLASRef<Platform::VULKAN>>(name, index, ref);
 }
 
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        0,
+        nullptr
+    );
+}
+
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        uint32(offsets.Size()),
+        offsets.Data()
+    );
+}
+
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        0,
+        nullptr
+    );
+}
+
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        uint32(offsets.Size()),
+        offsets.Data()
+    );
+}
+
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        0,
+        nullptr
+    );
+}
+
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+{
+    vkCmdBindDescriptorSets(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        pipeline->layout,
+        bind_index,
+        1,
+        &m_vk_descriptor_set,
+        uint32(offsets.Size()),
+        offsets.Data()
+    );
+}
+
+VkDescriptorSetLayout DescriptorSet2<Platform::VULKAN>::GetVkDescriptorSetLayout() const
+{
+    if (!m_vk_layout_wrapper) {
+        return VK_NULL_HANDLE;
+    }
+
+    return m_vk_layout_wrapper->vk_layout;
+}
+
 // DescriptorSetManager
 
 DescriptorSetManager<Platform::VULKAN>::DescriptorSetManager()
@@ -449,10 +548,12 @@ Result DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> 
     Result result = Result::OK;
 
     for (auto &it : m_vk_descriptor_set_layouts) {
-        HYPERION_PASS_ERRORS(
-            it.second->Destroy(device),
-            result
-        );
+        if (auto rc = it.second.Lock()) {
+            HYPERION_PASS_ERRORS(
+                rc->Destroy(device),
+                result
+            );
+        }
     }
 
     m_vk_descriptor_set_layouts.Clear();
@@ -470,7 +571,7 @@ Result DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> 
     return result;
 }
 
-Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platform::VULKAN> *device, const VulkanDescriptorSetLayoutWrapper *layout, VkDescriptorSet &out_vk_descriptor_set)
+Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set)
 {
     AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
 
@@ -528,7 +629,7 @@ RC<VulkanDescriptorSetLayoutWrapper> DescriptorSetManager<Platform::VULKAN>::Get
         return vk_descriptor_set_layout;
     }
 
-    return it->second;
+    return it->second.Lock();
 }
 
 } // namespace platform

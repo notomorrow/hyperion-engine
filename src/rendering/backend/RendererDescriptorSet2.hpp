@@ -219,6 +219,9 @@ public:
     DescriptorSet2(DescriptorSet2 &&other) noexcept             = delete;
     DescriptorSet2 &operator=(DescriptorSet2 &&other) noexcept  = delete;
     ~DescriptorSet2();
+
+    const DescriptorSetLayout<PLATFORM> &GetLayout() const
+        { return m_layout; }
     
     void SetElement(const String &name, const GPUBufferRef<PLATFORM> &ref);
     void SetElement(const String &name, uint index, const GPUBufferRef<PLATFORM> &ref);
@@ -259,6 +262,8 @@ namespace hyperion {
 namespace renderer {
 
 using DescriptorSet2 = platform::DescriptorSet2<Platform::CURRENT>;
+using DescriptorSetLayout = platform::DescriptorSetLayout<Platform::CURRENT>;
+using DescriptorSetManager = platform::DescriptorSetManager<Platform::CURRENT>;
 
 } // namespace renderer
 } // namespace hyperion

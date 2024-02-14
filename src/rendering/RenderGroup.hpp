@@ -155,7 +155,7 @@ private:
     Handle<Shader> m_shader;
     RenderableAttributeSet m_renderable_attributes;
 
-    IndirectRenderer m_indirect_renderer;
+    RC<IndirectRenderer> m_indirect_renderer;
     
     Array<Handle<Framebuffer>> m_fbos;
 

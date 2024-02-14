@@ -22,16 +22,17 @@ class RaytracingPipeline<Platform::VULKAN> : public Pipeline<Platform::VULKAN>
 {
 public:
     RaytracingPipeline();
-    RaytracingPipeline(
-        const Array<DescriptorSetRef> &used_descriptor_sets
-    );
+    RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader);
+    /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
+        used with this pipeline.  */
+    RaytracingPipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
+    RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
     RaytracingPipeline(const RaytracingPipeline &other)             = delete;
     RaytracingPipeline &operator=(const RaytracingPipeline &other)  = delete;
     ~RaytracingPipeline();
 
     Result Create(
         Device<Platform::VULKAN> *device,
-        ShaderProgram<Platform::VULKAN> *shader_program,
         DescriptorPool *pool
     );
     Result Destroy(Device<Platform::VULKAN> *device);

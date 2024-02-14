@@ -54,7 +54,11 @@ public:
     };
 
     GraphicsPipeline();
+    GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader);
+    /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
+        used with this pipeline.  */
     GraphicsPipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
+    GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();

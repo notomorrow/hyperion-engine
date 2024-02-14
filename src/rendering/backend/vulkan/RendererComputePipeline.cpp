@@ -18,6 +18,21 @@ ComputePipeline<Platform::VULKAN>::ComputePipeline()
 {
 }
 
+ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program))
+{
+}
+
+ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets)
+{
+}
+
+ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets)
+{
+}
+
 ComputePipeline<Platform::VULKAN>::ComputePipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
     : Pipeline<Platform::VULKAN>(used_descriptor_sets)
 {
@@ -106,9 +121,84 @@ void ComputePipeline<Platform::VULKAN>::DispatchIndirect(
     indirect->DispatchIndirect(command_buffer, offset);
 }
 
+Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+{
+    AssertThrowMsg(m_used_descriptor_sets2.HasValue(), "To use this function, you must use DescriptorSet2");
+
+    /* Push constants */
+    const VkPushConstantRange push_constant_ranges[] = {
+        {
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset     = 0,
+            .size       = uint32(device->GetFeatures().PaddedSize<PushConstantData>())
+        }
+    };
+    
+    /* Pipeline layout */
+    VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+
+    const Array<VkDescriptorSetLayout> used_layouts = GetDescriptorSetLayouts();
+    const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+
+    DebugLog(
+        LogType::Debug,
+        "Using %llu descriptor set layouts in pipeline\n",
+        used_layouts.Size()
+    );
+    
+    if (used_layouts.Size() > max_set_layouts) {
+        DebugLog(
+            LogType::Debug,
+            "Device max bound descriptor sets exceeded (%llu > %u)\n",
+            used_layouts.Size(),
+            max_set_layouts
+        );
+
+        return { Result::RENDERER_ERR, "Device max bound descriptor sets exceeded" };
+    }
+
+    layout_info.setLayoutCount = uint32(used_layouts.Size());
+    layout_info.pSetLayouts = used_layouts.Data();
+    
+    layout_info.pushConstantRangeCount = uint32(std::size(push_constant_ranges));
+    layout_info.pPushConstantRanges = push_constant_ranges;
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),
+        "Failed to create compute pipeline layout"
+    );
+
+    VkComputePipelineCreateInfo pipeline_info { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+
+    if (!m_shader_program) {
+        return { Result::RENDERER_ERR, "Compute shader not provided to pipeline" };
+    }
+
+    const Array<VkPipelineShaderStageCreateInfo> &stages = m_shader_program->GetShaderStages();
+
+    if (stages.Size() == 0) {
+        return { Result::RENDERER_ERR, "Compute pipelines must have at least one shader stage" };
+    }
+
+    if (stages.Size() > 1) {
+        return { Result::RENDERER_ERR, "Compute pipelines must have only one shader stage" };
+    }
+
+    pipeline_info.stage = stages.Front();
+    pipeline_info.layout = layout;
+    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_info.basePipelineIndex = -1;
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreateComputePipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),
+        "Failed to create compute pipeline"
+    );
+
+    HYPERION_RETURN_OK;
+}
+
 Result ComputePipeline<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
-    ShaderProgram<Platform::VULKAN> *shader,
     DescriptorPool *descriptor_pool
 )
 {
@@ -157,13 +247,17 @@ Result ComputePipeline<Platform::VULKAN>::Create(
 
     VkComputePipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
 
-    if (shader == nullptr) {
+    if (!m_shader_program) {
         return { Result::RENDERER_ERR, "Compute shader not provided to pipeline" };
     }
 
-    const auto &stages = shader->GetShaderStages();
+    const auto &stages = m_shader_program->GetShaderStages();
 
-    if (stages.Size() != 1) {
+    if (stages.Size() == 0) {
+        return { Result::RENDERER_ERR, "Compute pipelines must have at least one shader stage" };
+    }
+
+    if (stages.Size() > 1) {
         return { Result::RENDERER_ERR, "Compute pipelines must have only one shader stage" };
     }
 

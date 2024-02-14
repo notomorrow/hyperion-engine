@@ -11,101 +11,221 @@ using renderer::ShaderVec2;
 using renderer::ShaderVec3;
 using renderer::ShaderVec4;
 
-class IndirectRenderer;
-
-struct RENDER_COMMAND(CreateIndirectRenderer) : renderer::RenderCommand
+template <class BufferType>
+static bool ResizeBuffer(
+    Frame *frame,
+    const GPUBufferRef &buffer,
+    SizeType new_buffer_size
+)
 {
-    IndirectRenderer &indirect_renderer;
-
-    RENDER_COMMAND(CreateIndirectRenderer)(IndirectRenderer &indirect_renderer)
-        : indirect_renderer(indirect_renderer)
-    {
+    if constexpr (IndirectDrawState::use_next_pow2_size) {
+        new_buffer_size = MathUtil::NextPowerOf2(new_buffer_size);
     }
 
-    virtual Result operator()()
+    bool size_changed = false;
+
+    HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(
+        g_engine->GetGPUDevice(),
+        new_buffer_size,
+        &size_changed
+    ));
+
+    return size_changed;
+}
+
+static bool ResizeIndirectDrawCommandsBuffer(
+    Frame *frame,
+    uint num_draw_commands,
+    const GPUBufferRef &indirect_buffer,
+    const GPUBufferRef &staging_buffer
+)
+{
+    // assume render thread
+    const bool was_created_or_resized = ResizeBuffer<renderer::IndirectBuffer>(
+        frame,
+        indirect_buffer,
+        num_draw_commands * sizeof(IndirectDrawCommand)
+    );
+
+    if (!was_created_or_resized) {
+        return false;
+    }
+
+    // upload zeros to the buffer using a staging buffer.
+    if (staging_buffer->IsCreated()) {
+        HYPERION_ASSERT_RESULT(staging_buffer->EnsureCapacity(
+            g_engine->GetGPUDevice(),
+            indirect_buffer->size
+        ));
+    } else {
+        HYPERION_ASSERT_RESULT(staging_buffer->Create(
+            g_engine->GetGPUDevice(),
+            indirect_buffer->size
+        ));
+    }
+
+    staging_buffer->Memset(
+        g_engine->GetGPUDevice(),
+        staging_buffer->size,
+        0x0 // fill buffer with zeros
+    );
+
+    staging_buffer->InsertBarrier(
+        frame->GetCommandBuffer(),
+        renderer::ResourceState::COPY_SRC
+    );
+
+    indirect_buffer->InsertBarrier(
+        frame->GetCommandBuffer(),
+        renderer::ResourceState::COPY_DST
+    );
+
+    indirect_buffer->CopyFrom(
+        frame->GetCommandBuffer(),
+        staging_buffer.Get(),
+        staging_buffer->size
+    );
+
+    indirect_buffer->InsertBarrier(
+        frame->GetCommandBuffer(),
+        renderer::ResourceState::INDIRECT_ARG
+    );
+
+    return true;
+}
+
+static bool ResizeInstancesBuffer(
+    Frame *frame,
+    uint num_object_instances,
+    const GPUBufferRef &instance_buffer,
+    const GPUBufferRef &staging_buffer
+)
+{
+    // assume render thread
+
+    const bool was_created_or_resized = ResizeBuffer<StorageBuffer>(
+        frame,
+        instance_buffer,
+        num_object_instances * sizeof(ObjectInstance)
+    );
+
+    if (was_created_or_resized) {
+        instance_buffer->Memset(
+            g_engine->GetGPUDevice(),
+            instance_buffer->size,
+            0x0
+        );
+    }
+
+    return was_created_or_resized;
+}
+
+static bool ResizeIfNeeded(
+    Frame *frame,
+    const FixedArray<GPUBufferRef, max_frames_in_flight> &indirect_buffers,
+    const FixedArray<GPUBufferRef, max_frames_in_flight> &instance_buffers,
+    const FixedArray<GPUBufferRef, max_frames_in_flight> &staging_buffers,
+    uint num_draw_commands,
+    uint num_object_instances,
+    uint8 dirty_bits
+)
+{
+    // assume render thread
+
+    bool resize_happened = false;
+
+    const GPUBufferRef &indirect_buffer = indirect_buffers[frame->GetFrameIndex()];
+    const GPUBufferRef &instance_buffer = instance_buffers[frame->GetFrameIndex()];
+    const GPUBufferRef &staging_buffer = staging_buffers[frame->GetFrameIndex()];
+    
+    if ((dirty_bits & (1u << frame->GetFrameIndex())) || !indirect_buffers[frame->GetFrameIndex()].IsValid()) {
+        resize_happened |= ResizeIndirectDrawCommandsBuffer(frame, num_draw_commands, indirect_buffer, staging_buffer);
+    }
+    
+    if ((dirty_bits & (1u << frame->GetFrameIndex())) || !instance_buffers[frame->GetFrameIndex()].IsValid()) {
+        resize_happened |= ResizeInstancesBuffer(frame, num_object_instances, instance_buffer, staging_buffer);
+    }
+
+    return resize_happened;
+}
+
+#pragma region Render commands
+
+struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
+{
+    FixedArray<GPUBufferRef, max_frames_in_flight>  indirect_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  instance_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  staging_buffers;
+
+    RENDER_COMMAND(CreateIndirectDrawStateBuffers)(
+        const FixedArray<GPUBufferRef, max_frames_in_flight> &indirect_buffers,
+        const FixedArray<GPUBufferRef, max_frames_in_flight> &instance_buffers,
+        const FixedArray<GPUBufferRef, max_frames_in_flight> &staging_buffers
+    ) : indirect_buffers(indirect_buffers),
+        instance_buffers(instance_buffers),
+        staging_buffers(staging_buffers)
     {
-        HYPERION_BUBBLE_ERRORS(indirect_renderer.m_indirect_draw_state.Create());
-
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            AssertThrow(indirect_renderer.m_descriptor_sets[frame_index].IsValid());
-
-            // global object data
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-                ->SetElementBuffer(g_engine->GetRenderData()->objects.GetBuffer());
-
-            // global scene data
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
-                ->SetElementBuffer<SceneShaderData>(g_engine->GetRenderData()->scenes.GetBuffer());
-
-            // current camera
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(2)
-                ->SetElementBuffer<CameraShaderData>(g_engine->GetRenderData()->cameras.GetBuffer());
-
-            // instances buffer
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
-                ->SetElementBuffer(indirect_renderer.m_indirect_draw_state.GetInstanceBuffer(frame_index));
-
-            // indirect commands
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(4)
-                ->SetElementBuffer(indirect_renderer.m_indirect_draw_state.GetIndirectBuffer(frame_index));
-
-            // entity batches
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(5)
-                ->SetElementBuffer(g_engine->GetRenderData()->entity_instance_batches.GetBuffer());
-
-            // depth pyramid image (set to placeholder)
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(6)
-                ->SetSubDescriptor({
-                    .image_view = g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
-                });
-
-            // sampler
-            indirect_renderer.m_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(7)
-                ->SetSubDescriptor({
-                    .sampler = g_engine->GetPlaceholderData()->GetSamplerNearest()
-                });
-
-            HYPERION_BUBBLE_ERRORS(indirect_renderer.m_descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
+            AssertThrow(this->indirect_buffers[frame_index].IsValid());
+            AssertThrow(this->instance_buffers[frame_index].IsValid());
+            AssertThrow(this->staging_buffers[frame_index].IsValid());
         }
+    }
 
-        HYPERION_RETURN_OK;
+    virtual ~RENDER_COMMAND(CreateIndirectDrawStateBuffers)() override = default;
+
+    virtual Result operator()() override
+    {
+        auto single_time_commands = g_engine->GetGPUInstance()->GetSingleTimeCommands();
+
+        single_time_commands.Push([this](const CommandBufferRef &command_buffer) -> Result
+        {
+            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                auto frame = Frame::TemporaryFrame(command_buffer, frame_index);
+
+                if (!ResizeIndirectDrawCommandsBuffer(&frame, IndirectDrawState::initial_count, indirect_buffers[frame_index], staging_buffers[frame_index])) {
+                    return { Result::RENDERER_ERR, "Failed to create indirect draw commands buffer!" };
+                }
+
+                if (!ResizeInstancesBuffer(&frame, IndirectDrawState::initial_count, instance_buffers[frame_index], staging_buffers[frame_index])) {
+                    return { Result::RENDERER_ERR, "Failed to create instances buffer!" };
+                }
+            }
+
+            HYPERION_RETURN_OK;
+        });
+
+        return single_time_commands.Execute(g_engine->GetGPUDevice());
     }
 };
 
+#pragma endregion
+
 IndirectDrawState::IndirectDrawState()
-    : m_num_draw_commands(0)
+    : m_num_draw_commands(0),
+      m_dirty_bits(0x3)
 {
+    // Allocate used buffers so they can be set in descriptor sets
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        m_indirect_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::IndirectBuffer());
+        m_instance_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::StorageBuffer());
+        m_staging_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
+    }
 }
 
 IndirectDrawState::~IndirectDrawState()
 {
 }
 
-Result IndirectDrawState::Create()
+void IndirectDrawState::Create()
 {
-    auto single_time_commands = g_engine->GetGPUInstance()->GetSingleTimeCommands();
-
-    single_time_commands.Push([this](const CommandBufferRef &command_buffer) -> Result
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            auto frame = Frame::TemporaryFrame(command_buffer, frame_index);
-
-            if (!ResizeIndirectDrawCommandsBuffer(&frame, initial_count)) {
-                return { Result::RENDERER_ERR, "Failed to create indirect draw commands buffer!" };
-            }
-
-            if (!ResizeInstancesBuffer(&frame, initial_count)) {
-                return { Result::RENDERER_ERR, "Failed to create instances buffer!" };
-            }
-        }
-
-        HYPERION_RETURN_OK;
-    });
-
-    return single_time_commands.Execute(g_engine->GetGPUDevice());
+    // Push render command to create buffers
+    PUSH_RENDER_COMMAND(
+        CreateIndirectDrawStateBuffers,
+        m_indirect_buffers,
+        m_instance_buffers,
+        m_staging_buffers
+    );
 }
 
 void IndirectDrawState::Destroy()
@@ -115,57 +235,10 @@ void IndirectDrawState::Destroy()
     SafeRelease(std::move(m_staging_buffers));
 }
 
-template <class BufferType>
-static bool ResizeBuffer(
-    Frame *frame,
-    FixedArray<GPUBufferRef, max_frames_in_flight> &buffers,
-    SizeType new_buffer_size
-)
-{
-    const auto frame_index = frame->GetFrameIndex();
-
-    SizeType current_buffer_size = 0u;
-
-    bool needs_create = false;
-
-    if (buffers[frame_index].IsValid()) {
-        current_buffer_size = buffers[frame_index]->size;
-
-        if (new_buffer_size > current_buffer_size) {
-            SafeRelease(std::move(buffers[frame_index]));
-
-            needs_create = true;
-        }
-    } else {
-        needs_create = true;
-    }
-
-    if (needs_create) {
-        if constexpr (IndirectDrawState::use_next_pow2_size) {
-            new_buffer_size = MathUtil::NextPowerOf2(new_buffer_size);
-        }
-
-        buffers[frame_index] = MakeRenderObject<GPUBuffer>(BufferType());
-
-        DebugLog(
-            LogType::Debug,
-            "Resize indirect buffer (%p) at frame index %u from %llu -> %llu\n",
-            buffers[frame_index].Get(),
-            frame_index,
-            current_buffer_size,
-            new_buffer_size
-        );
-
-        HYPERION_ASSERT_RESULT(buffers[frame_index]->Create(g_engine->GetGPUDevice(), new_buffer_size));
-
-        return true;
-    }
-
-    return false;
-}
-
 void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData &out)
 {
+    // assume render thread
+
     out = { };
 
     const uint32 draw_command_index = m_num_draw_commands++;
@@ -189,100 +262,10 @@ void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData 
     GetContainer<Mesh>().Get(draw_call.mesh_id.ToIndex())
         .PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
     
-    m_is_dirty = { true, true };
+    m_dirty_bits |= 0x3;
 }
 
-bool IndirectDrawState::ResizeIndirectDrawCommandsBuffer(Frame *frame, SizeType count)
-{
-    const bool was_created_or_resized = ResizeBuffer<renderer::IndirectBuffer>(
-        frame,
-        m_indirect_buffers,
-        count * sizeof(IndirectDrawCommand)
-    );
-
-    if (!was_created_or_resized) {
-        return false;
-    }
-
-    // upload zeros to the buffer using a staging buffer.
-    if (m_staging_buffers[frame->GetFrameIndex()].IsValid()) {
-        SafeRelease(std::move(m_staging_buffers[frame->GetFrameIndex()]));
-    }
-
-    m_staging_buffers[frame->GetFrameIndex()] = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
-
-    HYPERION_ASSERT_RESULT(m_staging_buffers[frame->GetFrameIndex()]->Create(
-        g_engine->GetGPUDevice(),
-        m_indirect_buffers[frame->GetFrameIndex()]->size
-    ));
-
-    m_staging_buffers[frame->GetFrameIndex()]->Memset(
-        g_engine->GetGPUDevice(),
-        m_staging_buffers[frame->GetFrameIndex()]->size,
-        0x00 // fill buffer with zeros
-    );
-
-    m_staging_buffers[frame->GetFrameIndex()]->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::COPY_SRC
-    );
-
-    m_indirect_buffers[frame->GetFrameIndex()]->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::COPY_DST
-    );
-
-    m_indirect_buffers[frame->GetFrameIndex()]->CopyFrom(
-        frame->GetCommandBuffer(),
-        m_staging_buffers[frame->GetFrameIndex()].Get(),
-        m_staging_buffers[frame->GetFrameIndex()]->size
-    );
-
-    m_indirect_buffers[frame->GetFrameIndex()]->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::INDIRECT_ARG
-    );
-
-    return true;
-}
-
-bool IndirectDrawState::ResizeInstancesBuffer(Frame *frame, SizeType count)
-{
-    const bool was_created_or_resized = ResizeBuffer<StorageBuffer>(
-        frame,
-        m_instance_buffers,
-        count * sizeof(ObjectInstance)
-    );
-
-    if (was_created_or_resized) {
-        m_instance_buffers[frame->GetFrameIndex()]->Memset(
-            g_engine->GetGPUDevice(),
-            m_instance_buffers[frame->GetFrameIndex()]->size,
-            0x00
-        );
-    }
-
-    return was_created_or_resized;
-}
-
-bool IndirectDrawState::ResizeIfNeeded(Frame *frame)
-{
-    // assume render thread
-
-    bool resize_happened = false;
-    
-    if (m_is_dirty[frame->GetFrameIndex()] || !m_indirect_buffers[frame->GetFrameIndex()].IsValid()) {
-        resize_happened |= ResizeIndirectDrawCommandsBuffer(frame, m_num_draw_commands);
-    }
-    
-    if (m_is_dirty[frame->GetFrameIndex()] || !m_instance_buffers[frame->GetFrameIndex()].IsValid()) {
-        resize_happened |= ResizeInstancesBuffer(frame, m_object_instances.Size());
-    }
-
-    return resize_happened;
-}
-
-void IndirectDrawState::Reset()
+void IndirectDrawState::ResetDrawState()
 {
     // assume render thread
 
@@ -291,22 +274,7 @@ void IndirectDrawState::Reset()
     m_object_instances.Clear();
     m_draw_commands.Clear();
 
-    m_is_dirty = { true, true };
-}
-
-void IndirectDrawState::Reserve(Frame *frame, SizeType count)
-{
-    // assume render thread
-
-    m_object_instances.Reserve(count);
-    m_draw_commands.Reserve(count);
-
-    bool resize_happened = false;
-    
-    resize_happened |= ResizeIndirectDrawCommandsBuffer(frame, count);
-    resize_happened |= ResizeInstancesBuffer(frame, count);
-
-    m_is_dirty[frame->GetFrameIndex()] |= resize_happened;
+    m_dirty_bits |= 0x3;
 }
 
 void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
@@ -315,11 +283,19 @@ void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
 
     const uint frame_index = frame->GetFrameIndex();
 
-    if ((*out_was_resized = ResizeIfNeeded(frame))) {
-        m_is_dirty[frame_index] = true;
+    if ((*out_was_resized = ResizeIfNeeded(
+        frame,
+        m_indirect_buffers,
+        m_instance_buffers,
+        m_staging_buffers,
+        m_num_draw_commands,
+        m_object_instances.Size(),
+        m_dirty_bits
+    ))) {
+        m_dirty_bits |= (1u << frame_index);
     }
 
-    if (!m_is_dirty[frame_index]) {
+    if (!(m_dirty_bits & (1u << frame_index))) {
         return;
     }
     
@@ -365,7 +341,7 @@ void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
         m_object_instances.Data()
     );
     
-    m_is_dirty[frame_index] = false;
+    m_dirty_bits &= ~(1u << frame_index);
 }
 
 IndirectRenderer::IndirectRenderer()
@@ -377,22 +353,71 @@ IndirectRenderer::~IndirectRenderer() = default;
 
 void IndirectRenderer::Create()
 {
+    // Threads::AssertOnThread(THREAD_RENDER);
+
+    m_indirect_draw_state.Create();
+
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         m_descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>();
+
+        // global object data
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
+            ->SetElementBuffer(g_engine->GetRenderData()->objects.GetBuffer());
+
+        // global scene data
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
+            ->SetElementBuffer<SceneShaderData>(g_engine->GetRenderData()->scenes.GetBuffer());
+
+        // current camera
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(2)
+            ->SetElementBuffer<CameraShaderData>(g_engine->GetRenderData()->cameras.GetBuffer());
+
+        // instances buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
+            ->SetElementBuffer(m_indirect_draw_state.GetInstanceBuffer(frame_index));
+
+        // indirect commands
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(4)
+            ->SetElementBuffer(m_indirect_draw_state.GetIndirectBuffer(frame_index));
+
+        // entity batches
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(5)
+            ->SetElementBuffer(g_engine->GetRenderData()->entity_instance_batches.GetBuffer());
+
+        // depth pyramid image (set to placeholder)
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(6)
+            ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+
+        // sampler
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(7)
+            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
+
+        // HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
+        //     g_engine->GetGPUDevice(),
+        //     &g_engine->GetGPUInstance()->GetDescriptorPool()
+        // ));
+
+        DeferCreate(
+            m_descriptor_sets[frame_index],
+            g_engine->GetGPUDevice(),
+            &g_engine->GetGPUInstance()->GetDescriptorPool()
+        );
     }
 
-    PUSH_RENDER_COMMAND(CreateIndirectRenderer, *this);
+    Handle<Shader> object_visibility_shader = g_shader_manager->GetOrCreate(HYP_NAME(ObjectVisibility));
+    AssertThrow(object_visibility_shader.IsValid());
 
-    // create compute pipeline for object visibility (for indirect render)
-    // TODO: cache pipelines: re-use this
-    m_object_visibility = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(ObjectVisibility)),
+    m_object_visibility = MakeRenderObject<renderer::ComputePipeline>(
+        object_visibility_shader->GetShaderProgram(),
         Array<DescriptorSetRef> { m_descriptor_sets[0] }
     );
-
-    InitObject(m_object_visibility);
     
-    //HYP_SYNC_RENDER();
+    // use DeferCreate because our Shader might not be ready yet
+    DeferCreate(
+        m_object_visibility,
+        g_engine->GetGPUDevice(),
+        &g_engine->GetGPUInstance()->GetDescriptorPool()
+    );
 }
 
 void IndirectRenderer::Destroy()
@@ -450,7 +475,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     // bind our descriptor set to binding point 0
     command_buffer->BindDescriptorSet(
         g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_object_visibility->GetPipeline(),
+        m_object_visibility,
         m_descriptor_sets[frame_index],
         static_cast<DescriptorSet::Index>(0),
         FixedArray {
@@ -464,7 +489,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
         renderer::ResourceState::INDIRECT_ARG
     );
 
-    m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
+    m_object_visibility->Bind(command_buffer, Pipeline::PushConstantData {
         .object_visibility_data = {
             .batch_offset = 0,
             .num_instances = num_instances,
@@ -473,7 +498,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
         }
     });
     
-    m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { num_batches, 1, 1 });
+    m_object_visibility->Dispatch(command_buffer, Extent3D { num_batches, 1, 1 });
     
     m_indirect_draw_state.GetIndirectBuffer(frame_index)->InsertBarrier(
         frame->GetCommandBuffer(),

@@ -16,19 +16,28 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
+template <PlatformType PLATFORM>
+class ShaderProgram;
+
 template <>
 class ComputePipeline<Platform::VULKAN> : public Pipeline<Platform::VULKAN>
 {
 public:
     ComputePipeline();
+    ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader);
     /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
         used with this pipeline.  */
     ComputePipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
+    ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
+    ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets);
     ComputePipeline(const ComputePipeline &other) = delete;
     ComputePipeline &operator=(const ComputePipeline &other) = delete;
     ~ComputePipeline();
 
-    Result Create(Device<Platform::VULKAN> *device, ShaderProgram<Platform::VULKAN> *shader, DescriptorPool *pool);
+    // new ver (for DescriptorSet2)
+    Result Create(Device<Platform::VULKAN> *device);
+
+    Result Create(Device<Platform::VULKAN> *device, DescriptorPool *pool);
     Result Destroy(Device<Platform::VULKAN> *device);
 
     void Bind(CommandBuffer<Platform::VULKAN> *command_buffer) const;

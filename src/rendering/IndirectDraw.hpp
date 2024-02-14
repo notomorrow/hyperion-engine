@@ -66,34 +66,23 @@ public:
     const Array<ObjectInstance> &GetInstances() const
         { return m_object_instances; }
 
-    Result Create();
+    void Create();
     void Destroy();
 
     void PushDrawCall(const DrawCall &draw_call, DrawCommandData &out);
-    void Reset();
-    void Reserve(Frame *frame, SizeType count);
+    void ResetDrawState();
 
     void UpdateBufferData(Frame *frame, bool *out_was_resized);
 
 private:
-    bool ResizeIndirectDrawCommandsBuffer(Frame *frame, SizeType count);
-    bool ResizeInstancesBuffer(Frame *frame, SizeType count);
-
-    // returns true if resize happened.
-    bool ResizeIfNeeded(Frame *frame);
-
     Array<ObjectInstance>                           m_object_instances;
     Array<IndirectDrawCommand>                      m_draw_commands;
 
     FixedArray<GPUBufferRef, max_frames_in_flight>  m_indirect_buffers;
     FixedArray<GPUBufferRef, max_frames_in_flight>  m_instance_buffers;
     FixedArray<GPUBufferRef, max_frames_in_flight>  m_staging_buffers;
-    FixedArray<bool, max_frames_in_flight>          m_is_dirty;
     uint32                                          m_num_draw_commands;
-};
-
-struct alignas(16) IndirectParams
-{
+    uint8                                           m_dirty_bits;
 };
 
 class IndirectRenderer
@@ -103,6 +92,10 @@ public:
     friend struct RenderCommand_DestroyIndirectRenderer;
 
     IndirectRenderer();
+    IndirectRenderer(const IndirectRenderer &)                  = delete;
+    IndirectRenderer &operator=(const IndirectRenderer &)       = delete;
+    IndirectRenderer(IndirectRenderer &&) noexcept              = delete;
+    IndirectRenderer &operator=(IndirectRenderer &&) noexcept   = delete;
     ~IndirectRenderer();
 
     IndirectDrawState &GetDrawState()
@@ -119,11 +112,11 @@ public:
 private:
     void RebuildDescriptors(Frame *frame);
 
-    IndirectDrawState m_indirect_draw_state;
-    Handle<ComputePipeline> m_object_visibility;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
-    CullData m_cached_cull_data;
-    uint8 m_cached_cull_data_updated_bits;
+    IndirectDrawState                                   m_indirect_draw_state;
+    ComputePipelineRef                                  m_object_visibility;
+    FixedArray<DescriptorSetRef, max_frames_in_flight>  m_descriptor_sets;
+    CullData                                            m_cached_cull_data;
+    uint8                                               m_cached_cull_data_updated_bits;
 };
 
 } // namespace hyperion::v2
