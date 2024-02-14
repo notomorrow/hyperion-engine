@@ -48,18 +48,20 @@ public:
     Iterator Erase(ConstIterator it);
     Iterator Erase(const T &value);
 
-    [[nodiscard]] SizeType Size() const    { return Base::Size(); }
-    [[nodiscard]] T *Data()                               { return Base::Data(); }
-    [[nodiscard]] T * const Data() const                  { return Base::Data(); }
-    [[nodiscard]] bool Any() const                        { return Base::Any(); }
-    [[nodiscard]] bool Empty() const                      { return Base::Empty(); }
-    [[nodiscard]] bool Contains(const T &value) const     { return Find(value) != End(); }
-    void Clear()                                          { Base::Clear(); }
+    [[nodiscard]] SizeType Size() const                 { return Base::Size(); }
+    [[nodiscard]] T *Data()                             { return Base::Data(); }
+    [[nodiscard]] T * const Data() const                { return Base::Data(); }
+    [[nodiscard]] bool Any() const                      { return Base::Any(); }
+    [[nodiscard]] bool Empty() const                    { return Base::Empty(); }
+    [[nodiscard]] bool Contains(const T &value) const   { return Find(value) != End(); }
+
+    void Clear()                                        { Base::Clear(); }
+    void Reserve(SizeType size)                         { Base::Reserve(size); }
     
-    [[nodiscard]] T &Front()                              { return Base::Front(); }
-    [[nodiscard]] const T &Front() const                  { return Base::Front(); }
-    [[nodiscard]] T &Back()                               { return Base::Back(); }
-    [[nodiscard]] const T &Back() const                   { return Base::Back(); }
+    [[nodiscard]] T &Front()                            { return Base::Front(); }
+    [[nodiscard]] const T &Front() const                { return Base::Front(); }
+    [[nodiscard]] T &Back()                             { return Base::Back(); }
+    [[nodiscard]] const T &Back() const                 { return Base::Back(); }
 
     template <class OtherContainerType>
     void Merge(const OtherContainerType &other)

@@ -7,33 +7,33 @@
         extern DescriptorTable::DeclareSet desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME(name))
 
     #define DESCRIPTOR_SRV(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_STR(name))
     #define DESCRIPTOR_UAV(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_STR(name))
     #define DESCRIPTOR_CBUFF(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_STR(name))
     #define DESCRIPTOR_SSBO(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_STR(name))
     #define DESCRIPTOR_ACCELERATION_STRUCTURE(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_STR(name))
     #define DESCRIPTOR_SAMPLER(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_NAME(name))
+        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_STR(name))
 #elif defined(HYP_DESCRIPTOR_SETS_DEFINE)
     #define DESCRIPTOR_SET(index, name) \
         DescriptorTable::DeclareSet desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME(name))
 
     #define DESCRIPTOR_SRV(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_STR(name))
     #define DESCRIPTOR_UAV(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_STR(name))
     #define DESCRIPTOR_CBUFF(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_STR(name))
     #define DESCRIPTOR_SSBO(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_STR(name))
     #define DESCRIPTOR_ACCELERATION_STRUCTURE(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_STR(name))
     #define DESCRIPTOR_SAMPLER(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_NAME(name))
+        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_STR(name))
 #endif
 
 #if defined(HYP_DESCRIPTOR_SETS_DECLARE) || defined(HYP_DESCRIPTOR_SETS_DEFINE)

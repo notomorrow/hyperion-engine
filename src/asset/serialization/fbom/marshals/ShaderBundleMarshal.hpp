@@ -41,8 +41,8 @@ public:
 
             out.SetProperty(
                 String("descriptor_usages.") + String::ToString(index) + ".descriptor_name",
-                FBOMName(),
-                item.descriptor_name
+                FBOMString(item.descriptor_name.Size()),
+                item.descriptor_name.Data()
             );
 
             out.SetProperty(
@@ -175,7 +175,7 @@ public:
                         return err;
                     }
 
-                    if (auto err = in.GetProperty(descriptor_usage_index_string + ".descriptor_name").ReadName(&usage.descriptor_name)) {
+                    if (auto err = in.GetProperty(descriptor_usage_index_string + ".descriptor_name").ReadString(usage.descriptor_name)) {
                         return err;
                     }
 

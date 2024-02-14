@@ -152,45 +152,45 @@ void TemporalAA::CreateComputePipelines()
         // create descriptor sets for depth pyramid generation.
         DescriptorSetRef descriptor_set = MakeRenderObject<renderer::DescriptorSet>(*descriptor_set_decl);
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InColorTexture))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("InColorTexture")) {
             descriptor->SetElementSRV(0, g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
         } else {
             AssertThrowMsg(false, "Could not find descriptor InColorTexture");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InPrevColorTexture))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("InPrevColorTexture")) {
             descriptor->SetElementSRV(0, (*textures[(frame_index + 1) % 2])->GetImageView());
         } else {
             AssertThrowMsg(false, "Could not find descriptor InPrevColorTexture");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InVelocityTexture))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("InVelocityTexture")) {
             descriptor->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                 .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
         } else {
             AssertThrowMsg(false, "Could not find descriptor InVelocityTexture");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InDepthTexture))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("InDepthTexture")) {
             descriptor->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
                 .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
         } else {
             AssertThrowMsg(false, "Could not find descriptor InDepthTexture");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(SamplerLinear))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("SamplerLinear")) {
             descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
         } else {
             AssertThrowMsg(false, "Could not find descriptor SamplerLinear");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(SamplerNearest))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("SamplerNearest")) {
             descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
         } else {
             AssertThrowMsg(false, "Could not find descriptor SamplerNearest");
         }
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(OutColorImage))) {
+        if (auto *descriptor = descriptor_set->GetDescriptorByName("OutColorImage")) {
             descriptor->SetElementUAV(0, (*textures[frame_index % 2])->GetImageView());
         } else {
             AssertThrowMsg(false, "Could not find descriptor OutColorImage");

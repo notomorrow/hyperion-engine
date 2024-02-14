@@ -828,49 +828,49 @@ void EnvGrid::CreateVoxelGridData()
         // create descriptor sets for depth pyramid generation.
         DescriptorSetRef descriptor_set = MakeRenderObject<renderer::DescriptorSet>(*descriptor_set_decl);
 
-        if (auto *in_color_image_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InColorImage))) {
+        if (auto *in_color_image_descriptor = descriptor_set->GetDescriptorByName("InColorImage")) {
             in_color_image_descriptor->SetElementSRV(0, m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
         } else {
             AssertThrowMsg(false, "Missing descriptor for InColorImage");
         }
 
-        if (auto *in_normals_image_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InNormalsImage))) {
+        if (auto *in_normals_image_descriptor = descriptor_set->GetDescriptorByName("InNormalsImage")) {
             in_normals_image_descriptor->SetElementSRV(0, m_framebuffer->GetAttachmentUsages()[1]->GetImageView());
         } else {
             AssertThrowMsg(false, "Missing descriptor for InNormalsImage");
         }
 
-        if (auto *in_depth_image_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(InDepthImage))) {
+        if (auto *in_depth_image_descriptor = descriptor_set->GetDescriptorByName("InDepthImage")) {
             in_depth_image_descriptor->SetElementSRV(0, m_framebuffer->GetAttachmentUsages()[2]->GetImageView());
         } else {
             AssertThrowMsg(false, "Missing descriptor for InDepthImage");
         }
 
-        if (auto *sampler_linear_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(SamplerLinear))) {
+        if (auto *sampler_linear_descriptor = descriptor_set->GetDescriptorByName("SamplerLinear")) {
             sampler_linear_descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
         } else {
             AssertThrowMsg(false, "Missing descriptor for SamplerLinear");
         }
 
-        if (auto *sampler_nearest_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(SamplerNearest))) {
+        if (auto *sampler_nearest_descriptor = descriptor_set->GetDescriptorByName("SamplerNearest")) {
             sampler_nearest_descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
         } else {
             AssertThrowMsg(false, "Missing descriptor for SamplerNearest");
         }
 
-        if (auto *env_grid_buffer_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(EnvGridBuffer))) {
+        if (auto *env_grid_buffer_descriptor = descriptor_set->GetDescriptorByName("EnvGridBuffer")) {
             env_grid_buffer_descriptor->SetElementBuffer<EnvGridShaderData>(0, g_engine->GetRenderData()->env_grids.GetBuffer());
         } else {
             AssertThrowMsg(false, "Missing descriptor for EnvGridBuffer");
         }
 
-        if (auto *env_probes_buffer_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(EnvProbesBuffer))) {
+        if (auto *env_probes_buffer_descriptor = descriptor_set->GetDescriptorByName("EnvProbesBuffer")) {
             env_probes_buffer_descriptor->SetElementBuffer(0, g_engine->GetRenderData()->env_probes.GetBuffer());
         } else {
             AssertThrowMsg(false, "Missing descriptor for EnvProbesBuffer");
         }
 
-        if (auto *out_voxel_grid_image_descriptor = descriptor_set->GetDescriptorByName(HYP_NAME(OutVoxelGridImage))) {
+        if (auto *out_voxel_grid_image_descriptor = descriptor_set->GetDescriptorByName("OutVoxelGridImage")) {
             out_voxel_grid_image_descriptor->SetElementUAV(0, m_voxel_grid_texture->GetImageView());
         } else {
             AssertThrowMsg(false, "Missing descriptor for OutVoxelGridImage");

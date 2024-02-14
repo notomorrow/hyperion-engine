@@ -277,6 +277,7 @@ class RenderObjectHandle_Strong
     RenderObjectContainer<T, PLATFORM>  *_container = &RenderObjects<PLATFORM>::template GetRenderObjectContainer<T>();
 
 public:
+    using Type = T;
 
     static const RenderObjectHandle_Strong unset;
 
@@ -424,6 +425,8 @@ class RenderObjectHandle_Weak
     RenderObjectContainer<T, PLATFORM>  *_container = &RenderObjects<PLATFORM>::template GetRenderObjectContainer<T>();
 
 public:
+    using Type = T;
+    
     static const RenderObjectHandle_Weak unset;
 
     static RenderObjectHandle_Weak FromIndex(uint index)

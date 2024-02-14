@@ -565,7 +565,7 @@ Descriptor *DescriptorSet::GetDescriptor(uint binding) const
     return it->get();
 }
 
-Descriptor *DescriptorSet::GetDescriptorByName(Name name) const
+Descriptor *DescriptorSet::GetDescriptorByName(const String &name) const
 {
     const DescriptorDeclaration *decl = m_declaration.FindDescriptorDeclaration(name);
 

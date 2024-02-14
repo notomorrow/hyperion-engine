@@ -31,7 +31,6 @@ using renderer::GPUBufferType;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::StorageBuffer;
-using renderer::AtomicCounterBuffer;
 
 Engine              *g_engine = nullptr;
 AssetManager        *g_asset_manager = nullptr;

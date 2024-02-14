@@ -80,36 +80,6 @@ class GPUBuffer : public GPUMemory<PLATFORM>
 };
 
 template <PlatformType PLATFORM>
-class VertexBuffer : public GPUBuffer<PLATFORM>
-{
-public:
-    VertexBuffer()
-        : GPUBuffer<PLATFORM>(GPUBufferType::MESH_VERTEX_BUFFER)
-    {
-    }
-
-    void Bind(CommandBuffer<PLATFORM> *command_buffer);
-};
-
-template <PlatformType PLATFORM>
-class IndexBuffer : public GPUBuffer<PLATFORM>
-{
-public:
-    IndexBuffer()
-        : GPUBuffer<PLATFORM>(GPUBufferType::MESH_INDEX_BUFFER)
-    {
-    }
-
-    void Bind(CommandBuffer<PLATFORM> *command_buffer);
-
-    DatumType GetDatumType() const { return m_datum_type; }
-    void SetDatumType(DatumType datum_type) { m_datum_type = datum_type; }
-
-private:
-    DatumType m_datum_type = DatumType::UNSIGNED_INT;
-};
-
-template <PlatformType PLATFORM>
 class UniformBuffer : public GPUBuffer<PLATFORM>
 {
 public:
@@ -239,19 +209,11 @@ using GPUMemory                             = platform::GPUMemory<Platform::CURR
 using GPUImageMemory                        = platform::GPUImageMemory<Platform::CURRENT>;
 
 using GPUBuffer                             = platform::GPUBuffer<Platform::CURRENT>;
-using VertexBuffer                          = platform::VertexBuffer<Platform::CURRENT>;
-using IndexBuffer                           = platform::IndexBuffer<Platform::CURRENT>;
 using UniformBuffer                         = platform::UniformBuffer<Platform::CURRENT>;
 using StorageBuffer                         = platform::StorageBuffer<Platform::CURRENT>;
-using AtomicCounterBuffer                   = platform::AtomicCounterBuffer<Platform::CURRENT>;
 using StagingBuffer                         = platform::StagingBuffer<Platform::CURRENT>;
 using IndirectBuffer                        = platform::IndirectBuffer<Platform::CURRENT>;
 using ShaderBindingTableBuffer              = platform::ShaderBindingTableBuffer<Platform::CURRENT>;
-using AccelerationStructureBuffer           = platform::AccelerationStructureBuffer<Platform::CURRENT>;
-using AccelerationStructureInstancesBuffer  = platform::AccelerationStructureInstancesBuffer<Platform::CURRENT>;
-using PackedVertexStorageBuffer             = platform::PackedVertexStorageBuffer<Platform::CURRENT>;
-using PackedIndexStorageBuffer              = platform::PackedIndexStorageBuffer<Platform::CURRENT>;
-using ScratchBuffer                         = platform::ScratchBuffer<Platform::CURRENT>;
 
 // Forward declared
 using Device                                = platform::Device<Platform::CURRENT>;
