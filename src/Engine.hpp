@@ -103,7 +103,25 @@ struct DebugMarker
     }
 };
 
-class IndirectDrawState;
+class GlobalDescriptorSetManager
+{
+public:
+    GlobalDescriptorSetManager();
+    GlobalDescriptorSetManager(const GlobalDescriptorSetManager &)                  = delete;
+    GlobalDescriptorSetManager &operator=(const GlobalDescriptorSetManager &)       = delete;
+    GlobalDescriptorSetManager(GlobalDescriptorSetManager &&) noexcept              = delete;
+    GlobalDescriptorSetManager &operator=(GlobalDescriptorSetManager &&) noexcept   = delete;
+    ~GlobalDescriptorSetManager();
+
+    void Initialize();
+
+    void AddDescriptorSet(Name name, const DescriptorSet2Ref &ref);
+    DescriptorSet2Ref GetDescriptorSet(Name name) const;
+
+private:
+    HashMap<Name, DescriptorSet2Ref>    m_descriptor_sets;
+    mutable Mutex                       m_mutex;
+};
 
 class Engine
 {
@@ -158,6 +176,12 @@ public:
 
     const FinalPass &GetFinalPass() const
         { return m_final_pass; }
+
+    GlobalDescriptorSetManager &GetGlobalDescriptorSetManager()
+        { return m_global_descriptor_set_manager; }
+
+    const GlobalDescriptorSetManager &GetGlobalDescriptorSetManager() const
+        { return m_global_descriptor_set_manager; }
 
     Handle<RenderGroup> CreateRenderGroup(
         const RenderableAttributeSet &renderable_attributes
@@ -268,7 +292,6 @@ public:
     void FinalizeStop();
 
 private:
-
     void ResetRenderState(RenderStateMask mask);
     void UpdateBuffersAndDescriptors(uint frame_index);
 
@@ -276,32 +299,34 @@ private:
 
     void AddRenderGroupInternal(Handle<RenderGroup> &, bool cache);
     
-    UniquePtr<Instance> m_instance;
+    UniquePtr<Instance>                                     m_instance;
 
-    HashMap<TextureFormatDefault, InternalFormat> m_texture_format_defaults;
+    GlobalDescriptorSetManager                              m_global_descriptor_set_manager;
 
-    DeferredRenderer m_deferred_renderer;
-    DeferredSystem m_render_list_container;
-    FlatMap<RenderableAttributeSet, Handle<RenderGroup>> m_render_group_mapping;
-    std::mutex m_render_group_mapping_mutex;
+    HashMap<TextureFormatDefault, InternalFormat>           m_texture_format_defaults;
 
-    UniquePtr<ShaderGlobals>    m_render_data;
-    UniquePtr<PlaceholderData>  m_placeholder_data;
+    DeferredRenderer                                        m_deferred_renderer;
+    DeferredSystem                                          m_render_list_container;
+    FlatMap<RenderableAttributeSet, Handle<RenderGroup>>    m_render_group_mapping;
+    std::mutex                                              m_render_group_mapping_mutex;
 
-    ObjectPool                  m_object_pool;
+    UniquePtr<ShaderGlobals>                                m_render_data;
+    UniquePtr<PlaceholderData>                              m_placeholder_data;
 
-    Handle<World> m_world;
+    ObjectPool                                              m_object_pool;
+
+    Handle<World>                                           m_world;
     
-    Configuration m_configuration;
+    Configuration                                           m_configuration;
 
-    DebugDrawer m_debug_drawer;
+    DebugDrawer                                             m_debug_drawer;
 
-    FinalPass m_final_pass;
+    FinalPass                                               m_final_pass;
 
-    CrashHandler m_crash_handler;
+    CrashHandler                                            m_crash_handler;
 
-    bool m_is_stopping { false };
-    bool m_is_render_loop_active { false };
+    bool                                                    m_is_stopping { false };
+    bool                                                    m_is_render_loop_active { false };
 };
 
 } // namespace hyperion::v2

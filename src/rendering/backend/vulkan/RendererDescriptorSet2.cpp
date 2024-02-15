@@ -134,33 +134,33 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
 
             switch (descriptor.slot) {
             case DescriptorSlot::DESCRIPTOR_SLOT_SRV:
-                AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptor_index, 1);
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptor_index, descriptor.count);
     
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_UAV:
-                AddElement(descriptor.name, DescriptorSetElementType::IMAGE_STORAGE, descriptor_index, 1);
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE_STORAGE, descriptor_index, descriptor.count);
                     
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_CBUFF:
                 if (descriptor.is_dynamic) {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, 1);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, descriptor.count);
                 } else {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, 1);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, descriptor.count);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_SSBO:
                 if (descriptor.is_dynamic) {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, 1);
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, descriptor.count);
                 } else {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, 1);
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, descriptor.count);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE:
-                AddElement(descriptor.name, DescriptorSetElementType::TLAS, descriptor_index, 1);
+                AddElement(descriptor.name, DescriptorSetElementType::TLAS, descriptor_index, descriptor.count);
 
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_SAMPLER:
-                AddElement(descriptor.name, DescriptorSetElementType::SAMPLER, descriptor_index, 1);
+                AddElement(descriptor.name, DescriptorSetElementType::SAMPLER, descriptor_index, descriptor.count);
 
                 break;
             default:
@@ -309,6 +309,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                     || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
                 const GPUBufferRef<Platform::VULKAN> &ref = value_it->second.Get<GPUBufferRef<Platform::VULKAN>>();
+                AssertThrow(ref.IsValid());
 
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
                     ref->buffer,
@@ -321,6 +322,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
 
                 const ImageViewRef<Platform::VULKAN> &ref = value_it->second.Get<ImageViewRef<Platform::VULKAN>>();
+                AssertThrow(ref.IsValid());
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     VK_NULL_HANDLE,
@@ -331,6 +333,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
+                AssertThrow(ref.IsValid());
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     ref->GetSampler(),
@@ -339,6 +342,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
                 const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
+                AssertThrow(ref.IsValid());
 
                 descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
                     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
