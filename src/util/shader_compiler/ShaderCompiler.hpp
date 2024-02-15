@@ -601,10 +601,46 @@ struct DescriptorUsage
     {
     }
 
-    DescriptorUsage(const DescriptorUsage &other)                   = default;
-    DescriptorUsage &operator=(const DescriptorUsage &other)        = default;
-    DescriptorUsage(DescriptorUsage &&other) noexcept               = default;
-    DescriptorUsage &operator=(DescriptorUsage &&other) noexcept    = default;
+    DescriptorUsage(const DescriptorUsage &other)
+        : slot(other.slot),
+          set_name(other.set_name),
+          descriptor_name(other.descriptor_name),
+          flags(other.flags),
+          params(other.params)
+    {
+    }
+
+    DescriptorUsage &operator=(const DescriptorUsage &other)
+    {
+        slot = other.slot;
+        set_name = other.set_name;
+        descriptor_name = other.descriptor_name;
+        flags = other.flags;
+        params = other.params;
+
+        return *this;
+    }
+
+    DescriptorUsage(DescriptorUsage &&other) noexcept
+        : slot(other.slot),
+          set_name(std::move(other.set_name)),
+          descriptor_name(std::move(other.descriptor_name)),
+          flags(other.flags),
+          params(std::move(other.params))
+    {
+    }
+
+    DescriptorUsage &operator=(DescriptorUsage &&other) noexcept
+    {
+        slot = other.slot;
+        set_name = std::move(other.set_name);
+        descriptor_name = std::move(other.descriptor_name);
+        flags = other.flags;
+        params = std::move(other.params);
+
+        return *this;
+    }
+    
     ~DescriptorUsage()                                              = default;
 
     bool operator==(const DescriptorUsage &other) const

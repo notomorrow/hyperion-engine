@@ -21,6 +21,8 @@ DepthPyramidRenderer::~DepthPyramidRenderer() = default;
 
 void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+    
     AssertThrow(m_depth_attachment_usage == nullptr);
     // AssertThrow(depth_attachment_usage->IsDepthAttachment());
     m_depth_attachment_usage = std::move(depth_attachment_usage);

@@ -53,37 +53,13 @@ private:
     void CreateDescriptorSets();
     void CreateComputePipelines();
 
-    struct ImageOutput
-    {
-        StorageImage image;
-        ImageView image_view;
-
-        ImageOutput(StorageImage &&image)
-            : image(std::move(image))
-        {
-        }
-
-        ImageOutput(const ImageOutput &other) = delete;
-        ImageOutput(ImageOutput &&other) noexcept
-            : image(std::move(other.image)),
-              image_view(std::move(other.image_view))
-        {
-        }
-
-        ~ImageOutput() = default;
-
-        Result Create(Device *device);
-        Result Destroy(Device *device);
-    };
-
     Extent2D                                            m_extent;
 
     Handle<Texture>                                     m_result_texture;
     Handle<Texture>                                     m_history_texture;
 
-    FixedArray<GPUBufferRef, max_frames_in_flight>      m_uniform_buffers;
-    FixedArray<DescriptorSetRef, max_frames_in_flight>  m_descriptor_sets;
-    Handle<ComputePipeline>                             m_compute_taa;
+    FixedArray<DescriptorSet2Ref, max_frames_in_flight> m_descriptor_sets;
+    ComputePipelineRef                                  m_compute_taa;
 };
 
 } // namespace hyperion::v2
