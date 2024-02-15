@@ -2,77 +2,50 @@
     #error "HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE is not defined"
 #endif
 
-#ifdef HYP_DESCRIPTOR_SETS_DECLARE
-    #define DESCRIPTOR_SET(index, name) \
-        extern DescriptorTable::DeclareSet desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME(name))
+#define HYP_DESCRIPTOR_SET(index, name) \
+    static DescriptorTable::DeclareSet desc_set_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME_UNSAFE(name))
 
-    #define DESCRIPTOR_SRV(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_UAV(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_CBUFF(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_SSBO(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_ACCELERATION_STRUCTURE(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_SAMPLER(set_index, slot_index, name) \
-        extern DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_STR(name))
-#elif defined(HYP_DESCRIPTOR_SETS_DEFINE)
-    #define DESCRIPTOR_SET(index, name) \
-        DescriptorTable::DeclareSet desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME(name))
+#define HYP_DESCRIPTOR_SRV(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SRV, HYP_STR(name), count)
+#define HYP_DESCRIPTOR_UAV(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_UAV, HYP_STR(name), count)
+#define HYP_DESCRIPTOR_CBUFF(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_CBUFF, HYP_STR(name), count)
+#define HYP_DESCRIPTOR_SSBO(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SSBO, HYP_STR(name), count)
+#define HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, HYP_STR(name), count)
+#define HYP_DESCRIPTOR_SAMPLER(set_name, name, count) \
+    static DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SAMPLER, HYP_STR(name), count)
 
-    #define DESCRIPTOR_SRV(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SRV, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_UAV(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_UAV, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_CBUFF(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_CBUFF, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_SSBO(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SSBO, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_ACCELERATION_STRUCTURE(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, slot_index, HYP_STR(name))
-    #define DESCRIPTOR_SAMPLER(set_index, slot_index, name) \
-        DescriptorTable::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, set_index, DESCRIPTOR_SLOT_SAMPLER, slot_index, HYP_STR(name))
-#endif
+HYP_DESCRIPTOR_SET(0, Global);
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, num_gbuffer_textures);
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain, 1);
+HYP_DESCRIPTOR_SRV(Global, DeferredResult, 1);
+HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, 4);
+HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, 4);
+HYP_DESCRIPTOR_SRV(Global, SSRUVTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRSampleTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRRadiusTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRBlurHorTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRBlurVertTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRFinalTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, max_bound_reflection_probes);
+HYP_DESCRIPTOR_SRV(Global, PointShadowMaps, max_bound_point_shadow_maps);
+HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRResult, 1);
+HYP_DESCRIPTOR_UAV(Global, SSRUVImage, 1);
+HYP_DESCRIPTOR_UAV(Global, SSRSampleImage, 1);
 
-#if defined(HYP_DESCRIPTOR_SETS_DECLARE) || defined(HYP_DESCRIPTOR_SETS_DEFINE)
+HYP_DESCRIPTOR_SET(1, Scene);
+HYP_DESCRIPTOR_SET(2, Object);
+HYP_DESCRIPTOR_SET(3, Material);
 
-DESCRIPTOR_SET(0, Global);
-DESCRIPTOR_SRV(0, 0, GBufferTextures);
-DESCRIPTOR_SRV(0, 1, GBufferDepthTexture);
-DESCRIPTOR_SRV(0, 2, GBufferMipChain);
-DESCRIPTOR_SRV(0, 3, DeferredResult);
-DESCRIPTOR_SRV(0, 4, PostFXPreStack);
-DESCRIPTOR_SRV(0, 5, PostFXPostStack);
-DESCRIPTOR_SRV(0, 6, SSRUVTexture);
-DESCRIPTOR_SRV(0, 7, SSRSampleTexture);
-DESCRIPTOR_SRV(0, 8, SSRRadiusTexture);
-DESCRIPTOR_SRV(0, 9, SSRBlurHorTexture);
-DESCRIPTOR_SRV(0, 10, SSRBlurVertTexture);
-DESCRIPTOR_SRV(0, 11, SSRFinalTexture);
-DESCRIPTOR_SRV(0, 12, EnvProbeTextures);
-DESCRIPTOR_SRV(0, 13, PointShadowMaps);
-DESCRIPTOR_SRV(0, 14, DepthPyramidResult);
-DESCRIPTOR_SRV(0, 15, SSRResult);
-
-DESCRIPTOR_UAV(0, 0, SSRUVImage);
-DESCRIPTOR_UAV(0, 1, SSRSampleImage);
-DESCRIPTOR_UAV(0, 2, SSRRadiusImage);
-DESCRIPTOR_UAV(0, 3, SSRBlurHorImage);
-DESCRIPTOR_UAV(0, 5, SSRBlurVertImage);
-DESCRIPTOR_UAV(0, 6, VoxelImage);
-
-DESCRIPTOR_SSBO(0, 0, EnvProbesBuffer);
-
-DESCRIPTOR_SAMPLER(0, 0, GBufferDepthSampler);
-
-DESCRIPTOR_SET(1, Scene);
-DESCRIPTOR_SET(2, Object);
-DESCRIPTOR_SET(3, Material);
-
-#else
-
-#error "HYP_DESCRIPTOR_SETS_DECLARE or HYP_DESCRIPTOR_SETS_DEFINE is not defined"
-
-#endif
+#undef HYP_DESCRIPTOR_SET
+#undef HYP_DESCRIPTOR_SRV
+#undef HYP_DESCRIPTOR_UAV
+#undef HYP_DESCRIPTOR_CBUFF
+#undef HYP_DESCRIPTOR_SSBO
+#undef HYP_DESCRIPTOR_ACCELERATION_STRUCTURE
+#undef HYP_DESCRIPTOR_SAMPLER

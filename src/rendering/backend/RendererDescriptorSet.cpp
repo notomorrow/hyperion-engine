@@ -62,49 +62,17 @@ DescriptorSetDeclaration *DescriptorTable::AddDescriptorSet(DescriptorSetDeclara
     return &declarations.Back();
 }
 
-Array<DescriptorSetRef> GlobalDescriptorManager::GetOrCreateDescriptorSets(
-    Instance *instance,
-    Device *device,
-    const DescriptorTable &table
-)
+static struct GlobalDescriptorSetsDeclarations
 {
-    Array<DescriptorSetRef> results;
-    results.Reserve(table.GetDescriptorSetDeclarations().Size());
-
-    Mutex::Guard guard(m_mutex);
-
-    for (const DescriptorSetDeclaration &decl : table.GetDescriptorSetDeclarations()) {
-        const auto it = m_weak_refs.Find(decl.name);
-
-        DescriptorSetRef descriptor_set_ref;
-
-        if (it != m_weak_refs.End()) {
-            descriptor_set_ref = it->second.Lock();
-
-            if (descriptor_set_ref) {
-                results.PushBack(std::move(descriptor_set_ref));
-                continue;
-            }
-        }
-
-        descriptor_set_ref = MakeRenderObject<DescriptorSet>(decl);
-        m_weak_refs.Set(decl.name, descriptor_set_ref);
-
-        DeferCreate(descriptor_set_ref, device, &instance->GetDescriptorPool());
-
-        // HYPERION_ASSERT_RESULT(descriptor_set_ref->Create(device, &instance->GetDescriptorPool()));
-
-        results.PushBack(std::move(descriptor_set_ref));
+    GlobalDescriptorSetsDeclarations()
+    {
+        #define HYP_DESCRIPTOR_SETS_DEFINE
+        #define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table
+        #include <rendering/inl/DescriptorSets.inl>
+        #undef HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE
+        #undef HYP_DESCRIPTOR_SETS_DEFINE
     }
-
-    return results;
-}
-
-#define HYP_DESCRIPTOR_SETS_DEFINE
-#define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table
-#include <rendering/inl/DescriptorSets.inl>
-#undef HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE
-#undef HYP_DESCRIPTOR_SETS_DEFINE
+} g_global_descriptor_sets_declarations;
 
 } // namespace renderer
 } // namespace hyperion

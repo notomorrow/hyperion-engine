@@ -29,7 +29,6 @@ using renderer::Device;
 using renderer::GPUBufferType;
 
 class Engine;
-
 class PlaceholderData
 {
 public:

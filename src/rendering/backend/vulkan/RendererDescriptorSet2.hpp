@@ -158,7 +158,7 @@ private:
     }
 
     template <class T>
-    void PrefillElements(const String &name, uint count)
+    void PrefillElements(const String &name, uint count, const Optional<T> &placeholder_value = { })
     {
         bool is_bindless = false;
 
@@ -193,7 +193,11 @@ private:
         element.values.Reserve(count);
 
         for (uint i = 0; i < count; i++) {
-            element.values.Set(i, T { });
+            if (placeholder_value.HasValue()) {
+                element.values.Set(i, placeholder_value.Get());
+            } else {
+                element.values.Set(i, T { });
+            }
         }
 
         element.dirty_range = { 0, count };

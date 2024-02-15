@@ -162,6 +162,7 @@ struct DescriptorDeclaration
     DescriptorSlot  slot = DESCRIPTOR_SLOT_NONE;
     uint            index = ~0u;
     String          name;
+    uint            count = 1;
     bool            is_dynamic = false;
 };
 
@@ -260,43 +261,44 @@ public:
 
     struct DeclareDescriptor
     {
-        DeclareDescriptor(DescriptorTable *table, uint set_index, DescriptorSlot slot_type, uint index, const String &name)
+        DeclareDescriptor(DescriptorTable *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1)
         {
             AssertThrow(table != nullptr);
-            AssertThrow(set_index < table->declarations.Size());
+
+            uint set_index = ~0u;
+
+            for (uint i = 0; i < table->declarations.Size(); ++i) {
+                if (table->declarations[i].name == set_name) {
+                    set_index = i;
+                    break;
+                }
+            }
+
+            AssertThrowMsg(set_index != ~0u, "Descriptor set %s not found", set_name.LookupString());
 
             DescriptorSetDeclaration &decl = table->declarations[set_index];
             AssertThrow(decl.set_index == set_index);
             AssertThrow(slot_type > 0 && slot_type < decl.slots.Size());
 
-            if (index >= decl.slots[uint(slot_type) - 1].Size()) {
-                decl.slots[uint(slot_type) - 1].Resize(index + 1);
-            }
+            const uint slot_index = decl.slots[uint(slot_type) - 1].Size();
 
             DescriptorDeclaration descriptor_decl;
-            descriptor_decl.index = index;
+            descriptor_decl.index = slot_index;
             descriptor_decl.slot = slot_type;
-            descriptor_decl.name = name;
-            decl.slots[uint(slot_type) - 1][index] = std::move(descriptor_decl);
+            descriptor_decl.name = descriptor_name;
+            descriptor_decl.count = count;
+            decl.slots[uint(slot_type) - 1].PushBack(descriptor_decl);
         }
     };
 };
 
-class GlobalDescriptorManager
-{
-public:
-    Array<DescriptorSetRef> GetOrCreateDescriptorSets(
-        Instance *instance,
-        Device *device,
-        const DescriptorTable &table
-    );
-
-private:
-    FlatMap<Name, DescriptorSetWeakRef> m_weak_refs;
-    Mutex                               m_mutex;
-};
-
 extern DescriptorTable *g_static_descriptor_table;
+
+// #define HYP_DESCRIPTOR_SETS_DECLARE
+// #define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table
+// #include <rendering/inl/DescriptorSets.inl>
+// #undef HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE
+// #undef HYP_DESCRIPTOR_SETS_DECLARE
 
 } // namespace renderer
 } // namespace hyperion

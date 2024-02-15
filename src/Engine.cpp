@@ -7,7 +7,9 @@
 #include <rendering/Compute.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderEnvironment.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <scene/controllers/FollowCameraController.hpp>
 #include <scene/controllers/physics/RigidBodyController.hpp>
@@ -715,6 +717,15 @@ void Engine::Initialize(RC<Application> application)
 
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 1, GetPlaceholderData()->GetImageView2D1x1R8());
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 2, GetPlaceholderData()->GetImageView2D1x1R8());
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 3, GetPlaceholderData()->GetImageView2D1x1R8());
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 4, GetPlaceholderData()->GetImageView2D1x1R8());
+    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 5, GetPlaceholderData()->GetImageView2D1x1R8());
+
+    m_global_descriptor_set_manager.Initialize();
+
     m_render_list_container.Create();
 
     // has to be after we create framebuffers
@@ -1086,4 +1097,54 @@ void Engine::RenderDeferred(Frame *frame)
 
     m_deferred_renderer.Render(frame, render_state.GetScene().render_environment);
 }
+
+// GlobalDescriptorSetManager
+GlobalDescriptorSetManager::GlobalDescriptorSetManager()
+{
+    Mutex::Guard guard(m_mutex);
+
+    for (auto &it : renderer::g_static_descriptor_table->GetDescriptorSetDeclarations()) {
+        renderer::DescriptorSetLayout layout(it);
+        
+        DescriptorSet2Ref ref = layout.CreateDescriptorSet();
+        AssertThrow(ref.IsValid());
+
+        m_descriptor_sets.Insert(it.name, std::move(ref));
+    }
+}
+
+GlobalDescriptorSetManager::~GlobalDescriptorSetManager() = default;
+
+void GlobalDescriptorSetManager::Initialize()
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    Mutex::Guard guard(m_mutex);
+
+    for (auto &it : m_descriptor_sets) {
+        HYPERION_ASSERT_RESULT(it.second->Create(g_engine->GetGPUDevice()));
+    }
+}
+
+void GlobalDescriptorSetManager::AddDescriptorSet(Name name, const DescriptorSet2Ref &ref)
+{
+    Mutex::Guard guard(m_mutex);
+
+    const auto insert_result = m_descriptor_sets.Insert(name, std::move(ref));
+    AssertThrowMsg(insert_result.second, "Failed to insert descriptor set, item %s already exists", name.LookupString());
+}
+
+DescriptorSet2Ref GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
+{
+    Mutex::Guard guard(m_mutex);
+
+    auto it = m_descriptor_sets.Find(name);
+
+    if (it != m_descriptor_sets.End()) {
+        return it->second;
+    }
+
+    return DescriptorSet2Ref { };
+}
+
 } // namespace hyperion::v2
