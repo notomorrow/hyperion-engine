@@ -90,4 +90,6 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_irradiance_buffer, v_texcoord0).rgb;
 
     // out_color.rgb = texture(sampler2DArray(light_field_color_buffer, HYP_SAMPLER_LINEAR), vec3(v_texcoord0, 5)).rgb;
+
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, depth_pyramid_result, v_texcoord0).rgb;
 }

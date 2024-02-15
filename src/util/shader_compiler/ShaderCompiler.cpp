@@ -485,7 +485,9 @@ renderer::DescriptorTable DescriptorUsageSet::BuildDescriptorTable() const
         }
 
         if (!descriptor_set_declaration) {
-            descriptor_set_declaration = table.AddDescriptorSet(renderer::DescriptorSetDeclaration(table.GetDescriptorSetDeclarations().Size(), descriptor_usage.set_name));
+            const uint set_index = uint(table.GetDescriptorSetDeclarations().Size());
+
+            descriptor_set_declaration = table.AddDescriptorSet(renderer::DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
         }
 
         renderer::DescriptorDeclaration *descriptor_declaration = descriptor_set_declaration

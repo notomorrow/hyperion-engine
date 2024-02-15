@@ -74,10 +74,11 @@ void main()
         view_space_depth
     );
 
-#if 0
-
     vec4 color = Texture2D(sampler_nearest, color_texture, uv);
     vec4 previous_color = Texture2D(sampler_linear, prev_color_texture, uv - velocity);
+
+#if 0
+
     vec4 color_ycocg = AdjustColorIn(RGBToYCoCg(color));
     vec4 previous_color_ycocg = RGBToYCoCg(previous_color);
     // previous_color = ClampColor_3x3(input_texture, previous_color, uv, texel_size);

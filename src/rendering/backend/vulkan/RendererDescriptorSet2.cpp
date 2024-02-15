@@ -174,6 +174,22 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
 template <>
 DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::CreateDescriptorSet() const
 {
+    DebugLog(LogType::Debug, "Create descriptor set with layout:\n");
+
+    for (const auto &it : m_elements) {
+        const String &name = it.first;
+        const DescriptorSetLayoutElement &element = it.second;
+
+        DebugLog(
+            LogType::Debug,
+            "\t%s: %u, binding: %u, count: %u\n",
+            name.Data(),
+            element.type,
+            element.binding,
+            element.count
+        );
+    }
+
     return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
 }
 
@@ -227,7 +243,23 @@ Result DescriptorSet2<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device
 
     m_vk_layout_wrapper = device->GetDescriptorSetManager()->GetOrCreateVkDescriptorSetLayout(device, m_layout);
 
-    return device->GetDescriptorSetManager()->CreateDescriptorSet(device, m_vk_layout_wrapper, m_vk_descriptor_set);
+    Result result = Result::OK;
+
+    HYPERION_PASS_ERRORS(
+        device->GetDescriptorSetManager()->CreateDescriptorSet(device, m_vk_layout_wrapper, m_vk_descriptor_set),
+        result
+    );
+
+    if (!result) {
+        return result;
+    }
+
+    HYPERION_PASS_ERRORS(
+        Update(device),
+        result
+    );
+
+    return result;
 }
 
 Result DescriptorSet2<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)

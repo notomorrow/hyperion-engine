@@ -1,8 +1,11 @@
 #include <rendering/TemporalAA.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <math/Vector2.hpp>
 #include <math/MathUtil.hpp>
 #include <math/Halton.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -45,31 +48,6 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
     }
 };
 
-Result TemporalAA::ImageOutput::Create(Device *device)
-{
-    HYPERION_BUBBLE_ERRORS(image.Create(device));
-    HYPERION_BUBBLE_ERRORS(image_view.Create(device, &image));
-
-    HYPERION_RETURN_OK;
-}
-
-Result TemporalAA::ImageOutput::Destroy(Device *device)
-{
-    auto result = Result::OK;
-
-    HYPERION_PASS_ERRORS(
-        image.Destroy(device),
-        result
-    );
-
-    HYPERION_PASS_ERRORS(
-        image_view.Destroy(device),
-        result
-    );
-
-    return result;
-}
-
 TemporalAA::TemporalAA(const Extent2D &extent)
     : m_extent(extent)
 {
@@ -85,11 +63,8 @@ void TemporalAA::Create()
 
 void TemporalAA::Destroy()
 {
-    m_compute_taa.Reset();
-
-    // release our owned descriptor sets
+    SafeRelease(std::move(m_compute_taa));
     SafeRelease(std::move(m_descriptor_sets));
-    SafeRelease(std::move(m_uniform_buffers));
 
     PUSH_RENDER_COMMAND(
         SetTemporalAAResultInGlobalDescriptorSet,
@@ -111,7 +86,6 @@ void TemporalAA::CreateImages()
     ));
 
     m_result_texture->GetImage()->SetIsRWTexture(true);
-
     InitObject(m_result_texture);
 
     m_history_texture = CreateObject<Texture>(Texture2D(
@@ -123,7 +97,6 @@ void TemporalAA::CreateImages()
     ));
 
     m_history_texture->GetImage()->SetIsRWTexture(true);
-
     InitObject(m_history_texture);
 
     PUSH_RENDER_COMMAND(
@@ -141,6 +114,8 @@ void TemporalAA::CreateComputePipelines()
     const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table.FindDescriptorSetDeclaration(HYP_NAME(TemporalAADescriptorSet));
     AssertThrow(descriptor_set_decl != nullptr);
 
+    renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
+
     const FixedArray<Handle<Texture> *, 2> textures = {
         &m_result_texture,
         &m_history_texture
@@ -148,71 +123,46 @@ void TemporalAA::CreateComputePipelines()
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        DescriptorSetRef descriptor_set = MakeRenderObject<renderer::DescriptorSet>(*descriptor_set_decl);
+        DescriptorSet2Ref descriptor_set = descriptor_set_layout.CreateDescriptorSet();
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("InColorTexture")) {
-            descriptor->SetElementSRV(0, g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor InColorTexture");
-        }
+        descriptor_set->SetElement("InColorTexture", g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
+        descriptor_set->SetElement("InPrevColorTexture", (*textures[(frame_index + 1) % 2])->GetImageView());
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("InPrevColorTexture")) {
-            descriptor->SetElementSRV(0, (*textures[(frame_index + 1) % 2])->GetImageView());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor InPrevColorTexture");
-        }
+        descriptor_set->SetElement("InVelocityTexture", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+            .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("InVelocityTexture")) {
-            descriptor->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor InVelocityTexture");
-        }
+        descriptor_set->SetElement("InDepthTexture", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+            .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+    
+        descriptor_set->SetElement("SamplerLinear", g_engine->GetPlaceholderData()->GetSamplerLinear());
+        descriptor_set->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
 
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("InDepthTexture")) {
-            descriptor->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor InDepthTexture");
-        }
-
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("SamplerLinear")) {
-            descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor SamplerLinear");
-        }
-
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("SamplerNearest")) {
-            descriptor->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor SamplerNearest");
-        }
-
-        if (auto *descriptor = descriptor_set->GetDescriptorByName("OutColorImage")) {
-            descriptor->SetElementUAV(0, (*textures[frame_index % 2])->GetImageView());
-        } else {
-            AssertThrowMsg(false, "Could not find descriptor OutColorImage");
-        }
+        descriptor_set->SetElement("OutColorImage", (*textures[frame_index % 2])->GetImageView());
 
         DeferCreate(
             descriptor_set,
-            g_engine->GetGPUDevice(),
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
+            g_engine->GetGPUDevice()
         );
 
         m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
-    m_compute_taa = CreateObject<ComputePipeline>(
-        shader,
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    m_compute_taa = MakeRenderObject<renderer::ComputePipeline>(
+        shader->GetShaderProgram(),
+        Array<DescriptorSet2Ref> { m_descriptor_sets[0] }
     );
 
-    InitObject(m_compute_taa);
+    DeferCreate(
+        m_compute_taa,
+        g_engine->GetGPUDevice()
+    );
 }
 
 void TemporalAA::Render(Frame *frame)
 {
+    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
+    const uint frame_index = frame->GetFrameIndex();
+
     const auto &scene = g_engine->GetRenderState().GetScene().scene;
     const auto &camera = g_engine->GetRenderState().GetCamera().camera;
 
@@ -224,7 +174,7 @@ void TemporalAA::Render(Frame *frame)
     Handle<Texture> &active_texture = *textures[frame->GetFrameIndex() % 2];
 
     active_texture->GetImage()->GetGPUImage()
-        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+        ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
     struct alignas(128) {
         ShaderVec2<uint32>  dimensions;
@@ -239,18 +189,13 @@ void TemporalAA::Render(Frame *frame)
     );
     push_constants.camera_near_far = Vector2(camera.clip_near, camera.clip_far);
 
-    m_compute_taa->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
-    m_compute_taa->GetPipeline()->Bind(frame->GetCommandBuffer());
+    m_compute_taa->SetPushConstants(&push_constants, sizeof(push_constants));
+    m_compute_taa->Bind(command_buffer);
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_compute_taa->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
-    );
+    m_descriptor_sets[frame_index]->Bind(command_buffer, m_compute_taa, 0);
 
-    m_compute_taa->GetPipeline()->Dispatch(
-        frame->GetCommandBuffer(),
+    m_compute_taa->Dispatch(
+        command_buffer,
         Extent3D {
             (m_extent.width + 7) / 8,
             (m_extent.height + 7) / 8,
@@ -259,7 +204,7 @@ void TemporalAA::Render(Frame *frame)
     );
     
     active_texture->GetImage()->GetGPUImage()
-        ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+        ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 }
 
 } // namespace hyperion::v2
