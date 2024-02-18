@@ -13,8 +13,8 @@ namespace hyperion {
 template <class First, class Second>
 struct Pair
 {
-    First first;
-    Second second;
+    First   first;
+    Second  second;
 
     Pair()
         : first { },
@@ -52,6 +52,7 @@ struct Pair
     {
     }
 
+    HYP_FORCE_INLINE
     Pair &operator=(const Pair &other)
     {
         first = other.first;
@@ -66,6 +67,7 @@ struct Pair
     {
     }
 
+    HYP_FORCE_INLINE
     Pair &operator=(Pair &&other) noexcept
     {
         first = std::move(other.first);
@@ -76,32 +78,38 @@ struct Pair
 
     ~Pair() = default;
 
+    HYP_FORCE_INLINE
     bool operator<(const Pair &other) const
     {
         return first < other.first || (!(other.first < first) && second < other.second);
     }
 
+    HYP_FORCE_INLINE
     bool operator<=(const Pair &other) const
     {
         return operator<(other) || operator==(other);
     }
 
+    HYP_FORCE_INLINE
     bool operator>(const Pair &other) const
     {
         return !(operator<(other) || operator==(other));
     }
 
+    HYP_FORCE_INLINE
     bool operator>=(const Pair &other) const
     {
         return operator>(other) || operator==(other);
     }
 
+    HYP_FORCE_INLINE
     bool operator==(const Pair &other) const
     {
         return first == other.first
             && second == other.second;
     }
 
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -125,6 +133,7 @@ struct KeyValuePair : Pair<Key, Value>
     KeyValuePair(const KeyValuePair &other) : Pair<Key, Value>(other) {}
     KeyValuePair(KeyValuePair &&other) noexcept : Pair<Key, Value>(std::move(other)) {}
 
+    HYP_FORCE_INLINE
     KeyValuePair &operator=(const KeyValuePair &other)
     {
         Pair<Key, Value>::first = other.first;
@@ -133,6 +142,7 @@ struct KeyValuePair : Pair<Key, Value>
         return *this;
     }
 
+    HYP_FORCE_INLINE
     KeyValuePair &operator=(KeyValuePair &&other) noexcept
     {
         Pair<Key, Value>::first = std::move(other.first);
@@ -144,6 +154,7 @@ struct KeyValuePair : Pair<Key, Value>
     KeyValuePair(const Pair<Key, Value> &pair) : Pair<Key, Value>(pair) {}
     KeyValuePair(Pair<Key, Value> &&pair) noexcept : Pair<Key, Value>(std::move(pair)) {}
 
+    HYP_FORCE_INLINE
     KeyValuePair &operator=(const Pair<Key, Value> &other)
     {
         Pair<Key, Value>::first = other.first;
@@ -152,6 +163,7 @@ struct KeyValuePair : Pair<Key, Value>
         return *this;
     }
 
+    HYP_FORCE_INLINE
     KeyValuePair &operator=(Pair<Key, Value> &&other) noexcept
     {
         Pair<Key, Value>::first = std::move(other.first);
@@ -162,50 +174,62 @@ struct KeyValuePair : Pair<Key, Value>
 
     ~KeyValuePair() = default;
 
+    HYP_FORCE_INLINE
     bool operator<(const Key &key) const { return Pair<Key, Value>::first < key; }
+
+    HYP_FORCE_INLINE
     bool operator<=(const Key &key) const { return Pair<Key, Value>::first <= key; }
+
+    HYP_FORCE_INLINE
     bool operator>(const Key &key) const { return Pair<Key, Value>::first > key; }
+
+    HYP_FORCE_INLINE
     bool operator>=(const Key &key) const { return Pair<Key, Value>::first >= key; }
 
+    HYP_FORCE_INLINE
     bool operator<(const KeyValuePair &other) const { return Pair<Key, Value>::first < other.first; }
+
+    HYP_FORCE_INLINE
     bool operator<=(const KeyValuePair &other) const { return Pair<Key, Value>::first <= other.first; }
+
+    HYP_FORCE_INLINE
     bool operator>(const KeyValuePair &other) const { return Pair<Key, Value>::first > other.first; }
+
+    HYP_FORCE_INLINE
     bool operator>=(const KeyValuePair &other) const { return Pair<Key, Value>::first >= other.first; }
 
+    HYP_FORCE_INLINE
     bool operator==(const KeyValuePair &other) const
     {
         return Pair<Key, Value>::first == other.first
             && Pair<Key, Value>::second == other.second;
     }
 
-    // friend bool operator<(const KeyValuePair &, const Pair<Key, Value> &);
-    // friend bool operator<=(const KeyValuePair &, const Pair<Key, Value> &);
-    // friend bool operator>(const KeyValuePair &, const Pair<Key, Value> &);
-    // friend bool operator>=(const KeyValuePair &, const Pair<Key, Value> &);
-
-    // friend bool operator<(const Pair<Key, Value> &, const KeyValuePair &);
-    // friend bool operator<=(const Pair<Key, Value> &, const KeyValuePair &);
-    // friend bool operator>(const Pair<Key, Value> &, const KeyValuePair &);
-    // friend bool operator>=(const Pair<Key, Value> &, const KeyValuePair &);
-
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const { return Pair<Key, Value>::GetHashCode(); }
 };
 
 template <class K, class V>
 bool operator<(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first < rhs.first; }
+
 template <class K, class V>
 bool operator<=(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first <= rhs.first; }
+
 template <class K, class V>
 bool operator>(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first > rhs.first; }
+
 template <class K, class V>
 bool operator>=(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first >= rhs.first; }
 
 template <class K, class V>
 bool operator<(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first < rhs.first; }
+
 template <class K, class V>
 bool operator<=(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first <= rhs.first; }
+
 template <class K, class V>
 bool operator>(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first > rhs.first; }
+
 template <class K, class V>
 bool operator>=(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first >= rhs.first; }
 

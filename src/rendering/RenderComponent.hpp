@@ -2,7 +2,6 @@
 #define HYPERION_V2_RENDER_COMPONENT_H
 
 #include <core/Base.hpp>
-#include <core/lib/AtomicSemaphore.hpp>
 #include <scene/Entity.hpp>
 #include <math/MathUtil.hpp>
 #include <rendering/Buffers.hpp>

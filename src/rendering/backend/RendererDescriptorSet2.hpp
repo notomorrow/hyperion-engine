@@ -114,6 +114,21 @@ struct DescriptorDeclaration
     uint            size = -1;
     bool            is_dynamic = false;
     uint            index = ~0u;
+
+    HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(slot);
+        hc.Add(name);
+        hc.Add(count);
+        hc.Add(size);
+        hc.Add(is_dynamic);
+        hc.Add(index);
+
+        return hc;
+    }
 };
 
 struct DescriptorSetDeclaration
@@ -167,6 +182,24 @@ struct DescriptorSetDeclaration
     uint CalculateFlatIndex(DescriptorSlot slot, const String &name) const;
 
     DescriptorDeclaration *FindDescriptorDeclaration(const String &name) const;
+
+    HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(set_index);
+        hc.Add(name);
+        hc.Add(is_reference);
+
+        for (const auto &slot : slots) {
+            for (const auto &decl : slot) {
+                hc.Add(decl.GetHashCode());
+            }
+        }
+
+        return hc;
+    }
 };
 
 class DescriptorTableDeclaration
@@ -318,16 +351,56 @@ class DescriptorSetLayout
 {
 public:
     DescriptorSetLayout(const DescriptorSetDeclaration &decl);
-    DescriptorSetLayout(const DescriptorSetLayout &other)                   = default;
-    DescriptorSetLayout &operator=(const DescriptorSetLayout &other)        = default;
-    DescriptorSetLayout(DescriptorSetLayout &&other) noexcept               = default;
-    DescriptorSetLayout &operator=(DescriptorSetLayout &&other) noexcept    = default;
-    ~DescriptorSetLayout()                                                  = default;
+
+    DescriptorSetLayout(const DescriptorSetLayout &other)
+        : m_decl(other.m_decl),
+          m_elements(other.m_elements),
+          m_dynamic_elements(other.m_dynamic_elements)
+    {
+    }
+
+    DescriptorSetLayout &operator=(const DescriptorSetLayout &other)
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        m_decl = other.m_decl;
+        m_elements = other.m_elements;
+        m_dynamic_elements = other.m_dynamic_elements;
+
+        return *this;
+    }
+
+    DescriptorSetLayout(DescriptorSetLayout &&other) noexcept
+        : m_decl(std::move(other.m_decl)),
+          m_elements(std::move(other.m_elements)),
+          m_dynamic_elements(std::move(other.m_dynamic_elements))
+    {
+    }
+
+    DescriptorSetLayout &operator=(DescriptorSetLayout &&other) noexcept
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        m_decl = std::move(other.m_decl);
+        m_elements = std::move(other.m_elements);
+        m_dynamic_elements = std::move(other.m_dynamic_elements);
+
+        return *this;
+    }
+    
+    ~DescriptorSetLayout() = default;
 
     DescriptorSet2Ref<PLATFORM> CreateDescriptorSet() const;
 
     Name GetName() const
-        { return m_name; }
+        { return m_decl.name; }
+
+    const DescriptorSetDeclaration &GetDeclaration() const
+        { return m_decl; }
 
     const ArrayMap<String, DescriptorSetLayoutElement> &GetElements() const
         { return m_elements; }
@@ -353,6 +426,8 @@ public:
     {
         HashCode hc;
 
+        hc.Add(m_decl.GetHashCode());
+
         for (const auto &it : m_elements) {
             hc.Add(it.first.GetHashCode());
             hc.Add(it.second.GetHashCode());
@@ -362,7 +437,7 @@ public:
     }
 
 private:
-    Name                                            m_name;
+    DescriptorSetDeclaration                        m_decl;
     ArrayMap<String, DescriptorSetLayoutElement>    m_elements;
     Array<String>                                   m_dynamic_elements;
 };
@@ -476,7 +551,19 @@ public:
         Result result = Result::OK;
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (auto &set : m_sets[frame_index]) {
+            for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
+                const Name descriptor_set_name = set->GetLayout().GetName();
+
+                // use FindDescriptorSetDeclaration rather than `set->GetLayout().GetDeclaration()`, since we need to know
+                // if the descriptor set is a reference to a global set
+                DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
+                AssertThrow(decl != nullptr);
+
+                if (decl->is_reference) {
+                    // should already be created
+                    continue;
+                }
+
                 result = set->Create(device);
 
                 if (!result) {

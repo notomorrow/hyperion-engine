@@ -9,7 +9,10 @@
 
 #include <math/MathUtil.hpp>
 
+#include <Engine.hpp>
+
 #include <vulkan/vulkan.h>
+
 
 namespace hyperion {
 namespace renderer {
@@ -128,7 +131,7 @@ struct VulkanDescriptorSetLayoutWrapper
 
 template <>
 DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDeclaration &decl)
-    : m_name(decl.name)
+    : m_decl(decl)
 {
     const DescriptorSetDeclaration *decl_ptr = &decl;
 
@@ -313,7 +316,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                     || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
                 const GPUBufferRef<Platform::VULKAN> &ref = value_it->second.Get<GPUBufferRef<Platform::VULKAN>>();
-                AssertThrow(ref.IsValid());
+                AssertThrowMsg(ref.IsValid(), "Invalid buffer reference for descriptor set element: %s, index %u", name.Data(), i);
 
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
                     ref->buffer,
@@ -326,7 +329,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
 
                 const ImageViewRef<Platform::VULKAN> &ref = value_it->second.Get<ImageViewRef<Platform::VULKAN>>();
-                AssertThrow(ref.IsValid());
+                AssertThrowMsg(ref.IsValid(), "Invalid image view reference for descriptor set element: %s, index %u", name.Data(), i);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     VK_NULL_HANDLE,
@@ -337,7 +340,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
-                AssertThrow(ref.IsValid());
+                AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s, index %u", name.Data(), i);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     ref->GetSampler(),
@@ -346,7 +349,7 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
                 const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
-                AssertThrow(ref.IsValid());
+                AssertThrowMsg(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s, index %u", name.Data(), i);
 
                 descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
                     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
@@ -733,6 +736,20 @@ DescriptorTable<Platform::VULKAN>::DescriptorTable(const DescriptorTableDeclarat
     }
 
     for (const auto &set_decl : m_decl.GetElements()) {
+        if (set_decl.is_reference) {
+            const DescriptorSetDeclaration *decl_ptr = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(set_decl.name);
+            AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", set_decl.name.LookupString());
+
+            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                DescriptorSet2Ref<Platform::VULKAN> descriptor_set = g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(set_decl.name, frame_index);
+                AssertThrowMsg(descriptor_set.IsValid(), "Invalid global descriptor set reference: %s", set_decl.name.LookupString());
+
+                m_sets[frame_index].PushBack(std::move(descriptor_set));
+            }
+
+            continue;
+        }
+        
         DescriptorSetLayout<Platform::VULKAN> layout(set_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

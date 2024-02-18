@@ -27,14 +27,11 @@ HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, 4);
 HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, 4);
 HYP_DESCRIPTOR_SRV(Global, SSRUVTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, SSRSampleTexture, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRRadiusTexture, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRBlurHorTexture, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRBlurVertTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, SSRFinalTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, max_bound_reflection_probes);
 HYP_DESCRIPTOR_SRV(Global, PointShadowMaps, max_bound_point_shadow_maps);
 HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRResult, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRResultImage, 1);
 HYP_DESCRIPTOR_UAV(Global, SSRUVImage, 1);
 HYP_DESCRIPTOR_UAV(Global, SSRSampleImage, 1);
 

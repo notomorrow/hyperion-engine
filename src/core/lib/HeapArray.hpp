@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_HEAP_ARRAY_H
 #define HYPERION_V2_LIB_HEAP_ARRAY_H
 
-#include "ContainerBase.hpp"
+#include <core/lib/ContainerBase.hpp>
 #include <math/MathUtil.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
@@ -14,7 +14,7 @@ namespace hyperion {
 template <class T, SizeType Sz>
 class HeapArray : public ContainerBase<HeapArray<T, Sz>, SizeType>
 {
-    T *m_values;
+    T   *m_values;
 
 public:
     static constexpr bool is_contiguous = true;
@@ -50,7 +50,8 @@ public:
     T &operator[](typename HeapArray::Base::KeyType index)
         { return m_values[index]; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const T &operator[](typename HeapArray::Base::KeyType index) const
         { return m_values[index]; }
 
@@ -58,43 +59,55 @@ public:
     constexpr SizeType Size() const
         { return Sz; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool Empty() const
         { return Sz == 0; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool Any() const
         { return Sz != 0; }
 
     template <class Lambda>
-    [[nodiscard]] bool Any(Lambda &&lambda) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any(Lambda &&lambda) const
         { return Base::Any(std::forward<Lambda>(lambda)); }
 
     template <class Lambda>
-    [[nodiscard]] bool Every(Lambda &&lambda) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Every(Lambda &&lambda) const
         { return Base::Every(std::forward<Lambda>(lambda)); }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     T *Data()
         { return m_values; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const T *Data() const
         { return m_values; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     T &Front()
         { return m_values[0]; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const T &Front() const
         { return m_values[0]; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     T &Back()
         { return m_values[Sz - 1]; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const T &Back() const
         { return m_values[Sz - 1]; }
 

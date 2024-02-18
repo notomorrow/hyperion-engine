@@ -2,7 +2,6 @@
 #define HYPERION_V2_LIB_MUTEX_HPP
 
 #include <mutex>
-
 namespace hyperion {
 
 class Mutex;

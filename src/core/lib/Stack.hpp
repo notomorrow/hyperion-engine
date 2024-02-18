@@ -27,30 +27,46 @@ public:
     Stack &operator=(const Stack &other);
     Stack &operator=(Stack &&other) noexcept;
 
-    [[nodiscard]] SizeType Size() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType Size() const
         { return Base::Size(); }
 
-    [[nodiscard]] typename Base::ValueType *Data()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename Base::ValueType *Data()
         { return Base::Data(); }
 
-    [[nodiscard]] const typename Base::ValueType *Data() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename Base::ValueType *Data() const
         { return Base::Data(); }
 
-    [[nodiscard]] typename Base::ValueType &Top()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename Base::ValueType &Top()
         { return Base::Back(); }
 
-    [[nodiscard]] const typename Base::ValueType &Top() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename Base::ValueType &Top() const
         { return Base::Back(); }
 
-    [[nodiscard]] bool Empty() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
         { return Base::Empty(); }
 
-    [[nodiscard]] bool Any() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
         { return Base::Any(); }
 
+    HYP_FORCE_INLINE
     void Reserve(SizeType capacity)
         { Base::Reserve(capacity); }
 
+    HYP_FORCE_INLINE
     void Refit()
         { Base::Refit(); }
 

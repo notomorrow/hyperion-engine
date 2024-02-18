@@ -14,7 +14,6 @@
 #include <rendering/Mesh.hpp>
 #include <Constants.hpp>
 #include <core/ID.hpp>
-#include <core/lib/AtomicSemaphore.hpp>
 #include <util/Defines.hpp>
 
 #include <rendering/ShaderGlobals.hpp>

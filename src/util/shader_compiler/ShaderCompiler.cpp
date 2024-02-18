@@ -480,6 +480,13 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
             ->FindDescriptorSetDeclaration(descriptor_usage.set_name);
 
         if (static_descriptor_set_declaration != nullptr) {
+            AssertThrowMsg(
+                static_descriptor_set_declaration->FindDescriptorDeclaration(descriptor_usage.descriptor_name) != nullptr,
+                "Descriptor set %s is defined in the static descriptor table, but the descriptor %s is not",
+                descriptor_usage.set_name.LookupString(),
+                descriptor_usage.descriptor_name.Data()
+            );
+
             if (!descriptor_set_declaration) {
                 const uint set_index = uint(table.GetElements().Size());
 
@@ -1436,15 +1443,24 @@ bool ShaderCompiler::CompileBundle(
     DescriptorTableDeclaration descriptor_table = bundle.descriptor_usages.BuildDescriptorTable();
 
     // Generate descriptor table defines
-    for (DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
+    for (const DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
         descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(descriptor_set_declaration.set_index) + "\n";
 
-        for (const Array<DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration.slots) {
+        const DescriptorSetDeclaration *decl_ptr = &descriptor_set_declaration;
+
+        if (descriptor_set_declaration.is_reference) {
+            const DescriptorSetDeclaration *static_decl = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(descriptor_set_declaration.name);
+            AssertThrow(static_decl != nullptr);
+
+            decl_ptr = static_decl;
+        }
+
+        for (const Array<DescriptorDeclaration> &descriptor_declarations : decl_ptr->slots) {
             for (const DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
-                const uint flat_index = descriptor_set_declaration.CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
+                const uint flat_index = decl_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
                 AssertThrow(flat_index != uint(-1));
 
-                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + "_" + descriptor_declaration.name + " " + String::ToString(flat_index) + "\n";
+                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(decl_ptr->name.LookupString()) + "_" + descriptor_declaration.name + " " + String::ToString(flat_index) + "\n";
             }
         }
     }

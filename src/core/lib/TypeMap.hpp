@@ -1,16 +1,14 @@
 #ifndef HYPERION_TYPE_MAP_H
 #define HYPERION_TYPE_MAP_H
 
-#include "ContainerBase.hpp"
-#include "FlatMap.hpp"
-#include "FlatSet.hpp"
-#include "TypeID.hpp"
+#include <core/lib/ContainerBase.hpp>
+#include <core/lib/FlatMap.hpp>
+#include <core/lib/FlatSet.hpp>
+#include <core/lib/TypeID.hpp>
 
 #include <Types.hpp>
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
-
-#include <atomic>
 
 namespace hyperion {
 

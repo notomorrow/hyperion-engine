@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_FIXED_ARRAY_H
 #define HYPERION_V2_LIB_FIXED_ARRAY_H
 
-#include "ContainerBase.hpp"
+#include <core/lib/ContainerBase.hpp>
 #include <math/MathUtil.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
@@ -34,7 +34,7 @@ public:
 
     T m_values[MathUtil::Max(Sz, 1)];
 
-    using Iterator      = T *;
+    using Iterator = T *;
     using ConstIterator = const T *;
 
     using KeyType = SizeType;

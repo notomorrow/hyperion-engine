@@ -27,7 +27,7 @@ constexpr uint max_bound_environment_maps = 1;
 
 constexpr uint max_bindless_resources = 4096;
 
-constexpr uint num_gbuffer_textures = 6;
+constexpr uint num_gbuffer_textures = 8;
 
 constexpr bool use_indexed_array_for_object_data = true;
 // perform occlusion culling using indirect draw

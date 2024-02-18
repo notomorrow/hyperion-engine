@@ -38,6 +38,8 @@ enum GBufferResourceName : uint
     GBUFFER_RESOURCE_MAX
 };
 
+static_assert(uint(GBufferResourceName::GBUFFER_RESOURCE_MAX) == num_gbuffer_textures, "GBufferResourceName enum does not match num_gbuffer_textures");
+
 struct GBufferResource
 {
     GBufferFormat format;

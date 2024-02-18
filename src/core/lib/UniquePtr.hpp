@@ -9,7 +9,6 @@
 #include <Types.hpp>
 #include <Constants.hpp>
 
-#include <atomic>
 #include <cstdlib>
 
 namespace hyperion {
@@ -20,10 +19,10 @@ class UniquePtr;
 
 struct UniquePtrHolder
 {
-    void *value;
-    TypeID type_id;
-    TypeID base_type_id;
-    void (*dtor)(void *);
+    void    *value;
+    TypeID  type_id;
+    TypeID  base_type_id;
+    void    (*dtor)(void *);
 
     UniquePtrHolder()
         : value(nullptr),
