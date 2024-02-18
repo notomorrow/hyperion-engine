@@ -24,6 +24,8 @@
 
 namespace hyperion::v2 {
 
+using renderer::g_static_descriptor_table_decl;
+
 static const bool should_compile_missing_variants = true;
 
 enum class ShaderLanguage
@@ -464,24 +466,24 @@ static void ForEachPermutation(
     );
 }
 
-renderer::DescriptorTable DescriptorUsageSet::BuildDescriptorTable() const
+DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
 {
-    renderer::DescriptorTable table;
+    DescriptorTableDeclaration table;
 
     for (const DescriptorUsage &descriptor_usage : descriptor_usages) {
-        renderer::DescriptorSetDeclaration *descriptor_set_declaration = table.FindDescriptorSetDeclaration(descriptor_usage.set_name);
+        DescriptorSetDeclaration *descriptor_set_declaration = table.FindDescriptorSetDeclaration(descriptor_usage.set_name);
 
         // check if this descriptor set is defined in the static descriptor table
         // if it is, we can use those definitions
         // otherwise, it is a 'custom' descriptor set
-        renderer::DescriptorSetDeclaration *static_descriptor_set_declaration = renderer::g_static_descriptor_table
+        DescriptorSetDeclaration *static_descriptor_set_declaration = g_static_descriptor_table_decl
             ->FindDescriptorSetDeclaration(descriptor_usage.set_name);
 
         if (static_descriptor_set_declaration != nullptr) {
             if (!descriptor_set_declaration) {
                 const uint set_index = uint(table.GetElements().Size());
 
-                table.AddDescriptorSetDeclaration(renderer::DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true));
+                table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true));
             }
 
             continue;
@@ -490,10 +492,10 @@ renderer::DescriptorTable DescriptorUsageSet::BuildDescriptorTable() const
         if (!descriptor_set_declaration) {
             const uint set_index = uint(table.GetElements().Size());
 
-            descriptor_set_declaration = table.AddDescriptorSetDeclaration(renderer::DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
+            descriptor_set_declaration = table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
         }
 
-        renderer::DescriptorDeclaration desc {
+        DescriptorDeclaration desc {
             descriptor_usage.slot,
             descriptor_usage.descriptor_name,
             descriptor_usage.GetCount(),
@@ -1216,26 +1218,6 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
                 std::move(params)
             };
 
-            // DebugLog(LogType::Debug, "Create Descriptor usage: %s %s %u %d\n", set_name.Data(), descriptor_name.Data(), slot, is_dynamic);
-
-            // bool is_custom_descriptor_set = false;
-
-            // auto descriptor_set_declaration = renderer::g_static_descriptor_table->FindDescriptorSetDeclaration(usage.set_name);
-
-            // if (descriptor_set_declaration) {
-            //     auto descriptor_declaration = descriptor_set_declaration->FindDescriptorDeclaration(usage.descriptor_name);
-
-            //     if (descriptor_declaration) {
-            //         result.final_source += "layout(set=HYP_DESCRIPTOR_SET_INDEX_" + set_name + ", binding=HYP_DESCRIPTOR_INDEX_" + set_name + "_" + descriptor_name + ") " + parse_result.remaining + "\n";
-            //     } else {
-            //         result.errors.PushBack(ProcessError { String("Invalid descriptor ") + usage.descriptor_name.LookupString() });
-
-            //         break;
-            //     }
-            // } else {
-            //     is_custom_descriptor_set = true;
-            // }
-
             Array<String> additional_params;
 
             if (usage.params.Contains("format")) {
@@ -1451,14 +1433,14 @@ bool ShaderCompiler::CompileBundle(
 
     String descriptor_table_defines;
 
-    renderer::DescriptorTable descriptor_table = bundle.descriptor_usages.BuildDescriptorTable();
+    DescriptorTableDeclaration descriptor_table = bundle.descriptor_usages.BuildDescriptorTable();
 
     // Generate descriptor table defines
-    for (renderer::DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
+    for (DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
         descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(descriptor_set_declaration.set_index) + "\n";
 
-        for (const Array<renderer::DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration.slots) {
-            for (const renderer::DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
+        for (const Array<DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration.slots) {
+            for (const DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
                 const uint flat_index = descriptor_set_declaration.CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
                 AssertThrow(flat_index != uint(-1));
 

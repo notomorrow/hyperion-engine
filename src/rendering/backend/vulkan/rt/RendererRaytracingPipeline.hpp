@@ -27,6 +27,7 @@ public:
         used with this pipeline.  */
     RaytracingPipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
     RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
+    RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
     RaytracingPipeline(const RaytracingPipeline &other)             = delete;
     RaytracingPipeline &operator=(const RaytracingPipeline &other)  = delete;
     ~RaytracingPipeline();

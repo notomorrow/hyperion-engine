@@ -28,8 +28,8 @@ ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VU
 {
 }
 
-ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets)
-    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets)
+ComputePipeline<Platform::VULKAN>::ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader_program, DescriptorTableRef<Platform::VULKAN> descriptor_table)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), std::move(descriptor_table))
 {
 }
 
@@ -123,7 +123,7 @@ void ComputePipeline<Platform::VULKAN>::DispatchIndirect(
 
 Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
-    AssertThrowMsg(m_used_descriptor_sets2.HasValue(), "To use this function, you must use DescriptorSet2");
+    AssertThrowMsg(m_descriptor_table.HasValue(), "To use this function, you must use a DescriptorTable");
 
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {
@@ -277,6 +277,10 @@ Result ComputePipeline<Platform::VULKAN>::Create(
 Result ComputePipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     DebugLog(LogType::Debug, "Destroying compute pipeline\n");
+
+    if (m_descriptor_table.HasValue()) {
+        SafeRelease(std::move(m_descriptor_table.Get()));
+    }
 
     vkDestroyPipeline(device->GetDevice(), this->pipeline, nullptr);
     this->pipeline = nullptr;

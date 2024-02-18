@@ -1,4 +1,5 @@
 #include <rendering/backend/RendererShader.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <system/Debug.hpp>
 
@@ -111,7 +112,7 @@ Result ShaderProgram<Platform::VULKAN>::CreateShaderGroups()
                 VkRayTracingShaderGroupCreateInfoKHR{
                     .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
                     .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
-                    .generalShader      = static_cast<uint32_t>(i),
+                    .generalShader      = uint32(i),
                     .closestHitShader   = VK_SHADER_UNUSED_KHR,
                     .anyHitShader       = VK_SHADER_UNUSED_KHR,
                     .intersectionShader = VK_SHADER_UNUSED_KHR
@@ -126,7 +127,7 @@ Result ShaderProgram<Platform::VULKAN>::CreateShaderGroups()
                     .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
                     .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
                     .generalShader      = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader   = static_cast<uint32_t>(i),
+                    .closestHitShader   = uint32(i),
                     .anyHitShader       = VK_SHADER_UNUSED_KHR,
                     .intersectionShader = VK_SHADER_UNUSED_KHR
                 }
@@ -145,7 +146,7 @@ Result ShaderProgram<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     bool is_raytracing = false;
 
-    for (auto &shader_module : m_shader_modules) {
+    for (const auto &shader_module : m_shader_modules) {
         is_raytracing = is_raytracing || shader_module.IsRaytracing();
 
         auto stage = CreateShaderStage(shader_module);

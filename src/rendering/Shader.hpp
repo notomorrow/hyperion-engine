@@ -58,11 +58,8 @@ public:
     const CompiledShader &GetCompiledShader() const
         { return m_compiled_shader; }
 
-    void SetCompiledShader(const CompiledShader &compiled_shader)
-        { m_compiled_shader = compiled_shader; }
-
-    void SetCompiledShader(CompiledShader &&compiled_shader)
-        { m_compiled_shader = std::move(compiled_shader); }
+    void SetCompiledShader(const CompiledShader &compiled_shader);
+    void SetCompiledShader(CompiledShader &&compiled_shader);
 
     const ShaderProgramRef &GetShaderProgram() const
         { return m_shader_program; }
@@ -70,8 +67,8 @@ public:
     void Init();
 
 private:
-    CompiledShader m_compiled_shader;
-    ShaderProgramRef m_shader_program;
+    CompiledShader      m_compiled_shader;
+    ShaderProgramRef    m_shader_program;
 };
 
 class ShaderManagerSystem

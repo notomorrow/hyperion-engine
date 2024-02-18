@@ -50,7 +50,7 @@ private:
     ImageRef                                                    m_depth_pyramid;
     ImageViewRef                                                m_depth_pyramid_view;
     Array<ImageViewRef>                                         m_depth_pyramid_mips;
-    FixedArray<Array<DescriptorSet2Ref>, max_frames_in_flight>  m_depth_pyramid_descriptor_sets;
+    Array<DescriptorTableRef>                                   m_mip_descriptor_tables;
     SamplerRef                                                  m_depth_pyramid_sampler;
 
     ComputePipelineRef                                          m_generate_depth_pyramid;

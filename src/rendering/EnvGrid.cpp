@@ -819,16 +819,19 @@ void EnvGrid::CreateVoxelGridData()
     Handle<Shader> clear_voxels_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_CLEAR" }});
     Handle<Shader> offset_voxel_grid_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_OFFSET" }});
 
-    const renderer::DescriptorTable descriptor_table = voxelize_probe_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-    const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table.FindDescriptorSetDeclaration(HYP_NAME(VoxelizeProbeDescriptorSet));
-    AssertThrow(descriptor_set_decl != nullptr);
+    auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
-    const renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
+    // const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table_decl.FindDescriptorSetDeclaration(HYP_NAME(VoxelizeProbeDescriptorSet));
+    // AssertThrow(descriptor_set_decl != nullptr);
+
+    // const renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
     
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        DescriptorSet2Ref descriptor_set = descriptor_set_layout.CreateDescriptorSet();
+        DescriptorSet2Ref descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(VoxelizeProbeDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement("InColorImage", m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
         descriptor_set->SetElement("InNormalsImage", m_framebuffer->GetAttachmentUsages()[1]->GetImageView());
@@ -839,15 +842,17 @@ void EnvGrid::CreateVoxelGridData()
         descriptor_set->SetElement("EnvProbesBuffer", g_engine->GetRenderData()->env_probes.GetBuffer());
         descriptor_set->SetElement("OutVoxelGridImage", m_voxel_grid_texture->GetImageView());
 
-        DeferCreate(descriptor_set, g_engine->GetGPUDevice());
+        // DeferCreate(descriptor_set, g_engine->GetGPUDevice());
 
-        m_voxelize_probe_descriptor_sets[frame_index] = std::move(descriptor_set);
+        // m_voxelize_probe_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     { // Compute shader to clear the voxel grid at a specific position
         m_clear_voxels = MakeRenderObject<renderer::ComputePipeline>(
             clear_voxels_shader->GetShaderProgram(),
-            Array<DescriptorSet2Ref> { m_voxelize_probe_descriptor_sets[0] }
+            descriptor_table
         );
 
         DeferCreate(m_clear_voxels, g_engine->GetGPUDevice());
@@ -856,7 +861,7 @@ void EnvGrid::CreateVoxelGridData()
     { // Compute shader to voxelize a probe into voxel grid
         m_voxelize_probe = MakeRenderObject<renderer::ComputePipeline>(
             voxelize_probe_shader->GetShaderProgram(),
-            Array<DescriptorSet2Ref> { m_voxelize_probe_descriptor_sets[0] }
+            descriptor_table
         );
 
         DeferCreate(m_voxelize_probe, g_engine->GetGPUDevice());
@@ -865,7 +870,7 @@ void EnvGrid::CreateVoxelGridData()
     { // Compute shader to 'offset' the voxel grid
         m_offset_voxel_grid = MakeRenderObject<renderer::ComputePipeline>(
             offset_voxel_grid_shader->GetShaderProgram(),
-            Array<DescriptorSet2Ref> { m_voxelize_probe_descriptor_sets[0] }
+            descriptor_table
         );
 
         DeferCreate(m_offset_voxel_grid, g_engine->GetGPUDevice());
@@ -1429,11 +1434,24 @@ void EnvGrid::OffsetVoxelGrid(
 
     m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
-        frame->GetCommandBuffer(),
+    // m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
+    //     frame->GetCommandBuffer(),
+    //     m_offset_voxel_grid,
+    //     { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
+    //     0
+    // );
+
+    m_offset_voxel_grid->GetDescriptorTable().Get()->Bind(
+        frame,
         m_offset_voxel_grid,
-        { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-        0
+        ArrayMap<Name, ArrayMap<String, uint>> {
+            {
+                HYP_NAME(VoxelizeProbeDescriptorSet),
+                ArrayMap<String, uint> {
+                    { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                }
+            }
+        }
     );
 
     m_offset_voxel_grid->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
@@ -1464,8 +1482,8 @@ void EnvGrid::VoxelizeProbe(
     const ImageRef &color_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
     const Extent2D cubemap_dimensions = Extent2D(color_image->GetExtent());
 
-    DescriptorSet2Ref &descriptor_set = m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()];
-    AssertThrow(descriptor_set.IsValid());
+    // DescriptorSet2Ref &descriptor_set = m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()];
+    // AssertThrow(descriptor_set.IsValid());
 
     struct alignas(128)
     {
@@ -1488,13 +1506,26 @@ void EnvGrid::VoxelizeProbe(
     {   // Clear our voxel grid at the start of each probe
         m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-        m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
-            frame->GetCommandBuffer(),
+        // m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
+        //     frame->GetCommandBuffer(),
+        //     m_clear_voxels,
+        //     { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
+        //     0
+        // );
+
+        m_clear_voxels->GetDescriptorTable().Get()->Bind(
+            frame,
             m_clear_voxels,
-            { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-            0
+            ArrayMap<Name, ArrayMap<String, uint>> {
+                {
+                    HYP_NAME(VoxelizeProbeDescriptorSet),
+                    ArrayMap<String, uint> {
+                        { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                    }
+                }
+            }
         );
-        
+
         m_clear_voxels->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
         m_clear_voxels->Dispatch(
             frame->GetCommandBuffer(), 
@@ -1509,11 +1540,24 @@ void EnvGrid::VoxelizeProbe(
     { // Voxelize probe
         m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-        m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
-            frame->GetCommandBuffer(),
+        // m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
+        //     frame->GetCommandBuffer(),
+        //     m_voxelize_probe,
+        //     { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
+        //     0
+        // );
+
+        m_voxelize_probe->GetDescriptorTable().Get()->Bind(
+            frame,
             m_voxelize_probe,
-            { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-            0
+            ArrayMap<Name, ArrayMap<String, uint>> {
+                {
+                    HYP_NAME(VoxelizeProbeDescriptorSet),
+                    ArrayMap<String, uint> {
+                        { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                    }
+                }
+            }
         );
 
         m_voxelize_probe->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));

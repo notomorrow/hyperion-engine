@@ -1104,7 +1104,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
 {
     Mutex::Guard guard(m_mutex);
 
-    for (auto &it : renderer::g_static_descriptor_table->GetElements()) {
+    for (auto &it : renderer::g_static_descriptor_table_decl->GetElements()) {
         renderer::DescriptorSetLayout layout(it);
         
         DescriptorSet2Ref ref = layout.CreateDescriptorSet();

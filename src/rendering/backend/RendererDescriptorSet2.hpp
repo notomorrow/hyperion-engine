@@ -156,8 +156,6 @@ struct DescriptorSetDeclaration
 
     void AddDescriptorDeclaration(renderer::DescriptorDeclaration decl)
     {
-        DebugLog(LogType::Debug, "Add descriptor to slot %u with name %s (%u), dynamic: %d\n", decl.slot, decl.name.Data(), decl.name.GetHashCode().Value(), decl.is_dynamic);
-
         AssertThrow(decl.slot != DESCRIPTOR_SLOT_NONE && decl.slot < DESCRIPTOR_SLOT_MAX);
 
         decl.index = uint(slots[uint(decl.slot) - 1].Size());
@@ -171,9 +169,16 @@ struct DescriptorSetDeclaration
     DescriptorDeclaration *FindDescriptorDeclaration(const String &name) const;
 };
 
-class DescriptorTable
+class DescriptorTableDeclaration
 {
 public:
+    DescriptorTableDeclaration()                                                    = default;
+    DescriptorTableDeclaration(const DescriptorTableDeclaration &)                  = default;
+    DescriptorTableDeclaration &operator=(const DescriptorTableDeclaration &)       = default;
+    DescriptorTableDeclaration(DescriptorTableDeclaration &&) noexcept              = default;
+    DescriptorTableDeclaration &operator=(DescriptorTableDeclaration &&) noexcept   = default;
+    ~DescriptorTableDeclaration()                                                   = default;
+
     DescriptorSetDeclaration *FindDescriptorSetDeclaration(Name name) const;
     DescriptorSetDeclaration *AddDescriptorSetDeclaration(DescriptorSetDeclaration descriptor_set);
 
@@ -187,10 +192,9 @@ private:
     Array<DescriptorSetDeclaration> m_elements;
 
 public:
-
     struct DeclareSet
     {
-        DeclareSet(DescriptorTable *table, uint set_index, Name name)
+        DeclareSet(DescriptorTableDeclaration *table, uint set_index, Name name)
         {
             AssertThrow(table != nullptr);
 
@@ -207,7 +211,7 @@ public:
 
     struct DeclareDescriptor
     {
-        DeclareDescriptor(DescriptorTable *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1)
+        DeclareDescriptor(DescriptorTableDeclaration *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1)
         {
             AssertThrow(table != nullptr);
 
@@ -238,7 +242,7 @@ public:
     };
 };
 
-extern DescriptorTable *g_static_descriptor_table;
+extern DescriptorTableDeclaration *g_static_descriptor_table_decl;
 
 namespace platform {
 
@@ -252,9 +256,6 @@ template <PlatformType PLATFORM>
 class DescriptorSet2;
 
 template <PlatformType PLATFORM>
-class GPUBuffer;
-
-template <PlatformType PLATFORM>
 class ImageView;
 
 template <PlatformType PLATFORM>
@@ -262,6 +263,21 @@ class Sampler;
 
 template <PlatformType PLATFORM>
 class TopLevelAccelerationStructure;
+
+template <PlatformType PLATFORM>
+class Frame;
+
+template <PlatformType PLATFORM>
+class CommandBuffer;
+
+template <PlatformType PLATFORM>
+class GraphicsPipeline;
+
+template <PlatformType PLATFORM>
+class ComputePipeline;
+
+template <PlatformType PLATFORM>
+class RaytracingPipeline;
 
 template <class T>
 struct DescriptorSetElementTypeInfo
@@ -310,6 +326,9 @@ public:
 
     DescriptorSet2Ref<PLATFORM> CreateDescriptorSet() const;
 
+    Name GetName() const
+        { return m_name; }
+
     const ArrayMap<String, DescriptorSetLayoutElement> &GetElements() const
         { return m_elements; }
 
@@ -327,6 +346,9 @@ public:
         return &it->second;
     }
 
+    const Array<String> &GetDynamicElements() const
+        { return m_dynamic_elements; }
+
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -340,7 +362,9 @@ public:
     }
 
 private:
+    Name                                            m_name;
     ArrayMap<String, DescriptorSetLayoutElement>    m_elements;
+    Array<String>                                   m_dynamic_elements;
 };
 
 template <PlatformType PLATFORM>
@@ -384,6 +408,15 @@ public:
     void SetElement(const String &name, const TLASRef<PLATFORM> &ref);
     void SetElement(const String &name, uint index, const TLASRef<PLATFORM> &ref);
 
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const ComputePipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const ComputePipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+
+    DescriptorSet2Ref<PLATFORM> Clone() const;
+
 private:
     DescriptorSetLayout<PLATFORM>                       m_layout;
     ArrayMap<String, DescriptorSetElement<PLATFORM>>    m_elements;
@@ -408,10 +441,138 @@ public:
 
 namespace hyperion {
 namespace renderer {
+namespace platform {
+
+template <PlatformType PLATFORM>
+class DescriptorTable
+{
+public:
+    DescriptorTable(const DescriptorTableDeclaration &decl);
+    DescriptorTable(const DescriptorTable &other)                 = default;
+    DescriptorTable &operator=(const DescriptorTable &other)      = default;
+    DescriptorTable(DescriptorTable &&other) noexcept             = default;
+    DescriptorTable &operator=(DescriptorTable &&other) noexcept  = default;
+    ~DescriptorTable()                                            = default;
+
+    const DescriptorTableDeclaration &GetDeclaration() const
+        { return m_decl; }
+
+    const FixedArray<Array<DescriptorSet2Ref<PLATFORM>>, max_frames_in_flight> &GetSets() const
+        { return m_sets; }
+
+    DescriptorSet2Ref<PLATFORM> GetDescriptorSet(Name name, uint frame_index) const
+    {
+        for (const auto &set : m_sets[frame_index]) {
+            if (set->GetLayout().GetName() == name) {
+                return set;
+            }
+        }
+
+        return DescriptorSet2Ref<PLATFORM>::unset;
+    }
+
+    Result Create(Device<PLATFORM> *device)
+    {
+        Result result = Result::OK;
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (auto &set : m_sets[frame_index]) {
+                result = set->Create(device);
+
+                if (!result) {
+                    return result;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    Result Destroy(Device<PLATFORM> *device)
+    {
+        for (auto &it : m_sets) {
+            SafeRelease(std::move(it));
+        }
+        
+        m_sets = { };
+
+        return Result::OK;
+    }
+
+    void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets)
+    {
+        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+            const Name descriptor_set_name = set->GetLayout().GetName();
+
+            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
+            AssertThrow(decl != nullptr);
+
+            if (set->GetLayout().GetDynamicElements().Empty()) {
+                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
+
+                continue;
+            }
+
+            const auto offsets_it = offsets.Find(descriptor_set_name);
+            AssertThrow(offsets_it != offsets.End());
+
+            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
+        }
+    }
+
+    void Bind(Frame<PLATFORM> *frame, const ComputePipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets) const
+    {
+        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+            const Name descriptor_set_name = set->GetLayout().GetName();
+
+            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
+            AssertThrow(decl != nullptr);
+
+            if (set->GetLayout().GetDynamicElements().Empty()) {
+                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
+
+                continue;
+            }
+
+            const auto offsets_it = offsets.Find(descriptor_set_name);
+            AssertThrow(offsets_it != offsets.End());
+
+            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
+        }
+    }
+
+    void Bind(Frame<PLATFORM> *frame, const RaytracingPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets) const
+    {
+        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+            const Name descriptor_set_name = set->GetLayout().GetName();
+
+            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
+            AssertThrow(decl != nullptr);
+
+            if (set->GetLayout().GetDynamicElements().Empty()) {
+                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
+
+                continue;
+            }
+
+            const auto offsets_it = offsets.Find(descriptor_set_name);
+            AssertThrow(offsets_it != offsets.End());
+
+            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
+        }
+    }
+
+private:
+    DescriptorTableDeclaration                                              m_decl;
+    FixedArray<Array<DescriptorSet2Ref<PLATFORM>>, max_frames_in_flight>    m_sets;
+};
+
+} // namespace platform
 
 using DescriptorSet2 = platform::DescriptorSet2<Platform::CURRENT>;
 using DescriptorSetLayout = platform::DescriptorSetLayout<Platform::CURRENT>;
 using DescriptorSetManager = platform::DescriptorSetManager<Platform::CURRENT>;
+using DescriptorTable = platform::DescriptorTable<Platform::CURRENT>;
 
 } // namespace renderer
 } // namespace hyperion

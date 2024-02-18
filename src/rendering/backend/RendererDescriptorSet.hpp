@@ -143,13 +143,6 @@ static inline bool IsDescriptorTypeDynamicBuffer(DescriptorType type)
         || type == DescriptorType::STORAGE_BUFFER_DYNAMIC;
 }
 
-
-// #define HYP_DESCRIPTOR_SETS_DECLARE
-// #define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table
-// #include <rendering/inl/DescriptorSets.inl>
-// #undef HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE
-// #undef HYP_DESCRIPTOR_SETS_DECLARE
-
 } // namespace renderer
 } // namespace hyperion
 

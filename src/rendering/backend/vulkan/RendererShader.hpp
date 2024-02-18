@@ -5,6 +5,7 @@
 #include <core/lib/ByteBuffer.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>
+#include <core/lib/RefCountedPtr.hpp>
 
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererDevice.hpp>
@@ -16,6 +17,7 @@
 
 namespace hyperion {
 namespace renderer {
+
 namespace platform {
 
 template <>
@@ -78,11 +80,11 @@ public:
     ShaderProgram &operator=(const ShaderProgram &other)    = delete;
     ~ShaderProgram();
 
+    const String &GetEntryPointName() const
+        { return m_entry_point_name; }
+
     const Array<ShaderModule<Platform::VULKAN>> &GetShaderModules() const
         { return m_shader_modules; }
-
-    Array<VkPipelineShaderStageCreateInfo> &GetShaderStages()
-        { return m_shader_stages; }
 
     const Array<VkPipelineShaderStageCreateInfo> &GetShaderStages() const
         { return m_shader_stages; }
@@ -93,7 +95,8 @@ public:
 
     bool IsRaytracing() const
     {
-        return m_shader_modules.Any([](const ShaderModule<Platform::VULKAN> &it) {
+        return m_shader_modules.Any([](const ShaderModule<Platform::VULKAN> &it)
+        {
             return it.IsRaytracing();
         });
     }
@@ -108,7 +111,7 @@ public:
         HashCode hc;
 
         for (const auto &shader_module : m_shader_modules) {
-            hc.Add(static_cast<int>(shader_module.type));
+            hc.Add(uint(shader_module.type));
             hc.Add(shader_module.spirv.GetHashCode());
         }
 

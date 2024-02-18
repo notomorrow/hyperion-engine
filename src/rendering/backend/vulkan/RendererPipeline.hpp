@@ -3,6 +3,7 @@
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/Optional.hpp>
 
@@ -152,7 +153,7 @@ public:
     Pipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
 
     // new constructor
-    Pipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets);
+    Pipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
 
     Pipeline(const Pipeline &other) = delete;
     Pipeline &operator=(const Pipeline &other) = delete;
@@ -175,6 +176,12 @@ public:
         }
     }
 
+    const Optional<DescriptorTableRef<Platform::VULKAN>> &GetDescriptorTable() const
+        { return m_descriptor_table; }
+
+    const ShaderProgramRef<Platform::VULKAN> &GetShaderProgram() const
+        { return m_shader_program; }
+
     void SetPushConstants(const PushConstantData &push_constants)
         { this->push_constants = push_constants; }
     
@@ -194,7 +201,7 @@ protected:
 
     bool                                                    m_has_custom_descriptor_sets;
     Optional<Array<DescriptorSetRef>>                       m_used_descriptor_sets { };
-    Optional<Array<DescriptorSet2Ref<Platform::VULKAN>>>    m_used_descriptor_sets2 { };
+    Optional<DescriptorTableRef<Platform::VULKAN>>          m_descriptor_table { };
 
     VkPipeline                                              pipeline;
 };
