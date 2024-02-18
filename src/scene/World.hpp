@@ -4,7 +4,6 @@
 #include <scene/Scene.hpp>
 #include <physics/PhysicsWorld.hpp>
 #include <rendering/backend/RendererFrame.hpp>
-#include <core/lib/AtomicSemaphore.hpp>
 
 #include <mutex>
 #include <atomic>

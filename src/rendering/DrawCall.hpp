@@ -5,7 +5,6 @@
 #include <Constants.hpp>
 #include <core/ID.hpp>
 #include <core/Util.hpp>
-#include <core/lib/AtomicSemaphore.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/EntityDrawData.hpp>

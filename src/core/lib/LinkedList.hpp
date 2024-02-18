@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_LINKED_LIST_HPP
 #define HYPERION_V2_LIB_LINKED_LIST_HPP
 
-#include "ContainerBase.hpp"
+#include <core/lib/ContainerBase.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 #include <core/lib/CMemory.hpp>
@@ -41,30 +41,35 @@ public:
     {
         Node *node;
 
+        HYP_FORCE_INLINE
         T &operator*()
         {
             AssertThrow(node != nullptr);
             return node->value.Get();
         }
 
+        HYP_FORCE_INLINE
         const T &operator*() const
         {
             AssertThrow(node != nullptr);
             return node->value.Get();
         }
 
+        HYP_FORCE_INLINE
         T *operator->()
         {
             AssertThrow(node != nullptr);
             return &node->value.Get();
         }
 
+        HYP_FORCE_INLINE
         const T *operator->() const
         {
             AssertThrow(node != nullptr);
             return &node->value.Get();
         }
 
+        HYP_FORCE_INLINE
         Iterator &operator++()
         {
             AssertThrow(node != nullptr);
@@ -72,21 +77,26 @@ public:
             return *this;
         }
 
+        HYP_FORCE_INLINE
         Iterator operator++(int)
         {
             AssertThrow(node != nullptr);
             return Iterator { node->next };
         }
 
+        HYP_FORCE_INLINE
         bool operator==(const Iterator &other) const
             { return node == other.node; }
 
+        HYP_FORCE_INLINE
         bool operator!=(const Iterator &other) const
             { return node != other.node; }
 
+        HYP_FORCE_INLINE
         bool operator==(const ConstIterator &other) const
             { return node == other.node; }
 
+        HYP_FORCE_INLINE
         bool operator!=(const ConstIterator &other) const
             { return node != other.node; }
     };
@@ -95,18 +105,21 @@ public:
     {
         const Node *node;
         
+        HYP_FORCE_INLINE
         const T &operator*() const
         {
             AssertThrow(node != nullptr);
             return node->value.Get();
         }
 
+        HYP_FORCE_INLINE
         const T *operator->() const
         {
             AssertThrow(node != nullptr);
             return &node->value.Get();
         }
         
+        HYP_FORCE_INLINE
         ConstIterator &operator++()
         {
             AssertThrow(node != nullptr);
@@ -114,21 +127,26 @@ public:
             return *this;
         }
 
+        HYP_FORCE_INLINE
         ConstIterator operator++(int)
         {
             AssertThrow(node != nullptr);
             return ConstIterator { node->next };
         }
 
+        HYP_FORCE_INLINE
         bool operator==(const Iterator &other) const
             { return node == other.node; }
 
+        HYP_FORCE_INLINE
         bool operator!=(const Iterator &other) const
             { return node != other.node; }
 
+        HYP_FORCE_INLINE
         bool operator==(const ConstIterator &other) const
             { return node == other.node; }
 
+        HYP_FORCE_INLINE
         bool operator!=(const ConstIterator &other) const
             { return node != other.node; }
     };
@@ -145,25 +163,39 @@ public:
     //LinkedList &operator=(const LinkedList &other);
     //LinkedList &operator=(LinkedList &&other) noexcept;
 
-    [[nodiscard]] SizeType Size() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType Size() const
         { return m_size; }
 
-    [[nodiscard]] ValueType &Front()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    ValueType &Front()
         { AssertThrow(m_size != 0); return m_head->value.Get(); }
 
-    [[nodiscard]] const ValueType &Front() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const ValueType &Front() const
         { AssertThrow(m_size != 0); return m_head->value.Get(); }
 
-    [[nodiscard]] ValueType &Back()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    ValueType &Back()
         { AssertThrow(m_size != 0); return m_tail->value.Get(); }
 
-    [[nodiscard]] const ValueType &Back() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const ValueType &Back() const
         { AssertThrow(m_size != 0); return m_tail->value.Get(); }
 
-    [[nodiscard]] bool Empty() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
         { return Size() == 0; }
 
-    [[nodiscard]] bool Any() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
         { return Size() != 0; }
     
     template <class ...Args>
@@ -238,7 +270,8 @@ public:
 
 #if 0
     template <SizeType OtherNumInlineBytes>
-    [[nodiscard]] bool operator==(const DynArray<T, OtherNumInlineBytes> &other) const
+    [[nodiscard]]
+    bool operator==(const DynArray<T, OtherNumInlineBytes> &other) const
     {
         if (std::addressof(other) == this) {
             return true;
@@ -262,7 +295,9 @@ public:
     }
 
     template <SizeType OtherNumInlineBytes>
-    [[nodiscard]] bool operator!=(const DynArray<T, OtherNumInlineBytes> &other) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool operator!=(const DynArray<T, OtherNumInlineBytes> &other) const
         { return !operator==(other); }
 
 #endif
@@ -273,9 +308,9 @@ public:
     )
 
 private:
-    Node *m_head;
-    Node *m_tail;
-    SizeType m_size;
+    Node        *m_head;
+    Node        *m_tail;
+    SizeType    m_size;
 };
 
 template <class T>

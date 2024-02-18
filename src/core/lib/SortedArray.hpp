@@ -1,13 +1,12 @@
 #ifndef HYPERION_V2_LIB_SORTED_ARRAY_H
 #define HYPERION_V2_LIB_SORTED_ARRAY_H
 
-#include "ContainerBase.hpp"
-#include "DynArray.hpp"
-#include "Pair.hpp"
+#include <core/lib/ContainerBase.hpp>
+#include <core/lib/DynArray.hpp>
+#include <core/lib/Pair.hpp>
 #include <util/Defines.hpp>
 
 #include <algorithm>
-#include <vector>
 #include <utility>
 
 namespace hyperion {

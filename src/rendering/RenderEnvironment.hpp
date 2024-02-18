@@ -14,7 +14,6 @@
 #include <core/Base.hpp>
 #include <core/Name.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/AtomicLock.hpp>
 #include <core/lib/Queue.hpp>
 #include <core/lib/Pair.hpp>
 

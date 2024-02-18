@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_QUEUE_H
 #define HYPERION_V2_LIB_QUEUE_H
 
-#include "DynArray.hpp"
+#include <core/lib/DynArray.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -29,39 +29,61 @@ public:
     Queue &operator=(const Queue &other);
     Queue &operator=(Queue &&other) noexcept;
 
-    [[nodiscard]] SizeType Size() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType Size() const
         { return Base::Size(); }
 
-    [[nodiscard]] typename Base::ValueType *Data()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename Base::ValueType *Data()
         { return Base::Data(); }
 
-    [[nodiscard]] const typename Base::ValueType *Data() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename Base::ValueType *Data() const
         { return Base::Data(); }
 
-    [[nodiscard]] typename Base::ValueType &Front()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename Base::ValueType &Front()
         { return Base::Front(); }
 
-    [[nodiscard]] const typename Base::ValueType &Front() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename Base::ValueType &Front() const
         { return Base::Front(); }
 
-    [[nodiscard]] typename Base::ValueType &Back()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename Base::ValueType &Back()
         { return Base::Back(); }
 
-    [[nodiscard]] const typename Base::ValueType &Back() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename Base::ValueType &Back() const
         { return Base::Back(); }
 
-    [[nodiscard]] bool Empty() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
         { return Base::Empty(); }
 
-    [[nodiscard]] bool Any() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
         { return Base::Any(); }
 
-    [[nodiscard]] bool Contains(const T &value) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Contains(const T &value) const
         { return Base::Contains(value); }
 
+    HYP_FORCE_INLINE
     void Reserve(SizeType capacity)
         { Base::Reserve(capacity); }
 
+    HYP_FORCE_INLINE
     void Refit()
         { Base::Refit(); }
 

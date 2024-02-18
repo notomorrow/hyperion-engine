@@ -10,7 +10,7 @@
 #include "packing.inc"
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-// layout : [opaque albedo, .. shared gbuffer textures .., translucent albedo]
+// layout : [opaque albedo, .. shared gbuffer textures .., translucent albedo] - so result count is NUM_GBUFFER_TEXTURES even with depth attachment excluded from the count.
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 1) uniform texture2D gbuffer_depth_texture;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 2) uniform texture2D gbuffer_mip_chain;

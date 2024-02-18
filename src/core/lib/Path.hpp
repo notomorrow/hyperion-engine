@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_PATH_HPP
 #define HYPERION_V2_LIB_PATH_HPP
 
-#include "String.hpp"
+#include <core/lib/String.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -15,7 +15,8 @@ namespace hyperion {
 namespace containers {
 namespace detail {
 
-class Path : public String {
+class Path : public String
+{
 protected:
     using Base = String;
 

@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_LIB_DYN_ARRAY_H
 #define HYPERION_V2_LIB_DYN_ARRAY_H
 
-#include "ContainerBase.hpp"
-#include "FixedArray.hpp"
-#include "Pair.hpp"
+#include <core/lib/ContainerBase.hpp>
+#include <core/lib/FixedArray.hpp>
+#include <core/lib/Pair.hpp>
 #include <util/Defines.hpp>
 #include <Types.hpp>
 #include <core/lib/CMemory.hpp>

@@ -68,7 +68,7 @@ struct RENDER_COMMAND(CopyBackbufferToCPU) : renderer::RenderCommand
 
 Engine::Engine()
     : m_placeholder_data(new PlaceholderData()),
-      m_global_descriptor_set_manager(this)
+      m_global_descriptor_table(MakeRenderObject<renderer::DescriptorTable>(*renderer::g_static_descriptor_table_decl))
 {
 }
 
@@ -718,14 +718,46 @@ void Engine::Initialize(RC<Application> application)
 
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 1, GetPlaceholderData()->GetImageView2D1x1R8());
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 2, GetPlaceholderData()->GetImageView2D1x1R8());
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 3, GetPlaceholderData()->GetImageView2D1x1R8());
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 4, GetPlaceholderData()->GetImageView2D1x1R8());
-    m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 5, GetPlaceholderData()->GetImageView2D1x1R8());
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint i = 0; i < num_gbuffer_textures; i++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferTextures", i, GetPlaceholderData()->GetImageView2D1x1R8());
+        }
+        
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferDepthTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferMipChain", 0, GetPlaceholderData()->GetImageView2D1x1R8());
 
-    m_global_descriptor_set_manager.Initialize(this);
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DeferredResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 3, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 3, GetPlaceholderData()->GetImageView2D1x1R8());
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRUVTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRSampleTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRFinalTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRUVImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRSampleImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRResultImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
+
+        for (uint i = 0; i < max_bound_reflection_probes; i++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("EnvProbeTextures", i, GetPlaceholderData()->GetImageViewCube1x1R8());
+        }
+
+        for (uint i = 0; i < max_bound_point_shadow_maps; i++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PointShadowMaps", i, GetPlaceholderData()->GetImageViewCube1x1R8());
+        }
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DepthPyramidResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+    }
+
+    // m_global_descriptor_set_manager.Initialize(this);
+
+    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Create(m_instance->GetDevice()));
 
     m_render_list_container.Create();
 
@@ -853,6 +885,8 @@ void Engine::FinalizeStop()
         }
         game_thread->Join();
     }
+
+    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy(m_instance->GetDevice()));
 
     m_render_list_container.Destroy();
     m_deferred_renderer.Destroy();

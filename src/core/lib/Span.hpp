@@ -2,9 +2,7 @@
 #define HYPERION_V2_LIB_SPAN_HPP
 
 #include <Types.hpp>
-
 namespace hyperion {
-
 template <class T>
 struct Span
 {

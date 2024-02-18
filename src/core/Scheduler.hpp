@@ -1,7 +1,6 @@
 #ifndef HYPERION_V2_CORE_SCHEDULER_H
 #define HYPERION_V2_CORE_SCHEDULER_H
 
-#include <core/lib/AtomicSemaphore.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/Proc.hpp>

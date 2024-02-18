@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_LIB_FLAT_SET_H
 #define HYPERION_V2_LIB_FLAT_SET_H
 
-#include "ContainerBase.hpp"
-#include "SortedArray.hpp"
-#include "Pair.hpp"
+#include <core/lib/ContainerBase.hpp>
+#include <core/lib/SortedArray.hpp>
+#include <core/lib/Pair.hpp>
 #include <util/Defines.hpp>
 
 #include <algorithm>

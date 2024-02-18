@@ -177,11 +177,8 @@ public:
     const FinalPass &GetFinalPass() const
         { return m_final_pass; }
 
-    GlobalDescriptorSetManager &GetGlobalDescriptorSetManager()
-        { return m_global_descriptor_set_manager; }
-
-    const GlobalDescriptorSetManager &GetGlobalDescriptorSetManager() const
-        { return m_global_descriptor_set_manager; }
+    const DescriptorTableRef &GetGlobalDescriptorTable() const
+        { return m_global_descriptor_table; }
 
     Handle<RenderGroup> CreateRenderGroup(
         const RenderableAttributeSet &renderable_attributes
@@ -302,7 +299,7 @@ private:
     UniquePtr<Instance>                                     m_instance;
 
     UniquePtr<PlaceholderData>                              m_placeholder_data;
-    GlobalDescriptorSetManager                              m_global_descriptor_set_manager;
+    DescriptorTableRef                                      m_global_descriptor_table;
 
     HashMap<TextureFormatDefault, InternalFormat>           m_texture_format_defaults;
 
