@@ -124,13 +124,16 @@ struct VulkanDescriptorSetLayoutWrapper
     }
 };
 
+// DescriptorSetLayout
+
 template <>
 DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDeclaration &decl)
+    : m_name(decl.name)
 {
     const DescriptorSetDeclaration *decl_ptr = &decl;
 
     if (decl.is_reference) {
-        decl_ptr = g_static_descriptor_table->FindDescriptorSetDeclaration(decl.name);
+        decl_ptr = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(decl.name);
 
         AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", decl.name.LookupString());
     }
@@ -177,27 +180,20 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
             }
         }
     }
+
+    // Add to list of dynamic buffer names
+    for (const auto &it : m_elements) {
+        if (it.second.type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
+            || it.second.type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC)
+        {
+            m_dynamic_elements.PushBack(it.first);
+        }
+    }
 }
 
 template <>
 DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::CreateDescriptorSet() const
 {
-    DebugLog(LogType::Debug, "Create descriptor set with layout:\n");
-
-    for (const auto &it : m_elements) {
-        const String &name = it.first;
-        const DescriptorSetLayoutElement &element = it.second;
-
-        DebugLog(
-            LogType::Debug,
-            "\t%s: %u, binding: %u, count: %u\n",
-            name.Data(),
-            element.type,
-            element.binding,
-            element.count
-        );
-    }
-
     return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
 }
 
@@ -453,7 +449,7 @@ void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index
     SetElement<TLASRef<Platform::VULKAN>>(name, index, ref);
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -467,8 +463,23 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
+    Array<uint> offsets_flat;
+    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+
+    for (uint i = 0; i < m_layout.GetDynamicElements().Size(); i++) {
+        const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
+
+        const auto it = offsets.Find(dynamic_element_name);
+
+        if (it == offsets.End()) {
+            continue;
+        }
+
+        offsets_flat[i] = it->second;
+    }
+
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -476,12 +487,12 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
         bind_index,
         1,
         &m_vk_descriptor_set,
-        uint32(offsets.Size()),
-        offsets.Data()
+        uint32(offsets_flat.Size()),
+        offsets_flat.Data()
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -495,8 +506,23 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
+    Array<uint> offsets_flat;
+    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+
+    for (uint i = 0; i < m_layout.GetDynamicElements().Size(); i++) {
+        const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
+
+        const auto it = offsets.Find(dynamic_element_name);
+
+        if (it == offsets.End()) {
+            continue;
+        }
+
+        offsets_flat[i] = it->second;
+    }
+
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -504,12 +530,12 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
         bind_index,
         1,
         &m_vk_descriptor_set,
-        uint32(offsets.Size()),
-        offsets.Data()
+        uint32(offsets_flat.Size()),
+        offsets_flat.Data()
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -523,8 +549,23 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipelineRef<Platform::VULKAN> &pipeline, const Array<uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
+    Array<uint> offsets_flat;
+    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+
+    for (uint i = 0; i < m_layout.GetDynamicElements().Size(); i++) {
+        const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
+
+        const auto it = offsets.Find(dynamic_element_name);
+
+        if (it == offsets.End()) {
+            continue;
+        }
+
+        offsets_flat[i] = it->second;
+    }
+
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
@@ -532,9 +573,14 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
         bind_index,
         1,
         &m_vk_descriptor_set,
-        uint32(offsets.Size()),
-        offsets.Data()
+        uint32(offsets_flat.Size()),
+        offsets_flat.Data()
     );
+}
+
+DescriptorSet2Ref<Platform::VULKAN> DescriptorSet2<Platform::VULKAN>::Clone() const
+{
+    return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(GetLayout());
 }
 
 VkDescriptorSetLayout DescriptorSet2<Platform::VULKAN>::GetVkDescriptorSetLayout() const
@@ -674,6 +720,25 @@ RC<VulkanDescriptorSetLayoutWrapper> DescriptorSetManager<Platform::VULKAN>::Get
     }
 
     return it->second.Lock();
+}
+
+// DescriptorTemplate
+
+template <>
+DescriptorTable<Platform::VULKAN>::DescriptorTable(const DescriptorTableDeclaration &decl)
+    : m_decl(decl)
+{
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        m_sets[frame_index].Reserve(decl.GetElements().Size());
+    }
+
+    for (const auto &set_decl : m_decl.GetElements()) {
+        DescriptorSetLayout<Platform::VULKAN> layout(set_decl);
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            m_sets[frame_index].PushBack(layout.CreateDescriptorSet());
+        }
+    }
 }
 
 } // namespace platform

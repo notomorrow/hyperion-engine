@@ -3,9 +3,7 @@
 namespace hyperion {
 namespace renderer {
 
-
-
-DescriptorTable *g_static_descriptor_table = new DescriptorTable();
+DescriptorTableDeclaration *g_static_descriptor_table_decl = new DescriptorTableDeclaration();
 
 DescriptorDeclaration *DescriptorSetDeclaration::FindDescriptorDeclaration(const String &name) const
 {
@@ -45,7 +43,7 @@ uint DescriptorSetDeclaration::CalculateFlatIndex(DescriptorSlot slot, const Str
     return uint(-1);
 }
 
-DescriptorSetDeclaration *DescriptorTable::FindDescriptorSetDeclaration(Name name) const
+DescriptorSetDeclaration *DescriptorTableDeclaration::FindDescriptorSetDeclaration(Name name) const
 {
     for (const DescriptorSetDeclaration &decl : m_elements) {
         if (decl.name == name) {
@@ -56,7 +54,7 @@ DescriptorSetDeclaration *DescriptorTable::FindDescriptorSetDeclaration(Name nam
     return nullptr;
 }
 
-DescriptorSetDeclaration *DescriptorTable::AddDescriptorSetDeclaration(DescriptorSetDeclaration descriptor_set)
+DescriptorSetDeclaration *DescriptorTableDeclaration::AddDescriptorSetDeclaration(DescriptorSetDeclaration descriptor_set)
 {
     m_elements.PushBack(std::move(descriptor_set));
 
@@ -68,7 +66,7 @@ static struct GlobalDescriptorSetsDeclarations
     GlobalDescriptorSetsDeclarations()
     {
         #define HYP_DESCRIPTOR_SETS_DEFINE
-        #define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table
+        #define HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE g_static_descriptor_table_decl
         #include <rendering/inl/DescriptorSets.inl>
         #undef HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE
         #undef HYP_DESCRIPTOR_SETS_DEFINE

@@ -40,6 +40,13 @@ GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::
 {
 }
 
+GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, DescriptorTableRef<Platform::VULKAN> descriptor_table)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), std::move(descriptor_table)),
+      viewport { },
+      scissor { }
+{
+}
+
 GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
     : Pipeline<Platform::VULKAN>(used_descriptor_sets),
       viewport { },
@@ -444,6 +451,10 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
 
 Result GraphicsPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
+    if (m_descriptor_table.HasValue()) {
+        SafeRelease(std::move(m_descriptor_table.Get()));
+    }
+
     VkDevice render_device = device->GetDevice();
 
     m_construction_info.fbos.Clear();

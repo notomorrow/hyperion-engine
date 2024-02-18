@@ -427,6 +427,10 @@ public:
         { return Get(); }
 
     HYP_FORCE_INLINE
+    operator const T *() const
+        { return const_cast<const T *>(Get()); }
+
+    HYP_FORCE_INLINE
     void SetName(Name name)
     {
         AssertThrowMsg(index != 0, "Render object is not valid");
@@ -731,7 +735,8 @@ DEF_RENDER_PLATFORM_OBJECT(Fence,                                           16);
 DEF_RENDER_PLATFORM_OBJECT(Frame,                                           16);
 DEF_RENDER_PLATFORM_OBJECT(Attachment,                                      4096);
 DEF_RENDER_PLATFORM_OBJECT(AttachmentUsage,                                 8192);
-DEF_RENDER_PLATFORM_OBJECT(DescriptorSet2,                                  4096);
+DEF_RENDER_PLATFORM_OBJECT(DescriptorSet2,                                  16384);
+DEF_RENDER_PLATFORM_OBJECT(DescriptorTable,                                 4096);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(BLAS, BottomLevelAccelerationStructure,    65536);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(TLAS, TopLevelAccelerationStructure,       16);
 
@@ -753,6 +758,7 @@ DEF_CURRENT_PLATFORM_RENDER_OBJECT(Frame);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(Attachment);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(AttachmentUsage);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorSet2);
+DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorTable);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(BLAS);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(TLAS);
 

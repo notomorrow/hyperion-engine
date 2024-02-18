@@ -75,17 +75,19 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
     }
 
     auto shader = g_shader_manager->GetOrCreate(HYP_NAME(GenerateDepthPyramid), { });
-    const renderer::DescriptorTable descriptor_table = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-    const renderer::DescriptorSetDeclaration *depth_pyramid_descriptor_set_decl = descriptor_table.FindDescriptorSetDeclaration(HYP_NAME(DepthPyramidDescriptorSet));
+    m_mip_descriptor_tables.Reserve(num_mip_levels);
+
+    const renderer::DescriptorSetDeclaration *depth_pyramid_descriptor_set_decl = descriptor_table_decl.FindDescriptorSetDeclaration(HYP_NAME(DepthPyramidDescriptorSet));
     AssertThrow(depth_pyramid_descriptor_set_decl != nullptr);
 
-    renderer::DescriptorSetLayout depth_pyramid_layout(*depth_pyramid_descriptor_set_decl);
-    
-    for (uint i = 0; i < max_frames_in_flight; i++) {
-        for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
-            // create descriptor sets for depth pyramid generation.
-            DescriptorSet2Ref depth_pyramid_descriptor_set = depth_pyramid_layout.CreateDescriptorSet();
+    for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            DescriptorSet2Ref depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
+            AssertThrow(depth_pyramid_descriptor_set != nullptr);
 
             if (mip_level == 0) {
                 // first mip level -- input is the actual depth image
@@ -96,17 +98,14 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 
             depth_pyramid_descriptor_set->SetElement("OutImage", m_depth_pyramid_mips[mip_level]);
             depth_pyramid_descriptor_set->SetElement("DepthPyramidSampler", m_depth_pyramid_sampler);
-
-            HYPERION_ASSERT_RESULT(depth_pyramid_descriptor_set->Create(g_engine->GetGPUDevice()));
-
-            m_depth_pyramid_descriptor_sets[i].PushBack(std::move(depth_pyramid_descriptor_set));
         }
+
+        HYPERION_ASSERT_RESULT(descriptor_table->Create(g_engine->GetGPUDevice()));
+        m_mip_descriptor_tables.PushBack(std::move(descriptor_table));
     }
-    // create compute pipeline for rendering depth image
-    m_generate_depth_pyramid = MakeRenderObject<renderer::ComputePipeline>(
-        shader->GetShaderProgram(),
-        Array<DescriptorSet2Ref> { m_depth_pyramid_descriptor_sets[0].Front() }
-    );
+
+    // use the first mip descriptor table to create the compute pipeline, since the descriptor set layout is the same for all mip levels
+    m_generate_depth_pyramid = MakeRenderObject<renderer::ComputePipeline>(shader->GetShaderProgram(), m_mip_descriptor_tables.Front());
 
     DeferCreate(m_generate_depth_pyramid, g_engine->GetGPUDevice());
 }
@@ -117,8 +116,8 @@ void DepthPyramidRenderer::Destroy()
     SafeRelease(std::move(m_depth_pyramid_view));
     SafeRelease(std::move(m_depth_pyramid_mips));
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        SafeRelease(std::move(m_depth_pyramid_descriptor_sets[frame_index]));
+    for (auto &mip_descriptor_table : m_mip_descriptor_tables) {
+        SafeRelease(std::move(mip_descriptor_table));
     }
 
     SafeRelease(std::move(m_depth_pyramid_sampler));
@@ -159,8 +158,12 @@ void DepthPyramidRenderer::Render(Frame *frame)
         mip_width = MathUtil::Max(1u, depth_pyramid_extent.width >> (mip_level));
         mip_height = MathUtil::Max(1u, depth_pyramid_extent.height >> (mip_level));
 
-        // bind descriptor set to compute pipeline
-        m_depth_pyramid_descriptor_sets[frame_index][mip_level]->Bind(command_buffer, m_generate_depth_pyramid, 0);
+        // m_depth_pyramid_descriptor_sets[frame_index][mip_level]->Bind(command_buffer, m_generate_depth_pyramid, 0);
+
+        // // bind descriptor set to compute pipeline
+        m_mip_descriptor_tables[mip_level]->Bind(frame, m_generate_depth_pyramid, { });
+
+        // m_generate_depth_pyramid->GetDescriptorTable().Get()->Bind(frame, m_generate_depth_pyramid, { });
 
         // set push constant data for the current mip level
         m_generate_depth_pyramid->Bind(

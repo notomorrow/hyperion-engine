@@ -30,6 +30,9 @@ using renderer::ShaderModule;
 using renderer::ShaderModuleType;
 using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
+using renderer::DescriptorTableDeclaration;
+using renderer::DescriptorSetDeclaration;
+using renderer::DescriptorDeclaration;
 
 using ShaderPropertyFlags = uint32;
 
@@ -747,7 +750,7 @@ struct DescriptorUsageSet
     void Merge(DescriptorUsageSet &&other)
         { descriptor_usages.Merge(std::move(other.descriptor_usages)); }
 
-    renderer::DescriptorTable BuildDescriptorTable() const;
+    DescriptorTableDeclaration BuildDescriptorTable() const;
 };
 
 struct ShaderDefinition

@@ -29,7 +29,7 @@ public:
         used with this pipeline.  */
     ComputePipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
     ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
-    ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSet2Ref<Platform::VULKAN>> &used_descriptor_sets);
+    ComputePipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
     ComputePipeline(const ComputePipeline &other) = delete;
     ComputePipeline &operator=(const ComputePipeline &other) = delete;
     ~ComputePipeline();

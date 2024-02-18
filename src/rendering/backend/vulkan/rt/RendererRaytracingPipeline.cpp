@@ -33,6 +33,11 @@ RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platfo
 {
 }
 
+RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, DescriptorTableRef<Platform::VULKAN> descriptor_table)
+    : Pipeline<Platform::VULKAN>(std::move(shader_program), std::move(descriptor_table))
+{
+}
+
 RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
     : Pipeline<Platform::VULKAN>(used_descriptor_sets)
 {
@@ -155,6 +160,10 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
 Result RaytracingPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     DebugLog(LogType::Debug, "Destroying raytracing pipeline\n");
+
+    if (m_descriptor_table.HasValue()) {
+        SafeRelease(std::move(m_descriptor_table.Get()));
+    }
 
     auto result = Result::OK;
 

@@ -109,12 +109,14 @@ void TemporalAA::CreateComputePipelines()
 {
     auto shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalAA));
 
-    const renderer::DescriptorTable descriptor_table = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-    const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table.FindDescriptorSetDeclaration(HYP_NAME(TemporalAADescriptorSet));
+    const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table_decl.FindDescriptorSetDeclaration(HYP_NAME(TemporalAADescriptorSet));
     AssertThrow(descriptor_set_decl != nullptr);
 
-    renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
+    auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    // renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
 
     const FixedArray<Handle<Texture> *, 2> textures = {
         &m_result_texture,
@@ -123,7 +125,8 @@ void TemporalAA::CreateComputePipelines()
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        DescriptorSet2Ref descriptor_set = descriptor_set_layout.CreateDescriptorSet();
+        DescriptorSet2Ref descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement("InColorTexture", g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
         descriptor_set->SetElement("InPrevColorTexture", (*textures[(frame_index + 1) % 2])->GetImageView());
@@ -139,17 +142,22 @@ void TemporalAA::CreateComputePipelines()
 
         descriptor_set->SetElement("OutColorImage", (*textures[frame_index % 2])->GetImageView());
 
-        DeferCreate(
-            descriptor_set,
-            g_engine->GetGPUDevice()
-        );
+        // DeferCreate(
+        //     descriptor_set,
+        //     g_engine->GetGPUDevice()
+        // );
 
-        m_descriptor_sets[frame_index] = std::move(descriptor_set);
+        // m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
+
+    DeferCreate(
+        descriptor_table,
+        g_engine->GetGPUDevice()
+    );
 
     m_compute_taa = MakeRenderObject<renderer::ComputePipeline>(
         shader->GetShaderProgram(),
-        Array<DescriptorSet2Ref> { m_descriptor_sets[0] }
+        descriptor_table
     );
 
     DeferCreate(
@@ -192,7 +200,9 @@ void TemporalAA::Render(Frame *frame)
     m_compute_taa->SetPushConstants(&push_constants, sizeof(push_constants));
     m_compute_taa->Bind(command_buffer);
 
-    m_descriptor_sets[frame_index]->Bind(command_buffer, m_compute_taa, 0);
+    m_compute_taa->GetDescriptorTable().Get()->Bind(frame, m_compute_taa, { });
+
+    // m_descriptor_sets[frame_index]->Bind(command_buffer, m_compute_taa, 0);
 
     m_compute_taa->Dispatch(
         command_buffer,

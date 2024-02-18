@@ -10,8 +10,8 @@ using renderer::Result;
 
 struct RENDER_COMMAND(CreateShaderProgram) : renderer::RenderCommand
 {
-    ShaderProgramRef shader_program;
-    CompiledShader compiled_shader;
+    ShaderProgramRef    shader_program;
+    CompiledShader      compiled_shader;
 
     RENDER_COMMAND(CreateShaderProgram)(
         const ShaderProgramRef &shader_program,
@@ -228,6 +228,16 @@ void Shader::Init()
     );
 
     SetReady(true);
+}
+
+void Shader::SetCompiledShader(const CompiledShader &compiled_shader)
+{
+    m_compiled_shader = compiled_shader;
+}
+
+void Shader::SetCompiledShader(CompiledShader &&compiled_shader)
+{
+    m_compiled_shader = std::move(compiled_shader);
 }
 
 Handle<Shader> ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
