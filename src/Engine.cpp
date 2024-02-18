@@ -67,6 +67,8 @@ struct RENDER_COMMAND(CopyBackbufferToCPU) : renderer::RenderCommand
 
 
 Engine::Engine()
+    : m_placeholder_data(new PlaceholderData()),
+      m_global_descriptor_set_manager(this)
 {
 }
 
@@ -198,7 +200,6 @@ void Engine::Initialize(RC<Application> application)
     m_render_data.Reset(new ShaderGlobals());
     m_render_data->Create();
 
-    m_placeholder_data.Reset(new PlaceholderData());
     m_placeholder_data->Create();
 
     m_world = CreateObject<World>();
@@ -724,7 +725,7 @@ void Engine::Initialize(RC<Application> application)
     m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 4, GetPlaceholderData()->GetImageView2D1x1R8());
     m_global_descriptor_set_manager.GetDescriptorSet(HYP_NAME(Global))->SetElement("GBufferTextures", 5, GetPlaceholderData()->GetImageView2D1x1R8());
 
-    m_global_descriptor_set_manager.Initialize();
+    m_global_descriptor_set_manager.Initialize(this);
 
     m_render_list_container.Create();
 
@@ -1099,15 +1100,96 @@ void Engine::RenderDeferred(Frame *frame)
 }
 
 // GlobalDescriptorSetManager
-GlobalDescriptorSetManager::GlobalDescriptorSetManager()
+GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
 {
     Mutex::Guard guard(m_mutex);
 
-    for (auto &it : renderer::g_static_descriptor_table->GetDescriptorSetDeclarations()) {
+    for (auto &it : renderer::g_static_descriptor_table->GetElements()) {
         renderer::DescriptorSetLayout layout(it);
         
         DescriptorSet2Ref ref = layout.CreateDescriptorSet();
         AssertThrow(ref.IsValid());
+
+        // Init with placeholder data
+        for (const auto &layout_it : ref->GetLayout().GetElements()) {
+            switch (layout_it.second.type) {
+            case renderer::DescriptorSetElementType::UNIFORM_BUFFER: // Fallthrough
+            case renderer::DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: {
+                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.Data());
+
+                for (uint i = 0; i < layout_it.second.count; i++) {
+                    ref->SetElement(
+                        layout_it.first,
+                        i,
+                        engine->GetPlaceholderData()->GetOrCreateBuffer(
+                            engine->GetGPUDevice(),
+                            renderer::GPUBufferType::CONSTANT_BUFFER,
+                            layout_it.second.size
+                        )
+                    );
+                }
+
+                break;
+            }
+            case renderer::DescriptorSetElementType::STORAGE_BUFFER: // Fallthrough
+            case renderer::DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: {
+                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.Data());
+
+                for (uint i = 0; i < layout_it.second.count; i++) {
+                    ref->SetElement(
+                        layout_it.first,
+                        i,
+                        engine->GetPlaceholderData()->GetOrCreateBuffer(
+                            engine->GetGPUDevice(),
+                            renderer::GPUBufferType::STORAGE_BUFFER,
+                            layout_it.second.size
+                        )
+                    );
+                }
+
+                break;
+            }
+            case renderer::DescriptorSetElementType::IMAGE: {
+                // @TODO: Differentiate between 2D, 3D, and Cubemap
+                for (uint i = 0; i < layout_it.second.count; i++) {
+                    ref->SetElement(
+                        layout_it.first,
+                        i,
+                        engine->GetPlaceholderData()->GetImageView2D1x1R8()
+                    );
+                }
+
+                break;
+            }
+            case renderer::DescriptorSetElementType::IMAGE_STORAGE: {
+                // @TODO: Differentiate between 2D, 3D, and Cubemap
+                for (uint i = 0; i < layout_it.second.count; i++) {
+                    ref->SetElement(
+                        layout_it.first,
+                        i,
+                        engine->GetPlaceholderData()->GetImageView2D1x1R8Storage()
+                    );
+                }
+
+                break;
+            }
+            case renderer::DescriptorSetElementType::SAMPLER: {
+                for (uint i = 0; i < layout_it.second.count; i++) {
+                    ref->SetElement(
+                        layout_it.first,
+                        i,
+                        engine->GetPlaceholderData()->GetSamplerNearest()
+                    );
+                }
+
+                break;
+            }
+            case renderer::DescriptorSetElementType::TLAS: {
+                // Do nothing, must be manually set.
+                break;
+            }
+            }
+        }
 
         m_descriptor_sets.Insert(it.name, std::move(ref));
     }
@@ -1115,14 +1197,14 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager()
 
 GlobalDescriptorSetManager::~GlobalDescriptorSetManager() = default;
 
-void GlobalDescriptorSetManager::Initialize()
+void GlobalDescriptorSetManager::Initialize(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     Mutex::Guard guard(m_mutex);
 
     for (auto &it : m_descriptor_sets) {
-        HYPERION_ASSERT_RESULT(it.second->Create(g_engine->GetGPUDevice()));
+        HYPERION_ASSERT_RESULT(it.second->Create(engine->GetGPUDevice()));
     }
 }
 

@@ -26,9 +26,7 @@ using renderer::Frame;
 using renderer::Image;
 using renderer::ImageView;
 
-class ReflectionProbeRenderer
-    : public BasicObject<STUB_CLASS(ReflectionProbeRenderer)>,
-      public RenderComponent<ReflectionProbeRenderer>
+class ReflectionProbeRenderer : public RenderComponent<ReflectionProbeRenderer>
 {
 public:
     ReflectionProbeRenderer(

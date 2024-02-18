@@ -277,13 +277,6 @@ DescriptorSet::DescriptorSet()
 {
 }
 
-DescriptorSet::DescriptorSet(DescriptorSetDeclaration declaration)
-    : DescriptorSet()
-{
-    m_declaration = std::move(declaration);
-    AddDescriptors();
-}
-
 DescriptorSet::DescriptorSet(Index index, uint real_index, bool bindless)
     : m_set(VK_NULL_HANDLE),
       m_layout(VK_NULL_HANDLE),
@@ -474,53 +467,6 @@ Result DescriptorSet::Destroy(Device *device)
     return result;
 }
 
-void DescriptorSet::AddDescriptors()
-{
-    for (Array<DescriptorDeclaration> &slot : m_declaration.slots) {
-        for (DescriptorDeclaration &descriptor : slot) {
-            const uint descriptor_index = m_declaration.CalculateFlatIndex(descriptor.slot, descriptor.name);
-            AssertThrow(descriptor_index != uint(-1));
-
-            switch (descriptor.slot) {
-            case DescriptorSlot::DESCRIPTOR_SLOT_SRV:
-                AddDescriptor<renderer::ImageDescriptor>(descriptor_index)
-                    ->SetElementSRV(0, platform::ImageViewRef<Platform::VULKAN>::unset);
-    
-                break;
-            case DescriptorSlot::DESCRIPTOR_SLOT_UAV:
-                AddDescriptor<renderer::StorageImageDescriptor>(descriptor_index)
-                    ->SetElementUAV(0, platform::ImageViewRef<Platform::VULKAN>::unset);
-                    
-                break;
-            case DescriptorSlot::DESCRIPTOR_SLOT_CBUFF:
-                if (descriptor.is_dynamic) {
-                    AddDescriptor<renderer::DynamicUniformBufferDescriptor>(descriptor_index);
-                } else {
-                    AddDescriptor<renderer::UniformBufferDescriptor>(descriptor_index);
-                }
-                break;
-            case DescriptorSlot::DESCRIPTOR_SLOT_SSBO:
-                if (descriptor.is_dynamic) {
-                    AddDescriptor<renderer::DynamicStorageBufferDescriptor>(descriptor_index);
-                } else {
-                    AddDescriptor<renderer::StorageBufferDescriptor>(descriptor_index);
-                }
-                break;
-            case DescriptorSlot::DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE:
-                AddDescriptor<renderer::TlasDescriptor>(descriptor_index);
-                break;
-            case DescriptorSlot::DESCRIPTOR_SLOT_SAMPLER:
-                AddDescriptor<renderer::SamplerDescriptor>(descriptor_index)
-                    ->SetElementSampler(0, platform::SamplerRef<Platform::VULKAN>::unset);
-                break;
-            default:
-                AssertThrowMsg(false, "Invalid descriptor slot");
-                break;
-            }
-        }
-    }
-}
-
 bool DescriptorSet::RemoveDescriptor(Descriptor *descriptor)
 {
     AssertThrow(descriptor != nullptr);
@@ -556,29 +502,6 @@ Descriptor *DescriptorSet::GetDescriptor(DescriptorKey key) const
 Descriptor *DescriptorSet::GetDescriptor(uint binding) const
 {
     const auto it = m_descriptors.FindIf([binding](const auto &item) {
-        return item->GetBinding() == binding;
-    });
-
-    if (it == m_descriptors.End()) {
-        return nullptr;
-    }
-
-    return it->get();
-}
-
-Descriptor *DescriptorSet::GetDescriptorByName(const String &name) const
-{
-    const DescriptorDeclaration *decl = m_declaration.FindDescriptorDeclaration(name);
-
-    if (!decl) {
-        return nullptr;
-    }
-
-    const auto binding = m_declaration.CalculateFlatIndex(decl->slot, decl->name);
-    AssertThrow(binding != uint(~0u)); // Make sure its not unset
-
-    const auto it = m_descriptors.FindIf([binding](const auto &item)
-    {
         return item->GetBinding() == binding;
     });
 

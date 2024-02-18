@@ -48,6 +48,8 @@ public:
 
     HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8, m_image_2d_1x1_r8);
     HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8, m_image_view_2d_1x1_r8);
+    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8Storage, m_image_2d_1x1_r8_storage);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8Storage, m_image_view_2d_1x1_r8_storage);
     HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8, m_image_view_3d_1x1x1_r8);
     HYP_DEF_DUMMY_DATA(Image, Image3D1x1x1R8, m_image_3d_1x1x1_r8);
     HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8Storage, m_image_view_3d_1x1x1_r8_storage);

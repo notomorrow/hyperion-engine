@@ -412,8 +412,6 @@ public:
         resources such as layout. You would hold the DescriptorSet as a class member manually Create()/Destroy() it. */
     DescriptorSet();
 
-    DescriptorSet(DescriptorSetDeclaration declaration);
-
     /*! \brief Create a descriptor set the older way. The descriptor set will be held in the DescriptorPool and managed
         indirectly by going through methods on DescriptorPool etc. */
     DescriptorSet(Index index, uint real_index, bool bindless);
@@ -458,25 +456,8 @@ public:
     bool RemoveDescriptor(DescriptorKey key);
     bool RemoveDescriptor(uint binding);
 
-    bool HasDescriptorByName(const String &name) const
-        { return m_declaration.FindDescriptorDeclaration(name) != nullptr; }
-
-    template <SizeType Count>
-    bool HasDescriptorByName(FixedArray<Name, Count> names) const
-    {
-        for (const auto item : names) {
-            if (!m_declaration.FindDescriptorDeclaration(item)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     Descriptor *GetDescriptor(DescriptorKey key) const;
     Descriptor *GetDescriptor(uint binding) const;
-    /*! \brief Get a Descriptor by name -- must have a DescriptorSetDeclaration */
-    Descriptor *GetDescriptorByName(const String &name) const;
 
     template <class DescriptorType>
     Descriptor *GetOrAddDescriptor(DescriptorKey key)
@@ -508,12 +489,7 @@ public:
     VkDescriptorSetLayout m_layout;
 
 private:
-    /* Add descriptors from m_declaration */
-    void AddDescriptors();
-
     uint DescriptorKeyToIndex(DescriptorKey key) const;
-
-    DescriptorSetDeclaration            m_declaration;
 
     DescriptorPool                      *m_descriptor_pool;
     Array<std::unique_ptr<Descriptor>>  m_descriptors;

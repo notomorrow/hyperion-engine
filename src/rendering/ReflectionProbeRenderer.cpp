@@ -11,8 +11,7 @@ namespace hyperion::v2 {
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const Vector3 &origin
-) : BasicObject(),
-    RenderComponent(name, 5),
+) : RenderComponent(name, 5),
     m_aabb(BoundingBox(origin - 150.0f, origin + 150.0f))
 {
 }
@@ -20,8 +19,7 @@ ReflectionProbeRenderer::ReflectionProbeRenderer(
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const BoundingBox &aabb
-) : BasicObject(),
-    RenderComponent(name, 5),
+) : RenderComponent(name, 5),
     m_aabb(aabb)
 {
 }
@@ -32,12 +30,6 @@ ReflectionProbeRenderer::~ReflectionProbeRenderer()
 
 void ReflectionProbeRenderer::Init()
 {
-    if (IsInitCalled()) {
-        return;
-    }
-
-    BasicObject::Init();
-    
     m_env_probe = CreateObject<EnvProbe>(
         Handle<Scene>(GetParent()->GetScene()->GetID()),
         m_aabb,
@@ -46,15 +38,12 @@ void ReflectionProbeRenderer::Init()
     );
 
     InitObject(m_env_probe);
-
-    SetReady(true);
 }
 
 // called from game thread
 void ReflectionProbeRenderer::InitGame()
 {
     Threads::AssertOnThread(THREAD_GAME);
-    AssertReady();
 
     AssertThrow(m_env_probe.IsValid());
     m_env_probe->EnqueueBind();
@@ -64,8 +53,6 @@ void ReflectionProbeRenderer::InitGame()
 
 void ReflectionProbeRenderer::OnRemoved()
 {
-    AssertReady();
-
     AssertThrow(m_env_probe.IsValid());
     m_env_probe->EnqueueUnbind();
 }
@@ -88,7 +75,6 @@ void ReflectionProbeRenderer::OnUpdate(GameCounter::TickUnit delta)
 void ReflectionProbeRenderer::OnRender(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
-    AssertReady();
 
     m_env_probe->Render(frame);
 

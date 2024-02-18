@@ -5,7 +5,7 @@
 #include <core/Name.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
 #include <util/Defines.hpp>
 #include <HashCode.hpp>
@@ -13,6 +13,14 @@
 
 #include <set>
 #include <mutex>
+
+namespace hyperion {
+namespace json {
+
+class JSONValue;
+
+} // namespace json
+} // namespace hyperion
 
 namespace hyperion::v2 {
 
@@ -671,6 +679,40 @@ struct DescriptorUsage
         }
 
         return false;
+    }
+
+    uint GetCount() const
+    {
+        uint value = 1;
+
+        auto it = params.Find("count");
+
+        if (it == params.End()) {
+            return value;
+        }
+
+        if (StringUtil::Parse(it->second, &value)) {
+            return value;
+        }
+
+        return 1;
+    }
+
+    uint GetSize() const
+    {
+        uint value = uint(-1);
+
+        auto it = params.Find("size");
+
+        if (it == params.End()) {
+            return value;
+        }
+
+        if (StringUtil::Parse(it->second, &value)) {
+            return value;
+        }
+
+        return uint(-1);
     }
 };
 

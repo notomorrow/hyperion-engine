@@ -3,10 +3,13 @@
 
 #include <core/Base.hpp>
 #include <core/lib/AtomicVar.hpp>
+
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Buffers.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <core/Containers.hpp>
 #include <Threads.hpp>
 
@@ -211,9 +214,9 @@ private:
     Handle<ComputePipeline> m_pack_light_field_probe;
     Handle<ComputePipeline> m_copy_light_field_border_texels_irradiance;
     Handle<ComputePipeline> m_copy_light_field_border_texels_depth;
-    Handle<ComputePipeline> m_clear_voxels;
-    Handle<ComputePipeline> m_voxelize_probe;
-    Handle<ComputePipeline> m_offset_voxel_grid;
+    ComputePipelineRef m_clear_voxels;
+    ComputePipelineRef m_voxelize_probe;
+    ComputePipelineRef m_offset_voxel_grid;
     Handle<ComputePipeline> m_generate_voxel_grid_mipmaps;
     FixedArray<DescriptorSetRef, max_frames_in_flight> m_light_field_probe_descriptor_sets;
 
@@ -226,7 +229,7 @@ private:
     Handle<Texture> m_voxel_grid_texture;
 
     Array<ImageViewRef> m_voxel_grid_mips;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_voxelize_probe_descriptor_sets;
+    FixedArray<DescriptorSet2Ref, max_frames_in_flight> m_voxelize_probe_descriptor_sets;
     Array<DescriptorSetRef> m_generate_voxel_grid_mipmaps_descriptor_sets;
 
     Queue<uint> m_next_render_indices;
