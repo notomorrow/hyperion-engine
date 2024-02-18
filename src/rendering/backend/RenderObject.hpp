@@ -81,9 +81,11 @@ public:
             }
         }
 
+        HYP_FORCE_INLINE
         uint16 GetRefCountStrong() const
             { return ref_count_strong.Get(MemoryOrder::ACQUIRE); }
 
+        HYP_FORCE_INLINE
         uint16 GetRefCountWeak() const
             { return ref_count_weak.Get(MemoryOrder::ACQUIRE); }
 
@@ -99,7 +101,8 @@ public:
             return ptr;
         }
 
-        HYP_FORCE_INLINE void IncRefStrong()
+        HYP_FORCE_INLINE
+        void IncRefStrong()
             { ref_count_strong.Increment(1, MemoryOrder::RELAXED); }
 
         uint DecRefStrong()
@@ -116,7 +119,8 @@ public:
             return uint(count) - 1;
         }
 
-        HYP_FORCE_INLINE void IncRefWeak()
+        HYP_FORCE_INLINE
+        void IncRefWeak()
             { ref_count_weak.Increment(1, MemoryOrder::RELAXED); }
 
         uint DecRefWeak()
@@ -128,7 +132,8 @@ public:
             return uint(count) - 1;
         }
 
-        HYP_FORCE_INLINE T &Get()
+        HYP_FORCE_INLINE
+        T &Get()
         {
 #ifdef HYP_DEBUG_MODE
             AssertThrowMsg(HasValue(), "Render object of type %s has no value!", GetNameForRenderObject<T, PLATFORM>().LookupString());
@@ -138,7 +143,8 @@ public:
         }
 
     private:
-        HYP_FORCE_INLINE bool HasValue() const
+        HYP_FORCE_INLINE
+        bool HasValue() const
             { return has_value; }
     };
 
@@ -348,39 +354,55 @@ public:
         }
     }
 
+    HYP_FORCE_INLINE
     T *operator->() const
         { return Get(); }
 
+    HYP_FORCE_INLINE
     T &operator*()
         { return *Get(); }
 
+    HYP_FORCE_INLINE
     const T &operator*() const
         { return *Get(); }
 
+    HYP_FORCE_INLINE
     bool operator!() const
         { return !IsValid(); }
 
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return IsValid(); }
 
+    HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return !IsValid(); }
 
+    HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return IsValid(); }
 
+    HYP_FORCE_INLINE
     bool operator==(const RenderObjectHandle_Strong &other) const
         { return index == other.index; }
 
+    HYP_FORCE_INLINE
     bool operator!=(const RenderObjectHandle_Strong &other) const
         { return index == other.index; }
 
+    HYP_FORCE_INLINE
     bool operator<(const RenderObjectHandle_Strong &other) const
         { return index < other.index; }
 
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return index != 0; }
 
+    HYP_FORCE_INLINE
+    uint16 GetRefCount() const
+        { return index == 0 ? 0 : _container->GetRefCountStrong(index - 1); }
+
+    HYP_FORCE_INLINE
     T *Get() const
     {
         if (index == 0) {
@@ -390,6 +412,7 @@ public:
         return &_container->Get(index - 1);
     }
 
+    HYP_FORCE_INLINE
     void Reset()
     {
         if (index != 0) {
@@ -399,15 +422,18 @@ public:
         index = 0;
     }
 
+    HYP_FORCE_INLINE
     operator T *() const
         { return Get(); }
 
+    HYP_FORCE_INLINE
     void SetName(Name name)
     {
         AssertThrowMsg(index != 0, "Render object is not valid");
         _container->SetDebugName(index - 1, name);
     }
 
+    HYP_FORCE_INLINE
     Name GetName() const
     {
         AssertThrowMsg(index != 0, "Render object is not valid");
@@ -805,17 +831,31 @@ struct RenderObjectDeleter
             Base::mtx.unlock();
 
             while (to_delete.Any()) {
+                auto object = to_delete.Pop();
+
+                if (object.GetRefCount() > 1) {
+#ifdef HYP_DEBUG_MODE
+                    DebugLog(
+                        LogType::Warn,
+                        "Render object of type %s (Name: %s) has a reference count of %u, skipping\n",
+                        TypeName<T>().Data(),
+                        object.GetName().LookupString(),
+                        object.GetRefCount()
+                    );
+#endif
+
+                    continue;
+                }
+
 #ifdef HYP_DEBUG_MODE
                 DebugLog(
                     LogType::Debug,
                     "Deleting render object of type %s (Name: %s)\n",
                     TypeName<T>().Data(),
-                    to_delete.Front().GetName().LookupString()
+                    object.GetName().LookupString()
                 );
 #endif
-                HYPERION_ASSERT_RESULT(to_delete.Front()->Destroy(v2::GetEngineDevice()));
-
-                to_delete.Pop();
+                HYPERION_ASSERT_RESULT(object->Destroy(v2::GetEngineDevice()));
             }
         }
 

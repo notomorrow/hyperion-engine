@@ -64,6 +64,7 @@ struct DescriptorSetLayoutElement
     DescriptorSetElementType    type = DescriptorSetElementType::UNSET;
     uint                        binding = -1; // has to be set
     uint                        count = 1; // Set to -1 for bindless
+    uint                        size = -1;
 
     bool IsBindless() const
         { return count == ~0u; }
@@ -75,6 +76,7 @@ struct DescriptorSetLayoutElement
         hc.Add(type);
         hc.Add(binding);
         hc.Add(count);
+        hc.Add(size);
 
         return hc;
     }
@@ -91,6 +93,152 @@ static inline uint32 GetDescriptorSetElementTypeMask(FixedArray<DescriptorSetEle
 
     return mask;
 }
+
+enum DescriptorSlot : uint32
+{
+    DESCRIPTOR_SLOT_NONE,
+    DESCRIPTOR_SLOT_SRV,
+    DESCRIPTOR_SLOT_UAV,
+    DESCRIPTOR_SLOT_CBUFF,
+    DESCRIPTOR_SLOT_SSBO,
+    DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE,
+    DESCRIPTOR_SLOT_SAMPLER,
+    DESCRIPTOR_SLOT_MAX
+};
+
+struct DescriptorDeclaration
+{
+    DescriptorSlot  slot = DESCRIPTOR_SLOT_NONE;
+    String          name;
+    uint            count = 1;
+    uint            size = -1;
+    bool            is_dynamic = false;
+    uint            index = ~0u;
+};
+
+struct DescriptorSetDeclaration
+{
+    uint                                                            set_index = ~0u;
+    Name                                                            name = Name::invalid;
+    FixedArray<Array<DescriptorDeclaration>, DESCRIPTOR_SLOT_MAX>   slots = { };
+
+    // is this a reference to a global descriptor set declaration?
+    bool                                                            is_reference = false;
+
+    DescriptorSetDeclaration()                                                      = default;
+
+    DescriptorSetDeclaration(uint set_index, Name name, bool is_reference = false)
+        : set_index(set_index),
+          name(name),
+          is_reference(is_reference)
+    {
+    }
+
+    DescriptorSetDeclaration(const DescriptorSetDeclaration &other)                 = default;
+    DescriptorSetDeclaration &operator=(const DescriptorSetDeclaration &other)      = default;
+    DescriptorSetDeclaration(DescriptorSetDeclaration &&other) noexcept             = default;
+    DescriptorSetDeclaration &operator=(DescriptorSetDeclaration &&other) noexcept  = default;
+    ~DescriptorSetDeclaration()                                                     = default;
+
+    Array<DescriptorDeclaration> &GetSlot(DescriptorSlot slot)
+    {
+        AssertThrow(slot < DESCRIPTOR_SLOT_MAX && slot > DESCRIPTOR_SLOT_NONE);
+
+        return slots[uint(slot) - 1];
+    }
+
+    const Array<DescriptorDeclaration> &GetSlot(DescriptorSlot slot) const
+    {
+        AssertThrow(slot < DESCRIPTOR_SLOT_MAX && slot > DESCRIPTOR_SLOT_NONE);
+
+        return slots[uint(slot) - 1];
+    }
+
+    void AddDescriptorDeclaration(renderer::DescriptorDeclaration decl)
+    {
+        DebugLog(LogType::Debug, "Add descriptor to slot %u with name %s (%u), dynamic: %d\n", decl.slot, decl.name.Data(), decl.name.GetHashCode().Value(), decl.is_dynamic);
+
+        AssertThrow(decl.slot != DESCRIPTOR_SLOT_NONE && decl.slot < DESCRIPTOR_SLOT_MAX);
+
+        decl.index = uint(slots[uint(decl.slot) - 1].Size());
+        slots[uint(decl.slot) - 1].PushBack(std::move(decl));
+    }
+
+    /*! \brief Calculate a flat index for a Descriptor that is part of this set.
+        Returns -1 if not found */
+    uint CalculateFlatIndex(DescriptorSlot slot, const String &name) const;
+
+    DescriptorDeclaration *FindDescriptorDeclaration(const String &name) const;
+};
+
+class DescriptorTable
+{
+public:
+    DescriptorSetDeclaration *FindDescriptorSetDeclaration(Name name) const;
+    DescriptorSetDeclaration *AddDescriptorSetDeclaration(DescriptorSetDeclaration descriptor_set);
+
+    Array<DescriptorSetDeclaration> &GetElements()
+        { return m_elements; }
+
+    const Array<DescriptorSetDeclaration> &GetElements() const
+        { return m_elements; }
+
+private:
+    Array<DescriptorSetDeclaration> m_elements;
+
+public:
+
+    struct DeclareSet
+    {
+        DeclareSet(DescriptorTable *table, uint set_index, Name name)
+        {
+            AssertThrow(table != nullptr);
+
+            if (table->m_elements.Size() <= set_index) {
+                table->m_elements.Resize(set_index + 1);
+            }
+
+            DescriptorSetDeclaration decl;
+            decl.set_index = set_index;
+            decl.name = name;
+            table->m_elements[set_index] = std::move(decl);
+        }
+    };
+
+    struct DeclareDescriptor
+    {
+        DeclareDescriptor(DescriptorTable *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1)
+        {
+            AssertThrow(table != nullptr);
+
+            uint set_index = ~0u;
+
+            for (uint i = 0; i < table->m_elements.Size(); ++i) {
+                if (table->m_elements[i].name == set_name) {
+                    set_index = i;
+                    break;
+                }
+            }
+
+            AssertThrowMsg(set_index != ~0u, "Descriptor set %s not found", set_name.LookupString());
+
+            DescriptorSetDeclaration &decl = table->m_elements[set_index];
+            AssertThrow(decl.set_index == set_index);
+            AssertThrow(slot_type > 0 && slot_type < decl.slots.Size());
+
+            const uint slot_index = decl.slots[uint(slot_type) - 1].Size();
+
+            DescriptorDeclaration descriptor_decl;
+            descriptor_decl.index = slot_index;
+            descriptor_decl.slot = slot_type;
+            descriptor_decl.name = descriptor_name;
+            descriptor_decl.count = count;
+            decl.slots[uint(slot_type) - 1].PushBack(descriptor_decl);
+        }
+    };
+};
+
+extern DescriptorTable *g_static_descriptor_table;
 
 namespace platform {
 
@@ -165,8 +313,8 @@ public:
     const ArrayMap<String, DescriptorSetLayoutElement> &GetElements() const
         { return m_elements; }
 
-    void AddElement(const String &name, DescriptorSetElementType type, uint binding, uint count)
-        { m_elements.Insert(name, DescriptorSetLayoutElement { type, binding, count }); }
+    void AddElement(const String &name, DescriptorSetElementType type, uint binding, uint count, uint size = -1)
+        { m_elements.Insert(name, DescriptorSetLayoutElement { type, binding, count, size }); }
 
     const DescriptorSetLayoutElement *GetElement(const String &name) const
     {

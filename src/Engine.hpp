@@ -106,14 +106,14 @@ struct DebugMarker
 class GlobalDescriptorSetManager
 {
 public:
-    GlobalDescriptorSetManager();
+    GlobalDescriptorSetManager(Engine *engine);
     GlobalDescriptorSetManager(const GlobalDescriptorSetManager &)                  = delete;
     GlobalDescriptorSetManager &operator=(const GlobalDescriptorSetManager &)       = delete;
     GlobalDescriptorSetManager(GlobalDescriptorSetManager &&) noexcept              = delete;
     GlobalDescriptorSetManager &operator=(GlobalDescriptorSetManager &&) noexcept   = delete;
     ~GlobalDescriptorSetManager();
 
-    void Initialize();
+    void Initialize(Engine *engine);
 
     void AddDescriptorSet(Name name, const DescriptorSet2Ref &ref);
     DescriptorSet2Ref GetDescriptorSet(Name name) const;
@@ -301,6 +301,7 @@ private:
     
     UniquePtr<Instance>                                     m_instance;
 
+    UniquePtr<PlaceholderData>                              m_placeholder_data;
     GlobalDescriptorSetManager                              m_global_descriptor_set_manager;
 
     HashMap<TextureFormatDefault, InternalFormat>           m_texture_format_defaults;
@@ -311,7 +312,6 @@ private:
     std::mutex                                              m_render_group_mapping_mutex;
 
     UniquePtr<ShaderGlobals>                                m_render_data;
-    UniquePtr<PlaceholderData>                              m_placeholder_data;
 
     ObjectPool                                              m_object_pool;
 

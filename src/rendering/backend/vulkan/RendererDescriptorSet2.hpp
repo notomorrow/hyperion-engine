@@ -120,6 +120,14 @@ private:
                     uint(buffer_type),
                     name.Data()
                 );
+
+                AssertThrowMsg(
+                    (ref->size % layout_element->size) == 0,
+                    "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
+                    ref->size,
+                    layout_element->size,
+                    name.Data()
+                );
             }
         }
 

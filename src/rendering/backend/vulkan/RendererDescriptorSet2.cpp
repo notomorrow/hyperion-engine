@@ -127,9 +127,17 @@ struct VulkanDescriptorSetLayoutWrapper
 template <>
 DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDeclaration &decl)
 {
-    for (const Array<DescriptorDeclaration> &slot : decl.slots) {
+    const DescriptorSetDeclaration *decl_ptr = &decl;
+
+    if (decl.is_reference) {
+        decl_ptr = g_static_descriptor_table->FindDescriptorSetDeclaration(decl.name);
+
+        AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", decl.name.LookupString());
+    }
+
+    for (const Array<DescriptorDeclaration> &slot : decl_ptr->slots) {
         for (const DescriptorDeclaration &descriptor : slot) {
-            const uint descriptor_index = decl.CalculateFlatIndex(descriptor.slot, descriptor.name);
+            const uint descriptor_index = decl_ptr->CalculateFlatIndex(descriptor.slot, descriptor.name);
             AssertThrow(descriptor_index != uint(-1));
 
             switch (descriptor.slot) {
@@ -143,16 +151,16 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_CBUFF:
                 if (descriptor.is_dynamic) {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, descriptor.count);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, descriptor.count, descriptor.size);
                 } else {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, descriptor.count);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, descriptor.count, descriptor.size);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_SSBO:
                 if (descriptor.is_dynamic) {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, descriptor.count);
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, descriptor.count, descriptor.size);
                 } else {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, descriptor.count);
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, descriptor.count, descriptor.size);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE:

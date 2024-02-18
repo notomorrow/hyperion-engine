@@ -6,6 +6,7 @@
 #include <math/MathUtil.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
 #include <util/fs/FsUtil.hpp>
+#include <util/json/JSON.hpp>
 #include <util/Defines.hpp>
 #include <Constants.hpp>
 
@@ -478,28 +479,33 @@ renderer::DescriptorTable DescriptorUsageSet::BuildDescriptorTable() const
 
         if (static_descriptor_set_declaration != nullptr) {
             if (!descriptor_set_declaration) {
-                table.AddDescriptorSet(*static_descriptor_set_declaration);
+                const uint set_index = uint(table.GetElements().Size());
+
+                table.AddDescriptorSetDeclaration(renderer::DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true));
             }
 
             continue;
         }
 
         if (!descriptor_set_declaration) {
-            const uint set_index = uint(table.GetDescriptorSetDeclarations().Size());
+            const uint set_index = uint(table.GetElements().Size());
 
-            descriptor_set_declaration = table.AddDescriptorSet(renderer::DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
+            descriptor_set_declaration = table.AddDescriptorSetDeclaration(renderer::DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
         }
 
-        renderer::DescriptorDeclaration *descriptor_declaration = descriptor_set_declaration
-            ->FindDescriptorDeclaration(descriptor_usage.descriptor_name);
+        renderer::DescriptorDeclaration desc {
+            descriptor_usage.slot,
+            descriptor_usage.descriptor_name,
+            descriptor_usage.GetCount(),
+            descriptor_usage.GetSize(),
+            bool(descriptor_usage.flags & DESCRIPTOR_USAGE_FLAG_DYNAMIC)
+        };
 
-        if (descriptor_declaration != nullptr) {
+        if (auto *existing_decl = descriptor_set_declaration->FindDescriptorDeclaration(descriptor_usage.descriptor_name)) {
             // Already exists, just update the slot
-            descriptor_declaration->name = descriptor_usage.descriptor_name;
-            descriptor_declaration->slot = descriptor_usage.slot;
-            descriptor_declaration->is_dynamic = descriptor_usage.flags & DESCRIPTOR_USAGE_FLAG_DYNAMIC;
+            *existing_decl = std::move(desc);
         } else {
-            descriptor_set_declaration->AddDescriptor(descriptor_usage.slot, descriptor_usage.descriptor_name, descriptor_usage.flags & DESCRIPTOR_USAGE_FLAG_DYNAMIC);
+            descriptor_set_declaration->AddDescriptorDeclaration(std::move(desc));
         }
     }
 
@@ -1007,8 +1013,8 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
         };
     };
 
-    for (auto &line : lines) {
-        line = line.Trimmed();
+    for (uint line_index = 0; line_index < lines.Size();) {
+        const String line = lines[line_index].Trimmed();
     
         if (line.StartsWith("HYP_ATTRIBUTE")) {
             Array<String> parts = line.Split(' ');
@@ -1242,6 +1248,8 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
         } else {
             result.processed_source += line + '\n';
         }
+
+        line_index++;
     }
 
     return result;
@@ -1446,7 +1454,7 @@ bool ShaderCompiler::CompileBundle(
     renderer::DescriptorTable descriptor_table = bundle.descriptor_usages.BuildDescriptorTable();
 
     // Generate descriptor table defines
-    for (renderer::DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetDescriptorSetDeclarations()) {
+    for (renderer::DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
         descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(descriptor_set_declaration.set_index) + "\n";
 
         for (const Array<renderer::DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration.slots) {
