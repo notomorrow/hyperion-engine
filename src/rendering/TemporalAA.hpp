@@ -53,13 +53,12 @@ private:
     void CreateDescriptorSets();
     void CreateComputePipelines();
 
-    Extent2D                                            m_extent;
+    Extent2D            m_extent;
 
-    Handle<Texture>                                     m_result_texture;
-    Handle<Texture>                                     m_history_texture;
+    Handle<Texture>     m_result_texture;
+    Handle<Texture>     m_history_texture;
 
-    FixedArray<DescriptorSet2Ref, max_frames_in_flight> m_descriptor_sets;
-    ComputePipelineRef                                  m_compute_taa;
+    ComputePipelineRef  m_compute_taa;
 };
 
 } // namespace hyperion::v2

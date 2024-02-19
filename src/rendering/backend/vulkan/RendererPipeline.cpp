@@ -94,6 +94,8 @@ Array<VkDescriptorSetLayout> Pipeline<Platform::VULKAN>::GetDescriptorSetLayouts
         return { };
     }
 
+    AssertThrowMsg(m_descriptor_table->IsValid(), "Invalid DescriptorTable provided to Pipeline");
+
     Array<VkDescriptorSetLayout> used_layouts;
     used_layouts.Reserve((*m_descriptor_table)->GetSets()[0].Size());
 

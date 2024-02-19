@@ -62,9 +62,10 @@ public:
     void Render(Frame *frame);
 
 private:
+    ShaderProperties GetShaderProperties() const;
+
     void CreateUniformBuffers();
     void CreateBlueNoiseBuffer();
-    void CreateDescriptorSets();
     void CreateComputePipelines();
 
     Extent2D m_extent;
@@ -72,10 +73,9 @@ private:
     FixedArray<Handle<Texture>, 4> m_image_outputs;
     
     FixedArray<GPUBufferRef, max_frames_in_flight> m_uniform_buffers;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     
-    Handle<ComputePipeline> m_write_uvs;
-    Handle<ComputePipeline> m_sample;
+    ComputePipelineRef m_write_uvs;
+    ComputePipelineRef m_sample;
 
     UniquePtr<FullScreenPass> m_reflection_pass;
     UniquePtr<TemporalBlending> m_temporal_blending;

@@ -6,10 +6,13 @@
 #include <rendering/Shader.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <rendering/RenderableAttributes.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/HashMap.hpp>
+#include <core/lib/Mutex.hpp>
+#include <core/lib/AtomicVar.hpp>
 #include <Types.hpp>
 
 #include <util/EnumOptions.hpp>
@@ -527,6 +530,54 @@ public:
 private:
     FlatMap<HashCode::ValueType, WeakHandle<Material>> m_map;
     std::mutex m_mutex;
+};
+
+class MaterialDescriptorSetManager
+{
+public:
+    MaterialDescriptorSetManager();
+    MaterialDescriptorSetManager(const MaterialDescriptorSetManager &other)                 = delete;
+    MaterialDescriptorSetManager &operator=(const MaterialDescriptorSetManager &other)      = delete;
+    MaterialDescriptorSetManager(MaterialDescriptorSetManager &&other) noexcept             = delete;
+    MaterialDescriptorSetManager &operator=(MaterialDescriptorSetManager &&other) noexcept  = delete;
+    ~MaterialDescriptorSetManager();
+
+    /*! \brief Get the descriptor set for the given material and frame index. Only
+        to be used from the render thread. If the descriptor set is not found, nullptr
+        is returned.
+
+        \param material The IDof material to get the descriptor set for
+        \param frame_index The frame index to get the descriptor set for
+        \returns The descriptor set for the given material and frame index or nullptr if not found
+     */
+    const DescriptorSet2Ref &GetDescriptorSet(ID<Material> material, uint frame_index) const;
+
+    /*! \brief Add a material to the manager. This will create a descriptor set for
+        the material and add it to the manager. Usable from any thread.
+
+        \param material The ID of the material to add
+     */
+    void EnqueueAdd(ID<Material> material);
+
+    /*! \brief Remove a material from the manager. This will remove the descriptor set
+        for the material from the manager. Usable from any thread.
+
+        \param material The ID of the material to remove
+     */
+    void EnqueueRemove(ID<Material> material);
+
+    /*! \brief Update the manager. This will process any pending additions or removals
+        and update the descriptor sets. Usable from the render thread.
+     */
+    void Update();
+
+private:
+    HashMap<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>      m_material_descriptor_sets;
+
+    Array<Pair<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>>  m_pending_addition;
+    Array<ID<Material>>                                                             m_pending_removal;
+    AtomicVar<bool>                                                                 m_has_updates_pending;
+    Mutex                                                                           m_mutex;
 };
 
 } // namespace hyperion::v2

@@ -327,6 +327,15 @@ struct alignas(16) VoxelUniforms
 
 static_assert(sizeof(VoxelUniforms) == 64);
 
+struct alignas(256) BlueNoiseBuffer
+{
+    ShaderVec4<int32> sobol_256spp_256d[256 * 256 / 4];
+    ShaderVec4<int32> scrambling_tile[128 * 128 * 8 / 4];
+    ShaderVec4<int32> ranking_tile[128 * 128 * 8 / 4];
+};
+
+static_assert(sizeof(BlueNoiseBuffer) == 1310720);
+
 /* max number of skeletons, based on size in mb */
 static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
 static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);

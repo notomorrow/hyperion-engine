@@ -175,7 +175,7 @@ class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
     static constexpr bool       is_contiguous = false;
 
     static constexpr SizeType   initial_bucket_size = 16;
-    static constexpr double     desired_load_factor = 0.75;
+    static constexpr double     desired_load_factor = 0.9;
 
     template <class IteratorType>
     static inline void AdvanceIteratorBucket(IteratorType &iter)

@@ -67,7 +67,7 @@ public:
     void Destroy();
 
     /*! \brief Get or create a buffer of at least the given size */
-    const GPUBufferRef &GetOrCreateBuffer(Device *device, GPUBufferType buffer_type, SizeType required_size)
+    GPUBufferRef GetOrCreateBuffer(Device *device, GPUBufferType buffer_type, SizeType required_size, bool exact_size = false)
     {
         Threads::AssertOnThread(THREAD_RENDER);
 
@@ -77,30 +77,47 @@ public:
 
         auto &buffer_container = m_buffers.At(buffer_type);
 
-        auto it = buffer_container.LowerBound(required_size);
+        // typename FlatMap<SizeType, GPUBufferWeakRef>::Iterator it;
+        typename FlatMap<SizeType, GPUBufferRef>::Iterator it;
+        
+        if (exact_size) {
+            it = buffer_container.Find(required_size);
+        } else {
+            it = buffer_container.LowerBound(required_size);
+        }
 
         if (it != buffer_container.End()) {
-            return it->second;
+            // if (auto ref = it->second.Lock(); ref.IsValid()) {
+            //     return ref;
+            // }
+
+            if (it->second.IsValid()) {
+                return it->second;
+            }
         }
 
-        const auto required_size_pow2 = MathUtil::NextPowerOf2(required_size);
+        if (!exact_size) {
+            // use next power of 2 if exact size is not required,
+            // this will allow this placeholder buffer to be re-used more.
+            required_size = MathUtil::NextPowerOf2(required_size);
+        }
 
-        auto buffer = MakeRenderObject<renderer::GPUBuffer>(buffer_type);
-        HYPERION_ASSERT_RESULT(buffer->Create(device, required_size_pow2));
+        GPUBufferRef buffer = MakeRenderObject<renderer::GPUBuffer>(buffer_type);
+        HYPERION_ASSERT_RESULT(buffer->Create(device, required_size));
 
         if (buffer->IsCPUAccessible()) {
-            buffer->Memset(device, required_size_pow2, 0x00); // fill with zeros
+            buffer->Memset(device, required_size, 0x0); // fill with zeros
         }
 
-        const auto insert_result = buffer_container.Insert(required_size_pow2, std::move(buffer));
+        const auto insert_result = buffer_container.Insert(required_size, buffer);
         AssertThrow(insert_result.second); // was inserted
 
-        // TODO: GC of these buffers
-
-        return insert_result.first->second;
+        return buffer;
     }
 
 private:
+    // @TODO Replace with WeakRef version when GPUBufferRef is used in place of GPUBuffer * for all descriptor sets.
+    // FlatMap<GPUBufferType, FlatMap<SizeType, GPUBufferWeakRef>> m_buffers;
     FlatMap<GPUBufferType, FlatMap<SizeType, GPUBufferRef>> m_buffers;
 };
 

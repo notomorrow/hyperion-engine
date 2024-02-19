@@ -229,15 +229,15 @@ void Engine::Initialize(RC<Application> application)
         ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SHADOW_MATRICES)
         ->SetElementBuffer(0, m_render_data->shadow_map_data.GetBuffer());
     
-    if constexpr (use_indexed_array_for_object_data) {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
         m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
             ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
             ->SetElementBuffer(0, m_render_data->materials.GetBuffer());
-    } else {
+#else
         m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
             ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
             ->SetElementBuffer<MaterialShaderData>(0, m_render_data->materials.GetBuffer());
-    }
+#endif
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
@@ -277,15 +277,15 @@ void Engine::Initialize(RC<Application> application)
         ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::SHADOW_MATRICES)
         ->SetElementBuffer(0, m_render_data->shadow_map_data.GetBuffer());
     
-    if constexpr (use_indexed_array_for_object_data) {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
         m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
             ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
             ->SetElementBuffer(0, m_render_data->materials.GetBuffer());
-    } else {
+#else
         m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
             ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
             ->SetElementBuffer<MaterialShaderData>(0, m_render_data->materials.GetBuffer());
-    }
+#endif
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
@@ -378,10 +378,7 @@ void Engine::Initialize(RC<Application> application)
         // placeholder rt probe system uniforms
         descriptor_set
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::RT_PROBE_UNIFORMS)
-            ->SetSubDescriptor({
-                .element_index = 0,
-                .buffer = GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(ProbeSystemUniforms))
-            });
+            ->SetElementBuffer(0, GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(ProbeSystemUniforms)));
 
         // placeholder rt probes irradiance image
         descriptor_set
@@ -725,10 +722,12 @@ void Engine::Initialize(RC<Application> application)
             m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferTextures", i, GetPlaceholderData()->GetImageView2D1x1R8());
         }
         
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferDepthTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferMipChain", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferDepthTexture", GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferMipChain", GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DeferredResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("BlueNoiseBuffer", GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(BlueNoiseBuffer), true /* exact size */));
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DeferredResult", GetPlaceholderData()->GetImageView2D1x1R8());
 
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
@@ -739,12 +738,7 @@ void Engine::Initialize(RC<Application> application)
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 3, GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRUVTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRSampleTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRFinalTexture", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRUVImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRSampleImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRResultImage", 0, GetPlaceholderData()->GetImageView2D1x1R8Storage());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRResultTexture", GetPlaceholderData()->GetImageView2D1x1R8());
 
         for (uint i = 0; i < max_bound_reflection_probes; i++) {
             m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("EnvProbeTextures", i, GetPlaceholderData()->GetImageViewCube1x1R8());
@@ -754,15 +748,23 @@ void Engine::Initialize(RC<Application> application)
             m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PointShadowMaps", i, GetPlaceholderData()->GetImageViewCube1x1R8());
         }
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DepthPyramidResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DepthPyramidResult", GetPlaceholderData()->GetImageView2D1x1R8());
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SamplerNearest", GetPlaceholderData()->GetSamplerNearest());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SamplerLinear", GetPlaceholderData()->GetSamplerLinear());
 
         // Scene
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("SceneBuffer", m_render_data->scenes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("ScenesBuffer", m_render_data->scenes.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("LightsBuffer", m_render_data->lights.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CamerasBuffer", m_render_data->cameras.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvGridsBuffer", m_render_data->env_grids.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvProbesBuffer", m_render_data->env_probes.GetBuffer());
-        // m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CurrentEnvProbe", m_render_data->env_probes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CurrentEnvProbe", m_render_data->env_probes.GetBuffer());
+
+        // Object
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("MaterialsBuffer", m_render_data->materials.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("SkeletonsBuffer", m_render_data->skeletons.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("EntityInstanceBatchesBuffer", m_render_data->entity_instance_batches.GetBuffer());
     }
 
     // m_global_descriptor_set_manager.Initialize(this);
@@ -1127,6 +1129,8 @@ void Engine::UpdateBuffersAndDescriptors(uint frame_index)
 
     m_deferred_renderer.GetPostProcessing().PerformUpdates();
 
+    m_material_descriptor_set_manager.Update();
+
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Update(m_instance->GetDevice(), frame_index));
     
     m_instance->GetDescriptorPool().AddPendingDescriptorSets(m_instance->GetDevice(), frame_index);
@@ -1156,6 +1160,9 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
         DescriptorSet2Ref ref = layout.CreateDescriptorSet();
         AssertThrow(ref.IsValid());
 
+        DebugLog(LogType::Debug, "Num elements for descriptor set %s: %u\n", ref.GetName().LookupString(), ref->GetLayout().GetElements().Size());
+        HYP_BREAKPOINT;
+
         // Init with placeholder data
         for (const auto &layout_it : ref->GetLayout().GetElements()) {
             switch (layout_it.second.type) {
@@ -1170,7 +1177,8 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
                         engine->GetPlaceholderData()->GetOrCreateBuffer(
                             engine->GetGPUDevice(),
                             renderer::GPUBufferType::CONSTANT_BUFFER,
-                            layout_it.second.size
+                            layout_it.second.size,
+                            true // exact_size
                         )
                     );
                 }
@@ -1188,7 +1196,8 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
                         engine->GetPlaceholderData()->GetOrCreateBuffer(
                             engine->GetGPUDevice(),
                             renderer::GPUBufferType::STORAGE_BUFFER,
-                            layout_it.second.size
+                            layout_it.second.size,
+                            true // exact_size
                         )
                     );
                 }

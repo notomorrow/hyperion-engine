@@ -27,35 +27,6 @@ void RenderScheduler::AcceptAll(Array<RenderCommand *> &out_container)
     m_num_enqueued.Set(0, MemoryOrder::RELAXED);
 }
 
-#if 0
-RenderScheduler::FlushResult RenderScheduler::Flush()
-{
-    FlushResult result { Result::OK, 0 };
-
-    SizeType index = 0;
-    const SizeType num_commands = m_commands.Size();
-
-    while (index < num_commands) {
-        RenderCommand *front = m_commands[index++];
-
-#ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
-        DebugLog(LogType::RenDebug, "Executing render command %s\n", front->_debug_name.Data());
-#endif
-
-        result.result = front->Call();
-        front->~RenderCommand();
-
-        ++result.num_executed;
-
-        AssertThrowMsg(result.result, "Render command error! %s\n", result.result.message);
-    }
-
-    m_commands.Clear();
-
-    return result;
-}
-#endif
-
 Result RenderCommands::Flush()
 {
     if (Count() == 0) {
@@ -95,9 +66,8 @@ Result RenderCommands::Flush()
 #endif
 
         const Result command_result = front->Call();
+        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.error_code, command_result.message);
         front->~RenderCommand();
-
-        AssertThrowMsg(command_result, "Render command error! %s\n", command_result.message);
     }
 
     if (num_commands) {

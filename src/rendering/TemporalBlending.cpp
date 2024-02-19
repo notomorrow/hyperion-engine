@@ -120,9 +120,7 @@ void TemporalBlending::Destroy()
 {
     m_perform_blending.Reset();
 
-    for (auto &descriptor_set : m_descriptor_sets) {
-        SafeRelease(std::move(descriptor_set));
-    }
+    SafeRelease(std::move(m_descriptor_table));
 
     for (auto &image_output : m_image_outputs) {
         SafeRelease(std::move(image_output.image));
@@ -130,90 +128,7 @@ void TemporalBlending::Destroy()
     }
 }
 
-void TemporalBlending::CreateImageOutputs()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto &image_output = m_image_outputs[frame_index];
-
-        image_output.image = MakeRenderObject<Image>(StorageImage(
-            Extent3D(m_extent),
-            m_image_format,
-            ImageType::TEXTURE_TYPE_2D,
-            FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-            nullptr
-        ));
-
-        image_output.image_view = MakeRenderObject<ImageView>();
-    }
-
-    PUSH_RENDER_COMMAND(CreateTemporalBlendingImageOutputs, m_image_outputs.Data());
-}
-
-void TemporalBlending::CreateDescriptorSets()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = MakeRenderObject<DescriptorSet>();
-
-        if (m_input_framebuffer) {
-            AssertThrowMsg(m_input_framebuffer->GetAttachmentUsages().Size() != 0, "No attachment refs on input framebuffer!");
-        }
-
-        const ImageView *input_image_view = m_input_framebuffer ? m_input_framebuffer->GetAttachmentUsages()[0]->GetImageView() : m_input_image_views[frame_index];
-        AssertThrow(input_image_view != nullptr);
-
-        // input image
-        descriptor_set
-            ->AddDescriptor<ImageDescriptor>(0)
-            ->SetElementSRV(0, input_image_view);
-
-        // history image
-        descriptor_set
-            ->AddDescriptor<ImageDescriptor>(1)
-            ->SetElementSRV(0, m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view);
-
-        // velocity
-        descriptor_set
-            ->AddDescriptor<ImageDescriptor>(2)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
-
-        // sampler to use
-        descriptor_set
-            ->AddDescriptor<SamplerDescriptor>(3)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-        // sampler to use
-        descriptor_set
-            ->AddDescriptor<SamplerDescriptor>(4)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        // blurred output
-        descriptor_set
-            ->AddDescriptor<StorageImageDescriptor>(5)
-            ->SetElementUAV(0, m_image_outputs[frame_index].image_view);
-
-        // scene buffer
-        descriptor_set
-            ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
-            ->SetElementBuffer<SceneShaderData>(0, g_engine->GetRenderData()->scenes.GetBuffer());
-
-        // camera
-        descriptor_set
-            ->AddDescriptor<DynamicUniformBufferDescriptor>(7)
-            ->SetElementBuffer<CameraShaderData>(0, g_engine->GetRenderData()->cameras.GetBuffer());
-
-        // depth texture
-        descriptor_set
-            ->AddDescriptor<ImageDescriptor>(8)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
-
-        m_descriptor_sets[frame_index] = std::move(descriptor_set);
-    }
-
-    PUSH_RENDER_COMMAND(CreateTemporalBlendingDescriptors, m_descriptor_sets);
-}
-
-void TemporalBlending::CreateComputePipelines()
+ShaderProperties TemporalBlending::GetShaderProperties() const
 {
     ShaderProperties shader_properties;
 
@@ -238,12 +153,107 @@ void TemporalBlending::CreateComputePipelines()
     shader_properties.Set("TEMPORAL_BLEND_TECHNIQUE_" + String::ToString(uint(m_technique)));
     shader_properties.Set("FEEDBACK_" + feedback_strings[MathUtil::Min(uint(m_feedback), std::size(feedback_strings) - 1)]);
 
-    m_perform_blending = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(TemporalBlending), shader_properties),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    return shader_properties;
+}
+
+void TemporalBlending::CreateImageOutputs()
+{
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        auto &image_output = m_image_outputs[frame_index];
+
+        image_output.image = MakeRenderObject<Image>(StorageImage(
+            Extent3D(m_extent),
+            m_image_format,
+            ImageType::TEXTURE_TYPE_2D,
+            FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+            nullptr
+        ));
+
+        image_output.image_view = MakeRenderObject<ImageView>();
+    }
+
+    PUSH_RENDER_COMMAND(CreateTemporalBlendingImageOutputs, m_image_outputs.Data());
+}
+
+void TemporalBlending::CreateDescriptorSets()
+{
+    Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalBlending), GetShaderProperties());
+    AssertThrow(shader.IsValid());
+
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+    m_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        if (m_input_framebuffer) {
+            AssertThrowMsg(m_input_framebuffer->GetAttachmentUsages().Size() != 0, "No attachment refs on input framebuffer!");
+        }
+
+        const ImageViewRef input_image_view = m_input_framebuffer ? m_input_framebuffer->GetAttachmentUsages()[0]->GetImageView() : m_input_image_views[frame_index];
+        AssertThrow(input_image_view != nullptr);
+
+        // input image
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("InImage", input_image_view);
+
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("PrevImage", m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view);
+
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("VelocityImage", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
+
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("SamplerLinear", g_engine->GetPlaceholderData()->GetSamplerLinear());
+
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
+
+        m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
+            ->SetElement("OutImage", m_image_outputs[frame_index].image_view);
+
+        // // scene buffer
+        // descriptor_set
+        //     ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
+        //     ->SetElementBuffer<SceneShaderData>(0, g_engine->GetRenderData()->scenes.GetBuffer());
+
+        // // camera
+        // descriptor_set
+        //     ->AddDescriptor<DynamicUniformBufferDescriptor>(7)
+        //     ->SetElementBuffer<CameraShaderData>(0, g_engine->GetRenderData()->cameras.GetBuffer());
+
+        // // depth texture
+        // descriptor_set
+        //     ->AddDescriptor<ImageDescriptor>(8)
+        //     ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+        //         .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+
+        // m_descriptor_sets[frame_index] = std::move(descriptor_set);
+    }
+
+    DeferCreate(
+        m_descriptor_table,
+        g_engine->GetGPUDevice()
     );
 
-    InitObject(m_perform_blending);
+    // PUSH_RENDER_COMMAND(CreateTemporalBlendingDescriptors, m_descriptor_sets);
+}
+
+void TemporalBlending::CreateComputePipelines()
+{
+    AssertThrow(m_descriptor_table.IsValid());
+
+    Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalBlending), GetShaderProperties());
+    AssertThrow(shader.IsValid());
+
+    m_perform_blending = MakeRenderObject<renderer::ComputePipeline>(
+        shader->GetShaderProgram(),
+        m_descriptor_table
+    );
+
+    DeferCreate(
+        m_perform_blending,
+        g_engine->GetGPUDevice()
+    );
 }
 
 void TemporalBlending::Render(Frame *frame)
@@ -264,21 +274,27 @@ void TemporalBlending::Render(Frame *frame)
             .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetAttachment()->GetImage()->GetExtent()
     );
 
-    m_perform_blending->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
-    m_perform_blending->GetPipeline()->Bind(frame->GetCommandBuffer());
+    m_perform_blending->SetPushConstants(&push_constants, sizeof(push_constants));
+    m_perform_blending->Bind(frame->GetCommandBuffer());
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_perform_blending->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0,
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()),
+    m_descriptor_table->Bind(
+        frame,
+        m_perform_blending,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                }
+            }
         }
     );
 
-    m_perform_blending->GetPipeline()->Dispatch(
+    m_perform_blending->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             (extent.width + 7) / 8,

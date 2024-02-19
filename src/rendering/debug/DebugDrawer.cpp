@@ -19,8 +19,8 @@ struct RENDER_COMMAND(CreateImmediateModeDescriptors) : renderer::RenderCommand
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                Engine::Get()->GetGPUDevice(),
-                &Engine::Get()->GetGPUInstance()->GetDescriptorPool()
+                g_engine->GetGPUDevice(),
+                &g_engine->GetGPUInstance()->GetDescriptorPool()
             ));
         }
 
@@ -54,7 +54,7 @@ void DebugDrawer::Create()
 
         m_descriptor_sets[frame_index]
             ->AddDescriptor<DynamicStorageBufferDescriptor>(0)
-            ->SetElementBuffer<ImmediateDrawShaderData>(0, Engine::Get()->GetRenderData()->immediate_draws.GetBuffer());
+            ->SetElementBuffer<ImmediateDrawShaderData>(0, g_engine->GetRenderData()->immediate_draws.GetBuffer());
     }
 
     PUSH_RENDER_COMMAND(CreateImmediateModeDescriptors, m_descriptor_sets);
@@ -67,9 +67,9 @@ void DebugDrawer::Create()
         )
     );
 
-    Engine::Get()->InitObject(m_shader);
+    InitObject(m_shader);
 
-    m_renderer_instance = Engine::Get()->CreateRenderGroup(
+    m_renderer_instance = g_engine->CreateRenderGroup(
         m_shader,
         RenderableAttributeSet(
             MeshAttributes {
@@ -84,17 +84,17 @@ void DebugDrawer::Create()
         ),
         Array<DescriptorSetRef> {
             m_descriptor_sets[0],
-            Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL),
-            Engine::Get()->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
+            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL),
+            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         }
     );
     
     if (m_renderer_instance) {
-        Engine::Get()->GetDeferredSystem()
+        g_engine->GetDeferredSystem()
             .Get(m_renderer_instance->GetRenderableAttributes().GetMaterialAttributes().bucket)
             .AddFramebuffersToRenderGroup(m_renderer_instance);
 
-        Engine::Get()->InitObject(m_renderer_instance);
+        g_engine->InitObject(m_renderer_instance);
     }
 }
 
@@ -136,11 +136,11 @@ void DebugDrawer::Render(Frame *frame)
             draw_command.color.Packed()
         };
 
-        Engine::Get()->GetRenderData()->immediate_draws.Set(index, shader_data);
+        g_engine->GetRenderData()->immediate_draws.Set(index, shader_data);
     }
 
-    Engine::Get()->GetRenderData()->immediate_draws.UpdateBuffer(
-        Engine::Get()->GetGPUDevice(),
+    g_engine->GetRenderData()->immediate_draws.UpdateBuffer(
+        g_engine->GetGPUDevice(),
         frame->GetFrameIndex()
     );
 
@@ -148,16 +148,16 @@ void DebugDrawer::Render(Frame *frame)
     proxy.Bind(frame);
 
     proxy.GetCommandBuffer(frame->GetFrameIndex())->BindDescriptorSets(
-        Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+        g_engine->GetGPUInstance()->GetDescriptorPool(),
         proxy.GetGraphicsPipeline(),
         FixedArray<DescriptorSet::Index, 2> { DescriptorSet::global_buffer_mapping[frame_index], DescriptorSet::scene_buffer_mapping[frame_index] },
         FixedArray<DescriptorSet::Index, 2> { DescriptorSet::Index(1), DescriptorSet::Index(2) },
         FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, Engine::Get()->GetRenderState().GetScene().id.ToIndex()),
+            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
             HYP_RENDER_OBJECT_OFFSET(Light, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, Engine::Get()->GetRenderState().bound_env_grid.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(EnvProbe, Engine::Get()->GetRenderState().GetActiveEnvProbe().ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Camera, Engine::Get()->GetRenderState().GetCamera().id.ToIndex())
+            HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
+            HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()),
+            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
         }
     );
 
@@ -165,7 +165,7 @@ void DebugDrawer::Render(Frame *frame)
         const DebugDrawCommand &draw_command = m_draw_commands[index];
 
         proxy.GetCommandBuffer(frame_index)->BindDescriptorSet(
-            Engine::Get()->GetGPUInstance()->GetDescriptorPool(),
+            g_engine->GetGPUInstance()->GetDescriptorPool(),
             proxy.GetGraphicsPipeline(),
             m_descriptor_sets[frame_index],
             0,

@@ -39,25 +39,18 @@ struct RENDER_COMMAND(CreateBlueNoiseBuffer) : renderer::RenderCommand
     {
         AssertThrow(buffer.IsValid());
 
-        struct alignas(256) AlignedBuffer
-        {
-            ShaderVec4<int32> sobol_256spp_256d[256 * 256 / 4];
-            ShaderVec4<int32> scrambling_tile[128 * 128 * 8 / 4];
-            ShaderVec4<int32> ranking_tile[128 * 128 * 8 / 4];
-        };
+        static_assert(sizeof(BlueNoiseBuffer::sobol_256spp_256d) == sizeof(BlueNoise::sobol_256spp_256d));
+        static_assert(sizeof(BlueNoiseBuffer::scrambling_tile) == sizeof(BlueNoise::scrambling_tile));
+        static_assert(sizeof(BlueNoiseBuffer::ranking_tile) == sizeof(BlueNoise::ranking_tile));
 
-        static_assert(sizeof(AlignedBuffer::sobol_256spp_256d) == sizeof(BlueNoise::sobol_256spp_256d));
-        static_assert(sizeof(AlignedBuffer::scrambling_tile) == sizeof(BlueNoise::scrambling_tile));
-        static_assert(sizeof(AlignedBuffer::ranking_tile) == sizeof(BlueNoise::ranking_tile));
-
-        UniquePtr<AlignedBuffer> aligned_buffer(new AlignedBuffer);
+        UniquePtr<BlueNoiseBuffer> aligned_buffer(new BlueNoiseBuffer);
         Memory::MemCpy(&aligned_buffer->sobol_256spp_256d[0], BlueNoise::sobol_256spp_256d, sizeof(BlueNoise::sobol_256spp_256d));
         Memory::MemCpy(&aligned_buffer->scrambling_tile[0], BlueNoise::scrambling_tile, sizeof(BlueNoise::scrambling_tile));
         Memory::MemCpy(&aligned_buffer->ranking_tile[0], BlueNoise::ranking_tile, sizeof(BlueNoise::ranking_tile));
 
-        HYPERION_BUBBLE_ERRORS(buffer->Create(g_engine->GetGPUDevice(), sizeof(AlignedBuffer)));
+        HYPERION_BUBBLE_ERRORS(buffer->Create(g_engine->GetGPUDevice(), sizeof(BlueNoiseBuffer)));
 
-        buffer->Copy(g_engine->GetGPUDevice(), sizeof(AlignedBuffer), aligned_buffer.Get());
+        buffer->Copy(g_engine->GetGPUDevice(), sizeof(BlueNoiseBuffer), aligned_buffer.Get());
 
         HYPERION_RETURN_OK;
     }
@@ -573,7 +566,13 @@ void DeferredRenderer::CreateDescriptorSets()
             AssertThrow(depth_attachment_usage != nullptr);
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("GBufferDepthTexture", 0, depth_attachment_usage->GetImageView());
+                ->SetElement("GBufferDepthTexture", depth_attachment_usage->GetImageView());
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("GBufferMipChain", m_mip_chain->GetImageView());
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("BlueNoiseBuffer", m_blue_noise_buffer);
         }
         
         DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()

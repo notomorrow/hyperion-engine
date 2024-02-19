@@ -180,6 +180,12 @@ public:
     const DescriptorTableRef &GetGlobalDescriptorTable() const
         { return m_global_descriptor_table; }
 
+    MaterialDescriptorSetManager &GetMaterialDescriptorSetManager()
+        { return m_material_descriptor_set_manager; }
+
+    const MaterialDescriptorSetManager &GetMaterialDescriptorSetManager() const
+        { return m_material_descriptor_set_manager; }
+
     Handle<RenderGroup> CreateRenderGroup(
         const RenderableAttributeSet &renderable_attributes
     );
@@ -299,7 +305,10 @@ private:
     UniquePtr<Instance>                                     m_instance;
 
     UniquePtr<PlaceholderData>                              m_placeholder_data;
+
     DescriptorTableRef                                      m_global_descriptor_table;
+
+    MaterialDescriptorSetManager                            m_material_descriptor_set_manager;
 
     HashMap<TextureFormatDefault, InternalFormat>           m_texture_format_defaults;
 

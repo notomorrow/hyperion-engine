@@ -64,7 +64,6 @@ void TemporalAA::Create()
 void TemporalAA::Destroy()
 {
     SafeRelease(std::move(m_compute_taa));
-    SafeRelease(std::move(m_descriptor_sets));
 
     PUSH_RENDER_COMMAND(
         SetTemporalAAResultInGlobalDescriptorSet,
@@ -111,12 +110,7 @@ void TemporalAA::CreateComputePipelines()
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-    const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table_decl.FindDescriptorSetDeclaration(HYP_NAME(TemporalAADescriptorSet));
-    AssertThrow(descriptor_set_decl != nullptr);
-
     auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
-
-    // renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
 
     const FixedArray<Handle<Texture> *, 2> textures = {
         &m_result_texture,
@@ -125,7 +119,7 @@ void TemporalAA::CreateComputePipelines()
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        DescriptorSet2Ref descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement("InColorTexture", g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
@@ -141,13 +135,6 @@ void TemporalAA::CreateComputePipelines()
         descriptor_set->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
 
         descriptor_set->SetElement("OutColorImage", (*textures[frame_index % 2])->GetImageView());
-
-        // DeferCreate(
-        //     descriptor_set,
-        //     g_engine->GetGPUDevice()
-        // );
-
-        // m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
     DeferCreate(
@@ -201,8 +188,6 @@ void TemporalAA::Render(Frame *frame)
     m_compute_taa->Bind(command_buffer);
 
     m_compute_taa->GetDescriptorTable().Get()->Bind(frame, m_compute_taa, { });
-
-    // m_descriptor_sets[frame_index]->Bind(command_buffer, m_compute_taa, 0);
 
     m_compute_taa->Dispatch(
         command_buffer,

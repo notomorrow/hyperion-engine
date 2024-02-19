@@ -25,25 +25,31 @@ HYP_DESCRIPTOR_SRV(Global, GBufferMipChain, 1);
 HYP_DESCRIPTOR_SRV(Global, DeferredResult, 1);
 HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, 4);
 HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, 4);
-HYP_DESCRIPTOR_SRV(Global, SSRUVTexture, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRSampleTexture, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRFinalTexture, 1);
+HYP_DESCRIPTOR_SRV(Global, SSRResultTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, max_bound_reflection_probes);
 HYP_DESCRIPTOR_SRV(Global, PointShadowMaps, max_bound_point_shadow_maps);
 HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult, 1);
-HYP_DESCRIPTOR_SRV(Global, SSRResultImage, 1);
-HYP_DESCRIPTOR_UAV(Global, SSRUVImage, 1);
-HYP_DESCRIPTOR_UAV(Global, SSRSampleImage, 1);
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, 1, sizeof(BlueNoiseBuffer), false);
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear, 1);
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest, 1);
 
 HYP_DESCRIPTOR_SET(1, Scene);
-HYP_DESCRIPTOR_SSBO(Scene, SceneBuffer, 1, sizeof(SceneShaderData), true);
+HYP_DESCRIPTOR_SSBO(Scene, ScenesBuffer, 1, sizeof(SceneShaderData), true);
 HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer, 1, sizeof(LightShaderData), true);
 HYP_DESCRIPTOR_CBUFF(Scene, CamerasBuffer, 1, sizeof(CameraShaderData), true);
 HYP_DESCRIPTOR_CBUFF(Scene, EnvGridsBuffer, 1, sizeof(EnvGridShaderData), true);
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, 1, sizeof(EnvProbeShaderData) * max_env_probes, false);
-// HYP_DESCRIPTOR_SSBO(Scene, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
+HYP_DESCRIPTOR_SSBO(Scene, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
 
 HYP_DESCRIPTOR_SET(2, Object);
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, 1, sizeof(MaterialShaderData) * max_materials, false);
+#else
+HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, 1, sizeof(MaterialShaderData), true);
+#endif
+HYP_DESCRIPTOR_SSBO(Object, SkeletonsBuffer, 1, sizeof(SkeletonShaderData) * max_skeletons, false);
+HYP_DESCRIPTOR_SSBO(Object, EntityInstanceBatchesBuffer, 1, sizeof(EntityInstanceBatch) * max_entity_instance_batches, true);
+
 HYP_DESCRIPTOR_SET(3, Material);
 
 #undef HYP_DESCRIPTOR_SET

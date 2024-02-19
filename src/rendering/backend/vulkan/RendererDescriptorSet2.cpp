@@ -184,20 +184,43 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
         }
     }
 
+    // build a list of dynamic elements, paired by their element index so we can sort it after.
+    Array<Pair<String, uint>> dynamic_elements_with_index;
+
     // Add to list of dynamic buffer names
     for (const auto &it : m_elements) {
         if (it.second.type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
             || it.second.type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC)
         {
-            m_dynamic_elements.PushBack(it.first);
+            dynamic_elements_with_index.PushBack({ it.first, it.second.binding });
         }
+    }
+
+    std::sort(dynamic_elements_with_index.Begin(), dynamic_elements_with_index.End(), [](const Pair<String, uint> &a, const Pair<String, uint> &b)
+    {
+        return a.second < b.second;
+    });
+
+    m_dynamic_elements.Resize(dynamic_elements_with_index.Size());
+
+    for (uint i = 0; i < dynamic_elements_with_index.Size(); i++) {
+        m_dynamic_elements[i] = std::move(dynamic_elements_with_index[i].first);
     }
 }
 
 template <>
 DescriptorSet2Ref<Platform::VULKAN> DescriptorSetLayout<Platform::VULKAN>::CreateDescriptorSet() const
 {
+#ifdef HYP_DEBUG_MODE
+    DescriptorSet2Ref<Platform::VULKAN> descriptor_set_ref = MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
+    
+    // Set debug name
+    descriptor_set_ref.SetName(m_decl.name);
+
+    return descriptor_set_ref;
+#else
     return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(*this);
+#endif
 }
 
 // DescriptorSet2
@@ -318,12 +341,16 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const GPUBufferRef<Platform::VULKAN> &ref = value_it->second.Get<GPUBufferRef<Platform::VULKAN>>();
                 AssertThrowMsg(ref.IsValid(), "Invalid buffer reference for descriptor set element: %s, index %u", name.Data(), i);
 
+                if (is_dynamic) {
+                    AssertThrowMsg(layout_element->size != 0, "Buffer size not set for dynamic buffer element: %s, index %u", name.Data(), i);
+                }
+
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
                     ref->buffer,
                     0,
-                    element.buffer_size == 0
+                    layout_element->size == 0
                         ? ref->size
-                        : element.buffer_size
+                        : layout_element->size
                 };
             } else if (value_it->second.Is<ImageViewRef<Platform::VULKAN>>()) {
                 const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
@@ -417,9 +444,9 @@ void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index
 
 void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index, uint buffer_size, const GPUBufferRef<Platform::VULKAN> &ref)
 {
-    DescriptorSetElement<Platform::VULKAN> &element = SetElement<GPUBufferRef<Platform::VULKAN>>(name, index, ref);
+    // @TODO Use buffer_size to ensure it matches the layout size
 
-    element.buffer_size = buffer_size;
+    SetElement<GPUBufferRef<Platform::VULKAN>>(name, index, ref);
 }
 
 void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, const ImageViewRef<Platform::VULKAN> &ref)
@@ -475,10 +502,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN
         const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-
-        if (it == offsets.End()) {
-            continue;
-        }
+        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.Data());
 
         offsets_flat[i] = it->second;
     }
@@ -518,10 +542,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN
         const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-
-        if (it == offsets.End()) {
-            continue;
-        }
+        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.Data());
 
         offsets_flat[i] = it->second;
     }
@@ -561,10 +582,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN
         const String &dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-
-        if (it == offsets.End()) {
-            continue;
-        }
+        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.Data());
 
         offsets_flat[i] = it->second;
     }
@@ -583,7 +601,16 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN
 
 DescriptorSet2Ref<Platform::VULKAN> DescriptorSet2<Platform::VULKAN>::Clone() const
 {
+#ifdef HYP_DEBUG_MODE
+    DescriptorSet2Ref<Platform::VULKAN> descriptor_set_ref = MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(GetLayout());
+    
+    // Set debug name
+    descriptor_set_ref.SetName(m_layout.GetName());
+
+    return descriptor_set_ref;
+#else
     return MakeRenderObject<DescriptorSet2<Platform::VULKAN>>(GetLayout());
+#endif
 }
 
 VkDescriptorSetLayout DescriptorSet2<Platform::VULKAN>::GetVkDescriptorSetLayout() const
@@ -608,14 +635,14 @@ Result DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
 {
     static const Array<VkDescriptorPoolSize> pool_sizes = {
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
-        { VK_DESCRIPTOR_TYPE_SAMPLER,                    4096 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     4096 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              4096 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              32 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             64 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     64 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,             32 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     32 }
+        { VK_DESCRIPTOR_TYPE_SAMPLER,                    64 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     8 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              32000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              32000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             64000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     64000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,             32000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     32000 }
     };
 
     AssertThrow(m_vk_descriptor_pool == VK_NULL_HANDLE);
@@ -671,19 +698,19 @@ Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platfo
     AssertThrow(layout != nullptr);
     AssertThrow(layout->vk_layout != VK_NULL_HANDLE);
 
-    VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    VkDescriptorSetAllocateInfo alloc_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     alloc_info.descriptorPool = m_vk_descriptor_pool;
     alloc_info.descriptorSetCount = 1;
     alloc_info.pSetLayouts = &layout->vk_layout;
 
-    VkResult result = vkAllocateDescriptorSets(
+    const VkResult vk_result = vkAllocateDescriptorSets(
         device->GetDevice(),
         &alloc_info,
         &out_vk_descriptor_set
     );
 
-    if (result != VK_SUCCESS) {
-        return { Result::RENDERER_ERR, "Failed to allocate descriptor set" };
+    if (vk_result != VK_SUCCESS) {
+        return { Result::RENDERER_ERR, "Failed to allocate descriptor set", int(vk_result) };
     }
 
     return Result::OK;
@@ -735,7 +762,7 @@ DescriptorTable<Platform::VULKAN>::DescriptorTable(const DescriptorTableDeclarat
         m_sets[frame_index].Reserve(decl.GetElements().Size());
     }
 
-    for (const auto &set_decl : m_decl.GetElements()) {
+    for (const DescriptorSetDeclaration &set_decl : m_decl.GetElements()) {
         if (set_decl.is_reference) {
             const DescriptorSetDeclaration *decl_ptr = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(set_decl.name);
             AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", set_decl.name.LookupString());

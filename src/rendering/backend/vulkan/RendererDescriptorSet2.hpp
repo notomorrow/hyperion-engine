@@ -123,8 +123,10 @@ private:
                     name.Data()
                 );
 
+                const uint remainder = ref->size % layout_element->size;
+
                 AssertThrowMsg(
-                    (ref->size % layout_element->size) == 0,
+                    remainder == 0,
                     "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
                     ref->size,
                     layout_element->size,
@@ -198,6 +200,9 @@ private:
         }
 
         DescriptorSetElement<Platform::VULKAN> &element = it->second;
+
+        // // Set buffer_size, only used in the case of buffer elements
+        // element.buffer_size = layout_element->size;
         
         element.values.Clear();
         element.values.Reserve(count);

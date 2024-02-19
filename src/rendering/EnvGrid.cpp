@@ -1444,10 +1444,10 @@ void EnvGrid::OffsetVoxelGrid(
     m_offset_voxel_grid->GetDescriptorTable().Get()->Bind(
         frame,
         m_offset_voxel_grid,
-        ArrayMap<Name, ArrayMap<String, uint>> {
+        {
             {
                 HYP_NAME(VoxelizeProbeDescriptorSet),
-                ArrayMap<String, uint> {
+                {
                     { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                 }
             }
@@ -1516,10 +1516,10 @@ void EnvGrid::VoxelizeProbe(
         m_clear_voxels->GetDescriptorTable().Get()->Bind(
             frame,
             m_clear_voxels,
-            ArrayMap<Name, ArrayMap<String, uint>> {
+            {
                 {
                     HYP_NAME(VoxelizeProbeDescriptorSet),
-                    ArrayMap<String, uint> {
+                    {
                         { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                     }
                 }
@@ -1540,20 +1540,13 @@ void EnvGrid::VoxelizeProbe(
     { // Voxelize probe
         m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-        // m_voxelize_probe_descriptor_sets[frame->GetFrameIndex()]->Bind(
-        //     frame->GetCommandBuffer(),
-        //     m_voxelize_probe,
-        //     { HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-        //     0
-        // );
-
         m_voxelize_probe->GetDescriptorTable().Get()->Bind(
             frame,
             m_voxelize_probe,
-            ArrayMap<Name, ArrayMap<String, uint>> {
+            {
                 {
                     HYP_NAME(VoxelizeProbeDescriptorSet),
-                    ArrayMap<String, uint> {
+                    {
                         { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                     }
                 }
