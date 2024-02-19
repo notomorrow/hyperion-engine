@@ -4,6 +4,7 @@
 #include <core/Name.hpp>
 #include <core/lib/Optional.hpp>
 #include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/HashMap.hpp>
 #include <core/lib/ArrayMap.hpp>
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/Range.hpp>
@@ -139,13 +140,16 @@ struct DescriptorSetDeclaration
 
     // is this a reference to a global descriptor set declaration?
     bool                                                            is_reference = false;
+    // is this descriptor set intended to be used as a template for other sets? (e.g material textures)
+    bool                                                            is_template = false;
 
     DescriptorSetDeclaration()                                                      = default;
 
-    DescriptorSetDeclaration(uint set_index, Name name, bool is_reference = false)
+    DescriptorSetDeclaration(uint set_index, Name name, bool is_reference = false, bool is_template = false)
         : set_index(set_index),
           name(name),
-          is_reference(is_reference)
+          is_reference(is_reference),
+          is_template(is_template)
     {
     }
 
@@ -191,6 +195,7 @@ struct DescriptorSetDeclaration
         hc.Add(set_index);
         hc.Add(name);
         hc.Add(is_reference);
+        hc.Add(is_template);
 
         for (const auto &slot : slots) {
             for (const auto &decl : slot) {
@@ -235,7 +240,7 @@ public:
                 table->m_elements.Resize(set_index + 1);
             }
 
-            DescriptorSetDeclaration decl;
+            DescriptorSetDeclaration decl { };
             decl.set_index = set_index;
             decl.name = name;
             table->m_elements[set_index] = std::move(decl);
@@ -404,7 +409,7 @@ public:
     const DescriptorSetDeclaration &GetDeclaration() const
         { return m_decl; }
 
-    const ArrayMap<String, DescriptorSetLayoutElement> &GetElements() const
+    const HashMap<String, DescriptorSetLayoutElement> &GetElements() const
         { return m_elements; }
 
     void AddElement(const String &name, DescriptorSetElementType type, uint binding, uint count, uint size = -1)
@@ -440,7 +445,7 @@ public:
 
 private:
     DescriptorSetDeclaration                        m_decl;
-    ArrayMap<String, DescriptorSetLayoutElement>    m_elements;
+    HashMap<String, DescriptorSetLayoutElement>     m_elements;
     Array<String>                                   m_dynamic_elements;
 };
 
@@ -450,7 +455,6 @@ struct DescriptorSetElement
     using ValueType = Variant<GPUBufferRef<PLATFORM>, ImageViewRef<PLATFORM>, SamplerRef<PLATFORM>, TLASRef<PLATFORM>>;
 
     FlatMap<uint, ValueType>    values;
-    uint                        buffer_size = 0; // Used for dynamic uniform buffers
     Range<uint>                 dirty_range { };     
 
     HYP_FORCE_INLINE
@@ -490,17 +494,17 @@ public:
     void SetElement(const String &name, uint index, const TLASRef<PLATFORM> &ref);
 
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
 
     DescriptorSet2Ref<PLATFORM> Clone() const;
 
 private:
     DescriptorSetLayout<PLATFORM>                       m_layout;
-    ArrayMap<String, DescriptorSetElement<PLATFORM>>    m_elements;
+    HashMap<String, DescriptorSetElement<PLATFORM>>     m_elements;
 };
 
 template <PlatformType PLATFORM>
@@ -541,9 +545,9 @@ public:
     const FixedArray<Array<DescriptorSet2Ref<PLATFORM>>, max_frames_in_flight> &GetSets() const
         { return m_sets; }
 
-    DescriptorSet2Ref<PLATFORM> GetDescriptorSet(Name name, uint frame_index) const
+    const DescriptorSet2Ref<PLATFORM> &GetDescriptorSet(Name name, uint frame_index) const
     {
-        for (const auto &set : m_sets[frame_index]) {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
             if (set->GetLayout().GetName() == name) {
                 return set;
             }
@@ -630,7 +634,7 @@ public:
             }
 
             const auto offsets_it = offsets.Find(descriptor_set_name);
-            AssertThrow(offsets_it != offsets.End());
+            AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
 
             set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
         }
@@ -651,7 +655,7 @@ public:
             }
 
             const auto offsets_it = offsets.Find(descriptor_set_name);
-            AssertThrow(offsets_it != offsets.End());
+            AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
 
             set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
         }
@@ -672,7 +676,7 @@ public:
             }
 
             const auto offsets_it = offsets.Find(descriptor_set_name);
-            AssertThrow(offsets_it != offsets.End());
+            AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
 
             set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
         }

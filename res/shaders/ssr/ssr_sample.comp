@@ -2,12 +2,52 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "ssr_header.inc"
+
+HYP_DESCRIPTOR_UAV(SSRDescriptorSet, UVImage, format = rgba16f) uniform readonly image2D ssr_uv_image;
+HYP_DESCRIPTOR_UAV(SSRDescriptorSet, SampleImage, format = rgba16f) uniform writeonly image2D ssr_sample;
+HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, SSRParams, size = 64) uniform SSRParamsBuffer
+{
+	uvec4 dimension;
+	float ray_step;
+	float num_iterations;
+	float max_ray_distance;
+	float distance_bias;
+	float offset;
+	float eye_fade_start;
+	float eye_fade_end;
+	float screen_edge_fade_start;
+	float screen_edge_fade_end;
+} ssr_params;
+
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+{
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
+{
+    Scene scene;
+};
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+{
+    Camera camera;
+};
+
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 #include "../include/tonemap.inc"
 
-layout(set = 0, binding = 0, UV_FORMAT) uniform readonly image2D ssr_uv_image;
-layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D ssr_sample;
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/gbuffer.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 float IsoscelesTriangleOpposite(float adjacent_length, float cone_theta)
 {
@@ -51,7 +91,7 @@ void main(void)
     vec4 reflection_sample = vec4(0.0);
     float roughness = 0.0;
 
-    float depth = SampleDepth(texcoord);
+    float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
     if (depth > 0.9995) {
         imageStore(ssr_sample, ivec2(coord), vec4(0.0));

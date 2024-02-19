@@ -349,10 +349,10 @@ static void BindGlobalDescriptorSets(
 {
     const uint frame_index = frame->GetFrameIndex();
 
-    const uint global_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Global))->set_index;
+    // const uint global_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Global))->set_index;
 
-    g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-        ->Bind(command_buffer, pipeline, {}, global_set_index);
+    // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+    //     ->Bind(command_buffer, pipeline, {}, global_set_index);
 
 
     command_buffer->BindDescriptorSets(
@@ -402,9 +402,25 @@ static void BindPerObjectDescriptorSets(
 )
 {
     const uint frame_index = frame->GetFrameIndex();
+
+    const uint entity_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Object))->set_index;
+    const uint material_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material))->set_index;
     
 #if HYP_FEATURES_BINDLESS_TEXTURES
-    if constexpr (use_indexed_array_for_object_data) {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+        // // @NOTE: V2, will remove the old code once it is used a lot
+        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+        //     ->Bind(
+        //         command_buffer,
+        //         pipeline,
+        //         {
+        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+        //         },
+        //         entity_set_index
+        //     );
+
+
         command_buffer->BindDescriptorSets(
             g_engine->GetGPUInstance()->GetDescriptorPool(),
             pipeline,
@@ -415,21 +431,50 @@ static void BindPerObjectDescriptorSets(
                 uint32(batch_index * sizeof(EntityInstanceBatch))
             }
         );
-    } else {
-        command_buffer->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            pipeline,
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Material, material_index),
-                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
-                uint32(batch_index * sizeof(EntityInstanceBatch))
-            }
-        );
-    }
 #else
-    if constexpr (use_indexed_array_for_object_data) {
+        // // @NOTE: V2, will remove the old code once it is used a lot
+        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+        //     ->Bind(
+        //         command_buffer,
+        //         pipeline,
+        //         {
+        //             { String("MaterialsBuffer"), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
+        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+        //         },
+        //         entity_set_index
+        //     );
+
+
+        command_buffer->BindDescriptorSets(
+            g_engine->GetGPUInstance()->GetDescriptorPool(),
+            pipeline,
+            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
+            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
+            FixedArray {
+                HYP_RENDER_OBJECT_OFFSET(Material, material_index),
+                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
+                uint32(batch_index * sizeof(EntityInstanceBatch))
+            }
+        );
+#endif
+#else
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+        // // @NOTE: V2, will remove the old code once it is used a lot
+        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+        //     ->Bind(
+        //         command_buffer,
+        //         pipeline,
+        //         {
+        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+        //         },
+        //         entity_set_index
+        //     );
+
+        // g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
+        //     ->Bind(command_buffer, pipeline, material_set_index);
+
         command_buffer->BindDescriptorSets(
             g_engine->GetGPUInstance()->GetDescriptorPool(),
             pipeline,
@@ -440,7 +485,24 @@ static void BindPerObjectDescriptorSets(
                 uint32(batch_index * sizeof(EntityInstanceBatch))
             }
         );
-    } else {
+#else
+        // // @NOTE: V2, will remove the old code once it is used a lot
+        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+        //     ->Bind(
+        //         command_buffer,
+        //         pipeline,
+        //         {
+        //             { String("MaterialsBuffer"), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
+        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+        //         },
+        //         entity_set_index
+        //     );
+
+        // g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
+        //     ->Bind(command_buffer, pipeline, material_set_index);
+
+
         command_buffer->BindDescriptorSets(
             g_engine->GetGPUInstance()->GetDescriptorPool(),
             pipeline,
@@ -452,7 +514,7 @@ static void BindPerObjectDescriptorSets(
                 uint32(batch_index * sizeof(EntityInstanceBatch))
             }
         );
-    }
+#endif
 #endif
 }
 

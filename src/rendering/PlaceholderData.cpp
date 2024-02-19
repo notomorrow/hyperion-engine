@@ -121,11 +121,7 @@ void PlaceholderData::Destroy()
     SafeRelease(std::move(m_sampler_linear_mipmap));
     SafeRelease(std::move(m_sampler_nearest));
 
-    for (auto &it : m_buffers) {
-        for (auto &buffer_map_it : it.second) {
-            SafeRelease(std::move(buffer_map_it.second));
-        }
-    }
+    m_buffers.Clear();
 }
 
 } // namespace hyperion::v2

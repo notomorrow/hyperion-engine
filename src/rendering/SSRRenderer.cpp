@@ -1,4 +1,6 @@
-#include "SSRRenderer.hpp"
+#include <rendering/SSRRenderer.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <Engine.hpp>
 #include <Threads.hpp>
 
@@ -83,27 +85,21 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 
 struct RENDER_COMMAND(CreateSSRDescriptors) : renderer::RenderCommand
 {
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
     FixedArray<ImageViewRef, max_frames_in_flight> image_views;
 
     RENDER_COMMAND(CreateSSRDescriptors)(
-        const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets,
         const FixedArray<ImageViewRef, max_frames_in_flight> &image_views
-    ) : descriptor_sets(descriptor_sets),
-        image_views(image_views)
+    ) : image_views(image_views)
     {
     }
 
     virtual Result operator()()
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // create our own descriptor sets
-            AssertThrow(descriptor_sets[frame_index] != nullptr);
-            
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
+            // @NOTE: V2, when V1 is removed we will only need this part.
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("SSRResultTexture", image_views[frame_index]);
+
 
             // Add the final result to the global descriptor set
             DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
@@ -127,6 +123,11 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
     virtual Result operator()()
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            // @NOTE: V2, when V1 is removed we will only need this part.
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("SSRResultTexture", g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+
+
             // unset final result from the global descriptor set
             DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -216,7 +217,6 @@ void SSRRenderer::Create()
         m_temporal_blending->Create();
     }
 
-    CreateDescriptorSets();
     CreateComputePipelines();
 }
 
@@ -243,110 +243,12 @@ void SSRRenderer::Destroy()
     
     SafeRelease(std::move(m_uniform_buffers));
 
-    SafeRelease(std::move(m_descriptor_sets));
-
     PUSH_RENDER_COMMAND(RemoveSSRDescriptors);
 
     HYP_SYNC_RENDER();
 }
 
-void SSRRenderer::CreateUniformBuffers()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
-    }
-
-    PUSH_RENDER_COMMAND(
-        CreateSSRUniformBuffer,
-        m_extent,
-        m_uniform_buffers
-    );
-}
-
-void SSRRenderer::CreateDescriptorSets()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = MakeRenderObject<DescriptorSet>();
-
-        descriptor_set // 1st stage -- trace, write UVs
-            ->AddDescriptor<renderer::StorageImageDescriptor>(0)
-            ->SetElementUAV(0, m_image_outputs[0]->GetImageView());
-
-        descriptor_set // 2nd stage -- sample
-            ->AddDescriptor<renderer::StorageImageDescriptor>(1)
-            ->SetElementUAV(0, m_image_outputs[1]->GetImageView());
-
-        descriptor_set // 1st stage -- trace, write UVs
-            ->AddDescriptor<renderer::ImageDescriptor>(5)
-            ->SetElementSRV(0, m_image_outputs[0]->GetImageView());
-
-        descriptor_set // 2nd stage -- sample
-            ->AddDescriptor<renderer::ImageDescriptor>(6)
-            ->SetElementSRV(0, m_image_outputs[1]->GetImageView());
-
-        descriptor_set // gbuffer mip chain texture
-            ->AddDescriptor<renderer::ImageDescriptor>(10)
-            ->SetElementSRV(0, g_engine->GetDeferredRenderer().GetMipChain()->GetImageView());
-
-        descriptor_set // gbuffer normals texture
-            ->AddDescriptor<renderer::ImageDescriptor>(11)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView());
-
-        descriptor_set // gbuffer material texture
-            ->AddDescriptor<renderer::ImageDescriptor>(12)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_MATERIAL)->GetImageView());
-
-        descriptor_set // gbuffer depth
-            ->AddDescriptor<renderer::ImageDescriptor>(13)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-                .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
-
-        // nearest sampler
-        descriptor_set
-            ->AddDescriptor<renderer::SamplerDescriptor>(14)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        // linear sampler
-        descriptor_set
-            ->AddDescriptor<renderer::SamplerDescriptor>(15)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-        // scene data
-        descriptor_set
-            ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(16)
-            ->SetElementBuffer<SceneShaderData>(0, g_engine->GetRenderData()->scenes.GetBuffer());
-
-        // camera
-        descriptor_set
-            ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(17)
-            ->SetElementBuffer<CameraShaderData>(0, g_engine->GetRenderData()->cameras.GetBuffer());
-
-        // uniforms
-        descriptor_set
-            ->AddDescriptor<renderer::UniformBufferDescriptor>(18)
-            ->SetElementBuffer(0, m_uniform_buffers[frame_index].Get());
-
-        // blue noise buffer
-        descriptor_set
-            ->AddDescriptor<renderer::StorageBufferDescriptor>(19)
-            ->SetElementBuffer(0, g_engine->GetDeferredRenderer().GetBlueNoiseBuffer());
-
-        m_descriptor_sets[frame_index] = std::move(descriptor_set);
-    }
-
-    PUSH_RENDER_COMMAND(
-        CreateSSRDescriptors,
-        m_descriptor_sets,
-        FixedArray {
-            m_temporal_blending ? m_temporal_blending->GetImageOutput(0).image_view : m_image_outputs[1]->GetImageView(),
-            m_temporal_blending ? m_temporal_blending->GetImageOutput(1).image_view : m_image_outputs[1]->GetImageView()
-        }
-    );
-}
-
-void SSRRenderer::CreateComputePipelines()
+ShaderProperties SSRRenderer::GetShaderProperties() const
 {
     ShaderProperties shader_properties;
     shader_properties.Set("CONE_TRACING", bool(m_options & SSR_RENDERER_OPTIONS_CONE_TRACING));
@@ -364,19 +266,84 @@ void SSRRenderer::CreateComputePipelines()
         break;
     }
 
-    m_write_uvs = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(SSRWriteUVs), shader_properties),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    return shader_properties;
+}
+
+void SSRRenderer::CreateUniformBuffers()
+{
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
+    }
+
+    PUSH_RENDER_COMMAND(
+        CreateSSRUniformBuffer,
+        m_extent,
+        m_uniform_buffers
+    );
+}
+
+void SSRRenderer::CreateComputePipelines()
+{
+    const ShaderProperties shader_properties = GetShaderProperties();
+
+    // Write UVs pass
+
+    Handle<Shader> write_uvs_shader = g_shader_manager->GetOrCreate(HYP_NAME(SSRWriteUVs), shader_properties);
+    AssertThrow(write_uvs_shader.IsValid());
+
+    const renderer::DescriptorTableDeclaration write_uvs_shader_descriptor_table_decl = write_uvs_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef write_uvs_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(write_uvs_shader_descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = write_uvs_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement("UVImage", m_image_outputs[0]->GetImageView());
+        descriptor_set->SetElement("SSRParams", m_uniform_buffers[frame_index]);
+    }
+
+    DeferCreate(write_uvs_shader_descriptor_table, g_engine->GetGPUDevice());
+
+    m_write_uvs = MakeRenderObject<renderer::ComputePipeline>(
+        g_shader_manager->GetOrCreate(HYP_NAME(SSRWriteUVs), shader_properties)->GetShaderProgram(),
+        write_uvs_shader_descriptor_table
     );
 
-    InitObject(m_write_uvs);
+    DeferCreate(m_write_uvs, g_engine->GetGPUDevice());
 
-    m_sample = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(SSRSample), shader_properties),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    // Sample pass
+
+    Handle<Shader> sample_shader = g_shader_manager->GetOrCreate(HYP_NAME(SSRSample), shader_properties);
+    AssertThrow(sample_shader.IsValid());
+
+    const renderer::DescriptorTableDeclaration sample_shader_descriptor_table_decl = sample_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef sample_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(sample_shader_descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement("UVImage", m_image_outputs[0]->GetImageView());
+        descriptor_set->SetElement("SampleImage", m_image_outputs[1]->GetImageView());
+        descriptor_set->SetElement("SSRParams", m_uniform_buffers[frame_index]);
+    }
+
+    DeferCreate(sample_shader_descriptor_table, g_engine->GetGPUDevice());
+
+    m_sample = MakeRenderObject<renderer::ComputePipeline>(
+        sample_shader->GetShaderProgram(),
+        sample_shader_descriptor_table
     );
 
-    InitObject(m_sample);
+    DeferCreate(m_sample, g_engine->GetGPUDevice());
+
+    PUSH_RENDER_COMMAND(
+        CreateSSRDescriptors,
+        FixedArray {
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(0).image_view : m_image_outputs[1]->GetImageView(),
+            m_temporal_blending ? m_temporal_blending->GetImageOutput(1).image_view : m_image_outputs[1]->GetImageView()
+        }
+    );
 }
 
 void SSRRenderer::Render(Frame *frame)
@@ -404,20 +371,26 @@ void SSRRenderer::Render(Frame *frame)
     m_image_outputs[0]->GetImage()->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_write_uvs->GetPipeline()->Bind(command_buffer);
+    m_write_uvs->Bind(command_buffer);
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_write_uvs->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0,
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-            HYP_RENDER_OBJECT_OFFSET(Camera, camera_index)
+    m_write_uvs->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_write_uvs,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                }
+            }
         }
     );
 
-    m_write_uvs->GetPipeline()->Dispatch(command_buffer, Extent3D {
+    m_write_uvs->Dispatch(command_buffer, Extent3D {
         num_dispatch_calls, 1, 1
     });
 
@@ -431,20 +404,26 @@ void SSRRenderer::Render(Frame *frame)
     m_image_outputs[1]->GetImage()->GetGPUImage()
         ->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_sample->GetPipeline()->Bind(command_buffer);
+    m_sample->Bind(command_buffer);
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_sample->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0,
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-            HYP_RENDER_OBJECT_OFFSET(Camera, camera_index)
+    m_sample->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_sample,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                }
+            }
         }
     );
 
-    m_sample->GetPipeline()->Dispatch(command_buffer, Extent3D {
+    m_sample->Dispatch(command_buffer, Extent3D {
         num_dispatch_calls, 1, 1
     });
 

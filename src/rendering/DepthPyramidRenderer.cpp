@@ -74,7 +74,9 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
         m_depth_pyramid_mips.PushBack(std::move(mip_image_view));
     }
 
-    auto shader = g_shader_manager->GetOrCreate(HYP_NAME(GenerateDepthPyramid), { });
+    Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(GenerateDepthPyramid), { });
+    AssertThrow(shader.IsValid());
+    
     const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
     m_mip_descriptor_tables.Reserve(num_mip_levels);
@@ -86,7 +88,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSet2Ref depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
+            const DescriptorSet2Ref &depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
             AssertThrow(depth_pyramid_descriptor_set != nullptr);
 
             if (mip_level == 0) {

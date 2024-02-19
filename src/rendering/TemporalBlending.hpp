@@ -13,8 +13,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-
-#include <memory>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 namespace hyperion::v2 {
 
@@ -109,6 +108,8 @@ public:
     void Render(Frame *frame);
 
 private:
+    ShaderProperties GetShaderProperties() const;
+
     void CreateImageOutputs();
     void CreateDescriptorSets();
     void CreateComputePipelines();
@@ -118,11 +119,10 @@ private:
     TemporalBlendTechnique m_technique;
     TemporalBlendFeedback m_feedback;
 
+    ComputePipelineRef m_perform_blending;
+    DescriptorTableRef m_descriptor_table;
+
     FixedArray<ImageViewRef, max_frames_in_flight> m_input_image_views;
-
-    Handle<ComputePipeline> m_perform_blending;
-
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
     FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
 
     Handle<Framebuffer> m_input_framebuffer;

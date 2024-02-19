@@ -22,12 +22,14 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
     #endif
 #endif
 
-layout(set = 0, binding = 0) uniform texture2D input_texture;
-layout(set = 0, binding = 1) uniform texture2D prev_input_texture;
-layout(set = 0, binding = 2) uniform texture2D velocity_texture;
-layout(set = 0, binding = 3) uniform sampler sampler_linear;
-layout(set = 0, binding = 4) uniform sampler sampler_nearest;
-layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D output_image;
+HYP_DESCRIPTOR_SRV(TemporalBlendingDescriptorSet, InImage) uniform texture2D input_texture;
+HYP_DESCRIPTOR_SRV(TemporalBlendingDescriptorSet, PrevImage) uniform texture2D prev_input_texture;
+HYP_DESCRIPTOR_SRV(TemporalBlendingDescriptorSet, VelocityImage) uniform texture2D velocity_texture;
+HYP_DESCRIPTOR_SAMPLER(TemporalBlendingDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(TemporalBlendingDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
+
+// @TODO: Make ShaderCompiler use c preprocessor so that OUTPUT_FORMAT gets resolved
+HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) uniform writeonly image2D output_image;
 
 #ifdef TEMPORAL_BLEND_TECHNIQUE_0
     #define TEMPORAL_BLEND_TECHNIQUE 0
@@ -60,17 +62,17 @@ layout(set = 0, binding = 5, OUTPUT_FORMAT) uniform writeonly image2D output_ima
 #include "./include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std140, set = 0, binding = 6, row_major) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 7, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
 {
     Camera camera;
 };
 
-layout(set = 0, binding = 8) uniform texture2D depth_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D depth_texture;
 
 layout(push_constant) uniform PushConstant {
     uvec2 output_dimensions;

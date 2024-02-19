@@ -570,9 +570,9 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties)
         properties.Set(ShaderProperty("HYP_FEATURES_BINDLESS_TEXTURES", false));
     }
 
-    if (use_indexed_array_for_object_data) {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
         properties.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
-    }
+#endif
 
     //props.Set(ShaderProperty("HYP_MAX_SHADOW_MAPS", false));
     //props.Set(ShaderProperty("HYP_MAX_BONES", false));
@@ -1225,13 +1225,34 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
                 std::move(params)
             };
 
+            String std_version = "std140";
+
+            if (usage.params.Contains("standard")) {
+                std_version = usage.params.At("standard");
+            }
+
             Array<String> additional_params;
 
             if (usage.params.Contains("format")) {
                 additional_params.PushBack(usage.params.At("format"));
             }
 
-            result.processed_source += "layout(set=HYP_DESCRIPTOR_SET_INDEX_" + set_name + ", binding=HYP_DESCRIPTOR_INDEX_" + set_name + "_" + descriptor_name + (additional_params.Any() ? (", " + String::Join(additional_params, ", ")) : "") + ") " + parse_result.remaining + "\n";
+            // add std140, std430 etc. for buffer types.
+            switch (usage.slot) {
+            case renderer::DESCRIPTOR_SLOT_CBUFF: // fallthrough
+            case renderer::DESCRIPTOR_SLOT_SSBO: // fallthrough
+                if (usage.params.Contains("matrix_mode")) {
+                    additional_params.PushBack(usage.params.At("matrix_mode"));
+                } else {
+                    additional_params.PushBack("row_major");
+                }
+                
+                result.processed_source += "layout(" + std_version + ", set=HYP_DESCRIPTOR_SET_INDEX_" + set_name + ", binding=HYP_DESCRIPTOR_INDEX_" + set_name + "_" + descriptor_name + (additional_params.Any() ? (", " + String::Join(additional_params, ", ")) : "") + ") " + parse_result.remaining + "\n";
+                break;
+            default:
+                result.processed_source += "layout(set=HYP_DESCRIPTOR_SET_INDEX_" + set_name + ", binding=HYP_DESCRIPTOR_INDEX_" + set_name + "_" + descriptor_name + (additional_params.Any() ? (", " + String::Join(additional_params, ", ")) : "") + ") " + parse_result.remaining + "\n";
+                break;
+            }
 
             result.descriptor_usages.PushBack(usage);
         } else {
@@ -1240,6 +1261,8 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
 
         line_index++;
     }
+
+    DebugLog(LogType::Debug, "Processed source:\n%s\n", result.processed_source.Data());
 
     return result;
 }

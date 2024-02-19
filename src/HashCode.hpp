@@ -48,6 +48,10 @@ struct HashCode
 
     constexpr bool operator==(const HashCode &other) const { return hash == other.hash; }
     constexpr bool operator!=(const HashCode &other) const { return hash != other.hash; }
+    constexpr bool operator<(const HashCode &other) const { return hash < other.hash; }
+    constexpr bool operator<=(const HashCode &other) const { return hash <= other.hash; }
+    constexpr bool operator>(const HashCode &other) const { return hash > other.hash; }
+    constexpr bool operator>=(const HashCode &other) const { return hash >= other.hash; }
 
     template<class T>
     typename std::enable_if_t<std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>, HashCode &>
@@ -116,5 +120,19 @@ private:
     }
 };
 } // namespace hyperion
+
+namespace std {
+
+// Specialize std::hash for HashCode
+template <>
+struct hash<hyperion::HashCode>
+{
+    size_t operator()(const hyperion::HashCode &hc) const
+    {
+        return static_cast<size_t>(hc.Value());
+    }
+};
+
+} // namespace std
 
 #endif

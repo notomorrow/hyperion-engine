@@ -354,56 +354,68 @@ public:
         }
     }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     T *operator->() const
         { return Get(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     T &operator*()
         { return *Get(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     const T &operator*() const
         { return *Get(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!() const
         { return !IsValid(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     explicit operator bool() const
         { return IsValid(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return !IsValid(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return IsValid(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(const RenderObjectHandle_Strong &other) const
         { return index == other.index; }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(const RenderObjectHandle_Strong &other) const
         { return index == other.index; }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator<(const RenderObjectHandle_Strong &other) const
         { return index < other.index; }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool IsValid() const
         { return index != 0; }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     uint16 GetRefCount() const
         { return index == 0 ? 0 : _container->GetRefCountStrong(index - 1); }
 
     HYP_FORCE_INLINE
-    T *Get() const
+    T *Get() const &
     {
         if (index == 0) {
             return nullptr;
@@ -422,12 +434,14 @@ public:
         index = 0;
     }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
-    operator T *() const
+    operator T *() const &
         { return Get(); }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
-    operator const T *() const
+    operator const T *() const &
         { return const_cast<const T *>(Get()); }
 
     HYP_FORCE_INLINE
@@ -437,6 +451,7 @@ public:
         _container->SetDebugName(index - 1, name);
     }
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     Name GetName() const
     {
@@ -535,7 +550,8 @@ public:
             _container->DecRefWeak(index - 1);
         }
     }
-        
+
+    [[nodiscard]]
     RenderObjectHandle_Strong<T, PLATFORM> Lock() const
     {
         if (index == 0) {
@@ -547,15 +563,23 @@ public:
         return RenderObjectHandle_Strong<T, PLATFORM>::FromIndex(index);
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool operator==(const RenderObjectHandle_Weak &other) const
         { return index == other.index; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool operator!=(const RenderObjectHandle_Weak &other) const
         { return index == other.index; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool operator<(const RenderObjectHandle_Weak &other) const
         { return index < other.index; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return index != 0; }
 

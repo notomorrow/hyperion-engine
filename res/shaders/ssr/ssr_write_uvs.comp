@@ -5,9 +5,46 @@
 #include "../include/noise.inc"
 #include "../include/brdf.inc"
 
-layout(set = 0, binding = 0, UV_FORMAT) uniform writeonly image2D ssr_uvs;
+HYP_DESCRIPTOR_UAV(SSRDescriptorSet, UVImage, format = rgba16f) uniform writeonly image2D ssr_uvs;
+HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, SSRParams, size = 64) uniform SSRParamsBuffer
+{
+	uvec4 dimension;
+	float ray_step;
+	float num_iterations;
+	float max_ray_distance;
+	float distance_bias;
+	float offset;
+	float eye_fade_start;
+	float eye_fade_end;
+	float screen_edge_fade_start;
+	float screen_edge_fade_end;
+} ssr_params;
 
-#include "../include/Temporal.glsl"
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+{
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
+{
+    Scene scene;
+};
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/gbuffer.inc"
+#include "../include/BlueNoise.glsl"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 mat4 view = camera.view;
 mat4 proj = camera.projection;
@@ -42,7 +79,7 @@ bool TraceRays(
         marching_position += ray_step;
 
         hit_pixel = GetProjectedPositionFromView(proj, marching_position);
-        view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
+        view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, Texture2D(sampler_nearest, gbuffer_depth_texture, hit_pixel).r);
 
         step_delta = marching_position.z - view_space_position.z;
 
@@ -61,7 +98,7 @@ bool TraceRays(
             marching_position = marching_position - ray_step * sign(step_delta);
 
             hit_pixel = GetProjectedPositionFromView(proj, marching_position);
-            view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, SampleDepth(hit_pixel));
+            view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, Texture2D(sampler_nearest, gbuffer_depth_texture, hit_pixel).r);
             
             step_delta = abs(marching_position.z) - view_space_position.z;
 
@@ -114,9 +151,9 @@ void main(void)
     
         //saturate((vec2(gl_GlobalInvocationID.xy) + 0.5) / (vec2(ssr_params.dimension.xy) * 0.5));
 
-    const float roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
-
-    const float depth = SampleDepth(texcoord);
+    const vec4 material_info = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
+    const float roughness = material_info.r;
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
     if (depth > 0.9995) {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
