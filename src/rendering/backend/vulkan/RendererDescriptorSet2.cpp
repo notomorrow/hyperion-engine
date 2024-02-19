@@ -452,7 +452,7 @@ void DescriptorSet2<Platform::VULKAN>::SetElement(const String &name, uint index
     SetElement<TLASRef<Platform::VULKAN>>(name, index, ref);
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -466,7 +466,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
     Array<uint> offsets_flat;
     offsets_flat.Resize(m_layout.GetDynamicElements().Size());
@@ -495,7 +495,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -509,7 +509,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
     Array<uint> offsets_flat;
     offsets_flat.Resize(m_layout.GetDynamicElements().Size());
@@ -538,7 +538,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const
 {
     vkCmdBindDescriptorSets(
         command_buffer->GetCommandBuffer(),
@@ -552,7 +552,7 @@ void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VUL
     );
 }
 
-void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
+void DescriptorSet2<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const
 {
     Array<uint> offsets_flat;
     offsets_flat.Resize(m_layout.GetDynamicElements().Size());

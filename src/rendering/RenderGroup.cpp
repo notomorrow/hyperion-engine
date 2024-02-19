@@ -349,6 +349,12 @@ static void BindGlobalDescriptorSets(
 {
     const uint frame_index = frame->GetFrameIndex();
 
+    const uint global_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Global))->set_index;
+
+    g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+        ->Bind(command_buffer, pipeline, {}, global_set_index);
+
+
     command_buffer->BindDescriptorSets(
         g_engine->GetGPUInstance()->GetDescriptorPool(),
         pipeline,

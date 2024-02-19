@@ -14,8 +14,6 @@ HYP_DESCRIPTOR_SRV(DepthPyramidDescriptorSet, InImage) uniform texture2D mip_in;
 HYP_DESCRIPTOR_UAV(DepthPyramidDescriptorSet, OutImage) uniform writeonly image2D mip_out;
 HYP_DESCRIPTOR_SAMPLER(DepthPyramidDescriptorSet, DepthPyramidSampler) uniform sampler depth_pyramid_sampler;
 
-HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
-
 layout(push_constant) uniform DepthPyramidData
 {
     uvec2 mip_dimensions;

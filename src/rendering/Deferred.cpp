@@ -554,6 +554,28 @@ void DeferredRenderer::CreateDescriptorSets()
 {
     // set global gbuffer data
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        
+        { // v2 - when completed, remove old
+            uint element_index = 0u;
+
+            // not including depth texture here
+            for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
+                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                    ->SetElement("GBufferTextures", element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
+            }
+
+            // add translucent bucket's albedo
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("GBufferTextures", element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
+
+            // depth attachment goes into separate slot
+            const AttachmentUsageRef &depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
+            AssertThrow(depth_attachment_usage != nullptr);
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement("GBufferDepthTexture", 0, depth_attachment_usage->GetImageView());
+        }
+        
         DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
         
