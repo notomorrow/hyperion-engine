@@ -244,7 +244,7 @@ public:
 
     struct DeclareDescriptor
     {
-        DeclareDescriptor(DescriptorTableDeclaration *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1)
+        DeclareDescriptor(DescriptorTableDeclaration *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1, uint size = -1, bool is_dynamic = false)
         {
             AssertThrow(table != nullptr);
 
@@ -265,11 +265,13 @@ public:
 
             const uint slot_index = decl.slots[uint(slot_type) - 1].Size();
 
-            DescriptorDeclaration descriptor_decl;
+            DescriptorDeclaration descriptor_decl { };
             descriptor_decl.index = slot_index;
             descriptor_decl.slot = slot_type;
             descriptor_decl.name = descriptor_name;
+            descriptor_decl.size = size;
             descriptor_decl.count = count;
+            descriptor_decl.is_dynamic = is_dynamic;
             decl.slots[uint(slot_type) - 1].PushBack(descriptor_decl);
         }
     };
@@ -469,6 +471,10 @@ public:
 
     const DescriptorSetLayout<PLATFORM> &GetLayout() const
         { return m_layout; }
+
+    Result Create(Device<PLATFORM> *device);
+    Result Destroy(Device<PLATFORM> *device);
+    Result Update(Device<PLATFORM> *device);
     
     void SetElement(const String &name, const GPUBufferRef<PLATFORM> &ref);
     void SetElement(const String &name, uint index, const GPUBufferRef<PLATFORM> &ref);
@@ -483,12 +489,12 @@ public:
     void SetElement(const String &name, const TLASRef<PLATFORM> &ref);
     void SetElement(const String &name, uint index, const TLASRef<PLATFORM> &ref);
 
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const ComputePipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const ComputePipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<PLATFORM> &command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
 
     DescriptorSet2Ref<PLATFORM> Clone() const;
 
@@ -582,6 +588,29 @@ public:
         }
         
         m_sets = { };
+
+        return Result::OK;
+    }
+
+    Result Update(Device<PLATFORM> *device, uint frame_index)
+    {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
+            const Name descriptor_set_name = set->GetLayout().GetName();
+
+            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
+            AssertThrow(decl != nullptr);
+
+            if (decl->is_reference) {
+                // reference, updated elsewhere
+                continue;
+            }
+
+            const Result set_result = set->Update(device);
+
+            if (!set_result) {
+                return set_result;
+            }
+        }
 
         return Result::OK;
     }

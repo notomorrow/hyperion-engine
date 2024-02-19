@@ -9,10 +9,10 @@
     static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SRV, HYP_STR(name), count)
 #define HYP_DESCRIPTOR_UAV(set_name, name, count) \
     static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_UAV, HYP_STR(name), count)
-#define HYP_DESCRIPTOR_CBUFF(set_name, name, count, size) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_CBUFF, HYP_STR(name), count, size)
-#define HYP_DESCRIPTOR_SSBO(set_name, name, count, size) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SSBO, HYP_STR(name), count, size)
+#define HYP_DESCRIPTOR_CBUFF(set_name, name, count, size, is_dynamic) \
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_CBUFF, HYP_STR(name), count, size, is_dynamic)
+#define HYP_DESCRIPTOR_SSBO(set_name, name, count, size, is_dynamic) \
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SSBO, HYP_STR(name), count, size, is_dynamic)
 #define HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(set_name, name, count) \
     static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, HYP_STR(name), count)
 #define HYP_DESCRIPTOR_SAMPLER(set_name, name, count) \
@@ -36,6 +36,13 @@ HYP_DESCRIPTOR_UAV(Global, SSRUVImage, 1);
 HYP_DESCRIPTOR_UAV(Global, SSRSampleImage, 1);
 
 HYP_DESCRIPTOR_SET(1, Scene);
+HYP_DESCRIPTOR_SSBO(Scene, SceneBuffer, 1, sizeof(SceneShaderData), true);
+HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer, 1, sizeof(LightShaderData), true);
+HYP_DESCRIPTOR_CBUFF(Scene, CamerasBuffer, 1, sizeof(CameraShaderData), true);
+HYP_DESCRIPTOR_CBUFF(Scene, EnvGridsBuffer, 1, sizeof(EnvGridShaderData), true);
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, 1, sizeof(EnvProbeShaderData) * max_env_probes, false);
+// HYP_DESCRIPTOR_SSBO(Scene, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
+
 HYP_DESCRIPTOR_SET(2, Object);
 HYP_DESCRIPTOR_SET(3, Material);
 

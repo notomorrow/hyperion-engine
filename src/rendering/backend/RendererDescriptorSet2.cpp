@@ -1,6 +1,11 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 
+#include <rendering/Buffers.hpp>
+
 namespace hyperion {
+
+using namespace v2;
+
 namespace renderer {
 
 DescriptorTableDeclaration *g_static_descriptor_table_decl = new DescriptorTableDeclaration();

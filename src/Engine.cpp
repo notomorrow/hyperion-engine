@@ -719,6 +719,8 @@ void Engine::Initialize(RC<Application> application)
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        // Global
+
         for (uint i = 0; i < num_gbuffer_textures; i++) {
             m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferTextures", i, GetPlaceholderData()->GetImageView2D1x1R8());
         }
@@ -727,7 +729,7 @@ void Engine::Initialize(RC<Application> application)
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferMipChain", 0, GetPlaceholderData()->GetImageView2D1x1R8());
 
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DeferredResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        
+
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
@@ -753,6 +755,14 @@ void Engine::Initialize(RC<Application> application)
         }
 
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DepthPyramidResult", 0, GetPlaceholderData()->GetImageView2D1x1R8());
+
+        // Scene
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("SceneBuffer", m_render_data->scenes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("LightsBuffer", m_render_data->lights.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CamerasBuffer", m_render_data->cameras.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvGridsBuffer", m_render_data->env_grids.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvProbesBuffer", m_render_data->env_probes.GetBuffer());
+        // m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CurrentEnvProbe", m_render_data->env_probes.GetBuffer());
     }
 
     // m_global_descriptor_set_manager.Initialize(this);
@@ -1116,6 +1126,8 @@ void Engine::UpdateBuffersAndDescriptors(uint frame_index)
     m_render_data->entity_instance_batches.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     m_deferred_renderer.GetPostProcessing().PerformUpdates();
+
+    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Update(m_instance->GetDevice(), frame_index));
     
     m_instance->GetDescriptorPool().AddPendingDescriptorSets(m_instance->GetDevice(), frame_index);
     m_instance->GetDescriptorPool().DestroyPendingDescriptorSets(m_instance->GetDevice(), frame_index);

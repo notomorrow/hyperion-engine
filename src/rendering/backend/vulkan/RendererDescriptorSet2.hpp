@@ -80,12 +80,12 @@ public:
     void SetElement(const String &name, const TLASRef<Platform::VULKAN> &ref);
     void SetElement(const String &name, uint index, const TLASRef<Platform::VULKAN> &ref);
 
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBufferRef<Platform::VULKAN> &command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
 
     DescriptorSet2Ref<Platform::VULKAN> Clone() const;
 
