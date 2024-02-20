@@ -194,22 +194,22 @@ void TemporalBlending::CreateDescriptorSets()
 
         // input image
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("InImage", input_image_view);
+            ->SetElement(HYP_NAME(InImage), input_image_view);
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("PrevImage", m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view);
+            ->SetElement(HYP_NAME(PrevImage), m_image_outputs[(frame_index + 1) % max_frames_in_flight].image_view);
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("VelocityImage", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
+            ->SetElement(HYP_NAME(VelocityImage), g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("SamplerLinear", g_engine->GetPlaceholderData()->GetSamplerLinear());
+            ->SetElement(HYP_NAME(SamplerLinear), g_engine->GetPlaceholderData()->GetSamplerLinear());
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
+            ->SetElement(HYP_NAME(SamplerNearest), g_engine->GetPlaceholderData()->GetSamplerNearest());
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
-            ->SetElement("OutImage", m_image_outputs[frame_index].image_view);
+            ->SetElement(HYP_NAME(OutImage), m_image_outputs[frame_index].image_view);
 
         // // scene buffer
         // descriptor_set
@@ -284,11 +284,11 @@ void TemporalBlending::Render(Frame *frame)
             {
                 HYP_NAME(Scene),
                 {
-                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
                 }
             }
         }

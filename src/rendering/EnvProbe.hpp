@@ -37,9 +37,8 @@ enum EnvProbeType : uint
     ENV_PROBE_TYPE_REFLECTION = 0,
     ENV_PROBE_TYPE_SHADOW,
 
-    // These two types are controlled by EnvGrid
+    // These below types are controlled by EnvGrid
     ENV_PROBE_TYPE_AMBIENT,
-    ENV_PROBE_TYPE_LIGHT_FIELD,
 
     ENV_PROBE_TYPE_MAX
 };
@@ -167,12 +166,8 @@ public:
     HYP_FORCE_INLINE bool IsAmbientProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
 
-    HYP_FORCE_INLINE bool IsLightFieldProbe() const
-        { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_LIGHT_FIELD; }
-
     HYP_FORCE_INLINE bool IsControlledByEnvGrid() const
-        { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT
-            || m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_LIGHT_FIELD; }
+        { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
 
     HYP_FORCE_INLINE const EnvProbeIndex &GetBoundIndex() const
         { return m_bound_index; }

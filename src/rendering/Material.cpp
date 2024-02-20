@@ -89,7 +89,7 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : renderer::RenderCommand
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             // @NOTE: V2: remove the other code after v2 is used everywhere
             g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(id, frame_index)
-                ->SetElement("Textures", texture_index, texture->GetImageView());
+                ->SetElement(HYP_NAME(Textures), texture_index, texture->GetImageView());
 
             // Old V1
             const auto descriptor_set_index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, id.value - 1, frame_index);

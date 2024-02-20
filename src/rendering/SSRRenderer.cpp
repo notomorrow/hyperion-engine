@@ -37,47 +37,46 @@ struct alignas(16) SSRParams
 
 struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 {
-    Extent2D extent;
-    FixedArray<GPUBufferRef, max_frames_in_flight> uniform_buffers;
+    Extent2D        extent;
+    GPUBufferRef    uniform_buffer;
 
     RENDER_COMMAND(CreateSSRUniformBuffer)(
         Extent2D extent,
-        const FixedArray<GPUBufferRef, max_frames_in_flight> &uniform_buffers
+        GPUBufferRef uniform_buffers
     ) : extent(extent),
-        uniform_buffers(uniform_buffers)
+        uniform_buffer(std::move(uniform_buffers))
     {
         AssertThrow(extent.Size() != 0);
+        AssertThrow(this->uniform_buffer != nullptr);
     }
+
+    virtual ~RENDER_COMMAND(CreateSSRUniformBuffer)() override = default;
 
     virtual Result operator()()
     {
-        SSRParams ssr_params {
+        const SSRParams ssr_params {
             .dimensions = { extent.width, extent.height, 0, 0 },
-            .ray_step = 0.33f,
+            .ray_step = 0.1f,
             .num_iterations = 128.0f,
-            .max_ray_distance = 100.0f,
+            .max_ray_distance = 150.0f,
             .distance_bias = 0.1f,
-            .offset = 0.01f,
-            .eye_fade_start = 0.75f,
-            .eye_fade_end = 0.98f,
-            .screen_edge_fade_start = 0.985f,
-            .screen_edge_fade_end = 0.995f
+            .offset = 0.001f,
+            .eye_fade_start = 0.70f,
+            .eye_fade_end = 0.9f,
+            .screen_edge_fade_start = 0.7f,
+            .screen_edge_fade_end = 0.98f
         };
-
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            AssertThrow(uniform_buffers[frame_index] != nullptr);
             
-            HYPERION_BUBBLE_ERRORS(uniform_buffers[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                sizeof(ssr_params)
-            ));
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
+            g_engine->GetGPUDevice(),
+            sizeof(ssr_params)
+        ));
 
-            uniform_buffers[frame_index]->Copy(
-                g_engine->GetGPUDevice(),
-                sizeof(ssr_params),
-                &ssr_params
-            );
-        }
+        uniform_buffer->Copy(
+            g_engine->GetGPUDevice(),
+            sizeof(ssr_params),
+            &ssr_params
+        );
 
         HYPERION_RETURN_OK;
     }
@@ -98,7 +97,7 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : renderer::RenderCommand
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             // @NOTE: V2, when V1 is removed we will only need this part.
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("SSRResultTexture", image_views[frame_index]);
+                ->SetElement(HYP_NAME(SSRResultTexture), image_views[frame_index]);
 
 
             // Add the final result to the global descriptor set
@@ -125,7 +124,7 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             // @NOTE: V2, when V1 is removed we will only need this part.
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("SSRResultTexture", g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+                ->SetElement(HYP_NAME(SSRResultTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
 
 
             // unset final result from the global descriptor set
@@ -206,8 +205,8 @@ void SSRRenderer::Create()
         m_temporal_blending.Reset(new TemporalBlending(
             m_extent,
             ssr_format,
-            TemporalBlendTechnique::TECHNIQUE_2,
-            TemporalBlendFeedback::HIGH,
+            TemporalBlendTechnique::TECHNIQUE_1,
+            TemporalBlendFeedback::MEDIUM,
             FixedArray<ImageViewRef, 2> {
                 m_image_outputs[1]->GetImageView(),
                 m_image_outputs[1]->GetImageView()
@@ -227,21 +226,12 @@ void SSRRenderer::Destroy()
     m_write_uvs.Reset();
     m_sample.Reset();
 
-    for (auto &texture : m_temporal_history_textures) {
-        texture.Reset();
-    }
-
     if (m_temporal_blending) {
         m_temporal_blending->Destroy();
         m_temporal_blending.Reset();
     }
-
-    if (m_reflection_pass) {
-        m_reflection_pass->Destroy();
-        m_reflection_pass.Reset();
-    }
     
-    SafeRelease(std::move(m_uniform_buffers));
+    SafeRelease(std::move(m_uniform_buffer));
 
     PUSH_RENDER_COMMAND(RemoveSSRDescriptors);
 
@@ -271,14 +261,12 @@ ShaderProperties SSRRenderer::GetShaderProperties() const
 
 void SSRRenderer::CreateUniformBuffers()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
-    }
+    m_uniform_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
 
     PUSH_RENDER_COMMAND(
         CreateSSRUniformBuffer,
         m_extent,
-        m_uniform_buffers
+        m_uniform_buffer
     );
 }
 
@@ -298,8 +286,8 @@ void SSRRenderer::CreateComputePipelines()
         const DescriptorSet2Ref &descriptor_set = write_uvs_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement("UVImage", m_image_outputs[0]->GetImageView());
-        descriptor_set->SetElement("SSRParams", m_uniform_buffers[frame_index]);
+        descriptor_set->SetElement(HYP_NAME(UVImage), m_image_outputs[0]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(SSRParams), m_uniform_buffer);
     }
 
     DeferCreate(write_uvs_shader_descriptor_table, g_engine->GetGPUDevice());
@@ -323,9 +311,9 @@ void SSRRenderer::CreateComputePipelines()
         const DescriptorSet2Ref &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement("UVImage", m_image_outputs[0]->GetImageView());
-        descriptor_set->SetElement("SampleImage", m_image_outputs[1]->GetImageView());
-        descriptor_set->SetElement("SSRParams", m_uniform_buffers[frame_index]);
+        descriptor_set->SetElement(HYP_NAME(UVImage), m_image_outputs[0]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(SampleImage), m_image_outputs[1]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(SSRParams), m_uniform_buffer);
     }
 
     DeferCreate(sample_shader_descriptor_table, g_engine->GetGPUDevice());
@@ -380,11 +368,11 @@ void SSRRenderer::Render(Frame *frame)
             {
                 HYP_NAME(Scene),
                 {
-                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
                 }
             }
         }
@@ -413,11 +401,11 @@ void SSRRenderer::Render(Frame *frame)
             {
                 HYP_NAME(Scene),
                 {
-                    { String("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                    { String("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                    { String("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { String("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { String("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
                 }
             }
         }

@@ -554,25 +554,25 @@ void DeferredRenderer::CreateDescriptorSets()
             // not including depth texture here
             for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
                 g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                    ->SetElement("GBufferTextures", element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
+                    ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
             }
 
             // add translucent bucket's albedo
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("GBufferTextures", element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
+                ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
 
             // depth attachment goes into separate slot
             const AttachmentUsageRef &depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
             AssertThrow(depth_attachment_usage != nullptr);
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("GBufferDepthTexture", depth_attachment_usage->GetImageView());
+                ->SetElement(HYP_NAME(GBufferDepthTexture), depth_attachment_usage->GetImageView());
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("GBufferMipChain", m_mip_chain->GetImageView());
+                ->SetElement(HYP_NAME(GBufferMipChain), m_mip_chain->GetImageView());
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement("BlueNoiseBuffer", m_blue_noise_buffer);
+                ->SetElement(HYP_NAME(BlueNoiseBuffer), m_blue_noise_buffer);
         }
         
         DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()

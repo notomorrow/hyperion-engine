@@ -12,25 +12,15 @@ using renderer::Result;
 
 static const Extent2D num_tiles = { 4, 4 };
 static const Extent2D sh_probe_dimensions = Extent2D { 16, 16 };
-static const Extent2D light_field_probe_dimensions = Extent2D { 256, 256 };
 static const Extent2D framebuffer_dimensions = Extent2D { 256, 256 };
 static const Extent3D voxel_grid_dimensions = Extent3D { 256, 256, 256 };
 static const EnvProbeIndex invalid_probe_index = EnvProbeIndex();
-
-static const uint light_field_probe_lowres_packed_octahedron_size = 16;
-static const uint light_field_probe_radiance_packed_octahedron_size = 256;
-static const uint light_field_probe_irradiance_packed_octahedron_size = 128;
-static const uint light_field_probe_packed_border_size = 2;
-
-static constexpr bool light_field_use_texture_array = true;
 
 static Extent2D GetProbeDimensions(EnvProbeType env_probe_type)
 {
     switch (env_probe_type) {
     case ENV_PROBE_TYPE_AMBIENT:
         return sh_probe_dimensions;
-    case ENV_PROBE_TYPE_LIGHT_FIELD:
-        return light_field_probe_dimensions;
     default:
         AssertThrowMsg(false, "Invalid probe type");
     }
@@ -144,29 +134,6 @@ struct RENDER_COMMAND(CreateVoxelGridMipDescriptorSets) : renderer::RenderComman
     }
 };
 
-struct RENDER_COMMAND(CreateLightFieldStorageImages) : renderer::RenderCommand
-{
-    Array<LightFieldStorageImage> storage_images;
-
-    RENDER_COMMAND(CreateLightFieldStorageImages)(Array<LightFieldStorageImage> storage_images)
-        : storage_images(std::move(storage_images))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (LightFieldStorageImage &storage_image : storage_images) {
-            AssertThrow(storage_image.image.IsValid());
-            AssertThrow(storage_image.image_view.IsValid());
-
-            HYPERION_BUBBLE_ERRORS(storage_image.image->Create(g_engine->GetGPUDevice()));
-            HYPERION_BUBBLE_ERRORS(storage_image.image_view->Create(g_engine->GetGPUDevice(), storage_image.image));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 {
     renderer::DescriptorType    type;
@@ -221,66 +188,6 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
             default:
                 AssertThrowMsg(false, "Invalid descriptor type");
             }
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(SetLightFieldBuffersInGlobalDescriptorSet) : renderer::RenderCommand
-{
-    ImageViewRef light_field_color_image_view;
-    ImageViewRef light_field_normals_image_view;
-    ImageViewRef light_field_depth_image_view;
-    ImageViewRef light_field_depth_lowres_image_view;
-    ImageViewRef light_field_irradiance_image_view;
-    ImageViewRef light_field_filtered_distance_image_view;
-
-    RENDER_COMMAND(SetLightFieldBuffersInGlobalDescriptorSet)(
-        ImageViewRef light_field_color_image_view,
-        ImageViewRef light_field_normals_image_view,
-        ImageViewRef light_field_depth_image_view,
-        ImageViewRef light_field_depth_lowres_image_view,
-        ImageViewRef light_field_irradiance_image_view,
-        ImageViewRef light_field_filtered_distance_image_view
-    ) : light_field_color_image_view(std::move(light_field_color_image_view)),
-        light_field_normals_image_view(std::move(light_field_normals_image_view)),
-        light_field_depth_image_view(std::move(light_field_depth_image_view)),
-        light_field_depth_lowres_image_view(std::move(light_field_depth_lowres_image_view)),
-        light_field_irradiance_image_view(std::move(light_field_irradiance_image_view)),
-        light_field_filtered_distance_image_view(std::move(light_field_filtered_distance_image_view))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_COLOR_BUFFER)
-                ->SetElementSRV(0, light_field_color_image_view);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_NORMALS_BUFFER)
-                ->SetElementSRV(0, light_field_normals_image_view);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER)
-                ->SetElementSRV(0, light_field_depth_image_view);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER_LOWRES)
-                ->SetElementSRV(0, light_field_depth_lowres_image_view);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_IRRADIANCE_BUFFER)
-                ->SetElementSRV(0, light_field_irradiance_image_view);
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::LIGHT_FIELD_FILTERED_DISTANCE_BUFFER)
-                ->SetElementSRV(0, light_field_filtered_distance_image_view);
         }
 
         HYPERION_RETURN_OK;
@@ -464,8 +371,6 @@ void EnvGrid::Init()
 
     if (GetEnvGridType() == ENV_GRID_TYPE_SH) {
         CreateSHData();
-    } else if (GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD) {
-        CreateLightFieldData();
     }
 
     {
@@ -514,19 +419,6 @@ void EnvGrid::OnRemoved()
     m_ambient_shader.Reset();
     m_framebuffer.Reset();
 
-    if (GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD) {
-        PUSH_RENDER_COMMAND(
-            SetLightFieldBuffersInGlobalDescriptorSet,
-            ImageViewRef::unset,
-            ImageViewRef::unset,
-            ImageViewRef::unset,
-            ImageViewRef::unset,
-            ImageViewRef::unset,
-            ImageViewRef::unset
-        );
-
-    }
-
     PUSH_RENDER_COMMAND(
         SetElementInGlobalDescriptorSet,
         renderer::DescriptorType::IMAGE,
@@ -534,8 +426,6 @@ void EnvGrid::OnRemoved()
         0,
         ImageViewRef::unset
     );
-
-    SafeRelease(std::move(m_light_field_probe_descriptor_sets));
 
     SafeRelease(std::move(m_compute_sh_descriptor_sets));
 
@@ -833,14 +723,14 @@ void EnvGrid::CreateVoxelGridData()
         DescriptorSet2Ref descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(VoxelizeProbeDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement("InColorImage", m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
-        descriptor_set->SetElement("InNormalsImage", m_framebuffer->GetAttachmentUsages()[1]->GetImageView());
-        descriptor_set->SetElement("InDepthImage", m_framebuffer->GetAttachmentUsages()[2]->GetImageView());
-        descriptor_set->SetElement("SamplerLinear", g_engine->GetPlaceholderData()->GetSamplerLinear());
-        descriptor_set->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
-        descriptor_set->SetElement("EnvGridBuffer", 0, sizeof(EnvGridShaderData), g_engine->GetRenderData()->env_grids.GetBuffer());
-        descriptor_set->SetElement("EnvProbesBuffer", g_engine->GetRenderData()->env_probes.GetBuffer());
-        descriptor_set->SetElement("OutVoxelGridImage", m_voxel_grid_texture->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InColorImage), m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InNormalsImage), m_framebuffer->GetAttachmentUsages()[1]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InDepthImage), m_framebuffer->GetAttachmentUsages()[2]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(SamplerLinear), g_engine->GetPlaceholderData()->GetSamplerLinear());
+        descriptor_set->SetElement(HYP_NAME(SamplerNearest), g_engine->GetPlaceholderData()->GetSamplerNearest());
+        descriptor_set->SetElement(HYP_NAME(EnvGridBuffer), 0, sizeof(EnvGridShaderData), g_engine->GetRenderData()->env_grids.GetBuffer());
+        descriptor_set->SetElement(HYP_NAME(EnvProbesBuffer), g_engine->GetRenderData()->env_probes.GetBuffer());
+        descriptor_set->SetElement(HYP_NAME(OutVoxelGridImage), m_voxel_grid_texture->GetImageView());
 
         // DeferCreate(descriptor_set, g_engine->GetGPUDevice());
 
@@ -951,250 +841,6 @@ void EnvGrid::CreateSHData()
     );
 
     InitObject(m_finalize_sh);
-}
-
-void EnvGrid::CreateLightFieldData()
-{
-    AssertThrow(GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
-
-    const Extent2D radiance_extent = light_field_use_texture_array
-        ? Extent2D { light_field_probe_radiance_packed_octahedron_size, light_field_probe_radiance_packed_octahedron_size }
-        : Extent2D {
-              (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.width * m_density.height + light_field_probe_packed_border_size,
-              (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.depth + light_field_probe_packed_border_size
-          };
-
-    const Extent2D irradiance_extent = light_field_use_texture_array
-        ? Extent2D { light_field_probe_irradiance_packed_octahedron_size, light_field_probe_irradiance_packed_octahedron_size }
-        : Extent2D {
-              (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.width * m_density.height + light_field_probe_packed_border_size,
-              (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.depth + light_field_probe_packed_border_size
-          };
-
-    const Extent2D lowres_extent = light_field_use_texture_array
-        ? Extent2D { light_field_probe_lowres_packed_octahedron_size, light_field_probe_lowres_packed_octahedron_size }
-        : Extent2D {
-              (light_field_probe_lowres_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.width * m_density.height + light_field_probe_packed_border_size,
-              (light_field_probe_lowres_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.depth + light_field_probe_packed_border_size
-          };
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_color_texture = CreateObject<Texture>(TextureArray(
-            radiance_extent,
-            InternalFormat::RGBA16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_color_texture = CreateObject<Texture>(Texture2D(
-            radiance_extent,
-            InternalFormat::RGBA16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_color_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_color_texture);
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_normals_texture = CreateObject<Texture>(TextureArray(
-            radiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_normals_texture = CreateObject<Texture>(Texture2D(
-            radiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_normals_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_normals_texture);
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_depth_texture = CreateObject<Texture>(TextureArray(
-            radiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_depth_texture = CreateObject<Texture>(Texture2D(
-            radiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_depth_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_depth_texture);
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_lowres_depth_texture = CreateObject<Texture>(TextureArray(
-            lowres_extent,
-            InternalFormat::R32F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_lowres_depth_texture = CreateObject<Texture>(Texture2D(
-            lowres_extent,
-            InternalFormat::R32F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_lowres_depth_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_lowres_depth_texture);
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_irradiance_texture = CreateObject<Texture>(TextureArray(
-            irradiance_extent,
-            InternalFormat::RGBA16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_irradiance_texture = CreateObject<Texture>(Texture2D(
-            irradiance_extent,
-            InternalFormat::RGBA16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_irradiance_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_irradiance_texture);
-
-    if constexpr (light_field_use_texture_array) {
-        m_light_field_filtered_distance_texture = CreateObject<Texture>(TextureArray(
-            irradiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            m_density.Size()
-        ));
-    } else {
-        m_light_field_filtered_distance_texture = CreateObject<Texture>(Texture2D(
-            irradiance_extent,
-            InternalFormat::RG16F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            nullptr
-        ));
-    }
-
-    m_light_field_filtered_distance_texture->GetImage()->SetIsRWTexture(true);
-    InitObject(m_light_field_filtered_distance_texture);
-
-    // Descriptor sets
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_light_field_probe_descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>();
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(0)
-            ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageViewCube1x1R8());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(1)
-            ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageViewCube1x1R8());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(2)
-            ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageViewCube1x1R8());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(3)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(4)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(5)
-            ->SetElementUAV(0, m_light_field_color_texture->GetImageView());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(6)
-            ->SetElementUAV(0, m_light_field_normals_texture->GetImageView());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(7)
-            ->SetElementUAV(0, m_light_field_depth_texture->GetImageView());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(8)
-            ->SetElementUAV(0, m_light_field_lowres_depth_texture->GetImageView());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(9)
-            ->SetElementUAV(0, m_light_field_irradiance_texture->GetImageView());
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(10)
-            ->SetElementUAV(0, m_light_field_filtered_distance_texture->GetImageView());
-
-        if (m_voxel_grid_texture.IsValid()) {
-            m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(11)
-                ->SetElementUAV(0, m_voxel_grid_texture->GetImageView());
-        } else {
-            m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageImageDescriptor>(11)
-                ->SetElementUAV(0, g_engine->GetPlaceholderData()->GetImageView3D1x1x1R8Storage());
-        }
-
-        m_light_field_probe_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(12)
-            ->SetElementBuffer<EnvGridShaderData>(0, g_engine->GetRenderData()->env_grids.GetBuffer());
-
-        m_light_field_probe_descriptor_sets[frame_index]->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(13)
-            ->SetElementBuffer(0, g_engine->GetRenderData()->env_probes.GetBuffer());
-    }
-
-    PUSH_RENDER_COMMAND(CreateEnvGridDescriptorSets, m_light_field_probe_descriptor_sets);
-
-    { // Compute shader to pack rendered textures into the large grid
-        m_pack_light_field_probe = CreateObject<ComputePipeline>(
-            g_shader_manager->GetOrCreate(HYP_NAME(PackLightFieldProbe), {}),
-            Array<DescriptorSetRef> { m_light_field_probe_descriptor_sets[0] }
-        );
-
-        InitObject(m_pack_light_field_probe);
-    }
-
-    { // Compute shader to copy border texels after rendering a probe into the grid
-        m_copy_light_field_border_texels_irradiance = CreateObject<ComputePipeline>(
-            g_shader_manager->GetOrCreate(HYP_NAME(LightField_CopyBorderTexels), {}),
-            Array<DescriptorSetRef> { m_light_field_probe_descriptor_sets[0] }
-        );
-
-        InitObject(m_copy_light_field_border_texels_irradiance);
-    }
-
-    { // Compute shader to copy border texels after rendering a probe into the grid
-        m_copy_light_field_border_texels_depth = CreateObject<ComputePipeline>(
-            g_shader_manager->GetOrCreate(HYP_NAME(LightField_CopyBorderTexels), {{ "DEPTH" }}),
-            Array<DescriptorSetRef> { m_light_field_probe_descriptor_sets[0] }
-        );
-
-        InitObject(m_copy_light_field_border_texels_depth);
-    }
-
-    // Update global desc sets
-    PUSH_RENDER_COMMAND(
-        SetLightFieldBuffersInGlobalDescriptorSet,
-        m_light_field_color_texture->GetImageView(),
-        m_light_field_normals_texture->GetImageView(),
-        m_light_field_depth_texture->GetImageView(),
-        m_light_field_lowres_depth_texture->GetImageView(),
-        m_light_field_irradiance_texture->GetImageView(),
-        m_light_field_filtered_distance_texture->GetImageView()
-    );
 }
 
 void EnvGrid::CreateShader()
@@ -1315,11 +961,6 @@ void EnvGrid::RenderEnvProbe(
     switch (GetEnvGridType()) {
     case ENV_GRID_TYPE_SH:
         ComputeSH(frame, framebuffer_image, framebuffer_image_view, probe_index);
-
-        break;
-
-    case ENV_GRID_TYPE_LIGHT_FIELD:
-        ComputeLightFieldData(frame, probe_index);
 
         break;
     }
@@ -1448,7 +1089,7 @@ void EnvGrid::OffsetVoxelGrid(
             {
                 HYP_NAME(VoxelizeProbeDescriptorSet),
                 {
-                    { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                    { HYP_NAME(EnvGridBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                 }
             }
         }
@@ -1520,7 +1161,7 @@ void EnvGrid::VoxelizeProbe(
                 {
                     HYP_NAME(VoxelizeProbeDescriptorSet),
                     {
-                        { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                        { HYP_NAME(EnvGridBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                     }
                 }
             }
@@ -1547,7 +1188,7 @@ void EnvGrid::VoxelizeProbe(
                 {
                     HYP_NAME(VoxelizeProbeDescriptorSet),
                     {
-                        { String("EnvGridBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
+                        { HYP_NAME(EnvGridBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) }
                     }
                 }
             }
@@ -1629,157 +1270,6 @@ void EnvGrid::VoxelizeProbe(
             renderer::ResourceState::SHADER_RESOURCE
         );
     }
-}
-
-void EnvGrid::ComputeLightFieldData(
-    Frame *frame,
-    uint32 probe_index
-)
-{
-    AssertThrow(GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
-
-    const ImageRef &color_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
-    const ImageViewRef &color_image_view = m_framebuffer->GetAttachmentUsages()[0]->GetImageView();
-    
-    const ImageRef &normals_image = m_framebuffer->GetAttachmentUsages()[1]->GetAttachment()->GetImage();
-    const ImageViewRef &normals_image_view = m_framebuffer->GetAttachmentUsages()[1]->GetImageView();
-    
-    const ImageRef &depth_image = m_framebuffer->GetAttachmentUsages()[2]->GetAttachment()->GetImage();
-    const ImageViewRef &depth_image_view = m_framebuffer->GetAttachmentUsages()[2]->GetImageView();
-
-    m_light_field_probe_descriptor_sets[frame->GetFrameIndex()]
-        ->GetDescriptor(0)
-        ->SetElementSRV(0, color_image_view);
-
-    m_light_field_probe_descriptor_sets[frame->GetFrameIndex()]
-        ->GetDescriptor(1)
-        ->SetElementSRV(0, normals_image_view);
-
-    m_light_field_probe_descriptor_sets[frame->GetFrameIndex()]
-        ->GetDescriptor(2)
-        ->SetElementSRV(0, depth_image_view);
-
-    m_light_field_probe_descriptor_sets[frame->GetFrameIndex()]
-        ->ApplyUpdates(g_engine->GetGPUDevice());
-
-    // Encode color, normals, depth as octahedral and store into respective sections of large texture map.
-
-    const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(probe_index);
-    AssertThrow(probe.IsValid());
-
-    const ID<EnvProbe> id = probe->GetID();
-
-    struct alignas(128) {
-        ShaderVec4<uint32> probe_grid_position;
-        ShaderVec4<uint32> cubemap_dimensions;
-        ShaderVec4<uint32> probe_offset_coord;
-        ShaderVec4<uint32> probe_offset_coord_lowres;
-        ShaderVec4<uint32> grid_dimensions;
-    } push_constants;
-
-    AssertThrow(probe->m_grid_slot < max_bound_ambient_probes);
-
-    //temp
-    AssertThrow(probe->m_grid_slot == probe_index);
-    
-    const Vec3u position_in_grid {
-        probe->m_grid_slot % m_density.width,
-        (probe->m_grid_slot % (m_density.width * m_density.height)) / m_density.width,
-        probe->m_grid_slot / (m_density.width * m_density.height)
-    };
-    
-    push_constants.probe_grid_position = {
-        position_in_grid.x,
-        position_in_grid.y,
-        position_in_grid.z,
-        probe->m_grid_slot
-    };
-
-    push_constants.cubemap_dimensions = { color_image->GetExtent().width, color_image->GetExtent().height, 0, 0 };
-    
-    push_constants.probe_offset_coord = {
-        (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * (position_in_grid.y * m_density.width + position_in_grid.x),
-        (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * position_in_grid.z,
-        (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * (position_in_grid.y * m_density.width + position_in_grid.x),
-        (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * position_in_grid.z
-    };
-
-    push_constants.probe_offset_coord_lowres = {
-        (light_field_probe_lowres_packed_octahedron_size + light_field_probe_packed_border_size) * (position_in_grid.y * m_density.width + position_in_grid.x),
-        (light_field_probe_lowres_packed_octahedron_size + light_field_probe_packed_border_size) * position_in_grid.z,
-        0, 0
-    };
-
-    push_constants.grid_dimensions = {
-        (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * (m_density.width * m_density.height) + light_field_probe_packed_border_size,
-        (light_field_probe_radiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.depth + light_field_probe_packed_border_size,
-        (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * (m_density.width * m_density.height) + light_field_probe_packed_border_size,
-        (light_field_probe_irradiance_packed_octahedron_size + light_field_probe_packed_border_size) * m_density.depth + light_field_probe_packed_border_size
-    };
-
-    m_light_field_color_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    m_light_field_normals_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    m_light_field_depth_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    m_light_field_irradiance_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    m_light_field_lowres_depth_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_pack_light_field_probe->GetPipeline(),
-        m_light_field_probe_descriptor_sets[frame->GetFrameIndex()],
-        0,
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex())
-        }
-    );
-
-    m_pack_light_field_probe->GetPipeline()->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    m_pack_light_field_probe->GetPipeline()->Dispatch(
-        frame->GetCommandBuffer(),
-        Extent3D {
-            (light_field_probe_radiance_packed_octahedron_size + 31) / 32,
-            (light_field_probe_radiance_packed_octahedron_size + 31) / 32,
-            1
-        }
-    );
-
-    // Temporarily commented out because I am increasing the size of the images to test
-
-    // // Copy border texels for irradiance image
-
-    // m_light_field_color_texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    // frame->GetCommandBuffer()->BindDescriptorSet(
-    //     g_engine->GetGPUInstance()->GetDescriptorPool(),
-    //     m_copy_light_field_border_texels_irradiance->GetPipeline(),
-    //     m_light_field_probe_descriptor_sets[frame->GetFrameIndex()],
-    //     0
-    // );
-
-    // m_copy_light_field_border_texels_irradiance->GetPipeline()->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    // m_copy_light_field_border_texels_irradiance->GetPipeline()->Dispatch(frame->GetCommandBuffer(), Extent3D { 1, 1, 1 });
-
-    // // Copy border texels for depth image
-
-    // m_light_field_depth_texture.image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-    // frame->GetCommandBuffer()->BindDescriptorSet(
-    //     g_engine->GetGPUInstance()->GetDescriptorPool(),
-    //     m_copy_light_field_border_texels_depth->GetPipeline(),
-    //     m_light_field_probe_descriptor_sets[frame->GetFrameIndex()],
-    //     0
-    // );
-
-    // m_copy_light_field_border_texels_depth->GetPipeline()->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    // m_copy_light_field_border_texels_depth->GetPipeline()->Dispatch(frame->GetCommandBuffer(), Extent3D { 1, 1, 1 });
-
-    m_light_field_color_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-    m_light_field_normals_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-    m_light_field_depth_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-    m_light_field_irradiance_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-    m_light_field_lowres_depth_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 }
 
 } // namespace hyperion::v2

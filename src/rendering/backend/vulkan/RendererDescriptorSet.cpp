@@ -76,12 +76,6 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::DEFERRED_REFLECTION_PROBE, 59},
             
             {DescriptorKey::SH_GRID_BUFFER, 61},
-            {DescriptorKey::LIGHT_FIELD_COLOR_BUFFER, 63},
-            {DescriptorKey::LIGHT_FIELD_NORMALS_BUFFER, 64},
-            {DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER, 65},
-            {DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER_LOWRES, 66},
-            {DescriptorKey::LIGHT_FIELD_IRRADIANCE_BUFFER, 67},
-            {DescriptorKey::LIGHT_FIELD_FILTERED_DISTANCE_BUFFER, 68},
             {DescriptorKey::VOXEL_GRID_IMAGE, 69},
 
             {DescriptorKey::VCT_VOXEL_UAV, 70},

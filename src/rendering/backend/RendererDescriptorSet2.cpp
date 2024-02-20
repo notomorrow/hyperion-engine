@@ -10,7 +10,7 @@ namespace renderer {
 
 DescriptorTableDeclaration *g_static_descriptor_table_decl = new DescriptorTableDeclaration();
 
-DescriptorDeclaration *DescriptorSetDeclaration::FindDescriptorDeclaration(const String &name) const
+DescriptorDeclaration *DescriptorSetDeclaration::FindDescriptorDeclaration(Name name) const
 {
     for (uint slot_index = 0; slot_index < DESCRIPTOR_SLOT_MAX; slot_index++) {
         for (const DescriptorDeclaration &decl : slots[slot_index]) {
@@ -23,7 +23,7 @@ DescriptorDeclaration *DescriptorSetDeclaration::FindDescriptorDeclaration(const
     return nullptr;
 }
 
-uint DescriptorSetDeclaration::CalculateFlatIndex(DescriptorSlot slot, const String &name) const
+uint DescriptorSetDeclaration::CalculateFlatIndex(DescriptorSlot slot, Name name) const
 {
     AssertThrow(slot != DESCRIPTOR_SLOT_NONE && slot < DESCRIPTOR_SLOT_MAX);
 

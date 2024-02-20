@@ -21,7 +21,6 @@ constexpr uint num_async_compute_command_buffers = 1;
 
 constexpr uint max_bound_reflection_probes = 16;
 constexpr uint max_bound_ambient_probes = 1024;
-constexpr uint max_bound_light_field_probes = max_bound_ambient_probes;
 constexpr uint max_bound_point_shadow_maps = 16;
 constexpr uint max_bound_environment_maps = 1;
 

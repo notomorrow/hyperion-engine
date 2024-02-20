@@ -30,24 +30,6 @@ layout(location=0) out vec4 color_output;
 #include "./DeferredLighting.glsl"
 #include "../include/env_probe.inc"
 
-#define USE_TEXTURE_ARRAY
-
-#ifdef USE_TEXTURE_ARRAY
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2DArray light_field_color_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2DArray light_field_normals_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2DArray light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2DArray light_field_depth_buffer_lowres;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2DArray light_field_irradiance_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2DArray light_field_filtered_distance_buffer;
-#else
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_depth_buffer_lowres;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_irradiance_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2D light_field_filtered_distance_buffer;
-#endif
-
 int GetLocalEnvProbeIndex(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, out ivec3 unit_diff)
 {
     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
