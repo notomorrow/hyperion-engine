@@ -110,7 +110,7 @@ enum DescriptorSlot : uint32
 struct DescriptorDeclaration
 {
     DescriptorSlot  slot = DESCRIPTOR_SLOT_NONE;
-    String          name;
+    Name            name;
     uint            count = 1;
     uint            size = -1;
     bool            is_dynamic = false;
@@ -183,9 +183,9 @@ struct DescriptorSetDeclaration
 
     /*! \brief Calculate a flat index for a Descriptor that is part of this set.
         Returns -1 if not found */
-    uint CalculateFlatIndex(DescriptorSlot slot, const String &name) const;
+    uint CalculateFlatIndex(DescriptorSlot slot, Name name) const;
 
-    DescriptorDeclaration *FindDescriptorDeclaration(const String &name) const;
+    DescriptorDeclaration *FindDescriptorDeclaration(Name name) const;
 
     HYP_FORCE_INLINE
     HashCode GetHashCode() const
@@ -249,7 +249,7 @@ public:
 
     struct DeclareDescriptor
     {
-        DeclareDescriptor(DescriptorTableDeclaration *table, Name set_name, DescriptorSlot slot_type, const String &descriptor_name, uint count = 1, uint size = -1, bool is_dynamic = false)
+        DeclareDescriptor(DescriptorTableDeclaration *table, Name set_name, DescriptorSlot slot_type, Name descriptor_name, uint count = 1, uint size = -1, bool is_dynamic = false)
         {
             AssertThrow(table != nullptr);
 
@@ -409,13 +409,13 @@ public:
     const DescriptorSetDeclaration &GetDeclaration() const
         { return m_decl; }
 
-    const HashMap<String, DescriptorSetLayoutElement> &GetElements() const
+    const HashMap<Name, DescriptorSetLayoutElement> &GetElements() const
         { return m_elements; }
 
-    void AddElement(const String &name, DescriptorSetElementType type, uint binding, uint count, uint size = -1)
+    void AddElement(Name name, DescriptorSetElementType type, uint binding, uint count, uint size = -1)
         { m_elements.Insert(name, DescriptorSetLayoutElement { type, binding, count, size }); }
 
-    const DescriptorSetLayoutElement *GetElement(const String &name) const
+    const DescriptorSetLayoutElement *GetElement(Name name) const
     {
         const auto it = m_elements.Find(name);
 
@@ -426,7 +426,7 @@ public:
         return &it->second;
     }
 
-    const Array<String> &GetDynamicElements() const
+    const Array<Name> &GetDynamicElements() const
         { return m_dynamic_elements; }
 
     HashCode GetHashCode() const
@@ -444,9 +444,9 @@ public:
     }
 
 private:
-    DescriptorSetDeclaration                        m_decl;
-    HashMap<String, DescriptorSetLayoutElement>     m_elements;
-    Array<String>                                   m_dynamic_elements;
+    DescriptorSetDeclaration                    m_decl;
+    HashMap<Name, DescriptorSetLayoutElement>   m_elements;
+    Array<Name>                                 m_dynamic_elements;
 };
 
 template <PlatformType PLATFORM>
@@ -480,31 +480,31 @@ public:
     Result Destroy(Device<PLATFORM> *device);
     Result Update(Device<PLATFORM> *device);
     
-    void SetElement(const String &name, const GPUBufferRef<PLATFORM> &ref);
-    void SetElement(const String &name, uint index, const GPUBufferRef<PLATFORM> &ref);
-    void SetElement(const String &name, uint index, uint buffer_size, const GPUBufferRef<PLATFORM> &ref);
+    void SetElement(Name name, const GPUBufferRef<PLATFORM> &ref);
+    void SetElement(Name name, uint index, const GPUBufferRef<PLATFORM> &ref);
+    void SetElement(Name name, uint index, uint buffer_size, const GPUBufferRef<PLATFORM> &ref);
     
-    void SetElement(const String &name, const ImageViewRef<PLATFORM> &ref);
-    void SetElement(const String &name, uint index, const ImageViewRef<PLATFORM> &ref);
+    void SetElement(Name name, const ImageViewRef<PLATFORM> &ref);
+    void SetElement(Name name, uint index, const ImageViewRef<PLATFORM> &ref);
     
-    void SetElement(const String &name, const SamplerRef<PLATFORM> &ref);
-    void SetElement(const String &name, uint index, const SamplerRef<PLATFORM> &ref);
+    void SetElement(Name name, const SamplerRef<PLATFORM> &ref);
+    void SetElement(Name name, uint index, const SamplerRef<PLATFORM> &ref);
     
-    void SetElement(const String &name, const TLASRef<PLATFORM> &ref);
-    void SetElement(const String &name, uint index, const TLASRef<PLATFORM> &ref);
+    void SetElement(Name name, const TLASRef<PLATFORM> &ref);
+    void SetElement(Name name, uint index, const TLASRef<PLATFORM> &ref);
 
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const GraphicsPipeline<PLATFORM> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const ComputePipeline<PLATFORM> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const HashMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<PLATFORM> *command_buffer, const RaytracingPipeline<PLATFORM> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
 
     DescriptorSet2Ref<PLATFORM> Clone() const;
 
 private:
-    DescriptorSetLayout<PLATFORM>                       m_layout;
-    HashMap<String, DescriptorSetElement<PLATFORM>>     m_elements;
+    DescriptorSetLayout<PLATFORM>                   m_layout;
+    HashMap<Name, DescriptorSetElement<PLATFORM>>   m_elements;
 };
 
 template <PlatformType PLATFORM>
@@ -619,9 +619,9 @@ public:
         return Result::OK;
     }
 
-    void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets)
+    void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets)
     {
-        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
 
             DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
@@ -640,9 +640,9 @@ public:
         }
     }
 
-    void Bind(Frame<PLATFORM> *frame, const ComputePipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets) const
+    void Bind(Frame<PLATFORM> *frame, const ComputePipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets) const
     {
-        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
 
             DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
@@ -661,9 +661,9 @@ public:
         }
     }
 
-    void Bind(Frame<PLATFORM> *frame, const RaytracingPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<String, uint>> &offsets) const
+    void Bind(Frame<PLATFORM> *frame, const RaytracingPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets) const
     {
-        for (const auto &set : m_sets[frame->GetFrameIndex()]) {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
 
             DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);

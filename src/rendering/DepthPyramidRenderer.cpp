@@ -93,13 +93,13 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 
             if (mip_level == 0) {
                 // first mip level -- input is the actual depth image
-                depth_pyramid_descriptor_set->SetElement("InImage", m_depth_attachment_usage->GetImageView());
+                depth_pyramid_descriptor_set->SetElement(HYP_NAME(InImage), m_depth_attachment_usage->GetImageView());
             } else {
-                depth_pyramid_descriptor_set->SetElement("InImage", m_depth_pyramid_mips[mip_level - 1]);
+                depth_pyramid_descriptor_set->SetElement(HYP_NAME(InImage), m_depth_pyramid_mips[mip_level - 1]);
             }
 
-            depth_pyramid_descriptor_set->SetElement("OutImage", m_depth_pyramid_mips[mip_level]);
-            depth_pyramid_descriptor_set->SetElement("DepthPyramidSampler", m_depth_pyramid_sampler);
+            depth_pyramid_descriptor_set->SetElement(HYP_NAME(OutImage), m_depth_pyramid_mips[mip_level]);
+            depth_pyramid_descriptor_set->SetElement(HYP_NAME(DepthPyramidSampler), m_depth_pyramid_sampler);
         }
 
         HYPERION_ASSERT_RESULT(descriptor_table->Create(g_engine->GetGPUDevice()));

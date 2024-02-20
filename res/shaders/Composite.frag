@@ -28,15 +28,6 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 59) uniform texture2D reflection_probes_texture;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 79) uniform texture2D dof_blur_blended;
 
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 63) uniform texture2D light_field_color_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 64) uniform texture2D light_field_normals_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 65) uniform texture2D light_field_depth_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 66) uniform texture2D light_field_depth_buffer_lowres;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 67) uniform texture2D light_field_irradiance_buffer;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 68) uniform texture2D light_field_filtered_distance_buffer;
-
-
 layout(location=0) out vec4 out_color;
 
 void main()
@@ -90,8 +81,6 @@ void main()
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_filtered_distance_buffer, v_texcoord0 * 2.0).rrr;
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_irradiance_buffer, v_texcoord0).rgb;
-
-    // out_color.rgb = texture(sampler2DArray(light_field_color_buffer, HYP_SAMPLER_LINEAR), vec3(v_texcoord0, 5)).rgb;
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, depth_pyramid_result, v_texcoord0).rgb;
 }

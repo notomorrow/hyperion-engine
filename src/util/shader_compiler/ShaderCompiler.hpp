@@ -592,7 +592,7 @@ struct DescriptorUsage
 {
     renderer::DescriptorSlot    slot;
     Name                        set_name;
-    String                      descriptor_name;
+    Name                        descriptor_name;
     DescriptorUsageFlags        flags;
     HashMap<String, String>     params;
 
@@ -603,7 +603,7 @@ struct DescriptorUsage
     {
     }
 
-    DescriptorUsage(renderer::DescriptorSlot slot, Name set_name, const String &descriptor_name, DescriptorUsageFlags flags = DESCRIPTOR_USAGE_FLAG_NONE, HashMap<String, String> params = { })
+    DescriptorUsage(renderer::DescriptorSlot slot, Name set_name, Name descriptor_name, DescriptorUsageFlags flags = DESCRIPTOR_USAGE_FLAG_NONE, HashMap<String, String> params = { })
         : slot(slot),
           set_name(set_name),
           descriptor_name(descriptor_name),

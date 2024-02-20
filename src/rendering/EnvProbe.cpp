@@ -347,8 +347,7 @@ void EnvProbe::CreateShader()
         });
 
         break;
-    case EnvProbeType::ENV_PROBE_TYPE_AMBIENT: // fallthrough
-    case EnvProbeType::ENV_PROBE_TYPE_LIGHT_FIELD:
+    case EnvProbeType::ENV_PROBE_TYPE_AMBIENT:
         // Do nothing
         return;
     }

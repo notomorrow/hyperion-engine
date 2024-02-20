@@ -484,7 +484,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
                 static_descriptor_set_declaration->FindDescriptorDeclaration(descriptor_usage.descriptor_name) != nullptr,
                 "Descriptor set %s is defined in the static descriptor table, but the descriptor %s is not",
                 descriptor_usage.set_name.LookupString(),
-                descriptor_usage.descriptor_name.Data()
+                descriptor_usage.descriptor_name.LookupString()
             );
 
             if (!descriptor_set_declaration) {
@@ -1220,7 +1220,7 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
             const DescriptorUsage usage {
                 slot,
                 CreateNameFromDynamicString(ANSIString(set_name)),
-                descriptor_name,
+                CreateNameFromDynamicString(ANSIString(descriptor_name)),
                 flags,
                 std::move(params)
             };
@@ -1483,7 +1483,7 @@ bool ShaderCompiler::CompileBundle(
                 const uint flat_index = decl_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
                 AssertThrow(flat_index != uint(-1));
 
-                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(decl_ptr->name.LookupString()) + "_" + descriptor_declaration.name + " " + String::ToString(flat_index) + "\n";
+                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(decl_ptr->name.LookupString()) + "_" + descriptor_declaration.name.LookupString() + " " + String::ToString(flat_index) + "\n";
             }
         }
     }

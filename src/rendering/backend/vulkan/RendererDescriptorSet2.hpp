@@ -67,25 +67,25 @@ public:
     Result Destroy(Device<Platform::VULKAN> *device);
     Result Update(Device<Platform::VULKAN> *device);
     
-    void SetElement(const String &name, const GPUBufferRef<Platform::VULKAN> &ref);
-    void SetElement(const String &name, uint index, const GPUBufferRef<Platform::VULKAN> &ref);
-    void SetElement(const String &name, uint index, uint buffer_size, const GPUBufferRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, const GPUBufferRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, uint index, const GPUBufferRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, uint index, uint buffer_size, const GPUBufferRef<Platform::VULKAN> &ref);
     
-    void SetElement(const String &name, const ImageViewRef<Platform::VULKAN> &ref);
-    void SetElement(const String &name, uint index, const ImageViewRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, const ImageViewRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, uint index, const ImageViewRef<Platform::VULKAN> &ref);
     
-    void SetElement(const String &name, const SamplerRef<Platform::VULKAN> &ref);
-    void SetElement(const String &name, uint index, const SamplerRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, const SamplerRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, uint index, const SamplerRef<Platform::VULKAN> &ref);
     
-    void SetElement(const String &name, const TLASRef<Platform::VULKAN> &ref);
-    void SetElement(const String &name, uint index, const TLASRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, const TLASRef<Platform::VULKAN> &ref);
+    void SetElement(Name name, uint index, const TLASRef<Platform::VULKAN> &ref);
 
     void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const GraphicsPipeline<Platform::VULKAN> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const ComputePipeline<Platform::VULKAN> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
     void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, uint bind_index) const;
-    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<String, uint> &offsets, uint bind_index) const;
+    void Bind(const CommandBuffer<Platform::VULKAN> *command_buffer, const RaytracingPipeline<Platform::VULKAN> *pipeline, const ArrayMap<Name, uint> &offsets, uint bind_index) const;
 
     DescriptorSet2Ref<Platform::VULKAN> Clone() const;
 
@@ -93,21 +93,21 @@ public:
 
 private:
     template <class T>
-    DescriptorSetElement<Platform::VULKAN> &SetElement(const String &name, uint index, const T &ref)
+    DescriptorSetElement<Platform::VULKAN> &SetElement(Name name, uint index, const T &ref)
     {
         const DescriptorSetLayoutElement *layout_element = m_layout.GetElement(name);
-        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.Data());
+        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.LookupString());
 
         // Type check
         static const uint32 mask = DescriptorSetElementTypeInfo<typename T::Type>::mask;
-        AssertThrowMsg(mask & (1u << uint32(layout_element->type)), "Layout type for %s does not match given type", name.Data());
+        AssertThrowMsg(mask & (1u << uint32(layout_element->type)), "Layout type for %s does not match given type", name.LookupString());
 
         // Range check
         AssertThrowMsg(
             index < layout_element->count,
             "Index %u out of range for element %s with count %u",
             index,
-            name.Data(),
+            name.LookupString(),
             layout_element->count
         );
 
@@ -120,7 +120,7 @@ private:
                     (descriptor_set_element_type_to_buffer_type[uint(layout_element->type)] & (1u << uint(buffer_type))),
                     "Buffer type %u is not in the allowed types for element %s",
                     uint(buffer_type),
-                    name.Data()
+                    name.LookupString()
                 );
 
                 const uint remainder = ref->size % layout_element->size;
@@ -130,7 +130,7 @@ private:
                     "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
                     ref->size,
                     layout_element->size,
-                    name.Data()
+                    name.LookupString()
                 );
             }
         }
@@ -170,7 +170,7 @@ private:
     }
 
     template <class T>
-    void PrefillElements(const String &name, uint count, const Optional<T> &placeholder_value = { })
+    void PrefillElements(Name name, uint count, const Optional<T> &placeholder_value = { })
     {
         bool is_bindless = false;
 
@@ -180,13 +180,13 @@ private:
         }
 
         const DescriptorSetLayoutElement *layout_element = m_layout.GetElement(name);
-        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.Data());
+        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.LookupString());
 
         if (is_bindless) {
             AssertThrowMsg(
                 layout_element->IsBindless(),
                 "-1 given as count to prefill elements, yet %s is not specified as bindless in layout",
-                name.Data()
+                name.LookupString()
             );
         }
 
@@ -218,12 +218,12 @@ private:
         element.dirty_range = { 0, count };
     }
 
-    DescriptorSetLayout<Platform::VULKAN>                       m_layout;
-    ArrayMap<String, DescriptorSetElement<Platform::VULKAN>>    m_elements;
+    DescriptorSetLayout<Platform::VULKAN>                   m_layout;
+    HashMap<Name, DescriptorSetElement<Platform::VULKAN>>   m_elements;
 
-    RC<VulkanDescriptorSetLayoutWrapper>                        m_vk_layout_wrapper;
+    RC<VulkanDescriptorSetLayoutWrapper>                    m_vk_layout_wrapper;
 
-    VkDescriptorSet                                             m_vk_descriptor_set;
+    VkDescriptorSet                                         m_vk_descriptor_set;
 };
 
 template <>

@@ -6,17 +6,17 @@
     static DescriptorTableDeclaration::DeclareSet desc_set_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, index, HYP_NAME_UNSAFE(name))
 
 #define HYP_DESCRIPTOR_SRV(set_name, name, count) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SRV, HYP_STR(name), count)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SRV, HYP_NAME_UNSAFE(name), count)
 #define HYP_DESCRIPTOR_UAV(set_name, name, count) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_UAV, HYP_STR(name), count)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_UAV, HYP_NAME_UNSAFE(name), count)
 #define HYP_DESCRIPTOR_CBUFF(set_name, name, count, size, is_dynamic) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_CBUFF, HYP_STR(name), count, size, is_dynamic)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_CBUFF, HYP_NAME_UNSAFE(name), count, size, is_dynamic)
 #define HYP_DESCRIPTOR_SSBO(set_name, name, count, size, is_dynamic) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SSBO, HYP_STR(name), count, size, is_dynamic)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SSBO, HYP_NAME_UNSAFE(name), count, size, is_dynamic)
 #define HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(set_name, name, count) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, HYP_STR(name), count)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE, HYP_NAME_UNSAFE(name), count)
 #define HYP_DESCRIPTOR_SAMPLER(set_name, name, count) \
-    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SAMPLER, HYP_STR(name), count)
+    static DescriptorTableDeclaration::DeclareDescriptor desc_##name(HYP_DESCRIPTOR_SETS_GLOBAL_STATIC_DESCRIPTOR_TABLE, HYP_NAME_UNSAFE(set_name), DESCRIPTOR_SLOT_SAMPLER, HYP_NAME_UNSAFE(name), count)
 
 HYP_DESCRIPTOR_SET(0, Global);
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, num_gbuffer_textures);

@@ -101,12 +101,6 @@ struct EnvProbeCollection
         { return probes[indirect_indices[max_bound_ambient_probes + index]]; }
 };
 
-struct LightFieldStorageImage
-{
-    ImageRef image;
-    ImageViewRef image_view;
-};
-
 class EnvGrid : public RenderComponent<EnvGrid>
 {
 public:
@@ -138,8 +132,6 @@ private:
         switch (GetEnvGridType()) {
         case ENV_GRID_TYPE_SH:
             return ENV_PROBE_TYPE_AMBIENT;
-        case ENV_GRID_TYPE_LIGHT_FIELD:
-            return ENV_PROBE_TYPE_LIGHT_FIELD;
         default:
             return ENV_PROBE_TYPE_INVALID;
         }
@@ -153,12 +145,6 @@ private:
     void CreateVoxelGridData();
 
     void CreateSHData();
-
-    void CreateLightFieldData();
-    void ComputeLightFieldData(
-        Frame *frame,
-        uint32 probe_index
-    );
 
     void RenderEnvProbe(
         Frame *frame,
@@ -211,21 +197,11 @@ private:
     FixedArray<DescriptorSetRef, max_frames_in_flight> m_compute_sh_descriptor_sets;
     GPUBufferRef m_sh_tiles_buffer;
 
-    Handle<ComputePipeline> m_pack_light_field_probe;
-    Handle<ComputePipeline> m_copy_light_field_border_texels_irradiance;
-    Handle<ComputePipeline> m_copy_light_field_border_texels_depth;
     ComputePipelineRef m_clear_voxels;
     ComputePipelineRef m_voxelize_probe;
     ComputePipelineRef m_offset_voxel_grid;
     Handle<ComputePipeline> m_generate_voxel_grid_mipmaps;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_light_field_probe_descriptor_sets;
-
-    Handle<Texture> m_light_field_color_texture;
-    Handle<Texture> m_light_field_normals_texture;
-    Handle<Texture> m_light_field_depth_texture;
-    Handle<Texture> m_light_field_lowres_depth_texture;
-    Handle<Texture> m_light_field_irradiance_texture;
-    Handle<Texture> m_light_field_filtered_distance_texture;
+    
     Handle<Texture> m_voxel_grid_texture;
 
     Array<ImageViewRef> m_voxel_grid_mips;

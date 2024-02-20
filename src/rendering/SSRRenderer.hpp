@@ -72,19 +72,16 @@ private:
 
     FixedArray<Handle<Texture>, 4> m_image_outputs;
     
-    FixedArray<GPUBufferRef, max_frames_in_flight> m_uniform_buffers;
+    GPUBufferRef                    m_uniform_buffer;
     
-    ComputePipelineRef m_write_uvs;
-    ComputePipelineRef m_sample;
+    ComputePipelineRef              m_write_uvs;
+    ComputePipelineRef              m_sample;
 
-    UniquePtr<FullScreenPass> m_reflection_pass;
-    UniquePtr<TemporalBlending> m_temporal_blending;
+    UniquePtr<TemporalBlending>     m_temporal_blending;
 
-    FixedArray<Handle<Texture>, 2> m_temporal_history_textures;
+    SSRRendererOptions              m_options;
 
-    SSRRendererOptions m_options;
-
-    bool m_is_rendered;
+    bool                            m_is_rendered;
 };
 
 } // namespace hyperion::v2

@@ -436,30 +436,6 @@ void Engine::Initialize(RC<Application> application)
             ->SetElementBuffer(0, GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), renderer::GPUBufferType::STORAGE_BUFFER, sizeof(ShaderVec2<uint32>)));
 
         descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_COLOR_BUFFER)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_NORMALS_BUFFER)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_DEPTH_BUFFER_LOWRES)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_IRRADIANCE_BUFFER)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::LIGHT_FIELD_FILTERED_DISTANCE_BUFFER)
-            ->SetElementSRV(0, GetPlaceholderData()->GetImageView2D1x1R8());
-
-        descriptor_set
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::VOXEL_GRID_IMAGE)
             ->SetElementSRV(0, GetPlaceholderData()->GetImageView3D1x1x1R8());
     }
@@ -719,52 +695,52 @@ void Engine::Initialize(RC<Application> application)
         // Global
 
         for (uint i = 0; i < num_gbuffer_textures; i++) {
-            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferTextures", i, GetPlaceholderData()->GetImageView2D1x1R8());
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(GBufferTextures), i, GetPlaceholderData()->GetImageView2D1x1R8());
         }
         
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferDepthTexture", GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("GBufferMipChain", GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(GBufferDepthTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(GBufferMipChain), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("BlueNoiseBuffer", GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(BlueNoiseBuffer), true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(BlueNoiseBuffer), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(BlueNoiseBuffer), true /* exact size */));
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DeferredResult", GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DeferredResult), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPreStack", 3, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 0, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 1, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 2, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PostFXPostStack", 3, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPreStack), 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPreStack), 1, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPreStack), 2, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPreStack), 3, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 0, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 1, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 2, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 3, GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SSRResultTexture", GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SSRResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
 
         for (uint i = 0; i < max_bound_reflection_probes; i++) {
-            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("EnvProbeTextures", i, GetPlaceholderData()->GetImageViewCube1x1R8());
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(EnvProbeTextures), i, GetPlaceholderData()->GetImageViewCube1x1R8());
         }
 
         for (uint i = 0; i < max_bound_point_shadow_maps; i++) {
-            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("PointShadowMaps", i, GetPlaceholderData()->GetImageViewCube1x1R8());
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PointShadowMaps), i, GetPlaceholderData()->GetImageViewCube1x1R8());
         }
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("DepthPyramidResult", GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DepthPyramidResult), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SamplerNearest", GetPlaceholderData()->GetSamplerNearest());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement("SamplerLinear", GetPlaceholderData()->GetSamplerLinear());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SamplerNearest), GetPlaceholderData()->GetSamplerNearest());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SamplerLinear), GetPlaceholderData()->GetSamplerLinear());
 
         // Scene
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("ScenesBuffer", m_render_data->scenes.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("LightsBuffer", m_render_data->lights.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CamerasBuffer", m_render_data->cameras.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvGridsBuffer", m_render_data->env_grids.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("EnvProbesBuffer", m_render_data->env_probes.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement("CurrentEnvProbe", m_render_data->env_probes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(ScenesBuffer), m_render_data->scenes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(LightsBuffer), m_render_data->lights.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(CamerasBuffer), m_render_data->cameras.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(EnvGridsBuffer), m_render_data->env_grids.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(EnvProbesBuffer), m_render_data->env_probes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(CurrentEnvProbe), m_render_data->env_probes.GetBuffer());
 
         // Object
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("MaterialsBuffer", m_render_data->materials.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("SkeletonsBuffer", m_render_data->skeletons.GetBuffer());
-        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement("EntityInstanceBatchesBuffer", m_render_data->entity_instance_batches.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(MaterialsBuffer), m_render_data->materials.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(SkeletonsBuffer), m_render_data->skeletons.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(EntityInstanceBatchesBuffer), m_render_data->entity_instance_batches.GetBuffer());
     }
 
     // m_global_descriptor_set_manager.Initialize(this);
@@ -1168,7 +1144,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             switch (layout_it.second.type) {
             case renderer::DescriptorSetElementType::UNIFORM_BUFFER: // Fallthrough
             case renderer::DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.Data());
+                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.LookupString());
 
                 for (uint i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
@@ -1187,7 +1163,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             }
             case renderer::DescriptorSetElementType::STORAGE_BUFFER: // Fallthrough
             case renderer::DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.Data());
+                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.LookupString());
 
                 for (uint i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(

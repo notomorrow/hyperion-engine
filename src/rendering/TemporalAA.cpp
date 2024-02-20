@@ -122,19 +122,19 @@ void TemporalAA::CreateComputePipelines()
         const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement("InColorTexture", g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
-        descriptor_set->SetElement("InPrevColorTexture", (*textures[(frame_index + 1) % 2])->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InColorTexture), g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InPrevColorTexture), (*textures[(frame_index + 1) % 2])->GetImageView());
 
-        descriptor_set->SetElement("InVelocityTexture", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+        descriptor_set->SetElement(HYP_NAME(InVelocityTexture), g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
-        descriptor_set->SetElement("InDepthTexture", g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
+        descriptor_set->SetElement(HYP_NAME(InDepthTexture), g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
     
-        descriptor_set->SetElement("SamplerLinear", g_engine->GetPlaceholderData()->GetSamplerLinear());
-        descriptor_set->SetElement("SamplerNearest", g_engine->GetPlaceholderData()->GetSamplerNearest());
+        descriptor_set->SetElement(HYP_NAME(SamplerLinear), g_engine->GetPlaceholderData()->GetSamplerLinear());
+        descriptor_set->SetElement(HYP_NAME(SamplerNearest), g_engine->GetPlaceholderData()->GetSamplerNearest());
 
-        descriptor_set->SetElement("OutColorImage", (*textures[frame_index % 2])->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(OutColorImage), (*textures[frame_index % 2])->GetImageView());
     }
 
     DeferCreate(

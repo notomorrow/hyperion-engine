@@ -431,6 +431,7 @@ public:
     InsertResult Insert(const KeyType &key, ValueType &&value);
     InsertResult Insert(KeyType &&key, const ValueType &value);
     InsertResult Insert(KeyType &&key, ValueType &&value);
+    InsertResult Insert(Pair<KeyType, ValueType> &&pair);
 
     void Clear();
 
@@ -775,6 +776,18 @@ auto HashMap<KeyType, ValueType>::Insert(KeyType &&key, ValueType &&value) -> In
         HashCode::GetHashCode(key).Value(),
         std::move(key),
         std::move(value)
+    });
+}
+
+template <class KeyType, class ValueType>
+auto HashMap<KeyType, ValueType>::Insert(Pair<KeyType, ValueType> &&pair) -> InsertResult
+{
+    const HashCode hash_code = HashCode::GetHashCode(pair.first);
+
+    return InsertElement(detail::HashElement<KeyType, ValueType> {
+        hash_code.Value(),
+        std::move(pair.first),
+        std::move(pair.second)
     });
 }
 
