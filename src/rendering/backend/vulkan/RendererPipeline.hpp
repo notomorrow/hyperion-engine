@@ -179,8 +179,12 @@ public:
     const Optional<DescriptorTableRef<Platform::VULKAN>> &GetDescriptorTable() const
         { return m_descriptor_table; }
 
+    void SetDescriptorTable(DescriptorTableRef<Platform::VULKAN> descriptor_table);
+
     const ShaderProgramRef<Platform::VULKAN> &GetShaderProgram() const
         { return m_shader_program; }
+
+    void SetShaderProgram(ShaderProgramRef<Platform::VULKAN> shader_program);
 
     void SetPushConstants(const PushConstantData &push_constants)
         { this->push_constants = push_constants; }

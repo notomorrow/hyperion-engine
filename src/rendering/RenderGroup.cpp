@@ -14,22 +14,19 @@ using renderer::CommandBufferType;
 
 struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
 {
-    GraphicsPipelineRef                     pipeline;
-    renderer::ShaderProgram                 *shader_program;
-    RenderPassRef                           render_pass;
-    Array<FramebufferObjectRef>             framebuffers;
-    Array<Array<renderer::CommandBuffer *>> command_buffers;
-    RenderableAttributeSet                  attributes;
+    GraphicsPipelineRef                 pipeline;
+    RenderPassRef                       render_pass;
+    Array<FramebufferObjectRef>         framebuffers;
+    RenderGroup::AsyncCommandBuffers    command_buffers;
+    RenderableAttributeSet              attributes;
 
     RENDER_COMMAND(CreateGraphicsPipeline)(
         GraphicsPipelineRef pipeline,
-        renderer::ShaderProgram *shader_program,
         RenderPassRef render_pass,
-        Array<FramebufferObjectRef> &&framebuffers,
-        Array<Array<renderer::CommandBuffer *>> &&command_buffers,
+        Array<FramebufferObjectRef> framebuffers,
+        RenderGroup::AsyncCommandBuffers command_buffers,
         const RenderableAttributeSet &attributes
     ) : pipeline(std::move(pipeline)),
-        shader_program(shader_program),
         render_pass(std::move(render_pass)),
         framebuffers(std::move(framebuffers)),
         command_buffers(std::move(command_buffers)),
@@ -37,8 +34,24 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateGraphicsPipeline)() override = default;
+
+    virtual Result operator()() override
     {
+        DebugLog(LogType::Debug, "Create GraphicsPipeline %s\n", pipeline.GetName().LookupString());
+
+        AssertThrow(pipeline->GetDescriptorTable().HasValue());
+
+        DebugLog(LogType::Debug, "Descriptor table has %u sets:\n", pipeline->GetDescriptorTable().Get()->GetSets().Size());
+
+        for (const auto &set : pipeline->GetDescriptorTable().Get()->GetSets()[0]) {
+            DebugLog(LogType::Debug, "\t%s %u\n", set->GetLayout().GetName().LookupString(), pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(set->GetLayout().GetName()));
+
+            for (const auto &it : set->GetLayout().GetElements()) {
+                DebugLog(LogType::Debug, "\t\t%s %u %u\n", it.first.LookupString(), it.second.type, it.second.binding);
+            }
+        }
+
         renderer::GraphicsPipeline::ConstructionInfo construction_info {
             .vertex_attributes = attributes.GetMeshAttributes().vertex_attributes,
             .topology          = attributes.GetMeshAttributes().topology,
@@ -47,7 +60,6 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
             .blend_mode        = attributes.GetMaterialAttributes().blend_mode,
             .depth_test        = bool(attributes.GetMaterialAttributes().flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST),
             .depth_write       = bool(attributes.GetMaterialAttributes().flags & MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_WRITE),
-            .shader            = shader_program,
             .render_pass       = render_pass,
             .stencil_state     = attributes.GetStencilState()
         };
@@ -67,8 +79,7 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
 
         return pipeline->Create(
             g_engine->GetGPUDevice(),
-            std::move(construction_info),
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
+            std::move(construction_info)
         );
     }
 };
@@ -93,47 +104,34 @@ struct RENDER_COMMAND(CreateIndirectRenderer) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(DestroyIndirectRenderer) : renderer::RenderCommand
-{
-    RC<IndirectRenderer> indirect_renderer;
-
-    RENDER_COMMAND(DestroyIndirectRenderer)(RC<IndirectRenderer> indirect_renderer)
-        : indirect_renderer(std::move(indirect_renderer))
-    {
-        AssertThrow(this->indirect_renderer != nullptr);
-    }
-
-    virtual ~RENDER_COMMAND(DestroyIndirectRenderer)() override = default;
-
-    virtual Result operator()() override
-    {
-        indirect_renderer->Destroy();
-
-        return renderer::Result::OK;
-    }
-};
-
 #pragma endregion
 
 RenderGroup::RenderGroup(
     Handle<Shader> &&shader,
     const RenderableAttributeSet &renderable_attributes
 ) : BasicObject(),
-    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>()),
     m_shader(std::move(shader)),
+    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>()),
     m_renderable_attributes(renderable_attributes)
 {
+    if (m_shader != nullptr) {
+        m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
+    }
 }
 
 RenderGroup::RenderGroup(
     Handle<Shader> &&shader,
     const RenderableAttributeSet &renderable_attributes,
-    const Array<DescriptorSetRef> &used_descriptor_sets
+    DescriptorTableRef descriptor_table
 ) : BasicObject(),
-    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>(used_descriptor_sets)),
+    // Using old version with descriptor sets
+    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>(ShaderProgramRef::unset, std::move(descriptor_table))),
     m_shader(std::move(shader)),
     m_renderable_attributes(renderable_attributes)
 {
+    if (m_shader != nullptr) {
+        m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
+    }
 }
 
 RenderGroup::~RenderGroup()
@@ -162,11 +160,8 @@ void RenderGroup::Init()
 
     BasicObject::Init();
 
-    // create our indirect renderer
-    // will be created with some initial size.
     m_indirect_renderer.Reset(new IndirectRenderer());
     m_indirect_renderer->Create();
-    // PUSH_RENDER_COMMAND(CreateIndirectRenderer, m_indirect_renderer);
 
     AssertThrow(m_fbos.Any());
 
@@ -179,15 +174,16 @@ void RenderGroup::Init()
     InitObject(m_shader);
 
     for (uint i = 0; i < max_frames_in_flight; i++) {
-        for (auto &command_buffer : m_command_buffers[i]) {
-            command_buffer.Reset(new CommandBuffer(CommandBufferType::COMMAND_BUFFER_SECONDARY));
+        for (CommandBufferRef &command_buffer : m_command_buffers[i]) {
+            command_buffer = MakeRenderObject<renderer::CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
         }
     }
 
     // Do we need the callback anymore?
     // @TODO: Refactor how global descriptor sets are created,
     // and see if this can be removed
-    OnInit(g_engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
+    OnInit(g_engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...)
+    {
         RenderPassRef render_pass;
         
         Array<FramebufferObjectRef> framebuffers;
@@ -203,44 +199,46 @@ void RenderGroup::Init()
             }
         }
 
-        Array<Array<renderer::CommandBuffer *>> command_buffers;
-        command_buffers.Reserve(m_command_buffers.Size());
-        
-        for (auto &item : m_command_buffers) {
-            Array<renderer::CommandBuffer *> frame_command_buffers;
-            frame_command_buffers.Reserve(item.Size());
+        m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
 
-            for (auto &command_buffer : item) {
-                frame_command_buffers.PushBack(command_buffer.Get());
-            }
+        if (!m_pipeline->GetDescriptorTable().HasValue()) {
+            renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-            command_buffers.PushBack(std::move(frame_command_buffers));
+            DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+            AssertThrow(descriptor_table != nullptr);
+            DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+            m_pipeline->SetDescriptorTable(std::move(descriptor_table));
         }
+
+        AssertThrow(m_pipeline->GetDescriptorTable().HasValue());
+        AssertThrow(m_pipeline->GetDescriptorTable().Get() != nullptr);
+
+        m_pipeline.SetName(CreateNameFromDynamicString(ANSIString("GraphicsPipeline_") + m_shader->GetCompiledShader().GetName().LookupString()));
 
         PUSH_RENDER_COMMAND(
             CreateGraphicsPipeline, 
             m_pipeline,
-            m_shader->GetShaderProgram(),
             render_pass,
             std::move(framebuffers),
-            std::move(command_buffers),
+            m_command_buffers,
             m_renderable_attributes
         );
             
         SetReady(true);
 
-        OnTeardown([this]() {
+        OnTeardown([this]()
+        {
             SetReady(false);
 
-            PUSH_RENDER_COMMAND(DestroyIndirectRenderer, std::move(m_indirect_renderer));
-
+            m_indirect_renderer->Destroy();
             m_shader.Reset();
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                for (uint i = 0; i < uint(m_command_buffers[frame_index].Size()); i++) {
-                    g_safe_deleter->SafeRelease(std::move(m_command_buffers[frame_index][i]));
-                }
+                SafeRelease(std::move(m_command_buffers[frame_index]));
             }
+
+            m_command_buffers = { };
 
             for (auto &fbo : m_fbos) {
                 fbo.Reset();
@@ -349,27 +347,36 @@ static void BindGlobalDescriptorSets(
 {
     const uint frame_index = frame->GetFrameIndex();
 
-    // const uint global_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Global))->set_index;
+    const uint global_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+    AssertThrow(global_descriptor_set_index != -1);
 
-    // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-    //     ->Bind(command_buffer, pipeline, {}, global_set_index);
+    const uint scene_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+    AssertThrow(scene_descriptor_set_index != -1);
 
+    pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+        ->Bind(
+            command_buffer,
+            pipeline,
+            { },
+            global_descriptor_set_index
+        );
 
-    command_buffer->BindDescriptorSets(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        pipeline,
-        FixedArray<DescriptorSet::Index, 2> { DescriptorSet::global_buffer_mapping[frame_index], DescriptorSet::scene_buffer_mapping[frame_index] },
-        FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Light, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
-        }
-    );
+    pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+        ->Bind(
+            command_buffer,
+            pipeline,
+            {
+                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+            },
+            scene_descriptor_set_index
+        );
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
+#error Not implemented yet
     /* Bindless textures */
     g_engine->GetGPUInstance()->GetDescriptorPool().Bind(
         g_engine->GetGPUDevice(),
@@ -381,15 +388,6 @@ static void BindGlobalDescriptorSets(
         }
     );
 #endif
-                    
-    g_engine->GetGPUInstance()->GetDescriptorPool().Bind(
-        g_engine->GetGPUDevice(),
-        command_buffer,
-        pipeline,
-        {
-            {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1},
-        }
-    );
 }
 
 static void BindPerObjectDescriptorSets(
@@ -403,118 +401,45 @@ static void BindPerObjectDescriptorSets(
 {
     const uint frame_index = frame->GetFrameIndex();
 
-    const uint entity_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Object))->set_index;
-    const uint material_set_index = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material))->set_index;
-    
+    const uint entity_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Object));
+    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
+
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+    if (entity_descriptor_set_index != ~0u) {
+        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+            ->Bind(
+                command_buffer,
+                pipeline,
+                {
+                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+                },
+                entity_descriptor_set_index
+            );
+    }
+#else
+    if (entity_descriptor_set_index != ~0u) {
+        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index)
+            ->Bind(
+                command_buffer,
+                pipeline,
+                {
+                    { HYP_NAME(MaterialsBuffer), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
+                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
+                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(batch_index * sizeof(EntityInstanceBatch)) }
+                },
+                entity_descriptor_set_index
+            );
+    }
+#endif
+
 #if HYP_FEATURES_BINDLESS_TEXTURES
-#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-        // // @NOTE: V2, will remove the old code once it is used a lot
-        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-        //     ->Bind(
-        //         command_buffer,
-        //         pipeline,
-        //         {
-        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-        //         },
-        //         entity_set_index
-        //     );
-
-
-        command_buffer->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            pipeline,
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
-                uint32(batch_index * sizeof(EntityInstanceBatch))
-            }
-        );
+#error Not yet implemented
 #else
-        // // @NOTE: V2, will remove the old code once it is used a lot
-        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-        //     ->Bind(
-        //         command_buffer,
-        //         pipeline,
-        //         {
-        //             { String("MaterialsBuffer"), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
-        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-        //         },
-        //         entity_set_index
-        //     );
-
-
-        command_buffer->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            pipeline,
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::object_buffer_mapping[frame_index] },
-            FixedArray<DescriptorSet::Index, 1> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Material, material_index),
-                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
-                uint32(batch_index * sizeof(EntityInstanceBatch))
-            }
-        );
-#endif
-#else
-#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-        // // @NOTE: V2, will remove the old code once it is used a lot
-        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-        //     ->Bind(
-        //         command_buffer,
-        //         pipeline,
-        //         {
-        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-        //         },
-        //         entity_set_index
-        //     );
-
-        // g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
-        //     ->Bind(command_buffer, pipeline, material_set_index);
-
-        command_buffer->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            pipeline,
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::object_buffer_mapping[frame_index], DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, material_index, frame_index) },
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT, DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
-                uint32(batch_index * sizeof(EntityInstanceBatch))
-            }
-        );
-#else
-        // // @NOTE: V2, will remove the old code once it is used a lot
-        // g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-        //     ->Bind(
-        //         command_buffer,
-        //         pipeline,
-        //         {
-        //             { String("MaterialsBuffer"), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
-        //             { String("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-        //             { String("EntityInstanceBatchesBuffer"), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-        //         },
-        //         entity_set_index
-        //     );
-
-        // g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
-        //     ->Bind(command_buffer, pipeline, material_set_index);
-
-
-        command_buffer->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            pipeline,
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::object_buffer_mapping[frame_index], DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, material_index, frame_index) },
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT, DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Material, material_index),
-                HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index),
-                uint32(batch_index * sizeof(EntityInstanceBatch))
-            }
-        );
-#endif
+    if (material_descriptor_set_index != ~0u) {
+        g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
+            ->Bind(command_buffer, pipeline, material_descriptor_set_index);
+    }
 #endif
 }
 
@@ -522,7 +447,7 @@ template <bool IsIndirect>
 static HYP_FORCE_INLINE void
 RenderAll(
     Frame *frame,
-    FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> &command_buffers,
+    const RenderGroup::AsyncCommandBuffers &command_buffers,
     uint &command_buffer_index,
     const GraphicsPipelineRef &pipeline,
     IndirectRenderer *indirect_renderer,
@@ -626,7 +551,7 @@ RenderAll(
 
     // submit all command buffers
     for (uint i = 0; i < num_recorded_command_buffers; i++) {
-        command_buffers[frame_index][/*(command_buffer_index + i) % static_cast<uint>(command_buffers.Size())*/ i]
+        command_buffers[frame_index][i]
             ->SubmitSecondary(frame->GetCommandBuffer());
     }
 
@@ -690,9 +615,9 @@ void RenderGroup::SetEntityDrawDatas(Array<EntityDrawData> entity_draw_datas)
 
 // Proxied methods
 
-CommandBuffer *RendererProxy::GetCommandBuffer(uint frame_index)
+const CommandBufferRef &RendererProxy::GetCommandBuffer(uint frame_index) const
 {
-    return m_render_group->m_command_buffers[frame_index].Front().Get();
+    return m_render_group->m_command_buffers[frame_index].Front();
 }
 
 const GraphicsPipelineRef &RendererProxy::GetGraphicsPipeline() const

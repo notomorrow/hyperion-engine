@@ -3,7 +3,10 @@
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/SubShaderMarshal.hpp>
+
 #include <rendering/Shader.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion::v2::fbom {
@@ -21,6 +24,9 @@ public:
 
     virtual FBOMResult Serialize(const Shader &in_object, FBOMObject &out) const override
     {
+        // Set global descriptor table version - if this hashcode changes, the shader is invalid and must be recompiled
+        out.SetProperty("global_descriptor_table_version", FBOMUnsignedLong(), renderer::g_static_descriptor_table_decl->GetHashCode().Value());
+
         out.SetProperty("name", FBOMName(), in_object.GetCompiledShader().GetDefinition().name);
 
         const VertexAttributeSet required_vertex_attributes = in_object.GetCompiledShader().GetDefinition().properties.GetRequiredVertexAttributes();
@@ -49,6 +55,25 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
+        uint64 global_descriptor_table_version = -1;
+
+        if (auto err = in.GetProperty("global_descriptor_table_version").ReadUnsignedLong(&global_descriptor_table_version)) {
+            return err;
+        }
+
+        if (global_descriptor_table_version != renderer::g_static_descriptor_table_decl->GetHashCode().Value()) {
+            DebugLog(
+                LogType::Error,
+                "Failed to deserialize Shader instance: The global descriptor table version does not match.\n"
+                "\tExpected: %llu\n"
+                "\tActual: %llu\n",
+                renderer::g_static_descriptor_table_decl->GetHashCode().Value(),
+                global_descriptor_table_version
+            );
+
+            return { FBOMResult::FBOM_ERR, "Global descriptor table version mismatch" };
+        }
+
         Name name;
 
         if (auto err = in.GetProperty("name").ReadName(&name)) {

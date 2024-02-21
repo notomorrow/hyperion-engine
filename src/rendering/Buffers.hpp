@@ -148,8 +148,6 @@ static_assert(sizeof(ObjectShaderData) == 256);
 
 struct MaterialShaderData
 {
-    static constexpr uint max_bound_textures = 16u;
-    
     ShaderVec4<float> albedo;
     
     // 4 vec4s of 0.0..1.0 values stuffed into uint32s
@@ -257,11 +255,13 @@ struct alignas(256) EnvProbeShaderData
 
 static_assert(sizeof(EnvProbeShaderData) == 512);
 
-struct alignas(256) ImmediateDrawShaderData
+struct alignas(16) ImmediateDrawShaderData
 {
     ShaderMat4 transform;
     uint32 color_packed;
 };
+
+static_assert(sizeof(ImmediateDrawShaderData) == 80);
 
 struct alignas(16) ObjectInstance
 {
@@ -334,6 +334,31 @@ struct alignas(256) BlueNoiseBuffer
 };
 
 static_assert(sizeof(BlueNoiseBuffer) == 1310720);
+struct alignas(16) PostProcessingUniforms
+{
+    ShaderVec2<uint32> effect_counts; // pre, post
+    ShaderVec2<uint32> last_enabled_indices; // pre, post
+    ShaderVec2<uint32> masks; // pre, post
+};
+
+static_assert(sizeof(PostProcessingUniforms) == 32);
+
+struct alignas(256) DDGIUniforms
+{
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec4u   probe_border;
+    Vec4u   probe_counts;
+    Vec4u   grid_dimensions;
+    Vec4u   image_dimensions;
+    Vec4u   params; // x = probe distance, y = num rays per probe, z = flags, w = num bound lights
+    uint32  shadow_map_index;
+    uint32  _pad0, _pad1, _pad2;
+    uint32  light_indices[16];
+    //HYP_PAD_STRUCT_HERE(uint32, 4);
+};
+
+static_assert(sizeof(DDGIUniforms) == 256);
 
 /* max number of skeletons, based on size in mb */
 static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
@@ -351,7 +376,7 @@ static const SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 static const SizeType max_cameras = (16ull * 1024ull) / sizeof(CameraShaderData);
 static const SizeType max_cameras_bytes = max_cameras * sizeof(CameraShaderData);
 /* max number of lights, based on size in kb */
-static const SizeType max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
+static const SizeType max_lights = (64ull * 1024ull) / sizeof(LightShaderData);
 static const SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
 /* max number of shadow maps, based on size in kb */
 static const SizeType max_shadow_maps = (4ull * 1024ull) / sizeof(ShadowShaderData);

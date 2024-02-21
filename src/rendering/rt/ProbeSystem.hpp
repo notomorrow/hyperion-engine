@@ -36,23 +36,6 @@ enum ProbeSystemFlags : uint32
     PROBE_SYSTEM_FLAGS_FIRST_RUN = 0x1
 };
 
-struct alignas(256) ProbeSystemUniforms
-{
-    Vector4 aabb_max;
-    Vector4 aabb_min;
-    ShaderVec4<uint32> probe_border;
-    ShaderVec4<uint32> probe_counts;
-    ShaderVec4<uint32> grid_dimensions;
-    ShaderVec4<uint32> image_dimensions;
-    ShaderVec4<uint32> params; // x = probe distance, y = num rays per probe, z = flags, w = num bound lights
-    uint32 shadow_map_index;
-    uint32 _pad0, _pad1, _pad2;
-    uint32 light_indices[16];
-    //HYP_PAD_STRUCT_HERE(uint32, 4);
-};
-
-//static_assert(sizeof(ProbeSystemUniforms) == 128);
-
 struct ProbeRayData
 {
     Vector4 direction_depth;
@@ -189,7 +172,7 @@ private:
 
     Handle<TLAS> m_tlas;
 
-    ProbeSystemUniforms m_uniforms;
+    DDGIUniforms m_uniforms;
 
     RotationMatrixGenerator m_random_generator;
     uint32 m_time;

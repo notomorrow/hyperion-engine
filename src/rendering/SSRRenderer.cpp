@@ -52,7 +52,7 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateSSRUniformBuffer)() override = default;
 
-    virtual Result operator()()
+    virtual Result operator()() override
     {
         const SSRParams ssr_params {
             .dimensions = { extent.width, extent.height, 0, 0 },

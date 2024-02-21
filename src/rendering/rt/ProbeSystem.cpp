@@ -147,9 +147,9 @@ struct RENDER_COMMAND(DestroyProbeGridDescriptors) : renderer::RenderCommand
 struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : renderer::RenderCommand
 {
     GPUBufferRef uniform_buffer;
-    ProbeSystemUniforms uniforms;
+    DDGIUniforms uniforms;
 
-    RENDER_COMMAND(CreateProbeGridUniformBuffer)(const GPUBufferRef &uniform_buffer, const ProbeSystemUniforms &uniforms)
+    RENDER_COMMAND(CreateProbeGridUniformBuffer)(const GPUBufferRef &uniform_buffer, DDGIUniforms uniforms)
         : uniform_buffer(uniform_buffer),
           uniforms(uniforms)
     {
@@ -157,8 +157,8 @@ struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : renderer::RenderCommand
 
     virtual Result operator()()
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(ProbeSystemUniforms)));
-        uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(ProbeSystemUniforms), &uniforms);
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(DDGIUniforms)));
+        uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(DDGIUniforms), &uniforms);
 
         HYPERION_RETURN_OK;
     }
@@ -317,7 +317,7 @@ void ProbeGrid::CreateUniformBuffer()
     const Extent2D grid_image_dimensions = m_grid_info.GetImageDimensions();
     const Extent3D num_probes_per_dimension = m_grid_info.NumProbesPerDimension();
 
-    m_uniforms = ProbeSystemUniforms {
+    m_uniforms = DDGIUniforms {
         .aabb_max = Vector4(m_grid_info.aabb.max, 1.0f),
         .aabb_min = Vector4(m_grid_info.aabb.min, 1.0f),
         .probe_border = {
@@ -581,7 +581,7 @@ void ProbeGrid::UpdateUniforms(Frame *frame)
 
     m_uniforms.shadow_map_index = m_shadow_map_index;
 
-    m_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(ProbeSystemUniforms), &m_uniforms);
+    m_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(DDGIUniforms), &m_uniforms);
 
     m_uniforms.params[2] &= ~PROBE_SYSTEM_FLAGS_FIRST_RUN;
     

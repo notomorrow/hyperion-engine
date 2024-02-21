@@ -293,6 +293,11 @@ void PostProcessing::CreateUniformBuffer()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        // @NOTE: V2, remove below code when done
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(PostProcessingUniforms), m_uniform_buffer);
+
+        // V1
         DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 
         descriptor_set_globals

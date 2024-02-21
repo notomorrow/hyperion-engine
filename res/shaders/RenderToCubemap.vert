@@ -31,6 +31,8 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
     #define VERTEX_SKINNING_ENABLED
 #endif
 
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 #include "include/scene.inc"
 
 #define HYP_INSTANCING
@@ -41,6 +43,53 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #ifdef VERTEX_SKINNING_ENABLED
 #include "include/Skeleton.glsl"
+#endif
+
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
+
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+{
+    Object objects[HYP_MAX_ENTITIES];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) readonly buffer EntityInstanceBatchesBuffer
+{
+    EntityInstanceBatch entity_instance_batch;
+};
+
+#ifdef VERTEX_SKINNING_ENABLED
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer, size = 16384) readonly buffer SkeletonsBuffer
+{
+    Skeleton skeleton;
+};
+
+mat4 CreateSkinningMatrix(ivec4 bone_indices, vec4 bone_weights)
+{
+	mat4 skinning = mat4(0.0);
+
+	int index0 = min(bone_indices.x, HYP_MAX_BONES - 1);
+	skinning += bone_weights.x * skeleton.bones[index0];
+	int index1 = min(bone_indices.y, HYP_MAX_BONES - 1);
+	skinning += bone_weights.y * skeleton.bones[index1];
+	int index2 = min(bone_indices.z, HYP_MAX_BONES - 1);
+	skinning += bone_weights.z * skeleton.bones[index2];
+	int index3 = min(bone_indices.w, HYP_MAX_BONES - 1);
+	skinning += bone_weights.w * skeleton.bones[index3];
+
+	return skinning;
+}
+
 #endif
 
 void main() 

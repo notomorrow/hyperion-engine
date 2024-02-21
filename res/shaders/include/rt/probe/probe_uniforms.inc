@@ -11,7 +11,7 @@
 #define PROBE_SYSTEM_FLAGS_NONE 0x0
 #define PROBE_SYSTEM_FLAGS_FIRST_RUN 0x1
 
-struct ProbeSystemUniforms
+struct DDGIUniforms
 {
     vec4 aabb_max;
     vec4 aabb_min;

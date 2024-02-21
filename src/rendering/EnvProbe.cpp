@@ -639,6 +639,24 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         const auto &descriptor_pool = g_engine->GetGPUInstance()->GetDescriptorPool();
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            // New V2 version
+
+            switch (GetEnvProbeType()) {
+            case ENV_PROBE_TYPE_REFLECTION:
+                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                    ->SetElement(HYP_NAME(EnvProbeTextures), texture_slot, m_texture->GetImageView());
+
+                break;
+            case ENV_PROBE_TYPE_SHADOW:
+                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                    ->SetElement(HYP_NAME(PointLightShadowMapTextures), texture_slot, m_texture->GetImageView());
+
+                break;
+            default:
+                break;
+            }
+            
+            // @NOTE: Old V1 version
             DescriptorKey descriptor_key;
 
             switch (GetEnvProbeType()) {

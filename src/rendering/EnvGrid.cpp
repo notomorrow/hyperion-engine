@@ -136,57 +136,33 @@ struct RENDER_COMMAND(CreateVoxelGridMipDescriptorSets) : renderer::RenderComman
 
 struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 {
-    renderer::DescriptorType    type;
-    renderer::DescriptorKey     key;
-    uint32                      element_index;
-    ImageViewRef                value;
+    Name                                        set_name;
+    Name                                        element_name;
+    renderer::DescriptorSetElement::ValueType   value;
 
     RENDER_COMMAND(SetElementInGlobalDescriptorSet)(
-        renderer::DescriptorType type,
-        renderer::DescriptorKey key,
-        uint32 element_index,
-        ImageViewRef value
-    ) : type(type),
-        key(key),
-        element_index(element_index),
+        Name set_name,
+        Name element_name,
+        renderer::DescriptorSetElement::ValueType value
+    ) : set_name(set_name),
+        element_name(element_name),
         value(std::move(value))
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(SetElementInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            switch (type) {
-            case renderer::DescriptorType::IMAGE:
-                descriptor_set_globals
-                    ->GetOrAddDescriptor<renderer::ImageDescriptor>(key)
-                    ->SetElementSRV(element_index, value);
-                break;
-            case renderer::DescriptorType::IMAGE_STORAGE:
-                descriptor_set_globals
-                    ->GetOrAddDescriptor<renderer::StorageImageDescriptor>(key)
-                    ->SetElementUAV(element_index, value);
-                break;
-            // case renderer::DescriptorType::UNIFORM_BUFFER:
-            //     descriptor_set_globals
-            //         ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(key)
-            //         ->SetElementBuffer(element_index, value.Get<GPUBufferRef>());
-            //     break;
-            // case renderer::DescriptorType::STORAGE_BUFFER:
-            //     descriptor_set_globals
-            //         ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(key)
-            //         ->SetElementBuffer(element_index, value.Get<GPUBufferRef>());
-            //     break;
-            // case renderer::DescriptorType::SAMPLER:
-            //     descriptor_set_globals
-            //         ->GetOrAddDescriptor<renderer::SamplerDescriptor>(key)
-            //         ->SetElementSampler(element_index, value.Get<SamplerRef>());
-            //     break;
-            default:
-                AssertThrowMsg(false, "Invalid descriptor type");
+            if (value.Is<GPUBufferRef>()) {
+                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(set_name, frame_index)
+                    ->SetElement(element_name, value.Get<GPUBufferRef>());
+            } else if (value.Is<ImageViewRef>()) {
+                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(set_name, frame_index)
+                    ->SetElement(element_name, value.Get<ImageViewRef>());
+            } else {
+                AssertThrowMsg(false, "Not implemented");
             }
         }
 
@@ -421,9 +397,8 @@ void EnvGrid::OnRemoved()
 
     PUSH_RENDER_COMMAND(
         SetElementInGlobalDescriptorSet,
-        renderer::DescriptorType::IMAGE,
-        renderer::DescriptorKey::VOXEL_GRID_IMAGE,
-        0,
+        HYP_NAME(Scene),
+        HYP_NAME(VoxelGridTexture),
         ImageViewRef::unset
     );
 
@@ -653,16 +628,17 @@ void EnvGrid::CreateVoxelGridData()
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
         nullptr
     ));
+        AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
 
     m_voxel_grid_texture->GetImage()->SetIsRWTexture(true);
     InitObject(m_voxel_grid_texture);
+        AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
 
     // Set our voxel grid texture in the global descriptor set so we can use it in shaders
     PUSH_RENDER_COMMAND(
         SetElementInGlobalDescriptorSet,
-        renderer::DescriptorType::IMAGE,
-        renderer::DescriptorKey::VOXEL_GRID_IMAGE,
-        0,
+        HYP_NAME(Scene),
+        HYP_NAME(VoxelGridTexture),
         m_voxel_grid_texture->GetImageView()
     );
 
@@ -711,12 +687,7 @@ void EnvGrid::CreateVoxelGridData()
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
-    auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
-
-    // const renderer::DescriptorSetDeclaration *descriptor_set_decl = descriptor_table_decl.FindDescriptorSetDeclaration(HYP_NAME(VoxelizeProbeDescriptorSet));
-    // AssertThrow(descriptor_set_decl != nullptr);
-
-    // const renderer::DescriptorSetLayout descriptor_set_layout(*descriptor_set_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
     
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
@@ -732,9 +703,7 @@ void EnvGrid::CreateVoxelGridData()
         descriptor_set->SetElement(HYP_NAME(EnvProbesBuffer), g_engine->GetRenderData()->env_probes.GetBuffer());
         descriptor_set->SetElement(HYP_NAME(OutVoxelGridImage), m_voxel_grid_texture->GetImageView());
 
-        // DeferCreate(descriptor_set, g_engine->GetGPUDevice());
-
-        // m_voxelize_probe_descriptor_sets[frame_index] = std::move(descriptor_set);
+        AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
     }
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());

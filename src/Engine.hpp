@@ -194,7 +194,7 @@ public:
     Handle<RenderGroup> CreateRenderGroup(
         const Handle<Shader> &shader,
         const RenderableAttributeSet &renderable_attributes,
-        const Array<DescriptorSetRef> &used_descriptor_sets
+        DescriptorTableRef descriptor_table
     );
 
     // /*! \brief Create a RenderGroup, using implied DescriptorSets from the Shader's CompiledShaderBatch Definition */

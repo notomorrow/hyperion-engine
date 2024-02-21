@@ -67,6 +67,10 @@ public:
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32 width, uint32 height);
 
+    // V2, uses the new descriptor set system
+    Result Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info);
+
+    // v1
     Result Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
     Result Destroy(Device<Platform::VULKAN> *device);
     

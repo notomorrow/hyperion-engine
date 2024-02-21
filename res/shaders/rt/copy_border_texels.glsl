@@ -24,7 +24,7 @@ layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) i
 #define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + probe_system.probe_border.x)
 
 layout(std140, set = 0, binding = 9) uniform ProbeSystem {
-    ProbeSystemUniforms probe_system;
+    DDGIUniforms probe_system;
 };
 
 layout(std140, set = 0, binding = 10) buffer ProbeRayDataBuffer {

@@ -42,7 +42,7 @@ public:
 
     static constexpr uint max_textures_to_set = MathUtil::Min(
         max_textures,
-        MaterialShaderData::max_bound_textures,
+        max_bound_textures,
         HYP_FEATURES_BINDLESS_TEXTURES
             ? DescriptorSet::max_bindless_resources
             : DescriptorSet::max_material_texture_samplers

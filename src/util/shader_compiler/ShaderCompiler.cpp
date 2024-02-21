@@ -287,6 +287,8 @@ static ByteBuffer CompileToSPIRV(
         return ByteBuffer();
     }
 
+    // @TODO: use shader->preprocessedGLSL before working with our internal methods like HYP_DESCRIPTOR_*
+
     if (!glslang_shader_parse(shader, &input)) {
         GLSL_ERROR(LogType::Error, "GLSL parsing failed %s\n", filename.Data());
         GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
@@ -1467,28 +1469,31 @@ bool ShaderCompiler::CompileBundle(
 
     // Generate descriptor table defines
     for (const DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
-        descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(descriptor_set_declaration.set_index) + "\n";
+        const uint set_index = descriptor_table.GetDescriptorSetIndex(descriptor_set_declaration.name);
+        AssertThrow(set_index != -1);
 
-        const DescriptorSetDeclaration *decl_ptr = &descriptor_set_declaration;
+        descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(set_index) + "\n";
+
+        const DescriptorSetDeclaration *descriptor_set_declaration_ptr = &descriptor_set_declaration;
 
         if (descriptor_set_declaration.is_reference) {
             const DescriptorSetDeclaration *static_decl = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(descriptor_set_declaration.name);
             AssertThrow(static_decl != nullptr);
 
-            decl_ptr = static_decl;
+            descriptor_set_declaration_ptr = static_decl;
         }
 
-        for (const Array<DescriptorDeclaration> &descriptor_declarations : decl_ptr->slots) {
+        for (const Array<DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration_ptr->slots) {
             for (const DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
-                const uint flat_index = decl_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
+                const uint flat_index = descriptor_set_declaration_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
                 AssertThrow(flat_index != uint(-1));
 
-                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(decl_ptr->name.LookupString()) + "_" + descriptor_declaration.name.LookupString() + " " + String::ToString(flat_index) + "\n";
+                descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptor_set_declaration_ptr->name.LookupString()) + "_" + descriptor_declaration.name.LookupString() + " " + String::ToString(flat_index) + "\n";
             }
         }
     }
 
-    DebugLog(LogType::Debug, "Descriptor table defines = %s\n", descriptor_table_defines.Data());
+    DebugLog(LogType::Debug, "Descriptor table defines:\n%s\n", descriptor_table_defines.Data());
 
     // compile shader with each permutation of properties
     ForEachPermutation(final_versions, [&](const ShaderProperties &properties)

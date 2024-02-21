@@ -24,7 +24,7 @@
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 
 layout(std140, set = 0, binding = 9) uniform ProbeSystem {
-    ProbeSystemUniforms probe_system;
+    DDGIUniforms probe_system;
 };
 
 layout(std430, set = 0, binding = 10) buffer ProbeRayDataBuffer {

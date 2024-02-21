@@ -12,9 +12,9 @@ layout(location=0) out vec4 color_output;
 #include "../include/defines.inc"
 #include "../include/shared.inc"
 
-layout(set = 0, binding = 0) uniform texture2D input_texture;
-layout(set = 0, binding = 1) uniform sampler sampler_linear;
-layout(set = 0, binding = 2) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SRV(GenerateMipmapsDescriptorSet, InputTexture) uniform texture2D input_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 layout(push_constant) uniform PushConstant
 {

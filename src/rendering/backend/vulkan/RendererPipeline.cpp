@@ -62,6 +62,22 @@ Pipeline<Platform::VULKAN>::~Pipeline()
     AssertThrowMsg(layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }
 
+void Pipeline<Platform::VULKAN>::SetDescriptorTable(DescriptorTableRef<Platform::VULKAN> descriptor_table)
+{
+    if (descriptor_table) {
+        m_descriptor_table.Set(std::move(descriptor_table));
+        m_has_custom_descriptor_sets = true;
+    } else {
+        m_descriptor_table.Unset();
+        m_has_custom_descriptor_sets = false;
+    }
+}
+
+void Pipeline<Platform::VULKAN>::SetShaderProgram(ShaderProgramRef<Platform::VULKAN> shader_program)
+{
+    m_shader_program = std::move(shader_program);
+}
+
 void Pipeline<Platform::VULKAN>::AssignDefaultDescriptorSets(DescriptorPool *descriptor_pool)
 {
     m_has_custom_descriptor_sets = false;

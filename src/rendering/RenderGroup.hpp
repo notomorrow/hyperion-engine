@@ -61,7 +61,7 @@ class RendererProxy
     RendererProxy &operator=(const RendererProxy &other) = delete;
 
 public:
-    CommandBuffer *GetCommandBuffer(uint frame_index);
+    const CommandBufferRef &GetCommandBuffer(uint frame_index) const;
     
     const GraphicsPipelineRef &GetGraphicsPipeline() const;
 
@@ -88,8 +88,9 @@ class RenderGroup
     friend class Entity;
     friend class RendererProxy;
     friend class RenderList;
-
 public:
+    using AsyncCommandBuffers = FixedArray<FixedArray<CommandBufferRef, num_async_rendering_command_buffers>, max_frames_in_flight>;
+    
     RenderGroup(
         Handle<Shader> &&shader,
         const RenderableAttributeSet &renderable_attributes
@@ -98,20 +99,21 @@ public:
     RenderGroup(
         Handle<Shader> &&shader,
         const RenderableAttributeSet &renderable_attributes,
-        const Array<DescriptorSetRef> &used_descriptor_sets
+        DescriptorTableRef descriptor_table
     );
 
     RenderGroup(const RenderGroup &other) = delete;
     RenderGroup &operator=(const RenderGroup &other) = delete;
     ~RenderGroup();
 
-    GraphicsPipelineRef &GetPipeline() { return m_pipeline; }
-    const GraphicsPipelineRef &GetPipeline() const { return m_pipeline; }
+    const GraphicsPipelineRef &GetPipeline() const
+        { return m_pipeline; }
 
-    Handle<Shader> &GetShader() { return m_shader; }
-    const Handle<Shader> &GetShader() const { return m_shader; }
+    const Handle<Shader> &GetShader() const
+        { return m_shader; }
     
-    const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
+    const RenderableAttributeSet &GetRenderableAttributes() const
+        { return m_renderable_attributes; }
 
     void AddFramebuffer(Handle<Framebuffer> &&fbo) { m_fbos.PushBack(std::move(fbo)); }
     void RemoveFramebuffer(ID<Framebuffer> id);
@@ -160,7 +162,7 @@ private:
 
     // for each frame in flight - have an array of command buffers to use
     // for async command buffer recording.
-    FixedArray<FixedArray<UniquePtr<CommandBuffer>, num_async_rendering_command_buffers>, max_frames_in_flight> m_command_buffers;
+    AsyncCommandBuffers m_command_buffers;
 
     // cache so we don't allocate every frame
     Array<Array<DrawCall>> m_divided_draw_calls;

@@ -6,28 +6,6 @@ namespace hyperion::v2 {
 
 using renderer::DynamicStorageBufferDescriptor;
 
-struct RENDER_COMMAND(CreateImmediateModeDescriptors) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateImmediateModeDescriptors)(FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets)
-        : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 DebugDrawer::DebugDrawer()
 {
     m_draw_commands.Reserve(256);
@@ -43,21 +21,9 @@ void DebugDrawer::Create()
     m_shapes[uint(DebugDrawShape::BOX)] = MeshBuilder::Cube();
     m_shapes[uint(DebugDrawShape::PLANE)] = MeshBuilder::Quad();
 
-    uint index = 0;
     for (auto &shape : m_shapes) {
-        DebugLog(LogType::Debug, "init object at %u\n", index++);
         AssertThrow(InitObject(shape));
     }
-
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_descriptor_sets[frame_index] = MakeRenderObject<renderer::DescriptorSet>();
-
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<DynamicStorageBufferDescriptor>(0)
-            ->SetElementBuffer<ImmediateDrawShaderData>(0, g_engine->GetRenderData()->immediate_draws.GetBuffer());
-    }
-
-    PUSH_RENDER_COMMAND(CreateImmediateModeDescriptors, m_descriptor_sets);
 
     m_shader = g_shader_manager->GetOrCreate(
         HYP_NAME(DebugAABB),
@@ -67,7 +33,21 @@ void DebugDrawer::Create()
         )
     );
 
-    InitObject(m_shader);
+    AssertThrow(InitObject(m_shader));
+
+    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    AssertThrow(descriptor_table != nullptr);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index);
+        AssertThrow(debug_drawer_descriptor_set != nullptr);
+
+        debug_drawer_descriptor_set->SetElement(HYP_NAME(ImmediateDrawsBuffer), g_engine->GetRenderData()->immediate_draws.GetBuffer());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     m_renderer_instance = g_engine->CreateRenderGroup(
         m_shader,
@@ -82,11 +62,7 @@ void DebugDrawer::Create()
                 .cull_faces = FaceCullMode::NONE
             }
         ),
-        Array<DescriptorSetRef> {
-            m_descriptor_sets[0],
-            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL),
-            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        }
+        std::move(descriptor_table)
     );
     
     if (m_renderer_instance) {
@@ -147,29 +123,42 @@ void DebugDrawer::Render(Frame *frame)
     RendererProxy proxy = m_renderer_instance->GetProxy();
     proxy.Bind(frame);
 
-    proxy.GetCommandBuffer(frame->GetFrameIndex())->BindDescriptorSets(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
+    const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DebugDrawerDescriptorSet));
+
+    proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->Bind<GraphicsPipelineRef>(
+        proxy.GetCommandBuffer(frame_index),
+        frame_index,
         proxy.GetGraphicsPipeline(),
-        FixedArray<DescriptorSet::Index, 2> { DescriptorSet::global_buffer_mapping[frame_index], DescriptorSet::scene_buffer_mapping[frame_index] },
-        FixedArray<DescriptorSet::Index, 2> { DescriptorSet::Index(1), DescriptorSet::Index(2) },
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Light, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+        {
+            {
+                HYP_NAME(DebugDrawerDescriptorSet),
+                {
+                    { HYP_NAME(ImmediateDrawsBuffer), HYP_RENDER_OBJECT_OFFSET(ImmediateDraw, 0) }
+                }
+            },
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
         }
     );
 
     for (SizeType index = 0; index < m_draw_commands.Size(); index++) {
         const DebugDrawCommand &draw_command = m_draw_commands[index];
 
-        proxy.GetCommandBuffer(frame_index)->BindDescriptorSet(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
+        proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index)->Bind(
+            proxy.GetCommandBuffer(frame_index),
             proxy.GetGraphicsPipeline(),
-            m_descriptor_sets[frame_index],
-            0,
-            FixedArray<uint32, 1> { uint32(index * sizeof(ImmediateDrawShaderData)) }
+            {
+                { HYP_NAME(ImmediateDrawsBuffer), HYP_RENDER_OBJECT_OFFSET(ImmediateDraw, index) }
+            },
+            debug_drawer_descriptor_set_index
         );
 
         proxy.DrawMesh(frame, m_shapes[uint(draw_command.shape)].Get());

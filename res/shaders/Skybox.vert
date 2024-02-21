@@ -16,10 +16,29 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
 HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 #include "include/scene.inc"
 
 #define HYP_INSTANCING
 #include "include/object.inc"
+
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+{
+    Object objects[HYP_MAX_ENTITIES];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) readonly buffer EntityInstanceBatchesBuffer
+{
+    EntityInstanceBatch entity_instance_batch;
+};
 
 void main()
 {

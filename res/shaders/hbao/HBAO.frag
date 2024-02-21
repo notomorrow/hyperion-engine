@@ -14,28 +14,26 @@ layout(location=0) out vec4 color_output;
 #include "../include/noise.inc"
 #include "../include/packing.inc"
 
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/scene.inc"
+#include "../include/gbuffer.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(set = 0, binding = 0) uniform texture2D gbuffer_albedo_texture;
-layout(set = 0, binding = 1) uniform texture2D gbuffer_normals_texture;
-layout(set = 0, binding = 2) uniform texture2D gbuffer_depth_texture;
-layout(set = 0, binding = 3) uniform texture2D gbuffer_velocity_texture;
-layout(set = 0, binding = 4) uniform texture2D gbuffer_material_texture;
-layout(set = 0, binding = 5) uniform sampler sampler_nearest;
-layout(set = 0, binding = 6) uniform sampler sampler_linear;
-
-layout(std140, set = 0, binding = 7, row_major) readonly buffer SceneBuffer
-{
-    Scene scene;
-};
-
-layout(std140, set = 0, binding = 8, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
 };
 
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+{
+    Scene scene;
+};
 
 layout(push_constant) uniform PushConstant
 {
@@ -44,7 +42,6 @@ layout(push_constant) uniform PushConstant
 };
 
 #include "../include/Temporal.glsl"
-
 
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
