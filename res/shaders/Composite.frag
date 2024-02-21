@@ -9,24 +9,33 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 
+HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, count = 4) uniform texture2D effects_pre_stack[4];
+HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, count = 4) uniform texture2D effects_post_stack[4];
+
+HYP_DESCRIPTOR_CBUFF(Global, PostProcessingUniforms, size = 32) uniform PostProcessingUniforms {
+    uvec2 effect_counts;
+    uvec2 last_enabled_indices;
+    uvec2 masks;
+    uvec2 _pad;
+} post_processing;
+
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "include/gbuffer.inc"
 #include "include/shared.inc"
 #include "include/tonemap.inc"
 #include "include/PostFXSample.inc"
-#include "include/rt/probe/probe_uniforms.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform image2D image_storage_test;
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 36) uniform texture2D depth_pyramid_result;
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 42) uniform texture2D ui_texture;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D hbao_gi;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 43) uniform texture2D motion_vectors_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 50) uniform texture2D temporal_aa_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 59) uniform texture2D reflection_probes_texture;
-// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 79) uniform texture2D dof_blur_blended;
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
+HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
+HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
+HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_result;
 
 layout(location=0) out vec4 out_color;
 
@@ -52,9 +61,9 @@ void main()
 #if defined(DEBUG_SSR)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0).rgb;
 #elif defined(DEBUG_HBAO)
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).aaa;
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi, v_texcoord0).aaa;
 #elif defined(DEBUG_HBIL)
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, hbao_gi, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi, v_texcoord0).rgb;
 
     // out_color.rgb = (Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb - vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr)) * 6.0;
 #endif
@@ -62,13 +71,13 @@ void main()
 
     out_color.rgb = Tonemap(out_color.rgb);
 
-    // blend in UI.
-    vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
+    // // blend in UI.
+    // vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
 
-    out_color = vec4(
-        (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
-        1.0
-    );
+    // out_color = vec4(
+    //     (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
+    //     1.0
+    // );
 
     out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
     

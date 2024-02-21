@@ -378,7 +378,7 @@ void Engine::Initialize(RC<Application> application)
         // placeholder rt probe system uniforms
         descriptor_set
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::RT_PROBE_UNIFORMS)
-            ->SetElementBuffer(0, GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(ProbeSystemUniforms)));
+            ->SetElementBuffer(0, GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(DDGIUniforms)));
 
         // placeholder rt probes irradiance image
         descriptor_set
@@ -713,34 +713,65 @@ void Engine::Initialize(RC<Application> application)
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 1, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 2, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostFXPostStack), 3, GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PostProcessingUniforms), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::CONSTANT_BUFFER, sizeof(PostProcessingUniforms), true /* exact size */));
 
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SSAOResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SSRResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(TAAResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(RTRadianceResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(EnvGridRadianceResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(ReflectionProbeResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        for (uint i = 0; i < max_bound_reflection_probes; i++) {
-            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(EnvProbeTextures), i, GetPlaceholderData()->GetImageViewCube1x1R8());
-        }
-
-        for (uint i = 0; i < max_bound_point_shadow_maps; i++) {
-            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(PointShadowMaps), i, GetPlaceholderData()->GetImageViewCube1x1R8());
-        }
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DeferredIndirectResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DeferredDirectResultTexture), GetPlaceholderData()->GetImageView2D1x1R8());
 
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DepthPyramidResult), GetPlaceholderData()->GetImageView2D1x1R8());
 
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SamplerNearest), GetPlaceholderData()->GetSamplerNearest());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(SamplerLinear), GetPlaceholderData()->GetSamplerLinear());
 
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DDGIUniforms), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::CONSTANT_BUFFER, sizeof(DDGIUniforms), true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DDGIIrradianceTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(DDGIDepthTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Global), frame_index)->SetElement(HYP_NAME(FinalOutputTexture), GetPlaceholderData()->GetImageView2D1x1R8());
+
         // Scene
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(ScenesBuffer), m_render_data->scenes.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(LightsBuffer), m_render_data->lights.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(ObjectsBuffer), m_render_data->objects.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(CamerasBuffer), m_render_data->cameras.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(EnvGridsBuffer), m_render_data->env_grids.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(EnvProbesBuffer), m_render_data->env_probes.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(CurrentEnvProbe), m_render_data->env_probes.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(ShadowMapsBuffer), m_render_data->shadow_map_data.GetBuffer());
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(SHGridBuffer), GetRenderData()->spherical_harmonics_grid.sh_grid_buffer);
+
+        for (uint shadow_map_index = 0; shadow_map_index < max_shadow_maps; shadow_map_index++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(ShadowMapTextures), shadow_map_index, GetPlaceholderData()->GetImageView2D1x1R8());
+        }
+
+        for (uint shadow_map_index = 0; shadow_map_index < max_bound_point_shadow_maps; shadow_map_index++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(PointLightShadowMapTextures), shadow_map_index, GetPlaceholderData()->GetImageViewCube1x1R8());
+        }
+
+        for (uint i = 0; i < max_bound_reflection_probes; i++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(EnvProbeTextures), i, GetPlaceholderData()->GetImageViewCube1x1R8());
+        }
+
+        m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Scene), frame_index)->SetElement(HYP_NAME(VoxelGridTexture), GetPlaceholderData()->GetImageView3D1x1x1R8());
 
         // Object
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(MaterialsBuffer), m_render_data->materials.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(SkeletonsBuffer), m_render_data->skeletons.GetBuffer());
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(EntityInstanceBatchesBuffer), m_render_data->entity_instance_batches.GetBuffer());
+
+        // Material
+        for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Material), frame_index)
+                ->SetElement(HYP_NAME(Textures), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
+        }
     }
 
     // m_global_descriptor_set_manager.Initialize(this);
@@ -1017,7 +1048,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
 Handle<RenderGroup> Engine::CreateRenderGroup(
     const Handle<Shader> &shader,
     const RenderableAttributeSet &renderable_attributes,
-    const Array<DescriptorSetRef> &used_descriptor_sets
+    DescriptorTableRef descriptor_table
 )
 {
     if (!shader) {
@@ -1038,7 +1069,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
     auto renderer_instance = CreateObject<RenderGroup>(
         Handle<Shader>(shader),
         new_renderable_attributes,
-        used_descriptor_sets
+        std::move(descriptor_table)
     );
 
     return renderer_instance;

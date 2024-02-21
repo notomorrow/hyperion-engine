@@ -13,20 +13,45 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 41) uniform texture2D ssao_gi_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 57) uniform texture2D env_grid_irradiance_texture;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 58) uniform texture2D env_grid_radiance_texture;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 59) uniform texture2D reflection_probes_texture;
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
+HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
+HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
+HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
+HYP_DESCRIPTOR_SRV(Global, EnvGridRadianceResultTexture) uniform texture2D env_grid_radiance_texture;
+HYP_DESCRIPTOR_SRV(Global, EnvGridIrradianceResultTexture) uniform texture2D env_grid_irradiance_texture;
+HYP_DESCRIPTOR_SRV(Global, ReflectionProbeResultTexture) uniform texture2D reflection_probes_texture;
 
 #include "include/env_probe.inc"
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer, size = 4352) uniform EnvGridsBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
+
 #include "include/gbuffer.inc"
 #include "include/material.inc"
-#include "include/PostFXSample.inc"
-#include "include/tonemap.inc"
 
 #include "include/scene.inc"
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+{
+    Scene scene;
+};
+
 #include "include/PhysicalCamera.inc"
 
 #define HYP_DEFERRED_NO_REFRACTION
@@ -38,26 +63,37 @@ vec2 texcoord = v_texcoord0;
 #define HYP_VCT_REFLECTIONS_ENABLED 1
 #define HYP_VCT_INDIRECT_ENABLED 1
 
+#include "include/rt/probe/probe_uniforms.inc"
+
+HYP_DESCRIPTOR_CBUFF(Global, DDGIUniforms, size = 256) uniform DDGIUniformBuffer
+{
+    DDGIUniforms probe_system;
+};
+
+HYP_DESCRIPTOR_SRV(Global, DDGIIrradianceTexture) uniform texture2D probe_irradiance;
+HYP_DESCRIPTOR_SRV(Global, DDGIDepthTexture) uniform texture2D probe_depth;
+#include "include/DDGI.inc"
+
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 layout(push_constant) uniform PushConstant
 {
     DeferredParams deferred_params;
 };
 
-#include "include/DDGI.inc"
-
 void main()
 {
-    vec4 albedo = SampleGBuffer(gbuffer_albedo_texture, texcoord);
-    uint mask = VEC4_TO_UINT(SampleGBuffer(gbuffer_mask_texture, texcoord));
-    vec4 normal = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 albedo = Texture2D(sampler_nearest, gbuffer_albedo_texture, texcoord);
+    uint mask = VEC4_TO_UINT(Texture2D(sampler_nearest, gbuffer_mask_texture, texcoord));
+    vec4 normal = vec4(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)), 1.0);
 
-    vec4 tangents_buffer = SampleGBuffer(gbuffer_tangents_texture, texcoord);
+    vec4 tangents_buffer = Texture2D(sampler_nearest, gbuffer_tangents_texture, texcoord);
 
     vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
     vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
-    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
-    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     bool perform_lighting = albedo.a > 0.0;
     

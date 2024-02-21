@@ -108,17 +108,4 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
 
-// RenderComponentName enum
-#define HYP_RENDER_COMPONENT_VCT 0
-#define HYP_RENDER_COMPONENT_SHADOWS 1
-#define HYP_RENDER_COMPONENT_CUBEMAP 2
-#define HYP_RENDER_COMPONENT_SVO 3
-#define HYP_RENDER_COMPONENT_UI 4
-#define HYP_RENDER_COMPONENT_ENV_GRID 5
-
-bool IsRenderComponentEnabled(uint name)
-{
-    return bool(scene.enabled_render_components_mask & (1 << name));
-}
-
 #endif

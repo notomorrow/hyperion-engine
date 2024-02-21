@@ -1,3 +1,6 @@
+#ifndef HYP_OBJECT_GLSL
+#define HYP_OBJECT_GLSL
+
 #include "defines.inc"
 
 #define ENTITY_GPU_FLAG_NONE         0x0
@@ -70,7 +73,11 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly
     {
         EntityInstanceBatch entity_instance_batch;
     };
-    
+#endif
+
+#endif
+
+#ifdef VERTEX_SHADER
     #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
     #define object (objects[OBJECT_INDEX])
 #elif defined(FRAGMENT_SHADER)

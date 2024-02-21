@@ -132,33 +132,28 @@ struct RENDER_COMMAND(CreateMipDescriptorSet) : renderer::RenderCommand
 
 struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
 {
-    ImageRef m_image;
-    ImageViewRef m_image_view;
-    Array<ImageViewRef> m_mip_image_views;
-    Array<DescriptorSetRef> m_descriptor_sets;
-    Array<RC<FullScreenPass>> m_passes;
+    ImageRef                    m_image;
+    ImageViewRef                m_image_view;
+    Array<ImageViewRef>         m_mip_image_views;
+    Array<RC<FullScreenPass>>   m_passes;
 
     RENDER_COMMAND(RenderTextureMipmapLevels)(
         ImageRef image,
         ImageViewRef image_view,
         Array<ImageViewRef> mip_image_views,
-        Array<DescriptorSetRef> descriptor_sets,
         Array<RC<FullScreenPass>> passes
     ) : m_image(std::move(image)),
         m_image_view(std::move(image_view)),
         m_mip_image_views(std::move(mip_image_views)),
-        m_descriptor_sets(std::move(descriptor_sets)),
         m_passes(std::move(passes))
     {
-        AssertThrow(m_image.IsValid());
-        AssertThrow(m_image_view.IsValid());
+        AssertThrow(m_image != nullptr);
+        AssertThrow(m_image_view != nullptr);
 
-        AssertThrow(m_descriptor_sets.Size() == m_mip_image_views.Size());
         AssertThrow(m_passes.Size() == m_mip_image_views.Size());
 
         for (SizeType index = 0; index < m_mip_image_views.Size(); index++) {
-            AssertThrow(m_mip_image_views[index].IsValid());
-            AssertThrow(m_descriptor_sets[index].IsValid());
+            AssertThrow(m_mip_image_views[index] != nullptr);
             AssertThrow(m_passes[index] != nullptr);
         }
     }
@@ -168,7 +163,8 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
         // draw a quad for each level
         auto commands = g_engine->GetGPUInstance()->GetSingleTimeCommands();
 
-        commands.Push([this](const CommandBufferRef &command_buffer) {
+        commands.Push([this](const CommandBufferRef &command_buffer)
+        {
             const Extent3D extent = m_image->GetExtent();
 
             uint32 mip_width = extent.width,
@@ -201,11 +197,11 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
 
                     pass->GetRenderGroup()->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
                     pass->Begin(&temp_frame);
-                    
-                    pass->GetCommandBuffer(temp_frame.GetFrameIndex())->BindDescriptorSet(
-                        g_engine->GetGPUInstance()->GetDescriptorPool(),
+
+                    pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable().Get()->Bind(
+                        &temp_frame,
                         pass->GetRenderGroup()->GetPipeline(),
-                        m_descriptor_sets[mip_level], 0
+                        { }
                     );
                     
                     pass->GetQuadMesh()->Render(pass->GetCommandBuffer(temp_frame.GetFrameIndex()));
@@ -290,62 +286,39 @@ public:
         const uint num_mip_levels = m_image->NumMipmaps();
 
         m_mip_image_views.Resize(num_mip_levels);
-        m_descriptor_sets.Resize(num_mip_levels);
         m_passes.Resize(num_mip_levels);
 
         const Extent3D extent = m_image->GetExtent();
 
+        Handle<Shader> shader = g_shader_manager->GetOrCreate(
+            HYP_NAME(GenerateMipmaps),
+            ShaderProperties()
+        );
+
+        AssertThrow(InitObject(shader));
+
         for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+            renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+            DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
             const uint32 mip_width = MathUtil::Max(1u, extent.width >> (mip_level));
             const uint32 mip_height = MathUtil::Max(1u, extent.height >> (mip_level));
 
             ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
-
             PUSH_RENDER_COMMAND(CreateMipImageView, m_image, mip_image_view, mip_level);
 
-            {
-                // create a descriptor set for the shader to use for this mip level
-                DescriptorSetRef descriptor_set = MakeRenderObject<DescriptorSet>();
-
-                // input image
-                if (mip_level == 0) {
-                    descriptor_set
-                        ->AddDescriptor<renderer::ImageDescriptor>(0)
-                        ->SetElementSRV(0, m_image_view.Get());
-                } else {
-                    descriptor_set
-                        ->AddDescriptor<renderer::ImageDescriptor>(0)
-                        ->SetElementSRV(0, m_mip_image_views[mip_level - 1].Get());
-                }
-
-                // linear sampler
-                descriptor_set
-                    ->AddDescriptor<renderer::SamplerDescriptor>(1)
-                    ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-                // nearest / point sampler
-                descriptor_set
-                    ->AddDescriptor<renderer::SamplerDescriptor>(2)
-                    ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-                PUSH_RENDER_COMMAND(CreateMipDescriptorSet, descriptor_set);
-
-                m_descriptor_sets[mip_level] = std::move(descriptor_set);
-            }
+            const DescriptorSet2Ref &generate_mipmaps_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapsDescriptorSet), 0);
+            AssertThrow(generate_mipmaps_descriptor_set != nullptr);
+            generate_mipmaps_descriptor_set->SetElement(HYP_NAME(InputTexture), mip_level == 0 ? m_image_view : m_mip_image_views[mip_level - 1]);
+            DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
             m_mip_image_views[mip_level] = std::move(mip_image_view);
 
             {
-                auto shader = g_shader_manager->GetOrCreate(
-                    HYP_NAME(GenerateMipmaps),
-                    ShaderProperties()
-                );
-
-                InitObject(shader);
-
                 RC<FullScreenPass> pass(new FullScreenPass(
                     shader,
-                    Array<DescriptorSetRef> { m_descriptor_sets.Front() },
+                    descriptor_table,
                     m_image->GetTextureFormat(),
                     Extent2D { mip_width, mip_height }
                 ));
@@ -368,7 +341,6 @@ public:
         SafeRelease(std::move(m_image));
         SafeRelease(std::move(m_image_view));
         SafeRelease(std::move(m_mip_image_views));
-        SafeRelease(std::move(m_descriptor_sets));
     }
 
     void Render()
@@ -378,7 +350,6 @@ public:
             m_image,
             m_image_view,
             m_mip_image_views,
-            m_descriptor_sets,
             m_passes
         );
 
@@ -386,11 +357,10 @@ public:
     }
 
 private:
-    ImageRef m_image;
-    ImageViewRef m_image_view;
-    Array<ImageViewRef> m_mip_image_views;
-    Array<DescriptorSetRef> m_descriptor_sets;
-    Array<RC<FullScreenPass>> m_passes;
+    ImageRef                    m_image;
+    ImageViewRef                m_image_view;
+    Array<ImageViewRef>         m_mip_image_views;
+    Array<RC<FullScreenPass>>   m_passes;
 };
 
 Texture::Texture()
@@ -439,7 +409,8 @@ Texture::Texture(
     m_filter_mode(filter_mode),
     m_wrap_mode(wrap_mode)
 {
-    AssertThrow(m_image.IsValid());
+    AssertThrow(m_image != nullptr);
+    AssertThrow(m_image_view != nullptr);
 }
 
 Texture::Texture(Texture &&other) noexcept

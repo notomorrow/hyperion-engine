@@ -56,6 +56,12 @@ struct RENDER_COMMAND(CreateRTRadianceDescriptorSets) : renderer::RenderCommand
                 &g_engine->GetGPUInstance()->GetDescriptorPool()
             ));
 
+
+            // @NOTE V2, remove v1 code below
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(RTRadianceResultTexture), image_views[frame_index]);
+
+
             // Add the final result to the global descriptor set
             DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
@@ -77,6 +83,11 @@ struct RENDER_COMMAND(RemoveRTRadianceDescriptors) : renderer::RenderCommand
 
         // remove result image from global descriptor set
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            // @NOTE V2, remove v1 code below
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(RTRadianceResultTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+
+
             DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
 

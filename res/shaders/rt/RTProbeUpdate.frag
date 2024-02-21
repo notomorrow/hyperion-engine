@@ -25,7 +25,7 @@
 shared ProbeRayData ray_cache[CACHE_SIZE];
 
 layout(std140, set = 0, binding = 9) uniform ProbeSystem {
-    ProbeSystemUniforms probe_system;
+    DDGIUniforms probe_system;
 };
 
 layout(std140, set = 0, binding = 10) buffer ProbeRayDataBuffer {

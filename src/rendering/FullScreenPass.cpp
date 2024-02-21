@@ -64,7 +64,7 @@ FullScreenPass::FullScreenPass(
 
 FullScreenPass::FullScreenPass(
     const Handle<Shader> &shader,
-    const Array<DescriptorSetRef> &used_descriptor_sets,
+    DescriptorTableRef descriptor_table,
     InternalFormat image_format,
     Extent2D extent
 ) : FullScreenPass(
@@ -75,7 +75,7 @@ FullScreenPass::FullScreenPass(
         extent
     )
 {
-    m_used_descriptor_sets.Set(used_descriptor_sets);
+    m_descriptor_table.Set(std::move(descriptor_table));
 }
 
 FullScreenPass::FullScreenPass(
@@ -185,11 +185,11 @@ void FullScreenPass::CreatePipeline()
 
 void FullScreenPass::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
 {
-    if (m_used_descriptor_sets.HasValue()) {
+    if (m_descriptor_table.HasValue()) {
         m_render_group = CreateObject<RenderGroup>(
             Handle<Shader>(m_shader),
             renderable_attributes,
-            m_used_descriptor_sets.Get()
+            m_descriptor_table.Get()
         );
     } else {
         m_render_group = CreateObject<RenderGroup>(
@@ -233,7 +233,7 @@ void FullScreenPass::Record(uint frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+    const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
     auto record_result = command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
@@ -243,58 +243,23 @@ void FullScreenPass::Record(uint frame_index)
             m_render_group->GetPipeline()->push_constants = m_push_constant_data;
             m_render_group->GetPipeline()->Bind(cmd);
 
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
+            m_render_group->GetPipeline()->GetDescriptorTable().Get()->Bind<GraphicsPipelineRef>(
+                cmd,
+                frame_index,
                 m_render_group->GetPipeline(),
-                DescriptorSet::global_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
-            );
-
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::scene_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                FixedArray {
-                    HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-                    HYP_RENDER_OBJECT_OFFSET(Light, 0),
-                    HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-                    HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()),
-                    HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+                {
+                    {
+                        HYP_NAME(Scene),
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        }
+                    }
                 }
             );
-            
-#if HYP_FEATURES_BINDLESS_TEXTURES
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::bindless_textures_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
-            );
-#else
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
-            );
-#endif
-
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
-            );
-            
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
-          //  if (!g_engine->GetGPUDevice()->GetFeatures().IsRaytracingDisabled()) {
-                cmd->BindDescriptorSet(
-                    g_engine->GetGPUInstance()->GetDescriptorPool(),
-                    m_render_group->GetPipeline(),
-                    DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING,
-                    DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING
-                );
-         //   }
-#endif
 
             m_full_screen_quad->Render(cmd);
 

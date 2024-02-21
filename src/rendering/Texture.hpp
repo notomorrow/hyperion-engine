@@ -63,24 +63,35 @@ public:
 
     ~Texture();
     
-    ImageRef &GetImage() { return m_image; }
-    const ImageRef &GetImage() const { return m_image; }
+    const ImageRef &GetImage() const
+        { return m_image; }
 
-    ImageViewRef &GetImageView() { return m_image_view; }
-    const ImageViewRef &GetImageView() const { return m_image_view; }
+    const ImageViewRef &GetImageView() const
+        { return m_image_view; }
 
-    ImageType GetType() const { return m_image->GetType(); }
+    ImageType GetType() const
+        { return m_image->GetType(); }
 
-    uint NumFaces() const { return m_image->NumFaces(); }
+    uint NumFaces() const
+        { return m_image->NumFaces(); }
 
-    bool IsTextureCube() const { return m_image->IsTextureCube(); }
-    bool IsPanorama() const { return m_image->IsPanorama(); }
+    bool IsTextureCube() const
+        { return m_image->IsTextureCube(); }
+    
+    bool IsPanorama() const
+        { return m_image->IsPanorama(); }
 
-    const Extent3D &GetExtent() const { return m_image->GetExtent(); }
+    const Extent3D &GetExtent() const
+        { return m_image->GetExtent(); }
 
-    InternalFormat GetFormat() const { return m_image->GetTextureFormat(); }
-    FilterMode GetFilterMode() const { return m_filter_mode; }
-    WrapMode GetWrapMode() const { return m_wrap_mode; }
+    InternalFormat GetFormat() const
+        { return m_image->GetTextureFormat(); }
+
+    FilterMode GetFilterMode() const
+        { return m_filter_mode; }
+
+    WrapMode GetWrapMode() const
+        { return m_wrap_mode; }
     
     void Init();
 

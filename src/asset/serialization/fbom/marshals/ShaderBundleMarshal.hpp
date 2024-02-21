@@ -19,6 +19,9 @@ public:
             return { FBOMResult::FBOM_ERR, "Cannot serialize invalid compiled shader instance" };
         }
 
+        // Set global descriptor table version - if this hashcode changes, the shader is invalid and must be recompiled
+        out.SetProperty("global_descriptor_table_version", FBOMUnsignedLong(), renderer::g_static_descriptor_table_decl->GetHashCode().Value());
+
         out.SetProperty("name", FBOMName(), in_object.GetDefinition().name);
 
         out.SetProperty("entry_point_name", FBOMString(in_object.entry_point_name.Size()), in_object.entry_point_name.Data());
@@ -135,6 +138,25 @@ public:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
     {
+        uint64 global_descriptor_table_version = -1;
+
+        if (auto err = in.GetProperty("global_descriptor_table_version").ReadUnsignedLong(&global_descriptor_table_version)) {
+            return err;
+        }
+
+        if (global_descriptor_table_version != renderer::g_static_descriptor_table_decl->GetHashCode().Value()) {
+            DebugLog(
+                LogType::Error,
+                "Failed to deserialize Shader instance: The global descriptor table version does not match.\n"
+                "\tExpected: %llu\n"
+                "\tActual: %llu\n",
+                renderer::g_static_descriptor_table_decl->GetHashCode().Value(),
+                global_descriptor_table_version
+            );
+
+            return { FBOMResult::FBOM_ERR, "Global descriptor table version mismatch" };
+        }
+
         auto compiled_shader = UniquePtr<CompiledShader>::Construct();
 
         Name name;

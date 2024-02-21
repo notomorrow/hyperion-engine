@@ -225,6 +225,33 @@ public:
 
     const Array<DescriptorSetDeclaration> &GetElements() const
         { return m_elements; }
+        
+    /*! \brief Get the index of a descriptor set in the table
+        \param name The name of the descriptor set
+        \return The index of the descriptor set in the table, or -1 if not found */
+    HYP_FORCE_INLINE
+    uint GetDescriptorSetIndex(Name name) const
+    {
+        for (const auto &it : m_elements) {
+            if (it.name == name) {
+                return it.set_index;
+            }
+        }
+
+        return -1;
+    }
+
+    HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (const auto &decl : m_elements) {
+            hc.Add(decl.GetHashCode());
+        }
+
+        return hc;
+    }
 
 private:
     Array<DescriptorSetDeclaration> m_elements;
@@ -545,6 +572,10 @@ public:
     const FixedArray<Array<DescriptorSet2Ref<PLATFORM>>, max_frames_in_flight> &GetSets() const
         { return m_sets; }
 
+    /*! \brief Get a descriptor set from the table
+        \param name The name of the descriptor set
+        \param frame_index The index of the frame for the descriptor set
+        \return The descriptor set, or an unset reference if not found */
     const DescriptorSet2Ref<PLATFORM> &GetDescriptorSet(Name name, uint frame_index) const
     {
         for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
@@ -556,6 +587,16 @@ public:
         return DescriptorSet2Ref<PLATFORM>::unset;
     }
 
+    /*! \brief Get the index of a descriptor set in the table
+        \param name The name of the descriptor set
+        \return The index of the descriptor set in the table, or -1 if not found */
+    HYP_FORCE_INLINE
+    uint GetDescriptorSetIndex(Name name) const
+        { return m_decl.GetDescriptorSetIndex(name); }
+
+    /*! \brief Create all descriptor sets in the table
+        \param device The device to create the descriptor sets on
+        \return The result of the operation */
     Result Create(Device<PLATFORM> *device)
     {
         Result result = Result::OK;
@@ -585,6 +626,9 @@ public:
         return result;
     }
 
+    /*! \brief Safely release all descriptor sets in the table
+        \param device The device to destroy the descriptor sets on
+        \return The result of the operation */
     Result Destroy(Device<PLATFORM> *device)
     {
         for (auto &it : m_sets) {
@@ -596,6 +640,10 @@ public:
         return Result::OK;
     }
 
+    /*! \brief Apply updates to all descriptor sets in the table
+        \param device The device to update the descriptor sets on
+        \param frame_index The index of the frame to update the descriptor sets for
+        \return The result of the operation */
     Result Update(Device<PLATFORM> *device, uint frame_index)
     {
         for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
@@ -619,58 +667,39 @@ public:
         return Result::OK;
     }
 
+    HYP_FORCE_INLINE
     void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets)
     {
-        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
-            const Name descriptor_set_name = set->GetLayout().GetName();
-
-            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
-            AssertThrow(decl != nullptr);
-
-            if (set->GetLayout().GetDynamicElements().Empty()) {
-                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
-
-                continue;
-            }
-
-            const auto offsets_it = offsets.Find(descriptor_set_name);
-            AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
-
-            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
-        }
+        Bind<GraphicsPipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
     }
 
+    HYP_FORCE_INLINE
     void Bind(Frame<PLATFORM> *frame, const ComputePipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets) const
     {
-        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
-            const Name descriptor_set_name = set->GetLayout().GetName();
-
-            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
-            AssertThrow(decl != nullptr);
-
-            if (set->GetLayout().GetDynamicElements().Empty()) {
-                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
-
-                continue;
-            }
-
-            const auto offsets_it = offsets.Find(descriptor_set_name);
-            AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
-
-            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
-        }
+        Bind<ComputePipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
     }
 
+    HYP_FORCE_INLINE
     void Bind(Frame<PLATFORM> *frame, const RaytracingPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets) const
     {
-        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame->GetFrameIndex()]) {
+        Bind<RaytracingPipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
+    }
+
+    /*! \brief Bind all descriptor sets in the table
+        \param command_buffer The command buffer to push the bind commands to
+        \param frame_index The index of the frame to bind the descriptor sets for
+        \param pipeline The pipeline to bind the descriptor sets to
+        \param offsets The offsets to bind dynamic descriptor sets with */
+    template <class PipelineRef>
+    void Bind(CommandBuffer<PLATFORM> *command_buffer, uint frame_index, const PipelineRef &pipeline, const ArrayMap<Name, ArrayMap<Name, uint>> &offsets) const
+    {
+        for (const DescriptorSet2Ref<PLATFORM> &set : m_sets[frame_index]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
 
-            DescriptorSetDeclaration *decl = m_decl.FindDescriptorSetDeclaration(descriptor_set_name);
-            AssertThrow(decl != nullptr);
+            const uint set_index = GetDescriptorSetIndex(descriptor_set_name);
 
             if (set->GetLayout().GetDynamicElements().Empty()) {
-                set->Bind(frame->GetCommandBuffer(), pipeline, decl->set_index);
+                set->Bind(command_buffer, pipeline, set_index);
 
                 continue;
             }
@@ -678,7 +707,7 @@ public:
             const auto offsets_it = offsets.Find(descriptor_set_name);
             AssertThrowMsg(offsets_it != offsets.End(), "No offsets given for descriptor set %s", descriptor_set_name.LookupString());
 
-            set->Bind(frame->GetCommandBuffer(), pipeline, offsets_it->second, decl->set_index);
+            set->Bind(command_buffer, pipeline, offsets_it->second, set_index);
         }
     }
 
@@ -690,6 +719,7 @@ private:
 } // namespace platform
 
 using DescriptorSet2 = platform::DescriptorSet2<Platform::CURRENT>;
+using DescriptorSetElement = platform::DescriptorSetElement<Platform::CURRENT>;
 using DescriptorSetLayout = platform::DescriptorSetLayout<Platform::CURRENT>;
 using DescriptorSetManager = platform::DescriptorSetManager<Platform::CURRENT>;
 using DescriptorTable = platform::DescriptorTable<Platform::CURRENT>;

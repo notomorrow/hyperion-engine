@@ -9,18 +9,18 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 
-#include "include/gbuffer.inc"
-#include "include/shared.inc"
-#include "include/PostFXSample.inc"
-#include "include/rt/probe/probe_uniforms.inc"
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 80) uniform texture2D src_image;
-
 layout(location=0) out vec4 out_color;
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "include/shared.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_SRV(Global, FinalOutputTexture) uniform texture2D src_image;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 void main()
 {
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
 
-    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, src_image, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(sampler_nearest, src_image, v_texcoord0).rgb;
 }

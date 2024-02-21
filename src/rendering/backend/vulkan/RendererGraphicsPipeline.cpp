@@ -143,11 +143,36 @@ void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *c
     SubmitPushConstants(cmd);
 }
 
+// V2 version
+Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info)
+{
+    m_construction_info = std::move(construction_info);
+
+    AssertThrow(m_shader_program != nullptr);
+    AssertThrow(!m_construction_info.fbos.Empty());
+
+    const uint32_t width = m_construction_info.fbos[0]->GetWidth();
+    const uint32_t height = m_construction_info.fbos[0]->GetHeight();
+
+    SetScissor(0, 0, width, height);
+    SetViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+
+    m_dynamic_states = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    static int x = 0;
+    DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
+
+    return Rebuild(device, nullptr);
+}
+
 Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
 {
     m_construction_info = std::move(construction_info);
 
-    AssertThrow(m_construction_info.shader != nullptr);
+    AssertThrow(m_shader_program != nullptr);
     AssertThrow(!m_construction_info.fbos.Empty());
 
     const uint32_t width = m_construction_info.fbos[0]->GetWidth();
@@ -313,28 +338,43 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    const auto used_layouts = GetDescriptorSetLayouts(device, descriptor_pool);
-    const auto max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    
+    Array<VkDescriptorSetLayout> used_layouts;
 
+    // If descriptor_pool is nullptr we use new v2 version (descriptor table)
+    if (descriptor_pool) {
+        const auto used_layouts_vector = GetDescriptorSetLayouts(device, descriptor_pool);
+        used_layouts.Resize(used_layouts_vector.size());
+
+        for (SizeType i = 0; i < used_layouts_vector.size(); i++) {
+            used_layouts[i] = used_layouts_vector[i];
+        }
+    } else {
+        AssertThrowMsg(m_descriptor_table.HasValue(), "No descriptor table set for pipeline");
+
+        used_layouts = GetDescriptorSetLayouts();
+    }
+    
     DebugLog(
         LogType::Debug,
-        "Using %llu descriptor set layouts in pipeline\n",
-        used_layouts.size()
+        "Using %llu descriptor set layouts in pipeline:\n",
+        used_layouts.Size()
     );
     
-    if (used_layouts.size() > max_set_layouts) {
+    if (used_layouts.Size() > max_set_layouts) {
         DebugLog(
             LogType::Debug,
             "Device max bound descriptor sets exceeded (%llu > %u)\n",
-            used_layouts.size(),
+            used_layouts.Size(),
             max_set_layouts
         );
 
         return Result{Result::RENDERER_ERR, "Device max bound descriptor sets exceeded"};
     }
 
-    layout_info.setLayoutCount = uint32(used_layouts.size());
-    layout_info.pSetLayouts = used_layouts.data();
+    layout_info.setLayoutCount = uint32(used_layouts.Size());
+    layout_info.pSetLayouts = used_layouts.Data();
 
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {
@@ -395,12 +435,12 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
         }
 
         depth_stencil.back.reference = m_construction_info.stencil_state.id;
-        depth_stencil.front          = depth_stencil.back;
+        depth_stencil.front = depth_stencil.back;
     }
 
     VkGraphicsPipelineCreateInfo pipeline_info { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
-    auto &stages = m_construction_info.shader->GetShaderStages();
+    auto &stages = m_shader_program->GetShaderStages();
     AssertThrowMsg(stages.Any(), "No shader stages found");
 
     pipeline_info.stageCount          = uint32(stages.Size());

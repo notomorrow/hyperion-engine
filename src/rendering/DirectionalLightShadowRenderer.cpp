@@ -19,32 +19,63 @@ using renderer::StorageImage2D;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(CreateShadowMapDescriptors) : renderer::RenderCommand
+struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderCommand
 {
-    SizeType shadow_map_index;
-    ImageViewRef shadow_map_image_view;
+    uint            shadow_map_index;
+    ImageViewRef    shadow_map_image_view;
 
-    RENDER_COMMAND(CreateShadowMapDescriptors)(
-        SizeType shadow_map_index,
-        const ImageViewRef &shadow_map_image_view
+    RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet)(
+        uint shadow_map_index,
+        ImageViewRef shadow_map_image_view
     ) : shadow_map_index(shadow_map_index),
-        shadow_map_image_view(shadow_map_image_view)
+        shadow_map_image_view(std::move(shadow_map_image_view))
     {
+        AssertThrow(this->shadow_map_image_view != nullptr);
     }
+
+    virtual ~RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet)() override = default;
 
     virtual Result operator()()
     {
-        for (uint i = 0; i < max_frames_in_flight; i++) {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            // @NOTE: V2, remove V1 code below when done
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                ->SetElement(HYP_NAME(ShadowMapTextures), shadow_map_index, shadow_map_image_view);
+
+
             DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::scene_buffer_mapping[i]);
+                .GetDescriptorSet(DescriptorSet::scene_buffer_mapping[frame_index]);
 
             auto *shadow_map_descriptor = descriptor_set
                 ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SHADOW_MAPS);
 
             shadow_map_descriptor->SetElementSRV(
-                uint(shadow_map_index),
+                shadow_map_index,
                 shadow_map_image_view
             );
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet) : renderer::RenderCommand
+{
+    uint    shadow_map_index;
+
+    RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet)(
+        uint shadow_map_index
+    ) : shadow_map_index(shadow_map_index)
+    {
+    }
+
+    virtual ~RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()()
+    {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                ->SetElement(HYP_NAME(ShadowMapTextures), shadow_map_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
         HYPERION_RETURN_OK;
@@ -140,9 +171,11 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
     {
     }
 
+    virtual ~RENDER_COMMAND(UpdateShadowMapRenderData)() override = default;
+
     virtual Result operator()() override
     {
-        ShadowShaderData data;
+        ShadowShaderData data { };
         data.projection = projection_matrix;
         data.view = view_matrix;
         data.aabb_max = Vector4(aabb.max, 1.0f);
@@ -263,7 +296,8 @@ void ShadowPass::CreateDescriptors()
 {
     AssertThrow(m_shadow_map_index != ~0u);
 
-    PUSH_RENDER_COMMAND(CreateShadowMapDescriptors, 
+    PUSH_RENDER_COMMAND(
+        SetShadowMapInGlobalDescriptorSet,
         m_shadow_map_index,
         m_shadow_map->GetImageView()
     );
@@ -343,6 +377,13 @@ void ShadowPass::Destroy()
     m_shadow_map.Reset();
 
     SafeRelease(std::move(m_blur_descriptor_sets));
+
+    if (m_shadow_map_index != ~0u) {
+        PUSH_RENDER_COMMAND(
+            UnsetShadowMapInGlobalDescriptorSet,
+            m_shadow_map_index
+        );
+    }
 
     FullScreenPass::Destroy(); // flushes render queue, releases command buffers...
 }

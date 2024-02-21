@@ -181,7 +181,7 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
         single_time_commands.Push([this](const CommandBufferRef &command_buffer) -> Result
         {
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                auto frame = Frame::TemporaryFrame(command_buffer, frame_index);
+                Frame frame = Frame::TemporaryFrame(command_buffer, frame_index);
 
                 if (!ResizeIndirectDrawCommandsBuffer(&frame, IndirectDrawState::initial_count, indirect_buffers[frame_index], staging_buffers[frame_index])) {
                     return { Result::RENDERER_ERR, "Failed to create indirect draw commands buffer!" };

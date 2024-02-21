@@ -30,7 +30,7 @@ layout(set = 0, binding = 18) uniform sampler sampler_linear;
 #include "../../include/rt/probe/probe_uniforms.inc"
 
 layout(std140, set = 0, binding = 9) uniform ProbeSystem {
-    ProbeSystemUniforms probe_system;
+    DDGIUniforms probe_system;
 };
 
 layout(set = 0, binding = 16) uniform texture2D shadow_maps[];

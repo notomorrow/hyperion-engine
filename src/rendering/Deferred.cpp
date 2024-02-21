@@ -150,36 +150,27 @@ void DeferredPass::Record(uint frame_index)
     auto record_result = command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
         m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
-        [this, frame_index](CommandBuffer *cmd) {
-            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
-            m_render_group->GetPipeline()->Bind(cmd);
-
+        [this, frame_index](CommandBuffer *cmd)
+        {
             const auto &scene_binding = g_engine->GetRenderState().GetScene();
 
             const uint scene_index = scene_binding.id.ToIndex();
             const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+            const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
 
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::global_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
-            );
-            
-#if HYP_FEATURES_BINDLESS_TEXTURES
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::bindless_textures_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
-            );
-#else
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
-            );
-#endif
+            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+
+            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
+            m_render_group->GetPipeline()->Bind(cmd);
+
+            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->Bind(
+                    cmd,
+                    m_render_group->GetPipeline(),
+                    { },
+                    global_descriptor_set_index
+                );
 
             // render with each light
             for (const auto &it : g_engine->GetRenderState().lights) {
@@ -202,19 +193,19 @@ void DeferredPass::Record(uint frame_index)
                         }
                     }
 
-                    cmd->BindDescriptorSet(
-                        g_engine->GetGPUInstance()->GetDescriptorPool(),
-                        m_render_group->GetPipeline(),
-                        DescriptorSet::scene_buffer_mapping[frame_index],
-                        DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                        FixedArray {
-                            HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                            HYP_RENDER_OBJECT_OFFSET(Light, light_id.ToIndex()),
-                            HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-                            HYP_RENDER_OBJECT_OFFSET(EnvProbe, shadow_probe_index),
-                            HYP_RENDER_OBJECT_OFFSET(Camera, camera_index)
-                        }
-                    );
+                    m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                        ->Bind(
+                            cmd,
+                            m_render_group->GetPipeline(),
+                            {
+                                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, light_id.ToIndex()) },
+                                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
+                                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, shadow_probe_index) }
+                            },
+                            scene_descriptor_set_index
+                        );
 
                     m_full_screen_quad->Render(cmd);
                 }
@@ -307,39 +298,43 @@ void EnvGridPass::Record(uint frame_index)
 {
     auto *command_buffer = m_command_buffers[frame_index].Get();
 
+    // TODO: Do for each env grid in view
     auto record_result = command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
         m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
         [this, frame_index](CommandBuffer *cmd)
         {
+            const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+            const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+            const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
+
+            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+
             m_render_group->GetPipeline()->push_constants = m_push_constant_data;
             m_render_group->GetPipeline()->Bind(cmd);
 
-            const auto &scene_binding = g_engine->render_state.GetScene();
-            const uint scene_index = scene_binding.id.ToIndex();
+            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->Bind(
+                    cmd,
+                    m_render_group->GetPipeline(),
+                    { },
+                    global_descriptor_set_index
+                );
 
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::global_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
-            );
-            
-            // TODO: Do for each env grid in view
-            
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::scene_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                FixedArray {
-                    HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                    HYP_RENDER_OBJECT_OFFSET(Light, 0),
-                    HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-                    HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0),
-                    HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
-                }
-            );
+            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                ->Bind(
+                    cmd,
+                    m_render_group->GetPipeline(),
+                    {
+                        { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                        { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                        { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                        { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
+                        { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    },
+                    scene_descriptor_set_index
+                );
 
             m_full_screen_quad->Render(cmd);
 
@@ -417,12 +412,16 @@ void ReflectionProbePass::Record(uint frame_index)
             const uint scene_index = scene_binding.id.ToIndex();
             const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
-            cmd->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
-                m_render_group->GetPipeline(),
-                DescriptorSet::global_buffer_mapping[frame_index],
-                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
-            );
+            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+
+            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->Bind(
+                    cmd,
+                    m_render_group->GetPipeline(),
+                    { },
+                    global_descriptor_set_index
+                );
             
             // Render each reflection probe
 
@@ -446,19 +445,19 @@ void ReflectionProbePass::Record(uint frame_index)
 
                 // TODO: Add visibility check so we skip probes that don't have any impact on the current view
 
-                cmd->BindDescriptorSet(
-                    g_engine->GetGPUInstance()->GetDescriptorPool(),
-                    m_render_group->GetPipeline(),
-                    DescriptorSet::scene_buffer_mapping[frame_index],
-                    DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                    FixedArray {
-                        HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                        HYP_RENDER_OBJECT_OFFSET(Light, 0),
-                        HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0),
-                        HYP_RENDER_OBJECT_OFFSET(EnvProbe, env_probe_id.ToIndex()),
-                        HYP_RENDER_OBJECT_OFFSET(Camera, camera_index)
-                    }
-                );
+                m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                    ->Bind(
+                        cmd,
+                        m_render_group->GetPipeline(),
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, env_probe_id.ToIndex()) }
+                        },
+                        scene_descriptor_set_index
+                    );
 
                 m_full_screen_quad->Render(cmd);
 
@@ -573,6 +572,21 @@ void DeferredRenderer::CreateDescriptorSets()
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(BlueNoiseBuffer), m_blue_noise_buffer);
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DeferredIndirectResultTexture), m_indirect_pass.GetAttachmentUsage(0)->GetImageView());
+
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DeferredDirectResultTexture), m_direct_pass.GetAttachmentUsage(0)->GetImageView());
         }
         
         DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
@@ -831,7 +845,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     }
     
     // Redirect indirect and direct lighting into the same framebuffer
-    Handle<Framebuffer> &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer();
+    const Handle<Framebuffer> &deferred_pass_framebuffer = m_indirect_pass.GetFramebuffer();
     
     m_post_processing.RenderPre(frame);
 
@@ -904,17 +918,21 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_combine_pass->GetRenderGroup()->GetPipeline()->SetPushConstants(&deferred_combine_constants, sizeof(deferred_combine_constants));
         m_combine_pass->Begin(frame);
 
-        m_combine_pass->GetCommandBuffer(frame_index)->BindDescriptorSets(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
+        m_combine_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable().Get()->Bind(
+            m_combine_pass->GetCommandBuffer(frame_index),
+            frame_index,
             m_combine_pass->GetRenderGroup()->GetPipeline(),
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::global_buffer_mapping[frame_index], DescriptorSet::scene_buffer_mapping[frame_index] },
-            FixedArray<DescriptorSet::Index, 2> { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-                HYP_RENDER_OBJECT_OFFSET(Light, 0),
-                HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()),
-                HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()),
-                HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+            {
+                {
+                    HYP_NAME(Scene),
+                    {
+                        { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                        { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                        { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                        { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                        { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                    }
+                }
             }
         );
 

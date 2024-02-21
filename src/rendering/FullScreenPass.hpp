@@ -15,6 +15,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <memory>
 #include <utility>
@@ -50,7 +51,7 @@ public:
 
     FullScreenPass(
         const Handle<Shader> &shader,
-        const Array<DescriptorSetRef> &used_descriptor_sets,
+        DescriptorTableRef descriptor_table,
         InternalFormat image_format = InternalFormat::RGB8_SRGB,
         Extent2D extent = Extent2D { 0, 0 }
     );
@@ -67,29 +68,31 @@ public:
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     virtual ~FullScreenPass();
 
-    AttachmentUsage *GetAttachmentUsage(uint attachment_index)
+    const AttachmentUsageRef &GetAttachmentUsage(uint attachment_index) const
         { return GetFramebuffer()->GetAttachmentUsages()[attachment_index]; }
 
     const Array<AttachmentRef> &GetAttachments() const
         { return m_attachments; }
     
-    CommandBuffer *GetCommandBuffer(uint index) const { return m_command_buffers[index].Get(); }
+    const CommandBufferRef &GetCommandBuffer(uint index) const
+        { return m_command_buffers[index]; }
 
-    Handle<Framebuffer> &GetFramebuffer() { return m_framebuffer; }
-    const Handle<Framebuffer> &GetFramebuffer() const { return m_framebuffer; }
+    const Handle<Framebuffer> &GetFramebuffer() const
+        { return m_framebuffer; }
                                                       
-    Handle<Shader> &GetShader() { return m_shader; }
-    const Handle<Shader> &GetShader() const { return m_shader; }
+    const Handle<Shader> &GetShader() const
+        { return m_shader; }
 
     void SetShader(const Handle<Shader> &shader);
 
-    Handle<Mesh> &GetQuadMesh() { return m_full_screen_quad; }
-    const Handle<Mesh> &GetQuadMesh() const { return m_full_screen_quad; }
+    const Handle<Mesh> &GetQuadMesh() const
+        { return m_full_screen_quad; }
 
-    Handle<RenderGroup> &GetRenderGroup() { return m_render_group; }
-    const Handle<RenderGroup> &GetRenderGroup() const { return m_render_group; }
+    const Handle<RenderGroup> &GetRenderGroup() const
+        { return m_render_group; }
 
-    uint GetSubDescriptorIndex() const { return m_sub_descriptor_index; }
+    uint GetSubDescriptorIndex() const
+        { return m_sub_descriptor_index; }
 
     PushConstantData &GetPushConstants()
         { return m_push_constant_data; }
@@ -145,7 +148,7 @@ protected:
     DescriptorKey                                       m_descriptor_key;
     uint                                                m_sub_descriptor_index;
 
-    Optional<Array<DescriptorSetRef>>                   m_used_descriptor_sets;
+    Optional<DescriptorTableRef>                        m_descriptor_table;
 };
 } // namespace hyperion::v2
 

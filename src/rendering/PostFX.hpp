@@ -1,11 +1,12 @@
 #ifndef HYPERION_V2_POST_FX_H
 #define HYPERION_V2_POST_FX_H
 
-#include "Framebuffer.hpp"
-#include "Shader.hpp"
-#include "RenderGroup.hpp"
-#include "Mesh.hpp"
-#include "FullScreenPass.hpp"
+#include <rendering/Framebuffer.hpp>
+#include <rendering/Shader.hpp>
+#include <rendering/RenderGroup.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/FullScreenPass.hpp>
+#include <rendering/Buffers.hpp>
 
 #include <core/lib/TypeMap.hpp>
 #include <core/ThreadSafeContainer.hpp>
@@ -30,13 +31,6 @@ using renderer::DescriptorSet;
 using renderer::ShaderVec2;
 
 class Engine;
-
-struct alignas(16) PostProcessingUniforms
-{
-    ShaderVec2<uint32> effect_counts; // pre, post
-    ShaderVec2<uint32> last_enabled_indices; // pre, post
-    ShaderVec2<uint32> masks; // pre, post
-};
 
 class PostFXPass : public FullScreenPass
 {

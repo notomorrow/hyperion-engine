@@ -78,6 +78,11 @@ void FinalPass::Create()
     m_composite_pass.Create();
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        // @NOTE: V2, remove v1 code below when done
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(FinalOutputTexture), m_composite_pass.GetAttachmentUsage(0)->GetImageView());
+
+
         g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index])
             ->AddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::FINAL_OUTPUT)
             ->SetElementSRV(0, m_composite_pass.GetAttachmentUsage(0)->GetImageView());
@@ -227,28 +232,11 @@ void FinalPass::Render(Frame *frame)
     
     pipeline->Bind(frame->GetCommandBuffer());
 
-    g_engine->GetGPUInstance()->GetDescriptorPool().Bind(
-        g_engine->GetGPUDevice(),
-        frame->GetCommandBuffer(),
+    pipeline->GetDescriptorTable().Get()->Bind(
+        frame,
         pipeline,
-        {
-            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-        }
+        { }
     );
-
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
-    /* TMP */
-    g_engine->GetGPUInstance()->GetDescriptorPool().Bind(
-        g_engine->GetGPUDevice(),
-        frame->GetCommandBuffer(),
-        pipeline,
-        {{
-            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING,
-            .count = 1
-        }}
-    );
-#endif
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
     m_quad->Render(frame->GetCommandBuffer());

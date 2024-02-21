@@ -23,13 +23,13 @@ struct RENDER_COMMAND(UpdateMaterialRenderData) : renderer::RenderCommand
     ID<Material> id;
     MaterialShaderData shader_data;
     SizeType num_bound_textures;
-    FixedArray<ID<Texture>, MaterialShaderData::max_bound_textures> bound_texture_ids;
+    FixedArray<ID<Texture>, max_bound_textures> bound_texture_ids;
 
     RENDER_COMMAND(UpdateMaterialRenderData)(
         ID<Material> id,
         const MaterialShaderData &shader_data,
         SizeType num_bound_textures,
-        FixedArray<ID<Texture>, MaterialShaderData::max_bound_textures> &&bound_texture_ids
+        FixedArray<ID<Texture>, max_bound_textures> &&bound_texture_ids
     ) : id(id),
         shader_data(shader_data),
         num_bound_textures(num_bound_textures),
@@ -410,7 +410,7 @@ void Material::EnqueueRenderUpdates()
 {
     AssertReady();
     
-    FixedArray<ID<Texture>, MaterialShaderData::max_bound_textures> bound_texture_ids { };
+    FixedArray<ID<Texture>, max_bound_textures> bound_texture_ids { };
 
     const uint num_bound_textures = max_textures_to_set;
     
@@ -712,7 +712,7 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
 
 const DescriptorSet2Ref &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> material, uint frame_index) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
 
     auto it = m_material_descriptor_sets.Find(material);
 
@@ -732,12 +732,19 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material)
     
     renderer::DescriptorSetLayout layout(*declaration);
 
+    FixedArray<DescriptorSet2Ref, max_frames_in_flight> descriptor_sets;
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        descriptor_sets[frame_index] = MakeRenderObject<renderer::DescriptorSet2>(layout);
+
+        for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+            descriptor_sets[frame_index]->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+        }
+    }
+
     m_pending_addition.PushBack({
         material,
-        {
-            MakeRenderObject<renderer::DescriptorSet2>(layout),
-            MakeRenderObject<renderer::DescriptorSet2>(layout)
-        }
+        std::move(descriptor_sets)
     });
 
     m_has_updates_pending.Set(true, MemoryOrder::RELAXED);

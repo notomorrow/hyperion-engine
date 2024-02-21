@@ -9,25 +9,68 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 texcoord;
 layout(location=0) out vec4 color_output;
 
-// #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
+HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
+HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
+HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
+HYP_DESCRIPTOR_SRV(Global, DeferredIndirectResultTexture) uniform texture2D deferred_indirect_lighting;
+HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferred_direct_lighting;
+
 #include "../include/shared.inc"
 #include "../include/defines.inc"
 #include "../include/gbuffer.inc"
-#include "../include/scene.inc"
-#include "../include/brdf.inc"
-#include "../include/env_probe.inc"
-// #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 45) uniform texture2D rt_radiance_final;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 39) uniform texture2D ssr_result;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 55) uniform texture2D deferred_indirect_lighting;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 56) uniform texture2D deferred_direct_lighting;
+#include "../include/scene.inc"
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+{
+    Scene scene;
+};
+
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
+{
+    ShadowMap shadow_map_data[16];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, LightsBuffer, size = 64) readonly buffer LightsBuffer
+{
+    Light light;
+};
+
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+
+#include "../include/brdf.inc"
+
+#include "../include/env_probe.inc"
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer, size = 4352) uniform EnvGridsBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
+
 
 #include "./DeferredLighting.glsl"
 #include "../include/shadows.inc"
 
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 // #define HYP_DEFERRED_NO_ENV_PROBE // temp
+
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 layout(push_constant) uniform DeferredCombineData
 {
