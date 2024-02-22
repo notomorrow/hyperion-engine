@@ -8,9 +8,10 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 #include "../include/shared.inc"
 
-layout(set = 0, binding = 0) uniform texture3D mip_in;
-layout(set = 0, binding = 1, rgba8) uniform writeonly image3D mip_out;
-layout(set = 0, binding = 2) uniform sampler voxel_map_sampler;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler voxel_map_sampler;
+
+HYP_DESCRIPTOR_SRV(GenerateMipmapDescriptorSet, InputTexture) uniform texture3D mip_in;
+HYP_DESCRIPTOR_UAV(GenerateMipmapDescriptorSet, OutputTexture, format = rgba8) uniform writeonly image3D mip_out;
 
 layout(push_constant) uniform VoxelMipData
 {

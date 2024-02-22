@@ -281,17 +281,17 @@ void EnvGridPass::Create()
 
     FullScreenPass::CreatePipeline(renderable_attributes);
 
-    if (m_mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
-        m_temporal_blending.Reset(new TemporalBlending(
-            m_framebuffer->GetExtent(),
-            InternalFormat::RGBA8,
-            TemporalBlendTechnique::TECHNIQUE_1,
-            TemporalBlendFeedback::LOW,
-            m_framebuffer
-        ));
+    // if (m_mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
+    //     m_temporal_blending.Reset(new TemporalBlending(
+    //         m_framebuffer->GetExtent(),
+    //         InternalFormat::RGBA16F,
+    //         TemporalBlendTechnique::TECHNIQUE_1,
+    //         TemporalBlendFeedback::LOW,
+    //         m_framebuffer
+    //     ));
         
-        m_temporal_blending->Create();
-    }
+    //     m_temporal_blending->Create();
+    // }
 }
 
 void EnvGridPass::Record(uint frame_index)

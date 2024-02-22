@@ -153,8 +153,8 @@ private:
 
     void ComputeSH(
         Frame *frame,
-        const Image *image,
-        const ImageView *image_view,
+        const ImageRef &image,
+        const ImageViewRef &image_view,
         uint32 probe_index
     );
 
@@ -191,22 +191,21 @@ private:
 
     AtomicVar<EnvGridFlags> m_flags;
 
-    Handle<ComputePipeline> m_compute_sh;
-    Handle<ComputePipeline> m_clear_sh;
-    Handle<ComputePipeline> m_finalize_sh;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_compute_sh_descriptor_sets;
+    ComputePipelineRef m_clear_sh;
+    ComputePipelineRef m_compute_sh;
+    ComputePipelineRef m_finalize_sh;
+    DescriptorTableRef m_compute_sh_descriptor_table;
     GPUBufferRef m_sh_tiles_buffer;
 
     ComputePipelineRef m_clear_voxels;
     ComputePipelineRef m_voxelize_probe;
     ComputePipelineRef m_offset_voxel_grid;
-    Handle<ComputePipeline> m_generate_voxel_grid_mipmaps;
+    ComputePipelineRef m_generate_voxel_grid_mipmaps;
     
     Handle<Texture> m_voxel_grid_texture;
 
     Array<ImageViewRef> m_voxel_grid_mips;
-    FixedArray<DescriptorSet2Ref, max_frames_in_flight> m_voxelize_probe_descriptor_sets;
-    Array<DescriptorSetRef> m_generate_voxel_grid_mipmaps_descriptor_sets;
+    Array<DescriptorTableRef> m_generate_voxel_grid_mipmaps_descriptor_tables;
 
     Queue<uint> m_next_render_indices;
 };
