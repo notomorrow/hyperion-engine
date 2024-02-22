@@ -531,6 +531,7 @@ public:
 template <class ...Types>
 struct Variant
     : private ConstructAssignmentTraits<
+        true,
         containers::detail::VariantHelper<Types...>::copy_constructible,
         containers::detail::VariantHelper<Types...>::move_constructible,
         Variant<Types...>

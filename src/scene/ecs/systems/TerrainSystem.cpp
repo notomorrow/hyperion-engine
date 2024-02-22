@@ -83,14 +83,14 @@ public:
 };
 
 const FixedArray<Pair<int, int>, 8> TerrainErosion::offsets {
-    Pair { 1, 0 },
-    Pair { 1, 1 },
-    Pair { 1, -1 },
-    Pair { 0, 1 },
-    Pair { 0, -1 },
-    Pair { -1, 0 },
-    Pair { -1, 1 },
-    Pair { -1, -1 }
+    Pair<int, int> { 1, 0 },
+    Pair<int, int> { 1, 1 },
+    Pair<int, int> { 1, -1 },
+    Pair<int, int> { 0, 1 },
+    Pair<int, int> { 0, -1 },
+    Pair<int, int> { -1, 0 },
+    Pair<int, int> { -1, 1 },
+    Pair<int, int> { -1, -1 }
 };
 
 void TerrainErosion::Erode(TerrainHeightData &height_data)

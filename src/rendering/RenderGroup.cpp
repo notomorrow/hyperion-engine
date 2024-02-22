@@ -376,17 +376,12 @@ static void BindGlobalDescriptorSets(
         );
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
-#error Not implemented yet
-    /* Bindless textures */
-    g_engine->GetGPUInstance()->GetDescriptorPool().Bind(
-        g_engine->GetGPUDevice(),
-        command_buffer,
-        pipeline,
-        {
-            {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
-        }
-    );
+    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
+
+    if (material_descriptor_set_index != ~0u) {
+        g_engine->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
+            ->Bind(command_buffer, pipeline, material_descriptor_set_index);
+    }
 #endif
 }
 
@@ -402,7 +397,6 @@ static void BindPerObjectDescriptorSets(
     const uint frame_index = frame->GetFrameIndex();
 
     const uint entity_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Object));
-    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
 
 #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
     if (entity_descriptor_set_index != ~0u) {
@@ -433,9 +427,9 @@ static void BindPerObjectDescriptorSets(
     }
 #endif
 
-#if HYP_FEATURES_BINDLESS_TEXTURES
-#error Not yet implemented
-#else
+#if !HYP_FEATURES_BINDLESS_TEXTURES
+    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
+
     if (material_descriptor_set_index != ~0u) {
         g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
             ->Bind(command_buffer, pipeline, material_descriptor_set_index);

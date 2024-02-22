@@ -23,32 +23,34 @@ const FixedArray<std::pair<Vector3, Vector3>, 6> Texture::cubemap_directions = {
 
 struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
 {
-    Texture                 *texture;
+    ID<Texture>             id;
     renderer::ResourceState initial_state;
     ImageRef                image;
     ImageViewRef            image_view;
 
     RENDER_COMMAND(CreateTexture)(
-        Texture *texture,
+        ID<Texture> id,
         renderer::ResourceState initial_state,
-        const ImageRef &image,
-        const ImageViewRef &image_view
-    ) : texture(texture),
+        ImageRef image,
+        ImageViewRef image_view
+    ) : id(id),
         initial_state(initial_state),
-        image(image),
-        image_view(image_view)
+        image(std::move(image)),
+        image_view(std::move(image_view))
     {
-        AssertThrow(image.IsValid());
-        AssertThrow(image_view.IsValid());
+        AssertThrow(this->image.IsValid());
+        AssertThrow(this->image_view.IsValid());
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateTexture)() override = default;
+
+    virtual Result operator()() override
     {
         HYPERION_BUBBLE_ERRORS(image->Create(g_engine->GetGPUDevice(), g_engine->GetGPUInstance(), initial_state));
         HYPERION_BUBBLE_ERRORS(image_view->Create(g_engine->GetGPUInstance()->GetDevice(), image.Get()));
         
         if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
-            g_engine->GetRenderData()->textures.AddResource(texture);
+            g_engine->GetRenderData()->textures.AddResource(id, image_view);
         }
 
         HYPERION_RETURN_OK;
@@ -71,14 +73,13 @@ struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(DestroyTexture)() override = default;
+
+    virtual Result operator()() override
     {
         if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
             g_engine->GetRenderData()->textures.RemoveResource(id);
         }
-
-        SafeRelease(std::move(image));
-        SafeRelease(std::move(image_view));
 
         HYPERION_RETURN_OK;
     }
@@ -424,7 +425,8 @@ Texture::Texture(Texture &&other) noexcept
 
 Texture::~Texture()
 {
-    SetReady(false);
+    SafeRelease(std::move(m_image));
+    SafeRelease(std::move(m_image_view));
 
     if (IsInitCalled()) {
         PUSH_RENDER_COMMAND(
@@ -446,7 +448,7 @@ void Texture::Init()
 
     PUSH_RENDER_COMMAND(
         CreateTexture,
-        this,
+        m_id,
         renderer::ResourceState::SHADER_RESOURCE,
         m_image,
         m_image_view

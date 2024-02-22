@@ -94,27 +94,21 @@ struct EnumMapIterator
     bool operator!=(const EnumMapIterator &other) const
         { return !(*this == other); }
 
-    std::pair<EnumType, ValueType &> operator*()
+    HYP_FORCE_INLINE
+    Pair<EnumType, ValueType &> operator*()
     {
-        return std::make_pair<EnumType, ValueType &>(
-            EnumType(OrdinalToEnum(index)),
-            ref[index]
-        );
+        return { EnumType(OrdinalToEnum(index)), ref[index] };
     }
 
-    std::pair<EnumType, ValueType> operator*() const
+    HYP_FORCE_INLINE
+    Pair<EnumType, const ValueType &> operator*() const
     {
-        return std::make_pair<EnumType, ValueType>(
-            EnumType(OrdinalToEnum(index)),
-            ref[index]
-        );
+        return { EnumType(OrdinalToEnum(index)), ref[index] };
     }
 
-    std::pair<EnumType, ValueType &> operator->()
-        { return (*this).operator*(); }
-
-    std::pair<EnumType, ValueType> operator->() const
-        { return (*this).operator*(); }
+    HYP_FORCE_INLINE
+    ValueType *operator->() const
+        { return &ref[index]; }
 };
 
 } // namespace detail
