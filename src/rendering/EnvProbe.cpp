@@ -104,25 +104,6 @@ struct RENDER_COMMAND(CreateSHData) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateComputeSHDescriptorSets) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateComputeSHDescriptorSets)(const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets)
-        : descriptor_sets(descriptor_sets)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (auto &descriptor_set : descriptor_sets) {
-            HYPERION_BUBBLE_ERRORS(descriptor_set->Create(g_engine->GetGPUDevice(), &g_engine->GetGPUInstance()->GetDescriptorPool()));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 #pragma endregion
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb)

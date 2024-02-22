@@ -114,7 +114,6 @@ private:
 
     IndirectDrawState                                   m_indirect_draw_state;
     ComputePipelineRef                                  m_object_visibility;
-    FixedArray<DescriptorSetRef, max_frames_in_flight>  m_descriptor_sets;
     CullData                                            m_cached_cull_data;
     uint8                                               m_cached_cull_data_updated_bits;
 };

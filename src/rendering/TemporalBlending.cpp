@@ -36,32 +36,6 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : renderer::RenderComm
     }
 };
 
-struct RENDER_COMMAND(CreateTemporalBlendingDescriptors) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateTemporalBlendingDescriptors)(const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets)
-        : descriptor_sets(descriptor_sets)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef &descriptor_set = descriptor_sets[frame_index];
-            AssertThrow(descriptor_set.IsValid());
-                
-            HYPERION_ASSERT_RESULT(descriptor_set->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
     TemporalBlendTechnique technique,
@@ -234,8 +208,6 @@ void TemporalBlending::CreateDescriptorSets()
         m_descriptor_table,
         g_engine->GetGPUDevice()
     );
-
-    // PUSH_RENDER_COMMAND(CreateTemporalBlendingDescriptors, m_descriptor_sets);
 }
 
 void TemporalBlending::CreateComputePipelines()

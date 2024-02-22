@@ -12,6 +12,50 @@ using renderer::ImageDescriptor;
 using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
 
+
+#pragma region Render commands
+
+struct RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet) : renderer::RenderCommand
+{
+    ImageViewRef    depth_pyramid_image_view;
+
+    RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet)(
+        ImageViewRef depth_pyramid_image_view
+    ) : depth_pyramid_image_view(std::move(depth_pyramid_image_view))
+    {
+        AssertThrow(this->depth_pyramid_image_view != nullptr);
+    }
+
+    virtual ~RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()() override
+    {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DepthPyramidResult), depth_pyramid_image_view);
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet) : renderer::RenderCommand
+{
+    virtual ~RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()() override
+    {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                ->SetElement(HYP_NAME(DepthPyramidResult), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+#pragma endregion
+
 DepthPyramidRenderer::DepthPyramidRenderer()
     : m_is_rendered(false)
 {
@@ -108,12 +152,18 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 
     // use the first mip descriptor table to create the compute pipeline, since the descriptor set layout is the same for all mip levels
     m_generate_depth_pyramid = MakeRenderObject<renderer::ComputePipeline>(shader->GetShaderProgram(), m_mip_descriptor_tables.Front());
-
     DeferCreate(m_generate_depth_pyramid, g_engine->GetGPUDevice());
+
+    PUSH_RENDER_COMMAND(
+        SetDepthPyramidInGlobalDescriptorSet,
+        m_depth_pyramid_view
+    );
 }
 
 void DepthPyramidRenderer::Destroy()
 {
+    PUSH_RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet);
+
     SafeRelease(std::move(m_depth_pyramid));
     SafeRelease(std::move(m_depth_pyramid_view));
     SafeRelease(std::move(m_depth_pyramid_mips));

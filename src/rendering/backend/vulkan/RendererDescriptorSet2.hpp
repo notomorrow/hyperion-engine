@@ -123,15 +123,17 @@ private:
                     name.LookupString()
                 );
 
-                const uint remainder = ref->size % layout_element->size;
+                if (layout_element->size != 0 && layout_element->size != ~0u) {
+                    const uint remainder = ref->size % layout_element->size;
 
-                AssertThrowMsg(
-                    remainder == 0,
-                    "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
-                    ref->size,
-                    layout_element->size,
-                    name.LookupString()
-                );
+                    AssertThrowMsg(
+                        remainder == 0,
+                        "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
+                        ref->size,
+                        layout_element->size,
+                        name.LookupString()
+                    );
+                }
             }
         }
 

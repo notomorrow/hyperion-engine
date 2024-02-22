@@ -335,6 +335,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
             }
 
             if (value_it->second.Is<GPUBufferRef<Platform::VULKAN>>()) {
+                const bool layout_has_size = layout_element->size != 0 && layout_element->size != uint(-1);
+
                 const bool is_dynamic = layout_element->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
                     || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
@@ -346,11 +348,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 }
 
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
-                    ref->buffer,
-                    0,
-                    layout_element->size == 0
-                        ? ref->size
-                        : layout_element->size
+                    .buffer = ref->buffer,
+                    .offset = 0,
+                    .range  = layout_has_size ? layout_element->size : ref->size
                 };
             } else if (value_it->second.Is<ImageViewRef<Platform::VULKAN>>()) {
                 const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
@@ -361,11 +361,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 AssertThrowMsg(ref->GetImageView() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s, texture index %u\tImageViewRef index %u", name.LookupString(), i, ref.index);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
-                    VK_NULL_HANDLE,
-                    ref->GetImageView(),
-                    is_storage_image
-                        ? VK_IMAGE_LAYOUT_GENERAL
-                        : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    .sampler        = VK_NULL_HANDLE,
+                    .imageView      = ref->GetImageView(),
+                    .imageLayout    = is_storage_image ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 };
             } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
@@ -374,9 +372,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 AssertThrowMsg(ref->GetSampler() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s, index %u", name.LookupString(), i);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
-                    ref->GetSampler(),
-                    VK_NULL_HANDLE,
-                    VK_IMAGE_LAYOUT_UNDEFINED
+                    .sampler        = ref->GetSampler(),
+                    .imageView      = VK_NULL_HANDLE,
+                    .imageLayout    = VK_IMAGE_LAYOUT_UNDEFINED
                 };
             } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
                 const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
@@ -385,10 +383,10 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 AssertThrowMsg(ref->GetAccelerationStructure() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s, index %u", name.LookupString(), i);
 
                 descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
-                    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
-                    nullptr,
-                    1,
-                    &ref->GetAccelerationStructure()
+                    .sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+                    .pNext                      = nullptr,
+                    .accelerationStructureCount = 1,
+                    .pAccelerationStructures    = &ref->GetAccelerationStructure()
                 };
             } else {
                 AssertThrowMsg(false, "Unhandled descriptor set element type: %d", int(layout_element->type));

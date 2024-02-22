@@ -353,78 +353,38 @@ IndirectRenderer::~IndirectRenderer() = default;
 
 void IndirectRenderer::Create()
 {
-    // Threads::AssertOnThread(THREAD_RENDER);
-
     m_indirect_draw_state.Create();
-
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>();
-
-        // global object data
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-            ->SetElementBuffer(g_engine->GetRenderData()->objects.GetBuffer());
-
-        // global scene data
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
-            ->SetElementBuffer<SceneShaderData>(g_engine->GetRenderData()->scenes.GetBuffer());
-
-        // current camera
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(2)
-            ->SetElementBuffer<CameraShaderData>(g_engine->GetRenderData()->cameras.GetBuffer());
-
-        // instances buffer
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
-            ->SetElementBuffer(m_indirect_draw_state.GetInstanceBuffer(frame_index));
-
-        // indirect commands
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(4)
-            ->SetElementBuffer(m_indirect_draw_state.GetIndirectBuffer(frame_index));
-
-        // entity batches
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(5)
-            ->SetElementBuffer(g_engine->GetRenderData()->entity_instance_batches.GetBuffer());
-
-        // depth pyramid image (set to placeholder)
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(6)
-            ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-
-        // sampler
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(7)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        // HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
-        //     g_engine->GetGPUDevice(),
-        //     &g_engine->GetGPUInstance()->GetDescriptorPool()
-        // ));
-
-        DeferCreate(
-            m_descriptor_sets[frame_index],
-            g_engine->GetGPUDevice(),
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
-        );
-    }
 
     Handle<Shader> object_visibility_shader = g_shader_manager->GetOrCreate(HYP_NAME(ObjectVisibility));
     AssertThrow(object_visibility_shader.IsValid());
 
+    renderer::DescriptorTableDeclaration descriptor_table_decl = object_visibility_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(ObjectInstancesBuffer), m_indirect_draw_state.GetInstanceBuffer(frame_index));
+        descriptor_set->SetElement(HYP_NAME(IndirectDrawCommandsBuffer), m_indirect_draw_state.GetIndirectBuffer(frame_index));
+        descriptor_set->SetElement(HYP_NAME(EntityInstanceBatchesBuffer), g_engine->GetRenderData()->entity_instance_batches.GetBuffer());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
     m_object_visibility = MakeRenderObject<renderer::ComputePipeline>(
         object_visibility_shader->GetShaderProgram(),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+        descriptor_table
     );
     
     // use DeferCreate because our Shader might not be ready yet
-    DeferCreate(
-        m_object_visibility,
-        g_engine->GetGPUDevice(),
-        &g_engine->GetGPUInstance()->GetDescriptorPool()
-    );
+    DeferCreate(m_object_visibility, g_engine->GetGPUDevice());
 }
 
 void IndirectRenderer::Destroy()
 {
-    m_object_visibility.Reset();
-    
-    SafeRelease(std::move(m_descriptor_sets));
+    SafeRelease(std::move(m_object_visibility));
 
     m_indirect_draw_state.Destroy();
 }
@@ -460,27 +420,32 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
         m_cached_cull_data_updated_bits = 0xFF;
     }
 
-    if (m_cached_cull_data_updated_bits & (1u << frame_index)) {
-        m_descriptor_sets[frame_index]->GetDescriptor(6)
-            ->SetElementSRV(0, m_cached_cull_data.depth_pyramid_image_view);
+    // if (m_cached_cull_data_updated_bits & (1u << frame_index)) {
+    //     m_descriptor_sets[frame_index]->GetDescriptor(6)
+    //         ->SetElementSRV(0, m_cached_cull_data.depth_pyramid_image_view);
 
-        m_descriptor_sets[frame_index]->ApplyUpdates(g_engine->GetGPUDevice());
+    //     m_descriptor_sets[frame_index]->ApplyUpdates(g_engine->GetGPUDevice());
 
-        m_cached_cull_data_updated_bits &= ~(1u << frame_index);
-    }
+    //     m_cached_cull_data_updated_bits &= ~(1u << frame_index);
+    // }
     
     const ID<Scene> scene_id = g_engine->GetRenderState().GetScene().id;
     const uint scene_index = scene_id.ToIndex();
 
-    // bind our descriptor set to binding point 0
-    command_buffer->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
+    m_object_visibility->GetDescriptorTable().Get()->Bind(
+        frame,
         m_object_visibility,
-        m_descriptor_sets[frame_index],
-        static_cast<DescriptorSet::Index>(0),
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, scene_index),
-            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
         }
     );
     
@@ -494,7 +459,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
             .batch_offset = 0,
             .num_instances = num_instances,
             .scene_id = uint32(scene_id.value),
-            .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
+            .depth_pyramid_dimensions = Extent2D(g_engine->GetDeferredRenderer().GetDepthPyramidRenderer().GetExtent())
         }
     });
     
@@ -510,16 +475,15 @@ void IndirectRenderer::RebuildDescriptors(Frame *frame)
 {
     const uint frame_index = frame->GetFrameIndex();
 
-    auto &descriptor_set = m_descriptor_sets[frame_index];
-    AssertThrow(descriptor_set.IsValid());
+    const DescriptorTableRef &descriptor_table = m_object_visibility->GetDescriptorTable().Get();
 
-    descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(3)->SetElementBuffer(0, m_indirect_draw_state.GetInstanceBuffer(frame_index));
+    const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
+    AssertThrow(descriptor_set != nullptr);
 
-    descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(4)->SetElementBuffer(0, m_indirect_draw_state.GetIndirectBuffer(frame_index));
+    descriptor_set->SetElement(HYP_NAME(ObjectInstancesBuffer), m_indirect_draw_state.GetInstanceBuffer(frame_index));
+    descriptor_set->SetElement(HYP_NAME(IndirectDrawCommandsBuffer), m_indirect_draw_state.GetIndirectBuffer(frame_index));
 
-    descriptor_set->ApplyUpdates(g_engine->GetGPUDevice());
+    descriptor_set->Update(g_engine->GetGPUDevice());
 }
 
 } // namespace hyperion::v2
