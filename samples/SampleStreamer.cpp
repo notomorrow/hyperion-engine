@@ -82,6 +82,45 @@
 // }
 
 
+template <class First, class Second>
+struct PairHelper
+{
+    static constexpr bool default_constructible = (std::is_default_constructible_v<First> && (std::is_default_constructible_v<Second>));
+    static constexpr bool copy_constructible = (std::is_copy_constructible_v<First> && (std::is_copy_constructible_v<Second>));
+    static constexpr bool copy_assignable = (std::is_copy_assignable_v<First> && (std::is_copy_assignable_v<Second>));
+    static constexpr bool move_constructible = (std::is_move_constructible_v<First> && (std::is_move_constructible_v<Second>));
+    static constexpr bool move_assignable = (std::is_move_assignable_v<First> && (std::is_move_assignable_v<Second>));
+};
+
+template <class First, class Second>
+struct Pair2 :
+    private ConstructAssignmentTraits<
+        PairHelper<First, Second>::default_constructible,
+        PairHelper<First, Second>::copy_constructible,
+        PairHelper<First, Second>::move_constructible,
+        Pair2<First, Second>
+    >
+{
+    First   first;
+    Second  second;
+
+    // template <typename = std::enable_if_t<std::is_default_constructible_v<First> && std::is_default_constructible_v<Second>>>
+    Pair2() = default;
+
+    Pair2(const First &first, const Second &second)
+        : first(first), second(second)
+    {
+    }
+
+    Pair2(const Pair2 &) = default;
+    Pair2(Pair2 &&) noexcept = default;
+
+    Pair2 &operator=(const Pair2 &) = default;
+    Pair2 &operator=(Pair2 &&) noexcept = default;
+
+    ~Pair2() = default;
+};
+
 
 SampleStreamer::SampleStreamer(RC<Application> application)
     : Game(application, ManagedGameInfo {
@@ -89,6 +128,16 @@ SampleStreamer::SampleStreamer(RC<Application> application)
           "TestGame"
       })
 {
+    int i = 10;
+    int j = 5;
+    Pair<int, const int &> pair_test { i, j };
+    constexpr auto x = sizeof(pair_test);
+
+    const auto deducted_pair = Pair<const char *, int &> { "hello world", j };
+
+    constexpr auto y = std::is_move_assignable<decltype(pair_test)>::value;
+
+    DebugLog(LogType::Debug, "pair_test.first = %d, pair_test.second = %d\n", pair_test.first, pair_test.second);
 }
 
 void SampleStreamer::InitGame()
@@ -379,10 +428,10 @@ void SampleStreamer::InitGame()
         Array<Handle<Light>> point_lights;
 
         point_lights.PushBack(CreateObject<Light>(PointLight(
-            Vector3(3.0f, 3.0f, 0.0f),
+            Vector3(0.0f, 0.5f, 0.0f),
             Color(1.0f, 0.9f, 0.7f),
             5.0f,
-            12.0f
+            40.0f
         )));
         // point_lights.PushBack(CreateObject<Light>(PointLight(
         //     Vector3(0.0f, 10.0f, 12.0f),
@@ -685,7 +734,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");///living_room/living_room.obj");//sponza/sponza.obj");
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");///living_room/living_room.obj");
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -790,8 +839,8 @@ void SampleStreamer::InitGame()
 
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            node.Scale(3.0f);
-            // node.Scale(0.0125f);
+            // node.Scale(3.0f);
+            node.Scale(0.0125f);
             node.SetName("test_model");
             
             GetScene()->GetRoot().AddChild(node);

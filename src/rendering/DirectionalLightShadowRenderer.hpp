@@ -118,8 +118,7 @@ private:
 
     Handle<Texture>                 m_shadow_map;
 
-    Handle<ComputePipeline>         m_blur_shadow_map;
-    FixedArray<DescriptorSetRef, 2> m_blur_descriptor_sets;
+    ComputePipelineRef              m_blur_shadow_map_pipeline;
 };
 
 class DirectionalLightShadowRenderer : public RenderComponent<DirectionalLightShadowRenderer>

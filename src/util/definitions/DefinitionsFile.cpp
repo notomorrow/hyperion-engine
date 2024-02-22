@@ -56,7 +56,7 @@ void DefinitionsFile::Parse()
                 );
             }
 
-            sections.PushBack(Pair { std::move(section_name), Section { } });
+            sections.PushBack(Pair<String, Section> { std::move(section_name), { } });
 
             continue;
         }
@@ -80,7 +80,7 @@ void DefinitionsFile::Parse()
 
         if (sections.Empty()) {
             // no section defined; add a default one
-            sections.PushBack(Pair { String("default"), Section { } });
+            sections.PushBack(Pair<String, Section> { "default", { } });
         }
 
         const String &key = split[0];

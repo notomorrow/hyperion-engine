@@ -358,6 +358,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const ImageViewRef<Platform::VULKAN> &ref = value_it->second.Get<ImageViewRef<Platform::VULKAN>>();
                 AssertThrowMsg(ref.IsValid(), "Invalid image view reference for descriptor set element: %s, index %u", name.LookupString(), i);
 
+                AssertThrowMsg(ref->GetImageView() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s, texture index %u\tImageViewRef index %u", name.LookupString(), i, ref.index);
+
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     VK_NULL_HANDLE,
                     ref->GetImageView(),
@@ -369,6 +371,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
                 AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s, index %u", name.LookupString(), i);
 
+                AssertThrowMsg(ref->GetSampler() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s, index %u", name.LookupString(), i);
+
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     ref->GetSampler(),
                     VK_NULL_HANDLE,
@@ -377,6 +381,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
             } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
                 const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
                 AssertThrowMsg(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s, index %u", name.LookupString(), i);
+
+                AssertThrowMsg(ref->GetAccelerationStructure() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s, index %u", name.LookupString(), i);
 
                 descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
                     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,

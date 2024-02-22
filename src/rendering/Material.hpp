@@ -42,10 +42,9 @@ public:
 
     static constexpr uint max_textures_to_set = MathUtil::Min(
         max_textures,
-        max_bound_textures,
         HYP_FEATURES_BINDLESS_TEXTURES
-            ? DescriptorSet::max_bindless_resources
-            : DescriptorSet::max_material_texture_samplers
+            ? max_bindless_resources
+            : max_bound_textures
     );
 
     using TextureKeyType = uint64;
@@ -487,8 +486,6 @@ private:
 
     MaterialShaderData                                  m_shader_data;
     mutable ShaderDataState                             m_shader_data_state;
-
-    FixedArray<DescriptorSet *, max_frames_in_flight>   m_descriptor_sets;
 };
 
 class MaterialGroup : public BasicObject<STUB_CLASS(MaterialGroup)>
@@ -558,6 +555,14 @@ public:
         \param material The ID of the material to add
      */
     void EnqueueAdd(ID<Material> material);
+
+    /*! \brief Add a material to the manager. This will create a descriptor set for
+        the material and add it to the manager. Usable from any thread.
+
+        \param material The ID of the material to add
+        \param textures The textures to add to the material
+     */
+    void EnqueueAdd(ID<Material> material, FixedArray<Handle<Texture>, max_bound_textures> &&textures);
 
     /*! \brief Remove a material from the manager. This will remove the descriptor set
         for the material from the manager. Usable from any thread.

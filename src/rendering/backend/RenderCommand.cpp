@@ -15,6 +15,10 @@ std::condition_variable RenderCommands::flushed_cv = std::condition_variable();
 
 uint RenderCommands::buffer_index = 0;
 
+// // Note: double buffering is currently disabled as it is causing some issues with textures not being
+// // initalized when they are first added to a material's descriptor set.
+// #define HYP_RENDER_COMMANDS_DOUBLE_BUFFERED
+
 void RenderScheduler::Commit(RenderCommand *command)
 {
     m_commands.PushBack(command);
@@ -35,8 +39,9 @@ Result RenderCommands::Flush()
 
     Threads::AssertOnThread(v2::THREAD_RENDER);
 
-#if 1
     Array<RenderCommand *> commands;
+
+#ifdef HYP_RENDER_COMMANDS_DOUBLE_BUFFERED
 
     // Lock in order to accept commands, so when
     // one of our render commands pushes to the queue,
@@ -45,10 +50,11 @@ Result RenderCommands::Flush()
     // in the locked section.
     std::unique_lock lock(mtx);
 
+    const uint buffer_index = RenderCommands::buffer_index;
+
     scheduler.AcceptAll(commands);
 
     const SizeType num_commands = commands.Size();
-    scheduler.m_num_enqueued.Decrement(num_commands, MemoryOrder::RELAXED);
 
     // Swap buffers before executing commands, so that the commands may enqueue new commands
     SwapBuffers();
@@ -57,6 +63,30 @@ Result RenderCommands::Flush()
 
     flushed_cv.notify_all();
 
+    for (SizeType index = 0; index < num_commands; index++) {
+        RenderCommand *front = commands[index];
+
+#ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
+        DebugLog(LogType::RenDebug, "Executing render command %s\n", front->_debug_name.Data());
+#endif
+
+        const Result command_result = front->Call();
+        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.error_code, command_result.message);
+        front->~RenderCommand();
+    }
+
+    AssertThrowMsg(((buffer_index + 1) & 1) == RenderCommands::buffer_index, "Buffer index mismatch! %u != %u", buffer_index, RenderCommands::buffer_index);
+
+    if (num_commands) {
+        // Use previous buffer index since we call SwapBuffers before executing commands.
+        Rewind((buffer_index + 1) & 1);
+    }
+#else
+    std::unique_lock lock(mtx);
+
+    scheduler.AcceptAll(commands);
+
+    const SizeType num_commands = commands.Size();
 
     for (SizeType index = 0; index < num_commands; index++) {
         RenderCommand *front = commands[index];
@@ -71,20 +101,9 @@ Result RenderCommands::Flush()
     }
 
     if (num_commands) {
-        Rewind();
+        Rewind(buffer_index);
     }
-#else
 
-    std::unique_lock lock(mtx);
-    
-    const RenderScheduler::FlushResult flush_result = scheduler.Flush();
-
-    if (flush_result.num_executed) {
-        Rewind();
-
-        scheduler.m_num_enqueued.Decrement(flush_result.num_executed, MemoryOrder::RELAXED);
-    }
-    
     lock.unlock();
 
     flushed_cv.notify_all();
@@ -121,11 +140,8 @@ void RenderCommands::SwapBuffers()
     buffer_index = (buffer_index + 1) & 1;
 }
 
-void RenderCommands::Rewind()
+void RenderCommands::Rewind(uint buffer_index)
 {
-    // Use previous buffer index since we call SwapBuffers before executing commands.
-    const uint prev_buffer_index = (buffer_index + 1) & 1;
-
     // all items in the cache must have had destructor called on them already.
 
     for (auto it = holders.Begin(); it != holders.End(); ++it) {
@@ -133,7 +149,7 @@ void RenderCommands::Rewind()
             break;
         }
 
-        it->rewind_func(it->render_command_list_ptr, prev_buffer_index);
+        it->rewind_func(it->render_command_list_ptr, buffer_index);
     }
 }
 

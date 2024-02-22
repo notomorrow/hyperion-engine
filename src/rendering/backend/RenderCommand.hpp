@@ -258,7 +258,7 @@ private:
     }
 
     static void SwapBuffers();
-    static void Rewind();
+    static void Rewind(uint buffer_index);
 };
 
 } // namespace renderer

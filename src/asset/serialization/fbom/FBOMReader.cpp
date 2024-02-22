@@ -301,7 +301,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &object, FB
         const String relative_path(FileSystem::RelativePath(std::string(ref_path.Data()), FileSystem::CurrentPath()).data());
 
         { // check in cache
-            const auto it = m_config.external_data_cache.Find(Pair { relative_path, object_index });
+            const auto it = m_config.external_data_cache.Find(Pair<String, uint32> { relative_path, object_index });
 
             if (it != m_config.external_data_cache.End()) {
                 object = it->second;
@@ -317,7 +317,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &object, FB
         }
 
         // cache it
-        m_config.external_data_cache.Set(Pair { relative_path, object_index }, object);
+        m_config.external_data_cache.Set(Pair<String, uint32> { relative_path, object_index }, object);
 
         break;
     }
