@@ -11,24 +11,27 @@ layout(local_size_x = 256) in;
 #include "../include/aabb.inc"
 #include "./shared.inc"
 
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler depth_pyramid_sampler;
+HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult) uniform texture2D depth_pyramid;
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/object.inc"
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std140, set = 0, binding = 0, row_major) readonly buffer EntityBuffer
-{
-    Object entities[];
-};
-
-layout(std140, set = 0, binding = 1, row_major) readonly buffer SceneBuffer
-{
-    Scene scene;
-};
-
-layout(std140, set = 0, binding = 2, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+{
+    Object entities[HYP_MAX_ENTITIES];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+{
+    Scene scene;
 };
 
 struct IndirectDrawCommand
@@ -49,23 +52,20 @@ struct ObjectInstance
     uint batch_index;
 };
 
-layout(std140, set = 0, binding = 3) readonly buffer InstancesBuffer
+HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, ObjectInstancesBuffer) readonly buffer InstancesBuffer
 {
     ObjectInstance instances[];
 };
 
-layout(set = 0, binding = 4) buffer IndirectDrawCommandsBuffer
+HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, IndirectDrawCommandsBuffer, standard = scalar) buffer IndirectDrawCommandsBuffer
 {
     IndirectDrawCommand indirect_draw_commands[];
 };
 
-layout(std140, set = 0, binding = 5) buffer EntityInstanceBatchBuffer
+HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, EntityInstanceBatchesBuffer) buffer EntityInstanceBatchesBuffer
 {
     EntityInstanceBatch entity_instance_batches[];
 };
-
-layout(set = 0, binding = 6) uniform texture2D depth_pyramid;
-layout(set = 0, binding = 7) uniform sampler depth_pyramid_sampler;
 
 layout(push_constant) uniform ObjectVisibilityData
 {

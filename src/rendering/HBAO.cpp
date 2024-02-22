@@ -13,31 +13,6 @@ using renderer::CommandBuffer;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(CreateHBAODescriptorSets) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateHBAODescriptorSets)(const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets)
-        : descriptor_sets(descriptor_sets)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // create our own descriptor sets
-            AssertThrow(descriptor_sets[frame_index].IsValid());
-            
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : renderer::RenderCommand
 {
     FixedArray<ImageViewRef, max_frames_in_flight> pass_image_views;

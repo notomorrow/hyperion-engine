@@ -197,12 +197,6 @@ comp = rt/probe_update_irradiance.comp
 [RTProbeUpdateDepth]
 comp = rt/probe_update_depth.comp
 
-[BlurRadianceHor]
-comp = rt/blur/BlurRadianceHor.comp
-
-[BlurRadianceVert]
-comp = rt/blur/BlurRadianceVert.comp
-
 # Temporal
 
 [TemporalAA]

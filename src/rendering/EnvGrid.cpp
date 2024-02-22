@@ -96,44 +96,6 @@ struct RENDER_COMMAND(CreateSHData) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateEnvGridDescriptorSets) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateEnvGridDescriptorSets)(FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets)
-        : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (auto &descriptor_set : descriptor_sets) {
-            HYPERION_BUBBLE_ERRORS(descriptor_set->Create(g_engine->GetGPUDevice(), &g_engine->GetGPUInstance()->GetDescriptorPool()));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(CreateVoxelGridMipDescriptorSets) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateVoxelGridMipDescriptorSets)(FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets)
-        : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (auto &descriptor_set : descriptor_sets) {
-            HYPERION_BUBBLE_ERRORS(descriptor_set->Create(g_engine->GetGPUDevice(), &g_engine->GetGPUInstance()->GetDescriptorPool()));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 {
     Name                                        set_name;

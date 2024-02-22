@@ -577,7 +577,8 @@ void DeferredRenderer::CreateDescriptorSets()
                 ->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
+                ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
+                    //.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
@@ -650,7 +651,8 @@ void DeferredRenderer::CreateDescriptorSets()
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RADIANCE)
-            ->SetElementSRV(0, m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
+            ->SetElementSRV(0, m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
+                //m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
         descriptor_set_globals
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_REFLECTION_PROBE)
