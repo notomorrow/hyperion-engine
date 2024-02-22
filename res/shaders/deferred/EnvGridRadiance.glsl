@@ -6,12 +6,13 @@
 #include "../include/BlueNoise.glsl"
 #include "../include/Octahedron.glsl"
 
-#define HYP_VCT_USE_ROUGHNESS_SCATTERING
+// #define HYP_VCT_USE_ROUGHNESS_SCATTERING
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
     vec4 rgba = textureLod(sampler3D(voxel_image, sampler_linear), position, lod);
     // rgba.rgb = ReverseTonemapReinhardSimple(rgba.rgb);
+    rgba.rgb = pow(rgba.rgb, vec3(2.2));
     return rgba;
 }
 
