@@ -21,17 +21,27 @@ layout(local_size_x = WORKGROUP_SIZE_X, local_size_y = 1, local_size_z = 1) in;
 
 #define VALUE_TYPE GaussianSplatIndex
 
-layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
+HYP_DESCRIPTOR_CBUFF(SortSplatsDescriptorSet, GaussianSplattingSceneShaderData, standard = std430) uniform GaussianSplattingSceneShaderData
+{
+    mat4 model_matrix;
+};
+
+HYP_DESCRIPTOR_SSBO(SortSplatsDescriptorSet, SplatIndicesBuffer, standard = std430) buffer SplatIndicesBuffer
 {
     GaussianSplatIndex splat_indices[];
 };
 
-layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO(SortSplatsDescriptorSet, SplatInstancesBuffer, standard = std430) buffer SplatInstancesBuffer
+{
+    GaussianSplatShaderData instances[];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
@@ -41,7 +51,8 @@ layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
 #define STAGE_BIG_FLIP          2
 #define STAGE_BIG_DISPERSE      3
 
-layout(push_constant) uniform PushConstant {
+layout(push_constant) uniform PushConstant
+{
     uint num_points;
     uint stage;
     uint h;

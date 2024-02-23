@@ -22,6 +22,8 @@ using renderer::Result;
 using renderer::GPUBufferType;
 using renderer::CommandBufferType;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
 {
     GPUBufferRef            particle_buffer;
@@ -41,7 +43,9 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateParticleSpawnerBuffers)() override = default;
+
+    virtual Result operator()() override
     {
         static constexpr uint seed = 0xff;
 
@@ -90,29 +94,6 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateParticleDescriptors) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateParticleDescriptors)(
-        FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets
-    ) : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(DestroyParticleSystem) : renderer::RenderCommand
 {
     ThreadSafeContainer<ParticleSpawner>    *spawners;
@@ -123,7 +104,9 @@ struct RENDER_COMMAND(DestroyParticleSystem) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(DestroyParticleSystem)() override = default;
+
+    virtual Result operator()() override
     {
         auto result = Result::OK;
 
@@ -150,7 +133,9 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateParticleSystemBuffers)() override = default;
+
+    virtual Result operator()() override
     {
         HYPERION_BUBBLE_ERRORS(staging_buffer->Create(
             g_engine->GetGPUDevice(),
@@ -181,7 +166,9 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateParticleSystemCommandBuffers)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (uint i = 0; i < uint(command_buffers[frame_index].Size()); i++) {
@@ -195,6 +182,8 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 ParticleSpawner::ParticleSpawner()
     : m_params { }

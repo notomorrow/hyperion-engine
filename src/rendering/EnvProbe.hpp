@@ -255,18 +255,10 @@ private:
     Handle<Camera>                                      m_camera;
     RenderList                                          m_render_list;
 
-    GPUBufferRef                                        m_sh_tiles_buffer;
-
-    Handle<ComputePipeline>                             m_compute_sh;
-    Handle<ComputePipeline>                             m_clear_sh;
-    Handle<ComputePipeline>                             m_finalize_sh;
-    FixedArray<DescriptorSetRef, max_frames_in_flight>  m_compute_sh_descriptor_sets;
-
     Matrix4                                             m_projection_matrix;
     FixedArray<Matrix4, 6>                              m_view_matrices;
 
     EnvProbeIndex                                       m_bound_index;
-    // EnvProbeIndex m_last_rendered_index;
 
     Bitset                                              m_visibility_bits;
 

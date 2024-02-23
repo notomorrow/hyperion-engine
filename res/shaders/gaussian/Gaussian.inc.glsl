@@ -14,9 +14,4 @@ struct GaussianSplatShaderData
     vec4 color;
 };
 
-layout(std430, set = 0, binding = 0, row_major) buffer GaussianBuffer
-{
-    GaussianSplatShaderData instances[];
-};
-
 #endif

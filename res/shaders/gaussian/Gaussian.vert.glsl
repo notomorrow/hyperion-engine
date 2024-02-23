@@ -25,22 +25,27 @@ layout (location = 5) in vec3 a_bitangent;
 
 #include "./Gaussian.inc.glsl"
 
-layout(std430, set = 0, binding = 3) readonly buffer SplatIndicesBuffer
-{
-    GaussianSplatIndex splat_indices[];
-};
-
-layout(std430, set = 0, binding = 4, row_major) uniform GaussianSplattingSceneShaderData
+HYP_DESCRIPTOR_CBUFF(GaussianSplattingDescriptorSet, GaussianSplattingSceneShaderData, standard = std430) uniform GaussianSplattingSceneShaderData
 {
     mat4 model_matrix;
 };
 
-layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO(GaussianSplattingDescriptorSet, SplatIndicesBuffer, standard = std430) buffer SplatIndicesBuffer
+{
+    GaussianSplatIndex splat_indices[];
+};
+
+HYP_DESCRIPTOR_SSBO(GaussianSplattingDescriptorSet, SplatInstancesBuffer, standard = std430) buffer SplatInstancesBuffer
+{
+    GaussianSplatShaderData instances[];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
