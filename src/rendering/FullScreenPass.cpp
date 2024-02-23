@@ -10,10 +10,6 @@ namespace hyperion::v2 {
 
 using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
-using renderer::Descriptor;
-using renderer::DescriptorSet;
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
 using renderer::CommandBufferType;
 using renderer::FillMode;
 

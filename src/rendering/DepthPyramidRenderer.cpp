@@ -8,11 +8,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
-using renderer::DescriptorKey;
-
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet) : renderer::RenderCommand
@@ -210,12 +205,7 @@ void DepthPyramidRenderer::Render(Frame *frame)
         mip_width = MathUtil::Max(1u, depth_pyramid_extent.width >> (mip_level));
         mip_height = MathUtil::Max(1u, depth_pyramid_extent.height >> (mip_level));
 
-        // m_depth_pyramid_descriptor_sets[frame_index][mip_level]->Bind(command_buffer, m_generate_depth_pyramid, 0);
-
-        // // bind descriptor set to compute pipeline
         m_mip_descriptor_tables[mip_level]->Bind(frame, m_generate_depth_pyramid, { });
-
-        // m_generate_depth_pyramid->GetDescriptorTable().Get()->Bind(frame, m_generate_depth_pyramid, { });
 
         // set push constant data for the current mip level
         m_generate_depth_pyramid->Bind(

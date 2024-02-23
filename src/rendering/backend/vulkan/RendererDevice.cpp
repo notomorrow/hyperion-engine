@@ -20,8 +20,7 @@ Device<Platform::VULKAN>::Device(VkPhysicalDevice physical, VkSurfaceKHR surface
       m_surface(surface),
       m_allocator(VK_NULL_HANDLE),
       m_features(UniquePtr<Features>::Construct()),
-      m_descriptor_set_manager(new DescriptorSetManager<Platform::VULKAN>),
-      m_descriptor_pool(new DescriptorPool)
+      m_descriptor_set_manager(new DescriptorSetManager<Platform::VULKAN>)
 {
     m_features->SetPhysicalDevice(m_physical);
     m_queue_family_indices = FindQueueFamilies(m_physical, m_surface);
@@ -433,8 +432,6 @@ VkQueue Device<Platform::VULKAN>::GetQueue(uint32 queue_family_index, uint32 que
 void Device<Platform::VULKAN>::Destroy()
 {
     m_descriptor_set_manager->Destroy(this);
-
-    HYPERION_ASSERT_RESULT(m_descriptor_pool->Destroy(this));
 
     if (m_device != VK_NULL_HANDLE) {
         /* By the time this destructor is called there should never

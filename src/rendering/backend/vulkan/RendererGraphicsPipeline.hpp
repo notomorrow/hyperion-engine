@@ -8,7 +8,7 @@
 #include <rendering/backend/RendererSwapchain.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
@@ -54,11 +54,6 @@ public:
     };
 
     GraphicsPipeline();
-    GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader);
-    /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
-        used with this pipeline.  */
-    GraphicsPipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
-    GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
     GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
@@ -67,11 +62,7 @@ public:
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32 width, uint32 height);
 
-    // V2, uses the new descriptor set system
     Result Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info);
-
-    // v1
-    Result Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
     Result Destroy(Device<Platform::VULKAN> *device);
     
     void Bind(CommandBuffer<Platform::VULKAN> *cmd);
@@ -81,7 +72,7 @@ public:
         { return m_construction_info; }
 
 private:
-    Result Rebuild(Device<Platform::VULKAN> *device, DescriptorPool *descriptor_pool);
+    Result Rebuild(Device<Platform::VULKAN> *device);
     void UpdateDynamicStates(VkCommandBuffer cmd);
     Array<VkVertexInputAttributeDescription> BuildVertexAttributes(const VertexAttributeSet &attribute_set);
 

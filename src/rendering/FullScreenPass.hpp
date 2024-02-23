@@ -26,7 +26,6 @@ using renderer::Attachment;
 using renderer::Frame;
 using renderer::CommandBuffer;
 using renderer::VertexAttributeSet;
-using renderer::DescriptorKey;
 using renderer::Image;
 using renderer::ImageView;
 using renderer::Pipeline;

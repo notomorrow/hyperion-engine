@@ -8,10 +8,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::DescriptorSet;
-using renderer::DescriptorKey;
-using renderer::ImageDescriptor;
-using renderer::SamplerDescriptor;
 using renderer::CommandBuffer;
 using renderer::Result;
 

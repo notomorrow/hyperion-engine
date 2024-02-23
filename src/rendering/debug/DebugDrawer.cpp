@@ -4,8 +4,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::DynamicStorageBufferDescriptor;
-
 DebugDrawer::DebugDrawer()
 {
     m_draw_commands.Reserve(256);
@@ -49,7 +47,7 @@ void DebugDrawer::Create()
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
-    m_renderer_instance = g_engine->CreateRenderGroup(
+    m_render_group = g_engine->CreateRenderGroup(
         m_shader,
         RenderableAttributeSet(
             MeshAttributes {
@@ -65,12 +63,12 @@ void DebugDrawer::Create()
         std::move(descriptor_table)
     );
     
-    if (m_renderer_instance) {
+    if (m_render_group) {
         g_engine->GetDeferredSystem()
-            .Get(m_renderer_instance->GetRenderableAttributes().GetMaterialAttributes().bucket)
-            .AddFramebuffersToRenderGroup(m_renderer_instance);
+            .Get(m_render_group->GetRenderableAttributes().GetMaterialAttributes().bucket)
+            .AddFramebuffersToRenderGroup(m_render_group);
 
-        g_engine->InitObject(m_renderer_instance);
+        g_engine->InitObject(m_render_group);
     }
 }
 
@@ -78,10 +76,8 @@ void DebugDrawer::Destroy()
 {
     m_shapes = { };
 
-    m_renderer_instance.Reset();
+    m_render_group.Reset();
     m_shader.Reset();
-    
-    SafeRelease(std::move(m_descriptor_sets));
 }
 
 void DebugDrawer::Render(Frame *frame)
@@ -96,7 +92,7 @@ void DebugDrawer::Render(Frame *frame)
         return;
     }
 
-    if (!m_renderer_instance) {
+    if (!m_render_group) {
         m_draw_commands.Clear();
 
         return;
@@ -120,7 +116,7 @@ void DebugDrawer::Render(Frame *frame)
         frame->GetFrameIndex()
     );
 
-    RendererProxy proxy = m_renderer_instance->GetProxy();
+    RendererProxy proxy = m_render_group->GetProxy();
     proxy.Bind(frame);
 
     const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DebugDrawerDescriptorSet));

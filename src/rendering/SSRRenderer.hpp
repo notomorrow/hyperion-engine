@@ -25,7 +25,6 @@ using renderer::Image;
 using renderer::ImageView;
 using renderer::Sampler;
 using renderer::Device;
-using renderer::DescriptorSet;
 using renderer::AttachmentUsage;
 
 class Engine;

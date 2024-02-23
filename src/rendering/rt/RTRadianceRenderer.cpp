@@ -8,11 +8,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ImageDescriptor;
-using renderer::StorageImageDescriptor;
-using renderer::StorageBufferDescriptor;
-using renderer::TlasDescriptor;
-using renderer::SamplerDescriptor;
 using renderer::ResourceState;
 using renderer::Result;
 

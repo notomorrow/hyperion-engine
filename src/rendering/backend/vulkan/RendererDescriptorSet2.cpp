@@ -5,8 +5,6 @@
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp> // For DescriptorSetDeclaration
-
 #include <math/MathUtil.hpp>
 
 #include <Engine.hpp>

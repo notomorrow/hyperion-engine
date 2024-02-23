@@ -9,8 +9,6 @@ struct RenderCommand_CreateCubemapImages;
 struct RenderCommand_DestroyCubemapRenderPass;
 
 using renderer::Result;
-using renderer::DescriptorSet;
-using renderer::Descriptor;
 
 static const Extent2D num_tiles = { 4, 4 };
 static const InternalFormat reflection_probe_format = InternalFormat::R11G11B10F;

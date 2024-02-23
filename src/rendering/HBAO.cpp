@@ -4,11 +4,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ImageDescriptor;
-using renderer::StorageImageDescriptor;
-using renderer::SamplerDescriptor;
-using renderer::DynamicStorageBufferDescriptor;
-using renderer::DynamicUniformBufferDescriptor;
 using renderer::CommandBuffer;
 
 #pragma region Render commands
