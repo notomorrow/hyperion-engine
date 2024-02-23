@@ -208,18 +208,14 @@ ParticleSpawner::ParticleSpawner(const ParticleSpawnerParams &params)
 
 ParticleSpawner::~ParticleSpawner()
 {
-    if (IsInitCalled()) {
-        m_render_group.Reset();
-        m_update_particles.Reset();
+    m_render_group.Reset();
 
-        SafeRelease(std::move(m_particle_buffer));
-        SafeRelease(std::move(m_indirect_buffer));
-        SafeRelease(std::move(m_noise_buffer));
+    SafeRelease(std::move(m_update_particles));
+    SafeRelease(std::move(m_particle_buffer));
+    SafeRelease(std::move(m_indirect_buffer));
+    SafeRelease(std::move(m_noise_buffer));
 
-        SafeRelease(std::move(m_descriptor_sets));
-
-        m_shader.Reset();
-    }
+    m_shader.Reset();
 }
 
 void ParticleSpawner::Init()
@@ -235,8 +231,6 @@ void ParticleSpawner::Init()
     }
 
     CreateBuffers();
-    CreateShader();
-    CreateDescriptorSets();
     CreateRenderGroup();
     CreateComputePipelines();
 
@@ -265,78 +259,29 @@ void ParticleSpawner::CreateBuffers()
     );
 }
 
-void ParticleSpawner::CreateShader()
-{
-    m_shader = g_shader_manager->GetOrCreate(HYP_NAME(Particle));
-
-    InitObject(m_shader);
-}
-
-void ParticleSpawner::CreateDescriptorSets()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>();
-
-        // particle data
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-            ->SetElementBuffer(0, m_particle_buffer);
-
-        // indirect rendering data
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
-            ->SetElementBuffer(0, m_indirect_buffer);
-
-        // noise buffer
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::StorageBufferDescriptor>(2)
-            ->SetElementBuffer(0, m_noise_buffer);
-
-        // scene
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(4)
-            ->SetElementBuffer<SceneShaderData>(0, g_engine->GetRenderData()->scenes.GetBuffer());
-    
-        // camera
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(5)
-            ->SetElementBuffer<CameraShaderData>(0, g_engine->GetRenderData()->cameras.GetBuffer());
-
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::ImageDescriptor>(6)
-            ->SetElementSRV(0, m_params.texture
-                ? m_params.texture->GetImageView()
-                : g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::SamplerDescriptor>(7)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<renderer::SamplerDescriptor>(8)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        // gbuffer normals texture
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<ImageDescriptor>(9)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_NORMALS)->GetImageView());
-
-        // gbuffer depth texture
-        m_descriptor_sets[frame_index]
-            ->AddDescriptor<ImageDescriptor>(10)
-            ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
-    }
-
-    PUSH_RENDER_COMMAND(
-        CreateParticleDescriptors,
-        m_descriptor_sets
-    );
-}
-
 void ParticleSpawner::CreateRenderGroup()
 {
+    m_shader = g_shader_manager->GetOrCreate(HYP_NAME(Particle));
+    InitObject(m_shader);
+
+    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ParticleDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(ParticlesBuffer), m_particle_buffer);
+        descriptor_set->SetElement(HYP_NAME(ParticleTexture), m_params.texture
+            ? m_params.texture->GetImageView()
+            : g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
     m_render_group = CreateObject<RenderGroup>(
-        Handle<Shader>(m_shader),
+        m_shader,
         RenderableAttributeSet(
             MeshAttributes {
                 .vertex_attributes = renderer::static_mesh_vertex_attributes
@@ -347,15 +292,11 @@ void ParticleSpawner::CreateRenderGroup()
                 .cull_faces = FaceCullMode::FRONT,
                 .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_DEPTH_TEST
             }
-        )
+        ),
+        std::move(descriptor_table)
     );
 
     m_render_group->AddFramebuffer(Handle<Framebuffer>(g_engine->GetDeferredSystem()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffer()));
-
-    // do not use global descriptor sets for this renderer -- we will just use our own local ones
-    m_render_group->GetPipeline()->SetUsedDescriptorSets(Array<DescriptorSetRef> {
-        m_descriptor_sets[0]
-    });
 
     AssertThrow(InitObject(m_render_group));
 }
@@ -365,15 +306,30 @@ void ParticleSpawner::CreateComputePipelines()
     ShaderProperties properties;
     properties.Set("HAS_PHYSICS", m_params.has_physics);
 
-    m_update_particles = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(
-            HYP_NAME(UpdateParticles),
-            properties
-        ),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    Handle<Shader> update_particles_shader = g_shader_manager->GetOrCreate(HYP_NAME(UpdateParticles), properties);
+    InitObject(update_particles_shader);
+
+    renderer::DescriptorTableDeclaration descriptor_table_decl = update_particles_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(UpdateParticlesDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(ParticlesBuffer), m_particle_buffer);
+        descriptor_set->SetElement(HYP_NAME(IndirectDrawCommandsBuffer), m_indirect_buffer);
+        descriptor_set->SetElement(HYP_NAME(NoiseBuffer), m_noise_buffer);
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+    m_update_particles = MakeRenderObject<renderer::ComputePipeline>(
+        update_particles_shader->GetShaderProgram(),
+        descriptor_table
     );
 
-    InitObject(m_update_particles);
+    DeferCreate(m_update_particles, g_engine->GetGPUDevice());
 }
 
 ParticleSystem::ParticleSystem()
@@ -492,9 +448,9 @@ void ParticleSystem::UpdateParticles(Frame *frame)
             continue;
         }
 
-        spawner->GetComputePipeline()->GetPipeline()->Bind(frame->GetCommandBuffer());
+        spawner->GetComputePipeline()->Bind(frame->GetCommandBuffer());
 
-        spawner->GetComputePipeline()->GetPipeline()->SetPushConstants(Pipeline::PushConstantData {
+        spawner->GetComputePipeline()->SetPushConstants(Pipeline::PushConstantData {
             .particle_spawner_data = {
                 .origin             = ShaderVec4<float32>(Vector4(spawner->GetParams().origin, spawner->GetParams().start_size)),
                 .spawn_radius       = spawner->GetParams().radius,
@@ -507,20 +463,28 @@ void ParticleSystem::UpdateParticles(Frame *frame)
             }
         });
 
-        spawner->GetComputePipeline()->GetPipeline()->SubmitPushConstants(frame->GetCommandBuffer());
+        spawner->GetComputePipeline()->SubmitPushConstants(frame->GetCommandBuffer());
 
-        frame->GetCommandBuffer()->BindDescriptorSet(
-            g_engine->GetGPUInstance()->GetDescriptorPool(),
-            spawner->GetComputePipeline()->GetPipeline(),
-            spawner->GetDescriptorSets()[frame->GetFrameIndex()],
-            0,
-            FixedArray {
-                HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-                HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+        spawner->GetComputePipeline()->GetDescriptorTable().Get()->Bind(
+            frame,
+            spawner->GetComputePipeline(),
+            {
+                {
+                    HYP_NAME(Scene),
+                    {
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        }
+                    }
+                }
             }
         );
 
-        spawner->GetComputePipeline()->GetPipeline()->Dispatch(
+        spawner->GetComputePipeline()->Dispatch(
             frame->GetCommandBuffer(),
             Extent3D {
                 uint32((max_particles + 255) / 256), 1, 1
@@ -562,17 +526,25 @@ void ParticleSystem::Render(Frame *frame)
             m_command_buffers[frame_index][batch_index]->Record(
                 g_engine->GetGPUDevice(),
                 pipeline->GetConstructionInfo().render_pass,
-                [&](CommandBuffer *secondary) {
+                [&](CommandBuffer *secondary)
+                {
                     pipeline->Bind(secondary);
 
-                    secondary->BindDescriptorSet(
-                        g_engine->GetGPUInstance()->GetDescriptorPool(),
+                    pipeline->GetDescriptorTable().Get()->Bind(
+                        secondary,
+                        frame_index,
                         pipeline,
-                        particle_spawner->GetDescriptorSets()[frame_index],
-                        0,
-                        FixedArray {
-                            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-                            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+                        {
+                            {
+                                HYP_NAME(Scene),
+                                {
+                                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                                }
+                            }
                         }
                     );
 

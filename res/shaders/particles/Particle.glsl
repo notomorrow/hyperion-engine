@@ -9,9 +9,4 @@ struct ParticleShaderData
     vec4 attributes; // x = lifetime
 };
 
-layout(std430, set = 0, binding = 0, row_major) buffer ParticleBuffer
-{
-    ParticleShaderData instances[];
-};
-
 #endif

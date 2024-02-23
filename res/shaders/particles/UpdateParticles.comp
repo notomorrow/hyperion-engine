@@ -6,6 +6,11 @@
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+
 #include "../include/shared.inc"
 #include "../include/defines.inc"
 
@@ -13,9 +18,15 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 #include "../include/scene.inc"
 #include "../include/object.inc"
 #include "../include/packing.inc"
+#include "../include/gbuffer.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "./Particle.glsl"
+
+HYP_DESCRIPTOR_SSBO(UpdateParticlesDescriptorSet, ParticlesBuffer, standard = std430) buffer ParticlesBuffer
+{
+    ParticleShaderData instances[];
+};
 
 #define HYP_PARTICLE_NOISE_MAP_EXTENT 128
 #define HYP_PARTICLE_NOISE_MAP_SIZE HYP_FMATH_SQR(HYP_PARTICLE_NOISE_MAP_EXTENT)
@@ -30,29 +41,25 @@ struct IndirectDrawCommand
     uint first_instance;
 };
 
-layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
+HYP_DESCRIPTOR_SSBO(UpdateParticlesDescriptorSet, IndirectDrawCommandsBuffer, standard = scalar) buffer IndirectDrawCommandsBuffer
 {
     IndirectDrawCommand indirect_draw_command;
 };
 
-layout(set = 0, binding = 2) buffer NoiseBuffer
+HYP_DESCRIPTOR_SSBO(UpdateParticlesDescriptorSet, NoiseBuffer, standard = scalar) buffer NoiseBuffer
 {
     float noise_values[HYP_PARTICLE_NOISE_MAP_SIZE];
 };
 
-layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
 };
-
-layout(set = 0, binding = 8) uniform sampler sampler_nearest;
-layout(set = 0, binding = 9) uniform texture2D gbuffer_normals_texture;
-layout(set = 0, binding = 10) uniform texture2D gbuffer_depth_texture;
 
 layout(push_constant) uniform ParticleSpawnerData
 {

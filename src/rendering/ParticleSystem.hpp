@@ -42,13 +42,13 @@ class Engine;
 struct ParticleSpawnerParams
 {
     Handle<Texture> texture;
-    SizeType max_particles = 256u;
-    Vector3 origin = Vector3::zero;
-    float start_size = 0.035f;
-    float radius = 1.0f;
-    float randomness = 0.5f;
-    float lifespan = 1.0f;
-    bool has_physics = false;
+    SizeType max_particles  = 256u;
+    Vec3f origin            = Vec3f::zero;
+    float start_size        = 0.035f;
+    float radius            = 1.0f;
+    float randomness        = 0.5f;
+    float lifespan          = 1.0f;
+    bool has_physics        = false;
 };
 
 class ParticleSpawner
@@ -57,15 +57,12 @@ class ParticleSpawner
 public:
     ParticleSpawner();
     ParticleSpawner(const ParticleSpawnerParams &params);
-    ParticleSpawner(const ParticleSpawner &other) = delete;
-    ParticleSpawner &operator=(const ParticleSpawner &other) = delete;
+    ParticleSpawner(const ParticleSpawner &other)               = delete;
+    ParticleSpawner &operator=(const ParticleSpawner &other)    = delete;
     ~ParticleSpawner();
 
     const ParticleSpawnerParams &GetParams() const
         { return m_params; }
-
-    const FixedArray<DescriptorSetRef, max_frames_in_flight> &GetDescriptorSets() const
-        { return m_descriptor_sets; }
 
     const GPUBufferRef &GetParticleBuffer() const
         { return m_particle_buffer; }
@@ -76,7 +73,7 @@ public:
     const Handle<RenderGroup> &GetRenderGroup() const
         { return m_render_group; }
 
-    const Handle<ComputePipeline> &GetComputePipeline() const
+    const ComputePipelineRef &GetComputePipeline() const
         { return m_update_particles; }
 
     BoundingSphere GetBoundingSphere() const
@@ -88,20 +85,17 @@ public:
 private:
     void CreateNoiseMap();
     void CreateBuffers();
-    void CreateShader();
-    void CreateDescriptorSets();
     void CreateRenderGroup();
     void CreateComputePipelines();
 
-    ParticleSpawnerParams m_params;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
-    GPUBufferRef m_particle_buffer;
-    GPUBufferRef m_indirect_buffer;
-    GPUBufferRef m_noise_buffer;
-    Handle<ComputePipeline> m_update_particles;
-    Handle<Shader> m_shader;
-    Handle<RenderGroup> m_render_group;
-    Bitmap<1> m_noise_map;
+    ParticleSpawnerParams   m_params;
+    GPUBufferRef            m_particle_buffer;
+    GPUBufferRef            m_indirect_buffer;
+    GPUBufferRef            m_noise_buffer;
+    ComputePipelineRef      m_update_particles;
+    Handle<Shader>          m_shader;
+    Handle<RenderGroup>     m_render_group;
+    Bitmap<1>               m_noise_map;
 };
 
 class ParticleSystem

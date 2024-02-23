@@ -24,8 +24,8 @@ layout(location = 0) out vec4 gbuffer_albedo;
 // layout(location=4) out vec2 gbuffer_velocity;
 // layout(location=5) out vec4 gbuffer_mask;
 
-layout(set = 0, binding = 6) uniform texture2D albedo_texture;
-layout(set = 0, binding = 7) uniform sampler texture_sampler;
+HYP_DESCRIPTOR_SRV(ParticleDescriptorSet, ParticleTexture) uniform texture2D albedo_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
 
 void main()
 {
