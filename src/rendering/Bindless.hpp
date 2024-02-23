@@ -7,8 +7,6 @@
 #include <core/lib/Mutex.hpp>
 #include <Constants.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
-
 namespace hyperion::v2 {
 
 class Engine;

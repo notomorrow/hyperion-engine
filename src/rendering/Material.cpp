@@ -1,5 +1,4 @@
 #include <rendering/Material.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <Engine.hpp>
 

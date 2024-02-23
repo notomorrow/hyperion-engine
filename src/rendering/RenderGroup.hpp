@@ -92,12 +92,12 @@ public:
     using AsyncCommandBuffers = FixedArray<FixedArray<CommandBufferRef, num_async_rendering_command_buffers>, max_frames_in_flight>;
     
     RenderGroup(
-        Handle<Shader> &&shader,
+        Handle<Shader> shader,
         const RenderableAttributeSet &renderable_attributes
     );
 
     RenderGroup(
-        Handle<Shader> &&shader,
+        Handle<Shader> shader,
         const RenderableAttributeSet &renderable_attributes,
         DescriptorTableRef descriptor_table
     );

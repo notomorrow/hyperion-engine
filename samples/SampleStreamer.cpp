@@ -251,6 +251,21 @@ void SampleStreamer::InitGame()
         0.01f, 30000.0f
     ));
 
+    auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
+        .texture = g_asset_manager->Load<Texture>("textures/spark.png"),
+        .max_particles = 1000,
+        .origin = Vector3(0.0f, 0.0f, 0.0f),
+        .start_size = 0.05f,
+        .radius = 1.0f,
+        .randomness = 0.5f,
+        .lifespan = 1.0f,
+        .has_physics = true
+    });
+
+    InitObject(particle_spawner);
+
+    m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(particle_spawner);
+
     /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
         Vector3(0.0f, 7.0f, 0.0f), Vector3(0.0f, 0.0f, 5.0f)
     ));*/

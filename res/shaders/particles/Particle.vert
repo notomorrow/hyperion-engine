@@ -23,12 +23,17 @@ layout (location = 5) in vec3 a_bitangent;
 
 #include "./Particle.glsl"
 
-layout(std140, set = 0, binding = 4, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO(ParticleDescriptorSet, ParticlesBuffer, standard = std430) buffer ParticlesBuffer
+{
+    ParticleShaderData instances[];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 5, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
 };

@@ -107,7 +107,7 @@ struct RENDER_COMMAND(CreateIndirectRenderer) : renderer::RenderCommand
 #pragma endregion
 
 RenderGroup::RenderGroup(
-    Handle<Shader> &&shader,
+    Handle<Shader> shader,
     const RenderableAttributeSet &renderable_attributes
 ) : BasicObject(),
     m_shader(std::move(shader)),
@@ -120,7 +120,7 @@ RenderGroup::RenderGroup(
 }
 
 RenderGroup::RenderGroup(
-    Handle<Shader> &&shader,
+    Handle<Shader> shader,
     const RenderableAttributeSet &renderable_attributes,
     DescriptorTableRef descriptor_table
 ) : BasicObject(),
