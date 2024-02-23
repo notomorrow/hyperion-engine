@@ -99,7 +99,6 @@ void HBAO::CreatePass()
     renderer::DescriptorTableDeclaration descriptor_table_decl = hbao_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
-    AssertThrow(descriptor_table != nullptr);
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     m_hbao_pass.Reset(new FullScreenPass(

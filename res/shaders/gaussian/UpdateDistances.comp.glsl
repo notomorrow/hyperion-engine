@@ -17,34 +17,34 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 #include "./Gaussian.inc.glsl"
 
-layout(std430, set = 0, binding = 4, row_major) uniform GaussianSplattingSceneShaderData
+HYP_DESCRIPTOR_CBUFF(UpdateDistancesDescriptorSet, GaussianSplattingSceneShaderData, standard = std430) uniform GaussianSplattingSceneShaderData
 {
     mat4 model_matrix;
 };
 
-layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
-{
-    Camera camera;
-};
-
-layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
+HYP_DESCRIPTOR_SSBO(UpdateDistancesDescriptorSet, SplatIndicesBuffer, standard = std430) buffer SplatIndicesBuffer
 {
     GaussianSplatIndex splat_indices[];
+};
+
+HYP_DESCRIPTOR_SSBO(UpdateDistancesDescriptorSet, SplatInstancesBuffer, standard = std430) buffer SplatInstancesBuffer
+{
+    GaussianSplatShaderData instances[];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
+{
+    Scene scene;
+};
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
+{
+    Camera camera;
 };
 
 layout(push_constant) uniform PushConstant {
     uint num_points;  
 } push_constants;
-
-struct GaussianSplattingCamera {
-    mat4 view;
-    mat4 projection;
-    vec3 position;
-    vec2 focal;
-    vec2 dimensions;
-    float scale_modifier;
-};
-
 
 void main()
 {

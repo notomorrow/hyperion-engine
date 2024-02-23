@@ -27,22 +27,32 @@ struct IndirectDrawCommand
     uint first_instance;
 };
 
-layout(set = 0, binding = 1) buffer IndirectDrawCommandsBuffer
+HYP_DESCRIPTOR_SSBO(UpdateSplatsDescriptorSet, IndirectDrawCommandsBuffer, standard = scalar) buffer IndirectDrawCommandsBuffer
 {
     IndirectDrawCommand indirect_draw_command;
 };
 
-layout(std430, set = 0, binding = 3) buffer SplatIndicesBuffer
+HYP_DESCRIPTOR_CBUFF(UpdateSplatsDescriptorSet, GaussianSplattingSceneShaderData, standard = std430) uniform GaussianSplattingSceneShaderData
+{
+    mat4 model_matrix;
+};
+
+HYP_DESCRIPTOR_SSBO(UpdateSplatsDescriptorSet, SplatIndicesBuffer, standard = std430) buffer SplatIndicesBuffer
 {
     GaussianSplatIndex splat_indices[];
 };
 
-layout(std140, set = 0, binding = 5, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO(UpdateSplatsDescriptorSet, SplatInstancesBuffer, standard = std430) buffer SplatInstancesBuffer
+{
+    GaussianSplatShaderData instances[];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 0, binding = 6, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
