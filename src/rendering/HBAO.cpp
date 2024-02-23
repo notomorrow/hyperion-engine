@@ -25,18 +25,8 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : renderer::Rende
     virtual Result operator()()
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // @NOTE: v2, remove v1 when done
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(SSAOResultTexture), pass_image_views[frame_index]);
-
-
-            // Add the final result to the global descriptor set
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
-                ->SetElementSRV(0, pass_image_views[frame_index]);
         }
 
         HYPERION_RETURN_OK;
@@ -83,18 +73,8 @@ void HBAO::Destroy()
             auto result = Result::OK;
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                // @NOTE: v2, remove v1 when done
                 g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                     ->SetElement(HYP_NAME(SSAOResultTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-
-
-                // unset final result from the global descriptor set
-                DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                    .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-                descriptor_set_globals
-                    ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSAO_GI_RESULT)
-                    ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
             }
 
             return result;

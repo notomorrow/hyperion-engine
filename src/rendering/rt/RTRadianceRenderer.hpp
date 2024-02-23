@@ -75,7 +75,6 @@ public:
 private:
     void CreateImages();
     void CreateUniformBuffer();
-    void CreateDescriptorSets();
     void CreateRaytracingPipeline();
     void CreateTemporalBlending();
     void UpdateUniforms(Frame *frame);
@@ -117,7 +116,6 @@ private:
     UniquePtr<TemporalBlending>                         m_temporal_blending;
 
     RaytracingPipelineRef                               m_raytracing_pipeline;
-    FixedArray<DescriptorSetRef, max_frames_in_flight>  m_descriptor_sets;
     GPUBufferRef                                        m_uniform_buffer;
 };
 

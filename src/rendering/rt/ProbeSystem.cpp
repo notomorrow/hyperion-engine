@@ -20,8 +20,7 @@ using renderer::Result;
 enum ProbeSystemUpdates : uint32
 {
     PROBE_SYSTEM_UPDATES_NONE = 0x0,
-    PROBE_SYSTEM_UPDATES_TLAS = 0x1,
-    PROBE_SYSTEM_UPDATES_SHADOW_MAP = 0x2
+    PROBE_SYSTEM_UPDATES_TLAS = 0x1
 };
 
 struct RENDER_COMMAND(CreateProbeGridImage) : renderer::RenderCommand
@@ -56,91 +55,61 @@ struct RENDER_COMMAND(CreateProbeGridImageView) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridDescriptors) : renderer::RenderCommand
+struct RENDER_COMMAND(SetDDGIDescriptors) : renderer::RenderCommand
 {
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
     GPUBufferRef uniform_buffer;
     ImageViewRef irradiance_image_view;
     ImageViewRef depth_image_view;
 
-    RENDER_COMMAND(CreateProbeGridDescriptors)(
-        const FixedArray<DescriptorSetRef, max_frames_in_flight> &descriptor_sets,
+    RENDER_COMMAND(SetDDGIDescriptors)(
         const GPUBufferRef &uniform_buffer,
         const ImageViewRef &irradiance_image_view,
         const ImageViewRef &depth_image_view
-    ) : descriptor_sets(descriptor_sets),
-        uniform_buffer(uniform_buffer),
+    ) : uniform_buffer(uniform_buffer),
         irradiance_image_view(irradiance_image_view),
         depth_image_view(depth_image_view)
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(SetDDGIDescriptors)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // create our own descriptor sets
-            AssertThrow(descriptor_sets[frame_index] != nullptr);
-            
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[frame_index]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DDGIUniforms), uniform_buffer);
 
-            // Add the final result to the global descriptor set
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DDGIIrradianceTexture), irradiance_image_view);
 
-            descriptor_set_globals
-                ->GetOrAddDescriptor<UniformBufferDescriptor>(DescriptorKey::RT_PROBE_UNIFORMS)
-                ->SetElementBuffer(0, uniform_buffer);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_IRRADIANCE_GRID)
-                ->SetElementSRV(0, irradiance_image_view);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_DEPTH_GRID)
-                ->SetElementSRV(0, depth_image_view);
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DDGIDepthTexture), depth_image_view);
         }
 
         HYPERION_RETURN_OK;
     }
 };
 
-struct RENDER_COMMAND(DestroyProbeGridDescriptors) : renderer::RenderCommand
+struct RENDER_COMMAND(UnsetDDGIDescriptors) : renderer::RenderCommand
 {
-    RENDER_COMMAND(DestroyProbeGridDescriptors)()
+    RENDER_COMMAND(UnsetDDGIDescriptors)()
     {
     }
 
-    virtual Result operator()()
-    {
-        auto result = Result::OK;
+    virtual ~RENDER_COMMAND(UnsetDDGIDescriptors)() override = default;
 
-        Device *device = g_engine->GetGPUDevice();
-        
+    virtual Result operator()() override
+    {   
         // remove result image from global descriptor set
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DDGIIrradianceTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
 
-            // set to placeholder image
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_IRRADIANCE_GRID)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
-                });
-            
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::RT_DEPTH_GRID)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .image_view = g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
-                });
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DDGIDepthTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
-        return result;
+        HYPERION_RETURN_OK;
     }
 };
 
@@ -187,8 +156,7 @@ struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : renderer::RenderCommand
 ProbeGrid::ProbeGrid(ProbeGridInfo &&grid_info)
     : m_grid_info(std::move(grid_info)),
       m_updates { PROBE_SYSTEM_UPDATES_NONE, PROBE_SYSTEM_UPDATES_NONE },
-      m_time(0),
-      m_shadow_map_index(0)
+      m_time(0)
 {
 }
 
@@ -226,25 +194,21 @@ void ProbeGrid::Init()
 
     CreateStorageBuffers();
     CreateUniformBuffer();
-    CreateDescriptorSets();
+    CreatePipelines();
 
-    /* TMP */
-    g_engine->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](...) {
-        CreatePipeline();
-    });
-    
-    CreateComputePipelines();
+    PUSH_RENDER_COMMAND(
+        SetDDGIDescriptors,
+        m_uniform_buffer,
+        m_irradiance_image_view,
+        m_depth_image_view
+    );
 }
 
 void ProbeGrid::Destroy()
 {
     m_shader.Reset();
 
-    // release our owned descriptor sets
-    for (auto &descriptor_set : m_descriptor_sets) {
-        SafeRelease(std::move(descriptor_set));
-    }
-
+    SafeRelease(std::move(m_descriptor_table));
     SafeRelease(std::move(m_uniform_buffer));
     SafeRelease(std::move(m_radiance_buffer));
     SafeRelease(std::move(m_irradiance_image));
@@ -253,61 +217,97 @@ void ProbeGrid::Destroy()
     SafeRelease(std::move(m_depth_image_view));
     SafeRelease(std::move(m_pipeline));
 
-    PUSH_RENDER_COMMAND(DestroyProbeGridDescriptors);
+    PUSH_RENDER_COMMAND(UnsetDDGIDescriptors);
 
     HYP_SYNC_RENDER();
 }
 
-void ProbeGrid::CreatePipeline()
+void ProbeGrid::CreatePipelines()
 {
     m_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTProbe));
     InitObject(m_shader);
 
+    Handle<Shader> update_irradiance_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTProbeUpdateIrradiance));
+    Handle<Shader> update_depth_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTProbeUpdateDepth));
+    Handle<Shader> copy_border_texels_irradiance_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTCopyBorderTexelsIrradiance));
+    Handle<Shader> copy_border_texels_depth_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTCopyBorderTexelsDepth));
+
+    Handle<Shader> *shaders[] = {
+        &update_irradiance_shader,
+        &update_depth_shader,
+        &copy_border_texels_irradiance_shader,
+        &copy_border_texels_depth_shader
+    };
+
+    DescriptorUsageSet descriptor_usages;
+
+    for (Handle<Shader> *shader : shaders) {
+        InitObject(*shader);
+
+        descriptor_usages.Merge(shader->Get()->GetCompiledShader().GetDefinition().GetDescriptorUsages());
+    }
+
+    renderer::DescriptorTableDeclaration descriptor_table_decl = descriptor_usages.BuildDescriptorTable();
+
+    m_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = m_descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
+        
+        descriptor_set->SetElement(HYP_NAME(LightsBuffer), g_engine->GetRenderData()->lights.GetBuffer());
+        descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer());
+        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+
+        descriptor_set->SetElement(HYP_NAME(DDGIUniforms), m_uniform_buffer);
+        descriptor_set->SetElement(HYP_NAME(ProbeRayData), m_radiance_buffer);
+
+        descriptor_set->SetElement(HYP_NAME(OutputIrradianceImage), m_irradiance_image_view);
+        descriptor_set->SetElement(HYP_NAME(OutputDepthImage), m_depth_image_view);
+    }
+
+    DeferCreate(m_descriptor_table, g_engine->GetGPUDevice());
+
+    // Create raytracing pipeline
+
     m_pipeline = MakeRenderObject<RaytracingPipeline>(
         m_shader->GetShaderProgram(),
-        Array<DescriptorSetRef> {
-            m_descriptor_sets[0],
-            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE),
-            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-        }
+        m_descriptor_table
     );
 
-    DeferCreate(
-        m_pipeline, 
-        g_engine->GetGPUDevice(),
-        &g_engine->GetGPUInstance()->GetDescriptorPool()
-    );
-}
+    DeferCreate(m_pipeline, g_engine->GetGPUDevice());
 
-void ProbeGrid::CreateComputePipelines()
-{
-    m_update_irradiance = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(RTProbeUpdateIrradiance)),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    // Create compute pipelines
+
+    m_update_irradiance = MakeRenderObject<renderer::ComputePipeline>(
+        update_irradiance_shader->GetShaderProgram(),
+        m_descriptor_table
     );
 
-    InitObject(m_update_irradiance);
+    DeferCreate(m_update_irradiance, g_engine->GetGPUDevice());
 
-    m_update_depth = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(RTProbeUpdateDepth)),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    m_update_depth = MakeRenderObject<renderer::ComputePipeline>(
+        update_depth_shader->GetShaderProgram(),
+        m_descriptor_table
     );
 
-    InitObject(m_update_depth);
+    DeferCreate(m_update_depth, g_engine->GetGPUDevice());
 
-    m_copy_border_texels_irradiance = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(RTCopyBorderTexelsIrradiance)),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    m_copy_border_texels_irradiance = MakeRenderObject<renderer::ComputePipeline>(
+        copy_border_texels_irradiance_shader->GetShaderProgram(),
+        m_descriptor_table
     );
 
-    InitObject(m_copy_border_texels_irradiance);
+    DeferCreate(m_copy_border_texels_irradiance, g_engine->GetGPUDevice());
 
-    m_copy_border_texels_depth = CreateObject<ComputePipeline>(
-        g_shader_manager->GetOrCreate(HYP_NAME(RTCopyBorderTexelsDepth)),
-        Array<DescriptorSetRef> { m_descriptor_sets[0] }
+    m_copy_border_texels_depth = MakeRenderObject<renderer::ComputePipeline>(
+        copy_border_texels_depth_shader->GetShaderProgram(),
+        m_descriptor_table
     );
 
-    InitObject(m_copy_border_texels_depth);
+    DeferCreate(m_copy_border_texels_depth, g_engine->GetGPUDevice());
 }
 
 void ProbeGrid::CreateUniformBuffer()
@@ -421,86 +421,6 @@ void ProbeGrid::CreateStorageBuffers()
     }
 }
 
-void ProbeGrid::CreateDescriptorSets()
-{
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto descriptor_set = MakeRenderObject<DescriptorSet>();
-
-        descriptor_set->GetOrAddDescriptor<TlasDescriptor>(0)
-            ->SetElementAccelerationStructure(0, m_tlas->GetInternalTLAS());
-
-        // mesh descriptions
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(4)
-            ->SetElementBuffer(0, m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
-        
-        // materials
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(5)
-            ->SetElementBuffer(0, g_engine->GetRenderData()->materials.GetBuffer());
-        
-        // entities
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(6)
-            ->SetElementBuffer(0, g_engine->GetRenderData()->objects.GetBuffer());
-        
-        // lights
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(7)
-            ->SetElementBuffer(0, g_engine->GetRenderData()->lights.GetBuffer());
-
-        descriptor_set
-            ->GetOrAddDescriptor<UniformBufferDescriptor>(9)
-            ->SetElementBuffer(0, m_uniform_buffer.Get());
-
-        descriptor_set
-            ->GetOrAddDescriptor<StorageBufferDescriptor>(10)
-            ->SetElementBuffer(0, m_radiance_buffer.Get());
-
-        descriptor_set
-            ->GetOrAddDescriptor<StorageImageDescriptor>(11)
-            ->SetElementUAV(0, m_irradiance_image_view.Get());
-
-        descriptor_set
-            ->GetOrAddDescriptor<StorageImageDescriptor>(12)
-            ->SetElementUAV(0, m_depth_image_view.Get());
-
-        descriptor_set
-            ->GetOrAddDescriptor<ImageDescriptor>(13)
-            ->SetElementSRV(0, m_irradiance_image_view.Get());
-
-        descriptor_set
-            ->GetOrAddDescriptor<ImageDescriptor>(14)
-            ->SetElementSRV(0, m_depth_image_view.Get());
-        
-        // shadow map data
-        descriptor_set->GetOrAddDescriptor<StorageBufferDescriptor>(15)
-            ->SetElementBuffer(0, g_engine->GetRenderData()->shadow_map_data.GetBuffer());
-
-        // shadow maps
-        auto *shadow_map_descriptor = descriptor_set
-            ->GetOrAddDescriptor<ImageDescriptor>(16);
-        
-        for (uint i = 0; i < max_shadow_maps; i++) {
-            shadow_map_descriptor->SetElementSRV(i, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-        }
-
-        // Nearest sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(17)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
-
-        // Linear sampler
-        descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(18)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinear());
-
-        m_descriptor_sets[frame_index] = std::move(descriptor_set);
-    }
-
-    PUSH_RENDER_COMMAND(
-        CreateProbeGridDescriptors,
-        m_descriptor_sets,
-        m_uniform_buffer,
-        m_irradiance_image_view,
-        m_depth_image_view
-    );
-}
-
 void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
 {
     if (!flags) {
@@ -508,20 +428,20 @@ void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
     }
     
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = m_descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE) {
             // update acceleration structure in descriptor set
-            m_descriptor_sets[frame_index]->GetDescriptor(0)
-                ->SetSubDescriptor({
-                    .element_index = 0u,
-                    .acceleration_structure = m_tlas->GetInternalTLAS()
-                });
+            descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
         }
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS) {
             // update mesh descriptions buffer in descriptor set
-            m_descriptor_sets[frame_index]->GetDescriptor(4)
-                ->SetElementBuffer(0, m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+            descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
         }
+
+        descriptor_set->Update(g_engine->GetGPUDevice());
 
         m_updates[frame_index] &= ~PROBE_SYSTEM_UPDATES_TLAS;
     }
@@ -540,21 +460,6 @@ void ProbeGrid::SubmitPushConstants(CommandBuffer *command_buffer)
     m_pipeline->push_constants.probe_data.time = m_time++;
 
     m_pipeline->SubmitPushConstants(command_buffer);
-}
-
-void ProbeGrid::SetShadowMap(uint shadow_map_index, Handle<Texture> shadow_map)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    if (shadow_map_index == m_shadow_map_index && shadow_map == m_shadow_map) {
-        return;
-    }
-
-    m_shadow_map_index = shadow_map_index;
-    m_shadow_map = std::move(shadow_map);
-
-    m_updates[0] |= PROBE_SYSTEM_UPDATES_SHADOW_MAP;
-    m_updates[1] |= PROBE_SYSTEM_UPDATES_SHADOW_MAP;
 }
 
 void ProbeGrid::UpdateUniforms(Frame *frame)
@@ -579,22 +484,9 @@ void ProbeGrid::UpdateUniforms(Frame *frame)
 
     m_uniforms.params[3] = num_bound_lights;
 
-    m_uniforms.shadow_map_index = m_shadow_map_index;
-
     m_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(DDGIUniforms), &m_uniforms);
 
     m_uniforms.params[2] &= ~PROBE_SYSTEM_FLAGS_FIRST_RUN;
-    
-    if (m_updates[frame->GetFrameIndex()]) {
-        if (m_updates[frame->GetFrameIndex()] & PROBE_SYSTEM_UPDATES_SHADOW_MAP) {
-            m_descriptor_sets[frame->GetFrameIndex()]->GetDescriptor(16)
-                ->SetElementSRV(m_shadow_map_index, m_shadow_map ? m_shadow_map->GetImageView() : ImageViewRef::unset);
-        }
-
-        m_descriptor_sets[frame->GetFrameIndex()]->ApplyUpdates(g_engine->GetGPUDevice());
-
-        m_updates[frame->GetFrameIndex()] = PROBE_SYSTEM_UPDATES_NONE;
-    }
 }
 
 void ProbeGrid::RenderProbes(Frame *frame)
@@ -609,32 +501,21 @@ void ProbeGrid::RenderProbes(Frame *frame)
     
     SubmitPushConstants(frame->GetCommandBuffer());
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_pipeline.Get(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
-    );
-
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_pipeline.Get(),
-        DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, frame->GetFrameIndex()),
-        1,
-        FixedArray {
-            HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-            HYP_RENDER_OBJECT_OFFSET(Light, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0),
-            HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0),
-            HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+    m_pipeline->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_pipeline,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
         }
-    );
-
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_pipeline.Get(),
-        DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, frame->GetFrameIndex()),
-        2
     );
 
     m_pipeline->TraceRays(
@@ -666,16 +547,26 @@ void ProbeGrid::ComputeIrradiance(Frame *frame)
         ResourceState::UNORDERED_ACCESS
     );
     
-    m_update_irradiance->GetPipeline()->Bind(frame->GetCommandBuffer());
-    
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_update_irradiance->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
+    m_update_irradiance->Bind(frame->GetCommandBuffer());
+
+    m_update_irradiance->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_update_irradiance,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
+        }
     );
 
-    m_update_irradiance->GetPipeline()->Dispatch(
+    m_update_irradiance->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             probe_counts.width * probe_counts.height,
@@ -684,16 +575,26 @@ void ProbeGrid::ComputeIrradiance(Frame *frame)
         }
     );
 
-    m_update_depth->GetPipeline()->Bind(frame->GetCommandBuffer());
-    
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_update_depth->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
+    m_update_depth->Bind(frame->GetCommandBuffer());
+
+    m_update_depth->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_update_depth,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
+        }
     );
 
-    m_update_depth->GetPipeline()->Dispatch(
+    m_update_depth->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             probe_counts.width * probe_counts.height,
@@ -713,16 +614,26 @@ void ProbeGrid::ComputeIrradiance(Frame *frame)
     );
 
     // now copy border texels
-    m_copy_border_texels_irradiance->GetPipeline()->Bind(frame->GetCommandBuffer());
+    m_copy_border_texels_irradiance->Bind(frame->GetCommandBuffer());
 
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_copy_border_texels_irradiance->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
+    m_copy_border_texels_irradiance->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_copy_border_texels_irradiance,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
+        }
     );
 
-    m_copy_border_texels_irradiance->GetPipeline()->Dispatch(
+    m_copy_border_texels_irradiance->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             (probe_counts.width * probe_counts.height * (m_grid_info.irradiance_octahedron_size + m_grid_info.probe_border.width)) + 7 / 8,
@@ -731,16 +642,26 @@ void ProbeGrid::ComputeIrradiance(Frame *frame)
         }
     );
     
-    m_copy_border_texels_depth->GetPipeline()->Bind(frame->GetCommandBuffer());
-    
-    frame->GetCommandBuffer()->BindDescriptorSet(
-        g_engine->GetGPUInstance()->GetDescriptorPool(),
-        m_copy_border_texels_depth->GetPipeline(),
-        m_descriptor_sets[frame->GetFrameIndex()],
-        0
+    m_copy_border_texels_depth->Bind(frame->GetCommandBuffer());
+
+    m_copy_border_texels_depth->GetDescriptorTable().Get()->Bind(
+        frame,
+        m_copy_border_texels_depth,
+        {
+            {
+                HYP_NAME(Scene),
+                {
+                    { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                    { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                    { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            }
+        }
     );
     
-    m_copy_border_texels_depth->GetPipeline()->Dispatch(
+    m_copy_border_texels_depth->Dispatch(
         frame->GetCommandBuffer(),
         Extent3D {
             (probe_counts.width * probe_counts.height * (m_grid_info.depth_octahedron_size + m_grid_info.probe_border.width)) + 15 / 16,

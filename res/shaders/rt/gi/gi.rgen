@@ -21,22 +21,24 @@
 #include "../../include/rt/payload.inc"
 #include "../../include/rt/probe/probe_uniforms.inc"
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
+HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
 
-layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
+{
     DDGIUniforms probe_system;
 };
 
-layout(std430, set = 0, binding = 10) buffer ProbeRayDataBuffer {
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, ProbeRayData, standard = std430) buffer ProbeRayDataBuffer
+{
     ProbeRayData probe_rays[];
 };
 
 #include "../../include/rt/probe/shared.inc"
 
-layout(set = 0, binding = 11, rgba16f) uniform image2D output_irradiance;
-layout(set = 0, binding = 12, rg16f) uniform image2D output_depth;
+HYP_DESCRIPTOR_UAV(DDGIDescriptorSet, OutputIrradianceImage, format = rgba16f) uniform image2D output_irradiance;
+HYP_DESCRIPTOR_UAV(DDGIDescriptorSet, OutputDepthImage, format = rg16f) uniform image2D output_depth;
 
-layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
     Scene scene;
 };

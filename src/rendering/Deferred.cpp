@@ -546,137 +546,46 @@ void DeferredRenderer::CreateDescriptorSets()
 {
     // set global gbuffer data
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        
-        { // v2 - when completed, remove old
-            uint element_index = 0u;
+        uint element_index = 0u;
 
-            // not including depth texture here
-            for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
-                g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                    ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
-            }
-
-            // add translucent bucket's albedo
+        // not including depth texture here
+        for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
-
-            // depth attachment goes into separate slot
-            const AttachmentUsageRef &depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
-            AssertThrow(depth_attachment_usage != nullptr);
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(GBufferDepthTexture), depth_attachment_usage->GetImageView());
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(GBufferMipChain), m_mip_chain->GetImageView());
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(BlueNoiseBuffer), m_blue_noise_buffer);
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
-                    //.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(DeferredIndirectResultTexture), m_indirect_pass.GetAttachmentUsage(0)->GetImageView());
-
-            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->SetElement(HYP_NAME(DeferredDirectResultTexture), m_direct_pass.GetAttachmentUsage(0)->GetImageView());
+                ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
         }
-        
-        DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-        
-        { // add gbuffer textures
-            auto *gbuffer_textures = descriptor_set_globals->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
 
-            uint element_index = 0u;
-
-            // not including depth texture here
-            for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
-                gbuffer_textures->SetElementSRV(element_index++, m_opaque_fbo->GetAttachmentUsages()[attachment_index]->GetImageView());
-            }
-
-            // add translucent bucket's albedo
-            gbuffer_textures->SetElementSRV(element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
-        }
+        // add translucent bucket's albedo
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(GBufferTextures), element_index++, m_translucent_fbo->GetAttachmentUsages()[0]->GetImageView());
 
         // depth attachment goes into separate slot
         const AttachmentUsageRef &depth_attachment_usage = m_opaque_fbo->GetAttachmentUsages()[GBUFFER_RESOURCE_MAX - 1];
+        AssertThrow(depth_attachment_usage != nullptr);
 
-        /* Depth texture */
-        descriptor_set_globals
-            ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_DEPTH)
-            ->SetSubDescriptor({
-                .element_index = 0u,
-                .image_view = depth_attachment_usage->GetImageView()
-            });
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(GBufferDepthTexture), depth_attachment_usage->GetImageView());
 
-        /* Mip chain */
-        descriptor_set_globals
-            ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
-            ->SetElementSRV(0, m_mip_chain->GetImageView());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(GBufferMipChain), m_mip_chain->GetImageView());
 
-        /* Gbuffer depth sampler */
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerNearest());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(BlueNoiseBuffer), m_blue_noise_buffer);
 
-        /* Gbuffer sampler */
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
-            ->SetElementSampler(0, g_engine->GetPlaceholderData()->GetSamplerLinearMipmap());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
 
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEPTH_PYRAMID_RESULT)
-            ->SetElementSRV(0, m_dpr.GetResultImageView());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
+                //.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_AMBIENT)
-            ->SetElementSRV(0, m_indirect_pass.GetAttachmentUsage(0)->GetImageView());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
 
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_LIGHTING_DIRECT)
-            ->SetElementSRV(0, m_direct_pass.GetAttachmentUsage(0)->GetImageView());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(DeferredIndirectResultTexture), m_indirect_pass.GetAttachmentUsage(0)->GetImageView());
 
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_IRRADIANCE_ACCUM)
-            ->SetElementSRV(0, m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
-
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RADIANCE)
-            ->SetElementSRV(0, m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
-                //m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
-
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_REFLECTION_PROBE)
-            ->SetElementSRV(0, m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
-
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DEFERRED_RESULT)
-            ->SetElementSRV(0, m_combine_pass->GetAttachmentUsage(0)->GetImageView());
-
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::StorageBufferDescriptor>(DescriptorKey::BLUE_NOISE_BUFFER)
-            ->SetElementBuffer(0, m_blue_noise_buffer.Get());
-
-        // descriptor_set_globals
-        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_HOR)
-        //     ->SetElementSRV(0, m_dof_blur->GetHorizontalBlurPass()->GetAttachmentUsage(0)->GetImageView());
-
-        // descriptor_set_globals
-        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_VERT)
-        //     ->SetElementSRV(0, m_dof_blur->GetVerticalBlurPass()->GetAttachmentUsage(0)->GetImageView());
-
-        // descriptor_set_globals
-        //     ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::DOF_BLUR_BLENDED)
-        //     ->SetElementSRV(0, m_dof_blur->GetCombineBlurPass()->GetAttachmentUsage(0)->GetImageView());
+        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+            ->SetElement(HYP_NAME(DeferredDirectResultTexture), m_direct_pass.GetAttachmentUsage(0)->GetImageView());
     }
 }
 

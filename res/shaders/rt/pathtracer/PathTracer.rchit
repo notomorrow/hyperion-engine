@@ -24,25 +24,19 @@
 #define PATHTRACER
 #include "../../include/rt/payload.inc"
 
-layout(set = 0, binding = 10) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
 #define HYP_SAMPLER_NEAREST sampler_nearest
-
-layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
-
 
 /* Shadows */
 
-layout(set = 1, binding = 12) uniform texture2D shadow_maps[];
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[HYP_MAX_SHADOW_MAPS];
 
-layout(std140, set = 1, binding = 13, row_major) readonly buffer ShadowShaderData
+HYP_DESCRIPTOR_UAV(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
-};
-
-layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
-{
-    Camera camera;
 };
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -70,38 +64,36 @@ struct PackedVertex
     float texcoord_t;
 };
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
-
 layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
-layout(std140, set = 0, binding = 2) buffer MeshDescriptions
-{
-    MeshDescription mesh_descriptions[];
-};
-
-layout(std140, set = 0, binding = 3) readonly buffer MaterialBuffer
-{
-    Material materials[];
-};
-
-layout(std140, set = 0, binding = 4) readonly buffer EntityBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object entities[];
 };
 
-layout(std430, set = 0, binding = 5) readonly buffer LightShaderData
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer MeshDescriptions
+{
+    MeshDescription mesh_descriptions[];
+};
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
+{
+    Material materials[];
+};
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
 
-layout(std140, set = 0, binding = 13, row_major) uniform RTRadianceUniformBuffer
+HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
 {
     RTRadianceUniforms rt_radiance_uniforms;
 };
 
 // for RT, all textures are bindless
-layout(set = 2, binding = 0) uniform sampler2D textures[];
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform sampler2D textures[];
 
 float CheckLightIntersection(in Light light, in vec3 position, in vec3 R)
 {

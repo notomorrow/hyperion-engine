@@ -42,6 +42,7 @@ HYP_DESCRIPTOR_SRV(Global, DDGIIrradianceTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, DDGIDepthTexture, 1);
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear, 1);
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest, 1);
+HYP_DESCRIPTOR_SRV(Global, UITexture, 1);
 HYP_DESCRIPTOR_SRV(Global, FinalOutputTexture, 1);
 
 HYP_DESCRIPTOR_SET(1, Scene);

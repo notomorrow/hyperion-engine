@@ -38,21 +38,8 @@ struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderComma
     virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // @NOTE: V2, remove V1 code below when done
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
                 ->SetElement(HYP_NAME(ShadowMapTextures), shadow_map_index, shadow_map_image_view);
-
-
-            DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::scene_buffer_mapping[frame_index]);
-
-            auto *shadow_map_descriptor = descriptor_set
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SHADOW_MAPS);
-
-            shadow_map_descriptor->SetElementSRV(
-                shadow_map_index,
-                shadow_map_image_view
-            );
         }
 
         HYPERION_RETURN_OK;
@@ -102,32 +89,10 @@ struct RENDER_COMMAND(CreateShadowMapImage) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateShadowMapBlurDescriptorSets) : renderer::RenderCommand
-{
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateShadowMapBlurDescriptorSets)(FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets)
-        : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()() override
-    {
-        for (uint i = 0; i < descriptor_sets.Size(); i++) {
-            HYPERION_BUBBLE_ERRORS(descriptor_sets[i]->Create(
-                g_engine->GetGPUDevice(),
-                &g_engine->GetGPUInstance()->GetDescriptorPool()
-            ));
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(DestroyShadowPassData) : renderer::RenderCommand
 {
-    ImageRef shadow_map_image;
-    ImageViewRef shadow_map_image_view;
+    ImageRef        shadow_map_image;
+    ImageViewRef    shadow_map_image_view;
 
     RENDER_COMMAND(DestroyShadowPassData)(const ImageRef &shadow_map_image, const ImageViewRef &shadow_map_image_view)
         : shadow_map_image(shadow_map_image),

@@ -132,50 +132,45 @@ public:
     void Init();
     void Destroy();
 
-    void SetShadowMap(uint shadow_map_index, Handle<Texture> shadow_map);
-
     void RenderProbes(Frame *frame);
     void ComputeIrradiance(Frame *frame);
 
 private:
-    void CreatePipeline();
-    void CreateComputePipelines();
+    void CreatePipelines();
     void CreateUniformBuffer();
     void CreateStorageBuffers();
     void CreateDescriptorSets();
     void UpdateUniforms(Frame *frame);
     void SubmitPushConstants(CommandBuffer *command_buffer);
 
-    ProbeGridInfo m_grid_info;
-    Array<Probe> m_probes;
+    ProbeGridInfo           m_grid_info;
+    Array<Probe>            m_probes;
     
     FixedArray<uint32, max_frames_in_flight> m_updates;
 
-    uint m_shadow_map_index;
-    Handle<Texture> m_shadow_map;
-
-    Handle<ComputePipeline> m_update_irradiance,
+    ComputePipelineRef m_update_irradiance,
         m_update_depth,
         m_copy_border_texels_irradiance,
         m_copy_border_texels_depth;
 
     Handle<Shader> m_shader;
 
-    RaytracingPipelineRef m_pipeline;
-    GPUBufferRef m_uniform_buffer;
-    GPUBufferRef m_radiance_buffer;
-    ImageRef m_irradiance_image;
-    ImageViewRef m_irradiance_image_view;
-    ImageRef m_depth_image;
-    ImageViewRef m_depth_image_view;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
+    RaytracingPipelineRef   m_pipeline;
+    GPUBufferRef            m_uniform_buffer;
+    GPUBufferRef            m_radiance_buffer;
+    ImageRef                m_irradiance_image;
+    ImageViewRef            m_irradiance_image_view;
+    ImageRef                m_depth_image;
+    ImageViewRef            m_depth_image_view;
 
-    Handle<TLAS> m_tlas;
+    DescriptorTableRef      m_descriptor_table;
 
-    DDGIUniforms m_uniforms;
+    Handle<TLAS>            m_tlas;
+
+    DDGIUniforms            m_uniforms;
 
     RotationMatrixGenerator m_random_generator;
-    uint32 m_time;
+    uint32                  m_time;
 };
 
 } // namespace hyperion::v2

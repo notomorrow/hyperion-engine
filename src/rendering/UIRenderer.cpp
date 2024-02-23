@@ -9,60 +9,54 @@ namespace hyperion::v2 {
 
 using renderer::Result;
 
-struct RENDER_COMMAND(CreateUIDescriptors) : renderer::RenderCommand
+struct RENDER_COMMAND(SetUITextureInGlobalDescriptorSet) : renderer::RenderCommand
 {
-    SizeType component_index;
-    renderer::ImageView *image_view;
+    uint            component_index;
+    ImageViewRef    image_view;
 
-    RENDER_COMMAND(CreateUIDescriptors)(
-        SizeType component_index,
-        renderer::ImageView *image_view
+    RENDER_COMMAND(SetUITextureInGlobalDescriptorSet)(
+        uint component_index,
+        ImageViewRef image_view
     ) : component_index(component_index),
-        image_view(image_view)
+        image_view(std::move(image_view))
     {
+        AssertThrow(this->image_view != nullptr);
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(SetUITextureInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            descriptor_set
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::UI_TEXTURE)
-                ->SetElementSRV(uint(component_index), image_view);
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(UITexture), image_view);
         }
 
         HYPERION_RETURN_OK;
     }
 };
 
-struct RENDER_COMMAND(DestroyUIDescriptors) : renderer::RenderCommand
+struct RENDER_COMMAND(UnsetUITextureFromGlobalDescriptorSet) : renderer::RenderCommand
 {
-    SizeType component_index;
+    uint component_index;
 
-    RENDER_COMMAND(DestroyUIDescriptors)(
-        SizeType component_index
+    RENDER_COMMAND(UnsetUITextureFromGlobalDescriptorSet)(
+        uint component_index
     ) : component_index(component_index)
     {
     }
 
-    virtual Result operator()()
-    {
-        auto result = renderer::Result::OK;
+    virtual ~RENDER_COMMAND(UnsetUITextureFromGlobalDescriptorSet)() override = default;
 
+    virtual Result operator()() override
+    {
         // remove descriptors from global descriptor set
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            // set to placeholder data.
-            descriptor_set
-                ->GetDescriptor(DescriptorKey::UI_TEXTURE)
-                ->SetElementSRV(component_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(UITexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
-        return result;
+        HYPERION_RETURN_OK;
     }
 };
 
@@ -74,7 +68,7 @@ UIRenderer::UIRenderer(Name name, Handle<Scene> scene)
 
 UIRenderer::~UIRenderer()
 {
-    PUSH_RENDER_COMMAND(DestroyUIDescriptors, GetComponentIndex());
+    PUSH_RENDER_COMMAND(UnsetUITextureFromGlobalDescriptorSet, GetComponentIndex());
 
     HYP_SYNC_RENDER();
 }
@@ -101,7 +95,8 @@ void UIRenderer::CreateFramebuffer()
 void UIRenderer::CreateDescriptors()
 {
     // create descriptors in render thread
-    PUSH_RENDER_COMMAND(CreateUIDescriptors, 
+    PUSH_RENDER_COMMAND(
+        SetUITextureInGlobalDescriptorSet, 
         GetComponentIndex(),
         m_framebuffer->GetAttachmentUsages()[0]->GetImageView()
     );

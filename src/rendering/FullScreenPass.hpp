@@ -56,14 +56,6 @@ public:
         Extent2D extent = Extent2D { 0, 0 }
     );
 
-    FullScreenPass(
-        const Handle<Shader> &shader,
-        DescriptorKey descriptor_key,
-        uint sub_descriptor_index,
-        InternalFormat image_format = InternalFormat::RGB8_SRGB,
-        Extent2D extent = Extent2D { 0, 0 }
-    );
-
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     virtual ~FullScreenPass();
@@ -90,9 +82,6 @@ public:
 
     const Handle<RenderGroup> &GetRenderGroup() const
         { return m_render_group; }
-
-    uint GetSubDescriptorIndex() const
-        { return m_sub_descriptor_index; }
 
     PushConstantData &GetPushConstants()
         { return m_push_constant_data; }
@@ -143,10 +132,7 @@ protected:
 
     PushConstantData                                    m_push_constant_data;
 
-    // TODO: move to PostFXPass?                        
-    InternalFormat                                      m_image_format;                                    
-    DescriptorKey                                       m_descriptor_key;
-    uint                                                m_sub_descriptor_index;
+    InternalFormat                                      m_image_format;
 
     Optional<DescriptorTableRef>                        m_descriptor_table;
 };

@@ -32,6 +32,12 @@ using renderer::ShaderVec2;
 
 class Engine;
 
+enum PostProcessingStage
+{
+    POST_PROCESSING_STAGE_PRE_SHADING,
+    POST_PROCESSING_STAGE_POST_SHADING
+};
+
 class PostFXPass : public FullScreenPass
 {
 public:
@@ -44,8 +50,8 @@ public:
     );
     PostFXPass(
         const Handle<Shader> &shader,
-        DescriptorKey descriptor_key,
-        uint sub_descriptor_index,
+        PostProcessingStage stage,
+        uint effect_index,
         InternalFormat image_format = InternalFormat::RGB8_SRGB
     );
     PostFXPass(const PostFXPass &) = delete;
@@ -53,20 +59,24 @@ public:
     virtual ~PostFXPass();
 
     virtual void CreateDescriptors() override;
+
+    PostProcessingStage GetStage() const
+        { return m_stage; }
+
+    uint GetEffectIndex() const
+        { return m_effect_index; }
+
+protected:
+    PostProcessingStage m_stage;
+    uint                m_effect_index;
 };
 
 class PostProcessingEffect : public BasicObject<STUB_CLASS(PostProcessingEffect)>
 {
 public:
-    enum Stage : uint
-    {
-        PRE_SHADING,
-        POST_SHADING
-    };
-
     PostProcessingEffect(
-        Stage stage,
-        uint index,
+        PostProcessingStage stage,
+        uint effect_index,
         InternalFormat image_format = InternalFormat::RGBA16F//RGBA8_SRGB
     );
     PostProcessingEffect(const PostProcessingEffect &other) = delete;
@@ -79,8 +89,8 @@ public:
     Handle<Shader> &GetShader() { return m_shader; }
     const Handle<Shader> &GetShader() const { return m_shader; }
 
-    Stage GetStage() const { return m_stage; }
-    uint GetIndex() const { return m_pass.GetSubDescriptorIndex(); }
+    PostProcessingStage GetStage() const { return m_pass.GetStage(); }
+    uint GetEffectIndex() const { return m_pass.GetEffectIndex(); }
 
     bool IsEnabled() const { return m_is_enabled; }
     void SetIsEnabled(bool is_enabled) { m_is_enabled = is_enabled; }
@@ -98,9 +108,8 @@ protected:
     PostFXPass m_pass;
 
 private:
-    Handle<Shader> m_shader;
-    Stage m_stage;
-    bool m_is_enabled;
+    Handle<Shader>  m_shader;
+    bool            m_is_enabled;
 };
 
 class PostProcessing
@@ -126,7 +135,7 @@ public:
     template <class EffectClass>
     void AddEffect(UniquePtr<EffectClass> &&effect)
     {
-        const PostProcessingEffect::Stage stage = EffectClass::stage;
+        const PostProcessingStage stage = EffectClass::stage;
 
         AddEffectInternal(stage, std::move(effect));
     }
@@ -137,7 +146,7 @@ public:
     template <class EffectClass, class ...Args>
     void AddEffect(Args &&... args)
     {
-        const PostProcessingEffect::Stage stage = EffectClass::stage;
+        const PostProcessingStage stage = EffectClass::stage;
 
         AddEffectInternal(stage, UniquePtr<EffectClass>::Construct(std::forward<Args>(args)...));
     }
@@ -146,7 +155,7 @@ public:
     template <class EffectClass>
     EffectClass *GetPass() const
     {
-        const PostProcessingEffect::Stage stage = EffectClass::stage;
+        const PostProcessingStage stage = EffectClass::stage;
 
         return GetEffectInternal<EffectClass>(stage);
     }
@@ -162,7 +171,7 @@ private:
     void CreateUniformBuffer();
 
     template <class EffectClass>
-    void AddEffectInternal(PostProcessingEffect::Stage stage, UniquePtr<EffectClass> &&effect)
+    void AddEffectInternal(PostProcessingStage stage, UniquePtr<EffectClass> &&effect)
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 
@@ -180,7 +189,7 @@ private:
     }
 
     template <class EffectClass>
-    EffectClass *GetEffectInternal(PostProcessingEffect::Stage stage) const
+    EffectClass *GetEffectInternal(PostProcessingStage stage) const
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 

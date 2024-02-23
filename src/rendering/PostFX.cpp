@@ -24,9 +24,9 @@ PostFXPass::PostFXPass(InternalFormat image_format)
 PostFXPass::PostFXPass(
     const Handle<Shader> &shader,
     InternalFormat image_format
-) : FullScreenPass(
+) : PostFXPass(
         shader,
-        DescriptorKey::POST_FX_PRE_STACK,
+        POST_PROCESSING_STAGE_PRE_SHADING,
         ~0u,
         image_format
     )
@@ -35,15 +35,15 @@ PostFXPass::PostFXPass(
 
 PostFXPass::PostFXPass(
     const Handle<Shader> &shader,
-    DescriptorKey descriptor_key,
-    uint sub_descriptor_index,
+    PostProcessingStage stage,
+    uint effect_index,
     InternalFormat image_format
 ) : FullScreenPass(
         shader,
-        descriptor_key,
-        sub_descriptor_index,
         image_format
-    )
+    ),
+    m_stage(stage),
+    m_effect_index(effect_index)
 {
 }
 
@@ -54,36 +54,34 @@ void PostFXPass::CreateDescriptors()
     Threads::AssertOnThread(THREAD_RENDER);
     
     if (!m_framebuffer->GetAttachmentUsages().Empty()) {
+        if (m_effect_index == ~0u) {
+            DebugLog(LogType::Warn, "Effect index not set, skipping descriptor creation\n");
+
+            return;
+        }
+
+        const Name descriptor_name = m_stage == POST_PROCESSING_STAGE_PRE_SHADING
+            ? HYP_NAME(PostFXPreStack)
+            : HYP_NAME(PostFXPostStack);
+
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(m_descriptor_key);
-
-            AssertThrowMsg(m_framebuffer->GetAttachmentUsages().Size() == 1, "Only one attachment allowed for post processing passes");
-
-            for (const AttachmentUsageRef &attachment_usage : m_framebuffer->GetAttachmentUsages()) {
-                m_sub_descriptor_index = descriptor->SetSubDescriptor({
-                    .element_index  = m_sub_descriptor_index,
-                    .image_view     = attachment_usage->GetImageView()
-                });
-            }
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(descriptor_name, m_effect_index, m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
         }
     }
 }
 
 PostProcessingEffect::PostProcessingEffect(
-    Stage stage,
-    uint index,
+    PostProcessingStage stage,
+    uint effect_index,
     InternalFormat image_format
 ) : BasicObject(),
     m_pass(
         Handle<Shader>(),
-        stage == Stage::PRE_SHADING
-            ? DescriptorKey::POST_FX_PRE_STACK
-            : DescriptorKey::POST_FX_POST_STACK,
-        index,
+        stage,
+        effect_index,
         image_format
     ),
-    m_stage(stage),
     m_is_enabled(true)
 {
 }
@@ -120,7 +118,7 @@ void PostProcessingEffect::Init()
 void PostProcessingEffect::RenderEffect(Frame *frame, uint slot)
 {
     m_pass.SetPushConstants({
-        .post_fx_data = { (slot << 1) | uint(m_stage) }
+        .post_fx_data = { (slot << 1) | uint(m_pass.GetStage()) }
     });
 
     m_pass.Record(frame->GetFrameIndex());
@@ -133,21 +131,6 @@ PostProcessing::~PostProcessing() = default;
 void PostProcessing::Create()
 {
     Threads::AssertOnThread(THREAD_RENDER);
-
-    // Fill out placeholder images -- 8 pre, 8 post.
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            for (auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
-                auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageDescriptor>(descriptor_key);
-
-                for (uint effect_index = 0; effect_index < 8; effect_index++) {
-                    descriptor->SetElementSRV(effect_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-                }
-            }
-        }
-    }
 
     for (uint stage_index = 0; stage_index < 2; stage_index++) {
         for (auto &effect : m_effects[stage_index]) {
@@ -185,18 +168,6 @@ void PostProcessing::Destroy()
         }
 
         m_effects[stage_index].Clear();
-    }
-
-    for (const auto descriptor_set_index : DescriptorSet::global_buffer_mapping) {
-        DescriptorSetRef descriptor_set = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(descriptor_set_index);
-
-        descriptor_set->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
-            ->RemoveSubDescriptor(0);
-
-        // remove all images
-        for (const auto descriptor_key : { DescriptorKey::POST_FX_PRE_STACK, DescriptorKey::POST_FX_POST_STACK }) {
-            descriptor_set->RemoveDescriptor(descriptor_key);
-        }
     }
 
     SafeRelease(std::move(m_uniform_buffer));
@@ -263,12 +234,12 @@ PostProcessingUniforms PostProcessing::GetUniforms() const
             AssertThrow(it.second != nullptr);
 
             if (it.second->IsEnabled()) {
-                AssertThrowMsg(it.second->GetIndex() != ~0u, "Not yet initialized - index not set yet");
+                AssertThrowMsg(it.second->GetEffectIndex() != ~0u, "Not yet initialized - index not set yet");
 
-                post_processing_uniforms.masks[stage_index] |= 1u << it.second->GetIndex();
+                post_processing_uniforms.masks[stage_index] |= 1u << it.second->GetEffectIndex();
                 post_processing_uniforms.last_enabled_indices[stage_index] = MathUtil::Max(
                     post_processing_uniforms.last_enabled_indices[stage_index],
-                    it.second->GetIndex()
+                    it.second->GetEffectIndex()
                 );
             }
         }
@@ -293,16 +264,8 @@ void PostProcessing::CreateUniformBuffer()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        // @NOTE: V2, remove below code when done
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
             ->SetElement(HYP_NAME(PostProcessingUniforms), m_uniform_buffer);
-
-        // V1
-        DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-        descriptor_set_globals
-            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
-            ->SetElementBuffer(0, m_uniform_buffer);
     }
 }
 
@@ -312,7 +275,7 @@ void PostProcessing::RenderPre(Frame *frame) const
 
     uint index = 0;
 
-    for (auto &it : m_effects[uint(PostProcessingEffect::Stage::PRE_SHADING)]) {
+    for (auto &it : m_effects[uint(POST_PROCESSING_STAGE_PRE_SHADING)]) {
         auto &effect = it.second;
 
         effect->RenderEffect(frame, index);
@@ -327,7 +290,7 @@ void PostProcessing::RenderPost(Frame *frame) const
 
     uint index = 0;
 
-    for (auto &it : m_effects[uint(PostProcessingEffect::Stage::POST_SHADING)]) {
+    for (auto &it : m_effects[uint(POST_PROCESSING_STAGE_POST_SHADING)]) {
         auto &effect = it.second;
         
         effect->RenderEffect(frame, index);

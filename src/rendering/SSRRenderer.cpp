@@ -95,18 +95,8 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : renderer::RenderCommand
     virtual Result operator()()
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // @NOTE: V2, when V1 is removed we will only need this part.
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(SSRResultTexture), image_views[frame_index]);
-
-
-            // Add the final result to the global descriptor set
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSR_RESULT)
-                ->SetElementSRV(0, image_views[frame_index]);
         }
 
         HYPERION_RETURN_OK;
@@ -122,18 +112,8 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
     virtual Result operator()()
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // @NOTE: V2, when V1 is removed we will only need this part.
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(SSRResultTexture), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-
-
-            // unset final result from the global descriptor set
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::SSR_RESULT)
-                ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
         HYPERION_RETURN_OK;
