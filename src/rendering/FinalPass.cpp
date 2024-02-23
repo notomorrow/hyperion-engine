@@ -78,14 +78,8 @@ void FinalPass::Create()
     m_composite_pass.Create();
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        // @NOTE: V2, remove v1 code below when done
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
             ->SetElement(HYP_NAME(FinalOutputTexture), m_composite_pass.GetAttachmentUsage(0)->GetImageView());
-
-
-        g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index])
-            ->AddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::FINAL_OUTPUT)
-            ->SetElementSRV(0, m_composite_pass.GetAttachmentUsage(0)->GetImageView());
     }
 
     m_quad = MeshBuilder::Quad();
@@ -189,15 +183,7 @@ void FinalPass::Create()
 
 void FinalPass::Destroy()
 {
-    { // Destroy composite pass, set images to placeholders
-        m_composite_pass.Destroy();
-
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            g_engine->GetGPUInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index])
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(renderer::DescriptorKey::FINAL_OUTPUT)
-                ->SetElementSRV(0, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-        }
-    }
+    m_composite_pass.Destroy();
 
     SafeRelease(std::move(m_attachments));
     SafeRelease(std::move(m_last_frame_image));

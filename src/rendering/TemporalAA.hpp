@@ -10,8 +10,9 @@
 
 #include <rendering/RenderState.hpp>
 #include <rendering/DrawProxy.hpp>
-#include <rendering/Compute.hpp>
+
 #include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 namespace hyperion::v2 {
 

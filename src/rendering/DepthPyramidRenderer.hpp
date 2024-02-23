@@ -1,8 +1,6 @@
 #ifndef HYPERION_V2_DEPTH_PYRAMID_RENDERER_H
 #define HYPERION_V2_DEPTH_PYRAMID_RENDERER_H
 
-#include "Compute.hpp"
-
 #include <core/Containers.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
@@ -10,6 +8,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 namespace hyperion::v2 {
 

@@ -4,7 +4,6 @@
 #include <core/Base.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/DrawProxy.hpp>
-#include <rendering/Compute.hpp>
 #include <rendering/CullData.hpp>
 // #include <rendering/DrawCall.hpp>
 
@@ -19,6 +18,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>

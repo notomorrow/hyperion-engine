@@ -730,13 +730,6 @@ void DescriptorPool::RemoveDescriptorSet(Device *device, uint index)
 
             it = m_descriptor_sets_pending_addition[queue_index].Erase(it);
 
-            // if (IsCreated()) { // creating at runtime, after descriptor sets all created
-            //     HYPERION_BUBBLE_ERRORS((*it)->Create(
-            //         g_engine->GetGPUDevice(),
-            //         &g_engine->GetGPUInstance()->GetDescriptorPool()
-            //     ));
-            // }
-
             return; // found
         } else {
             ++it;

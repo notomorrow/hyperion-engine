@@ -291,35 +291,6 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
     /* Our command pool will have a command buffer for each frame we can render to. */
     HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(m_device, &queue_graphics));
 
-    /* init descriptor sets */
-
-    for (uint i = DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED; i != DescriptorSet::DESCRIPTOR_SET_INDEX_MAX; i++) {
-        const auto index = DescriptorSet::Index(i);
-        const auto slot  = DescriptorSet::GetBaseIndex(index);
-
-#if HYP_FEATURES_BINDLESS_TEXTURES
-        if (slot == DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES) {
-            continue;
-        }
-#else
-        if (slot == DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS) {
-            continue;
-        }
-#endif
-
-        m_device->GetDescriptorPool()->AddDescriptorSet(
-            GetDevice(),
-            MakeRenderObject<renderer::DescriptorSet, Platform::VULKAN>(
-                slot,
-                i,
-                slot == DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
-            ),
-            true // add immediately instead of enqueuing
-        );
-    }
-
-    //AssertThrow(descriptor_pool.NumDescriptorSets() <= DescriptorSet::max_descriptor_sets);
-
     SetupDebugMessenger();
     m_device->SetupAllocator(this);
 

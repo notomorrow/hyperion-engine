@@ -10,9 +10,9 @@
 #include <rendering/Light.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EntityDrawCollection.hpp>
-#include <rendering/Compute.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <scene/Scene.hpp>

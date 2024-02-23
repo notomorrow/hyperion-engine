@@ -11,7 +11,6 @@
 #include <rendering/DrawProxy.hpp>
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/Buffers.hpp>
-#include <rendering/Compute.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 
 #include <rendering/backend/RendererCommandBuffer.hpp>

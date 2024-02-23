@@ -44,9 +44,6 @@ public:
     void SetRenderSurface(const VkSurfaceKHR &surface);
     void SetRequiredExtensions(const ExtensionMap &extensions);
 
-    DescriptorPool *GetDescriptorPool() const
-        { return m_descriptor_pool.Get(); }
-
     DescriptorSetManager<Platform::VULKAN> *GetDescriptorSetManager() const
         { return m_descriptor_set_manager.Get(); }
 
