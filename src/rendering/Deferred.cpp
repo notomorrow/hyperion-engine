@@ -11,9 +11,6 @@
 namespace hyperion::v2 {
 
 using renderer::Image;
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
-using renderer::DescriptorKey;
 using renderer::Rect;
 using renderer::Result;
 using renderer::GPUBufferType;

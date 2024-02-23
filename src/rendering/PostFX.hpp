@@ -27,7 +27,6 @@ namespace hyperion::v2 {
 using renderer::Frame;
 using renderer::CommandBuffer;
 using renderer::VertexAttributeSet;
-using renderer::DescriptorSet;
 using renderer::ShaderVec2;
 
 class Engine;

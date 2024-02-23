@@ -9,9 +9,6 @@
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-
-#include <memory>
 
 namespace hyperion {
 namespace renderer {
@@ -22,7 +19,6 @@ class RaytracingPipeline<Platform::VULKAN> : public Pipeline<Platform::VULKAN>
 {
 public:
     RaytracingPipeline();
-    RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader);
     RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
     RaytracingPipeline(const RaytracingPipeline &other)             = delete;
     RaytracingPipeline &operator=(const RaytracingPipeline &other)  = delete;

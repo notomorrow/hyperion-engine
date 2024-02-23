@@ -18,7 +18,6 @@
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererFrameHandler.hpp>
 #include <rendering/backend/RendererQueue.hpp>

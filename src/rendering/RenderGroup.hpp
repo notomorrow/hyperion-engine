@@ -28,8 +28,6 @@
 namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
-using renderer::DescriptorSet;
-using renderer::DescriptorSetBinding;
 using renderer::VertexAttributeSet;
 using renderer::Topology;
 using renderer::FillMode;

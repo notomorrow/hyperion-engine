@@ -2,7 +2,6 @@
 #define HYPERION_RENDERER_BACKEND_VULKAN_PIPELINE_HPP
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <core/lib/DynArray.hpp>
 #include <core/lib/Optional.hpp>
@@ -146,35 +145,11 @@ public:
     static_assert(sizeof(PushConstantData) <= 128);
 
     Pipeline();
-    Pipeline(ShaderProgramRef<Platform::VULKAN> shader);
-    /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
-        used with this pipeline.  */
-    Pipeline(const Array<DescriptorSetRef> &used_descriptor_sets);
-    Pipeline(ShaderProgramRef<Platform::VULKAN> shader, const Array<DescriptorSetRef> &used_descriptor_sets);
-
-    // new constructor
     Pipeline(ShaderProgramRef<Platform::VULKAN> shader, DescriptorTableRef<Platform::VULKAN> descriptor_table);
 
     Pipeline(const Pipeline &other) = delete;
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
-
-    bool HasCustomDescriptorSets() const
-        { return m_has_custom_descriptor_sets; }
-
-    const Optional<Array<DescriptorSetRef>> &GetUsedDescriptorSets() const
-        { return m_used_descriptor_sets; }
-
-    void SetUsedDescriptorSets(const Array<DescriptorSetRef> &used_descriptor_sets)
-    {
-        if (used_descriptor_sets.Any()) {
-            m_used_descriptor_sets = used_descriptor_sets;
-            m_has_custom_descriptor_sets = true;
-        } else {
-            m_used_descriptor_sets.Unset();
-            m_has_custom_descriptor_sets = false;
-        }
-    }
 
     const Optional<DescriptorTableRef<Platform::VULKAN>> &GetDescriptorTable() const
         { return m_descriptor_table; }
@@ -194,17 +169,10 @@ public:
     VkPipelineLayout layout;
 
 protected:
-    void AssignDefaultDescriptorSets(DescriptorPool *descriptor_pool);
-
-    // For DescriptorSet2
     Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
-
-    std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device<Platform::VULKAN> *device, DescriptorPool *descriptor_pool);
 
     ShaderProgramRef<Platform::VULKAN>                      m_shader_program;
 
-    bool                                                    m_has_custom_descriptor_sets;
-    Optional<Array<DescriptorSetRef>>                       m_used_descriptor_sets { };
     Optional<DescriptorTableRef<Platform::VULKAN>>          m_descriptor_table { };
 
     VkPipeline                                              pipeline;

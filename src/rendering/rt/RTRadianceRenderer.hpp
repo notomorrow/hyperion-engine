@@ -25,7 +25,6 @@ using renderer::ImageView;
 using renderer::StorageImage;
 using renderer::Sampler;
 using renderer::Device;
-using renderer::DescriptorSet;
 using renderer::AttachmentUsage;
 using renderer::Result;
 using renderer::RaytracingPipeline;

@@ -215,12 +215,7 @@ GaussianSplattingInstance::~GaussianSplattingInstance()
         SafeRelease(std::move(m_splat_indices_buffer));
         SafeRelease(std::move(m_scene_buffer));
         SafeRelease(std::move(m_indirect_buffer));
-
-        for (auto &sort_stage_descriptor_sets : m_descriptor_sets) {
-            for (auto &descriptor_set : sort_stage_descriptor_sets) {
-                SafeRelease(std::move(descriptor_set));
-            }
-        }
+        SafeRelease(std::move(m_sort_stage_descriptor_tables));
     }
 }
 

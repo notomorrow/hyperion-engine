@@ -26,7 +26,6 @@ namespace hyperion::v2 {
 using renderer::Frame;
 using renderer::Image;
 using renderer::ImageView;
-using renderer::DescriptorSet;
 
 enum class ShadowMode
 {

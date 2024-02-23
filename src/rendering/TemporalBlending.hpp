@@ -24,7 +24,6 @@ using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::Sampler;
 using renderer::Device;
-using renderer::DescriptorSet;
 using renderer::AttachmentUsage;
 ;
 using renderer::Result;

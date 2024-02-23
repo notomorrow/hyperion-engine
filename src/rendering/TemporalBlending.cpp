@@ -7,13 +7,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
-using renderer::StorageImageDescriptor;
-using renderer::DynamicStorageBufferDescriptor;
-using renderer::DynamicUniformBufferDescriptor;
-using renderer::SamplerDescriptor;
-using renderer::DescriptorKey;
 using renderer::Rect;
 using renderer::ShaderVec2;
 

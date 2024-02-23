@@ -10,11 +10,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::ImageDescriptor;
-using renderer::StorageImageDescriptor;
-using renderer::SamplerDescriptor;
-using renderer::UniformBufferDescriptor;
-using renderer::DynamicStorageBufferDescriptor;
 using renderer::ShaderVec2;
 using renderer::ShaderMat4;
 

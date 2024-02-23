@@ -19,11 +19,11 @@
 #include <rendering/Texture.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <atomic>
@@ -34,7 +34,6 @@ namespace hyperion::v2 {
 using renderer::CommandBuffer;
 using renderer::Frame;
 using renderer::Device;
-using renderer::DescriptorSet;
 using renderer::Result;
 
 class Engine;
@@ -72,9 +71,6 @@ public:
     const RC<GaussianSplattingModelData> &GetModel() const
         { return m_model; }
 
-    const FixedArray<FixedArray<DescriptorSetRef, SortStage::SORT_STAGE_MAX>, max_frames_in_flight> &GetDescriptorSets() const
-        { return m_descriptor_sets; }
-
     const GPUBufferRef &GetSplatBuffer() const
         { return m_splat_buffer; }
 
@@ -100,7 +96,6 @@ private:
     void CreateComputePipelines();
 
     RC<GaussianSplattingModelData>  m_model;
-    FixedArray<FixedArray<DescriptorSetRef, SortStage::SORT_STAGE_MAX>, max_frames_in_flight> m_descriptor_sets;
     GPUBufferRef                    m_splat_buffer;
     GPUBufferRef                    m_splat_indices_buffer;
     GPUBufferRef                    m_scene_buffer;

@@ -10,11 +10,6 @@ namespace hyperion::v2 {
 
 using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
-using renderer::Descriptor;
-using renderer::DescriptorSet;
-using renderer::DescriptorKey;
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
 
 PostFXPass::PostFXPass(InternalFormat image_format)
     : FullScreenPass(Handle<Shader>(), image_format)

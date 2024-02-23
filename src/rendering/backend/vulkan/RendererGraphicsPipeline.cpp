@@ -26,29 +26,8 @@ GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline()
 {
 }
 
-GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
-    : Pipeline<Platform::VULKAN>(std::move(shader_program)),
-      viewport { },
-      scissor { }
-{
-}
-
-GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
-    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets),
-      viewport { },
-      scissor { }
-{
-}
-
 GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, DescriptorTableRef<Platform::VULKAN> descriptor_table)
     : Pipeline<Platform::VULKAN>(std::move(shader_program), std::move(descriptor_table)),
-      viewport { },
-      scissor { }
-{
-}
-
-GraphicsPipeline<Platform::VULKAN>::GraphicsPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
-    : Pipeline<Platform::VULKAN>(used_descriptor_sets),
       viewport { },
       scissor { }
 {
@@ -143,7 +122,6 @@ void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *c
     SubmitPushConstants(cmd);
 }
 
-// V2 version
 Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info)
 {
     m_construction_info = std::move(construction_info);
@@ -162,37 +140,10 @@ Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devi
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    static int x = 0;
-    DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
-
-    return Rebuild(device, nullptr);
+    return Rebuild(device);
 }
 
-Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
-{
-    m_construction_info = std::move(construction_info);
-
-    AssertThrow(m_shader_program != nullptr);
-    AssertThrow(!m_construction_info.fbos.Empty());
-
-    const uint32_t width = m_construction_info.fbos[0]->GetWidth();
-    const uint32_t height = m_construction_info.fbos[0]->GetHeight();
-
-    SetScissor(0, 0, width, height);
-    SetViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
-
-    m_dynamic_states = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-
-    static int x = 0;
-    DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
-
-    return Rebuild(device, descriptor_pool);
-}
-
-Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *device, DescriptorPool *descriptor_pool)
+Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *device)
 {
     BuildVertexAttributes(m_construction_info.vertex_attributes);
 
@@ -340,21 +291,8 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
 
     const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
     
-    Array<VkDescriptorSetLayout> used_layouts;
-
-    // If descriptor_pool is nullptr we use new v2 version (descriptor table)
-    if (descriptor_pool) {
-        const auto used_layouts_vector = GetDescriptorSetLayouts(device, descriptor_pool);
-        used_layouts.Resize(used_layouts_vector.size());
-
-        for (SizeType i = 0; i < used_layouts_vector.size(); i++) {
-            used_layouts[i] = used_layouts_vector[i];
-        }
-    } else {
-        AssertThrowMsg(m_descriptor_table.HasValue(), "No descriptor table set for pipeline");
-
-        used_layouts = GetDescriptorSetLayouts();
-    }
+    AssertThrowMsg(m_descriptor_table.HasValue(), "No descriptor table set for pipeline");
+    Array<VkDescriptorSetLayout> used_layouts = GetDescriptorSetLayouts();
     
     DebugLog(
         LogType::Debug,

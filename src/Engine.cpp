@@ -26,7 +26,6 @@ using renderer::VertexAttributeSet;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
-using renderer::DescriptorKey;
 using renderer::FillMode;
 using renderer::GPUBufferType;
 using renderer::GPUBuffer;

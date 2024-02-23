@@ -9,12 +9,7 @@
 
 namespace hyperion::v2 {
 
-using renderer::DescriptorKey;
 using renderer::Image;
-using renderer::ImageDescriptor;
-using renderer::ImageSamplerDescriptor;
-using renderer::SamplerDescriptor;
-using renderer::StorageImageDescriptor;
 using renderer::StorageImage2D;
 
 #pragma region Render commands

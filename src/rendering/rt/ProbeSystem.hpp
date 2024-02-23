@@ -22,7 +22,6 @@ using renderer::RaytracingPipeline;
 using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::CommandBuffer;
-using renderer::ImageDescriptor;
 ;
 using renderer::Frame;
 using renderer::RTUpdateStateFlags;

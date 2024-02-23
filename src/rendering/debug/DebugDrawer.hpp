@@ -20,7 +20,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <Types.hpp>
@@ -36,7 +36,6 @@ class Engine;
 class DebugDrawer;
 
 using renderer::Frame;
-using renderer::DescriptorSet;
 
 enum class DebugDrawShape
 {
@@ -97,17 +96,14 @@ public:
 private:
     void UpdateDrawCommands();
 
-    Handle<Shader> m_shader;
-    Handle<RenderGroup> m_renderer_instance;
+    Handle<Shader>                                      m_shader;
+    Handle<RenderGroup>                                 m_render_group;
 
     FixedArray<Handle<Mesh>, uint(DebugDrawShape::MAX)> m_shapes;
-    Array<DebugDrawCommand> m_draw_commands;
-    Array<DebugDrawCommand> m_draw_commands_pending_addition;
-
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
-
-    std::atomic<int64> m_num_draw_commands_pending_addition { 0 };
-    std::mutex m_draw_commands_mutex;
+    Array<DebugDrawCommand>                             m_draw_commands;
+    Array<DebugDrawCommand>                             m_draw_commands_pending_addition;
+    std::atomic<int64>                                  m_num_draw_commands_pending_addition { 0 };
+    std::mutex                                          m_draw_commands_mutex;
 };
 
 } // namespace hyperion::v2
