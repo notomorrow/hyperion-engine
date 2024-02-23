@@ -1,7 +1,6 @@
 #ifndef HYPERION_V2_SCREENSPACE_REFLECTION_RENDERER_H
 #define HYPERION_V2_SCREENSPACE_REFLECTION_RENDERER_H
 
-#include "Compute.hpp"
 #include <Constants.hpp>
 
 #include <core/Containers.hpp>
@@ -15,6 +14,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <memory>
 

@@ -40,11 +40,11 @@ struct alignas(8) GaussianSplatIndex
 
 struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::RenderCommand
 {
-    GPUBufferRef splat_buffer;
-    GPUBufferRef splat_indices_buffer;
-    GPUBufferRef scene_buffer;
-    GPUBufferRef indirect_buffer;
-    RC<GaussianSplattingModelData> model;
+    GPUBufferRef                    splat_buffer;
+    GPUBufferRef                    splat_indices_buffer;
+    GPUBufferRef                    scene_buffer;
+    GPUBufferRef                    indirect_buffer;
+    RC<GaussianSplattingModelData>  model;
 
     RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers)(
         GPUBufferRef splat_buffer,
@@ -60,7 +60,9 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers)() override = default;
+
+    virtual Result operator()() override
     {
         static_assert(sizeof(GaussianSplattingInstanceShaderData) == sizeof(model->points[0]));
 
@@ -140,35 +142,10 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
     }
 };
 
-struct RENDER_COMMAND(CreateGaussianSplattingInstanceDescriptors) : renderer::RenderCommand
-{
-    FixedArray<FixedArray<DescriptorSetRef, GaussianSplattingInstance::SortStage::SORT_STAGE_MAX>, max_frames_in_flight> descriptor_sets;
-
-    RENDER_COMMAND(CreateGaussianSplattingInstanceDescriptors)(
-        FixedArray<FixedArray<DescriptorSetRef, GaussianSplattingInstance::SortStage::SORT_STAGE_MAX>, max_frames_in_flight> descriptor_sets
-    ) : descriptor_sets(std::move(descriptor_sets))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (auto &descriptor_set : descriptor_sets[frame_index]) {
-                HYPERION_BUBBLE_ERRORS(descriptor_set->Create(
-                    g_engine->GetGPUDevice(),
-                    &g_engine->GetGPUInstance()->GetDescriptorPool()
-                ));
-            }
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers) : renderer::RenderCommand
 {
-    GPUBufferRef staging_buffer;
-    Handle<Mesh> quad_mesh;
+    GPUBufferRef    staging_buffer;
+    Handle<Mesh>    quad_mesh;
 
     RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers)(
         GPUBufferRef staging_buffer,
@@ -813,17 +790,25 @@ void GaussianSplatting::Render(Frame *frame)
     m_command_buffers[frame_index]->Record(
         g_engine->GetGPUDevice(),
         pipeline->GetConstructionInfo().render_pass,
-        [&](CommandBuffer *secondary) {
+        [&](CommandBuffer *secondary)
+        {
             pipeline->Bind(secondary);
 
-            secondary->BindDescriptorSet(
-                g_engine->GetGPUInstance()->GetDescriptorPool(),
+            m_gaussian_splatting_instance->GetRenderGroup()->GetPipeline()->GetDescriptorTable().Get()->Bind(
+                secondary,
+                frame_index,
                 pipeline,
-                m_gaussian_splatting_instance->GetDescriptorSets()[frame_index][GaussianSplattingInstance::SortStage::SORT_STAGE_FIRST],
-                0,
-                FixedArray {
-                    HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()),
-                    HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex())
+                {
+                    {
+                        HYP_NAME(Scene),
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                        }
+                    }
                 }
             );
 

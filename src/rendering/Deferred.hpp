@@ -5,7 +5,6 @@
 #include <rendering/PostFX.hpp>
 #include <rendering/ParticleSystem.hpp>
 #include <rendering/Texture.hpp>
-#include <rendering/Compute.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/CullData.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
@@ -19,6 +18,7 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 namespace hyperion::v2 {
 

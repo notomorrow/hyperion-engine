@@ -5,7 +5,6 @@
 
 #include <core/Containers.hpp>
 
-#include <rendering/Compute.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/rt/TLAS.hpp>
@@ -15,9 +14,8 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
-
-#include <memory>
 
 namespace hyperion::v2 {
 

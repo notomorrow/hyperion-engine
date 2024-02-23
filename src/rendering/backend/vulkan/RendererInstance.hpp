@@ -52,16 +52,6 @@ public:
     Instance(RC<Application> application);
     Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
-    
-    // @NOTE: Moved DescriptorPool into Device so it is useable for DescriptorSet2.
-    // It is still mainly accessed from the Instance class and thus `Create` is not called on it
-    // from this class. This is a temporary solution until the DescriptorPool is refactored once
-    // DescriptorSet2 is completed.
-    DescriptorPool &GetDescriptorPool()
-        { return *m_device->GetDescriptorPool(); }
-    
-    const DescriptorPool &GetDescriptorPool() const
-        { return *m_device->GetDescriptorPool(); }
                                                           
     DeviceQueue &GetGraphicsQueue() { return this->queue_graphics; }
     const DeviceQueue &GetGraphicsQueue() const { return this->queue_graphics; }

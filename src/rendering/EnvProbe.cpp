@@ -617,8 +617,6 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         AssertThrow(texture_slot != ~0u);
         AssertThrow(m_texture.IsValid());
 
-        const auto &descriptor_pool = g_engine->GetGPUInstance()->GetDescriptorPool();
-
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             switch (GetEnvProbeType()) {
             case ENV_PROBE_TYPE_REFLECTION:

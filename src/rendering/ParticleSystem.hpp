@@ -13,7 +13,6 @@
 
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/Compute.hpp>
 #include <rendering/Framebuffer.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
@@ -25,6 +24,7 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <atomic>
 #include <mutex>

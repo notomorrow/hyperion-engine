@@ -5,7 +5,6 @@
 #include <core/Containers.hpp>
 
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/Compute.hpp>
 
 namespace hyperion::v2 {
 

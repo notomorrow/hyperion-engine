@@ -4,12 +4,12 @@
 #include <core/Containers.hpp>
 
 #include <rendering/Shader.hpp>
-#include <rendering/Compute.hpp>
 #include <rendering/rt/TLAS.hpp>
 
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <Types.hpp>

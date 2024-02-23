@@ -5,7 +5,7 @@
 
 #include <core/Containers.hpp>
 
-#include <rendering/Compute.hpp>
+#include <rendering/Shader.hpp>
 #include <rendering/Framebuffer.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
@@ -14,6 +14,7 @@
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 namespace hyperion::v2 {
 

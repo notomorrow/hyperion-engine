@@ -6,7 +6,6 @@
 
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/Compute.hpp>
 
 #include <array>
 
