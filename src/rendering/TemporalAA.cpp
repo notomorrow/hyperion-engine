@@ -35,18 +35,8 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
             : g_engine->GetPlaceholderData()->GetImageView2D1x1R8();
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // @NOTE: V2, remove v1 code below when done
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
                 ->SetElement(HYP_NAME(TAAResultTexture), result_texture_view);
-
-
-            // Add the final result to the global descriptor set
-            DescriptorSetRef descriptor_set_globals = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::global_buffer_mapping[frame_index]);
-
-            descriptor_set_globals
-                ->GetOrAddDescriptor<ImageDescriptor>(DescriptorKey::TEMPORAL_AA_RESULT)
-                ->SetElementSRV(0, result_texture_view);
         }
 
         HYPERION_RETURN_OK;

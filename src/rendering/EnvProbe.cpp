@@ -620,8 +620,6 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         const auto &descriptor_pool = g_engine->GetGPUInstance()->GetDescriptorPool();
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            // New V2 version
-
             switch (GetEnvProbeType()) {
             case ENV_PROBE_TYPE_REFLECTION:
                 g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
@@ -636,33 +634,6 @@ void EnvProbe::UpdateRenderData(bool set_texture)
             default:
                 break;
             }
-            
-            // @NOTE: Old V1 version
-            DescriptorKey descriptor_key;
-
-            switch (GetEnvProbeType()) {
-            case ENV_PROBE_TYPE_REFLECTION:
-                descriptor_key = DescriptorKey::ENV_PROBE_TEXTURES;
-
-                break;
-            case ENV_PROBE_TYPE_SHADOW:
-                descriptor_key = DescriptorKey::POINT_SHADOW_MAPS;
-
-                break;
-            default:
-                descriptor_key = DescriptorKey::UNUSED;
-                break;
-            }
-
-            AssertThrow(descriptor_key != DescriptorKey::UNUSED);
-
-            DescriptorSet *descriptor_set = descriptor_pool.GetDescriptorSet(DescriptorSet::scene_buffer_mapping[frame_index]);
-            Descriptor *descriptor = descriptor_set->GetOrAddDescriptor<renderer::ImageDescriptor>(descriptor_key);
-
-            descriptor->SetElementSRV(
-                texture_slot,
-                m_texture->GetImageView()
-            );
         }
     }
 }

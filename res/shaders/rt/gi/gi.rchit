@@ -7,10 +7,10 @@
 
 #define HYP_NO_CUBEMAP
 
-layout(set = 0, binding = 17) uniform sampler sampler_nearest;
-#define HYP_SAMPLER_NEAREST sampler_nearest
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-layout(set = 0, binding = 18) uniform sampler sampler_linear;
+#define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 #include "../../include/defines.inc"
@@ -29,13 +29,16 @@ layout(set = 0, binding = 18) uniform sampler sampler_linear;
 
 #include "../../include/rt/probe/probe_uniforms.inc"
 
-layout(std140, set = 0, binding = 9) uniform ProbeSystem {
+HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
+{
     DDGIUniforms probe_system;
 };
 
-layout(set = 0, binding = 16) uniform texture2D shadow_maps[];
+/* Shadows */
 
-layout(std140, set = 0, binding = 15, row_major) readonly buffer ShadowShaderData
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[HYP_MAX_SHADOW_MAPS];
+
+HYP_DESCRIPTOR_UAV(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
@@ -61,27 +64,25 @@ struct PackedVertex
     float texcoord_t;
 };
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
-
 layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
-layout(std140, set = 0, binding = 4) buffer MeshDescriptions
-{
-    MeshDescription mesh_descriptions[];
-};
-
-layout(std140, set = 0, binding = 5) readonly buffer MaterialBuffer
-{
-    Material materials[];
-};
-
-layout(std140, set = 0, binding = 6) readonly buffer EntityBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object entities[];
 };
 
-layout(std140, set = 0, binding = 7) readonly buffer LightShaderData
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer MeshDescriptions
+{
+    MeshDescription mesh_descriptions[];
+};
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
+{
+    Material materials[];
+};
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
@@ -224,7 +225,7 @@ void main()
         local_light *= light.position_intensity.w * attenuation;
 
         
-        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index == probe_system.shadow_map_index) {
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
             local_light *= GetShadowStandard(probe_system.shadow_map_index, position.xyz, vec2(0.0), NdotL);
         }
 

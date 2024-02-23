@@ -5,41 +5,6 @@
 
 namespace hyperion::v2 {
 
-#pragma region Render commands
-
-struct RENDER_COMMAND(SetEnvironmentMap) : renderer::RenderCommand
-{
-    uint            index;
-    Handle<Texture> environment_map;
-
-    RENDER_COMMAND(SetEnvironmentMap)(uint index, Handle<Texture> environment_map)
-        : index(index),
-          environment_map(std::move(environment_map))
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            DescriptorSetRef descriptor_set_scene = g_engine->GetGPUInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::scene_buffer_mapping[frame_index]);
-
-            auto *environment_maps_descriptor = descriptor_set_scene
-                ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::ENVIRONMENT_MAPS);
-
-            if (environment_map.IsValid()) {
-                environment_maps_descriptor->SetElementSRV(index, environment_map->GetImageView());
-            } else {
-                environment_maps_descriptor->SetElementSRV(index, g_engine->GetPlaceholderData()->GetImageViewCube1x1R8());
-            }
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion
-
 SkydomeRenderer::SkydomeRenderer(Name name, Extent2D dimensions)
     : RenderComponent(name, 60),
       m_dimensions(dimensions)
@@ -75,14 +40,6 @@ void SkydomeRenderer::Init()
     m_env_probe->EnqueueBind();
 
     m_cubemap = m_env_probe->GetTexture();
-
-    if (GetComponentIndex() < max_bound_environment_maps) {
-        PUSH_RENDER_COMMAND(
-            SetEnvironmentMap,
-            GetComponentIndex(),
-            m_cubemap
-        );
-    }
 }
 
 void SkydomeRenderer::InitGame()
@@ -95,14 +52,6 @@ void SkydomeRenderer::InitGame()
 
 void SkydomeRenderer::OnRemoved()
 {
-    if (GetComponentIndex() < max_bound_environment_maps) {
-        PUSH_RENDER_COMMAND(
-            SetEnvironmentMap,
-            GetComponentIndex(),
-            Handle<Texture>::empty
-        );
-    }
-
     if (m_env_probe) {
         m_env_probe->EnqueueUnbind();
         m_env_probe.Reset();

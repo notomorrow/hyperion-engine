@@ -8,23 +8,28 @@
 #include "../../include/packing.inc"
 #include "../../include/tonemap.inc"
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
-// radiance image
-layout(set = 0, binding = 1, rgba8) uniform image2D image;
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 
-layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
-layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
-layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
-layout(set = 0, binding = 9) uniform texture2D gbuffer_albedo_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-layout(set = 0, binding = 10) uniform sampler sampler_nearest;
 #define HYP_SAMPLER_NEAREST sampler_nearest
-
-layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
+
+HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, Image, format = rgba8) uniform image2D image;
+
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+{
+    Light lights[];
+};
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+#include "../include/gbuffer.inc"
 #include "../../include/scene.inc"
 #include "../../include/shared.inc"
 #include "../../include/packing.inc"
@@ -33,8 +38,8 @@ layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #include "../../include/env_probe.inc"
 
 /// Blue noise
-
-layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+{
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
@@ -44,35 +49,28 @@ layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
 {
     Camera camera;
 };
 
-layout(set = 1, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
-layout(std140, set = 1, binding = 3, row_major) readonly buffer EnvProbeBuffer
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer, size = 4352) uniform EnvGridsBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
-};
-
-layout(std430, set = 0, binding = 5) readonly buffer LightShaderData
-{
-    Light lights[];
 };
 
 #define PATHTRACER
 #include "../../include/rt/RTRadiance.inc"
 #include "../../include/rt/payload.inc"
-
-layout(std140, set = 0, binding = 13, row_major) uniform RTRadianceUniformBuffer
-{
-    RTRadianceUniforms rt_radiance_uniforms;
-};
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 

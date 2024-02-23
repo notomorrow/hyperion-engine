@@ -23,32 +23,14 @@ RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline()
 {
 }
 
-RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program)
-    : Pipeline<Platform::VULKAN>(std::move(shader_program))
-{
-}
-
-RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, const Array<DescriptorSetRef> &used_descriptor_sets)
-    : Pipeline<Platform::VULKAN>(std::move(shader_program), used_descriptor_sets)
-{
-}
-
 RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(ShaderProgramRef<Platform::VULKAN> shader_program, DescriptorTableRef<Platform::VULKAN> descriptor_table)
     : Pipeline<Platform::VULKAN>(std::move(shader_program), std::move(descriptor_table))
 {
 }
 
-RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(const Array<DescriptorSetRef> &used_descriptor_sets)
-    : Pipeline<Platform::VULKAN>(used_descriptor_sets)
-{
-}
-
 RaytracingPipeline<Platform::VULKAN>::~RaytracingPipeline() = default;
 
-Result RaytracingPipeline<Platform::VULKAN>::Create(
-    Device<Platform::VULKAN> *device,
-    DescriptorPool *descriptor_pool
-)
+Result RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (!device->GetFeatures().IsRaytracingSupported()) {
         return {Result::RENDERER_ERR, "Raytracing is not supported on this device"};
@@ -61,28 +43,29 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
-    const auto used_layouts = GetDescriptorSetLayouts(device, descriptor_pool);
-    const auto max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+
+    Array<VkDescriptorSetLayout> used_layouts = GetDescriptorSetLayouts();
 
     DebugLog(
         LogType::Debug,
         "Using %llu descriptor set layouts in pipeline\n",
-        used_layouts.size()
+        used_layouts.Size()
     );
     
-    if (used_layouts.size() > max_set_layouts) {
+    if (used_layouts.Size() > max_set_layouts) {
         DebugLog(
             LogType::Debug,
             "Device max bound descriptor sets exceeded (%llu > %u)\n",
-            used_layouts.size(),
+            used_layouts.Size(),
             max_set_layouts
         );
 
         return Result{Result::RENDERER_ERR, "Device max bound descriptor sets exceeded"};
     }
 
-    layout_info.setLayoutCount = uint32(used_layouts.size());
-    layout_info.pSetLayouts = used_layouts.data();
+    layout_info.setLayoutCount = uint32(used_layouts.Size());
+    layout_info.pSetLayouts = used_layouts.Data();
     
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {

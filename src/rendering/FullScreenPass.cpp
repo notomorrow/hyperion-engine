@@ -50,27 +50,11 @@ FullScreenPass::FullScreenPass(InternalFormat image_format, Extent2D extent)
 
 FullScreenPass::FullScreenPass(
     const Handle<Shader> &shader,
-    InternalFormat image_format,
-    Extent2D extent
-) : FullScreenPass(
-        shader,
-        DescriptorKey::UNUSED,
-        ~0u,
-        image_format,
-        extent
-    )
-{
-}
-
-FullScreenPass::FullScreenPass(
-    const Handle<Shader> &shader,
     DescriptorTableRef descriptor_table,
     InternalFormat image_format,
     Extent2D extent
 ) : FullScreenPass(
         shader,
-        DescriptorKey::UNUSED,
-        ~0u,
         image_format,
         extent
     )
@@ -80,13 +64,9 @@ FullScreenPass::FullScreenPass(
 
 FullScreenPass::FullScreenPass(
     const Handle<Shader> &shader,
-    DescriptorKey descriptor_key,
-    uint sub_descriptor_index,
     InternalFormat image_format,
     Extent2D extent
 ) : m_shader(shader),
-    m_descriptor_key(descriptor_key),
-    m_sub_descriptor_index(sub_descriptor_index),
     m_image_format(image_format),
     m_extent(extent)
 {

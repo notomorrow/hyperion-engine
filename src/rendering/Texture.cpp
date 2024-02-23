@@ -87,9 +87,9 @@ struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
 
 struct RENDER_COMMAND(CreateMipImageView) : renderer::RenderCommand
 {
-    ImageRef src_image;
-    ImageViewRef mip_image_view;
-    uint mip_level;
+    ImageRef        src_image;
+    ImageViewRef    mip_image_view;
+    uint            mip_level;
 
     RENDER_COMMAND(CreateMipImageView)(
         ImageRef src_image,
@@ -108,25 +108,6 @@ struct RENDER_COMMAND(CreateMipImageView) : renderer::RenderCommand
             src_image.Get(),
             mip_level, 1,
             0, src_image->NumFaces()
-        );
-    }
-};
-
-struct RENDER_COMMAND(CreateMipDescriptorSet) : renderer::RenderCommand
-{
-    DescriptorSetRef descriptor_set;
-
-    RENDER_COMMAND(CreateMipDescriptorSet)(
-        DescriptorSetRef descriptor_set
-    ) : descriptor_set(std::move(descriptor_set))
-    {
-    }
-
-    virtual Result operator()() override
-    {
-        return descriptor_set->Create(
-            g_engine->GetGPUDevice(),
-            &g_engine->GetGPUInstance()->GetDescriptorPool()
         );
     }
 };

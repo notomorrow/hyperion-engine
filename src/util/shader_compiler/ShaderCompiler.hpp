@@ -721,7 +721,7 @@ struct DescriptorUsage
 
 struct DescriptorUsageSet
 {
-    FlatSet<DescriptorUsage> descriptor_usages;
+    FlatSet<DescriptorUsage>    descriptor_usages;
 
     DescriptorUsage &operator[](SizeType index)
         { return descriptor_usages[index]; }

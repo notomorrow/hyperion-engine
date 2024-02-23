@@ -11,6 +11,7 @@ layout(location=2) in vec2 v_texcoord0;
 
 HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, count = 4) uniform texture2D effects_pre_stack[4];
 HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, count = 4) uniform texture2D effects_post_stack[4];
+HYP_DESCRIPTOR_SRV(Global, UITexture) uniform texture2D ui_texture;
 
 HYP_DESCRIPTOR_CBUFF(Global, PostProcessingUniforms, size = 32) uniform PostProcessingUniforms {
     uvec2 effect_counts;

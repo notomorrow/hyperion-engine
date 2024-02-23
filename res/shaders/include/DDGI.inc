@@ -3,22 +3,7 @@
 
 #include "rt/probe/probe_uniforms.inc"
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 46) uniform ProbeSystem {
-    DDGIUniforms probe_system;
-};
-
-#endif
-
 #include "rt/probe/shared.inc"
-
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 47) uniform texture2D probe_irradiance;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 48) uniform texture2D probe_depth;
-
-#endif
 
 vec4 DDGISampleIrradiance(vec3 P, vec3 N, vec3 V)
 {

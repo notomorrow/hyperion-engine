@@ -67,26 +67,14 @@ public:
     const FixedArray<DescriptorSetRef, max_frames_in_flight> &GetDescriptorSets() const
         { return m_descriptor_sets; }
 
-   GPUBufferRef &GetParticleBuffer()
-        { return m_particle_buffer; }
-
     const GPUBufferRef &GetParticleBuffer() const
         { return m_particle_buffer; }
-
-    GPUBufferRef &GetIndirectBuffer()
-        { return m_indirect_buffer; }
 
     const GPUBufferRef &GetIndirectBuffer() const
         { return m_indirect_buffer; }
 
-    Handle<RenderGroup> &GetRenderGroup()
-        { return m_render_group; }
-
     const Handle<RenderGroup> &GetRenderGroup() const
         { return m_render_group; }
-
-    Handle<ComputePipeline> &GetComputePipeline()
-        { return m_update_particles; }
 
     const Handle<ComputePipeline> &GetComputePipeline() const
         { return m_update_particles; }

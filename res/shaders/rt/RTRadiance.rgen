@@ -10,22 +10,22 @@
 #include "../include/packing.inc"
 #include "../include/tonemap.inc"
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
-// radiance image
-layout(set = 0, binding = 1, rgba8) uniform image2D image;
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 
-layout(set = 0, binding = 6) uniform texture2D gbuffer_normals_texture;
-layout(set = 0, binding = 7) uniform texture2D gbuffer_material_texture;
-layout(set = 0, binding = 8) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-layout(set = 0, binding = 10) uniform sampler sampler_nearest;
 #define HYP_SAMPLER_NEAREST sampler_nearest
-
-layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
+
+HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+#include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/shared.inc"
 #include "../include/packing.inc"
@@ -33,8 +33,8 @@ layout(set = 0, binding = 11) uniform sampler sampler_linear;
 #include "../include/brdf.inc"
 
 /// Blue noise
-
-layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+{
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
@@ -45,12 +45,12 @@ layout(std140, set = 0, binding = 12) readonly buffer BlueNoiseBuffer {
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #undef HYP_NO_CUBEMAP
 
-layout(std140, set = 1, binding = 0, row_major) readonly buffer SceneShaderData
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-layout(std140, set = 1, binding = 4, row_major) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
 {
     Camera camera;
 };
