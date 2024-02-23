@@ -14,3 +14,6 @@
 [submodule "submodules/runtime"]
 	path = submodules/runtime
 	url = https://github.com/dotnet/runtime
+[submodule "submodules/xatlas"]
+	path = submodules/xatlas
+	url = https://github.com/jpcy/xatlas.git
