@@ -164,6 +164,19 @@ Mesh::Mesh(
 Mesh::Mesh(
     Array<Vertex> vertices,
     Array<Index> indices,
+    Topology topology
+) : Mesh(
+        std::move(vertices),
+        std::move(indices),
+        topology,
+        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
+    )
+{
+}
+
+Mesh::Mesh(
+    Array<Vertex> vertices,
+    Array<Index> indices,
     Topology topology,
     const VertexAttributeSet &vertex_attributes
 ) : BasicObject(),
@@ -179,30 +192,21 @@ Mesh::Mesh(
     })),
     m_aabb(BoundingBox::empty)
 {
-    CalculateAABB();
-}
+    m_indices_count = m_streamed_mesh_data->GetMeshData().indices.Size();
 
-Mesh::Mesh(
-    Array<Vertex> vertices,
-    Array<Index> indices,
-    Topology topology
-) : Mesh(
-        std::move(vertices),
-        std::move(indices),
-        topology,
-        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
-    )
-{
+    CalculateAABB();
 }
 
 Mesh::Mesh(Mesh &&other) noexcept
     : m_vbo(std::move(other.m_vbo)),
       m_ibo(std::move(other.m_ibo)),
+      m_indices_count(other.m_indices_count),
       m_mesh_attributes(other.m_mesh_attributes),
       m_streamed_mesh_data(std::move(other.m_streamed_mesh_data)),
       m_aabb(other.m_aabb)
 {
     other.m_aabb = BoundingBox::empty;
+    other.m_indices_count = 0;
 }
 
 Mesh &Mesh::operator=(Mesh &&other) noexcept
@@ -216,8 +220,10 @@ Mesh &Mesh::operator=(Mesh &&other) noexcept
     m_mesh_attributes = other.m_mesh_attributes;
     m_streamed_mesh_data = std::move(other.m_streamed_mesh_data);
     m_aabb = other.m_aabb;
+    m_indices_count = other.m_indices_count;
 
     other.m_aabb = BoundingBox::empty;
+    other.m_indices_count = 0;
 
     return *this;
 }

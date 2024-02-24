@@ -22,6 +22,50 @@ struct Pixel
 
     Pixel() = default;
 
+    Pixel(ubyte r)
+    {
+        bytes[0] = r;
+    }
+
+    Pixel(ubyte r, ubyte g)
+    {
+        bytes[0] = r;
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = g;
+        }
+    }
+
+    Pixel(ubyte r, ubyte g, ubyte b)
+    {
+        bytes[0] = r;
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = g;
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = b;
+        }
+    }
+
+    Pixel(ubyte r, ubyte g, ubyte b, ubyte a)
+    {
+        bytes[0] = r;
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = g;
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = b;
+        }
+
+        if constexpr (byte_size >= 4) {
+            bytes[3] = a;
+        }
+    }
+
     void SetR(float r)
     {
         bytes[0] = static_cast<ubyte>(r * 255.0f);
@@ -66,11 +110,11 @@ struct Pixel
         }
     }
 
-    Pixel(const Pixel &other) = default;
-    Pixel &operator=(const Pixel &other) = default;
-    Pixel(Pixel &&other) noexcept = default;
-    Pixel &operator=(Pixel &&other) noexcept = default;
-    ~Pixel() = default;
+    Pixel(const Pixel &other)                   = default;
+    Pixel &operator=(const Pixel &other)        = default;
+    Pixel(Pixel &&other) noexcept               = default;
+    Pixel &operator=(Pixel &&other) noexcept    = default;
+    ~Pixel()                                    = default;
 
     Vector3 GetRGB() const
     {
@@ -118,12 +162,12 @@ struct Pixel
 template <uint NumComponents>
 class Bitmap
 {
+public:
     using PixelType = Pixel<NumComponents>;
 
-public:
     Bitmap()
-        : m_width(0u),
-          m_height(0u)
+        : m_width(0),
+          m_height(0)
     {
     }
 
@@ -198,6 +242,14 @@ public:
     const PixelType &GetPixel(uint x, uint y) const
         { return const_cast<const Bitmap *>(this)->GetPixel(x, y); }
 
+    void SetPixel(uint x, uint y, PixelType pixel)
+    {
+        const uint index = ((x + m_width) % m_width)
+            + (((m_height - y) + m_height) % m_height) * m_width;
+
+        m_pixels[index] = pixel;
+    }
+
     ByteBuffer ToByteBuffer() const
     {
         ByteBuffer byte_buffer;
@@ -260,6 +312,94 @@ public:
                 auto temp = GetPixel(m_width - x - 1u, y);
                 GetPixel(m_width - x - 1u, y) = GetPixel(x, y);
                 GetPixel(x, y) = temp;
+            }
+        }
+    }
+
+    // https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
+    void FillTriangle(
+        Vec2i t0,
+        Vec2i t1,
+        Vec2i t2,
+        PixelType color
+    )
+    {
+        if (t0.y > t1.y) {
+            std::swap(t0, t1);
+        }
+
+        if (t0.y > t2.y) {
+            std::swap(t0, t2);
+        }
+
+        if (t1.y > t2.y) {
+            std::swap(t1, t2);
+        }
+
+        int total_height = t2.y-t0.y;
+
+        for (int y = t0.y; y <= t1.y; y++) { 
+            int segment_height = t1.y - t0.y + 1; 
+            float alpha = (float)(y - t0.y) / total_height;
+            float beta = (float)(y - t0.y) / segment_height;
+
+            Vec2i A = t0 + (t2 - t0) * alpha;
+            Vec2i B = t0 + (t1 - t0) * beta;
+
+            if (A.x > B.x) {
+                std::swap(A, B);
+            }
+
+            for (int j = A.x; j <= B.x; j++) {
+                SetPixel(j, y, color);
+            }
+        }
+
+        for (int y = t1.y; y <= t2.y; y++) {
+            int segment_height = t2.y - t1.y + 1;
+            float alpha = (float)(y - t0.y) / total_height;
+            float beta = (float)(y - t1.y) / segment_height;
+
+            Vec2i A = t0 + (t2 - t0) * alpha;
+            Vec2i B = t1 + (t2 - t1) * beta;
+
+            if (A.x > B.x) {
+                std::swap(A, B);
+            }
+
+            for (int j = A.x; j <= B.x; j++) {
+                SetPixel(j, y, color);
+            }
+        }
+    }
+
+    void DrawLine(uint x0, uint y0, uint x1, uint y1, PixelType color)
+    {
+        const int dx = MathUtil::Abs(int(x1) - int(x0));
+        const int dy = MathUtil::Abs(int(y1) - int(y0));
+
+        const int sx = x0 < x1 ? 1 : -1;
+        const int sy = y0 < y1 ? 1 : -1;
+
+        int err = dx - dy;
+
+        while (true) {
+            GetPixel(x0, y0) = color;
+
+            if (x0 == x1 && y0 == y1) {
+                break;
+            }
+
+            int e2 = 2 * err;
+
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
             }
         }
     }

@@ -617,7 +617,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 
     HYPERION_ASSERT_RESULT(renderer::RenderCommands::Flush());
 
-    UpdateBuffersAndDescriptors(frame->GetFrameIndex());
+    UpdateBuffersAndDescriptors(frame);
 
     ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
 }
@@ -627,8 +627,10 @@ void Engine::ResetRenderState(RenderStateMask mask)
     render_state.Reset(mask);
 }
 
-void Engine::UpdateBuffersAndDescriptors(uint frame_index)
+void Engine::UpdateBuffersAndDescriptors(Frame *frame)
 {
+    const uint frame_index = frame->GetFrameIndex();
+
     m_render_data->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_render_data->cameras.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_render_data->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
@@ -643,7 +645,7 @@ void Engine::UpdateBuffersAndDescriptors(uint frame_index)
 
     m_deferred_renderer.GetPostProcessing().PerformUpdates();
 
-    m_material_descriptor_set_manager.Update();
+    m_material_descriptor_set_manager.Update(frame);
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Update(m_instance->GetDevice(), frame_index));
     

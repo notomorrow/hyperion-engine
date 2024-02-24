@@ -296,7 +296,7 @@ public:
 
 private:
     void ResetRenderState(RenderStateMask mask);
-    void UpdateBuffersAndDescriptors(uint frame_index);
+    void UpdateBuffersAndDescriptors(Frame *frame);
 
     void FindTextureFormatDefaults();
 

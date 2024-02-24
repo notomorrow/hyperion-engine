@@ -51,41 +51,41 @@ public:
 
     enum TextureKey : TextureKeyType
     {
-        MATERIAL_TEXTURE_NONE = 0,
+        MATERIAL_TEXTURE_NONE                           = 0,
 
-        MATERIAL_TEXTURE_ALBEDO_MAP    = 1 << 0,
-        MATERIAL_TEXTURE_NORMAL_MAP    = 1 << 1,
-        MATERIAL_TEXTURE_AO_MAP        = 1 << 2,
-        MATERIAL_TEXTURE_PARALLAX_MAP  = 1 << 3,
-        MATERIAL_TEXTURE_METALNESS_MAP = 1 << 4,
-        MATERIAL_TEXTURE_ROUGHNESS_MAP = 1 << 5,
-        MATERIAL_TEXTURE_SKYBOX_MAP    = 1 << 6,
-        MATERIAL_TEXTURE_COLOR_MAP     = 1 << 7,
-        MATERIAL_TEXTURE_POSITION_MAP  = 1 << 8,
-        MATERIAL_TEXTURE_DATA_MAP      = 1 << 9,
-        MATERIAL_TEXTURE_SSAO_MAP      = 1 << 10,
-        MATERIAL_TEXTURE_TANGENT_MAP   = 1 << 11,
-        MATERIAL_TEXTURE_BITANGENT_MAP = 1 << 12,
-        MATERIAL_TEXTURE_DEPTH_MAP     = 1 << 13,
+        MATERIAL_TEXTURE_ALBEDO_MAP                     = 1 << 0,
+        MATERIAL_TEXTURE_NORMAL_MAP                     = 1 << 1,
+        MATERIAL_TEXTURE_AO_MAP                         = 1 << 2,
+        MATERIAL_TEXTURE_PARALLAX_MAP                   = 1 << 3,
+        MATERIAL_TEXTURE_METALNESS_MAP                  = 1 << 4,
+        MATERIAL_TEXTURE_ROUGHNESS_MAP                  = 1 << 5,
+        MATERIAL_TEXTURE_LIGHT_MAP                      = 1 << 6,
+        MATERIAL_TEXTURE_COLOR_MAP                      = 1 << 7,
+        MATERIAL_TEXTURE_POSITION_MAP                   = 1 << 8,
+        MATERIAL_TEXTURE_DATA_MAP                       = 1 << 9,
+        MATERIAL_TEXTURE_SSAO_MAP                       = 1 << 10,
+        MATERIAL_TEXTURE_TANGENT_MAP                    = 1 << 11,
+        MATERIAL_TEXTURE_BITANGENT_MAP                  = 1 << 12,
+        MATERIAL_TEXTURE_DEPTH_MAP                      = 1 << 13,
 
         // terrain
 
-        MATERIAL_TEXTURE_SPLAT_MAP = 1 << 14,
+        MATERIAL_TEXTURE_SPLAT_MAP                      = 1 << 14,
 
-        MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP      = 1 << 15,
-        MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP     = 1 << 16,
-        MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP         = 1 << 17,
-        MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP   = 1 << 18,
+        MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP         = 1 << 15,
+        MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP        = 1 << 16,
+        MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP            = 1 << 17,
+        MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP      = 1 << 18,
 
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP    = 1 << 19,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP   = 1 << 20,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP       = 1 << 21,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP = 1 << 22,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP       = 1 << 19,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP      = 1 << 20,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP          = 1 << 21,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP    = 1 << 22,
 
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP    = 1 << 23,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP   = 1 << 24,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP       = 1 << 25,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 1 << 26
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP       = 1 << 23,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP      = 1 << 24,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP          = 1 << 25,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP    = 1 << 26
     };
 
     struct Parameter
@@ -571,18 +571,24 @@ public:
      */
     void EnqueueRemove(ID<Material> material);
 
+    void SetNeedsDescriptorSetUpdate(ID<Material> id);
+
     /*! \brief Update the manager. This will process any pending additions or removals
         and update the descriptor sets. Usable from the render thread.
      */
-    void Update();
+    void Update(Frame *frame);
 
 private:
-    HashMap<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>      m_material_descriptor_sets;
+    FlatMap<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>      m_material_descriptor_sets;
 
     Array<Pair<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>>  m_pending_addition;
     Array<ID<Material>>                                                             m_pending_removal;
-    AtomicVar<bool>                                                                 m_has_updates_pending;
-    Mutex                                                                           m_mutex;
+    Mutex                                                                           m_pending_mutex;
+    AtomicVar<bool>                                                                 m_pending_addition_flag;
+
+    FixedArray<Array<ID<Material>>, max_frames_in_flight>                           m_descriptor_sets_to_update;
+    Mutex                                                                           m_descriptor_sets_to_update_mutex;
+    AtomicVar<uint>                                                                 m_descriptor_sets_to_update_flag;
 };
 
 } // namespace hyperion::v2

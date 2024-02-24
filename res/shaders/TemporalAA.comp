@@ -75,7 +75,7 @@ void main()
     );
 
     vec4 color = Texture2D(sampler_nearest, color_texture, uv);
-    vec4 previous_color = Texture2D(sampler_linear, prev_color_texture, uv - velocity);
+    vec4 previous_color = Texture2D(sampler_nearest, prev_color_texture, uv - velocity);
 
 #if 0
 

@@ -60,6 +60,42 @@ struct alignas(alignof(T) * 2) Vec2
     Vec2 &operator*=(const Vec2 &other)
         { x *= other.x; y *= other.y; return *this; }
 
+    constexpr Vec2 operator*(int i) const
+        { return Vec2 { Type(x * i), Type(y * i) }; }
+
+    Vec2 &operator*=(int i)
+        { x *= i; y *= i; return *this; }
+
+    constexpr Vec2 operator*(uint u) const
+        { return Vec2 { Type(x * u), Type(y * u) }; }
+
+    Vec2 &operator*=(uint u)
+        { x *= u; y *= u; return *this; }
+
+    constexpr Vec2 operator*(float f) const
+        { return Vec2 { Type(x * f), Type(y * f) }; }
+
+    Vec2 &operator*=(float f)
+        { x *= f; y *= f; return *this; }
+
+    constexpr Vec2 operator/(int i) const
+        { return Vec2 { Type(x / i), Type(y / i) }; }
+
+    Vec2 &operator/=(int i)
+        { x /= i; y /= i; return *this; }
+
+    constexpr Vec2 operator/(uint u) const
+        { return Vec2 { Type(x / u), Type(y / u) }; }
+
+    Vec2 &operator/=(uint u)
+        { x /= u; y /= u; return *this; }
+
+    constexpr Vec2 operator/(float f) const
+        { return Vec2 { Type(x / f), Type(y / f) }; }
+
+    Vec2 &operator/=(float f)
+        { x /= f; y /= f; return *this; }
+
     constexpr Vec2 operator/(const Vec2 &other) const
         { return { x / other.x, y / other.y }; }
 
@@ -97,7 +133,7 @@ struct alignas(alignof(T) * 2) Vec2
         { return x != other.x || y != other.y; }
 
     constexpr Vec2 operator-() const
-        { return operator*(T(-1)); }
+        { return operator*(Type(-1)); }
 
     constexpr bool operator<(const Vec2 &other) const
     {
@@ -140,6 +176,8 @@ struct alignas(alignof(float) * 2) Vec2<float>
 {
     friend std::ostream &operator<<(std::ostream &out, const Vec2<float> &vec);
 public:
+    using Type = float;
+
     static constexpr uint size = 2;
 
     static const Vec2 zero;
@@ -188,7 +226,7 @@ public:
 
     template <class U>
     explicit operator Vec2<U>() const
-        { return Vec2i(static_cast<U>(x), static_cast<U>(y)); }
+        { return Vec2<U>(static_cast<U>(x), static_cast<U>(y)); }
 
     Vec2 &operator=(const Vec2 &other)
         { x = other.x; y = other.y; return *this; }
@@ -211,11 +249,47 @@ public:
     Vec2 &operator*=(const Vec2 &other)
         { x *= other.x; y *= other.y; return *this; }
 
+    constexpr Vec2 operator*(int i) const
+        { return Vec2 { Type(x * i), Type(y * i) }; }
+
+    Vec2 &operator*=(int i)
+        { x *= i; y *= i; return *this; }
+
+    constexpr Vec2 operator*(uint u) const
+        { return Vec2 { Type(x * u), Type(y * u) }; }
+
+    Vec2 &operator*=(uint u)
+        { x *= u; y *= u; return *this; }
+
+    constexpr Vec2 operator*(float f) const
+        { return Vec2 { Type(x * f), Type(y * f) }; }
+
+    Vec2 &operator*=(float f)
+        { x *= f; y *= f; return *this; }
+
     constexpr Vec2 operator/(const Vec2 &other) const
-        { return { x / other.x, y / other.y }; }
+        { return Vec2 { x / other.x, y / other.y }; }
 
     Vec2 &operator/=(const Vec2 &other)
         { x /= other.x; y /= other.y; return *this; }
+
+    constexpr Vec2 operator/(int i) const
+        { return Vec2 { Type(x / i), Type(y / i) }; }
+
+    Vec2 &operator/=(int i)
+        { x /= i; y /= i; return *this; }
+
+    constexpr Vec2 operator/(uint u) const
+        { return Vec2 { Type(x / u), Type(y / u) }; }
+
+    Vec2 &operator/=(uint u)
+        { x /= u; y /= u; return *this; }
+
+    constexpr Vec2 operator/(float f) const
+        { return Vec2 { Type(x / f), Type(y / f) }; }
+
+    Vec2 &operator/=(float f)
+        { x /= f; y /= f; return *this; }
 
     constexpr bool operator==(const Vec2 &other) const
         { return x == other.x && y == other.y; }

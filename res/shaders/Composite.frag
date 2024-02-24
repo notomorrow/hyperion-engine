@@ -45,9 +45,9 @@ void main()
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
 #if 1
 #ifdef TEMPORAL_AA
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, temporal_aa_result, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, temporal_aa_result, v_texcoord0).rgb;
 #else
-    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_deferred_result, v_texcoord0).rgb;
 #endif
 #else
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, dof_blur_blended, v_texcoord0).rgb;
@@ -86,7 +86,7 @@ void main()
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, ssr_result, v_texcoord0).rgb;
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_filtered_distance_buffer, v_texcoord0 * 2.0).rrr;
