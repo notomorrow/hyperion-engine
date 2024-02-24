@@ -10,6 +10,7 @@
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
+layout(location=3) in vec2 v_texcoord1;
 layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
@@ -333,7 +334,13 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
-    // gbuffer_albedo = vec4(P, 1.0);
+
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP)) {
+        vec4 lightmap_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+        
+        gbuffer_albedo = vec4(lightmap_texture.rgb, 0.0);
+        // gbuffer_albedo = vec4(v_texcoord1, 0.0, 0.0);
+    }
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);

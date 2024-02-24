@@ -90,6 +90,9 @@ public:
     const RC<StreamedMeshData> &GetStreamedMeshData() const
         { return m_streamed_mesh_data; }
 
+    void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
+        { m_streamed_mesh_data = streamed_mesh_data; }
+
     const VertexAttributeSet &GetVertexAttributes() const
         { return m_mesh_attributes.vertex_attributes; }
 

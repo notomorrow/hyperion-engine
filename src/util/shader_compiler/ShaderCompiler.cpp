@@ -1024,6 +1024,8 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
         };
     };
 
+    int last_attribute_location = -1;
+
     for (uint line_index = 0; line_index < lines.Size();) {
         const String line = lines[line_index].Trimmed();
     
@@ -1067,43 +1069,39 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
 
                 if (index != parts.Front().Size() && ((ch = parts.Front()[index]) == '(')) {
                     ++index;
-                } else {
-                    result.errors.PushBack(ProcessError { "Invalid attribute, missing opening parenthesis" });
 
-                    break;
-                }
-
-                // read integer string
-                while (index != parts.Front().Size() && std::isdigit(ch = parts.Front()[index])) {
-                    attribute_location.Append(ch);
-                    ++index;
-                }
-
-                // if there is a comma, read the conditional define that we will use
-                if (index != parts.Front().Size() && ((ch = parts.Front()[index]) == ',')) {
-                    ++index;
-
-                    String condition;
-                    while (index != parts.Front().Size() && (std::isalpha(ch = parts.Front()[index]) || ch == '_')) {
-                        condition.Append(ch);
+                        // read integer string
+                    while (index != parts.Front().Size() && std::isdigit(ch = parts.Front()[index])) {
+                        attribute_location.Append(ch);
                         ++index;
                     }
 
-                    attribute_condition = condition;
-                }
+                    // if there is a comma, read the conditional define that we will use
+                    if (index != parts.Front().Size() && ((ch = parts.Front()[index]) == ',')) {
+                        ++index;
 
-                if (index != parts.Front().Size() && ((ch = parts.Front()[index]) == ')')) {
-                    ++index;
-                } else {
-                    result.errors.PushBack(ProcessError { "Invalid attribute, missing closing parenthesis" });
+                        String condition;
+                        while (index != parts.Front().Size() && (std::isalpha(ch = parts.Front()[index]) || ch == '_')) {
+                            condition.Append(ch);
+                            ++index;
+                        }
 
-                    break;
-                }
+                        attribute_condition = condition;
+                    }
 
-                if (attribute_location.Empty()) {
-                    result.errors.PushBack(ProcessError { "Invalid attribute location" });
+                    if (index != parts.Front().Size() && ((ch = parts.Front()[index]) == ')')) {
+                        ++index;
+                    } else {
+                        result.errors.PushBack(ProcessError { "Invalid attribute, missing closing parenthesis" });
 
-                    break;
+                        break;
+                    }
+
+                    if (attribute_location.Empty()) {
+                        result.errors.PushBack(ProcessError { "Invalid attribute location" });
+
+                        break;
+                    }
                 }
             }
 
@@ -1118,7 +1116,11 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
             VertexAttributeDefinition attribute_definition;
             attribute_definition.name = attribute_name;
             attribute_definition.type_class = attribute_type;
-            attribute_definition.location = std::atoi(attribute_location.Data());
+            attribute_definition.location = attribute_location.Any()
+                ? std::atoi(attribute_location.Data())
+                : last_attribute_location + 1;
+
+            last_attribute_location = attribute_definition.location;
 
             if (optional) {
                 result.optional_attributes.PushBack(attribute_definition);

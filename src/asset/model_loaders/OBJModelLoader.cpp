@@ -8,6 +8,7 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <util/fs/FsUtil.hpp>
+#include <util/lightmapper/LightmapBuilder.hpp>
 
 #include <algorithm>
 #include <stack>
@@ -342,6 +343,9 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             continue;
         }
 
+        // temp
+        Handle<Texture> lightmap_texture;
+
         auto mesh = CreateObject<Mesh>(
             vertices, 
             indices,
@@ -353,6 +357,43 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         }
 
         mesh->CalculateTangents();
+
+        // Temp 
+        if (model.filepath.Contains("gun")) {
+            LightmapBuilder lightmap_builder;
+            auto lightmap_result = lightmap_builder.Build({
+                {
+                    {
+                        mesh,
+                        Transform::identity
+                    }
+                }
+            });
+
+            if (lightmap_result) {
+                ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
+                UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
+                streamed_data->Load();
+
+                lightmap_texture = CreateObject<Texture>(
+                    Extent3D { lightmap_result.result.bitmap.GetWidth(), lightmap_result.result.bitmap.GetHeight(), 1 },
+                    InternalFormat::RGB8,
+                    ImageType::TEXTURE_TYPE_2D,
+                    FilterMode::TEXTURE_FILTER_LINEAR,
+                    WrapMode::TEXTURE_WRAP_REPEAT,
+                    std::move(streamed_data)
+                );
+
+                InitObject(lightmap_texture);
+            } else {
+                DebugLog(
+                    LogType::Error,
+                    "Obj model loader: Could not build lightmap for mesh '%s': %s\n",
+                    obj_mesh.tag.Data(),
+                    lightmap_result.message
+                );
+            }
+        }
 
         InitObject(mesh);
 
@@ -370,7 +411,9 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             }
         }
 
-        if (!material) {
+        if (material) {
+            material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
+        } else {
             material = g_material_system->GetOrCreate(
                 {
                     .shader_definition = ShaderDefinition {
@@ -383,6 +426,9 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
                     { Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f) },
                     { Material::MATERIAL_KEY_ROUGHNESS, 0.65f },
                     { Material::MATERIAL_KEY_METALNESS, 0.0f }
+                },
+                {
+                    { Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture }
                 }
             );
         }

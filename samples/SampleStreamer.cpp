@@ -62,8 +62,6 @@
 #include <rtc/RTCClient.hpp>
 #include <rtc/RTCDataChannel.hpp>
 
-#include "scene/ecs/components/BLASComponent.hpp"
-
 // static void CollectMeshes(NodeProxy node, Array<Pair<Handle<Mesh>, Transform>> &out)
 // {
 //     const auto &entity = node.GetEntity();
@@ -843,13 +841,13 @@ void SampleStreamer::InitGame()
 
             m_scene->GetRoot().AddChild(cart);
 
-            for (auto &node : cart.GetChildren()) {
-                if (auto child_entity = node.GetEntity()) {
-                    // Add BLASComponent
+            // for (auto &node : cart.GetChildren()) {
+            //     if (auto child_entity = node.GetEntity()) {
+            //         // Add BLASComponent
 
-                    // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
-                }
-            }
+            //         // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
+            //     }
+            // }
         }
 
         if (results["test_model"]) {

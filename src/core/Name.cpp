@@ -15,7 +15,7 @@ static ANSIString GenerateUUID()
 
     for (SizeType i = 0; i < num_uuid_groups; ++i) {
         for (SizeType j = 0; j < num_uuid_chars; ++j) {
-            const SizeType index = MathUtil::RandRange(0ull, sizeof(uuid_chars) - 1ull);
+            const uint index = MathUtil::RandRange(0u, uint(sizeof(uuid_chars)) - 1u);
 
             uuid.Append(index);
         }

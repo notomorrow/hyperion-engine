@@ -78,7 +78,6 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : renderer::RenderCommand
         texture_index(texture_index),
         texture(std::move(texture))
     {
-        AssertThrow(this->texture.IsValid());
     }
 
     virtual ~RENDER_COMMAND(UpdateMaterialTexture)() override = default;
@@ -86,9 +85,19 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : renderer::RenderCommand
     virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(id, frame_index)
-                ->SetElement(HYP_NAME(Textures), texture_index, texture->GetImageView());
+            const DescriptorSet2Ref &descriptor_set = g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(id, frame_index);
+            AssertThrow(descriptor_set != nullptr);
+
+            if (texture.IsValid()) {
+                AssertThrow(texture->GetImageView() != nullptr);
+
+                descriptor_set->SetElement(HYP_NAME(Textures), texture_index, texture->GetImageView());
+            } else {
+                descriptor_set->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+            }
         }
+
+        g_engine->GetMaterialDescriptorSetManager().SetNeedsDescriptorSetUpdate(id);
 
         HYPERION_RETURN_OK;
     }
@@ -307,7 +316,7 @@ void Material::EnqueueTextureUpdate(TextureKey key)
     AssertThrow(texture.IsValid());
 
     PUSH_RENDER_COMMAND(
-        UpdateMaterialTexture, 
+        UpdateMaterialTexture,
         m_id,
         texture_index,
         texture
@@ -351,19 +360,12 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
         return;
     }
 
-    if (IsInitCalled()) {
-        // release current texture
-        if (m_textures[key] != nullptr) {
-            m_textures[key].Reset();
-        }
+    InitObject(texture);
 
-        InitObject(texture);
-    }
-
-    m_textures.Set(key, std::move(texture));
+    m_textures.Set(key, texture);
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
-    if (texture && IsReady()) {
+    if (IsInitCalled()) {
         EnqueueTextureUpdate(key);
     }
 #endif
@@ -530,7 +532,8 @@ Handle<Material> MaterialCache::GetOrCreate(
 // MaterialDescriptorSetManager
 
 MaterialDescriptorSetManager::MaterialDescriptorSetManager()
-    : m_has_updates_pending { false }
+    : m_pending_addition_flag { false },
+      m_descriptor_sets_to_update_flag { 0 }
 {
 }
 
@@ -542,7 +545,7 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
 
     m_material_descriptor_sets.Clear();
 
-    m_mutex.Lock();
+    m_pending_mutex.Lock();
 
     for (auto &it : m_pending_addition) {
         SafeRelease(std::move(it.second));
@@ -551,7 +554,7 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
     m_pending_addition.Clear();
     m_pending_removal.Clear();
 
-    m_mutex.Unlock();
+    m_pending_mutex.Unlock();
 }
 
 const DescriptorSet2Ref &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> material, uint frame_index) const
@@ -569,7 +572,7 @@ const DescriptorSet2Ref &MaterialDescriptorSetManager::GetDescriptorSet(ID<Mater
 
 void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material)
 {
-    Mutex::Guard guard(m_mutex);
+    Mutex::Guard guard(m_pending_mutex);
 
     const renderer::DescriptorSetDeclaration *declaration = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material));
     AssertThrow(declaration != nullptr);
@@ -591,12 +594,12 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material)
         std::move(descriptor_sets)
     });
 
-    m_has_updates_pending.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
 }
 
 void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material, FixedArray<Handle<Texture>, max_bound_textures> &&textures)
 {
-    Mutex::Guard guard(m_mutex);
+    Mutex::Guard guard(m_pending_mutex);
 
     const renderer::DescriptorSetDeclaration *declaration = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material));
     AssertThrow(declaration != nullptr);
@@ -628,12 +631,12 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material, FixedArray<
         std::move(descriptor_sets)
     });
 
-    m_has_updates_pending.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
 }
 
 void MaterialDescriptorSetManager::EnqueueRemove(ID<Material> material)
 {
-    Mutex::Guard guard(m_mutex);
+    Mutex::Guard guard(m_pending_mutex);
 
     decltype(m_pending_addition)::Iterator pending_addition_it = nullptr;
 
@@ -654,18 +657,59 @@ void MaterialDescriptorSetManager::EnqueueRemove(ID<Material> material)
         m_pending_removal.PushBack(material);
     }
 
-    m_has_updates_pending.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
 }
 
-void MaterialDescriptorSetManager::Update()
+void MaterialDescriptorSetManager::SetNeedsDescriptorSetUpdate(ID<Material> id)
+{
+    Mutex::Guard guard(m_descriptor_sets_to_update_mutex);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        auto it = m_descriptor_sets_to_update[frame_index].Find(id);
+
+        if (it != m_descriptor_sets_to_update[frame_index].End()) {
+            continue;
+        }
+
+        m_descriptor_sets_to_update[frame_index].PushBack(id);
+    }
+
+    m_descriptor_sets_to_update_flag.Set(0x3, MemoryOrder::RELAXED);
+}
+
+void MaterialDescriptorSetManager::Update(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    if (!m_has_updates_pending.Get(MemoryOrder::RELAXED)) {
+    const uint frame_index = frame->GetFrameIndex();
+
+    const uint descriptor_sets_to_update_flag = m_descriptor_sets_to_update_flag.Get(MemoryOrder::RELAXED);
+
+    if (descriptor_sets_to_update_flag & (1u << frame_index)) {
+        Mutex::Guard guard(m_descriptor_sets_to_update_mutex);
+
+        for (ID<Material> id : m_descriptor_sets_to_update[frame_index]) {
+            auto it = m_material_descriptor_sets.Find(id);
+
+            if (it == m_material_descriptor_sets.End()) {
+                continue;
+            }
+
+            AssertThrow(it->second[frame_index].IsValid());
+            it->second[frame_index]->Update(g_engine->GetGPUDevice());
+        }
+
+        m_descriptor_sets_to_update[frame_index].Clear();
+
+        m_descriptor_sets_to_update_flag.BitAnd(~(1u << frame_index), MemoryOrder::RELAXED);
+    }
+
+
+    if (!m_pending_addition_flag.Get(MemoryOrder::RELAXED)) {
         return;
     }
 
-    Mutex::Guard guard(m_mutex);
+    Mutex::Guard guard(m_pending_mutex);
 
     for (auto it = m_pending_removal.Begin(); it != m_pending_removal.End();) {
         auto material_descriptor_sets_it = m_material_descriptor_sets.Find(*it);
@@ -689,7 +733,7 @@ void MaterialDescriptorSetManager::Update()
         it = m_pending_addition.Erase(it);
     }
 
-    m_has_updates_pending.Set(false, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(false, MemoryOrder::RELAXED);
 }
 
 } // namespace hyperion::v2
