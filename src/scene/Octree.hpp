@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_OCTREE_H
-#define HYPERION_V2_OCTREE_H
+#ifndef HYPERION_V2_OCTREE_HPP
+#define HYPERION_V2_OCTREE_HPP
 
 #include <core/Containers.hpp>
 #include <core/lib/Pair.hpp>

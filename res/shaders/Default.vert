@@ -108,7 +108,7 @@ void main() {
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_texcoord1 = a_texcoord1.xy;
     v_camera_position = camera.position.xyz;
-    v_tangent = (normal_matrix * vec4(a_tangent, 0.0)).xyz;
+    v_tangent = a_tangent;//(normal_matrix * vec4(a_tangent, 0.0)).xyz;
 	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
 
