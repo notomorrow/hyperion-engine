@@ -56,7 +56,7 @@ void LightmapTracer::CollectMeshes(NodeProxy node, Proc<void, const Handle<Mesh>
     }
 }
 
-void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
+void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, LightmapHitPath &path, uint depth)
 {
     if (depth >= num_bounces) {
         return;
@@ -88,6 +88,7 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
     AssertThrowMsg(mesh_component != nullptr, "Mesh component is null");
     AssertThrowMsg(mesh_component->mesh.IsValid(), "Mesh is invalid");
 
+    const MeshData &mesh_data = it->second->GetMeshData();
     const BoundingBox &mesh_aabb = mesh_component->mesh->GetAABB();
 
     TransformComponent *transform_component = m_params.scene->GetEntityManager()->TryGetComponent<TransformComponent>(entity_id);
@@ -95,9 +96,7 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
 
     const Matrix4 inverse_model_matrix = transform_component->transform.GetMatrix().Inverted();
 
-    Vec3f local_hitpoint = inverse_model_matrix * hitpoint;
-
-    const MeshData &mesh_data = it->second->GetMeshData();
+    const Vec3f local_hitpoint = inverse_model_matrix * hitpoint;
 
     AssertThrowMsg(triangle_index * 3 + 2 < mesh_data.indices.Size(), "Triangle index out of bounds (%u >= %llu)\n", triangle_index * 3 + 2, mesh_data.indices.Size());
 
@@ -139,11 +138,11 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
 
     Vec4f albedo = Vec4f(material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
 
-    // if (const Handle<Texture> &albedo_texture = material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP); albedo_texture.IsValid()) {
-    //     const Vec4f albedo_texture_sample = albedo_texture->Sample(uv);
+    if (const Handle<Texture> &albedo_texture = material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP); albedo_texture.IsValid()) {
+        const Vec4f albedo_texture_sample = albedo_texture->Sample(uv);
 
-    //     albedo *= albedo_texture_sample;
-    // }
+        albedo *= albedo_texture_sample;
+    }
 
     float roughness = float(material->GetParameter(Material::MATERIAL_KEY_ROUGHNESS));
 
@@ -153,35 +152,14 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
     //     roughness = roughness_texture_sample;
     // }
 
-    const Vec3f L = m_params.light->GetType() == LightType::DIRECTIONAL
-        ? m_params.light->GetPosition().Normalized()
-        : m_params.light->GetPosition() - hitpoint;
-
-    const float NdotL = MathUtil::Max(normal.Dot(L), 0.0f);
-
-    auto mesh_trace_data_it = m_trace_data.elements.Find(mesh_id);
-
-    if (mesh_trace_data_it == m_trace_data.elements.End()) {
-        LightmapMeshTraceData mesh_trace_data;
-        // mesh_trace_data.vertex_colors.Resize(mesh_data.vertices.Size());
-        mesh_trace_data.transform = transform_component->transform; // temp?
-
-        mesh_trace_data_it = m_trace_data.elements.Insert(mesh_id, std::move(mesh_trace_data)).first;
-    }
-
-    AssertThrow(mesh_trace_data_it != m_trace_data.elements.End());
-
-    const float decay = 1.0f / (depth + 1); // TEMP use actual falloff from pathtracer
-
-    auto octree_insert_result = mesh_trace_data_it->second.octree.Insert({
-        albedo,
-        (local_hitpoint / mesh_aabb.GetExtent()),// + 0.5f,
-        triangle_index
+    // new
+    path.AddHit({
+        .position = hitpoint,
+        .throughput = albedo,
+        .emissive = 0.0f,
+        .mesh_id = mesh_id,
+        .triangle_index = triangle_index
     });
-
-    AssertThrowMsg(octree_insert_result.first, "Octree insert failed with message: %s", octree_insert_result.first.message);
-
-    mesh_trace_data_it->second.hits_map[position] = { albedo * NdotL * decay, triangle_index };
 
     if (depth + 1 < num_bounces) {
         const Vec2f rnd {
@@ -200,19 +178,17 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, uint depth)
         const Optional<LightmapRayHit> hit = TraceSingleRay(ray);
 
         if (hit.HasValue()) {
-            HandleRayHit(hit.Get(), depth + 1);
+            HandleRayHit(hit.Get(), path, depth + 1);
         }
     }
 }
 
 LightmapTracer::Result LightmapTracer::Trace()
 {
+    LightmapTraceData trace_data;
+
     const Vec3f scene_origin = m_params.scene->GetOctree().GetAABB().GetCenter();
-
     Vec3f light_position;
-
-    // temp, for debugging
-    Handle<Mesh> merged_voxel_grid_mesh;
 
     switch (m_params.light->GetType()) {
     case LightType::DIRECTIONAL: {
@@ -225,21 +201,38 @@ LightmapTracer::Result LightmapTracer::Trace()
 
             const Ray ray { light_position, -v };
 
+            LightmapHitPath path;
+
             const Optional<LightmapRayHit> hit = TraceSingleRay(ray);
 
             if (hit.HasValue()) {
-                DebugLog(LogType::Debug, "\tRay hit mesh %u\ttriangle %u\n", hit->mesh_id.Value(), hit->triangle_index);
-                
-                HandleRayHit(hit.Get());
-            } else {
-                DebugLog(LogType::Debug, "\tRay missed\n");
+                HandleRayHit(hit.Get(), path);
+            }
+
+            if (path.Missed()) {
+                continue;
+            }
+
+            for (const auto &hit : path.hits) {
+                trace_data.IntegrateHit(hit);
             }
         }
 
-        // Debugging, using tangent to store vertex colors as a visualizer.
-        DebugLog(LogType::Debug, "Num traced meshes: %u\n", m_trace_data.elements.Size());
+        HashMap<ID<Mesh>, Array<LightmapHitData>> mesh_hit_datas; // temp for debugging
 
-        for (const auto &it : m_trace_data.elements) {
+        for (const auto &it : trace_data.hits_map) {
+            const ID<Mesh> mesh_id = it.second.mesh_id;
+
+            auto mesh_hit_data_it = mesh_hit_datas.Find(mesh_id);
+
+            if (mesh_hit_data_it == mesh_hit_datas.End()) {
+                mesh_hit_data_it = mesh_hit_datas.Insert(mesh_id, { }).first;
+            }
+
+            mesh_hit_data_it->second.PushBack(it.second);
+        }
+
+        for (const auto &it : mesh_hit_datas) {
             const ID<Mesh> mesh_id = it.first;
 
             const Handle<Mesh> mesh = Handle<Mesh>(mesh_id);
@@ -260,57 +253,17 @@ LightmapTracer::Result LightmapTracer::Trace()
                 new_mesh_data.vertices[i].SetTangent(Vec3f{ 0.0f, 0.0f, 0.0f });
             }
 
-            // TEMP
-            for (auto it : it.second.hits_map) {
-                AssertThrowMsg(it.second.second * 3 + 2 < new_mesh_data.indices.Size(), "Triangle index out of bounds (%u >= %llu)\n", it.second.second * 3 + 2, new_mesh_data.indices.Size());
-                new_mesh_data.vertices[new_mesh_data.indices[it.second.second * 3 + 0]].SetTangent(it.second.first.GetXYZ());
-                new_mesh_data.vertices[new_mesh_data.indices[it.second.second * 3 + 1]].SetTangent(it.second.first.GetXYZ());
-                new_mesh_data.vertices[new_mesh_data.indices[it.second.second * 3 + 2]].SetTangent(it.second.first.GetXYZ());
+            for (const auto &hit : it.second) {
+                const uint triangle_index = hit.triangle_index;
+                const Vec4f throughput = hit.throughput;
+
+                // TEMP
+                AssertThrowMsg(triangle_index * 3 + 2 < new_mesh_data.indices.Size(), "Index out of bounds (%u >= %llu)\n", triangle_index * 3 + 2, new_mesh_data.indices.Size());
+                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 0]].SetTangent(throughput.GetXYZ());
+                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 1]].SetTangent(throughput.GetXYZ());
+                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 2]].SetTangent(throughput.GetXYZ());
             }
-
-            VoxelGrid voxel_grid { Vec3u { 32, 32, 32 }, 0.1f };
-
-            it.second.octree.ForEachOctant([&](const LightmapOctree *octant) -> void
-            {
-                if (octant->GetValue().triangle_index == ~0u) {
-                    // skip unset octants
-                    return;
-                }
-
-                const LightmapOctreeEntry &entry = octant->GetValue();
-
-                const Vec3f hitpoint = entry.hitpoint; // hitpoint is in range 0..1
-
-                Vec3u hitpoint_voxel = Vec3u(hitpoint * 32.0f);
-                hitpoint_voxel.x = MathUtil::Clamp(hitpoint_voxel.x, 0u, 31u);
-                hitpoint_voxel.y = MathUtil::Clamp(hitpoint_voxel.y, 0u, 31u);
-                hitpoint_voxel.z = MathUtil::Clamp(hitpoint_voxel.z, 0u, 31u);
-
-                voxel_grid.SetVoxel(hitpoint_voxel.x, hitpoint_voxel.y, hitpoint_voxel.z, {
-                    entry.color
-                });
-
-
-                // DebugLog(LogType::Debug, "Octant hitpoint: %f %f %f\tOctant ID: (%u:%u)\n", entry.hitpoint.x, entry.hitpoint.y, entry.hitpoint.z,
-                //     octant->GetOctantID().GetDepth(), octant->GetOctantID().GetIndex());
-
     
-                // AssertThrowMsg(entry.triangle_index != ~0u, "Invalid triangle index");
-                // AssertThrowMsg(entry.triangle_index * 3 + 2 < new_mesh_data.indices.Size(), "Triangle index out of bounds (%u >= %llu)\n", entry.triangle_index * 3 + 2, new_mesh_data.indices.Size());
-
-                // new_mesh_data.vertices[new_mesh_data.indices[entry.triangle_index * 3 + 0]].SetTangent(Vec3f { entry.color.x, entry.color.y, entry.color.z });
-                // new_mesh_data.vertices[new_mesh_data.indices[entry.triangle_index * 3 + 1]].SetTangent(Vec3f { entry.color.x, entry.color.y, entry.color.z });
-                // new_mesh_data.vertices[new_mesh_data.indices[entry.triangle_index * 3 + 2]].SetTangent(Vec3f { entry.color.x, entry.color.y, entry.color.z });
-            });
-
-            // Handle<Mesh> voxel_grid_mesh = MeshBuilder::BuildVoxelMesh(voxel_grid);
-
-            // if (merged_voxel_grid_mesh.IsValid()) {
-            //     merged_voxel_grid_mesh = MeshBuilder::Merge(merged_voxel_grid_mesh.Get(), voxel_grid_mesh.Get(), Transform::identity, it.second.transform);
-            // } else {
-            //     merged_voxel_grid_mesh = std::move(voxel_grid_mesh);
-            // }
-
             Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
         }
 
@@ -327,8 +280,7 @@ LightmapTracer::Result LightmapTracer::Trace()
     }
 
     return {
-        Result::RESULT_OK,
-        std::move(merged_voxel_grid_mesh)
+        Result::RESULT_OK
     };
 }
 

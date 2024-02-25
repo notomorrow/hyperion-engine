@@ -244,15 +244,13 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh *mesh, const Transform &tran
 
     Array<Vertex> new_vertices(mesh_data_ref->GetMeshData().vertices);
 
-    const Matrix4 normal_matrix = transform.GetMatrix().Inverted().Transposed();
+    const auto normal_matrix = transform.GetMatrix().Inverted().Transposed();
 
     for (Vertex &vertex : new_vertices) {
         vertex.SetPosition(transform.GetMatrix() * vertex.GetPosition());
         vertex.SetNormal(normal_matrix * vertex.GetNormal());
-
-        // TEMP commented out to test 
-        // vertex.SetTangent(normal_matrix * vertex.GetTangent());
-        // vertex.SetBitangent(normal_matrix * vertex.GetBitangent());
+        vertex.SetTangent(normal_matrix * vertex.GetTangent());
+        vertex.SetBitangent(normal_matrix * vertex.GetBitangent());
     }
 
     RC<StreamedMeshData> new_streamed_mesh_data = StreamedMeshData::FromMeshData(MeshData {
@@ -340,19 +338,6 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
                 }
 
                 auto cube = Cube();
-
-                // TEMP TEST
-                auto ref = cube->GetStreamedMeshData()->AcquireRef();
-                MeshData new_mesh_data;
-                new_mesh_data.vertices = ref->GetMeshData().vertices;
-                new_mesh_data.indices = ref->GetMeshData().indices;
-
-                for (uint i = 0; i < new_mesh_data.vertices.Size(); i++) {
-                    new_mesh_data.vertices[i].SetTangent(Vec3f(voxel_grid.voxels[index].data.color.x, voxel_grid.voxels[index].data.color.y, voxel_grid.voxels[index].data.color.z));
-                }
-
-                Mesh::SetStreamedMeshData(cube, StreamedMeshData::FromMeshData(new_mesh_data));
-                
 
                 if (!mesh) {
                     mesh = ApplyTransform(
