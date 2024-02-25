@@ -300,7 +300,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
 
     xatlas::Destroy(atlas);
 
-    /*for (SizeType i = 0; i < m_mesh_data.Size(); i++) {
+    for (SizeType i = 0; i < m_mesh_data.Size(); i++) {
         const LightmapMeshData &lightmap_mesh_data = m_mesh_data[i];
         const LightmapEntity &element = m_params.elements[i];
 
@@ -319,9 +319,8 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
             new_mesh_data.vertices[i].SetTexCoord1(lightmap_uv);
         }
 
-        mesh->SetStreamedMeshData(StreamedMeshData::FromMeshData(new_mesh_data));
-        mesh->SetVertexAttributes(mesh->GetVertexAttributes() | renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1);
-    }*/
+        Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
+    }
 
     return {
         LightmapUVBuilder::Result::RESULT_OK,

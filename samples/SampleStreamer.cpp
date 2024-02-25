@@ -737,7 +737,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");//living_room/living_room.obj");
+        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//living_room/living_room.obj");
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -793,17 +793,17 @@ void SampleStreamer::InitGame()
 
 #if 0
         if (auto zombie = results["zombie"].Get<Node>()) {
-            zombie.Scale(0.5f);
+            zombie.Scale(0.25f);
             auto zombie_entity = zombie[0].GetEntity();
 
             m_scene->GetRoot().AddChild(zombie);
 
             if (zombie_entity.IsValid()) {
-                // if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
-                //     mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-                //     mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.25f);
-                //     mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
-                // }
+                if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.25f);
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+                }
 
                 m_scene->GetEntityManager()->AddComponent(zombie_entity, AudioComponent {
                     g_asset_manager->Load<AudioSource>("sounds/cartoon001.wav"),
@@ -868,8 +868,8 @@ void SampleStreamer::InitGame()
 
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            //node.Scale(3.0f);
-            node.Scale(0.0125f);
+            node.Scale(3.0f);
+            // node.Scale(0.0125f);
             node.SetName("test_model");
             
             GetScene()->GetRoot().AddChild(node);

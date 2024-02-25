@@ -204,7 +204,7 @@ bool Ray::TestTriangleList(
             vertices[indices[i + 2]].GetPosition() * transform.GetMatrix()
         };
 
-        if (TestTriangle(triangle, static_cast<RayHitID>(i /* triangle index */), tmp_results)) {
+        if (TestTriangle(triangle, static_cast<RayHitID>(i / 3 /* triangle index */), tmp_results)) {
             intersected = true;
         }
     }

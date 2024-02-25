@@ -7,6 +7,9 @@
 #include <core/lib/Pair.hpp>
 #include <core/lib/Proc.hpp>
 #include <core/lib/Optional.hpp>
+#include <core/lib/FixedArray.hpp>
+
+#include <rendering/lightmapper/LightmapSparseVoxelOctree.hpp>
 
 #include <rendering/Light.hpp>
 #include <rendering/Mesh.hpp>
@@ -28,9 +31,20 @@ struct LightmapTracerParams
     Handle<Scene>   scene;
 };
 
+struct LightmapMeshTraceData
+{
+    // // @TODO Use a more efficient data structure like svo for recording hits on a mesh
+    // Array<Vec4f>    vertex_colors;
+
+    HashMap<Vec3f, Pair<Vec4f, uint32>>  hits_map;
+
+    LightmapOctree  octree;
+    Transform       transform;
+};
+
 struct LightmapTraceData
 {
-
+    HashMap<ID<Mesh>, LightmapMeshTraceData>    elements;
 };
 
 struct LightmapRayHit
@@ -60,8 +74,8 @@ struct LightmapRayHit
 class LightmapTracer
 {
 public:
-    static constexpr uint num_rays_per_light = 2048;
-    static constexpr uint num_bounces = 8;
+    static constexpr uint num_rays_per_light = 10000;
+    static constexpr uint num_bounces = 3;//8;
 
     struct Result
     {
@@ -73,6 +87,8 @@ public:
         } status;
 
         String  message;
+
+        Handle<Mesh>    debug_octree_mesh; // for debugging only -- to be removed
         
         Result()
             : status(RESULT_OK)
@@ -80,6 +96,12 @@ public:
 
         Result(Status status)
             : status(status)
+        { }
+
+        // Temp constructor
+        Result(Status status, Handle<Mesh> debug_octree_mesh)
+            : status(status),
+              debug_octree_mesh(std::move(debug_octree_mesh))
         { }
 
         Result(Status status, String message)
@@ -118,6 +140,7 @@ private:
     BasicNoiseGenerator<float>  m_noise_generator;
 
     MeshDataCache               m_mesh_data_cache;
+    LightmapTraceData           m_trace_data;
 };
 
 } // namespace hyperion::v2

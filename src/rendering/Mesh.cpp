@@ -12,6 +12,8 @@ namespace hyperion::v2 {
 using renderer::Result;
 using renderer::GPUBufferType;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
 {
     Array<float>        vertex_data;
@@ -41,6 +43,8 @@ struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
             this->index_data.Resize(this->index_data.Size() + (3 - (this->index_data.Size() % 3)));
         }
     }
+
+    virtual ~RENDER_COMMAND(UploadMeshData)() override = default;
 
     virtual Result operator()() override
     {
@@ -85,6 +89,33 @@ struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
         HYPERION_RETURN_OK;
     }
 };
+
+struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
+{
+    Handle<Mesh>            mesh;
+    RC<StreamedMeshData>    streamed_mesh_data;
+
+    RENDER_COMMAND(SetStreamedMeshData)(
+        Handle<Mesh> mesh,
+        RC<StreamedMeshData> streamed_mesh_data
+    ) : mesh(std::move(mesh)),
+        streamed_mesh_data(std::move(streamed_mesh_data))
+    {
+        AssertThrow(this->mesh.IsValid());
+        AssertThrow(this->streamed_mesh_data != nullptr);
+    }
+
+    virtual ~RENDER_COMMAND(SetStreamedMeshData)() override = default;
+
+    virtual Result operator()() override
+    {
+        mesh->SetStreamedMeshData(std::move(streamed_mesh_data));
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+#pragma endregion
 
 Pair<Array<Vertex>, Array<Mesh::Index>>
 Mesh::CalculateIndices(const Array<Vertex> &vertices)
@@ -299,8 +330,19 @@ void Mesh::SetVertices(Array<Vertex> vertices, Array<Index> indices)
     }));
 }
 
+void Mesh::SetStreamedMeshData(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data)
+{
+    PUSH_RENDER_COMMAND(
+        SetStreamedMeshData,
+        std::move(mesh),
+        std::move(streamed_mesh_data)
+    );
+}
+
 void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+
     m_streamed_mesh_data = std::move(streamed_mesh_data);
 
     CalculateAABB();
@@ -325,7 +367,8 @@ void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
 
         m_indices_count = mesh_data.indices.Size();
 
-        PUSH_RENDER_COMMAND(
+        // Execute render command inline so we do not have any frames rendered where the VBO/IBO is invalid
+        EXEC_RENDER_COMMAND_INLINE(
             UploadMeshData,
             BuildVertexBuffer(GetVertexAttributes(), mesh_data),
             mesh_data.indices,

@@ -33,10 +33,14 @@ using renderer::AccelerationGeometry;
 using renderer::Topology;
 using renderer::IndirectDrawCommand;
 
+struct RENDER_COMMAND(SetStreamedMeshData);
+
 class Mesh
     : public BasicObject<STUB_CLASS(Mesh)>
 {
 public:
+    friend struct RENDER_COMMAND(SetStreamedMeshData);
+
     using Index = uint32;
 
     static Pair<Array<Vertex>, Array<Index>> CalculateIndices(const Array<Vertex> &vertices);
@@ -90,7 +94,10 @@ public:
     const RC<StreamedMeshData> &GetStreamedMeshData() const
         { return m_streamed_mesh_data; }
 
+    /*! \brief Set the mesh data for the Mesh. Only usable on the Render thread. If needed
+        from another thread, use the static version of this function. */
     void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data);
+    static void SetStreamedMeshData(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data);
 
     const VertexAttributeSet &GetVertexAttributes() const
         { return m_mesh_attributes.vertex_attributes; }

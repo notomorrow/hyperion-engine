@@ -33,10 +33,10 @@ using v2::Threads;
  * \brief Executes a render command line. This must be called from the render thread. Avoid if possible.
  */
 #define EXEC_RENDER_COMMAND_INLINE(name, ...) \
-    { \
+    do { \
         ::hyperion::v2::Threads::AssertOnThread(::hyperion::v2::THREAD_RENDER); \
-        RENDER_COMMAND(name) _command(__VA_ARGS__)(); \
-    }
+        RENDER_COMMAND(name)(__VA_ARGS__)(); \
+    } while (0)
 
 #define HYP_SYNC_RENDER() \
     do { \
