@@ -688,7 +688,7 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
         entity_it->aabb = new_aabb;
     } else { /* Moved into new octant */
 
-        m_nodes.PushBack(Node { id, aabb });
+        m_nodes.PushBack(Node { id, new_aabb });
 
         if (m_state != nullptr) {
             AssertThrowMsg(m_state->node_to_octree.Find(id) == m_state->node_to_octree.End(), "Entity must not already be in octree hierarchy.");

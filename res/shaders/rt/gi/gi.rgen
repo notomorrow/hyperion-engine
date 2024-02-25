@@ -60,7 +60,7 @@ void SetProbeRayData(uvec2 coord, ProbeRayData ray_data)
     probe_rays[PROBE_RAY_DATA_INDEX(coord)] = ray_data;
 }
 
-void main() 
+void main()
 {
     const uvec2 coord = uvec2(gl_LaunchIDEXT.xy);
     

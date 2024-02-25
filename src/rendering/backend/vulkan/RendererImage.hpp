@@ -194,11 +194,11 @@ public:
     /*! \brief Returns the byte-size of the image. Note, it's possible no CPU-side memory exists
         for the image data even if the result is non-zero. To check if any CPU-side bytes exist,
         use HasAssignedImageData(). */
-    SizeType GetByteSize() const
-        { return m_extent.Size()
-            * SizeType(NumComponents(m_format))
-            * SizeType(NumBytes(m_format))
-            * SizeType(NumFaces()); }
+    uint GetByteSize() const
+        { return uint(m_extent.Size())
+            * NumComponents(m_format)
+            * NumBytes(m_format)
+            * NumFaces(); }
 
     bool IsTextureCube() const
         { return m_type == ImageType::TEXTURE_TYPE_CUBEMAP; }

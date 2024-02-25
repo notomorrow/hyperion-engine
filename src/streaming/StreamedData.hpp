@@ -48,7 +48,7 @@ public:
     {
     }
 
-    StreamedDataRef &operator=(const StreamedDataRefBase &other)
+    StreamedDataRef &operator=(const StreamedDataRef &other)
     {
         StreamedDataRefBase::operator=(static_cast<const StreamedDataRefBase &>(other));
         return *this;
@@ -59,7 +59,7 @@ public:
     {
     }
 
-    StreamedDataRef &operator=(StreamedDataRefBase &&other) noexcept
+    StreamedDataRef &operator=(StreamedDataRef &&other) noexcept
     {
         StreamedDataRefBase::operator=(static_cast<StreamedDataRefBase &&>(other));
         return *this;

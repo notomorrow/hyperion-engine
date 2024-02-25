@@ -370,6 +370,8 @@ struct alignas(alignof(float) * 4) Vec3<float>
 
     Vec3 Cross(const Vec3 &other) const;
 
+    Vec3 Reflect(const Vec3 &normal) const;
+
     Vec3 &Rotate(const Vec3 &axis, Type radians);
     Vec3 &Lerp(const Vec3 &to, Type amt);
     Type Dot(const Vec3 &other) const;

@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_TEXTURE_H
-#define HYPERION_V2_TEXTURE_H
+#ifndef HYPERION_V2_TEXTURE_HPP
+#define HYPERION_V2_TEXTURE_HPP
 
 #include <core/Base.hpp>
 #include <core/Handle.hpp>
@@ -15,7 +15,9 @@
 
 #include <scene/VisibilityState.hpp>
 
+#include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
+#include <math/Vector4.hpp>
 
 #include <Types.hpp>
 
@@ -96,6 +98,8 @@ public:
     void Init();
 
     void GenerateMipmaps();
+
+    Vec4f Sample(Vec2f uv) const;
 
 protected:
     FilterMode m_filter_mode;

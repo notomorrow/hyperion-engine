@@ -293,12 +293,46 @@ void Mesh::SetVertices(Array<Vertex> vertices)
 
 void Mesh::SetVertices(Array<Vertex> vertices, Array<Index> indices)
 {
-    m_streamed_mesh_data = StreamedMeshData::FromMeshData({
+    SetStreamedMeshData(StreamedMeshData::FromMeshData({
        std::move(vertices),
        std::move(indices)
-    });
+    }));
+}
+
+void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
+{
+    m_streamed_mesh_data = std::move(streamed_mesh_data);
 
     CalculateAABB();
+
+    if (IsInitCalled()) {
+        SafeRelease(std::move(m_vbo));
+        SafeRelease(std::move(m_ibo));
+
+        m_vbo = MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER);
+        m_ibo = MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER);
+
+        if (!m_streamed_mesh_data) {
+            // Create empty buffers
+            m_streamed_mesh_data = StreamedMeshData::FromMeshData({
+                Array<Vertex> { },
+                Array<Index> { }
+            });
+        }
+
+        auto ref = m_streamed_mesh_data->AcquireRef();
+        const MeshData &mesh_data = ref->GetMeshData();
+
+        m_indices_count = mesh_data.indices.Size();
+
+        PUSH_RENDER_COMMAND(
+            UploadMeshData,
+            BuildVertexBuffer(GetVertexAttributes(), mesh_data),
+            mesh_data.indices,
+            m_vbo,
+            m_ibo
+        );
+    }
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible

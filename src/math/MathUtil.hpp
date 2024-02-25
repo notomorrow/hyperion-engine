@@ -1,9 +1,9 @@
 #ifndef MATHUTIL_H
 #define MATHUTIL_H
 
-#include "Vector2.hpp"
-#include "Vector3.hpp"
-#include "Vector4.hpp"
+#include <math/Vector2.hpp>
+#include <math/Vector3.hpp>
+#include <math/Vector4.hpp>
 
 #include <util/Defines.hpp>
 #include <Types.hpp>
@@ -510,6 +510,12 @@ public:
 
         return value + multiple - remainder;
     }
+
+    static Vec3f RandomInSphere(Vec3f rnd);
+    static Vec3f RandomInHemisphere(Vec3f rnd, Vec3f n);
+    static Vec2f VogelDisk(uint sample_index, uint num_samples, float phi);
+    static Vec3f ImportanceSampleGGX(Vec2f Xi, Vec3f N, float roughness);
+    static Vec3f CalculateBarycentricCoordinates(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2, const Vec3f &p);
 };
 
 } // namespace hyperion
