@@ -30,6 +30,8 @@
 
 #include <util/ArgParse.hpp>
 #include <util/json/JSON.hpp>
+#include <rendering/lightmapper/LightmapTracer.hpp>
+#include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
 #include <core/net/Socket.hpp>
 
@@ -284,7 +286,7 @@ void SampleStreamer::InitGame()
         }
     }
 
-    if (false) {
+    if (true) {
         auto cube_node = m_scene->GetRoot().AddChild();
         cube_node.SetName("TestCube");
 
@@ -308,18 +310,6 @@ void SampleStreamer::InitGame()
                 { Material::MATERIAL_KEY_ROUGHNESS, 0.01f }
             }
         );
-
-        // add physics
-        m_scene->GetEntityManager()->AddComponent(entity_id, RigidBodyComponent {
-            CreateObject<physics::RigidBody>(
-                RC<physics::PhysicsShape>(new physics::BoxPhysicsShape(BoundingBox { Vec3f { -1.0f }, Vec3f { 1.0f } })),
-                physics::PhysicsMaterial {
-                    .mass = 0.1f // static
-                }
-            )
-        });
-
-        // m_scene->GetEntityManager()->AddComponent(entity_id, BLASComponent { });
         
         m_scene->GetEntityManager()->AddComponent(entity_id, MeshComponent {
             cube,
@@ -412,64 +402,62 @@ void SampleStreamer::InitGame()
         terrain_node.SetName("TerrainNode");
     }
 
-    {
-        auto sun = CreateObject<Light>(DirectionalLight(
-            Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
-            Color(1.0f, 0.7f, 0.4f),
-            5.0f
-        ));
+    auto sun = CreateObject<Light>(DirectionalLight(
+        Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
+        Color(1.0f, 0.7f, 0.4f),
+        5.0f
+    ));
 
-        InitObject(sun);
+    InitObject(sun);
 
-        auto sun_node = m_scene->GetRoot().AddChild();
-        sun_node.SetName("Sun");
+    auto sun_node = m_scene->GetRoot().AddChild();
+    sun_node.SetName("Sun");
 
-        auto sun_entity = m_scene->GetEntityManager()->AddEntity();
-        sun_node.SetEntity(sun_entity);
+    auto sun_entity = m_scene->GetEntityManager()->AddEntity();
+    sun_node.SetEntity(sun_entity);
 
-        sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
+    sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
 
-        m_scene->GetEntityManager()->AddComponent(sun_entity, LightComponent {
-            sun
+    m_scene->GetEntityManager()->AddComponent(sun_entity, LightComponent {
+        sun
+    });
+
+    m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
+        .radius = 15.0f,
+        .resolution = { 2048, 2048 }
+    });
+
+    Array<Handle<Light>> point_lights;
+
+    point_lights.PushBack(CreateObject<Light>(PointLight(
+        Vector3(0.0f, 0.5f, 0.0f),
+        Color(1.0f, 0.9f, 0.7f),
+        5.0f,
+        40.0f
+    )));
+    // point_lights.PushBack(CreateObject<Light>(PointLight(
+    //     Vector3(0.0f, 10.0f, 12.0f),
+    //     Color(1.0f, 0.0f, 0.0f),
+    //     15.0f,
+    //     200.0f
+    // )));
+
+    for (auto &light : point_lights) {
+        auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
+
+        m_scene->GetEntityManager()->AddComponent(point_light_entity, ShadowMapComponent { });
+
+        m_scene->GetEntityManager()->AddComponent(point_light_entity, TransformComponent {
+            Transform(
+                light->GetPosition(),
+                Vec3f(1.0f),
+                Quaternion::Identity()
+            )
         });
 
-        m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
-            .radius = 15.0f,
-            .resolution = { 2048, 2048 }
+        m_scene->GetEntityManager()->AddComponent(point_light_entity, LightComponent {
+            light
         });
-
-        Array<Handle<Light>> point_lights;
-
-        point_lights.PushBack(CreateObject<Light>(PointLight(
-            Vector3(0.0f, 0.5f, 0.0f),
-            Color(1.0f, 0.9f, 0.7f),
-            5.0f,
-            40.0f
-        )));
-        // point_lights.PushBack(CreateObject<Light>(PointLight(
-        //     Vector3(0.0f, 10.0f, 12.0f),
-        //     Color(1.0f, 0.0f, 0.0f),
-        //     15.0f,
-        //     200.0f
-        // )));
-
-        for (auto &light : point_lights) {
-            auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
-
-            m_scene->GetEntityManager()->AddComponent(point_light_entity, ShadowMapComponent { });
-
-            m_scene->GetEntityManager()->AddComponent(point_light_entity, TransformComponent {
-                Transform(
-                    light->GetPosition(),
-                    Vec3f(1.0f),
-                    Quaternion::Identity()
-                )
-            });
-
-            m_scene->GetEntityManager()->AddComponent(point_light_entity, LightComponent {
-                light
-            });
-        }
     }
     
 
@@ -840,6 +828,31 @@ void SampleStreamer::InitGame()
             cart.SetName("cart");
 
             m_scene->GetRoot().AddChild(cart);
+
+            MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(cart[0].GetEntity());
+            LightmapUVBuilder lightmap_uv_builder;
+            auto lightmap_result = lightmap_uv_builder.Build({
+                {
+                    { mesh_component.mesh, Transform::identity }
+                }
+            });
+
+            ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
+            UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
+            streamed_data->Load();
+
+            auto lightmap_texture = CreateObject<Texture>(
+                Extent3D { lightmap_result.result.bitmap.GetWidth(), lightmap_result.result.bitmap.GetHeight(), 1 },
+                InternalFormat::RGB8,
+                ImageType::TEXTURE_TYPE_2D,
+                FilterMode::TEXTURE_FILTER_LINEAR,
+                WrapMode::TEXTURE_WRAP_REPEAT,
+                std::move(streamed_data)
+            );
+            InitObject(lightmap_texture);
+
+            mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
+            // Handle<Mesh> mesh = mesh_component.mesh;
 
             // for (auto &node : cart.GetChildren()) {
             //     if (auto child_entity = node.GetEntity()) {
@@ -1275,6 +1288,17 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
     }
 
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
+
+        auto sun_node = m_scene->GetRoot().Select("Sun");
+        ID<Entity> sun_entity = sun_node.GetEntity();
+
+        LightComponent &light_component = m_scene->GetEntityManager()->GetComponent<LightComponent>(sun_entity);
+
+        LightmapTracer tracer({ light_component.light, m_scene });
+        tracer.Trace();
+
+
+
         // shoot bullet on mouse button left
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
 #if 0
@@ -1381,7 +1405,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
         }
     }
 
-#if 0
+#if 1
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
             const auto &mouse_position = GetInputManager()->GetMousePosition();
@@ -1414,9 +1438,12 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
                         TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(entity_id);
 
                         if (mesh_component != nullptr && mesh_component->mesh.IsValid() && transform_component != nullptr) {
+                            auto streamed_mesh_data = mesh_component->mesh->GetStreamedMeshData();
+                            auto ref = streamed_mesh_data->AcquireRef();
+                            
                             ray.TestTriangleList(
-                                mesh_component->mesh->GetVertices(),
-                                mesh_component->mesh->GetIndices(),
+                                ref->GetMeshData().vertices,
+                                ref->GetMeshData().indices,
                                 transform_component->transform,
                                 entity_id.Value(),
                                 triangle_mesh_results

@@ -73,8 +73,8 @@ public:
 
     virtual ~BasicNoiseGenerator() = default;
 
-    virtual T Next() const
-        { return m_distribution(); }
+    virtual T Next()
+        { return m_distribution(m_mt); }
 
 protected:
     Seed m_seed;

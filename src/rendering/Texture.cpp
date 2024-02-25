@@ -448,4 +448,66 @@ void Texture::GenerateMipmaps()
     mipmap_renderer.Destroy();
 }
 
+Vec4f Texture::Sample(Vec2f uv) const
+{
+    if (!IsReady()) {
+        return Vec4f::zero;
+    }
+
+    const StreamedData *streamed_data = m_image->GetStreamedData();
+
+    if (!streamed_data) {
+        return Vec4f::zero;
+    }
+
+    // @FIXME: Create StreamedTextureData class like StreamedMeshData
+    // where we can use AcquireRef() instead of Load() every time.
+
+    const ByteBuffer &byte_buffer = streamed_data->Load();
+
+    if (byte_buffer.Size() == 0) {
+        return Vec4f::zero;
+    }
+
+    const Vec2u coord = {
+        uint32(uv.x * m_image->GetExtent().width),
+        uint32(uv.y * m_image->GetExtent().height)
+    };
+
+    const uint bytes_per_pixel = renderer::NumBytes(m_image->GetTextureFormat());
+
+    if (bytes_per_pixel != 1) {
+        DebugLog(
+            LogType::Error,
+            "Texture::Sample: Unsupported bytes per pixel: %u\n",
+            bytes_per_pixel
+        );
+
+        return Vec4f::zero;
+    }
+
+    const uint num_components = renderer::NumComponents(m_image->GetTextureFormat());
+
+    const uint32 index = coord.y * m_image->GetExtent().width * bytes_per_pixel * num_components + coord.x * bytes_per_pixel * num_components;
+
+    if (index >= byte_buffer.Size()) {
+        return Vec4f::zero;
+    }
+
+    const uint8 *data = byte_buffer.Data() + index;
+
+    switch (num_components) {
+    case 1:
+        return Vec4f(data[0] / 255.0f);
+    case 2:
+        return Vec4f(data[0] / 255.0f, data[1] / 255.0f, 0.0f, 1.0f);
+    case 3:
+        return Vec4f(data[0] / 255.0f, data[1] / 255.0f, data[2] / 255.0f, 1.0f);
+    case 4:
+        return Vec4f(data[0] / 255.0f, data[1] / 255.0f, data[2] / 255.0f, data[3] / 255.0f);
+    default: // should never happen
+        return Vec4f::zero;
+    }
+}
+
 } // namespace hyperion::v2

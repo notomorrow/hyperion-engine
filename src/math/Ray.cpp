@@ -132,7 +132,7 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
     return false;
 }
 
-bool Ray::TestTriangleList(
+Optional<RayHit> Ray::TestTriangleList(
     const Array<Vertex> &vertices,
     const Array<uint32> &indices,
     const Transform &transform
@@ -140,7 +140,11 @@ bool Ray::TestTriangleList(
 {
     RayTestResults out_results;
 
-    return TestTriangleList(vertices, indices, transform, ~0, out_results);
+    if (!TestTriangleList(vertices, indices, transform, ~0, out_results)) {
+        return { };
+    }
+
+    return out_results.Front();
 }
 
 bool Ray::TestTriangleList(
@@ -188,13 +192,19 @@ bool Ray::TestTriangleList(
     RayTestResults tmp_results;
 
     for (SizeType i = 0; i < indices.Size(); i += 3) {
-        const Triangle triangle(
-            vertices[indices[i]].GetPosition()     * transform.GetMatrix(),
+#ifdef HYP_DEBUG_MODE
+        AssertThrow(indices[i + 0] < vertices.Size());
+        AssertThrow(indices[i + 1] < vertices.Size());
+        AssertThrow(indices[i + 2] < vertices.Size());
+#endif
+
+        const Triangle triangle {
+            vertices[indices[i + 0]].GetPosition() * transform.GetMatrix(),
             vertices[indices[i + 1]].GetPosition() * transform.GetMatrix(),
             vertices[indices[i + 2]].GetPosition() * transform.GetMatrix()
-        );
+        };
 
-        if (TestTriangle(triangle, static_cast<RayHitID>(i), tmp_results)) {
+        if (TestTriangle(triangle, static_cast<RayHitID>(i /* triangle index */), tmp_results)) {
             intersected = true;
         }
     }
@@ -202,8 +212,13 @@ bool Ray::TestTriangleList(
     if (intersected) {
         AssertThrow(!tmp_results.Empty());
 
-        auto &first_result     = tmp_results.Front();
-        first_result.id        = hit_id;
+        auto &first_result = tmp_results.Front();
+
+        // If hit_id is set, overwrite the id (which would be set to the mesh index)
+        if (hit_id != ~0u) {
+            first_result.id = hit_id;
+        }
+        
         first_result.user_data = user_data;
 
         out_results.AddHit(first_result);

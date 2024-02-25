@@ -213,6 +213,30 @@ public:
             return std::memcmp(&values, &other.values, sizeof(values)) == 0;
         }
 
+        explicit operator int() const
+            { return values.int_values[0]; }
+
+        explicit operator Vec2i() const
+            { return Vec2i { values.int_values[0], values.int_values[1] }; }
+
+        explicit operator Vec3i() const
+            { return Vec3i { values.int_values[0], values.int_values[1], values.int_values[2] }; }
+
+        explicit operator Vec4i() const
+            { return Vec4i { values.int_values[0], values.int_values[1], values.int_values[2], values.int_values[3] }; }
+
+        explicit operator float() const
+            { return values.float_values[0]; }
+
+        explicit operator Vec2f() const
+            { return Vec2f { values.float_values[0], values.float_values[1] }; }
+
+        explicit operator Vec3f() const
+            { return Vec3f { values.float_values[0], values.float_values[1], values.float_values[2] }; }
+
+        explicit operator Vec4f() const
+            { return Vec4f { values.float_values[0], values.float_values[1], values.float_values[2], values.float_values[3] }; }
+
         HashCode GetHashCode() const
         {
             HashCode hc;

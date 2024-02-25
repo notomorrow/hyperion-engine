@@ -160,6 +160,12 @@ Vec3<float> math::detail::Vec3<float>::Cross(const Vec3<float> &other) const
     };
 }
 
+Vec3<float> math::detail::Vec3<float>::Reflect(const Vec3<float> &normal) const
+{
+    const Vec3 &incident = *this;
+    return incident - Vec3(2.0f) * Dot(normal) * normal;
+}
+
 Vec3<float> &math::detail::Vec3<float>::Rotate(const Vec3<float> &axis, float radians)
 {
     return (*this) = Matrix4::Rotation(axis, radians) * (*this);

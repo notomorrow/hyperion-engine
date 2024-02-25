@@ -1,7 +1,7 @@
 #ifndef HYPERION_RAY_H
 #define HYPERION_RAY_H
 
-#include "Vector3.hpp"
+#include <math/Vector3.hpp>
 #include <math/Vertex.hpp>
 #include <math/Transform.hpp>
 
@@ -9,6 +9,7 @@
 #include <Types.hpp>
 
 #include <core/lib/FlatSet.hpp>
+#include <core/lib/Optional.hpp>
 
 #include <array>
 #include <tuple>
@@ -24,8 +25,17 @@ using RayHitID = uint;
 
 struct Ray
 {
-    Vector3 position;
-    Vector3 direction;
+    Vec3f   position;
+    Vec3f   direction;
+
+    bool operator==(const Ray &other) const
+    {
+        return position  == other.position
+            && direction == other.direction;
+    }
+
+    bool operator!=(const Ray &other) const
+        { return !(*this == other); }
 
     bool TestAABB(const BoundingBox &aabb) const;
     bool TestAABB(const BoundingBox &aabb, RayTestResults &out_results) const;
@@ -37,7 +47,7 @@ struct Ray
     bool TestTriangle(const Triangle &triangle, RayHitID hit_id, RayTestResults &out_results) const;
     bool TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
     
-    bool TestTriangleList(
+    Optional<RayHit> TestTriangleList(
         const Array<Vertex> &vertices,
         const Array<uint32> &indices,
         const Transform &transform
@@ -82,8 +92,8 @@ struct RayHit
 {
     static constexpr bool no_hit = false;
     
-    Vector3     hitpoint;
-    Vector3     normal;
+    Vec3f       hitpoint;
+    Vec3f       normal;
     float       distance = 0.0f;
     RayHitID    id = ~0u;
     const void *user_data = nullptr;
