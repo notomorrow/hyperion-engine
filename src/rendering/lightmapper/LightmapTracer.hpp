@@ -9,8 +9,6 @@
 #include <core/lib/Optional.hpp>
 #include <core/lib/FixedArray.hpp>
 
-#include <rendering/lightmapper/LightmapSparseVoxelOctree.hpp>
-
 #include <rendering/Light.hpp>
 #include <rendering/Mesh.hpp>
 
@@ -31,20 +29,48 @@ struct LightmapTracerParams
     Handle<Scene>   scene;
 };
 
+struct LightmapHitData
+{
+    Vec3f       position;
+    Vec4f       throughput;
+    float       emissive;
+    ID<Mesh>    mesh_id;
+    uint32      triangle_index;
+};
+
+struct LightmapHitPath
+{
+    Array<LightmapHitData>  hits;
+
+    void AddHit(LightmapHitData hit)
+        { hits.PushBack(std::move(hit)); }
+
+    bool Missed() const
+        { return hits.Empty(); }
+};
+
 struct LightmapMeshTraceData
 {
-    // // @TODO Use a more efficient data structure like svo for recording hits on a mesh
-    // Array<Vec4f>    vertex_colors;
-
-    HashMap<Vec3f, Pair<Vec4f, uint32>>  hits_map;
-
-    LightmapOctree  octree;
-    Transform       transform;
+    // Don't use octree for now - having issues with it
+    HashMap<Vec3f, LightmapHitData> hits_map;
 };
 
 struct LightmapTraceData
 {
-    HashMap<ID<Mesh>, LightmapMeshTraceData>    elements;
+    // @TODO: Use more suitable data structure for this
+    HashMap<Vec3f, LightmapHitData> hits_map;
+
+    void IntegrateHit(const LightmapHitData &hit)
+    {
+        auto it = hits_map.Find(hit.position);
+        // @TODO Use proper integration
+        if (it != hits_map.End()) {
+            it->second.throughput *= hit.throughput;
+            it->second.emissive += hit.emissive;
+        } else {
+            hits_map.Insert(hit.position, hit);
+        }
+    }
 };
 
 struct LightmapRayHit
@@ -74,8 +100,8 @@ struct LightmapRayHit
 class LightmapTracer
 {
 public:
-    static constexpr uint num_rays_per_light = 10000;
-    static constexpr uint num_bounces = 3;//8;
+    static constexpr uint num_rays_per_light = 40000;
+    static constexpr uint num_bounces = 20;
 
     struct Result
     {
@@ -87,8 +113,6 @@ public:
         } status;
 
         String  message;
-
-        Handle<Mesh>    debug_octree_mesh; // for debugging only -- to be removed
         
         Result()
             : status(RESULT_OK)
@@ -96,12 +120,6 @@ public:
 
         Result(Status status)
             : status(status)
-        { }
-
-        // Temp constructor
-        Result(Status status, Handle<Mesh> debug_octree_mesh)
-            : status(status),
-              debug_octree_mesh(std::move(debug_octree_mesh))
         { }
 
         Result(Status status, String message)
@@ -131,7 +149,7 @@ private:
     void PreloadMeshData();
     void CollectMeshes(NodeProxy node, Proc<void, const Handle<Mesh> &, const Transform &> &proc);
 
-    void HandleRayHit(const LightmapRayHit &ray_hit, uint depth = 0);
+    void HandleRayHit(const LightmapRayHit &ray_hit, LightmapHitPath &path, uint depth = 0);
 
     Optional<LightmapRayHit> TraceSingleRay(const Ray &ray);
 
@@ -140,7 +158,6 @@ private:
     BasicNoiseGenerator<float>  m_noise_generator;
 
     MeshDataCache               m_mesh_data_cache;
-    LightmapTraceData           m_trace_data;
 };
 
 } // namespace hyperion::v2
