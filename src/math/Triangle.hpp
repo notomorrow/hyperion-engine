@@ -25,11 +25,11 @@ public:
     const Vertex &GetPoint(SizeType index) const { return operator[](index); }
     void SetPoint(SizeType index, const Vertex &value) { m_points[index] = value; }
 
-    Vec3f GetCenter() const
+    Vec3f GetPosition() const
         { return (m_points[0].GetPosition() + m_points[1].GetPosition() + m_points[2].GetPosition()) / 3.0f; }
 
     Vec3f GetNormal() const
-        { return (m_points[1].GetPosition() - m_points[0].GetPosition()).Cross(m_points[2].GetPosition() - m_points[0].GetPosition()).Normalized(); }
+        { return (m_points[1].GetPosition() - m_points[0].GetPosition()).Cross(m_points[2].GetPosition() - m_points[0].GetPosition()).Normalize(); }
 
     Vertex &Closest(const Vec3f &vec);
     const Vertex &Closest(const Vec3f &vec) const;

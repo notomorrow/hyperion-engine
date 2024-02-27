@@ -1,4 +1,5 @@
 #include <rendering/lightmapper/LightmapTracer.hpp>
+#include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
 #include <math/MathUtil.hpp>
 
@@ -152,12 +153,12 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, LightmapHitPath &pa
     //     roughness = roughness_texture_sample;
     // }
 
-    // new
     path.AddHit({
-        .position = hitpoint,
-        .throughput = albedo,
-        .emissive = 0.0f,
-        .mesh_id = mesh_id,
+        .hitpoint       = hitpoint,
+        .barycentric    = barycentric_coordinates,
+        .throughput     = albedo,
+        .emissive       = 0.0f,
+        .mesh_id        = mesh_id,
         .triangle_index = triangle_index
     });
 
@@ -173,7 +174,7 @@ void LightmapTracer::HandleRayHit(const LightmapRayHit &hit, LightmapHitPath &pa
 
         const Vec3f R = hit.ray.direction.Reflect(H).Normalized();
 
-        const Ray ray { hit.ray_hit.hitpoint + normal * 0.25f, -R };
+        const Ray ray { hit.ray_hit.hitpoint + normal * 0.25f, R };
 
         const Optional<LightmapRayHit> hit = TraceSingleRay(ray);
 
@@ -189,83 +190,25 @@ LightmapTracer::Result LightmapTracer::Trace()
 
     const Vec3f scene_origin = m_params.scene->GetOctree().GetAABB().GetCenter();
     Vec3f light_position;
+    
+    LightmapUVBuilder uv_builder;
+    LightmapUVBuilderParams uv_builder_params;
 
     switch (m_params.light->GetType()) {
     case LightType::DIRECTIONAL: {
         const Vec3f light_direction = m_params.light->GetPosition().Normalized();
         light_position = scene_origin + (light_direction * 10.0f);
 
-        for (uint ray_index = 0; ray_index < num_rays_per_light; ray_index++) {
-            const Vec3f rnd = { m_noise_generator.Next(), m_noise_generator.Next(), m_noise_generator.Next() };
-            const Vec3f v = MathUtil::RandomInHemisphere(rnd, light_direction).Normalized();
+        Proc<void, const Handle<Mesh> &, const Transform &> proc = [this, &trace_data, &uv_builder_params, light_direction](const Handle<Mesh> &mesh, const Transform &transform) -> void
+        {
+            PerformTracingOnMesh(mesh, transform, trace_data, light_direction);
 
-            const Ray ray { light_position, -v };
+            uv_builder_params.elements.PushBack({
+                mesh
+            });
+        };
 
-            LightmapHitPath path;
-
-            const Optional<LightmapRayHit> hit = TraceSingleRay(ray);
-
-            if (hit.HasValue()) {
-                HandleRayHit(hit.Get(), path);
-            }
-
-            if (path.Missed()) {
-                continue;
-            }
-
-            for (const auto &hit : path.hits) {
-                trace_data.IntegrateHit(hit);
-            }
-        }
-
-        HashMap<ID<Mesh>, Array<LightmapHitData>> mesh_hit_datas; // temp for debugging
-
-        for (const auto &it : trace_data.hits_map) {
-            const ID<Mesh> mesh_id = it.second.mesh_id;
-
-            auto mesh_hit_data_it = mesh_hit_datas.Find(mesh_id);
-
-            if (mesh_hit_data_it == mesh_hit_datas.End()) {
-                mesh_hit_data_it = mesh_hit_datas.Insert(mesh_id, { }).first;
-            }
-
-            mesh_hit_data_it->second.PushBack(it.second);
-        }
-
-        for (const auto &it : mesh_hit_datas) {
-            const ID<Mesh> mesh_id = it.first;
-
-            const Handle<Mesh> mesh = Handle<Mesh>(mesh_id);
-            AssertThrow(mesh.IsValid());
-
-            if (!mesh->NumIndices()) {
-                continue;
-            }
-
-            auto ref = mesh->GetStreamedMeshData()->AcquireRef();
-
-            MeshData new_mesh_data;
-            new_mesh_data.vertices = ref->GetMeshData().vertices;
-            new_mesh_data.indices = ref->GetMeshData().indices;
-
-            // TEMP
-            for (uint i = 0; i < new_mesh_data.vertices.Size(); i++) {
-                new_mesh_data.vertices[i].SetTangent(Vec3f{ 0.0f, 0.0f, 0.0f });
-            }
-
-            for (const auto &hit : it.second) {
-                const uint triangle_index = hit.triangle_index;
-                const Vec4f throughput = hit.throughput;
-
-                // TEMP
-                AssertThrowMsg(triangle_index * 3 + 2 < new_mesh_data.indices.Size(), "Index out of bounds (%u >= %llu)\n", triangle_index * 3 + 2, new_mesh_data.indices.Size());
-                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 0]].SetTangent(throughput.GetXYZ());
-                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 1]].SetTangent(throughput.GetXYZ());
-                new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 2]].SetTangent(throughput.GetXYZ());
-            }
-    
-            Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
-        }
+        CollectMeshes(m_params.scene->GetRoot(), proc);
 
         break;
     }
@@ -279,9 +222,137 @@ LightmapTracer::Result LightmapTracer::Trace()
         return { Result::RESULT_ERR, "LightmapTracer cannot trace the given light type" };
     }
 
+    LightmapUVBuilder::Result uv_builder_result = uv_builder.Build(uv_builder_params);
+
+    if (!uv_builder_result) {
+        return { Result::RESULT_ERR, uv_builder_result.message };
+    }
+
+    for (const auto &it : uv_builder_result.result.mesh_uvs) {
+        const ID<Mesh> mesh_id = it.first;
+        const LightmapMeshUVs &mesh_uvs = it.second;
+
+        const auto trace_data_it = trace_data.hits_by_mesh_id.Find(mesh_id);
+
+        if (trace_data_it == trace_data.hits_by_mesh_id.End()) {
+            continue;
+        }
+
+        Handle<Mesh> mesh = Handle<Mesh>(mesh_id);
+        AssertThrow(mesh.IsValid());
+
+        auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+        AssertThrow(mesh_uvs.uvs.Size() == ref->GetMeshData().vertices.Size());
+
+        // Set lightmap uv in mesh vertex data
+
+        MeshData new_mesh_data;
+        new_mesh_data.vertices = ref->GetMeshData().vertices;
+        new_mesh_data.indices = ref->GetMeshData().indices;
+
+        for (SizeType i = 0; i < new_mesh_data.vertices.Size(); i++) {
+            const Vec2f lightmap_uv = mesh_uvs.uvs[i];
+
+            new_mesh_data.vertices[i].SetTexCoord1(lightmap_uv);
+        }
+
+        // Write lightmap to file
+        AssertThrow(uv_builder_result.result.bitmap != nullptr);
+
+        const uint width = uv_builder_result.result.bitmap->GetWidth();
+        const uint height = uv_builder_result.result.bitmap->GetHeight();
+
+        for (const auto &hit : trace_data_it->second) {
+            const LightmapHitData &hit_data = hit.second;
+
+            const uint triangle_index = hit_data.triangle_index;
+
+            AssertThrow(triangle_index * 3 + 2 < new_mesh_data.indices.Size());
+
+            const Vec2f &uv0 = mesh_uvs.uvs[new_mesh_data.indices[triangle_index * 3 + 0]];
+            const Vec2f &uv1 = mesh_uvs.uvs[new_mesh_data.indices[triangle_index * 3 + 1]];
+            const Vec2f &uv2 = mesh_uvs.uvs[new_mesh_data.indices[triangle_index * 3 + 2]];
+
+            const Vec2f uv = uv0 * hit_data.barycentric.x + uv1 * hit_data.barycentric.y + uv2 * hit_data.barycentric.z;
+            const Vec2u coord = Vec2u(uint(uv.x * float(width)) % width, uint(uv.y * float(height)) % height);
+
+            uv_builder_result.result.bitmap->SetPixel(coord.x, coord.y, Vec3f { hit_data.throughput.x, hit_data.throughput.y, hit_data.throughput.z });
+        }
+
+        Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
+    }
+
+    uv_builder_result.result.bitmap->Write("lightmap.bmp");
+
+
+        // auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+
+        // MeshData new_mesh_data;
+        // new_mesh_data.vertices = ref->GetMeshData().vertices;
+        // new_mesh_data.indices = ref->GetMeshData().indices;
+
+        // // TEMP
+        // for (uint i = 0; i < new_mesh_data.vertices.Size(); i++) {
+        //     new_mesh_data.vertices[i].SetTangent(Vec3f{ 0.0f, 0.0f, 0.0f });
+        // }
+
+        // for (const auto &hit : it.second) {
+        //     const uint triangle_index = hit.second.triangle_index;
+        //     const Vec4f throughput = hit.second.throughput;
+
+        //     // TEMP
+        //     AssertThrowMsg(triangle_index * 3 + 2 < new_mesh_data.indices.Size(), "Index out of bounds (%u >= %llu)\n", triangle_index * 3 + 2, new_mesh_data.indices.Size());
+        //     new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 0]].SetTangent(throughput.GetXYZ());
+        //     new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 1]].SetTangent(throughput.GetXYZ());
+        //     new_mesh_data.vertices[new_mesh_data.indices[triangle_index * 3 + 2]].SetTangent(throughput.GetXYZ());
+        // }
+
+        // Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
+
+
     return {
         Result::RESULT_OK
     };
+}
+
+void LightmapTracer::PerformTracingOnMesh(const Handle<Mesh> &mesh, const Transform &transform, LightmapTraceData &trace_data, Vec3f light_direction)
+{
+    if (!mesh.IsValid()) {
+        return;
+    }
+
+    if (!mesh->GetStreamedMeshData()) {
+        return;
+    }
+
+    auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+    m_mesh_data_cache.elements.Set(mesh.GetID(), ref);
+
+    const MeshData &mesh_data = ref->GetMeshData();
+
+    DebugLog(LogType::Debug, "Performing tracing on mesh with ID %u, %llu vertices, %llu indices\n", mesh.GetID().Value(), mesh_data.vertices.Size(), mesh_data.indices.Size());
+
+    LightmapHitPath path;
+
+    for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
+        const Triangle triangle {
+            mesh_data.vertices[mesh_data.indices[i + 0]].GetPosition() * transform.GetMatrix(),
+            mesh_data.vertices[mesh_data.indices[i + 1]].GetPosition() * transform.GetMatrix(),
+            mesh_data.vertices[mesh_data.indices[i + 2]].GetPosition() * transform.GetMatrix()
+        };
+
+        const Vec3f normal = triangle.GetNormal();
+
+        const Ray ray { triangle.GetPosition() + normal * 0.25f, -normal };
+
+        const Optional<LightmapRayHit> hit = TraceSingleRay(ray);
+
+        if (hit.HasValue()) {
+            DebugLog(LogType::Debug, "Hit triangle %u\n", i / 3);
+
+            HandleRayHit(hit.Get(), path);
+        }
+    }
 }
 
 Optional<LightmapRayHit> LightmapTracer::TraceSingleRay(const Ray &ray)
@@ -332,11 +403,6 @@ Optional<LightmapRayHit> LightmapTracer::TraceSingleRay(const Ray &ray)
         if (!results.Empty()) {
             return results.Front();
         }
-    } else {
-        DebugLog(
-            LogType::Debug,
-            "Octree ray test failed\n"
-        );
     }
 
     return { };

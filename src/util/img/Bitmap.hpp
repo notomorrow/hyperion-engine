@@ -22,6 +22,45 @@ struct Pixel
 
     Pixel() = default;
 
+    Pixel(Vec2f rg)
+    {
+        bytes[0] = static_cast<ubyte>(rg.x * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<ubyte>(rg.y * 255.0f);
+        }
+    }
+
+    Pixel(Vec3f rgb)
+    {
+        bytes[0] = static_cast<ubyte>(rgb.x * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<ubyte>(rgb.y * 255.0f);
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = static_cast<ubyte>(rgb.z * 255.0f);
+        }
+    }
+
+    Pixel(Vec4f rgba)
+    {
+        bytes[0] = static_cast<ubyte>(rgba.x * 255.0f);
+
+        if constexpr (byte_size >= 2) {
+            bytes[1] = static_cast<ubyte>(rgba.y * 255.0f);
+        }
+
+        if constexpr (byte_size >= 3) {
+            bytes[2] = static_cast<ubyte>(rgba.z * 255.0f);
+        }
+
+        if constexpr (byte_size >= 4) {
+            bytes[3] = static_cast<ubyte>(rgba.w * 255.0f);
+        }
+    }
+
     Pixel(ubyte r)
     {
         bytes[0] = r;
