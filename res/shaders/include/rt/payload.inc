@@ -4,10 +4,15 @@ struct RayPayload
 	float distance;
 	vec3 normal;
 	float roughness;
-#ifdef PATHTRACER
+#if defined(PATHTRACER) || defined(LIGHTMAPPER)
 	vec3 throughput;
 	vec3 emissive;
 	vec3 dir;
+#endif
+#ifdef LIGHTMAPPER
+	vec3 barycentric_coords;
+	uint entity_index;
+	uint triangle_index;
 #endif
 };
 

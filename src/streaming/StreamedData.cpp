@@ -167,7 +167,7 @@ void MemoryStreamedData::Unpage()
 
     m_hash_code = m_byte_buffer.GetHashCode();
 
-    auto &data_store = GetDataStore<StaticString("streaming")>();
+    auto &data_store = GetDataStore<StaticString("streaming"), DATA_STORE_FLAG_RW>();
     data_store.Write(String::ToString(m_hash_code.Value()), m_byte_buffer);
 
     m_byte_buffer = ByteBuffer(0, nullptr);
@@ -178,7 +178,7 @@ void MemoryStreamedData::Unpage()
 const ByteBuffer &MemoryStreamedData::Load() const
 {
     if (!m_is_in_memory) {
-        const auto &data_store = GetDataStore<StaticString("streaming")>();
+        const auto &data_store = GetDataStore<StaticString("streaming"), DATA_STORE_FLAG_RW>();
 
         m_is_in_memory = data_store.Read(String::ToString(m_hash_code.Value()), m_byte_buffer);
     }

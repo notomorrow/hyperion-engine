@@ -73,17 +73,15 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
         particle_buffer->Memset(
             g_engine->GetGPUDevice(),
             particle_buffer->size,
-            0x00
+            0x0
         );
 
         // copy bytes into noise buffer
-        Array<float> unpacked_floats;
-        noise_map.GetUnpackedFloats(unpacked_floats);
-        AssertThrow(noise_map.GetByteSize() == unpacked_floats.Size());
+        Array<float> unpacked_floats = noise_map.GetUnpackedFloats();
 
         noise_buffer->Copy(
             g_engine->GetGPUDevice(),
-            unpacked_floats.Size() * sizeof(float),
+            unpacked_floats.ByteSize(),
             unpacked_floats.Data()
         );
 

@@ -36,12 +36,14 @@ public:
     ) const;
 
 private:
-    struct ShaderBindingTableEntry {
+    struct ShaderBindingTableEntry
+    {
         std::unique_ptr<ShaderBindingTableBuffer<Platform::VULKAN>> buffer;
         VkStridedDeviceAddressRegionKHR                             strided_device_address_region;
     };
 
-    struct {
+    struct
+    {
         VkStridedDeviceAddressRegionKHR ray_gen { };
         VkStridedDeviceAddressRegionKHR ray_miss { };
         VkStridedDeviceAddressRegionKHR closest_hit { };

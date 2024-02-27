@@ -180,6 +180,11 @@ rgen = rt/pathtracer/PathTracer.rgen
 rchit = rt/pathtracer/PathTracer.rchit
 rmiss = rt/pathtracer/PathTracer.rmiss
 
+[LightmapPathTracer]
+rgen = rt/lightmapper/LightmapPathTracer.rgen
+rchit = rt/lightmapper/LightmapPathTracer.rchit
+rmiss = rt/lightmapper/LightmapPathTracer.rmiss
+
 [RTProbe]
 rgen = rt/gi/gi.rgen
 rchit = rt/gi/gi.rchit

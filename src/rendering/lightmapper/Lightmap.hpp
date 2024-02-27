@@ -1,15 +1,19 @@
 #ifndef HYPERION_V2_LIGHTMAP_HPP
 #define HYPERION_V2_LIGHTMAP_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <util/img/Bitmap.hpp>
+#include <scene/Entity.hpp>
+
+#include <rendering/Mesh.hpp>
+
+#include <math/Matrix4.hpp>
 
 namespace hyperion::v2 {
 
-struct Lightmap
+struct LightmapEntity
 {
-    Name        name;
-    Bitmap<3>   bitmap;
+    ID<Entity>      entity_id;
+    Handle<Mesh>    mesh;
+    Matrix4         transform;
 };
 
 } // namespace hyperion::v2

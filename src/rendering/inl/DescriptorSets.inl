@@ -70,7 +70,11 @@ HYP_DESCRIPTOR_SSBO(Object, SkeletonsBuffer, 1, sizeof(SkeletonShaderData), true
 HYP_DESCRIPTOR_SSBO(Object, EntityInstanceBatchesBuffer, 1, sizeof(EntityInstanceBatch), true);
 
 HYP_DESCRIPTOR_SET(3, Material);
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
+HYP_DESCRIPTOR_SRV(Material, Textures, max_bindless_resources);
+#else
 HYP_DESCRIPTOR_SRV(Material, Textures, max_bound_textures);
+#endif
 
 #undef HYP_DESCRIPTOR_SET
 #undef HYP_DESCRIPTOR_SRV

@@ -180,12 +180,16 @@ Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devic
         "Failed to create compute pipeline"
     );
 
+    m_is_created = true;
+
     HYPERION_RETURN_OK;
 }
 
 Result ComputePipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     DebugLog(LogType::Debug, "Destroying compute pipeline\n");
+
+    m_is_created = false;
 
     if (m_descriptor_table.HasValue()) {
         SafeRelease(std::move(m_descriptor_table.Get()));

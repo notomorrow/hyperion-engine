@@ -15,21 +15,16 @@ HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
+#define texture_sampler sampler_linear
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, Image, format = rgba8) uniform image2D image;
-
-
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
-{
-    Light lights[];
-};
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/gbuffer.inc"
+#include "../../include/gbuffer.inc"
 #include "../../include/scene.inc"
 #include "../../include/shared.inc"
 #include "../../include/packing.inc"
@@ -48,6 +43,11 @@ HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer Blu
 #include "../../include/BlueNoise.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+{
+    Light lights[];
+};
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
@@ -129,7 +129,7 @@ void main()
         ComputeOrthonormalBasis(normal, tangent, bitangent);
 
         vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
-        H = normalize(tangent * H.x + bitangent * H.y + normal * H.z);
+        H = tangent * H.x + bitangent * H.y + normal * H.z;
 
         vec3 direction = reflect(-V, H);
         vec3 origin = position + normal * RAY_OFFSET;
@@ -181,7 +181,7 @@ void main()
             ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
 
             H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
-            H = normalize(tangent * H.x + bitangent * H.y + payload.normal * H.z);
+            H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
                 
             direction = reflect(direction, H);
 
@@ -191,7 +191,6 @@ void main()
     }
 
     color = radiance.rgb / float(NUM_SAMPLES * NUM_BOUNCES);
-
     color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
     
     // float max_component = max(color.r, max(color.g, color.b));

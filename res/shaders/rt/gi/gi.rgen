@@ -21,22 +21,19 @@
 #include "../../include/rt/payload.inc"
 #include "../../include/rt/probe/probe_uniforms.inc"
 
-HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
+HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(DDGIDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
 
 HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
 {
     DDGIUniforms probe_system;
 };
 
-HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, ProbeRayData, standard = std430) buffer ProbeRayDataBuffer
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, ProbeRayData) buffer ProbeRayDataBuffer
 {
     ProbeRayData probe_rays[];
 };
 
 #include "../../include/rt/probe/shared.inc"
-
-HYP_DESCRIPTOR_UAV(DDGIDescriptorSet, OutputIrradianceImage, format = rgba16f) uniform image2D output_irradiance;
-HYP_DESCRIPTOR_UAV(DDGIDescriptorSet, OutputDepthImage, format = rg16f) uniform image2D output_depth;
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
 {
@@ -86,6 +83,5 @@ void main()
     ray_data.normal = vec4(payload.normal, 0.0);
     ray_data.direction_depth = vec4(direction, payload.distance);
 
-    //imageStore(output_irradiance, ivec2(coord), vec4(payload.color, 1.0));
     SetProbeRayData(coord, ray_data);
 }

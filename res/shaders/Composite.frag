@@ -37,6 +37,7 @@ HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_re
 HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_result;
+HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_result;
 
 layout(location=0) out vec4 out_color;
 
@@ -92,5 +93,5 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_filtered_distance_buffer, v_texcoord0 * 2.0).rrr;
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_irradiance_buffer, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, depth_pyramid_result, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_result, v_texcoord0).rgb;
 }

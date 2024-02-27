@@ -788,7 +788,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBu
     ));
 
     // zero out buffer
-    m_mesh_descriptions_buffer->Memset(device, m_mesh_descriptions_buffer->size, 0x00);
+    m_mesh_descriptions_buffer->Memset(device, m_mesh_descriptions_buffer->size, 0x0);
 
     if (m_blas.Empty()) {
         // no need to update the data inside

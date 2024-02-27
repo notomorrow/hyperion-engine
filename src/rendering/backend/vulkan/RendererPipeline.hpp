@@ -151,6 +151,9 @@ public:
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
 
+    bool IsCreated() const
+        { return m_is_created; }
+
     const Optional<DescriptorTableRef<Platform::VULKAN>> &GetDescriptorTable() const
         { return m_descriptor_table; }
 
@@ -172,8 +175,8 @@ protected:
     Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
 
     ShaderProgramRef<Platform::VULKAN>                      m_shader_program;
-
     Optional<DescriptorTableRef<Platform::VULKAN>>          m_descriptor_table { };
+    bool                                                    m_is_created { false };      
 
     VkPipeline                                              pipeline;
 };

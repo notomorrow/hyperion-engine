@@ -18,13 +18,6 @@ enum RTRadianceUpdates : uint32
     RT_RADIANCE_UPDATES_SHADOW_MAP = 0x2
 };
 
-struct alignas(16) RTRadianceUniforms
-{
-    uint32 num_bound_lights;
-    uint32 _pad0, _pad1, _pad2;
-    uint32 light_indices[16];
-};
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet) : renderer::RenderCommand
@@ -77,10 +70,12 @@ struct RENDER_COMMAND(CreateRTRadianceUniformBuffer) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateRTRadianceUniformBuffer)() override = default;
+
+    virtual Result operator()() override
     {
         HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
-        uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x00);
+        uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
 
         HYPERION_RETURN_OK;
     }
@@ -143,7 +138,7 @@ void RTRadianceRenderer::Destroy()
 
 void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 {
-    RTRadianceUniforms uniforms;
+    RTRadianceUniforms uniforms { };
 
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
@@ -157,10 +152,8 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
     m_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
 
-
     if (m_updates[frame->GetFrameIndex()]) {
-        m_raytracing_pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(RTRadianceDescriptorSet), frame->GetFrameIndex())
-            ->Update(g_engine->GetGPUDevice());
+        m_raytracing_pipeline->GetDescriptorTable().Get()->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex());
 
         m_updates[frame->GetFrameIndex()] = RT_RADIANCE_UPDATES_NONE;
     }
@@ -168,14 +161,6 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
 void RTRadianceRenderer::SubmitPushConstants(CommandBuffer *command_buffer)
 {
-    /*struct alignas(128) {
-        uint32 light_indices[16];
-        uint32 num_bound_lights;
-    } push_constants;
-
-    m_raytracing_pipeline->SubmitPushConstants(command_buffer);
-
-    DebugLog(LogType::Debug, "num_bound_lights = %u\n", num_bound_lights);*/
 }
 
 void RTRadianceRenderer::Render(Frame *frame)
@@ -303,11 +288,12 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
+        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+
         descriptor_set->SetElement(HYP_NAME(OutputImage), m_texture->GetImageView());
         
         descriptor_set->SetElement(HYP_NAME(LightsBuffer), g_engine->GetRenderData()->lights.GetBuffer());
         descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer());
-        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
         descriptor_set->SetElement(HYP_NAME(RTRadianceUniforms), m_uniform_buffer);
     }
 

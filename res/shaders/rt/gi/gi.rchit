@@ -10,6 +10,7 @@
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
+#define texture_sampler sampler_linear
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
@@ -72,17 +73,17 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
     Object entities[];
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer MeshDescriptions
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, MeshDescriptionsBuffer) buffer MeshDescriptions
 {
     MeshDescription mesh_descriptions[];
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
@@ -90,8 +91,7 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer Light
 #define HYP_GET_LIGHT(index) \
     lights[probe_system.light_indices[(index / 4)][index % 4]]
 
-// for RT, all textures are bindless
-layout(set = 2, binding = 0) uniform sampler2D textures[];
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
 void main()
 {

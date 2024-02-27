@@ -379,7 +379,7 @@ static void BindGlobalDescriptorSets(
     const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
 
     if (material_descriptor_set_index != ~0u) {
-        g_engine->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
+        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
             ->Bind(command_buffer, pipeline, material_descriptor_set_index);
     }
 #endif

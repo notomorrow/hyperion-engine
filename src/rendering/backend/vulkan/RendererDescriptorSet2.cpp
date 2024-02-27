@@ -345,6 +345,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                     AssertThrowMsg(layout_element->size != 0, "Buffer size not set for dynamic buffer element: %s, index %u", name.LookupString(), i);
                 }
 
+                AssertThrowMsg(ref->buffer != VK_NULL_HANDLE, "Invalid buffer for descriptor set element: %s, index %u", name.LookupString(), i);
+                
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
                     .buffer = ref->buffer,
                     .offset = 0,

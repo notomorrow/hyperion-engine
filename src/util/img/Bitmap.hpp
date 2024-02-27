@@ -264,32 +264,56 @@ public:
         return byte_buffer;
     }
 
-    void GetUnpackedBytes(Array<ubyte> &out)
+    Array<ubyte> GetUnpackedBytes() const
     {
-        out.Resize(m_pixels.Size() * PixelType::byte_size);
+        Array<ubyte> bytes;
+        bytes.Resize(m_pixels.Size() * PixelType::byte_size);
 
-        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += PixelType::byte_size, j++) {
-            for (uint k = 0; k < PixelType::byte_size; k++) {
-                out[i + k] = m_pixels[j].bytes[k];
+        for (uint i = 0; i < m_pixels.Size(); i++) {
+            for (uint j = 0; j < PixelType::byte_size; j++) {
+                bytes[i * PixelType::byte_size + j] = m_pixels[i].bytes[j];
             }
         }
+
+        return bytes;
     }
 
-    void GetUnpackedFloats(Array<float> &out)
+    Array<ubyte> GetUnpackedBytes(uint bytes_per_pixel) const
     {
-        out.Resize(m_pixels.Size() * PixelType::byte_size);
+        Array<ubyte> bytes;
+        bytes.Resize(m_pixels.Size() * bytes_per_pixel);
 
-        for (SizeType i = 0, j = 0; i < out.Size() && j < m_pixels.Size(); i += PixelType::byte_size, j++) {
-            for (uint k = 0; k < PixelType::byte_size; k++) {
-                out[i + k] = static_cast<float>(m_pixels[j].bytes[k]) / 255.0f;
+        for (uint i = 0; i < m_pixels.Size(); i++) {
+            for (uint j = 0; j < MathUtil::Min(PixelType::byte_size, bytes_per_pixel); j++) {
+                bytes[i * bytes_per_pixel + j] = m_pixels[i].bytes[j];
             }
         }
+
+        return bytes;
     }
 
-    void Write(const String &filepath)
+    Array<float> GetUnpackedFloats() const
     {
-        Array<ubyte> unpacked_bytes;
-        GetUnpackedBytes(unpacked_bytes);
+        Array<float> floats;
+        floats.Resize(m_pixels.Size() * PixelType::byte_size);
+
+        for (uint i = 0; i < m_pixels.Size(); i++) {
+           for (uint j = 0; j < PixelType::byte_size; j++) {
+                floats[i * PixelType::byte_size + j] = static_cast<float>(m_pixels[i].bytes[j]) / 255.0f;
+           }
+        }
+
+        return floats;
+    }
+
+    void Write(const String &filepath) const
+    {
+        Array<ubyte> unpacked_bytes = GetUnpackedBytes(3 /* WriteBitmap uses 3 bytes per pixel */);
+
+        // BMP stores in BGR format, so swap R and B
+        for (uint i = 0; i < unpacked_bytes.Size(); i += 3) {
+            std::swap(unpacked_bytes[i], unpacked_bytes[i + 2]);
+        }
 
         WriteBitmap::Write(filepath.Data(), m_width, m_height, unpacked_bytes.Data());
     }

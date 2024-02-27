@@ -17,6 +17,7 @@ HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
+#define texture_sampler sampler_linear
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 

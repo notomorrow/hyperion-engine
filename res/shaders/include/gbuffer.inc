@@ -20,8 +20,14 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_lin
 
 #define gbuffer_sampler sampler_linear
 #define gbuffer_depth_sampler sampler_nearest
-#define HYP_SAMPLER_NEAREST gbuffer_depth_sampler
-#define HYP_SAMPLER_LINEAR gbuffer_sampler
+
+#ifndef sampler_linear
+#define HYP_SAMPLER_NEAREST sampler_nearest
+#endif
+
+#ifndef HYP_SAMPLER_LINEAR
+#define HYP_SAMPLER_LINEAR sampler_linear
+#endif
 
 #define HYP_GBUFFER_TEXTURE(index) (gbuffer_textures[index])
 
