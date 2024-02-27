@@ -17,6 +17,7 @@
 
 #include <math/Ray.hpp>
 #include <math/Vector3.hpp>
+#include <math/Triangle.hpp>
 #include <math/Transform.hpp>
 
 #include <util/NoiseFactory.hpp>
@@ -31,7 +32,8 @@ struct LightmapTracerParams
 
 struct LightmapHitData
 {
-    Vec3f       position;
+    Vec3f       hitpoint;
+    Vec3f       barycentric;
     Vec4f       throughput;
     float       emissive;
     ID<Mesh>    mesh_id;
@@ -49,27 +51,20 @@ struct LightmapHitPath
         { return hits.Empty(); }
 };
 
-struct LightmapMeshTraceData
-{
-    // Don't use octree for now - having issues with it
-    HashMap<Vec3f, LightmapHitData> hits_map;
-};
-
 struct LightmapTraceData
 {
     // @TODO: Use more suitable data structure for this
-    HashMap<Vec3f, LightmapHitData> hits_map;
+    HashMap<ID<Mesh>, HashMap<Vec3f, LightmapHitData>> hits_by_mesh_id;
 
     void IntegrateHit(const LightmapHitData &hit)
     {
-        auto it = hits_map.Find(hit.position);
-        // @TODO Use proper integration
-        if (it != hits_map.End()) {
-            it->second.throughput *= hit.throughput;
-            it->second.emissive += hit.emissive;
-        } else {
-            hits_map.Insert(hit.position, hit);
+        auto it = hits_by_mesh_id.Find(hit.mesh_id);
+
+        if (it == hits_by_mesh_id.End()) {
+            it = hits_by_mesh_id.Insert(hit.mesh_id, { }).first;
         }
+
+        it->second.Insert(hit.hitpoint, hit);
     }
 };
 
@@ -100,8 +95,8 @@ struct LightmapRayHit
 class LightmapTracer
 {
 public:
-    static constexpr uint num_rays_per_light = 40000;
-    static constexpr uint num_bounces = 20;
+    static constexpr uint num_rays_per_light = 8;
+    static constexpr uint num_bounces = 1;
 
     struct Result
     {
@@ -151,6 +146,7 @@ private:
 
     void HandleRayHit(const LightmapRayHit &ray_hit, LightmapHitPath &path, uint depth = 0);
 
+    void PerformTracingOnMesh(const Handle<Mesh> &mesh, const Transform &transform, LightmapTraceData &trace_data, Vec3f light_direction);
     Optional<LightmapRayHit> TraceSingleRay(const Ray &ray);
 
     LightmapTracerParams        m_params;

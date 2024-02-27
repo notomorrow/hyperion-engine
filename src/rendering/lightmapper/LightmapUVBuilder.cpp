@@ -93,6 +93,8 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
 
     LightmapUVMap uv_map;
 
+    LightmapUVBuilderResult result;
+
 #ifdef HYP_XATLAS
     xatlas::Atlas *atlas = xatlas::Create();
 
@@ -307,19 +309,30 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
         const Handle<Mesh> &mesh = element.mesh;
         AssertThrow(mesh.IsValid());
 
-        auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+        const ID<Mesh> mesh_id = mesh.GetID();
 
-        MeshData new_mesh_data;
-        new_mesh_data.vertices = ref->GetMeshData().vertices;
-        new_mesh_data.indices = ref->GetMeshData().indices;
+        LightmapMeshUVs mesh_uvs;
+        mesh_uvs.uvs.Resize(lightmap_mesh_data.lightmap_uvs.Size() / 2);
 
-        for (SizeType i = 0; i < new_mesh_data.vertices.Size(); i++) {
-            Vec2f lightmap_uv = Vec2f(lightmap_mesh_data.lightmap_uvs[i * 2], lightmap_mesh_data.lightmap_uvs[i * 2 + 1]);
-
-            new_mesh_data.vertices[i].SetTexCoord1(lightmap_uv);
+        for (SizeType i = 0; i < lightmap_mesh_data.lightmap_uvs.Size(); i += 2) {
+            mesh_uvs.uvs[i / 2] = Vec2f(lightmap_mesh_data.lightmap_uvs[i], lightmap_mesh_data.lightmap_uvs[i + 1]);
         }
 
-        Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
+        result.mesh_uvs.Insert(mesh_id, std::move(mesh_uvs));
+
+        // auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+
+        // MeshData new_mesh_data;
+        // new_mesh_data.vertices = ref->GetMeshData().vertices;
+        // new_mesh_data.indices = ref->GetMeshData().indices;
+
+        // for (SizeType i = 0; i < new_mesh_data.vertices.Size(); i++) {
+        //     Vec2f lightmap_uv = Vec2f(lightmap_mesh_data.lightmap_uvs[i * 2], lightmap_mesh_data.lightmap_uvs[i * 2 + 1]);
+
+        //     new_mesh_data.vertices[i].SetTexCoord1(lightmap_uv);
+        // }
+
+        // Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
     }
 
     return {

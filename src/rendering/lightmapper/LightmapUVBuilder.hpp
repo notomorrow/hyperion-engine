@@ -2,11 +2,12 @@
 #define HYPERION_V2_LIGHTMAP_UV_BUILDER_HPP
 
 #include <core/lib/String.hpp>
-
+#include <core/lib/HashMap.hpp>
 #include <rendering/lightmapper/Lightmap.hpp>
 #include <rendering/Mesh.hpp>
 
 #include <math/Transform.hpp>
+#include <util/img/Bitmap.hpp>
 
 #include <util/img/Bitmap.hpp>
 

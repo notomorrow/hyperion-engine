@@ -737,7 +737,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//living_room/living_room.obj");
+        batch->Add("test_model", "models/pica_pica/pica_pica.obj");////living_room/living_room.obj");sponza/sponza.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -831,39 +831,21 @@ void SampleStreamer::InitGame()
 
             m_scene->GetRoot().AddChild(cart);
 
-            /*MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(cart[0].GetEntity());
-            LightmapUVBuilder lightmap_uv_builder;
-            auto lightmap_result = lightmap_uv_builder.Build({
-                {
-                    { mesh_component.mesh, Transform::identity }
-                }
-            });
+            // ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
+            // UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
+            // streamed_data->Load();
 
-            ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
-            UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
-            streamed_data->Load();
+            // auto lightmap_texture = CreateObject<Texture>(
+            //     Extent3D { lightmap_result.result.bitmap.GetWidth(), lightmap_result.result.bitmap.GetHeight(), 1 },
+            //     InternalFormat::RGB8,
+            //     ImageType::TEXTURE_TYPE_2D,
+            //     FilterMode::TEXTURE_FILTER_LINEAR,
+            //     WrapMode::TEXTURE_WRAP_REPEAT,
+            //     std::move(streamed_data)
+            // );
+            // InitObject(lightmap_texture);
 
-            auto lightmap_texture = CreateObject<Texture>(
-                Extent3D { lightmap_result.result.bitmap.GetWidth(), lightmap_result.result.bitmap.GetHeight(), 1 },
-                InternalFormat::RGB8,
-                ImageType::TEXTURE_TYPE_2D,
-                FilterMode::TEXTURE_FILTER_LINEAR,
-                WrapMode::TEXTURE_WRAP_REPEAT,
-                std::move(streamed_data)
-            );
-            InitObject(lightmap_texture);
-
-            mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);*/
-
-            // Handle<Mesh> mesh = mesh_component.mesh;
-
-            // for (auto &node : cart.GetChildren()) {
-            //     if (auto child_entity = node.GetEntity()) {
-            //         // Add BLASComponent
-
-            //         // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
-            //     }
-            // }
+            // mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
         }
 
         if (results["test_model"]) {
