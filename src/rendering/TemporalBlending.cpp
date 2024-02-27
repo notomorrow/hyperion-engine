@@ -177,24 +177,6 @@ void TemporalBlending::CreateDescriptorSets()
 
         m_descriptor_table->GetDescriptorSet(HYP_NAME(TemporalBlendingDescriptorSet), frame_index)
             ->SetElement(HYP_NAME(OutImage), m_image_outputs[frame_index].image_view);
-
-        // // scene buffer
-        // descriptor_set
-        //     ->AddDescriptor<DynamicStorageBufferDescriptor>(6)
-        //     ->SetElementBuffer<SceneShaderData>(0, g_engine->GetRenderData()->scenes.GetBuffer());
-
-        // // camera
-        // descriptor_set
-        //     ->AddDescriptor<DynamicUniformBufferDescriptor>(7)
-        //     ->SetElementBuffer<CameraShaderData>(0, g_engine->GetRenderData()->cameras.GetBuffer());
-
-        // // depth texture
-        // descriptor_set
-        //     ->AddDescriptor<ImageDescriptor>(8)
-        //     ->SetElementSRV(0, g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
-        //         .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
-
-        // m_descriptor_sets[frame_index] = std::move(descriptor_set);
     }
 
     DeferCreate(

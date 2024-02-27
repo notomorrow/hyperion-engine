@@ -27,6 +27,7 @@
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
+#define texture_sampler sampler_linear
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
@@ -93,7 +94,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 };
 
 // for RT, all textures are bindless
-HYP_DESCRIPTOR_SRV(Material, Textures) uniform sampler2D textures[];
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
 float CheckLightIntersection(in Light light, in vec3 position, in vec3 R)
 {
@@ -231,8 +232,6 @@ void main()
         
         roughness = roughness_sample;
     }
-
-    const float ambient = 0.025;
 
     vec3 direct_lighting = vec3(0.0);
     

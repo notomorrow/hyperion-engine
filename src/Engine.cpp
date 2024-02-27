@@ -282,10 +282,17 @@ void Engine::Initialize(RC<Application> application)
         m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Object), frame_index)->SetElement(HYP_NAME(EntityInstanceBatchesBuffer), m_render_data->entity_instance_batches.GetBuffer());
 
         // Material
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
+        for (uint texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
+            m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Material), frame_index)
+                ->SetElement(HYP_NAME(Textures), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
+        }
+#else
         for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             m_global_descriptor_table->GetDescriptorSet(HYP_NAME(Material), frame_index)
                 ->SetElement(HYP_NAME(Textures), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
         }
+#endif
     }
 
     // m_global_descriptor_set_manager.Initialize(this);

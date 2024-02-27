@@ -111,10 +111,7 @@ public:
     const Array<Probe> &GetProbes() const
         { return m_probes; }
 
-    void SetTLAS(const Handle<TLAS> &tlas)
-        { m_tlas = tlas; }
-
-    void SetTLAS(Handle<TLAS> &&tlas)
+    void SetTLAS(Handle<TLAS> tlas)
         { m_tlas = std::move(tlas); }
 
     void ApplyTLASUpdates(RTUpdateStateFlags flags);
@@ -138,7 +135,6 @@ private:
     void CreatePipelines();
     void CreateUniformBuffer();
     void CreateStorageBuffers();
-    void CreateDescriptorSets();
     void UpdateUniforms(Frame *frame);
     void SubmitPushConstants(CommandBuffer *command_buffer);
 
@@ -161,8 +157,6 @@ private:
     ImageViewRef            m_irradiance_image_view;
     ImageRef                m_depth_image;
     ImageViewRef            m_depth_image_view;
-
-    DescriptorTableRef      m_descriptor_table;
 
     Handle<TLAS>            m_tlas;
 

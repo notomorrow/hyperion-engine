@@ -167,6 +167,11 @@ public:
     [[nodiscard]] SizeType Size() const { return m_size - m_start_offset; }
 
     /**
+     * \brief Returns the size in bytes of the array.
+     */
+    [[nodiscard]] SizeType ByteSize() const { return (m_size - m_start_offset) * sizeof(T); }
+
+    /**
      * \brief Returns a pointer to the first element in the array.
      */
     [[nodiscard]] ValueType *Data() { return &GetBuffer()[m_start_offset]; }
@@ -325,9 +330,7 @@ protected:
     HYP_FORCE_INLINE T *GetBuffer()
     {
         if constexpr (use_inline_storage) {
-            Storage *buffers[] = { &m_inline_storage[0], m_buffer };
-
-            return reinterpret_cast<T *>(buffers[static_cast<uint>(m_is_dynamic)]);
+            return reinterpret_cast<T *>(m_is_dynamic ? m_buffer : &m_inline_storage[0]);
         } else {
             return reinterpret_cast<T *>(m_buffer);
         }
@@ -336,9 +339,7 @@ protected:
     HYP_FORCE_INLINE const T *GetBuffer() const
     {
         if constexpr (use_inline_storage) {
-            const Storage *buffers[] = { &m_inline_storage[0], m_buffer };
-
-            return reinterpret_cast<const T *>(buffers[static_cast<uint>(m_is_dynamic)]);
+            return reinterpret_cast<const T *>(m_is_dynamic ? m_buffer : &m_inline_storage[0]);
         } else {
             return reinterpret_cast<const T *>(m_buffer);
         }
@@ -347,9 +348,7 @@ protected:
     HYP_FORCE_INLINE Storage *GetStorage()
     {
         if constexpr (use_inline_storage) {
-            Storage *buffers[] = { &m_inline_storage[0], m_buffer };
-
-            return buffers[static_cast<uint>(m_is_dynamic)];
+            return m_is_dynamic ? m_buffer : &m_inline_storage[0];
         } else {
             return m_buffer;
         }
@@ -358,9 +357,7 @@ protected:
     HYP_FORCE_INLINE const Storage *GetStorage() const
     {
         if constexpr (use_inline_storage) {
-            const Storage *buffers[] = { &m_inline_storage[0], m_buffer };
-
-            return buffers[static_cast<uint>(m_is_dynamic)];
+            return m_is_dynamic ? m_buffer : &m_inline_storage[0];
         } else {
             return m_buffer;
         }

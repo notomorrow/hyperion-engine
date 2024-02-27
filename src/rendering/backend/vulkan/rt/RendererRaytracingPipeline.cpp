@@ -137,12 +137,16 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *de
         return result;
     }
 
+    m_is_created = true;
+
     HYPERION_RETURN_OK;
 }
 
 Result RaytracingPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     DebugLog(LogType::Debug, "Destroying raytracing pipeline\n");
+
+    m_is_created = false;
 
     if (m_descriptor_table.HasValue()) {
         SafeRelease(std::move(m_descriptor_table.Get()));

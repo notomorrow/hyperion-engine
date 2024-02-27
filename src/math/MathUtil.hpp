@@ -516,6 +516,7 @@ public:
     static Vec2f VogelDisk(uint sample_index, uint num_samples, float phi);
     static Vec3f ImportanceSampleGGX(Vec2f Xi, Vec3f N, float roughness);
     static Vec3f CalculateBarycentricCoordinates(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2, const Vec3f &p);
+    static Vec3f CalculateBarycentricCoordinates(const Vec2f &v0, const Vec2f &v1, const Vec2f &v2, const Vec2f &p);
 };
 
 } // namespace hyperion

@@ -14,7 +14,7 @@ class Triangle
 {
 public:
     Triangle();
-    Triangle(const Vector3 &v0, const Vector3 &v1, const Vector3 &v2);
+    Triangle(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2);
     Triangle(const Vertex &v0, const Vertex &v1, const Vertex &v2);
     Triangle(const Triangle &other);
     ~Triangle() = default;
@@ -25,18 +25,19 @@ public:
     const Vertex &GetPoint(SizeType index) const { return operator[](index); }
     void SetPoint(SizeType index, const Vertex &value) { m_points[index] = value; }
 
-    Vector3 GetCenter() const
-    {
-        return (m_points[0].GetPosition() + m_points[1].GetPosition() + m_points[2].GetPosition()) / 3.0f;
-    }
+    Vec3f GetCenter() const
+        { return (m_points[0].GetPosition() + m_points[1].GetPosition() + m_points[2].GetPosition()) / 3.0f; }
 
-    Vertex &Closest(const Vector3 &vec);
-    const Vertex &Closest(const Vector3 &vec) const;
+    Vec3f GetNormal() const
+        { return (m_points[1].GetPosition() - m_points[0].GetPosition()).Cross(m_points[2].GetPosition() - m_points[0].GetPosition()).Normalized(); }
+
+    Vertex &Closest(const Vec3f &vec);
+    const Vertex &Closest(const Vec3f &vec) const;
     // bool IntersectRay(const Ray &ray, RayTestResults &out) const;
 
     BoundingBox GetBoundingBox() const;
 
-    bool ContainsPoint(const Vector3 &pt) const;
+    bool ContainsPoint(const Vec3f &pt) const;
 
 private:
     FixedArray<Vertex, 3> m_points;

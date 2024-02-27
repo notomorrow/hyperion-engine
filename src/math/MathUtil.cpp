@@ -68,4 +68,18 @@ Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec3f &v0, const Vec3f &v1
     return { u, v, w };
 }
 
+Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec2f &v0, const Vec2f &v1, const Vec2f &v2, const Vec2f &p)
+{
+    Vec3f s[2];
+    for (int i=2; i--; ) {
+        s[i][0] = v2[i]-v0[i];
+        s[i][1] = v1[i]-v0[i];
+        s[i][2] = v0[i]-p[i];
+    }
+    Vec3f u = s[0].Cross(s[1]);
+    if (Abs(u[2])>1e-2) // dont forget that u[2] is integer. If it is zero then triangle ABC is degenerate
+        return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+    return Vec3f(-1,1,1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
+}
+
 } // namespace hyperion

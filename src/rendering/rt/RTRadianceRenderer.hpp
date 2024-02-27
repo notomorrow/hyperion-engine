@@ -55,11 +55,8 @@ public:
     );
 
     ~RTRadianceRenderer();
-
-    void SetTLAS(const Handle<TLAS> &tlas)
-        { m_tlas = tlas; }
-
-    void SetTLAS(Handle<TLAS> &&tlas)
+    
+    void SetTLAS(Handle<TLAS> tlas)
         { m_tlas = std::move(tlas); }
 
     void ApplyTLASUpdates(RTUpdateStateFlags flags);

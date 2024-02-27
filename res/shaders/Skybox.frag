@@ -33,16 +33,16 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer Objec
     Object objects[HYP_MAX_ENTITIES];
 };
 
-#ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
 HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
 #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
 HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
 #endif
 #else
-// layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
-// #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-//     layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-// #endif
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
+#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform textureCube cubemap_textures[];
+#endif
 #endif
 
 // #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA

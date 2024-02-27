@@ -96,26 +96,13 @@ struct Material
         cubemap_textures[(mat).texture_indices[(index / 4)][index % 4]]
 #endif
 
-#ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
-    #define SAMPLE_TEXTURE(mat, index, texcoord) \
-        Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
+#define SAMPLE_TEXTURE(mat, index, texcoord) \
+    Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
 
-    #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
-        Texture2DTriplanar(texture_sampler, GET_TEXTURE(mat, index), (position), (normal))
+#define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
+    Texture2DTriplanar(texture_sampler, GET_TEXTURE(mat, index), (position), (normal))
 
-    #define SAMPLE_TEXTURE_CUBE(mat, index, texcoord) \
-        TextureCube(texture_sampler, GET_TEXTURE_CUBE(mat, index), (texcoord))
-#else
-    #define SAMPLE_TEXTURE(mat, index, texcoord) \
-        Texture2D(GET_TEXTURE(mat, index), (texcoord))
-
-    #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
-        Texture2DTriplanar(GET_TEXTURE(mat, index), (position), (normal))
-
-    #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-        #define SAMPLE_TEXTURE_CUBE(mat, index, texcoord) \
-            TextureCube(GET_TEXTURE_CUBE(mat, index), (texcoord))
-    #endif
-#endif
+#define SAMPLE_TEXTURE_CUBE(mat, index, texcoord) \
+    TextureCube(texture_sampler, GET_TEXTURE_CUBE(mat, index), (texcoord))
 
 #endif

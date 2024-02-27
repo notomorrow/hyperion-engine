@@ -12,7 +12,7 @@ Triangle::Triangle(const Vertex &v0, const Vertex &v1, const Vertex &v2)
 {
 }
 
-Triangle::Triangle(const Vector3 &v0, const Vector3 &v1, const Vector3 &v2)
+Triangle::Triangle(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2)
     : m_points({ Vertex(v0), Vertex(v1), Vertex(v2) })
 {
 }
@@ -22,7 +22,7 @@ Triangle::Triangle(const Triangle &other)
 {
 }
 
-Vertex &Triangle::Closest(const Vector3 &vec)
+Vertex &Triangle::Closest(const Vec3f &vec)
 {
     float distances[3];
     uint shortest_index = 0;
@@ -40,31 +40,31 @@ Vertex &Triangle::Closest(const Vector3 &vec)
     return m_points[shortest_index];
 }
 
-const Vertex &Triangle::Closest(const Vector3 &vec) const
+const Vertex &Triangle::Closest(const Vec3f &vec) const
 {
     return const_cast<Triangle *>(this)->Closest(vec);
 }
 
 BoundingBox Triangle::GetBoundingBox() const
 {
-    const Vector3 min = Vector3::Min(
-        Vector3::Min(m_points[0].GetPosition(), m_points[1].GetPosition()),
+    const Vec3f min = Vec3f::Min(
+        Vec3f::Min(m_points[0].GetPosition(), m_points[1].GetPosition()),
         m_points[2].GetPosition()
     );
 
-    const Vector3 max = Vector3::Max(
-        Vector3::Max(m_points[0].GetPosition(), m_points[1].GetPosition()),
+    const Vec3f max = Vec3f::Max(
+        Vec3f::Max(m_points[0].GetPosition(), m_points[1].GetPosition()),
         m_points[2].GetPosition()
     );
 
     return BoundingBox(min, max);
 }
 
-bool Triangle::ContainsPoint(const Vector3 &pt) const
+bool Triangle::ContainsPoint(const Vec3f &pt) const
 {
-    const Vector3 v0 = m_points[2].GetPosition() - m_points[0].GetPosition();
-    const Vector3 v1 = m_points[1].GetPosition() - m_points[0].GetPosition();
-    const Vector3 v2 = pt - m_points[0].GetPosition();
+    const Vec3f v0 = m_points[2].GetPosition() - m_points[0].GetPosition();
+    const Vec3f v1 = m_points[1].GetPosition() - m_points[0].GetPosition();
+    const Vec3f v2 = pt - m_points[0].GetPosition();
 
     const float dot00 = v0.Dot(v0);
     const float dot01 = v0.Dot(v1);

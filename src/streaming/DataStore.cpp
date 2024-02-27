@@ -7,9 +7,13 @@ namespace hyperion::v2 {
 
 extern AssetManager *g_asset_manager;
 
-DataStoreBase::DataStoreBase(const String &prefix)
-    : m_prefix(prefix)
+DataStoreBase::DataStoreBase(const String &prefix, DataStoreFlags flags)
+    : m_prefix(prefix),
+      m_flags(flags)
 {
+    if (m_flags & DATA_STORE_FLAG_WRITE) {
+        AssertThrowMsg(MakeDirectory(), "Failed to create directory for data store at path %s", GetDirectory().Data());
+    }
 }
 
 bool DataStoreBase::MakeDirectory() const
@@ -26,11 +30,9 @@ bool DataStoreBase::MakeDirectory() const
 
 void DataStoreBase::Write(const String &key, const ByteBuffer &byte_buffer)
 {
-    const FilePath directory = GetDirectory();
+    AssertThrowMsg(m_flags & DATA_STORE_FLAG_WRITE, "Data store is not writable");
 
-    AssertThrowMsg(MakeDirectory(), "Failed to make directory %s", directory.Data());
-
-    const FilePath filepath = directory / key;
+    const FilePath filepath = GetDirectory() / key;
 
     FileByteWriter writer(filepath.Data());
     writer.Write(byte_buffer.Data(), byte_buffer.Size());
@@ -39,6 +41,8 @@ void DataStoreBase::Write(const String &key, const ByteBuffer &byte_buffer)
 
 bool DataStoreBase::Read(const String &key, ByteBuffer &out_byte_buffer) const
 {
+    AssertThrowMsg(m_flags & DATA_STORE_FLAG_READ, "Data store is not readable");
+
     const FilePath directory = GetDirectory();
 
     if (!directory.Exists() || !directory.IsDirectory()) {

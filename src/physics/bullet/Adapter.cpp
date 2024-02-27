@@ -66,11 +66,11 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape *physic
 }
 
 BulletPhysicsAdapter::BulletPhysicsAdapter()
-    : m_collision_configuration(nullptr),
-      m_dynamics_world(nullptr),
+    : m_broadphase(nullptr),
+      m_collision_configuration(nullptr),
       m_dispatcher(nullptr),
-      m_broadphase(nullptr),
-      m_solver(nullptr)
+      m_solver(nullptr),
+      m_dynamics_world(nullptr)
 {
     
 }

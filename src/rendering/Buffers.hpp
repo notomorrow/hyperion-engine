@@ -360,6 +360,16 @@ struct alignas(256) DDGIUniforms
 
 static_assert(sizeof(DDGIUniforms) == 256);
 
+
+struct alignas(16) RTRadianceUniforms
+{
+    uint32 num_bound_lights;
+    uint32 _pad0, _pad1, _pad2;
+    uint32 light_indices[16];
+};
+
+static_assert(sizeof(RTRadianceUniforms) == 80);
+
 /* max number of skeletons, based on size in mb */
 static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
 static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);

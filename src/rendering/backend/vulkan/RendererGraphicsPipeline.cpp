@@ -140,7 +140,15 @@ Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devi
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    return Rebuild(device);
+    Result rebuild_result = Rebuild(device);
+
+    if (!rebuild_result) {
+        return rebuild_result;
+    }
+
+    m_is_created = true;
+
+    HYPERION_RETURN_OK;
 }
 
 Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *device)
@@ -429,6 +437,8 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
 
 Result GraphicsPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
+    m_is_created = false;
+
     if (m_descriptor_table.HasValue()) {
         SafeRelease(std::move(m_descriptor_table.Get()));
     }

@@ -20,6 +20,7 @@
 #include <scene/ecs/components/TerrainComponent.hpp>
 #include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
+#include <scene/ecs/components/BLASComponent.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -30,6 +31,7 @@
 
 #include <util/ArgParse.hpp>
 #include <util/json/JSON.hpp>
+#include <rendering/lightmapper/LightmapRenderer.hpp>
 #include <rendering/lightmapper/LightmapTracer.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
@@ -282,7 +284,7 @@ void SampleStreamer::InitGame()
             gun.SetLocalRotation(Quaternion(Vec3f(0.0f, 1.0f, 0.0f), M_PI));
             gun_parent.AddChild(gun);
 
-            // m_scene->GetEntityManager()->AddComponent(gun[0].GetEntity(), BLASComponent { });
+            m_scene->GetEntityManager()->AddComponent(gun[0].GetEntity(), BLASComponent { });
         }
     }
 
@@ -735,7 +737,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");///living_room/living_room.obj");
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");//living_room/living_room.obj");
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -829,7 +831,7 @@ void SampleStreamer::InitGame()
 
             m_scene->GetRoot().AddChild(cart);
 
-            MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(cart[0].GetEntity());
+            /*MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(cart[0].GetEntity());
             LightmapUVBuilder lightmap_uv_builder;
             auto lightmap_result = lightmap_uv_builder.Build({
                 {
@@ -851,7 +853,8 @@ void SampleStreamer::InitGame()
             );
             InitObject(lightmap_texture);
 
-            mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
+            mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);*/
+
             // Handle<Mesh> mesh = mesh_component.mesh;
 
             // for (auto &node : cart.GetChildren()) {
@@ -865,7 +868,7 @@ void SampleStreamer::InitGame()
 
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            // node.Scale(3.0f);
+            //node.Scale(3.0f);
             node.Scale(0.0125f);
             node.SetName("test_model");
             
@@ -882,7 +885,7 @@ void SampleStreamer::InitGame()
                 if (auto child_entity = node.GetEntity()) {
                     // Add BLASComponent
 
-                    // m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
+                    m_scene->GetEntityManager()->AddComponent(child_entity, BLASComponent { });
                 }
             }
 
@@ -903,8 +906,10 @@ void SampleStreamer::InitGame()
             });
         }
     }
-
+    
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
+
+    RC<LightmapRenderer> lightmap_renderer = m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
 }
 
 void SampleStreamer::InitRender()
@@ -1288,70 +1293,34 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
     }
 
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
+        struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
+        {
+            Handle<Scene> scene;
 
-        auto sun_node = m_scene->GetRoot().Select("Sun");
-        ID<Entity> sun_entity = sun_node.GetEntity();
+            RENDER_COMMAND(SubmitLightmapJob)(Handle<Scene> scene)
+                : scene(std::move(scene))
+            {
+            }
 
-        LightComponent &light_component = m_scene->GetEntityManager()->GetComponent<LightComponent>(sun_entity);
+            virtual ~RENDER_COMMAND(SubmitLightmapJob)() override = default;
 
-        LightmapTracer tracer({ light_component.light, m_scene });
-        tracer.Trace();
+            virtual Result operator()() override
+            {
+                auto *lightmap_renderer = scene->GetEnvironment()->GetRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
 
+                if (lightmap_renderer) {
+                    lightmap_renderer->AddJob(UniquePtr<LightmapJob>(new LightmapJob(scene)));
+                }
 
+                HYPERION_RETURN_OK;
+            }
+        };
+
+        PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
 
         // shoot bullet on mouse button left
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
 #if 0
-            const auto &mouse_position = GetInputManager()->GetMousePosition();
-
-            const int mouse_x = mouse_position.GetX();
-            const int mouse_y = mouse_position.GetY();
-
-            Optional<Vec3f> world_ray = GetWorldRay({
-                float(mouse_x) / float(GetInputManager()->GetWindow()->GetExtent().width),
-                float(mouse_y) / float(GetInputManager()->GetWindow()->GetExtent().height)
-            });
-
-            if (world_ray.HasValue()) {
-                // shot at this point in the world, create test entity at this point
-
-                auto bullet_hole = m_scene->GetRoot().AddChild();
-                bullet_hole.SetName("BulletHole");
-
-                auto entity_id = m_scene->GetEntityManager()->AddEntity();
-                bullet_hole.SetEntity(entity_id);
-
-                auto bullet_hole_mesh = MeshBuilder::Cube();
-                InitObject(bullet_hole_mesh);
-
-                bullet_hole.Scale(0.2f);
-                bullet_hole.SetWorldTranslation(world_ray.Get());
-
-                m_scene->GetEntityManager()->AddComponent(entity_id, MeshComponent {
-                    bullet_hole_mesh,
-                    g_material_system->GetOrCreate(
-                        {
-                            .shader_definition = ShaderDefinition {
-                                HYP_NAME(Forward),
-                                ShaderProperties(renderer::static_mesh_vertex_attributes)
-                            },
-                            .bucket = Bucket::BUCKET_OPAQUE
-                        },
-                        {
-                            { Material::MATERIAL_KEY_ALBEDO, Vec4f(0.0f, 1.0f, 0.0f, 1.0f) },
-                            { Material::MATERIAL_KEY_METALNESS, 0.0f },
-                            { Material::MATERIAL_KEY_ROUGHNESS, 0.01f }
-                        }
-                    )
-                });
-
-                m_scene->GetEntityManager()->AddComponent(entity_id, BoundingBoxComponent {
-                    bullet_hole_mesh->GetAABB()
-                });
-
-                m_scene->GetEntityManager()->AddComponent(entity_id, VisibilityStateComponent { });
-            }
-#else
             const Vec3f &camera_position = m_scene->GetCamera()->GetTranslation();
             const Vec3f &camera_direction = m_scene->GetCamera()->GetDirection();
 
@@ -1405,7 +1374,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
         }
     }
 
-#if 1
+#if 0
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
             const auto &mouse_position = GetInputManager()->GetMousePosition();

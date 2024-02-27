@@ -38,6 +38,11 @@ template <class T>
 class StreamedDataRef : public StreamedDataRefBase
 {
 public:
+    StreamedDataRef()
+        : StreamedDataRefBase(nullptr)
+    {
+    }
+
     StreamedDataRef(RC<T> &&owner)
         : StreamedDataRefBase(owner)
     {
@@ -71,7 +76,7 @@ public:
         { return static_cast<T *>(m_owner.Get()); }
 
     const T *operator->() const
-        { return static_cat<const T *>(m_owner.Get()); }
+        { return static_cast<const T *>(m_owner.Get()); }
 };
 
 class StreamedData : public EnableRefCountedPtrFromThis<StreamedData>
