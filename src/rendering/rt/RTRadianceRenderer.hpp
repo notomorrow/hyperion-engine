@@ -111,6 +111,8 @@ private:
 
     RaytracingPipelineRef                               m_raytracing_pipeline;
     GPUBufferRef                                        m_uniform_buffer;
+
+    Matrix4                                             m_previous_view_matrix;
 };
 
 } // namespace hyperion::v2

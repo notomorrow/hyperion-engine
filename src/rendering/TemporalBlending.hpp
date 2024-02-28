@@ -37,7 +37,9 @@ enum class TemporalBlendTechnique
     TECHNIQUE_0,
     TECHNIQUE_1,
     TECHNIQUE_2,
-    TECHNIQUE_3
+    TECHNIQUE_3,
+
+    TECHNIQUE_4 // Progressive blending for path tracing
 };
 
 enum class TemporalBlendFeedback
@@ -102,6 +104,15 @@ public:
     const ImageOutput &GetImageOutput(uint frame_index) const
         { return m_image_outputs[frame_index]; }
 
+    TemporalBlendTechnique GetTechnique() const
+        { return m_technique; }
+
+    TemporalBlendFeedback GetFeedback() const
+        { return m_feedback; }
+
+    void ResetProgressiveBlending()
+        { m_blending_frame_counter = 0; }
+
     void Create();
     void Destroy();
 
@@ -114,18 +125,20 @@ private:
     void CreateDescriptorSets();
     void CreateComputePipelines();
 
-    Extent2D m_extent;
-    InternalFormat m_image_format;
-    TemporalBlendTechnique m_technique;
-    TemporalBlendFeedback m_feedback;
+    Extent2D                                        m_extent;
+    InternalFormat                                  m_image_format;
+    TemporalBlendTechnique                          m_technique;
+    TemporalBlendFeedback                           m_feedback;
 
-    ComputePipelineRef m_perform_blending;
-    DescriptorTableRef m_descriptor_table;
+    uint                                            m_blending_frame_counter;
 
-    FixedArray<ImageViewRef, max_frames_in_flight> m_input_image_views;
-    FixedArray<ImageOutput, max_frames_in_flight> m_image_outputs;
+    ComputePipelineRef                              m_perform_blending;
+    DescriptorTableRef                              m_descriptor_table;
 
-    Handle<Framebuffer> m_input_framebuffer;
+    FixedArray<ImageViewRef, max_frames_in_flight>  m_input_image_views;
+    FixedArray<ImageOutput, max_frames_in_flight>   m_image_outputs;
+
+    Handle<Framebuffer>                             m_input_framebuffer;
 };
 
 } // namespace hyperion::v2

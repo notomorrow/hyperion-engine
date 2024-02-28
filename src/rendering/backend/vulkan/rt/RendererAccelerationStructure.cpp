@@ -696,8 +696,9 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstances
         instances.Size() * sizeof(VkAccelerationStructureInstanceKHR)
     );
 
-    if (m_instances_buffer == nullptr) {
-    } else if (m_instances_buffer->size != instances_buffer_size) {
+    AssertThrow(m_instances_buffer != nullptr);
+
+    if (m_instances_buffer->size != instances_buffer_size) {
         DebugLog(
             LogType::Debug,
             "Resizing TLAS instances buffer from %llu to %llu\n",
@@ -711,7 +712,9 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstances
         HYPERION_BUBBLE_ERRORS(m_instances_buffer->Destroy(device));
     }
 
-    HYPERION_BUBBLE_ERRORS(m_instances_buffer->Create(device, instances_buffer_size));
+    if (!m_instances_buffer->IsCreated()) {
+        HYPERION_BUBBLE_ERRORS(m_instances_buffer->Create(device, instances_buffer_size));
+    }
 
     if (instances.Empty()) {
         // zero out the buffer

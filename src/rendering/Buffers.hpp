@@ -364,7 +364,8 @@ static_assert(sizeof(DDGIUniforms) == 256);
 struct alignas(16) RTRadianceUniforms
 {
     uint32 num_bound_lights;
-    uint32 _pad0, _pad1, _pad2;
+    uint32 ray_offset; // for lightmapper
+    uint32 _pad1, _pad2;
     uint32 light_indices[16];
 };
 

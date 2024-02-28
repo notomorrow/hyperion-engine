@@ -4,6 +4,7 @@
 #include <scene/Entity.hpp>
 
 #include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <math/Matrix4.hpp>
 
@@ -11,9 +12,10 @@ namespace hyperion::v2 {
 
 struct LightmapEntity
 {
-    ID<Entity>      entity_id;
-    Handle<Mesh>    mesh;
-    Matrix4         transform;
+    ID<Entity>          entity_id;
+    Handle<Mesh>        mesh;
+    Handle<Material>    material;
+    Matrix4             transform;
 };
 
 } // namespace hyperion::v2

@@ -165,13 +165,6 @@ void RTRadianceRenderer::SubmitPushConstants(CommandBuffer *command_buffer)
 
 void RTRadianceRenderer::Render(Frame *frame)
 {
-    // Used for environment map
-    ID<EnvProbe> env_probe_id;
-
-    if (g_engine->render_state.bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any()) {
-        env_probe_id = g_engine->render_state.bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Front().first;
-    }
-
     UpdateUniforms(frame);
 
     m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
@@ -216,6 +209,13 @@ void RTRadianceRenderer::Render(Frame *frame)
         frame->GetCommandBuffer(),
         ResourceState::SHADER_RESOURCE
     );
+
+    // Reset progressive blending if the camera view matrix has changed (for path tracing)
+    if (m_temporal_blending->GetTechnique() == TemporalBlendTechnique::TECHNIQUE_4 && g_engine->GetRenderState().GetCamera().camera.view != m_previous_view_matrix) {
+        m_temporal_blending->ResetProgressiveBlending();
+
+        m_previous_view_matrix = g_engine->GetRenderState().GetCamera().camera.view;
+    }
 
     m_temporal_blending->Render(frame);
 }
@@ -326,7 +326,9 @@ void RTRadianceRenderer::CreateTemporalBlending()
     m_temporal_blending.Reset(new TemporalBlending(
         m_extent,
         InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_1,
+        (m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER)
+            ? TemporalBlendTechnique::TECHNIQUE_4 // progressive blending
+            : TemporalBlendTechnique::TECHNIQUE_1,
         (m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER)
             ? TemporalBlendFeedback::HIGH
             : TemporalBlendFeedback::LOW,

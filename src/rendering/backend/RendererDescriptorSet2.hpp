@@ -112,7 +112,7 @@ struct DescriptorDeclaration
     DescriptorSlot  slot = DESCRIPTOR_SLOT_NONE;
     Name            name;
     uint            count = 1;
-    uint            size = -1;
+    uint            size = uint(-1);
     bool            is_dynamic = false;
     uint            index = ~0u;
 

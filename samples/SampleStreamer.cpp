@@ -273,7 +273,7 @@ void SampleStreamer::InitGame()
     ));*/
     m_scene->GetCamera()->SetCameraController(RC<CameraController>(new FirstPersonCameraController()));
 
-    {
+    if (true) {
         auto gun = g_asset_manager->Load<Node>("models/gun/AK47NoSubdiv.obj");
 
         if (gun) {
@@ -288,7 +288,26 @@ void SampleStreamer::InitGame()
         }
     }
 
-    if (true) {
+    if (false) {
+        auto box = g_asset_manager->Load<Node>("models/cube.obj");
+
+        if (box) {
+            m_scene->GetRoot().AddChild(box);
+
+            MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(box[0].GetEntity());
+            mesh_component.material = g_material_system->GetOrCreate({
+               .shader_definition = ShaderDefinition {
+                   HYP_NAME(Forward),
+                   ShaderProperties(renderer::static_mesh_vertex_attributes)
+                },
+                .bucket = Bucket::BUCKET_OPAQUE
+            });
+
+            m_scene->GetEntityManager()->AddComponent(box[0].GetEntity(), BLASComponent { });
+        }
+    }
+
+    if (false) {
         auto cube_node = m_scene->GetRoot().AddChild();
         cube_node.SetName("TestCube");
 
@@ -321,6 +340,7 @@ void SampleStreamer::InitGame()
             cube->GetAABB()
         });
         m_scene->GetEntityManager()->AddComponent(entity_id, VisibilityStateComponent { });
+        m_scene->GetEntityManager()->AddComponent(entity_id, BLASComponent { });
     }
 
     if (false) {
@@ -407,7 +427,7 @@ void SampleStreamer::InitGame()
     auto sun = CreateObject<Light>(DirectionalLight(
         Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
         Color(1.0f, 0.7f, 0.4f),
-        5.0f
+        1.0f
     ));
 
     InitObject(sun);
@@ -717,7 +737,7 @@ void SampleStreamer::InitGame()
 
         start = std::chrono::high_resolution_clock::now();
 
-        for (int j = 0; j < num_iterations; j++)
+        for (int j = 0; j < num_iterations; j++) {
             for (int i = 0; i < num_objects; i++) {
                 TestObject test_object {
                     .i = i,
@@ -727,6 +747,7 @@ void SampleStreamer::InitGame()
 
                 AssertThrow(std_map.find(test_object.GetHashCode())->second.i == i);
             }
+        }
 
         end = std::chrono::high_resolution_clock::now();
 
@@ -737,7 +758,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");////living_room/living_room.obj");sponza/sponza.obj");//
+        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -829,7 +850,7 @@ void SampleStreamer::InitGame()
             cart.Scale(1.5f);
             cart.SetName("cart");
 
-            m_scene->GetRoot().AddChild(cart);
+            //m_scene->GetRoot().AddChild(cart);
 
             // ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
             // UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
@@ -850,8 +871,9 @@ void SampleStreamer::InitGame()
 
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
+            //node.Scale(0.25f);
             node.Scale(3.0f);
-            // node.Scale(0.0125f);
+            //node.Scale(0.0125f);
             node.SetName("test_model");
             
             GetScene()->GetRoot().AddChild(node);
@@ -1111,7 +1133,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 
         const Quaternion rotation = Quaternion::LookAt(camera_direction, Vector3::UnitY());
 
-        Vec3f gun_offset = Vec3f(-0.18f, -0.3f, -0.3f);
+        Vec3f gun_offset = Vec3f(-0.18f, -0.3f, -0.1f);
         gun_node.SetLocalTranslation(camera_position + (camera_direction) + (Quaternion(rotation).Invert() * gun_offset));
         gun_node.SetLocalRotation(rotation);
     }

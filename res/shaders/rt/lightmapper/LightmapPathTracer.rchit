@@ -112,8 +112,7 @@ void main()
     uvec3 index = uvec3(
         index_buffer.indices[gl_PrimitiveID]
     );
-    // payload.color = vec3(greaterThan(index, ivec3(mesh_description.num_vertices)));
-    // return;
+    
     Vertex v0;
     {
         const uint offset = 8 * index[0];
@@ -267,8 +266,8 @@ void main()
     //     return;
     // }
 
-    payload.emissive = vec3(0.0);
-    payload.throughput *= material_color.rgb;
+    payload.emissive = vec4(0.0);
+    payload.throughput *= material_color;
     payload.entity_index = entity_index;
     payload.triangle_index = gl_PrimitiveID;
     payload.barycentric_coords = barycentric_coords;

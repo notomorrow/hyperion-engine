@@ -864,16 +864,6 @@ struct RenderObjectDeleter
                 auto object = to_delete.Pop();
 
                 if (object.GetRefCount() > 1) {
-#ifdef HYP_DEBUG_MODE
-                    DebugLog(
-                        LogType::Warn,
-                        "Render object of type %s (Name: %s) has a reference count of %u, skipping\n",
-                        TypeName<T>().Data(),
-                        object.GetName().LookupString(),
-                        object.GetRefCount()
-                    );
-#endif
-
                     continue;
                 }
 

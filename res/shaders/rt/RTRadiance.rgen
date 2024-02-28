@@ -124,6 +124,11 @@ void main()
     vec3 origin = position + normal * RAY_OFFSET;
         
     traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+
+    if (payload.distance < 0.0) {
+        imageStore(image, storage_coord, vec4(0.0));
+        return;
+    }
     
     vec3 hit_position = origin + direction * payload.distance;
     

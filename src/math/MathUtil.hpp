@@ -207,7 +207,7 @@ public:
         { return deg * pi<T> / T(180); }
 
     template <class T>
-    static constexpr T Clamp(T val, T min, T max)
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, T) Clamp(T val, T min, T max)
     {
         if (val > max) {
             return max;

@@ -41,6 +41,8 @@ HYP_DESCRIPTOR_UAV(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowM
 #include "../include/shadows.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+#include "../include/rt/RTRadiance.inc"
+
 /* End Shadows */
 
 #undef HYP_NO_CUBEMAP
@@ -81,15 +83,6 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer Ma
 HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
-};
-
-struct RTRadianceUniforms
-{
-    uint num_bound_lights;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
-    uvec4 light_indices[4];
 };
 
 HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
