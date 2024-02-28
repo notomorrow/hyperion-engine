@@ -5,9 +5,9 @@ struct RayPayload
 	vec3 normal;
 	float roughness;
 #if defined(PATHTRACER) || defined(LIGHTMAPPER)
-	vec3 throughput;
-	vec3 emissive;
-	vec3 dir;
+	vec4 throughput;
+	vec4 emissive;
+	vec4 beta;
 #endif
 #ifdef LIGHTMAPPER
 	vec3 barycentric_coords;

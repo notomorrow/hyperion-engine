@@ -66,11 +66,11 @@ public:
     void Create();
     
     void ReadHitsBuffer(LightmapHitsBuffer *ptr);
-    void Trace(Frame *frame, const Array<LightmapRay> &rays);
+    void Trace(Frame *frame, const Array<LightmapRay> &rays, uint32 ray_offset);
 
 private:
     void CreateUniformBuffer();
-    void UpdateUniforms(Frame *frame);
+    void UpdateUniforms(Frame *frame, uint32 ray_offset);
 
     Handle<TLAS>            m_tlas;
     
@@ -86,6 +86,8 @@ private:
 class LightmapJob
 {
 public:
+    static constexpr uint num_multisamples = 1;
+
     LightmapJob(Handle<Scene> scene);
     LightmapJob(const LightmapJob &other)                   = delete;
     LightmapJob &operator=(const LightmapJob &other)        = delete;
@@ -98,6 +100,15 @@ public:
 
     const LightmapUVMap &GetUVMap() const
         { return m_uv_map; }
+
+    const Array<LightmapEntity> &GetEntities() const
+        { return m_entities; }
+
+    uint32 GetTexelIndex() const
+        { return m_texel_index; }
+
+    const Array<uint> &GetTexelIndices() const
+        { return m_texel_indices; }
 
     void BuildUVMap();
     void GatherRays(Frame *frame, Array<LightmapRay> &out_rays);

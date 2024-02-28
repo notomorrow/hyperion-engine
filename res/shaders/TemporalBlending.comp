@@ -39,6 +39,8 @@ HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) un
     #define TEMPORAL_BLEND_TECHNIQUE 2
 #elif defined(TEMPORAL_BLEND_TECHNIQUE_3)
     #define TEMPORAL_BLEND_TECHNIQUE 3
+#elif defined(TEMPORAL_BLEND_TECHNIQUE_4)
+    #define TEMPORAL_BLEND_TECHNIQUE 4 // progressive
 #else
     #define TEMPORAL_BLEND_TECHNIQUE 3
 #endif
@@ -75,8 +77,9 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraSha
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D depth_texture;
 
 layout(push_constant) uniform PushConstant {
-    uvec2 output_dimensions;
-    uvec2 depth_texture_dimensions;
+    uvec2   output_dimensions;
+    uvec2   depth_texture_dimensions;
+    uint    blending_frame_counter;
 };
 
 void main(void)
@@ -196,6 +199,20 @@ void main(void)
     color = TemporalBlendRounded(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
 #elif TEMPORAL_BLEND_TECHNIQUE == 3
     color = TemporalBlendVarying(input_texture, prev_input_texture, uv, velocity, texel_size, view_space_depth);
+#elif TEMPORAL_BLEND_TECHNIQUE == 4
+    vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv);
+
+    color.a = 1.0;
+    previous_color.a = 1.0;
+
+    color = ADJUST_COLOR_IN(color);
+    previous_color = ADJUST_COLOR_IN(previous_color);
+
+    // Moving average over number of frames
+    const float blending = 1.0 / float(blending_frame_counter + 1);
+    color = mix(previous_color, color, blending);
+
+    color = ADJUST_COLOR_OUT(color);
 #endif
 
     imageStore(output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);

@@ -72,11 +72,16 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer 
 #include "../../include/rt/RTRadiance.inc"
 #include "../../include/rt/payload.inc"
 
+HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
+{
+    RTRadianceUniforms rt_radiance_uniforms;
+};
+
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
 #define RAY_OFFSET 0.01
 #define NUM_SAMPLES 8
-#define NUM_BOUNCES 8
+#define NUM_BOUNCES 2
 
 void main() 
 {
@@ -114,7 +119,7 @@ void main()
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
 
-    vec3 color = vec3(0.0);
+    vec4 color = vec4(0.0);
 
     const vec4 target = projection_inverse * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
     const vec4 albedo = Texture2DLod(sampler_nearest, gbuffer_albedo_texture, uv, 0.0);
@@ -132,6 +137,10 @@ void main()
         H = tangent * H.x + bitangent * H.y + normal * H.z;
 
         vec3 direction = reflect(-V, H);
+        // normalize(RandomInHemisphere(
+        //     vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
+        //     normal.xyz
+        // ));
         vec3 origin = position + normal * RAY_OFFSET;
 
         // vec2 blue_noise_sample = vec2(
@@ -143,13 +152,13 @@ void main()
         // const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
 
 
-        payload.throughput = albedo.rgb;
-        payload.emissive = vec3(0.0);
+        payload.throughput = albedo;
+        payload.emissive = vec4(0.0);
+        payload.beta = vec4(1.0);
 
         for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
-            vec3 throughput = payload.throughput;
+            vec4 throughput = payload.throughput;
 
-            payload.dir = direction;
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
             if (payload.distance < 0.0) {
@@ -157,20 +166,32 @@ void main()
                 if (current_env_probe.texture_index != ~0u) {
                     uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
-                    const float sky_multiplier = 1.0;
+                    vec4 emissive = TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction);
 
-                    radiance.rgb += TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction).rgb * sky_multiplier * throughput;
+                    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+                        const Light light = HYP_GET_LIGHT(light_index);
+
+                        if (light.type != 0) {
+                            continue;
+                        }
+
+                        const float NdotL = max(dot(direction, light.position_intensity.xyz), 0.0);
+
+                        emissive += UINT_TO_VEC4(light.color_encoded) * (light.position_intensity.w * NdotL);
+                    }
+
+                    radiance += emissive * throughput;
                 }
 
                 break;
             }
 
-            radiance.rgb += payload.emissive * throughput;
+            radiance += payload.emissive * throughput;
 
             throughput = payload.throughput;
             
             // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
-            float p = max(throughput.r, max(throughput.g, throughput.b));
+            float p = max(throughput.r, max(throughput.g, max(throughput.b, throughput.a)));
 
             if (RandomFloat(ray_seed) > p) {
                 break;
@@ -190,7 +211,7 @@ void main()
         }
     }
 
-    color = radiance.rgb / float(NUM_SAMPLES * NUM_BOUNCES);
+    color = radiance / float(NUM_SAMPLES);
     color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
     
     // float max_component = max(color.r, max(color.g, color.b));
@@ -200,5 +221,5 @@ void main()
     //     return;
     // }
 
-    imageStore(image, storage_coord, vec4(color, 1.0));
+    imageStore(image, storage_coord, color);
 }

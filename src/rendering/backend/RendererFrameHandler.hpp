@@ -12,7 +12,7 @@
 namespace hyperion {
 namespace renderer {
 
-class DeviceQueue;
+struct DeviceQueue;
 
 namespace platform {
 

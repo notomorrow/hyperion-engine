@@ -10,6 +10,8 @@ namespace hyperion::v2 {
 using renderer::Rect;
 using renderer::ShaderVec2;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : renderer::RenderCommand
 {
     TemporalBlending::ImageOutput *image_outputs;
@@ -19,7 +21,9 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : renderer::RenderComm
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateTemporalBlendingImageOutputs)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_BUBBLE_ERRORS(image_outputs[frame_index].Create(g_engine->GetGPUDevice()));
@@ -28,6 +32,8 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : renderer::RenderComm
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,
@@ -54,7 +60,8 @@ TemporalBlending::TemporalBlending(
     m_image_format(image_format),
     m_technique(technique),
     m_feedback(feedback),
-    m_input_framebuffer(input_framebuffer)
+    m_input_framebuffer(input_framebuffer),
+    m_blending_frame_counter(0)
 {
 }
 
@@ -68,7 +75,8 @@ TemporalBlending::TemporalBlending(
     m_image_format(image_format),
     m_technique(technique),
     m_feedback(feedback),
-    m_input_image_views(input_image_views)
+    m_input_image_views(input_image_views),
+    m_blending_frame_counter(0)
 {
 }
 
@@ -211,8 +219,9 @@ void TemporalBlending::Render(Frame *frame)
     const Extent3D &extent = m_image_outputs[frame->GetFrameIndex()].image->GetExtent();
 
     struct alignas(128) {
-        ShaderVec2<uint32> output_dimensions;
-        ShaderVec2<uint32> depth_texture_dimensions;
+        ShaderVec2<uint32>  output_dimensions;
+        ShaderVec2<uint32>  depth_texture_dimensions;
+        uint32              blending_frame_counter;
     } push_constants;
 
     push_constants.output_dimensions = Extent2D(extent);
@@ -220,6 +229,8 @@ void TemporalBlending::Render(Frame *frame)
         g_engine->GetDeferredSystem().Get(BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetAttachment()->GetImage()->GetExtent()
     );
+
+    push_constants.blending_frame_counter = m_blending_frame_counter;
 
     m_perform_blending->SetPushConstants(&push_constants, sizeof(push_constants));
     m_perform_blending->Bind(frame->GetCommandBuffer());
@@ -253,6 +264,10 @@ void TemporalBlending::Render(Frame *frame)
     // set it to be able to be used as texture2D for next pass, or outside of this
     m_image_outputs[frame->GetFrameIndex()].image->GetGPUImage()
         ->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+
+    m_blending_frame_counter = m_technique == TemporalBlendTechnique::TECHNIQUE_4
+        ? m_blending_frame_counter + 1
+        : 0;
 }
 
 } // namespace hyperion::v2

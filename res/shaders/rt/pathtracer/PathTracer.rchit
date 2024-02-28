@@ -266,19 +266,16 @@ void main()
         const Light light = HYP_GET_LIGHT(closest_light_index);
 
         payload.distance = closest_light_dist;
-        payload.emissive = vec3(UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w);
-        payload.throughput = vec3(0.0);
-        payload.color = UINT_TO_VEC4(light.color_encoded).rgb;
+        payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+        payload.throughput = vec4(0.0);
         payload.normal = normal;
         payload.roughness = 0.0;
 
         return;
     }
 
-    payload.emissive = vec3(0.0);
-    payload.throughput *= material_color.rgb;
-    payload.color = material_color.rgb;
-
+    payload.emissive = vec4(0.0);
+    payload.throughput *= material_color;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;

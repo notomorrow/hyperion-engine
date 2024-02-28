@@ -40,7 +40,7 @@ struct LightmapUV
     uint        triangle_index;
     Vec3f       barycentric_coords;
     Vec2f       lightmap_uv;
-    Vec4f       color; // To be set by the lightmap renderer
+    Vec4f       color = Vec4f::zero; // To be set by the lightmap renderer
 };
 
 struct LightmapUVMap
@@ -51,6 +51,7 @@ struct LightmapUVMap
     HashMap<ID<Mesh>, Array<uint>>  mesh_to_uv_indices;
 
     Bitmap<3> ToBitmap() const;
+    Array<float> ToFloatArray() const;
 };
 
 class LightmapUVBuilder
