@@ -5,11 +5,14 @@
 #define MAX_BONE_INDICES 4
 
 #include <core/lib/FixedArray.hpp>
+#include <core/lib/Variant.hpp>
 
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
 #include <math/Transform.hpp>
 #include <math/Matrix4.hpp>
+
+#include <rendering/backend/RendererStructs.hpp>
 
 #include <HashCode.hpp>
 #include <util/Defines.hpp>
@@ -109,6 +112,45 @@ struct alignas(16) Vertex
 
     void AddBoneWeight(float val) { if (num_weights < MAX_BONE_WEIGHTS) bone_weights[num_weights++] = val; }
     void AddBoneIndex(int val)    { if (num_indices < MAX_BONE_INDICES) bone_indices[num_indices++] = val; }
+
+    /*! \brief Read the attribute from the vertex into \ref{ptr}. The value at \ref{ptr} must be able to hold sizeof(float) * 4.
+     *  If an invalid attribute is passed, the function does nothing.
+     *
+     *  \param attr The attribute to read.
+     *  \param ptr The pointer to write the attribute to.
+     */
+    void ReadAttribute(renderer::VertexAttribute::Type attr, void *ptr) const
+    {
+        switch (attr) {
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION:
+            Memory::MemCpy(ptr, &position, sizeof(float) * 3);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL:
+            Memory::MemCpy(ptr, &normal, sizeof(float) * 3);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT:
+            Memory::MemCpy(ptr, &tangent, sizeof(float) * 3);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT:
+            Memory::MemCpy(ptr, &bitangent, sizeof(float) * 3);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0:
+            Memory::MemCpy(ptr, &texcoord0, sizeof(float) * 2);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1:
+            Memory::MemCpy(ptr, &texcoord1, sizeof(float) * 2);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES:
+            Memory::MemCpy(ptr, bone_indices.Data(), sizeof(uint) * MAX_BONE_INDICES);
+            break;
+        case renderer::VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS:
+            Memory::MemCpy(ptr, bone_weights.Data(), sizeof(float) * MAX_BONE_WEIGHTS);
+            break;
+        default:
+            // Do nothing
+            break;
+        }
+    }
 
     HashCode GetHashCode() const
     {
