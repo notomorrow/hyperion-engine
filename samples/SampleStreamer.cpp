@@ -913,7 +913,7 @@ void SampleStreamer::InitGame()
     
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
 
-    RC<LightmapRenderer> lightmap_renderer = m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
+    //RC<LightmapRenderer> lightmap_renderer = m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
 }
 
 void SampleStreamer::InitRender()
@@ -1297,7 +1297,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
     }
 
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
-        struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
+        /*struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
         {
             Handle<Scene> scene;
 
@@ -1320,7 +1320,9 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
             }
         };
 
-        PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
+        PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);*/
+
+        m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
 
         // shoot bullet on mouse button left
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
