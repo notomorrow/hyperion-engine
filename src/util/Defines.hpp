@@ -229,8 +229,13 @@
 #endif
 
 #if defined(HYP_APPLE) && HYP_APPLE
-    #define HYP_FEATURES_BINDLESS_TEXTURES 0
-    #define HYP_FEATURES_ENABLE_RAYTRACING 0
+    #ifdef HYP_FEATURES_BINDLESS_TEXTURES
+        #undef HYP_FEATURES_BINDLESS_TEXTURES
+    #endif
+
+    #ifdef HYP_FEATURES_ENABLE_RAYTRACING
+        #undef HYP_FEATURES_ENABLE_RAYTRACING
+    #endif
 
     #if defined(HYP_VULKAN) && HYP_VULKAN
         #define HYP_VULKAN_API_VERSION VK_API_VERSION_1_1 // moltenvk supports api 1.1

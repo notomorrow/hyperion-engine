@@ -53,9 +53,20 @@ struct Ray
         const Transform &transform
     ) const;
 
+    Optional<RayHit> TestTriangleList(
+        const Array<Triangle> &triangles,
+        const Transform &transform
+    ) const;
+
     bool TestTriangleList(
         const Array<Vertex> &vertices,
         const Array<uint32> &indices,
+        const Transform &transform,
+        RayTestResults &out_results
+    ) const;
+
+    bool TestTriangleList(
+        const Array<Triangle> &triangles,
         const Transform &transform,
         RayTestResults &out_results
     ) const;
@@ -69,8 +80,23 @@ struct Ray
     ) const;
 
     bool TestTriangleList(
+        const Array<Triangle> &triangles,
+        const Transform &transform,
+        RayHitID hit_id,
+        RayTestResults &out_results
+    ) const;
+
+    bool TestTriangleList(
         const Array<Vertex> &vertices,
         const Array<uint32> &indices,
+        const Transform &transform,
+        RayHitID hit_id,
+        const void *user_data,
+        RayTestResults &out_results
+    ) const;
+
+    bool TestTriangleList(
+        const Array<Triangle> &triangles,
         const Transform &transform,
         RayHitID hit_id,
         const void *user_data,
@@ -94,6 +120,7 @@ struct RayHit
     
     Vec3f       hitpoint;
     Vec3f       normal;
+    Vec3f       barycentric_coords;
     float       distance = 0.0f;
     RayHitID    id = ~0u;
     const void *user_data = nullptr;
@@ -104,12 +131,14 @@ struct RayHit
             distance,
             hitpoint,
             normal,
+            barycentric_coords,
             id,
             user_data
         ) < std::tie(
             other.distance,
             other.hitpoint,
             other.normal,
+            other.barycentric_coords,
             other.id,
             other.user_data
         );
@@ -117,10 +146,11 @@ struct RayHit
 
     bool operator==(const RayHit &other) const
     {
-        return distance  == other.distance
-            && hitpoint  == other.hitpoint
-            && normal    == other.normal
-            && id        == other.id
+        return distance == other.distance
+            && hitpoint == other.hitpoint
+            && normal == other.normal
+            && barycentric_coords == other.barycentric_coords
+            && id == other.id
             && user_data == other.user_data;
     }
 
@@ -131,6 +161,7 @@ struct RayHit
         hc.Add(distance);
         hc.Add(hitpoint.GetHashCode());
         hc.Add(normal.GetHashCode());
+        hc.Add(barycentric_coords.GetHashCode());
         hc.Add(id);
         hc.Add(user_data);
 

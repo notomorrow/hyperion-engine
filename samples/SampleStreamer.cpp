@@ -1313,7 +1313,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
                 auto *lightmap_renderer = scene->GetEnvironment()->GetRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
 
                 if (lightmap_renderer) {
-                    lightmap_renderer->AddJob(UniquePtr<LightmapJob>(new LightmapJob(scene)));
+                    lightmap_renderer->AddJob(UniquePtr<LightmapJob>(new LightmapJob(scene, LIGHTMAP_TRACE_MODE_CPU)));
                 }
 
                 HYPERION_RETURN_OK;

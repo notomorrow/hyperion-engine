@@ -11,7 +11,7 @@ StreamedDataRefBase::StreamedDataRefBase(RC<StreamedData> &&owner)
     : m_owner(std::move(owner))
 {
     if (m_owner != nullptr) {
-        m_owner->m_use_count++;
+        m_owner->m_use_count.Increment(1u, MemoryOrder::RELAXED);
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -23,7 +23,7 @@ StreamedDataRefBase::StreamedDataRefBase(const StreamedDataRefBase &other)
     : m_owner(other.m_owner)
 {
     if (m_owner != nullptr) {
-        m_owner->m_use_count++;
+        m_owner->m_use_count.Increment(1u, MemoryOrder::RELAXED);
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -38,7 +38,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(const StreamedDataRefBase &o
     }
 
     if (m_owner != nullptr) {
-        if (--m_owner->m_use_count == 0) {
+        if (m_owner->m_use_count.Decrement(1u, MemoryOrder::ACQUIRE_RELEASE) == 1) {
             m_owner->Unpage();
         }
     }
@@ -46,7 +46,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(const StreamedDataRefBase &o
     m_owner = other.m_owner;
 
     if (m_owner != nullptr) {
-        m_owner->m_use_count++;
+        m_owner->m_use_count.Increment(1u, MemoryOrder::RELAXED);
 
         if (!m_owner->IsInMemory()) {
             (void)m_owner->Load();
@@ -69,7 +69,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(StreamedDataRefBase &&other)
     }
 
     if (m_owner != nullptr) {
-        if (--m_owner->m_use_count == 0) {
+        if (m_owner->m_use_count.Decrement(1u, MemoryOrder::ACQUIRE_RELEASE) == 1) {
             m_owner->Unpage();
         }
     }
@@ -83,7 +83,7 @@ StreamedDataRefBase &StreamedDataRefBase::operator=(StreamedDataRefBase &&other)
 StreamedDataRefBase::~StreamedDataRefBase()
 {
     if (m_owner != nullptr) {
-        if (--m_owner->m_use_count == 0) {
+        if (m_owner->m_use_count.Decrement(1u, MemoryOrder::ACQUIRE_RELEASE) == 1) {
             m_owner->Unpage();
         }
     }

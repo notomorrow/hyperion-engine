@@ -85,6 +85,41 @@ public:
     friend class StreamedDataRefBase; // allow it to access m_use_count
 
     StreamedData()          = default;
+
+    StreamedData(const StreamedData &other)
+        : m_use_count { other.m_use_count.Get(MemoryOrder::ACQUIRE) }
+    {
+    }
+
+    StreamedData &operator=(const StreamedData &other)
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        m_use_count.Set(other.m_use_count.Get(MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+
+        return *this;
+    }
+
+    StreamedData(StreamedData &&other) noexcept
+        : m_use_count { other.m_use_count.Get(MemoryOrder::ACQUIRE_RELEASE) }
+    {
+        other.m_use_count.Set(0u, MemoryOrder::RELEASE);
+    }
+
+    StreamedData &operator=(StreamedData &&other) noexcept
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        m_use_count.Set(other.m_use_count.Get(MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+        other.m_use_count.Set(0u, MemoryOrder::RELEASE);
+
+        return *this;
+    }
+
     virtual ~StreamedData() = default;
 
     virtual bool IsNull() const = 0;
@@ -93,7 +128,7 @@ public:
     virtual const ByteBuffer &Load() const = 0;
 
 private:
-    uint32  m_use_count = 0;
+    AtomicVar<uint> m_use_count { 0u };
 };
 
 class NullStreamedData : public StreamedData

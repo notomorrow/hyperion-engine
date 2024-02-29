@@ -144,7 +144,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions pack_options { };
-    pack_options.resolution = 2048;
+    pack_options.resolution = 256;//2048;
     //pack_options.padding = 8;
     //pack_options.rotateCharts = true;
 

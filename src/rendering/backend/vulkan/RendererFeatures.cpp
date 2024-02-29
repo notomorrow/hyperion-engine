@@ -48,7 +48,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
 
         // features
 
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
         m_buffer_device_address_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = VK_NULL_HANDLE
@@ -89,7 +89,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
         
         // properties
 
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
         m_raytracing_pipeline_properties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
             .pNext = VK_NULL_HANDLE
@@ -135,7 +135,7 @@ void Features::LoadDynamicFunctions(Device *device)
         dyn_functions.name = reinterpret_cast<PFN_##name>(proc_addr); \
     } while (0)
 
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
     HYP_LOAD_FN(vkGetBufferDeviceAddressKHR); // currently only used for RT
 
     if (IsRaytracingSupported() && !IsRaytracingDisabled()) {

@@ -88,9 +88,9 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
 {
     float t, u, v;
 
-    Vector3 v0v1 = triangle.GetPoint(1).GetPosition() - triangle.GetPoint(0).GetPosition();
-	Vector3 v0v2 = triangle.GetPoint(2).GetPosition() - triangle.GetPoint(0).GetPosition();
-	Vector3 pvec = direction.Cross(v0v2);
+    Vec3f v0v1 = triangle.GetPoint(1).GetPosition() - triangle.GetPoint(0).GetPosition();
+	Vec3f v0v2 = triangle.GetPoint(2).GetPosition() - triangle.GetPoint(0).GetPosition();
+	Vec3f pvec = direction.Cross(v0v2);
 
 	float det = v0v1.Dot(pvec);
 
@@ -101,14 +101,14 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
 
 	float inv_det = 1.0 / det;
 
-	Vector3 tvec = position - triangle.GetPoint(0).GetPosition();
+	Vec3f tvec = position - triangle.GetPoint(0).GetPosition();
 	u = tvec.Dot(pvec) * inv_det;
 
 	if (u < 0 || u > 1) {
         return false;
     }
 
-	Vector3 qvec = tvec.Cross(v0v1);
+	Vec3f qvec = tvec.Cross(v0v1);
 	v = direction.Dot(qvec) * inv_det;
 
 	if (v < 0 || u + v > 1) {
@@ -117,13 +117,20 @@ bool Ray::TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *us
 
 	t = v0v2.Dot(qvec) * inv_det;
 
+    const Vec3f barycentric_coords = Vec3f(1.0f - u - v, u, v);
+
+    const Vec3f normal = triangle.GetPoint(0).GetNormal() * barycentric_coords.x
+        + triangle.GetPoint(1).GetNormal() * barycentric_coords.y
+        + triangle.GetPoint(2).GetNormal() * barycentric_coords.z;
+
     if (t > 0.0f) {
         out_results.AddHit({
-            .hitpoint = position + (direction * t),
-            .normal = v0v1.Cross(v0v2),
-            .distance  = t,
-            .id = hit_id,
-            .user_data = user_data
+            .hitpoint           = position + (direction * t),
+            .normal             = normal,
+            .barycentric_coords = barycentric_coords,
+            .distance           = t,
+            .id                 = hit_id,
+            .user_data          = user_data
         });
 
         return true;
@@ -147,6 +154,20 @@ Optional<RayHit> Ray::TestTriangleList(
     return out_results.Front();
 }
 
+Optional<RayHit> Ray::TestTriangleList(
+    const Array<Triangle> &triangles,
+    const Transform &transform
+) const
+{
+    RayTestResults out_results;
+
+    if (!TestTriangleList(triangles, transform, ~0, out_results)) {
+        return { };
+    }
+
+    return out_results.Front();
+}
+
 bool Ray::TestTriangleList(
     const Array<Vertex> &vertices,
     const Array<uint32> &indices,
@@ -158,6 +179,15 @@ bool Ray::TestTriangleList(
 }
 
 bool Ray::TestTriangleList(
+    const Array<Triangle> &triangles,
+    const Transform &transform,
+    RayTestResults &out_results
+) const
+{
+    return TestTriangleList(triangles, transform, ~0, out_results);
+}
+
+bool Ray::TestTriangleList(
     const Array<Vertex> &vertices,
     const Array<uint32> &indices,
     const Transform &transform,
@@ -166,6 +196,16 @@ bool Ray::TestTriangleList(
 ) const
 {
     return TestTriangleList(vertices, indices, transform, hit_id, nullptr, out_results);
+}
+
+bool Ray::TestTriangleList(
+    const Array<Triangle> &triangles,
+    const Transform &transform,
+    RayHitID hit_id,
+    RayTestResults &out_results
+) const
+{
+    return TestTriangleList(triangles, transform, hit_id, nullptr, out_results);
 }
 
 bool Ray::TestTriangleList(
@@ -229,6 +269,45 @@ bool Ray::TestTriangleList(
     return false;
 }
 
+bool Ray::TestTriangleList(
+    const Array<Triangle> &triangles,
+    const Transform &transform,
+    RayHitID hit_id,
+    const void *user_data,
+    RayTestResults &out_results
+) const
+{
+    bool intersected = false;
+
+    RayTestResults tmp_results;
+
+    for (SizeType i = 0; i < triangles.Size(); i++) {
+        const Triangle &triangle = triangles[i];
+
+        if (TestTriangle(triangle, static_cast<RayHitID>(i), tmp_results)) {
+            intersected = true;
+        }
+    }
+
+    if (intersected) {
+        AssertThrow(!tmp_results.Empty());
+
+        auto &first_result = tmp_results.Front();
+
+        // If hit_id is set, overwrite the id (which would be set to the mesh index)
+        if (hit_id != ~0u) {
+            first_result.id = hit_id;
+        }
+        
+        first_result.user_data = user_data;
+
+        out_results.AddHit(first_result);
+
+        return true;
+    }
+
+    return false;
+}
 
 bool RayTestResults::AddHit(const RayHit &hit)
 {
