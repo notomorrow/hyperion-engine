@@ -375,7 +375,7 @@ static void BindGlobalDescriptorSets(
             scene_descriptor_set_index
         );
 
-#if HYP_FEATURES_BINDLESS_TEXTURES
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
     const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
 
     if (material_descriptor_set_index != ~0u) {
@@ -427,7 +427,7 @@ static void BindPerObjectDescriptorSets(
     }
 #endif
 
-#if !HYP_FEATURES_BINDLESS_TEXTURES
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
     const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
 
     if (material_descriptor_set_index != ~0u) {

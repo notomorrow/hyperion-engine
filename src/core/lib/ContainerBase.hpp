@@ -265,6 +265,17 @@ public:
             std::forward<Lambda>(lambda)
         );
     }
+
+    template <class TaskSystem, class Lambda>
+    void ParallelForEach(TaskSystem &task_system, Lambda &&lambda) const
+    {
+        static_assert(Container::is_contiguous, "Container must be contiguous to perform parallel for-each");
+
+        task_system.ParallelForEach(
+            *static_cast<const Container *>(this),
+            std::forward<Lambda>(lambda)
+        );
+    }
     
     [[nodiscard]] HashCode GetHashCode() const
     {

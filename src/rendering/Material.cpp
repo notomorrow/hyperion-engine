@@ -15,9 +15,9 @@ using renderer::Result;
 
 struct RENDER_COMMAND(UpdateMaterialRenderData) : renderer::RenderCommand
 {
-    ID<Material> id;
-    MaterialShaderData shader_data;
-    SizeType num_bound_textures;
+    ID<Material>                                id;
+    MaterialShaderData                          shader_data;
+    SizeType                                    num_bound_textures;
     FixedArray<ID<Texture>, max_bound_textures> bound_texture_ids;
 
     RENDER_COMMAND(UpdateMaterialRenderData)(
@@ -43,7 +43,7 @@ struct RENDER_COMMAND(UpdateMaterialRenderData) : renderer::RenderCommand
         if (num_bound_textures != 0) {
             for (SizeType i = 0; i < bound_texture_ids.Size(); i++) {
                 if (bound_texture_ids[i] != Texture::empty_id) {
-#if HYP_FEATURES_BINDLESS_TEXTURES
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
                     shader_data.texture_index[i] = bound_texture_ids[i].ToIndex();
 #else
                     shader_data.texture_index[i] = i;
@@ -190,7 +190,7 @@ Material::~Material()
     }
 
     if (IsInitCalled()) {
-#if !HYP_FEATURES_BINDLESS_TEXTURES
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
         EnqueueDescriptorSetDestroy();
 #endif
 
@@ -220,7 +220,7 @@ void Material::Init()
         }
     }
 
-#if !HYP_FEATURES_BINDLESS_TEXTURES
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
     EnqueueDescriptorSetCreate();
 #endif
 
@@ -364,7 +364,7 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
 
     m_textures.Set(key, texture);
 
-#if !HYP_FEATURES_BINDLESS_TEXTURES
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
     if (IsInitCalled()) {
         EnqueueTextureUpdate(key);
     }

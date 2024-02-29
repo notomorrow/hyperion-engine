@@ -42,9 +42,11 @@ public:
 
     static constexpr uint max_textures_to_set = MathUtil::Min(
         max_textures,
-        HYP_FEATURES_BINDLESS_TEXTURES
-            ? max_bindless_resources
-            : max_bound_textures
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
+        max_bindless_resources
+#else
+        max_bound_textures
+#endif
     );
 
     using TextureKeyType = uint64;

@@ -6,6 +6,10 @@ namespace hyperion::v2 {
 
 void BLASUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
+    if (!g_engine->GetConfig().Get(CONFIG_RT_ENABLED)) {
+        return;
+    }
+
     BLASComponent &blas_component = entity_manager.GetComponent<BLASComponent>(entity);
     MeshComponent &mesh_component = entity_manager.GetComponent<MeshComponent>(entity);
     TransformComponent &transform_component = entity_manager.GetComponent<TransformComponent>(entity);
@@ -32,6 +36,10 @@ void BLASUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> 
 
 void BLASUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity)
 {
+    if (!g_engine->GetConfig().Get(CONFIG_RT_ENABLED)) {
+        return;
+    }
+
     BLASComponent &blas_component = entity_manager.GetComponent<BLASComponent>(entity);
 
     if (blas_component.blas.IsValid()) {

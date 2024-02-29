@@ -30,13 +30,47 @@ using renderer::ImageView;
 
 struct LightmapHitsBuffer;
 
+enum LightmapTraceMode
+{
+    LIGHTMAP_TRACE_MODE_GPU,
+    LIGHTMAP_TRACE_MODE_CPU
+};
+
 struct LightmapRay
 {
     Ray         ray;
     ID<Mesh>    mesh_id;
     uint        triangle_index;
     uint        texel_index;
+
+    bool operator==(const LightmapRay &other) const
+    {
+        return ray == other.ray
+            && mesh_id == other.mesh_id
+            && triangle_index == other.triangle_index
+            && texel_index == other.texel_index;
+    }
+
+    bool operator!=(const LightmapRay &other) const
+        { return !(*this == other); }
 };
+
+constexpr uint max_ray_hits_gpu = 8192;
+constexpr uint max_ray_hits_cpu = 512;
+
+struct alignas(16) LightmapHit
+{
+    Vec4f   color;
+};
+
+static_assert(sizeof(LightmapHit) == 16);
+
+struct alignas(16) LightmapHitsBuffer
+{
+    FixedArray<LightmapHit, max_ray_hits_gpu>   hits;
+};
+
+static_assert(sizeof(LightmapHitsBuffer) == 131072);
 
 class LightmapPathTracer
 {
@@ -88,7 +122,7 @@ class LightmapJob
 public:
     static constexpr uint num_multisamples = 1;
 
-    LightmapJob(Handle<Scene> scene);
+    LightmapJob(Handle<Scene> scene, LightmapTraceMode trace_mode);
     LightmapJob(const LightmapJob &other)                   = delete;
     LightmapJob &operator=(const LightmapJob &other)        = delete;
     LightmapJob(LightmapJob &&other) noexcept               = delete;
@@ -111,18 +145,29 @@ public:
         { return m_texel_indices; }
 
     void BuildUVMap();
-    void GatherRays(Frame *frame, Array<LightmapRay> &out_rays);
+    void GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays);
+
+    /*! \brief Trace rays on the CPU.
+     *  \param rays The rays to trace.    
+     */
+    void TraceRaysOnCPU(const Array<LightmapRay> &rays);
 
     bool IsCompleted() const;
     bool IsReady() const
         { return m_is_ready.Get(MemoryOrder::RELAXED); }
 
 private:
+    Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
+
     Handle<Scene>                       m_scene;
+    LightmapTraceMode                   m_trace_mode;
+
     LightmapUVMap                       m_uv_map;
     Array<LightmapEntity>               m_entities;
 
     Array<uint>                         m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
+
+    HashMap<ID<Mesh>, Array<Triangle>>  m_triangle_cache; // for cpu tracing
 
     AtomicVar<bool>                     m_is_ready;
     uint                                m_texel_index;
@@ -151,8 +196,12 @@ public:
     void OnRender(Frame *frame);
 
 private:
+    void HandleCompletedJob(LightmapJob *job);
+
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
         { }
+
+    LightmapTraceMode               m_trace_mode;
 
     UniquePtr<LightmapPathTracer>   m_path_tracer;
 

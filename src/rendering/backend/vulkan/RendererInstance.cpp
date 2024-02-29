@@ -76,7 +76,7 @@ static Array<const char *> CheckValidationLayerSupport(const Array<const char *>
 ExtensionMap Instance<Platform::VULKAN>::GetExtensionMap()
 {
     return {
-#if HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
         { VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false },
         { VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false },
         { VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false },

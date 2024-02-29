@@ -148,7 +148,7 @@ public:
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetSamplers >= 16);
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetUniformBuffers >= 16);
 
-#if HYP_FEATURES_BINDLESS_TEXTURES
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
         REQUIRES_VK_FEATURE(m_indexing_properties.maxPerStageDescriptorUpdateAfterBindSamplers >= 4096);
 #else
         REQUIRES_VK_FEATURE(m_indexing_properties.maxPerStageDescriptorUpdateAfterBindSamplers >= 16);
@@ -161,7 +161,7 @@ public:
 
     bool SupportsBindlessTextures() const
     {
-#if !HYP_FEATURES_BINDLESS_TEXTURES
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
         return false;
 #else
 
@@ -436,7 +436,7 @@ public:
 
     bool IsRaytracingSupported() const
     {
-#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && HYP_FEATURES_ENABLE_RAYTRACING && HYP_FEATURES_BINDLESS_TEXTURES
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
         return m_raytracing_pipeline_features.rayTracingPipeline
             && m_acceleration_structure_features.accelerationStructure
             && m_buffer_device_address_features.bufferDeviceAddress;
