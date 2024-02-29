@@ -225,16 +225,19 @@ struct VertexAttributeSet
         flag_mask |= other.flag_mask;
     }
 
-    Array<VertexAttribute> BuildAttributes() const
+    uint Size() const
+        { return uint(MathUtil::BitCount(flag_mask)); }
+
+    Array<VertexAttribute::Type> BuildAttributes() const
     {
-        Array<VertexAttribute> attributes;
+        Array<VertexAttribute::Type> attributes;
         attributes.Reserve(VertexAttribute::mapping.Size());
 
         for (SizeType i = 0; i < VertexAttribute::mapping.Size(); i++) {
             const uint64 iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
-                attributes.PushBack(VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)]);
+                attributes.PushBack(VertexAttribute::Type(iter_flag_mask));
             }
         }
 
