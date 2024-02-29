@@ -122,7 +122,7 @@ class LightmapJob
 public:
     static constexpr uint num_multisamples = 1;
 
-    LightmapJob(Handle<Scene> scene, LightmapTraceMode trace_mode);
+    LightmapJob(Array<LightmapEntity> entities, LightmapTraceMode trace_mode);
     LightmapJob(const LightmapJob &other)                   = delete;
     LightmapJob &operator=(const LightmapJob &other)        = delete;
     LightmapJob(LightmapJob &&other) noexcept               = delete;
@@ -159,11 +159,10 @@ public:
 private:
     Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
 
-    Handle<Scene>                       m_scene;
     LightmapTraceMode                   m_trace_mode;
+    Array<LightmapEntity>               m_entities;
 
     LightmapUVMap                       m_uv_map;
-    Array<LightmapEntity>               m_entities;
 
     Array<uint>                         m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
 

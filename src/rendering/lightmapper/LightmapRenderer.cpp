@@ -229,95 +229,27 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
 
 // LightmapJob
 
-LightmapJob::LightmapJob(Handle<Scene> scene, LightmapTraceMode trace_mode)
-    : m_scene(std::move(scene)),
+LightmapJob::LightmapJob(Array<LightmapEntity> entities, LightmapTraceMode trace_mode)
+    : m_entities(std::move(entities)),
       m_trace_mode(trace_mode),
       m_is_ready { false },
       m_texel_index(0)
 {
-    if (m_scene.IsValid()) {
-        m_scene->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)
-        {
-            for (auto [entity, mesh_component, transform_component] : mgr.GetEntitySet<MeshComponent, TransformComponent>()) {
-                if (!mesh_component.mesh.IsValid()) {
-                    continue;
-                }
+    
 
-                if (!mesh_component.material.IsValid()) {
-                    continue;
-                }
+    BuildUVMap();
 
-                // Only process opaque and translucent materials
-                if (mesh_component.material->GetBucket() != BUCKET_OPAQUE && mesh_component.material->GetBucket() != BUCKET_TRANSLUCENT) {
-                    continue;
-                }
+    // Flatten texel indices, grouped by mesh IDs
+    const LightmapUVMap &uv_map = GetUVMap();
+    m_texel_indices.Reserve(uv_map.uvs.Size());
 
-                const RC<StreamedMeshData> &streamed_mesh_data = mesh_component.mesh->GetStreamedMeshData();
-
-                if (!streamed_mesh_data) {
-                    continue;
-                }
-
-                const Matrix4 &transform_matrix = transform_component.transform.GetMatrix();
-
-                m_entities.PushBack(LightmapEntity {
-                    entity,
-                    mesh_component.mesh,
-                    mesh_component.material,
-                    transform_matrix
-                });
-
-                // Set triangle data in m_triangle_cache
-                // On CPU, we need to cache the triangles for ray tracing
-                if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
-                    auto ref = streamed_mesh_data->AcquireRef();
-                    const MeshData &mesh_data = ref->GetMeshData();
-
-                    const Matrix4 normal_matrix = transform_matrix.Inverted().Transpose();
-
-                    for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
-                        Triangle triangle {
-                            mesh_data.vertices[mesh_data.indices[i + 0]],
-                            mesh_data.vertices[mesh_data.indices[i + 1]],
-                            mesh_data.vertices[mesh_data.indices[i + 2]]
-                        };
-
-                        triangle[0].position = transform_matrix * triangle[0].position;
-                        triangle[1].position = transform_matrix * triangle[1].position;
-                        triangle[2].position = transform_matrix * triangle[2].position;
-
-                        triangle[0].normal = (normal_matrix * Vec4f(triangle[0].normal, 0.0f)).GetXYZ();
-                        triangle[1].normal = (normal_matrix * Vec4f(triangle[1].normal, 0.0f)).GetXYZ();
-                        triangle[2].normal = (normal_matrix * Vec4f(triangle[2].normal, 0.0f)).GetXYZ();
-
-                        triangle[0].tangent = (normal_matrix * Vec4f(triangle[0].tangent, 0.0f)).GetXYZ();
-                        triangle[1].tangent = (normal_matrix * Vec4f(triangle[1].tangent, 0.0f)).GetXYZ();
-                        triangle[2].tangent = (normal_matrix * Vec4f(triangle[2].tangent, 0.0f)).GetXYZ();
-
-                        triangle[0].bitangent = (normal_matrix * Vec4f(triangle[0].bitangent, 0.0f)).GetXYZ();
-                        triangle[1].bitangent = (normal_matrix * Vec4f(triangle[1].bitangent, 0.0f)).GetXYZ();
-                        triangle[2].bitangent = (normal_matrix * Vec4f(triangle[2].bitangent, 0.0f)).GetXYZ();
-
-                        m_triangle_cache[mesh_component.mesh.GetID()].PushBack(triangle);
-                    }
-                }
-            }
-
-            BuildUVMap();
-
-            // Flatten texel indices, grouped by mesh IDs
-            const LightmapUVMap &uv_map = GetUVMap();
-            m_texel_indices.Reserve(uv_map.uvs.Size());
-
-            for (const auto &it : uv_map.mesh_to_uv_indices) {
-                for (uint i = 0; i < it.second.Size(); i++) {
-                     m_texel_indices.PushBack(it.second[i]);
-                }
-            }
-
-            m_is_ready.Set(true, MemoryOrder::RELAXED);
-        });
+    for (const auto &it : uv_map.mesh_to_uv_indices) {
+        for (uint i = 0; i < it.second.Size(); i++) {
+             m_texel_indices.PushBack(it.second[i]);
+        }
     }
+
+    m_is_ready.Set(true, MemoryOrder::RELAXED);
 }
 
 bool LightmapJob::IsCompleted() const
@@ -326,7 +258,7 @@ bool LightmapJob::IsCompleted() const
         return false;
     }
 
-    if (!m_scene.IsValid()) {
+    if (m_entities.Empty()) {
         return true;
     }
 
@@ -531,6 +463,95 @@ void LightmapRenderer::Init()
 
 void LightmapRenderer::InitGame()
 {
+    static constexpr uint ideal_triangles_per_job = 10000;
+
+    // Build jobs
+    m_parent->GetScene()->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)
+    {
+        Array<LightmapEntity> lightmap_entities;
+        uint num_triangles = 0;
+
+        for (auto [entity, mesh_component, transform_component] : mgr.GetEntitySet<MeshComponent, TransformComponent>()) {
+            if (!mesh_component.mesh.IsValid()) {
+                continue;
+            }
+
+            if (!mesh_component.material.IsValid()) {
+                continue;
+            }
+
+            // Only process opaque and translucent materials
+            if (mesh_component.material->GetBucket() != BUCKET_OPAQUE && mesh_component.material->GetBucket() != BUCKET_TRANSLUCENT) {
+                continue;
+            }
+
+            const RC<StreamedMeshData> &streamed_mesh_data = mesh_component.mesh->GetStreamedMeshData();
+
+            if (!streamed_mesh_data) {
+                continue;
+            }
+
+            if (num_triangles + streamed_mesh_data->GetMeshData().indices.Size() / 3 > ideal_triangles_per_job) {
+                if (lightmap_entities.Any()) {
+                    UniquePtr<LightmapJob> job(new LightmapJob(std::move(lightmap_entities)));
+
+                    AddJob(std::move(job));
+                }
+
+                num_triangles = 0;
+            }
+
+            // Set triangle data in m_triangle_cache
+            // On CPU, we need to cache the triangles for ray tracing
+            if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
+                auto ref = streamed_mesh_data->AcquireRef();
+                const MeshData &mesh_data = ref->GetMeshData();
+
+                const Matrix4 normal_matrix = transform_matrix.Inverted().Transpose();
+
+                for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
+                    Triangle triangle {
+                        mesh_data.vertices[mesh_data.indices[i + 0]],
+                        mesh_data.vertices[mesh_data.indices[i + 1]],
+                        mesh_data.vertices[mesh_data.indices[i + 2]]
+                    };
+
+                    triangle[0].position = transform_matrix * triangle[0].position;
+                    triangle[1].position = transform_matrix * triangle[1].position;
+                    triangle[2].position = transform_matrix * triangle[2].position;
+
+                    triangle[0].normal = (normal_matrix * Vec4f(triangle[0].normal, 0.0f)).GetXYZ();
+                    triangle[1].normal = (normal_matrix * Vec4f(triangle[1].normal, 0.0f)).GetXYZ();
+                    triangle[2].normal = (normal_matrix * Vec4f(triangle[2].normal, 0.0f)).GetXYZ();
+
+                    triangle[0].tangent = (normal_matrix * Vec4f(triangle[0].tangent, 0.0f)).GetXYZ();
+                    triangle[1].tangent = (normal_matrix * Vec4f(triangle[1].tangent, 0.0f)).GetXYZ();
+                    triangle[2].tangent = (normal_matrix * Vec4f(triangle[2].tangent, 0.0f)).GetXYZ();
+
+                    triangle[0].bitangent = (normal_matrix * Vec4f(triangle[0].bitangent, 0.0f)).GetXYZ();
+                    triangle[1].bitangent = (normal_matrix * Vec4f(triangle[1].bitangent, 0.0f)).GetXYZ();
+                    triangle[2].bitangent = (normal_matrix * Vec4f(triangle[2].bitangent, 0.0f)).GetXYZ();
+
+                    m_triangle_cache[mesh_component.mesh.GetID()].PushBack(triangle);
+                }
+            }
+
+            lightmap_entities.PushBack(LightmapEntity {
+                entity,
+                mesh_component.mesh,
+                mesh_component.material,
+                transform_component.transform.GetMatrix()
+            });
+
+            num_triangles += streamed_mesh_data->GetMeshData().indices.Size() / 3;
+        }
+
+        if (lightmap_entities.Any()) {
+            UniquePtr<LightmapJob> job(new LightmapJob(std::move(lightmap_entities)));
+
+            AddJob(std::move(job));
+        }
+    }); 
 }
 
 void LightmapRenderer::OnRemoved()
@@ -629,8 +650,8 @@ void LightmapRenderer::OnRender(Frame *frame)
                 LightmapUVMap &uv_map = job->GetUVMap();
                 LightmapUV &uv = uv_map.uvs[ray.texel_index];
 
-                //uv.color += Vec4f(hit.color * (1.0f / float(LightmapJob::num_multisamples)));
-                uv.color = (uv.color * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
+                uv.color += Vec4f(hit.color * (1.0f / float(LightmapJob::num_multisamples)));
+                //uv.color = (uv.color * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
             }
         }
 
