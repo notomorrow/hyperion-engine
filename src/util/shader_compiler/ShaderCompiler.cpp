@@ -1589,8 +1589,8 @@ bool ShaderCompiler::CompileBundle(
                 // These will be used to generate the descriptor table layout
                 preamble += descriptor_table_defines + "\n\n";
 
-                for (const VertexAttribute &attribute : properties.GetRequiredVertexAttributes().BuildAttributes()) {
-                    preamble += String("#define HYP_ATTRIBUTE_") + attribute.name + "\n";
+                for (const VertexAttribute::Type attribute_type : properties.GetRequiredVertexAttributes().BuildAttributes()) {
+                    preamble += String("#define HYP_ATTRIBUTE_") + VertexAttribute::mapping[attribute_type].name + "\n";
                 }
 
                 // We do not do the same for Optional attributes, as they have not been instantiated at this point in time.

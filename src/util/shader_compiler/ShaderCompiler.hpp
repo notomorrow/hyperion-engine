@@ -432,16 +432,14 @@ public:
         { return m_props.Size(); }
 
     Array<ShaderProperty> ToArray() const
-    {
-        return m_props.ToArray();
-    }
+        { return m_props.ToArray(); }
 
     String ToString() const
     {
         Array<String> property_names;
 
-        for (const VertexAttribute &attribute : GetRequiredVertexAttributes().BuildAttributes()) {
-            property_names.PushBack(String("HYP_ATTRIBUTE_") + attribute.name);
+        for (const VertexAttribute::Type attribute_type : GetRequiredVertexAttributes().BuildAttributes()) {
+            property_names.PushBack(String("HYP_ATTRIBUTE_") + VertexAttribute::mapping[attribute_type].name);
         }
 
         for (const ShaderProperty &property : GetPropertySet()) {
