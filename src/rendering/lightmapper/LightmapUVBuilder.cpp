@@ -217,7 +217,10 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
                         continue;
                     }
 
-                    const Vec2f lightmap_uv = Vec2f { float(P.x) / float(atlas->width), float(P.y) / float(atlas->height) };
+                    const Vec2f lightmap_uv = Vec2f {
+                        float(P.x) / float(atlas->width - 1),
+                        float(P.y) / float(atlas->height - 1)
+                    };
 
                     const uint index = (P.x + atlas->width) % atlas->width
                         + (atlas->height - P.y + atlas->height) % atlas->height * atlas->width;
@@ -242,8 +245,6 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
         }
     }
 
-    xatlas::Destroy(atlas);
-
     for (SizeType i = 0; i < m_mesh_data.Size(); i++) {
         const LightmapMeshData &lightmap_mesh_data = m_mesh_data[i];
         const LightmapEntity &element = m_params.elements[i];
@@ -263,8 +264,23 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
             new_mesh_data.vertices[i].SetTexCoord1(lightmap_uv);
         }
 
+        /*new_mesh_data.vertices.Resize(atlas->meshes[i].vertexCount);
+        new_mesh_data.indices.Resize(atlas->meshes[i].indexCount);
+
+        for (uint j = 0; j < atlas->meshes[i].indexCount; j++) {
+            new_mesh_data.indices[j] = atlas->meshes[i].indexArray[j];
+
+            new_mesh_data.vertices[new_mesh_data.indices[j]] = ref->GetMeshData().vertices[atlas->meshes[i].vertexArray[atlas->meshes[i].indexArray[j]].xref];
+            new_mesh_data.vertices[new_mesh_data.indices[j]].texcoord1 = Vec2f {
+                float(atlas->meshes[i].vertexArray[atlas->meshes[i].indexArray[j]].uv[0]) / float(atlas->width - 1),
+                float(atlas->meshes[i].vertexArray[atlas->meshes[i].indexArray[j]].uv[1]) / float(atlas->height - 1)
+            };
+        }*/
+
         Mesh::SetStreamedMeshData(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
     }
+
+    xatlas::Destroy(atlas);
 
     return {
         LightmapUVBuilder::Result::RESULT_OK,

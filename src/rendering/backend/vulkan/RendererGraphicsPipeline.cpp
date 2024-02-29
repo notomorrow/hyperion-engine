@@ -72,11 +72,11 @@ Array<VkVertexInputAttributeDescription> GraphicsPipeline<Platform::VULKAN>::Bui
 
     FlatMap<uint32, uint32> binding_sizes { };
 
-    const Array<VertexAttribute> attributes = attribute_set.BuildAttributes();
-    this->vertex_attributes.Resize(attributes.Size());
+    const Array<VertexAttribute::Type> attribute_types = attribute_set.BuildAttributes();
+    this->vertex_attributes.Resize(attribute_types.Size());
 
-    for (SizeType i = 0; i < attributes.Size(); i++) {
-        const auto &attribute = attributes[i];
+    for (SizeType i = 0; i < attribute_types.Size(); i++) {
+        const VertexAttribute &attribute = VertexAttribute::mapping[attribute_types[i]];
 
         this->vertex_attributes[i] = VkVertexInputAttributeDescription {
             .location = attribute.location,
