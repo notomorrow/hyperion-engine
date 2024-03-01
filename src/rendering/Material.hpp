@@ -544,6 +544,12 @@ class MaterialCache
 public:
     void Add(const Handle<Material> &material);
 
+    Handle<Material> CreateMaterial(
+        MaterialAttributes attributes = { },
+        const Material::ParameterTable &parameters = Material::DefaultParameters(),
+        const Material::TextureSet &textures = { }
+    );
+
     Handle<Material> GetOrCreate(
         MaterialAttributes attributes = { },
         const Material::ParameterTable &parameters = Material::DefaultParameters(),

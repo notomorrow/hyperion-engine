@@ -1,4 +1,5 @@
 #include <scene/Scene.hpp>
+
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -20,6 +21,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <math/Halton.hpp>
@@ -138,7 +140,7 @@ void Scene::Init()
 
     if (IsWorldScene()) {
         if (!m_tlas) {
-            if (g_engine->GetConfig().Get(CONFIG_RT_SUPPORTED) && HasFlags(InitInfo::SCENE_FLAGS_HAS_TLAS)) {
+            if (g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported() && HasFlags(InitInfo::SCENE_FLAGS_HAS_TLAS)) {
                 CreateTLAS();
             } else {
                 SetFlags(InitInfo::SCENE_FLAGS_HAS_TLAS, false);

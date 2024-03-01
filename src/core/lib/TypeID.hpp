@@ -16,7 +16,7 @@ using TypeIDValue = uint32;
 
 struct TypeIDNameMap
 {
-    static constexpr SizeType max_size = 4096;
+    static constexpr SizeType max_size = 8192;
 
     Name                        names[max_size];
     HashMap<Name, TypeIDValue>  name_to_id;

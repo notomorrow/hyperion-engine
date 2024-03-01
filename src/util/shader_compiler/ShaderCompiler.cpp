@@ -888,7 +888,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
         bundles.PushBack(std::move(bundle));
     }
 
-    const bool supports_rt_shaders = g_engine->GetConfig().Get(CONFIG_RT_SUPPORTED);
+    const bool supports_rt_shaders = g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported();
 
     FlatMap<Bundle *, bool> results;
 

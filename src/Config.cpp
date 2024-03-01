@@ -10,7 +10,6 @@ namespace hyperion::v2 {
 const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_DEBUG_MODE, "DebugMode" },
     { CONFIG_SHADER_COMPILATION, "ShaderCompilation" },
-    { CONFIG_RT_SUPPORTED, "RTSupported" },
     { CONFIG_RT_ENABLED, "RTEnabled" },
     { CONFIG_RT_REFLECTIONS, "RTReflections" },
     { CONFIG_RT_GI, "RTGlobalIllumination" },
@@ -55,8 +54,7 @@ String Configuration::OptionNameToString(OptionName option)
 
 bool Configuration::IsRTOption(OptionName option)
 {
-    return option == CONFIG_RT_SUPPORTED
-        || option == CONFIG_RT_ENABLED
+    return option == CONFIG_RT_ENABLED
         || option == CONFIG_RT_REFLECTIONS
         || option == CONFIG_RT_GI
         || option == CONFIG_RT_GI_DEBUG_PROBES
@@ -170,8 +168,7 @@ void Configuration::SetToDefaultConfiguration()
     m_variables[CONFIG_SHADER_COMPILATION] = Option(false, false);
 #endif
     
-    m_variables[CONFIG_RT_SUPPORTED] = Option(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported(), false);
-    m_variables[CONFIG_RT_ENABLED] = Option(m_variables[CONFIG_RT_SUPPORTED] && g_engine->GetGPUDevice()->GetFeatures().IsRaytracingEnabled(), true);
+    m_variables[CONFIG_RT_ENABLED] = Option(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported() && g_engine->GetGPUDevice()->GetFeatures().IsRaytracingEnabled(), true);
     m_variables[CONFIG_RT_REFLECTIONS] = Option(m_variables[CONFIG_RT_ENABLED], true);
     m_variables[CONFIG_RT_GI] = Option(m_variables[CONFIG_RT_ENABLED], true);
 

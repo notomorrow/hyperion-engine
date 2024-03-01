@@ -14,11 +14,11 @@ public:
     /**
      * \brief Pack a 32-bit float as a 16-bit float in the higher 16 bits of a uint32.
      */
-    static inline uint32 PackFloat16InUInt32(float32 value)
+    static inline uint32 PackFloat16(float value)
     {
         union {
             uint32 u;
-            float32 f;
+            float f;
         };
 
         f = value * 65535.0f;
@@ -26,11 +26,11 @@ public:
         return u << 16;
     }
 
-    static inline float32 UnpackFloat16FromUnsignedInt(uint32 value)
+    static inline float UnpackFloat16(uint32 value)
     {
         union {
             uint32 u;
-            float32 f;
+            float f;
         };
 
         u = value >> 16;
@@ -38,7 +38,7 @@ public:
         return f / 65535.0f;
     }
 
-    static inline uint32 PackFloat32InUInt32(float32 value)
+    static inline uint32 PackFloat(float value)
     {
         union {
             uint32 u;
@@ -50,7 +50,7 @@ public:
         return u;
     }
 
-    static inline float UnpackFloat32FromUnsignedInt(uint32 value)
+    static inline float UnpackFloat(uint32 value)
     {
         union {
             uint32 u;
@@ -62,7 +62,7 @@ public:
         return f;
     }
 
-    static inline uint32 PackColorU32(const Vector4 &vec)
+    static inline uint32 PackVec4f(const Vector4 &vec)
     {
         union {
             uint8 bytes[4];
@@ -77,7 +77,7 @@ public:
         return result;
     }
 
-    static inline Vector4 UnpackColor(uint32 value)
+    static inline Vec4f UnpackVec4f(uint32 value)
     {
         return {
             float(value & 0xff000000) / 255.0f,

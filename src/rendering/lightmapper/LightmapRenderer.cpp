@@ -229,14 +229,12 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
 
 // LightmapJob
 
-LightmapJob::LightmapJob(Array<LightmapEntity> entities, LightmapTraceMode trace_mode)
-    : m_entities(std::move(entities)),
-      m_trace_mode(trace_mode),
+LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities)
+    : m_scene(scene),
+      m_entities(std::move(entities)),
       m_is_ready { false },
       m_texel_index(0)
 {
-    
-
     BuildUVMap();
 
     // Flatten texel indices, grouped by mesh IDs
@@ -251,6 +249,13 @@ LightmapJob::LightmapJob(Array<LightmapEntity> entities, LightmapTraceMode trace
 
     m_is_ready.Set(true, MemoryOrder::RELAXED);
 }
+
+LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache)
+    : LightmapJob(scene, std::move(entities))
+{
+    m_triangle_cache = std::move(triangle_cache);
+}
+
 
 bool LightmapJob::IsCompleted() const
 {
@@ -463,12 +468,13 @@ void LightmapRenderer::Init()
 
 void LightmapRenderer::InitGame()
 {
-    static constexpr uint ideal_triangles_per_job = 10000;
+    static constexpr uint ideal_triangles_per_job = 0;//3000;
 
     // Build jobs
     m_parent->GetScene()->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)
     {
         Array<LightmapEntity> lightmap_entities;
+        HashMap<ID<Mesh>, Array<Triangle>> triangle_cache;
         uint num_triangles = 0;
 
         for (auto [entity, mesh_component, transform_component] : mgr.GetEntitySet<MeshComponent, TransformComponent>()) {
@@ -491,9 +497,9 @@ void LightmapRenderer::InitGame()
                 continue;
             }
 
-            if (num_triangles + streamed_mesh_data->GetMeshData().indices.Size() / 3 > ideal_triangles_per_job) {
+            if (ideal_triangles_per_job != 0 && num_triangles + streamed_mesh_data->GetMeshData().indices.Size() / 3 > ideal_triangles_per_job) {
                 if (lightmap_entities.Any()) {
-                    UniquePtr<LightmapJob> job(new LightmapJob(std::move(lightmap_entities)));
+                    UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(triangle_cache)));
 
                     AddJob(std::move(job));
                 }
@@ -504,6 +510,8 @@ void LightmapRenderer::InitGame()
             // Set triangle data in m_triangle_cache
             // On CPU, we need to cache the triangles for ray tracing
             if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
+                const Matrix4 &transform_matrix = transform_component.transform.GetMatrix();
+
                 auto ref = streamed_mesh_data->AcquireRef();
                 const MeshData &mesh_data = ref->GetMeshData();
 
@@ -532,7 +540,7 @@ void LightmapRenderer::InitGame()
                     triangle[1].bitangent = (normal_matrix * Vec4f(triangle[1].bitangent, 0.0f)).GetXYZ();
                     triangle[2].bitangent = (normal_matrix * Vec4f(triangle[2].bitangent, 0.0f)).GetXYZ();
 
-                    m_triangle_cache[mesh_component.mesh.GetID()].PushBack(triangle);
+                    triangle_cache[mesh_component.mesh.GetID()].PushBack(triangle);
                 }
             }
 
@@ -547,7 +555,7 @@ void LightmapRenderer::InitGame()
         }
 
         if (lightmap_entities.Any()) {
-            UniquePtr<LightmapJob> job(new LightmapJob(std::move(lightmap_entities)));
+            UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(triangle_cache)));
 
             AddJob(std::move(job));
         }
@@ -682,6 +690,9 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
     ByteBuffer bitmap_bytebuffer(float_array.Size() * sizeof(float), float_array.Data());
     UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(bitmap_bytebuffer)));
     (void)streamed_data->Load();
+
+    Bitmap<4> bitmap(float_array, uv_map.width, uv_map.height);
+    bitmap.Write("Lightmap_" + String::ToString(rand() % 150) + ".bmp");
 
     Handle<Texture> lightmap_texture = CreateObject<Texture>(
         Extent3D { uv_map.width, uv_map.height, 1 },

@@ -210,6 +210,21 @@ public:
     {
     }
 
+    Bitmap(const Array<float> &floats, uint width, uint height)
+        : m_width(width),
+          m_height(height)
+    {
+        m_pixels.Resize(width * height);
+
+        const uint bpp = PixelType::byte_size;
+
+        for (uint i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += bpp, j++) {
+            for (uint k = 0; k < bpp; k++) {
+                m_pixels[j].bytes[k] = static_cast<ubyte>(floats[i + k] * 255.0f);
+            }
+        }
+    }
+
     Bitmap(uint width, uint height)
         : m_width(width),
           m_height(height)
@@ -400,6 +415,10 @@ public:
         }
 
         int total_height = t2.y-t0.y;
+
+        if (total_height == 0) {
+            return;
+        }
 
         for (int y = t0.y; y <= t1.y; y++) { 
             int segment_height = t1.y - t0.y + 1; 

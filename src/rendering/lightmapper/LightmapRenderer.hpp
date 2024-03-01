@@ -122,7 +122,9 @@ class LightmapJob
 public:
     static constexpr uint num_multisamples = 1;
 
-    LightmapJob(Array<LightmapEntity> entities, LightmapTraceMode trace_mode);
+    LightmapJob(Scene *scene, Array<LightmapEntity> entities);
+    LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache);
+
     LightmapJob(const LightmapJob &other)                   = delete;
     LightmapJob &operator=(const LightmapJob &other)        = delete;
     LightmapJob(LightmapJob &&other) noexcept               = delete;
@@ -134,6 +136,9 @@ public:
 
     const LightmapUVMap &GetUVMap() const
         { return m_uv_map; }
+
+    Scene *GetScene() const
+        { return m_scene; }
 
     const Array<LightmapEntity> &GetEntities() const
         { return m_entities; }
@@ -159,7 +164,7 @@ public:
 private:
     Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
 
-    LightmapTraceMode                   m_trace_mode;
+    Scene                               *m_scene;
     Array<LightmapEntity>               m_entities;
 
     LightmapUVMap                       m_uv_map;

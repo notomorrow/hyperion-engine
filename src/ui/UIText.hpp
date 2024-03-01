@@ -30,17 +30,14 @@ class InputManager;
 
 namespace hyperion::v2 {
 
-;
-
 class FontMap
 {
 public:
     FontMap(
         const Handle<Texture> &texture,
         Extent2D char_size
-    )
-        : m_texture(texture),
-          m_char_size(char_size)
+    ) : m_texture(texture),
+        m_char_size(char_size)
     {
         int x_position = 0;
         int y_position = 0;
@@ -49,10 +46,10 @@ public:
         const uint num_chars_per_col = NumCharsPerCol();
 
         for (int ch = 16; ch < 255; ch++) {
-            m_char_texture_coords[ch] = Vector2(
+            m_char_texture_coords[ch] = Vec2i {
                 x_position,
                 y_position
-            );
+            };
 
             if (x_position == num_chars_per_row - 1) {
                 x_position = 0;
@@ -126,26 +123,26 @@ public:
         return m_texture->GetExtent().height / m_char_size.height;
     }
 
-    Vector2 GetCharOffset(char ch) const
+    Vec2f GetCharOffset(char ch) const
     {
-        return m_char_texture_coords[ch] / Vector2(NumCharsPerCol(), NumCharsPerRow());
+        return Vec2f(m_char_texture_coords[ch]) / Vec2f(NumCharsPerCol(), NumCharsPerRow());
     }
 
-    Vector2 GetScaling() const
+    Vec2f GetScaling() const
     {
         if (!m_texture) {
-            return Vector2::zero;
+            return Vec2f::zero;
         }
 
         const Extent3D extent = m_texture->GetExtent();
 
-        return Vector2(m_char_size) / Vector2(float(extent.width), float(extent.height));
+        return Vec2f(m_char_size) / Vec2f(float(extent.width), float(extent.height));
     }
 
 private:
-    Handle<Texture> m_texture;
-    Extent2D m_char_size;
-    FixedArray<Vector2, 255> m_char_texture_coords;
+    Handle<Texture>         m_texture;
+    Extent2D                m_char_size;
+    FixedArray<Vec2i, 255>  m_char_texture_coords;
 };
 
 class UIText

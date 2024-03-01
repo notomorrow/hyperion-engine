@@ -321,6 +321,7 @@ public:
 
     Vec2 &Normalize();
     Vec2 &Lerp(const Vec2 &to, const float amt);
+    float Dot(const Vec2 &other) const;
 
     static Vec2 Abs(const Vec2 &);
     static Vec2 Round(const Vec2 &);

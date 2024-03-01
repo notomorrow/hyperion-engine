@@ -28,7 +28,7 @@ public:
     Color(float r, float g, float b, float a = 1.0f);
     explicit Color(float rgba);
     Color(const Color &other);
-    Color(const Vector4 &vec);
+    Color(const Vec4f &vec);
 
     HYP_FORCE_INLINE float GetRed() const
         { return float(bytes[0]) / 255.0f; }
@@ -75,8 +75,8 @@ public:
     HYP_FORCE_INLINE explicit operator uint32() const
         { return value; }
 
-    HYP_FORCE_INLINE explicit operator Vector4() const
-        { return Vector4(GetRed(), GetGreen(), GetBlue(), GetAlpha()); }
+    HYP_FORCE_INLINE explicit operator Vec4f() const
+        { return Vec4f(GetRed(), GetGreen(), GetBlue(), GetAlpha()); }
 
     HYP_FORCE_INLINE uint32 Packed() const
         { return value; }

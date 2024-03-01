@@ -100,7 +100,8 @@ struct UniquePtrHolder
         dtor(value);
     }
 
-    HYP_FORCE_INLINE explicit operator bool() const
+    HYP_FORCE_INLINE
+    explicit operator bool() const
         { return value != nullptr; }
 };
 
@@ -133,7 +134,9 @@ public:
         Reset();
     }
 
-    [[nodiscard]] HYP_FORCE_INLINE void *Get() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    void *Get() const
         { return m_holder.value; }
 
     explicit operator bool() const
@@ -158,7 +161,8 @@ public:
         { return m_holder.type_id; }
 
     /*! \brief Destroys any currently held object.  */
-    HYP_FORCE_INLINE void Reset()
+    HYP_FORCE_INLINE
+    void Reset()
     {
         if (m_holder) {
             m_holder.Destruct();
@@ -170,7 +174,9 @@ public:
         The value held within the UniquePtr will be unset,
         and the T* returned from this method will NEED to be deleted
         manually. */
-    [[nodiscard]] HYP_FORCE_INLINE void *Release()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    void *Release()
     {
         if (m_holder) {
             auto *ptr = m_holder.value;
@@ -182,7 +188,8 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE UniquePtr<T> CastUnsafe()
+    HYP_FORCE_INLINE
+    UniquePtr<T> CastUnsafe()
     {
         UniquePtr<T> unique;
         unique.m_holder = m_holder;
@@ -289,19 +296,24 @@ public:
 
     ~UniquePtr() = default;
 
-    HYP_FORCE_INLINE T *Get() const
+    HYP_FORCE_INLINE
+    T *Get() const
         { return static_cast<T *>(Base::m_holder.value); }
 
-    HYP_FORCE_INLINE T *operator->() const
+    HYP_FORCE_INLINE
+    T *operator->() const
         { return Get(); }
 
-    HYP_FORCE_INLINE T &operator*()
+    HYP_FORCE_INLINE
+    T &operator*()
         { return *Get(); }
 
-    HYP_FORCE_INLINE const T &operator*() const
+    HYP_FORCE_INLINE
+    const T &operator*() const
         { return *Get(); }
     
-    HYP_FORCE_INLINE bool operator<(const UniquePtr &other) const
+    HYP_FORCE_INLINE
+    bool operator<(const UniquePtr &other) const
         { return uintptr_t(Base::Get()) < uintptr_t(other.Base::Get()); }
     
     /*! \brief Drops any currently held valeu and constructs a new value using \ref{value}.
@@ -355,8 +367,13 @@ public:
         }
     }
 
+    HYP_FORCE_INLINE
+    void Reset(std::nullptr_t)
+        { Reset(); }
+
     /*! \brief Destroys any currently held object.  */
-    HYP_FORCE_INLINE void Reset()
+    HYP_FORCE_INLINE
+    void Reset()
         { Base::Reset(); }
 
     /*! \brief Releases the ptr to be managed externally.
@@ -404,7 +421,9 @@ public:
         no cast is performed and a null UniquePtr is returned. Otherwise, the
         value currently held in the UniquePtr being casted is std::move'd to the returned value. */
     template <class Ty>
-    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<Ty> Cast()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    UniquePtr<Ty> Cast()
     {
         if (Is<Ty>()) {
             return Base::CastUnsafe<Ty>();
@@ -482,43 +501,17 @@ public:
 
     ~UniquePtr() = default;
 
-    HYP_FORCE_INLINE void *Get() const
+    HYP_FORCE_INLINE
+    void *Get() const
         { return Base::Get(); }
     
-    HYP_FORCE_INLINE bool operator<(const UniquePtr &other) const
+    HYP_FORCE_INLINE
+    bool operator<(const UniquePtr &other) const
         { return uintptr_t(Base::Get()) < uintptr_t(other.Base::Get()); }
 
-    // template <class T>
-    // void Set(const T &value)
-    // {
-    //     Base::Reset();
-        
-    //     Base::m_holder.template Construct<T>(value);
-    // }
-
-    // template <class T>
-    // void Set(T &&value)
-    // {
-    //     Base::Reset();
-        
-    //     Base::m_holder.template Construct<T>(std::move(value));
-    // }
-
-    // /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
-    //     if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
-    //     automatically. */
-    // template <class T>
-    // void Reset(T *ptr)
-    // {
-    //     Base::Reset();
-
-    //     if (ptr) {
-    //         Base::m_holder.template TakeOwnership<T>(ptr);
-    //     }
-    // }
-
     /*! \brief Destroys any currently held object.  */
-    HYP_FORCE_INLINE void Reset()
+    HYP_FORCE_INLINE
+    void Reset()
         { Base::Reset(); }
 
     template <class Ty>
@@ -532,12 +525,18 @@ public:
     /*! \brief Attempts to cast the pointer directly to the given type.
         If the types are not EXACT (or T is not void, in the case of a void pointer),
         no cast is performed and a null UniquePtr is returned. Otherwise, the
-        value currently held in the UniquePtr being casted is std::move'd to the returned value.
+        value currently held in the UniquePtr being casted is moved to the returned value.
         
-        Please remember, casting from UniquePtr<void> -> UniquePtr<T> will not be able to do any base class checking
-        so you can only go from UniquePtr<void> to the exact specified type! */
+        \note Casting from UniquePtr<void> -> UniquePtr<T> will not be able to do any base class checking
+        so you can only go from UniquePtr<void> to the exact specified type!
+
+        \tparam Ty The type to cast to.
+        \returns A UniquePtr<Ty> if the cast is successful, otherwise a null UniquePtr.
+    */
     template <class Ty>
-    [[nodiscard]] HYP_FORCE_INLINE UniquePtr<Ty> Cast()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    UniquePtr<Ty> Cast()
     {
         if (Is<Ty>()) {
             return Base::CastUnsafe<Ty>();
@@ -548,7 +547,10 @@ public:
 
     /*! \brief Constructs a new RefCountedPtr from this object.
         The value held within this UniquePtr will be unset,
-        the RefCountedPtr taking over management of the pointer. */
+        the RefCountedPtr taking over management of the pointer.
+
+        \returns A reference counted pointer to the value held in this UniquePtr.
+    */
     template <class CountType = uint>
     [[nodiscard]] RefCountedPtr<void, CountType> MakeRefCounted()
     {

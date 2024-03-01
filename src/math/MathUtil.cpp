@@ -70,6 +70,23 @@ Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec3f &v0, const Vec3f &v1
 
 Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec2f &v0, const Vec2f &v1, const Vec2f &v2, const Vec2f &p)
 {
+ //   // http://www.blackpawn.com/texts/pointinpoly/
+	//// Compute vectors
+	//Vec2f v0 = p3 - p1;
+	//Vec2f v1 = p2 - p1;
+	//Vec2f v2 = p - p1;
+	//// Compute dot products
+	//float dot00 = v0.Dot(v0);
+	//float dot01 = v0.Dot(v1);
+	//float dot02 = v0.Dot(v2);
+	//float dot11 = v1.Dot(v1);
+	//float dot12 = v1.Dot(v2);
+	//// Compute barycentric coordinates
+	//float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+	//float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+	//float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+	//return Vec2f(u, v);
+
     Vec3f s[2];
     for (int i=2; i--; ) {
         s[i][0] = v2[i]-v0[i];

@@ -1,8 +1,9 @@
-#include "RenderEnvironment.hpp"
 #include <Engine.hpp>
+#include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
 
@@ -182,7 +183,7 @@ void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
 
-    AssertThrow(g_engine->GetConfig().Get(CONFIG_RT_SUPPORTED));
+    AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
     
     if (m_has_rt_radiance) {
         m_rt_radiance->ApplyTLASUpdates(flags);
@@ -198,7 +199,7 @@ void RenderEnvironment::RenderRTRadiance(Frame *frame)
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
 
-    AssertThrow(g_engine->GetConfig().Get(CONFIG_RT_SUPPORTED));
+    AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
     
     if (m_has_rt_radiance) {
         m_rt_radiance->Render(frame);
@@ -210,7 +211,7 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
 
-    AssertThrow(g_engine->GetConfig().Get(CONFIG_RT_SUPPORTED));
+    AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
     
     if (m_has_ddgi_probes) {
         const DirectionalLightShadowRenderer *shadow_map_renderer = GetRenderComponent<DirectionalLightShadowRenderer>();
