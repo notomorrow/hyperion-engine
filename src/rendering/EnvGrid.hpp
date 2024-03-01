@@ -30,9 +30,9 @@ struct RenderCommand_UpdateEnvProbeAABBsInGrid;
 
 struct EnvProbeCollection
 {
-    SizeType num_probes = 0;
-    FixedArray<uint, max_bound_ambient_probes * 2> indirect_indices = { 0 };
-    FixedArray<Handle<EnvProbe>, max_bound_ambient_probes> probes = { };
+    uint                                                    num_probes = 0;
+    FixedArray<uint, max_bound_ambient_probes * 2>          indirect_indices = { 0 };
+    FixedArray<Handle<EnvProbe>, max_bound_ambient_probes>  probes = { };
 
     // Must be called on init, before render thread starts using probes too
     // returns the index

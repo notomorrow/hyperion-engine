@@ -281,17 +281,17 @@ void Material::EnqueueRenderUpdates()
     MaterialShaderData shader_data {
         .albedo = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
         .packed_params = ShaderVec4<uint32>(
-            ByteUtil::PackColorU32(Vector4(
+            ByteUtil::PackVec4f(Vec4f(
                 GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
                 GetParameter<float>(MATERIAL_KEY_METALNESS),
                 GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
                 GetParameter<float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY)
             )),
-            ByteUtil::PackColorU32(Vector4(
+            ByteUtil::PackVec4f(Vec4f(
                 GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD)
             )),
-            ByteUtil::PackColorU32(Vector4()),
-            ByteUtil::PackColorU32(Vector4())
+            ByteUtil::PackVec4f(Vec4f { }),
+            ByteUtil::PackVec4f(Vec4f { })
         ),
         .uv_scale = GetParameter<Vector2>(MATERIAL_KEY_UV_SCALE),
         .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
@@ -473,6 +473,31 @@ void MaterialCache::Add(const Handle<Material> &material)
     );
 
     m_map.Set(hc.Value(), material);
+}
+
+Handle<Material> MaterialCache::CreateMaterial(
+    MaterialAttributes attributes,
+    const Material::ParameterTable &parameters,
+    const Material::TextureSet &textures
+)
+{
+    if (!attributes.shader_definition) {
+        attributes.shader_definition = ShaderDefinition {
+            HYP_NAME(Forward),
+            renderer::static_mesh_vertex_attributes
+        };
+    }
+    
+    auto handle = g_engine->CreateObject<Material>(
+        Name::Unique("material"),
+        attributes,
+        parameters,
+        textures
+    );
+
+    InitObject(handle);
+
+    return handle;
 }
 
 Handle<Material> MaterialCache::GetOrCreate(

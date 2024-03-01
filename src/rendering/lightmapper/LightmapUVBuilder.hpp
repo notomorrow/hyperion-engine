@@ -50,6 +50,8 @@ struct LightmapUVMap
     Array<LightmapUV>               uvs;
     HashMap<ID<Mesh>, Array<uint>>  mesh_to_uv_indices;
 
+    Bitmap<3> tmp_bitmap;
+
     Bitmap<3> ToBitmap() const;
     Array<float> ToFloatArray() const;
 };

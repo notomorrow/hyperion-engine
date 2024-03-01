@@ -15,12 +15,12 @@ Color::Color(uint32 hex)
 }
 
 Color::Color(float r, float g, float b, float a)
-    : value(ByteUtil::PackColorU32(Vector4(r, g, b, a)))
+    : value(ByteUtil::PackVec4f(Vec4f(r, g, b, a)))
 {
 }
 
 Color::Color(float rgba)
-    : value(ByteUtil::PackColorU32(Vector4(rgba, rgba, rgba, rgba)))
+    : value(ByteUtil::PackVec4f(Vec4f(rgba, rgba, rgba, rgba)))
 {
 }
 
@@ -29,8 +29,8 @@ Color::Color(const Color &other)
 {
 }
 
-Color::Color(const Vector4 &vec)
-    : value(ByteUtil::PackColorU32(vec))
+Color::Color(const Vec4f &vec)
+    : value(ByteUtil::PackVec4f(vec))
 {
 }
 

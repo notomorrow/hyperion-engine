@@ -32,7 +32,6 @@
 #include <util/ArgParse.hpp>
 #include <util/json/JSON.hpp>
 #include <rendering/lightmapper/LightmapRenderer.hpp>
-#include <rendering/lightmapper/LightmapTracer.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
 #include <core/net/Socket.hpp>
@@ -84,68 +83,17 @@
 // }
 
 
-template <class First, class Second>
-struct PairHelper
-{
-    static constexpr bool default_constructible = (std::is_default_constructible_v<First> && (std::is_default_constructible_v<Second>));
-    static constexpr bool copy_constructible = (std::is_copy_constructible_v<First> && (std::is_copy_constructible_v<Second>));
-    static constexpr bool copy_assignable = (std::is_copy_assignable_v<First> && (std::is_copy_assignable_v<Second>));
-    static constexpr bool move_constructible = (std::is_move_constructible_v<First> && (std::is_move_constructible_v<Second>));
-    static constexpr bool move_assignable = (std::is_move_assignable_v<First> && (std::is_move_assignable_v<Second>));
-};
-
-template <class First, class Second>
-struct Pair2 :
-    private ConstructAssignmentTraits<
-        PairHelper<First, Second>::default_constructible,
-        PairHelper<First, Second>::copy_constructible,
-        PairHelper<First, Second>::move_constructible,
-        Pair2<First, Second>
-    >
-{
-    First   first;
-    Second  second;
-
-    // template <typename = std::enable_if_t<std::is_default_constructible_v<First> && std::is_default_constructible_v<Second>>>
-    Pair2() = default;
-
-    Pair2(const First &first, const Second &second)
-        : first(first), second(second)
-    {
-    }
-
-    Pair2(const Pair2 &) = default;
-    Pair2(Pair2 &&) noexcept = default;
-
-    Pair2 &operator=(const Pair2 &) = default;
-    Pair2 &operator=(Pair2 &&) noexcept = default;
-
-    ~Pair2() = default;
-};
-
-
 SampleStreamer::SampleStreamer(RC<Application> application)
     : Game(application, ManagedGameInfo {
           "csharp/bin/Debug/net8.0/csharp.dll",
           "TestGame"
       })
 {
-    int i = 10;
-    int j = 5;
-    Pair<int, const int &> pair_test { i, j };
-    constexpr auto x = sizeof(pair_test);
-
-    const auto deducted_pair = Pair<const char *, int &> { "hello world", j };
-
-    constexpr auto y = std::is_move_assignable<decltype(pair_test)>::value;
-
-    DebugLog(LogType::Debug, "pair_test.first = %d, pair_test.second = %d\n", pair_test.first, pair_test.second);
 }
 
 void SampleStreamer::InitGame()
 {
     Game::InitGame();
-
 
     ArgParse args;
     args.Add("SignallingServerIP", "s", ArgParse::ARG_FLAGS_REQUIRED, ArgParse::ArgumentType::ARGUMENT_TYPE_STRING);

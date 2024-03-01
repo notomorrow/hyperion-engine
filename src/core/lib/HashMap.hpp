@@ -195,8 +195,8 @@ class HashMap : public ContainerBase<HashMap<KeyType, ValueType>, KeyType>
     }
 
 public:
-    using Base              = ContainerBase<HashMap<KeyType, ValueType>, KeyType>;
-    using KeyValuePairType  = KeyValuePair<KeyType, ValueType>;
+    using Base = ContainerBase<HashMap<KeyType, ValueType>, KeyType>;
+    using KeyValuePairType = KeyValuePair<KeyType, ValueType>;
 
     struct ConstIterator;
 
@@ -217,23 +217,28 @@ public:
         Iterator(Iterator &&other) noexcept             = default;
         Iterator &operator=(Iterator &other) &noexcept  = default;
         ~Iterator()                                     = default;
-
+        
+        HYP_FORCE_INLINE
         detail::HashElement<KeyType, ValueType> *operator->() const
             {  return bucket_iter.operator->(); }
-
+        
+        HYP_FORCE_INLINE
         detail::HashElement<KeyType, ValueType> &operator*()
             {  return bucket_iter.operator*(); }
-
+        
+        HYP_FORCE_INLINE
         const detail::HashElement<KeyType, ValueType> &operator*() const
             {  return bucket_iter.operator*(); }
-
+        
+        HYP_FORCE_INLINE
         Iterator &operator++()
         {
             AdvanceIterator(*this);
 
             return *this;
         }
-
+        
+        HYP_FORCE_INLINE
         Iterator operator++(int) const
         {
             Iterator iter(*this);
@@ -279,20 +284,24 @@ public:
         ConstIterator(ConstIterator &&other) noexcept               = default;
         ConstIterator &operator=(ConstIterator &other) &noexcept    = default;
         ~ConstIterator()                                            = default;
-
+        
+        HYP_FORCE_INLINE
         const detail::HashElement<KeyType, ValueType> *operator->() const
             {  return bucket_iter.operator->(); }
-
+        
+        HYP_FORCE_INLINE
         const detail::HashElement<KeyType, ValueType> &operator*() const
             {  return bucket_iter.operator*(); }
-
+        
+        HYP_FORCE_INLINE
         ConstIterator &operator++()
         {
             AdvanceIterator(*this);
 
             return *this;
         }
-
+        
+        HYP_FORCE_INLINE
         ConstIterator operator++(int) const
         {
             ConstIterator iter = *this;
@@ -301,19 +310,23 @@ public:
             return iter;
         }
 
-        [[nodiscard]] HYP_FORCE_INLINE
+        [[nodiscard]]
+        HYP_FORCE_INLINE
         bool operator==(const Iterator &other) const
             { return bucket_iter == other.bucket_iter; }
 
-        [[nodiscard]] HYP_FORCE_INLINE
+        [[nodiscard]]
+        HYP_FORCE_INLINE
         bool operator!=(const Iterator &other) const
             { return bucket_iter != other.bucket_iter; }
 
-        [[nodiscard]] HYP_FORCE_INLINE
+        [[nodiscard]]
+        HYP_FORCE_INLINE
         bool operator==(const ConstIterator &other) const
             { return bucket_iter == other.bucket_iter; }
 
-        [[nodiscard]] HYP_FORCE_INLINE
+        [[nodiscard]]
+        HYP_FORCE_INLINE
         bool operator!=(const ConstIterator &other) const
             { return bucket_iter != other.bucket_iter; }
     };
@@ -364,10 +377,14 @@ public:
     }
 #endif
 
-    [[nodiscard]] bool Any() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
         { return m_size != 0; }
 
-    [[nodiscard]] bool Empty() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
         { return m_size == 0; }
 
     [[nodiscard]] bool operator==(const HashMap &other) const
@@ -393,25 +410,39 @@ public:
         return true;
     }
 
-    [[nodiscard]] bool operator!=(const HashMap &other) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool operator!=(const HashMap &other) const
         { return !(*this == other); }
 
-    [[nodiscard]] SizeType Size() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType Size() const
         { return m_size; }
 
-    [[nodiscard]] SizeType BucketCount() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType BucketCount() const
         { return m_buckets.Size(); }
 
-    [[nodiscard]] SizeType BucketSize(SizeType bucket_index) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType BucketSize(SizeType bucket_index) const
         { return m_buckets[bucket_index].elements.Size(); }
 
-    [[nodiscard]] SizeType Bucket(const KeyType &key) const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType Bucket(const KeyType &key) const
         { return HashCode::GetHashCode(key).Value() % m_buckets.Size(); }
     
-    [[nodiscard]] double LoadFactor() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    double LoadFactor() const
         { return double(Size()) / double(BucketCount()); }
 
-    [[nodiscard]] static constexpr double MaxLoadFactor()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    static constexpr double MaxLoadFactor()
         { return desired_load_factor; }
 
     Iterator Find(const KeyType &key);
@@ -434,45 +465,57 @@ public:
     InsertResult Insert(Pair<KeyType, ValueType> &&pair);
 
     void Clear();
-
+    
+    HYP_FORCE_INLINE
     Iterator Begin()
         { return Iterator(this, typename detail::HashBucket<KeyType, ValueType>::Iterator { m_buckets.Data(), SizeType(0) }); }
-
+    
+    HYP_FORCE_INLINE
     Iterator End()
         { return Iterator(this, typename detail::HashBucket<KeyType, ValueType>::Iterator { m_buckets.Data() + m_buckets.Size(), SizeType(0) }); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator Begin() const
         { return ConstIterator(this, typename detail::HashBucket<KeyType, ValueType>::ConstIterator { m_buckets.Data(), SizeType(0) }); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator End() const
         { return ConstIterator(this, typename detail::HashBucket<KeyType, ValueType>::ConstIterator { m_buckets.Data() + m_buckets.Size(), SizeType(0) }); }
-
+    
+    HYP_FORCE_INLINE
     Iterator begin()
         { return Begin(); }
-
+    
+    HYP_FORCE_INLINE
     Iterator end()
         { return End(); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator begin() const
         { return Begin(); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator end() const
         { return End(); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator cbegin() const
         { return Begin(); }
-
+    
+    HYP_FORCE_INLINE
     ConstIterator cend() const
         { return End(); }
 
 private:
     void CheckAndRebuildBuckets();
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     detail::HashBucket<KeyType, ValueType> *GetBucketForHash(HashCode::ValueType hash)
         { return &m_buckets[hash % m_buckets.Size()]; }
 
-    [[nodiscard]] HYP_FORCE_INLINE
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const detail::HashBucket<KeyType, ValueType> *GetBucketForHash(HashCode::ValueType hash) const
         { return &m_buckets[hash % m_buckets.Size()]; }
 

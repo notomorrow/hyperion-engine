@@ -43,11 +43,16 @@ Vec2<float> &Vec2<float>::Normalize()
     return *this;
 }
 
-Vec2<float> &Vec2<float>::Lerp(const Vector2 &to, const float amt)
+Vec2<float> &Vec2<float>::Lerp(const Vec2<float> &to, const float amt)
 {
     x = MathUtil::Lerp(x, to.x, amt);
     y = MathUtil::Lerp(y, to.y, amt);
     return *this;
+}
+
+float Vec2<float>::Dot(const Vec2<float> &other) const
+{
+    return x * other.x + y * other.y;
 }
 
 Vec2<float> Vec2<float>::Abs(const Vec2<float> &vec)

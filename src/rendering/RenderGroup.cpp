@@ -179,76 +179,71 @@ void RenderGroup::Init()
         }
     }
 
-    // Do we need the callback anymore?
-    // @TODO: Refactor how global descriptor sets are created,
-    // and see if this can be removed
-    OnInit(g_engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...)
-    {
-        RenderPassRef render_pass;
+    
+    RenderPassRef render_pass;
+    
+    Array<FramebufferObjectRef> framebuffers;
+    framebuffers.Reserve(m_fbos.Size());
+
+    for (auto &fbo : m_fbos) {
+        if (!render_pass.IsValid()) {
+            render_pass = fbo->GetRenderPass();
+        }
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            framebuffers.PushBack(fbo->GetFramebuffer(frame_index));
+        }
+    }
+
+    m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
+
+    if (!m_pipeline->GetDescriptorTable().HasValue()) {
+        renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+
+        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        AssertThrow(descriptor_table != nullptr);
+        DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+        m_pipeline->SetDescriptorTable(std::move(descriptor_table));
+    }
+
+    AssertThrow(m_pipeline->GetDescriptorTable().HasValue());
+    AssertThrow(m_pipeline->GetDescriptorTable().Get() != nullptr);
+
+    m_pipeline.SetName(CreateNameFromDynamicString(ANSIString("GraphicsPipeline_") + m_shader->GetCompiledShader().GetName().LookupString()));
+
+    PUSH_RENDER_COMMAND(
+        CreateGraphicsPipeline, 
+        m_pipeline,
+        render_pass,
+        std::move(framebuffers),
+        m_command_buffers,
+        m_renderable_attributes
+    );
         
-        Array<FramebufferObjectRef> framebuffers;
-        framebuffers.Reserve(m_fbos.Size());
+    SetReady(true);
+
+    OnTeardown([this]()
+    {
+        SetReady(false);
+
+        m_indirect_renderer->Destroy();
+        m_shader.Reset();
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            SafeRelease(std::move(m_command_buffers[frame_index]));
+        }
+
+        m_command_buffers = { };
 
         for (auto &fbo : m_fbos) {
-            if (!render_pass.IsValid()) {
-                render_pass = fbo->GetRenderPass();
-            }
-
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                framebuffers.PushBack(fbo->GetFramebuffer(frame_index));
-            }
+            fbo.Reset();
         }
 
-        m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
-
-        if (!m_pipeline->GetDescriptorTable().HasValue()) {
-            renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
-
-            DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
-            AssertThrow(descriptor_table != nullptr);
-            DeferCreate(descriptor_table, g_engine->GetGPUDevice());
-
-            m_pipeline->SetDescriptorTable(std::move(descriptor_table));
-        }
-
-        AssertThrow(m_pipeline->GetDescriptorTable().HasValue());
-        AssertThrow(m_pipeline->GetDescriptorTable().Get() != nullptr);
-
-        m_pipeline.SetName(CreateNameFromDynamicString(ANSIString("GraphicsPipeline_") + m_shader->GetCompiledShader().GetName().LookupString()));
-
-        PUSH_RENDER_COMMAND(
-            CreateGraphicsPipeline, 
-            m_pipeline,
-            render_pass,
-            std::move(framebuffers),
-            m_command_buffers,
-            m_renderable_attributes
-        );
-            
-        SetReady(true);
-
-        OnTeardown([this]()
-        {
-            SetReady(false);
-
-            m_indirect_renderer->Destroy();
-            m_shader.Reset();
-
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                SafeRelease(std::move(m_command_buffers[frame_index]));
-            }
-
-            m_command_buffers = { };
-
-            for (auto &fbo : m_fbos) {
-                fbo.Reset();
-            }
-
-            SafeRelease(std::move(m_pipeline));
-            
-            HYP_SYNC_RENDER();
-        });
-    }));
+        SafeRelease(std::move(m_pipeline));
+        
+        HYP_SYNC_RENDER();
+    });
 }
 
 void RenderGroup::CollectDrawCalls()
