@@ -30,7 +30,7 @@ struct LightmapMeshData
 
     Array<uint32>   indices;
 
-    Array<float>    lightmap_uvs;
+    Array<Vec2f>    lightmap_uvs;
 };
 
 struct LightmapUV

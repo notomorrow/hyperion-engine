@@ -470,7 +470,7 @@ void LightmapRenderer::Init()
 
 void LightmapRenderer::InitGame()
 {
-    static constexpr uint ideal_triangles_per_job = 3000;
+    static constexpr uint ideal_triangles_per_job = 0;//3000;
 
     // Build jobs
     m_parent->GetScene()->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)

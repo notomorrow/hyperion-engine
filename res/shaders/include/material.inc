@@ -99,6 +99,9 @@ struct Material
 #define SAMPLE_TEXTURE(mat, index, texcoord) \
     Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
 
+#define SAMPLE_TEXTURE_NEAREST(mat, index, texcoord) \
+    Texture2D(sampler_nearest, GET_TEXTURE(mat, index), (texcoord))
+
 #define SAMPLE_TEXTURE_TRIPLANAR(mat, index, position, normal) \
     Texture2DTriplanar(texture_sampler, GET_TEXTURE(mat, index), (position), (normal))
 
