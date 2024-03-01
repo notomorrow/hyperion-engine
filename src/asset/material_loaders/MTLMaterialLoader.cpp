@@ -307,7 +307,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             textures.Set(it.mapping.key, std::move(texture));
         }
 
-        Handle<Material> material = g_material_system->CreateMaterial(
+        Handle<Material> material = g_material_system->GetOrCreate(
             attributes,
             parameters,
             textures

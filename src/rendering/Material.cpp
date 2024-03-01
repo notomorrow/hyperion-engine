@@ -380,9 +380,7 @@ void Material::SetTexture(TextureKey key, const Handle<Texture> &texture)
 
 void Material::SetTextureAtIndex(uint index, const Handle<Texture> &texture)
 {
-    const TextureKey key = static_cast<TextureKey>(m_textures.OrdinalToEnum(index));
-
-    return SetTexture(key, texture);
+    return SetTexture(m_textures.KeyAt(index), texture);
 }
 
 const Handle<Texture> &Material::GetTexture(TextureKey key) const
@@ -392,9 +390,7 @@ const Handle<Texture> &Material::GetTexture(TextureKey key) const
 
 const Handle<Texture> &Material::GetTextureAtIndex(uint index) const
 {
-    const TextureKey key = static_cast<TextureKey>(m_textures.OrdinalToEnum(index));
-
-    return GetTexture(key);
+    return GetTexture(m_textures.KeyAt(index));
 }
 
 Handle<Material> Material::Clone() const

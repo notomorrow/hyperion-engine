@@ -50,9 +50,11 @@ struct LightmapUVMap
     Array<LightmapUV>               uvs;
     HashMap<ID<Mesh>, Array<uint>>  mesh_to_uv_indices;
 
-    Bitmap<3> tmp_bitmap;
 
+    /*! \brief Write the UV map color data to RGB8 format. */
     Bitmap<3> ToBitmap() const;
+
+    /*! \brief Write the UV map color data to a 32-bit float array in RGBA32F format */
     Array<float> ToFloatArray() const;
 };
 

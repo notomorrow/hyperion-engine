@@ -342,9 +342,6 @@ void main()
         gbuffer_albedo = vec4(lightmap_texture.rgb, 0.0);
     }
 
-    // // debugging
-    // gbuffer_albedo = vec4(v_texcoord1.xy, 0.0, 0.0);
-
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));

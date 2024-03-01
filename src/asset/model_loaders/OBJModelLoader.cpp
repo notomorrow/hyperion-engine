@@ -360,7 +360,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 
         if (!obj_mesh.material.Empty() && material_library) {
             if (material_library->Has(obj_mesh.material)) {
-                material = material_library->Get(obj_mesh.material);
+                material = material_library->Get(obj_mesh.material)->Clone();
             } else {
                 DebugLog(
                     LogType::Warn,
