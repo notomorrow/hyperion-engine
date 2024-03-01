@@ -82,12 +82,6 @@ public:
     LightmapPathTracer &operator=(LightmapPathTracer &&other) noexcept  = delete;
     ~LightmapPathTracer();
 
-    const GPUBufferRef &GetRaysBuffer() const
-        { return m_rays_buffer; }
-
-    const GPUBufferRef &GetHitsBuffer() const
-        { return m_hits_buffer; }
-
     const RaytracingPipelineRef &GetPipeline() const
         { return m_raytracing_pipeline; }   
     
@@ -99,22 +93,21 @@ public:
 
     void Create();
     
-    void ReadHitsBuffer(LightmapHitsBuffer *ptr);
+    void ReadHitsBuffer(LightmapHitsBuffer *ptr, uint frame_index);
     void Trace(Frame *frame, const Array<LightmapRay> &rays, uint32 ray_offset);
 
 private:
     void CreateUniformBuffer();
     void UpdateUniforms(Frame *frame, uint32 ray_offset);
 
-    Handle<TLAS>            m_tlas;
+    Handle<TLAS>                                    m_tlas;
     
-    GPUBufferRef            m_uniform_buffer;
-    GPUBufferRef            m_rays_buffer;
-    GPUBufferRef            m_hits_buffer;
-    GPUBufferRef            m_hits_staging_buffer;
-    RaytracingPipelineRef   m_raytracing_pipeline;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  m_uniform_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  m_rays_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  m_hits_buffers;
+    RaytracingPipelineRef                           m_raytracing_pipeline;
 
-    Array<LightmapRay>      m_previous_frame_rays;
+    Array<LightmapRay>                              m_previous_frame_rays;
 };
 
 class LightmapJob
@@ -149,7 +142,8 @@ public:
     const Array<uint> &GetTexelIndices() const
         { return m_texel_indices; }
 
-    void BuildUVMap();
+    void Start();
+
     void GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays);
 
     /*! \brief Trace rays on the CPU.
@@ -157,11 +151,20 @@ public:
      */
     void TraceRaysOnCPU(const Array<LightmapRay> &rays);
 
+    /*! \brief Integrate ray hits into the lightmap.
+     *  \param rays The rays that were traced.
+     *  \param hits The hits to integrate.
+     *  \param num_hits The number of hits (must be the same as the number of rays).
+     */
+    void IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits);
+
     bool IsCompleted() const;
+    bool IsStarted() const;
     bool IsReady() const
         { return m_is_ready.Get(MemoryOrder::RELAXED); }
 
 private:
+    void BuildUVMap();
     Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
 
     Scene                               *m_scene;
@@ -174,6 +177,7 @@ private:
     HashMap<ID<Mesh>, Array<Triangle>>  m_triangle_cache; // for cpu tracing
 
     AtomicVar<bool>                     m_is_ready;
+    AtomicVar<bool>                     m_is_started;
     uint                                m_texel_index;
 };
 
