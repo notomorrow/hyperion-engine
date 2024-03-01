@@ -1268,7 +1268,8 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
             }
         };
 
-        PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
+        // PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
+        m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(Name::Unique("LightmapRenderer"));
 
         // shoot bullet on mouse button left
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {

@@ -390,7 +390,9 @@ Optional<LightmapHit> LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray)
                     const ID<Mesh> mesh_id = mesh_component->mesh.GetID();
 
                     auto triangle_cache_it = m_triangle_cache.Find(mesh_id);
-                    AssertThrow(triangle_cache_it != m_triangle_cache.End());
+                    if (triangle_cache_it == m_triangle_cache.End()) {
+                        continue;
+                    }
 
                     const Optional<RayHit> hit = ray.ray.TestTriangleList(
                         triangle_cache_it->second,
@@ -468,7 +470,7 @@ void LightmapRenderer::Init()
 
 void LightmapRenderer::InitGame()
 {
-    static constexpr uint ideal_triangles_per_job = 0;//3000;
+    static constexpr uint ideal_triangles_per_job = 3000;
 
     // Build jobs
     m_parent->GetScene()->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)

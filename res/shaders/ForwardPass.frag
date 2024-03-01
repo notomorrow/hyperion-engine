@@ -338,8 +338,8 @@ void main()
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP)) {
         vec4 lightmap_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
 
-        gbuffer_albedo = vec4(v_texcoord1.xy - lightmap_texture.rg, 0.0, 0.0);
-        // gbuffer_albedo = vec4(lightmap_texture.rgb, 0.0);
+        // gbuffer_albedo = vec4(v_texcoord1.xy - lightmap_texture.rg, 0.0, 0.0);
+        gbuffer_albedo = vec4(lightmap_texture.rgb, 0.0);
     }
 
     // // debugging

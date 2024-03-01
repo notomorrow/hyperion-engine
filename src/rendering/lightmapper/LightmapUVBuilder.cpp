@@ -46,13 +46,9 @@ Array<float> LightmapUVMap::ToFloatArray() const
             const uint index = (x + width) % width
                 + (height - y + height) % height * width;
 
-            // float(tmp_bitmap.GetPixelAtIndex(index).bytes[0]) * 255.0f;//
-            // float(tmp_bitmap.GetPixelAtIndex(index).bytes[1]) * 255.0f;//
-            // float(tmp_bitmap.GetPixelAtIndex(index).bytes[2]) * 255.0f;//
-
-            float_array[index * 4 + 0] = uvs[index].lightmap_uv.x;//(float(x) / float(width));//float(tmp_bitmap.GetPixelAtIndex(index).bytes[0]) * 255.0f; //uvs[index].color.x;//(float(x) / float(width)) - uvs[index].lightmap_uv.x;////uvs[index].color.x;
-            float_array[index * 4 + 1] = uvs[index].lightmap_uv.y;//(float(y) / float(height));//float(tmp_bitmap.GetPixelAtIndex(index).bytes[1]) * 255.0f; //uvs[index].color.y;//(float(y) / float(height)) - (1.0f - uvs[index].lightmap_uv.y);////uvs[index].color.y;
-            float_array[index * 4 + 2] = 0.0f;//float(tmp_bitmap.GetPixelAtIndex(index).bytes[2]) * 255.0f; //uvs[index].color.z;
+            float_array[index * 4 + 0] = uvs[index].lightmap_uv.x; //float(tmp_bitmap.GetPixelAtIndex(index).bytes[0]) * 255.0f; //(float(x) / float(width));// //uvs[index].color.x;//(float(x) / float(width)) - uvs[index].lightmap_uv.x;////uvs[index].color.x;
+            float_array[index * 4 + 1] = uvs[index].lightmap_uv.y; //float(tmp_bitmap.GetPixelAtIndex(index).bytes[1]) * 255.0f; //(float(y) / float(height));//float(tmp_bitmap.GetPixelAtIndex(index).bytes[1]) * 255.0f; //uvs[index].color.y;//(float(y) / float(height)) - (1.0f - uvs[index].lightmap_uv.y);////uvs[index].color.y;
+            float_array[index * 4 + 2] = 0.0f; //float(tmp_bitmap.GetPixelAtIndex(index).bytes[2]) * 255.0f; //0.0f;//float(tmp_bitmap.GetPixelAtIndex(index).bytes[2]) * 255.0f; //uvs[index].color.z;
             float_array[index * 4 + 3] = 1.0f;//uvs[index].color.w;
         }
     }
@@ -151,7 +147,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions pack_options { };
-    pack_options.resolution = 2048;
+    pack_options.resolution = 256;//2048;
     pack_options.padding = 8;
     pack_options.rotateCharts = true;
 
@@ -290,17 +286,17 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
         }
     }
     
-    //// temp
-    //for (uint x = 0; x < atlas->width; x++) {
+    // // temp
+    // for (uint x = 0; x < atlas->width; x++) {
     //    for (uint y = 0; y <  atlas->height; y++) {
     //        const uint index = (x + atlas->width) % atlas->width
     //            + (atlas->height - y + atlas->height) % atlas->height * atlas->width;
 
-    //        uv_map.tmp_bitmap.GetPixelAtIndex(index).SetRGBA(Vec4f(float(x) / float(uv_map.width), float(y) / float(uv_map.height), 0.0f, 1.0f));
+    //     //    uv_map.tmp_bitmap.GetPixelAtIndex(index).SetRGBA(Vec4f(float(x) / float(uv_map.width), float(y) / float(uv_map.height), 0.0f, 1.0f));
 
-    //        //uv_map.uvs[index].lightmap_uv = Vec2f(float(x) / float(uv_map.width), float(y) / float(uv_map.height));
+    //        uv_map.uvs[index].lightmap_uv = Vec2f(float(x) / float(uv_map.width), float(y) / float(uv_map.height));
     //    }
-    //}
+    // }
 
     FlatSet<uint> mesh_ids;
 
