@@ -30,7 +30,8 @@ void CrashHandler::Initialize()
         GFSDK_Aftermath_Version_API,
         GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_Vulkan,
         GFSDK_Aftermath_GpuCrashDumpFeatureFlags_DeferDebugInfoCallbacks,
-        [](const void *dump, const uint32 size, void *) {
+        [](const void *dump, const uint32 size, void *)
+        {
             GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status_Unknown;
             AssertThrow(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
@@ -141,7 +142,8 @@ void CrashHandler::Initialize()
             writer.Write(bytes.data(), bytes.size());
             writer.Close();
         },
-        [](const void *info, const uint32 size, void *) {
+        [](const void *info, const uint32 size, void *)
+        {
             GFSDK_Aftermath_ShaderDebugInfoIdentifier identifier = {};
             AssertThrow(GFSDK_Aftermath_GetShaderDebugInfoIdentifier(GFSDK_Aftermath_Version_API, info, size, &identifier) == GFSDK_Aftermath_Result_Success);
 
@@ -164,9 +166,11 @@ void CrashHandler::Initialize()
             writer.Write(bytes.data(), bytes.size());
             writer.Close();
         },
-        [](PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription, void *) {
+        [](PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription, void *)
+        {
         },
-        [](const void *, void *, void **, uint32 *) {
+        [](const void *, void *, void **, uint32 *)
+        {
         },
         nullptr
     );

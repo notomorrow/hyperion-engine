@@ -55,8 +55,8 @@ struct LightmapRay
         { return !(*this == other); }
 };
 
-constexpr uint max_ray_hits_gpu = 8192;
-constexpr uint max_ray_hits_cpu = 512;
+constexpr uint max_ray_hits_gpu = 512 * 512;
+constexpr uint max_ray_hits_cpu = 64 * 64;
 
 struct alignas(16) LightmapHit
 {
@@ -70,7 +70,7 @@ struct alignas(16) LightmapHitsBuffer
     FixedArray<LightmapHit, max_ray_hits_gpu>   hits;
 };
 
-static_assert(sizeof(LightmapHitsBuffer) == 131072);
+static_assert(sizeof(LightmapHitsBuffer) == max_ray_hits_gpu * 16);
 
 class LightmapPathTracer
 {
@@ -83,13 +83,7 @@ public:
     ~LightmapPathTracer();
 
     const RaytracingPipelineRef &GetPipeline() const
-        { return m_raytracing_pipeline; }   
-    
-    Array<LightmapRay> &GetPreviousFrameRays()
-        { return m_previous_frame_rays; }
-
-    const Array<LightmapRay> &GetPreviousFrameRays() const
-        { return m_previous_frame_rays; }
+        { return m_raytracing_pipeline; }
 
     void Create();
     
@@ -100,14 +94,13 @@ private:
     void CreateUniformBuffer();
     void UpdateUniforms(Frame *frame, uint32 ray_offset);
 
-    Handle<TLAS>                                    m_tlas;
+    Handle<TLAS>                                        m_tlas;
     
-    FixedArray<GPUBufferRef, max_frames_in_flight>  m_uniform_buffers;
-    FixedArray<GPUBufferRef, max_frames_in_flight>  m_rays_buffers;
-    FixedArray<GPUBufferRef, max_frames_in_flight>  m_hits_buffers;
-    RaytracingPipelineRef                           m_raytracing_pipeline;
-
-    Array<LightmapRay>                              m_previous_frame_rays;
+    FixedArray<GPUBufferRef, max_frames_in_flight>      m_uniform_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>      m_rays_buffers;
+    FixedArray<GPUBufferRef, max_frames_in_flight>      m_hits_buffers;
+    HeapArray<LightmapHitsBuffer, max_frames_in_flight> m_previous_hits_buffers;
+    RaytracingPipelineRef                               m_raytracing_pipeline;
 };
 
 class LightmapJob
@@ -142,6 +135,12 @@ public:
     const Array<uint> &GetTexelIndices() const
         { return m_texel_indices; }
 
+    const Array<LightmapRay> &GetPreviousFrameRays(uint frame_index) const
+        { return m_previous_frame_rays[frame_index]; }
+
+    void SetPreviousFrameRays(uint frame_index, Array<LightmapRay> rays)
+        { m_previous_frame_rays[frame_index] = std::move(rays); }
+
     void Start();
 
     void GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays);
@@ -167,18 +166,20 @@ private:
     void BuildUVMap();
     Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
 
-    Scene                               *m_scene;
-    Array<LightmapEntity>               m_entities;
+    Scene                                                   *m_scene;
+    Array<LightmapEntity>                                   m_entities;
 
-    LightmapUVMap                       m_uv_map;
+    LightmapUVMap                                           m_uv_map;
 
-    Array<uint>                         m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
+    Array<uint>                                             m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
 
-    HashMap<ID<Mesh>, Array<Triangle>>  m_triangle_cache; // for cpu tracing
+    HashMap<ID<Mesh>, Array<Triangle>>                      m_triangle_cache; // for cpu tracing
 
-    AtomicVar<bool>                     m_is_ready;
-    AtomicVar<bool>                     m_is_started;
-    uint                                m_texel_index;
+    FixedArray<Array<LightmapRay>, max_frames_in_flight>    m_previous_frame_rays;
+
+    AtomicVar<bool>                                         m_is_ready;
+    AtomicVar<bool>                                         m_is_started;
+    uint                                                    m_texel_index;
 };
 
 class LightmapRenderer : public RenderComponent<LightmapRenderer>

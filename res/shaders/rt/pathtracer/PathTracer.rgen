@@ -155,10 +155,11 @@ void main()
         payload.throughput = albedo;
         payload.emissive = vec4(0.0);
         payload.beta = vec4(1.0);
+        payload.normal = normal;
 
         for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
             vec4 throughput = payload.throughput;
-
+            vec3 normal = payload.normal;
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
             if (payload.distance < 0.0) {
@@ -175,9 +176,9 @@ void main()
                             continue;
                         }
 
-                        const float NdotL = max(dot(direction, light.position_intensity.xyz), 0.0);
-
-                        emissive += UINT_TO_VEC4(light.color_encoded) * (light.position_intensity.w * NdotL);
+                        const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
+                        emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                        break;
                     }
 
                     radiance += emissive * throughput;

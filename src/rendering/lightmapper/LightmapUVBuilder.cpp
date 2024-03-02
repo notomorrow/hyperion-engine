@@ -10,7 +10,7 @@ namespace hyperion::v2 {
 
 // LightmapUVMap
 
-Bitmap<3> LightmapUVMap::ToBitmap() const
+Bitmap<3> LightmapUVMap::ToRGB() const
 {
     AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
 
@@ -27,6 +27,30 @@ Bitmap<3> LightmapUVMap::ToBitmap() const
             };
 
             bitmap.GetPixelAtIndex(index) = { ubyte(color.x * 255.0f), ubyte(color.y * 255.0f), ubyte(color.z * 255.0f) };
+        }
+    }
+
+    return bitmap;
+}
+
+Bitmap<4> LightmapUVMap::ToRGBA() const
+{
+    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
+
+    Bitmap<4> bitmap(width, height);
+
+    for (uint x = 0; x < width; x++) {
+        for (uint y = 0; y < height; y++) {
+            const uint index = x + y * width;
+
+            const Vec4f color {
+                uvs[index].color.x,
+                uvs[index].color.y,
+                uvs[index].color.z,
+                uvs[index].color.w
+            };
+
+            bitmap.GetPixelAtIndex(index) = { ubyte(color.x * 255.0f), ubyte(color.y * 255.0f), ubyte(color.z * 255.0f), ubyte(color.w * 255.0f) };
         }
     }
 
@@ -136,6 +160,8 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
         mesh_decl.vertexPositionStride = sizeof(float) * 3;
         mesh_decl.vertexNormalData = lightmap_mesh_data.vertex_normals.Data();
         mesh_decl.vertexNormalStride = sizeof(float) * 3;
+        mesh_decl.vertexUvData = lightmap_mesh_data.vertex_uvs.Data();
+        mesh_decl.vertexUvStride = sizeof(float) * 2;
 
         xatlas::AddMeshError error = xatlas::AddMesh(atlas, mesh_decl);
 
@@ -151,9 +177,9 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions pack_options { };
-    //pack_options.resolution = 2048;
-    pack_options.padding = 0;
-    pack_options.texelsPerUnit = 32.0f;
+    pack_options.resolution = 2048;
+    pack_options.padding = 8;
+    //pack_options.texelsPerUnit = 128.0f;
     pack_options.bilinear = true;
     //pack_options.blockAlign = true;
     // pack_options.bruteForce = true;
@@ -223,11 +249,6 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) {
                         continue;
                     }
-
-                    const Vec2f lightmap_uv {
-                        float(P.x) / float(atlas->width),
-                        float(P.y) / float(atlas->height)
-                    };
 
                     const uint index = (P.x + atlas->width) % atlas->width
                         + (atlas->height - P.y + atlas->height) % atlas->height * atlas->width;

@@ -250,21 +250,21 @@ void main()
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
-    // if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
-    //     const Light light = HYP_GET_LIGHT(closest_light_index);
+    // @FIXME
 
-    //     payload.distance = closest_light_dist;
-    //     payload.emissive = vec3(UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w);
-    //     payload.throughput = vec3(0.0);
-    //     payload.entity_index = ~0u;
-    //     payload.triangle_index = ~0u;
-    //     payload.barycentric_coords = vec3(0.0);
-    //     payload.color = UINT_TO_VEC4(light.color_encoded).rgb;
-    //     payload.normal = normal;
-    //     payload.roughness = 0.0;
+    if (closest_light_index != ~0u) {
+        const Light light = HYP_GET_LIGHT(closest_light_index);
 
-    //     return;
-    // }
+        payload.distance = closest_light_dist;
+        payload.emissive += vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+        payload.entity_index = ~0u;
+        payload.triangle_index = ~0u;
+        payload.barycentric_coords = vec3(0.0);
+        payload.normal = normal;
+        payload.roughness = 0.0;
+
+        return;
+    }
 
     payload.emissive = vec4(0.0);
     payload.throughput *= material_color;

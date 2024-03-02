@@ -85,12 +85,8 @@ void main()
 {
     vec4 albedo = Texture2D(sampler_nearest, gbuffer_albedo_texture, texcoord);
     uint mask = VEC4_TO_UINT(Texture2D(sampler_nearest, gbuffer_mask_texture, texcoord));
-    vec4 normal = vec4(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)), 1.0);
+    vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
 
-    vec4 tangents_buffer = Texture2D(sampler_nearest, gbuffer_tangents_texture, texcoord);
-
-    vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
-    vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
     float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
@@ -100,9 +96,7 @@ void main()
     vec3 albedo_linear = albedo.rgb;
     vec3 result = vec3(0.0);
 
-    vec3 N = normalize(normal.xyz);
-    vec3 T = normalize(tangent.xyz);
-    vec3 B = normalize(bitangent.xyz);
+    vec3 N = normalize(normal);
     vec3 V = normalize(camera.position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
     
