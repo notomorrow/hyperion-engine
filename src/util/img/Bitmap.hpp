@@ -24,40 +24,40 @@ struct Pixel
 
     Pixel(Vec2f rg)
     {
-        bytes[0] = static_cast<ubyte>(rg.x * 255.0f);
+        bytes[0] = ubyte(rg.x * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(rg.y * 255.0f);
+            bytes[1] = ubyte(rg.y * 255.0f);
         }
     }
 
     Pixel(Vec3f rgb)
     {
-        bytes[0] = static_cast<ubyte>(rgb.x * 255.0f);
+        bytes[0] = ubyte(rgb.x * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(rgb.y * 255.0f);
+            bytes[1] = ubyte(rgb.y * 255.0f);
         }
 
         if constexpr (byte_size >= 3) {
-            bytes[2] = static_cast<ubyte>(rgb.z * 255.0f);
+            bytes[2] = ubyte(rgb.z * 255.0f);
         }
     }
 
     Pixel(Vec4f rgba)
     {
-        bytes[0] = static_cast<ubyte>(rgba.x * 255.0f);
+        bytes[0] = ubyte(rgba.x * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(rgba.y * 255.0f);
+            bytes[1] = ubyte(rgba.y * 255.0f);
         }
 
         if constexpr (byte_size >= 3) {
-            bytes[2] = static_cast<ubyte>(rgba.z * 255.0f);
+            bytes[2] = ubyte(rgba.z * 255.0f);
         }
 
         if constexpr (byte_size >= 4) {
-            bytes[3] = static_cast<ubyte>(rgba.w * 255.0f);
+            bytes[3] = ubyte(rgba.w * 255.0f);
         }
     }
 
@@ -107,45 +107,45 @@ struct Pixel
 
     void SetR(float r)
     {
-        bytes[0] = static_cast<ubyte>(r * 255.0f);
+        bytes[0] = ubyte(r * 255.0f);
     }
 
     void SetRG(float r, float g)
     {
-        bytes[0] = static_cast<ubyte>(r * 255.0f);
+        bytes[0] = ubyte(r * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(g * 255.0f);
+            bytes[1] = ubyte(g * 255.0f);
         }
     }
 
     void SetRGB(float r, float g, float b)
     {
-        bytes[0] = static_cast<ubyte>(r * 255.0f);
+        bytes[0] = ubyte(r * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(g * 255.0f);
+            bytes[1] = ubyte(g * 255.0f);
         }
 
         if constexpr (byte_size >= 3) {
-            bytes[2] = static_cast<ubyte>(b * 255.0f);
+            bytes[2] = ubyte(b * 255.0f);
         }
     }
 
     void SetRGBA(float r, float g, float b, float a)
     {
-        bytes[0] = static_cast<ubyte>(r * 255.0f);
+        bytes[0] = ubyte(r * 255.0f);
 
         if constexpr (byte_size >= 2) {
-            bytes[1] = static_cast<ubyte>(g * 255.0f);
+            bytes[1] = ubyte(g * 255.0f);
         }
 
         if constexpr (byte_size >= 3) {
-            bytes[2] = static_cast<ubyte>(b * 255.0f);
+            bytes[2] = ubyte(b * 255.0f);
         }
 
         if constexpr (byte_size >= 4) {
-            bytes[3] = static_cast<ubyte>(a * 255.0f);
+            bytes[3] = ubyte(a * 255.0f);
         }
     }
 
@@ -155,47 +155,55 @@ struct Pixel
     Pixel &operator=(Pixel &&other) noexcept    = default;
     ~Pixel()                                    = default;
 
-    Vector3 GetRGB() const
+    Vec3f GetRGB() const
     {
-        return Vector3(
-            static_cast<float>(bytes[2]) / 255.0f,
-            static_cast<float>(bytes[1]) / 255.0f,
-            static_cast<float>(bytes[0]) / 255.0f
+        return Vec3f(
+            float(bytes[0]) / 255.0f,
+            float(bytes[1]) / 255.0f,
+            float(bytes[2]) / 255.0f
         );
     }
 
-    void SetRGB(const Vector3 &rgb)
+    void SetRGB(const Vec3f &rgb)
     {
         for (uint i = 0; i < MathUtil::Min(byte_size, 3); i++) {
-            bytes[byte_size - i - 1] = static_cast<ubyte>(rgb[i] * 255.0f);
+            bytes[i] = ubyte(rgb[i] * 255.0f);
         }
     }
 
-    Vector4 GetRGBA() const
+    HYP_FORCE_INLINE
+    operator Vec3f() const
+        { return GetRGB(); }
+
+    Vec4f GetRGBA() const
     {
         if constexpr (byte_size < 4) {
-            return Vector4(
-                static_cast<float>(bytes[2]) / 255.0f,
-                static_cast<float>(bytes[1]) / 255.0f,
-                static_cast<float>(bytes[0]) / 255.0f,
+            return Vec4f(
+                float(bytes[0]) / 255.0f,
+                float(bytes[1]) / 255.0f,
+                float(bytes[2]) / 255.0f,
                 1.0f
             );
         } else {
-            return Vector4(
-                static_cast<float>(bytes[3]) / 255.0f,
-                static_cast<float>(bytes[2]) / 255.0f,
-                static_cast<float>(bytes[1]) / 255.0f,
-                static_cast<float>(bytes[0]) / 255.0f
+            return Vec4f(
+                float(bytes[0]) / 255.0f,
+                float(bytes[1]) / 255.0f,
+                float(bytes[2]) / 255.0f,
+                float(bytes[3]) / 255.0f
             );
         }
     }
 
-    void SetRGBA(const Vector4 &rgba)
+    void SetRGBA(const Vec4f &rgba)
     {
         for (uint i = 0; i < MathUtil::Min(byte_size, 4); i++) {
-            bytes[byte_size - i - 1] = static_cast<ubyte>(rgba[i] * 255.0f);
+            bytes[i] = ubyte(rgba[i] * 255.0f);
         }
     }
+
+    HYP_FORCE_INLINE
+    operator Vec4f() const
+        { return GetRGBA(); }
 };
 
 template <uint NumComponents>
@@ -220,7 +228,7 @@ public:
 
         for (uint i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += bpp, j++) {
             for (uint k = 0; k < bpp; k++) {
-                m_pixels[j].bytes[k] = static_cast<ubyte>(floats[i + k] * 255.0f);
+                m_pixels[j].bytes[k] = ubyte(floats[i + k] * 255.0f);
             }
         }
     }
@@ -353,7 +361,7 @@ public:
 
         for (uint i = 0; i < m_pixels.Size(); i++) {
            for (uint j = 0; j < PixelType::byte_size; j++) {
-                floats[i * PixelType::byte_size + j] = static_cast<float>(m_pixels[i].bytes[j]) / 255.0f;
+                floats[i * PixelType::byte_size + j] = float(m_pixels[i].bytes[j]) / 255.0f;
            }
         }
 

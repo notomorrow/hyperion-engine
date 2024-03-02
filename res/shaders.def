@@ -215,6 +215,9 @@ comp = TemporalBlending.comp
 permute = HORIZONTAL, OUTPUT(RGBA8 RGBA16F RGBA32F)
 comp = Blur.comp
 
+# Lightmapping
+[DilateLightmap]
+comp = lightmapping/DilateLightmap.comp.glsl
 
 # Third Party Shaders
 

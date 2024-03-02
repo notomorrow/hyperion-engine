@@ -33,6 +33,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer 
     EnvProbe current_env_probe;
 };
 
+#include "include/shared.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
 
@@ -82,12 +83,11 @@ void main()
 {
     vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);
     uint mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
-    vec4 normal = vec4(DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord)), 1.0);
+    vec3 normal = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
 
-    vec4 tangents_buffer = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_tangents_texture, texcoord);
-
-    vec3 tangent = UnpackNormalVec2(tangents_buffer.xy);
-    vec3 bitangent = UnpackNormalVec2(tangents_buffer.zw);
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(normal, tangent, bitangent);
 
     float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
@@ -103,9 +103,9 @@ void main()
     const float reflectance = 0.16 * material_reflectance * material_reflectance;
     vec4 F0 = vec4(albedo.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
 
-    vec3 N = normalize(normal.xyz);
-    vec3 T = normalize(tangent.xyz);
-    vec3 B = normalize(bitangent.xyz);
+    vec3 N = normalize(normal);
+    vec3 T = normalize(tangent);
+    vec3 B = normalize(bitangent);
     vec3 V = normalize(camera.position.xyz - position.xyz);
 
     float NdotV = max(0.0001, dot(N, V));

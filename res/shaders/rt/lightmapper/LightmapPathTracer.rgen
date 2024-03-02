@@ -64,14 +64,9 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer 
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-struct LightmapHit
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std430) buffer HitsBuffer
 {
-    vec4 color;
-};
-
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, size = 131072) buffer HitsBuffer
-{
-    LightmapHit hits[8192];
+    vec4 hits[512*512];
 };
 
 struct Ray
@@ -80,7 +75,7 @@ struct Ray
     vec4 direction;
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer) readonly buffer RaysBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std430) readonly buffer RaysBuffer
 {
     Ray rays[];
 };
@@ -90,8 +85,8 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
     RTRadianceUniforms rt_radiance_uniforms;
 };
 
-#define RAY_OFFSET 0.2
-#define NUM_SAMPLES 8
+#define RAY_OFFSET 0.25
+#define NUM_SAMPLES 16
 #define NUM_BOUNCES 4
 
 // uncomment to see the actual object colors
@@ -155,9 +150,11 @@ void main()
         payload.triangle_index = ~0u;
         payload.entity_index = ~0u;
         payload.beta = vec4(1.0);
+        payload.normal = ray.direction.xyz;
 
         for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
             vec4 throughput = payload.throughput;
+            vec3 normal = payload.normal;
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
             if (payload.distance < 0.0) {
@@ -174,7 +171,7 @@ void main()
                             continue;
                         }
 
-                        const float cos_theta = max(dot(direction, light.position_intensity.xyz), 0.0);
+                        const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
                         emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
                         break;
                     }
@@ -197,14 +194,19 @@ void main()
 
             payload.throughput /= max(p, 0.0001);
         
-            vec3 tangent;
-            vec3 bitangent;
-            ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+            // vec3 tangent;
+            // vec3 bitangent;
+            // ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
 
-            H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
-            H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+            // H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
+            // H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
                 
-            direction = reflect(direction, H);
+            // direction = reflect(direction, H);
+
+            direction = normalize(RandomInHemisphere(
+                vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
+                payload.normal
+            ));
 
             vec3 hit_position = origin + direction * payload.distance;
             origin = hit_position + payload.normal * RAY_OFFSET;
@@ -214,5 +216,5 @@ void main()
     vec4 color = radiance / float(NUM_SAMPLES);
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
-    hits[ray_index].color = color;
+    hits[ray_index] = color;
 }

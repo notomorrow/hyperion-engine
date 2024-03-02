@@ -15,8 +15,8 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
 {
     GPUBufferRef uniform_buffer;
 
-    RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer)(const GPUBufferRef &uniform_buffer)
-        : uniform_buffer(uniform_buffer)
+    RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer)(GPUBufferRef uniform_buffer)
+        : uniform_buffer(std::move(uniform_buffer))
     {
     }
 
@@ -155,10 +155,21 @@ void LightmapPathTracer::ReadHitsBuffer(LightmapHitsBuffer *ptr, uint frame_inde
         sizeof(LightmapHitsBuffer),
         ptr
     );
+
+    //Memory::MemCpy(ptr, &m_previous_hits_buffers[frame_index], sizeof(LightmapHitsBuffer));
 }
 
 void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uint32 ray_offset)
 {
+    const uint frame_index = frame->GetFrameIndex();
+    const uint previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
+
+    /*m_hits_buffers[previous_frame_index]->Read(
+        g_engine->GetGPUDevice(),
+        sizeof(LightmapHitsBuffer),
+        &m_previous_hits_buffers[previous_frame_index]
+    );*/
+
     UpdateUniforms(frame, ray_offset);
 
     { // rays buffer
@@ -169,10 +180,11 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
             ray_float_data[i * 8 + 0] = rays[i].ray.position.x;
             ray_float_data[i * 8 + 1] = rays[i].ray.position.y;
             ray_float_data[i * 8 + 2] = rays[i].ray.position.z;
-
+            ray_float_data[i * 8 + 3] = 1.0f;
             ray_float_data[i * 8 + 4] = rays[i].ray.direction.x;
             ray_float_data[i * 8 + 5] = rays[i].ray.direction.y;
             ray_float_data[i * 8 + 6] = rays[i].ray.direction.z;
+            ray_float_data[i * 8 + 7] = 0.0f;
         }
         
         bool rays_buffer_resized = false;
@@ -222,8 +234,6 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
         frame->GetCommandBuffer(),
         renderer::ResourceState::UNORDERED_ACCESS
     );
-
-    m_previous_frame_rays = rays;
 }
 
 // LightmapJob
@@ -279,6 +289,13 @@ bool LightmapJob::IsCompleted() const
 
     if (m_entities.Empty()) {
         return true;
+    }
+
+    // Ensure there are no rays remaining to be integrated
+    for (uint i = 0; i < max_frames_in_flight; i++) {
+        if (m_previous_frame_rays[i].Any()) {
+            return false;
+        }
     }
 
     if (m_texel_index >= m_texel_indices.Size() * num_multisamples) {
@@ -372,7 +389,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
 
         out_rays.PushBack(LightmapRay {
             Ray {
-                position,
+                position + normal * 0.01f,
                 normal
             },
             mesh.GetID(),
@@ -394,8 +411,9 @@ void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *h
         LightmapUVMap &uv_map = GetUVMap();
         LightmapUV &uv = uv_map.uvs[ray.texel_index];
 
-        //uv.color += Vec4f(hit.color * (1.0f / float(LightmapJob::num_multisamples)));
-        uv.color = (uv.color * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
+        uv.color += Vec4f(hit.color * (1.0f / float(num_multisamples)));
+
+        //uv.color = (uv.color * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
     }
 }
 
@@ -493,7 +511,7 @@ void LightmapRenderer::Init()
 
 void LightmapRenderer::InitGame()
 {
-    static constexpr uint ideal_triangles_per_job = 3000;
+    static constexpr uint ideal_triangles_per_job = 10000;
 
     // Build jobs
     m_parent->GetScene()->GetEntityManager()->PushCommand([this](EntityManager &mgr, GameCounter::TickUnit)
@@ -614,7 +632,14 @@ void LightmapRenderer::OnUpdate(GameCounter::TickUnit delta)
 
     Mutex::Guard guard(m_queue_mutex);
 
+    AssertThrow(!m_queue.Empty());
     LightmapJob *job = m_queue.Front().Get();
+
+    if (job->IsCompleted()) {
+        HandleCompletedJob(job);
+
+        return;
+    }
 
     // Start job if not started
     if (!job->IsStarted()) {
@@ -623,12 +648,6 @@ void LightmapRenderer::OnUpdate(GameCounter::TickUnit delta)
 
     // If in CPU mode, trace rays on CPU
     if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
-        if (job->IsCompleted()) {
-            HandleCompletedJob(job);
-
-            return;
-        }
-
         Array<LightmapRay> rays;
 
         job->GatherRays(max_ray_hits_cpu, rays);
@@ -641,6 +660,9 @@ void LightmapRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void LightmapRenderer::OnRender(Frame *frame)
 {
+    const uint frame_index = frame->GetFrameIndex();
+    const uint previous_frame_index = (frame_index + max_frames_in_flight - 1) % max_frames_in_flight;
+
     // Do nothing if not in GPU trace mode
     if (m_trace_mode != LIGHTMAP_TRACE_MODE_GPU) {
         return;
@@ -666,33 +688,41 @@ void LightmapRenderer::OnRender(Frame *frame)
     {
         Mutex::Guard guard(m_queue_mutex);
 
+        // Hack: ensure num_jobs has not changed
+        if (!m_num_jobs.Get(MemoryOrder::RELAXED)) {
+            return;
+        }
+
         LightmapJob *job = m_queue.Front().Get();
+
+        if (job->IsCompleted()) {
+            return;
+        }
 
         // Wait for job to be ready
         if (!job->IsReady()) {
             return;
         }
 
-        // Read ray hits from previous frame
-        const Array<LightmapRay> previous_frame_rays = std::move(m_path_tracer->GetPreviousFrameRays());
+        // Read ray hits from last time this frame was rendered
+        const Array<LightmapRay> &previous_rays = job->GetPreviousFrameRays(frame_index);
 
         // Read previous frame hits into CPU buffer
-        LightmapHitsBuffer hits_buffer { };
-        m_path_tracer->ReadHitsBuffer(&hits_buffer, (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight);
+        if (previous_rays.Any()) {
+            // @NOTE Use heap allocation to avoid stack overflow (max_ray_hits_gpu * sizeof(LightmapHit) > 1MB)
+            LightmapHitsBuffer *hits_buffer(new LightmapHitsBuffer);
+            m_path_tracer->ReadHitsBuffer(hits_buffer, frame_index);
 
-        if (previous_frame_rays.Any()) {
-            job->IntegrateRayHits(previous_frame_rays.Data(), hits_buffer.hits.Data(), previous_frame_rays.Size());
-        }
+            job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size());
 
-        if (job->IsCompleted()) {
-            HandleCompletedJob(job);
-
-            return;
+            delete hits_buffer;
         }
 
         ray_offset = job->GetTexelIndex() % MathUtil::Max(job->GetTexelIndices().Size(), 1u);
 
         job->GatherRays(max_ray_hits_gpu, current_frame_rays);
+
+        job->SetPreviousFrameRays(frame_index, current_frame_rays);
     }
 
     if (current_frame_rays.Any()) {
@@ -707,7 +737,30 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
 
     const LightmapUVMap &uv_map = job->GetUVMap();
 
-    ByteBuffer bitmap_bytebuffer(uv_map.ToBitmap().ToByteBuffer());
+    Bitmap<3> rgba_bitmap = uv_map.ToRGB();
+    Bitmap<3> rgba_bitmap_dilated = rgba_bitmap;
+
+    // Dilate lightmap
+    for (uint x = 0; x < rgba_bitmap.GetWidth(); x++) {
+        for (uint y = 0; y < rgba_bitmap.GetHeight(); y++) {
+            Vec3f color = rgba_bitmap.GetPixel(x, y);
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y - 1));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x, y - 1));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y - 1));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y + 1));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x, y + 1));
+            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y + 1));
+
+            rgba_bitmap_dilated.GetPixel(x, y) = color;
+        }
+    }
+
+    // Temp
+    rgba_bitmap.Write("lightmap_" + String::ToString(rand() % 150) + ".bmp");
+
+    ByteBuffer bitmap_bytebuffer(rgba_bitmap.ToByteBuffer());
     UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(bitmap_bytebuffer)));
     (void)streamed_data->Load();
 

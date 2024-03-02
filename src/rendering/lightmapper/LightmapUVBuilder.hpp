@@ -52,7 +52,9 @@ struct LightmapUVMap
 
 
     /*! \brief Write the UV map color data to RGB8 format. */
-    Bitmap<3> ToBitmap() const;
+    Bitmap<3> ToRGB() const;
+    /*! \brief Write the UV map color data to RGBA8 format. */
+    Bitmap<4> ToRGBA() const;
 
     /*! \brief Write the UV map color data to a 32-bit float array in RGBA32F format */
     Array<float> ToFloatArray() const;
