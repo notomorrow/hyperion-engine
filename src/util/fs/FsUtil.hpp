@@ -163,6 +163,12 @@ public:
 
     bool Open(BufferedReader &out) const;
 
+    /*! \brief Remove the file or directory at the path.
+     *
+     * \return true if the file or directory was removed, false otherwise.
+     */
+    bool Remove() const;
+
     static inline FilePath Current()
     {
         return FilePath(FileSystem::CurrentPath().c_str());
@@ -180,6 +186,11 @@ public:
 
         return FilePath(str.c_str());
     }
+
+    Array<FilePath> GetAllFilesInDirectory() const;
+
+    SizeType DirectorySize() const;
+    SizeType FileSize() const;
 };
 
 } // namespace hyperion

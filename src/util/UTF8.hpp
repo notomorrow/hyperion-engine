@@ -567,30 +567,47 @@ inline void utf8_charat(const char *str, char *dst, hyperion::SizeType max, hype
 
 using namespace hyperion;
 
-inline u8char *utf8_append(uint32_t cp, u8char *result)
+inline uint32 utf8_append(uint32_t cp, u8char *result)
 {
-    if (cp < 0x80) {
-        *(result++) = static_cast<u8char>(cp);
-    } else if (cp < 0x800) {
-        *(result++) = static_cast<u8char>((cp >> 6)            | 0xc0);
-        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
-    } else if (cp < 0x10000) {
-        *(result++) = static_cast<u8char>((cp >> 12)           | 0xe0);
-        *(result++) = static_cast<u8char>(((cp >> 6) & 0x3f)   | 0x80);
-        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
-    } else {
-        *(result++) = static_cast<u8char>((cp >> 18)           | 0xf0);
-        *(result++) = static_cast<u8char>(((cp >> 12) & 0x3f)  | 0x80);
-        *(result++) = static_cast<u8char>(((cp >> 6) & 0x3f)   | 0x80);
-        *(result++) = static_cast<u8char>((cp & 0x3f)          | 0x80);
+    if (result) {
+        uint32 len = 0;
+
+        if (cp < 0x80) {
+            result[len++] = u8char(cp);
+        } else if (cp < 0x800) {
+            result[len++] = u8char((cp >> 6)            | 0xc0);
+            result[len++] = u8char((cp & 0x3f)          | 0x80);
+        } else if (cp < 0x10000) {
+            result[len++] = u8char((cp >> 12)           | 0xe0);
+            result[len++] = u8char(((cp >> 6) & 0x3f)   | 0x80);
+            result[len++] = u8char((cp & 0x3f)          | 0x80);
+        } else {
+            result[len++] = u8char((cp >> 18)           | 0xf0);
+            result[len++] = u8char(((cp >> 12) & 0x3f)  | 0x80);
+            result[len++] = u8char(((cp >> 6) & 0x3f)   | 0x80);
+            result[len++] = u8char((cp & 0x3f)          | 0x80);
+        }
+
+        return len;
     }
 
-    return result;
+    if (cp < 0x80) {
+        return 1;
+    } else if (cp < 0x800) {
+        return 2;
+    } else if (cp < 0x10000) {
+        return 3;
+    } else {
+        return 4;
+    }
 }
 
-
-inline u8char *utf16to8(u16char *start, u16char *end, u8char *result)
+/*! \brief Pass nullptr to \ref{result} on the first call to get the size needed for the buffer.
+ * *  Then call the function again with the memory allocated for \ref{result}. */
+inline uint32 utf16_to_utf8(const u16char *start, const u16char *end, u8char *result)
 {
+    uint32 len = 0;
+
     while (start != end) {
         uint32 cp = HYP_UTF_MASK16(*start++);
         // Take care of surrogate pairs first
@@ -603,10 +620,45 @@ inline u8char *utf16to8(u16char *start, u16char *end, u8char *result)
             AssertThrow(!HYP_UTF_IS_TRAIL_SURROGATE(cp));
         }
 
-        result = utf8_append(cp, result);
+        len += utf8_append(cp, result);
     }
 
-    return result;
+    return len;
+}
+
+/*! \brief Pass nullptr to \ref{result} on the first call to get the size needed for the buffer.
+ * *  Then call the function again with the memory allocated for \ref{result}. */
+inline uint32 utf32_to_utf8(const u32char *start, const u32char *end, u8char *result)
+{
+    uint32 len = 0;
+
+    while (start != end) {
+        uint32 cp = *start++;
+
+        len += utf8_append(cp, result);
+    }
+
+    return len;
+}
+
+/*! \brief Pass nullptr to \ref{result} on the first call to get the size needed for the buffer.
+ * *  Then call the function again with the memory allocated for \ref{result}. */
+inline uint32 wide_to_utf8(const wchar_t *start, const wchar_t *end, u8char *result)
+{
+#ifdef _WIN32
+    uint32 len = 0;
+
+    if (result) {
+        len = WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), (char *)result, 0, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), (char *)result, len, NULL, NULL);
+    } else {
+        len = WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), NULL, 0, NULL, NULL);
+    }
+
+    return len;
+#else
+    return utf32to8(reinterpret_cast<u32char *>(start), reinterpret_cast<u32char *>(end), result);
+#endif
 }
 
 /*! \brief How to use:

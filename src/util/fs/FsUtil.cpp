@@ -124,6 +124,11 @@ int FilePath::MkDir() const
 #endif
 }
 
+bool FilePath::Remove() const
+{
+    return std::filesystem::remove(Data());
+}
+
 bool FilePath::Exists() const
 {
     struct stat st;
@@ -166,6 +171,43 @@ bool FilePath::Open(BufferedReader &out) const
     out = BufferedReader(*this);
 
     return true;
+}
+
+Array<FilePath> FilePath::GetAllFilesInDirectory() const
+{
+    Array<FilePath> files;
+
+    for (const auto &entry : std::filesystem::directory_iterator(Data())) {
+        if (entry.is_regular_file()) {
+            files.PushBack(WideString(entry.path().c_str()).ToUTF8());
+        }
+    }
+
+    return files;
+}
+
+SizeType FilePath::DirectorySize() const
+{
+    SizeType size = 0;
+
+    for (const auto &entry : std::filesystem::directory_iterator(Data())) {
+        if (entry.is_regular_file()) {
+            size += entry.file_size();
+        }
+    }
+
+    return size;
+}
+
+SizeType FilePath::FileSize() const
+{
+    struct stat st;
+
+    if (stat(Data(), &st) != 0) {
+        return 0;
+    }
+
+    return st.st_size;
 }
 
 } // namespace hyperion

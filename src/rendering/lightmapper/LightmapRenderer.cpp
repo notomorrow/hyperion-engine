@@ -737,8 +737,8 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
 
     const LightmapUVMap &uv_map = job->GetUVMap();
 
-    Bitmap<3> rgba_bitmap = uv_map.ToRGB();
-    Bitmap<3> rgba_bitmap_dilated = rgba_bitmap;
+    Bitmap<4, float> rgba_bitmap = uv_map.ToRGBA32F();
+    Bitmap<4, float> rgba_bitmap_dilated = rgba_bitmap;
 
     // Dilate lightmap
     for (uint x = 0; x < rgba_bitmap.GetWidth(); x++) {
@@ -757,7 +757,45 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
         }
     }
 
-    // Temp
+    rgba_bitmap = rgba_bitmap_dilated;
+
+    // Apply bilateral blur
+    Bitmap<4, float> rgba_bitmap_blurred = rgba_bitmap;
+
+    for (uint x = 0; x < rgba_bitmap.GetWidth(); x++) {
+        for (uint y = 0; y < rgba_bitmap.GetHeight(); y++) {
+            Vec3f color = Vec3f(0.0f);
+
+            float total_weight = 0.0f;
+
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    const uint nx = x + dx;
+                    const uint ny = y + dy;
+
+                    if (nx >= rgba_bitmap.GetWidth() || ny >= rgba_bitmap.GetHeight()) {
+                        continue;
+                    }
+
+                    const Vec3f neighbor_color = rgba_bitmap.GetPixel(nx, ny);
+
+                    const float spatial_weight = MathUtil::Exp(-float(dx * dx + dy * dy) / (2.0f * 1.0f));
+                    const float color_weight = MathUtil::Exp(-(neighbor_color - rgba_bitmap.GetPixel(x, y)).LengthSquared() / (2.0f * 0.1f));
+
+                    const float weight = spatial_weight * color_weight;
+
+                    color += neighbor_color * weight;
+                    total_weight += weight;
+                }
+            }
+
+            rgba_bitmap_blurred.GetPixel(x, y) = color / MathUtil::Max(total_weight, MathUtil::epsilon_f);
+        }
+    }
+
+    rgba_bitmap = rgba_bitmap_blurred;
+    
+    // Temp; write to rgb8 bitmap
     rgba_bitmap.Write("lightmap_" + String::ToString(rand() % 150) + ".bmp");
 
     ByteBuffer bitmap_bytebuffer(rgba_bitmap.ToByteBuffer());
@@ -766,7 +804,7 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
 
     Handle<Texture> lightmap_texture = CreateObject<Texture>(
         Extent3D { uv_map.width, uv_map.height, 1 },
-        InternalFormat::RGB8,
+        InternalFormat::RGBA32F,
         ImageType::TEXTURE_TYPE_2D,
         FilterMode::TEXTURE_FILTER_LINEAR,
         WrapMode::TEXTURE_WRAP_REPEAT,

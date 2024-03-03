@@ -13,139 +13,131 @@
 
 namespace hyperion::v2 {
 
-template <uint NumComponents>
+template <class ComponentType, uint NumComponents>
 struct Pixel
 {
-    static constexpr uint byte_size = NumComponents > 1 ? NumComponents : 1;
+    static constexpr uint num_components = NumComponents;
 
-    ubyte bytes[byte_size];
+    ComponentType components[NumComponents];
 
     Pixel() = default;
 
     Pixel(Vec2f rg)
     {
-        bytes[0] = ubyte(rg.x * 255.0f);
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(rg.x * 255.0f);
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(rg.y * 255.0f);
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(rg.y * 255.0f);
+            }
+        } else {
+            components[0] = rg.x;
+
+            if constexpr (num_components >= 2) {
+                components[1] = rg.y;
+            }
         }
     }
 
     Pixel(Vec3f rgb)
     {
-        bytes[0] = ubyte(rgb.x * 255.0f);
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(rgb.x * 255.0f);
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(rgb.y * 255.0f);
-        }
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(rgb.y * 255.0f);
+            }
 
-        if constexpr (byte_size >= 3) {
-            bytes[2] = ubyte(rgb.z * 255.0f);
+            if constexpr (num_components >= 3) {
+                components[2] = ubyte(rgb.z * 255.0f);
+            }
+        } else {
+            components[0] = rgb.x;
+
+            if constexpr (num_components >= 2) {
+                components[1] = rgb.y;
+            }
+
+            if constexpr (num_components >= 3) {
+                components[2] = rgb.z;
+            }
         }
     }
 
     Pixel(Vec4f rgba)
     {
-        bytes[0] = ubyte(rgba.x * 255.0f);
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(rgba.x * 255.0f);
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(rgba.y * 255.0f);
-        }
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(rgba.y * 255.0f);
+            }
 
-        if constexpr (byte_size >= 3) {
-            bytes[2] = ubyte(rgba.z * 255.0f);
-        }
+            if constexpr (num_components >= 3) {
+                components[2] = ubyte(rgba.z * 255.0f);
+            }
 
-        if constexpr (byte_size >= 4) {
-            bytes[3] = ubyte(rgba.w * 255.0f);
-        }
-    }
+            if constexpr (num_components >= 4) {
+                components[3] = ubyte(rgba.w * 255.0f);
+            }
+        } else {
+            components[0] = rgba.x;
 
-    Pixel(ubyte r)
-    {
-        bytes[0] = r;
-    }
+            if constexpr (num_components >= 2) {
+                components[1] = rgba.y;
+            }
 
-    Pixel(ubyte r, ubyte g)
-    {
-        bytes[0] = r;
+            if constexpr (num_components >= 3) {
+                components[2] = rgba.z;
+            }
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = g;
-        }
-    }
-
-    Pixel(ubyte r, ubyte g, ubyte b)
-    {
-        bytes[0] = r;
-
-        if constexpr (byte_size >= 2) {
-            bytes[1] = g;
-        }
-
-        if constexpr (byte_size >= 3) {
-            bytes[2] = b;
+            if constexpr (num_components >= 4) {
+                components[3] = rgba.w;
+            }
         }
     }
 
-    Pixel(ubyte r, ubyte g, ubyte b, ubyte a)
+    Pixel(ComponentType r)
     {
-        bytes[0] = r;
+        components[0] = r;
+    }
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = g;
-        }
+    Pixel(ComponentType r, ComponentType g)
+    {
+        components[0] = r;
 
-        if constexpr (byte_size >= 3) {
-            bytes[2] = b;
-        }
-
-        if constexpr (byte_size >= 4) {
-            bytes[3] = a;
+        if constexpr (num_components >= 2) {
+            components[1] = g;
         }
     }
 
-    void SetR(float r)
+    Pixel(ComponentType r, ComponentType g, ComponentType b)
     {
-        bytes[0] = ubyte(r * 255.0f);
-    }
+        components[0] = r;
 
-    void SetRG(float r, float g)
-    {
-        bytes[0] = ubyte(r * 255.0f);
-
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(g * 255.0f);
-        }
-    }
-
-    void SetRGB(float r, float g, float b)
-    {
-        bytes[0] = ubyte(r * 255.0f);
-
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(g * 255.0f);
+        if constexpr (num_components >= 2) {
+            components[1] = g;
         }
 
-        if constexpr (byte_size >= 3) {
-            bytes[2] = ubyte(b * 255.0f);
+        if constexpr (num_components >= 3) {
+            components[2] = b;
         }
     }
 
-    void SetRGBA(float r, float g, float b, float a)
+    Pixel(ComponentType r, ComponentType g, ComponentType b, ComponentType a)
     {
-        bytes[0] = ubyte(r * 255.0f);
+        components[0] = r;
 
-        if constexpr (byte_size >= 2) {
-            bytes[1] = ubyte(g * 255.0f);
+        if constexpr (num_components >= 2) {
+            components[1] = g;
         }
 
-        if constexpr (byte_size >= 3) {
-            bytes[2] = ubyte(b * 255.0f);
+        if constexpr (num_components >= 3) {
+            components[2] = b;
         }
 
-        if constexpr (byte_size >= 4) {
-            bytes[3] = ubyte(a * 255.0f);
+        if constexpr (num_components >= 4) {
+            components[3] = a;
         }
     }
 
@@ -155,19 +147,143 @@ struct Pixel
     Pixel &operator=(Pixel &&other) noexcept    = default;
     ~Pixel()                                    = default;
 
+    float GetComponent(uint index) const
+    {
+        if (index >= num_components) {
+            return 0.0f;
+        }
+
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            return float(components[index]) / 255.0f;
+        } else {
+            return components[index];
+        }
+    }
+
+    void SetComponent(uint index, float value)
+    {
+        if (index >= num_components) {
+            return;
+        }
+
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[index] = ubyte(value * 255.0f);
+        } else {
+            components[index] = value;
+        }
+    }
+
+    void SetR(float r)
+    {
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(r * 255.0f);
+        } else {
+            components[0] = r;
+        }
+    }
+
+    void SetRG(float r, float g)
+    {
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(r * 255.0f);
+
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(g * 255.0f);
+            }
+        } else {
+            components[0] = r;
+
+            if constexpr (num_components >= 2) {
+                components[1] = g;
+            }
+        }
+    }
+
+    void SetRGB(float r, float g, float b)
+    {
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(r * 255.0f);
+
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(g * 255.0f);
+            }
+
+            if constexpr (num_components >= 3) {
+                components[2] = ubyte(b * 255.0f);
+            }
+        } else {
+            components[0] = r;
+
+            if constexpr (num_components >= 2) {
+                components[1] = g;
+            }
+
+            if constexpr (num_components >= 3) {
+                components[2] = b;
+            }
+        }
+    }
+
+    void SetRGBA(float r, float g, float b, float a)
+    {
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            components[0] = ubyte(r * 255.0f);
+
+            if constexpr (num_components >= 2) {
+                components[1] = ubyte(g * 255.0f);
+            }
+
+            if constexpr (num_components >= 3) {
+                components[2] = ubyte(b * 255.0f);
+            }
+
+            if constexpr (num_components >= 4) {
+                components[3] = ubyte(a * 255.0f);
+            }
+        } else {
+            components[0] = r;
+
+            if constexpr (num_components >= 2) {
+                components[1] = g;
+            }
+
+            if constexpr (num_components >= 3) {
+                components[2] = b;
+            }
+
+            if constexpr (num_components >= 4) {
+                components[3] = a;
+            }
+        }
+    }
+
     Vec3f GetRGB() const
     {
-        return Vec3f(
-            float(bytes[0]) / 255.0f,
-            float(bytes[1]) / 255.0f,
-            float(bytes[2]) / 255.0f
-        );
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            return Vec3f(
+                float(components[0]) / 255.0f,
+                float(components[1]) / 255.0f,
+                float(components[2]) / 255.0f
+            );
+        } else {
+            return Vec3f(
+                components[0],
+                components[1],
+                components[2]
+            );
+        }
     }
 
     void SetRGB(const Vec3f &rgb)
     {
-        for (uint i = 0; i < MathUtil::Min(byte_size, 3); i++) {
-            bytes[i] = ubyte(rgb[i] * 255.0f);
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            for (uint i = 0; i < MathUtil::Min(NumComponents, 3); i++) {
+                components[i] = ubyte(rgb[i] * 255.0f);
+            }
+        } else {
+            for (uint i = 0; i < MathUtil::Min(NumComponents, 3); i++) {
+                components[i] = rgb[i];
+            }
         }
     }
 
@@ -177,27 +293,51 @@ struct Pixel
 
     Vec4f GetRGBA() const
     {
-        if constexpr (byte_size < 4) {
-            return Vec4f(
-                float(bytes[0]) / 255.0f,
-                float(bytes[1]) / 255.0f,
-                float(bytes[2]) / 255.0f,
-                1.0f
-            );
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            if constexpr (NumComponents < 4) {
+                return Vec4f(
+                    float(components[0]) / 255.0f,
+                    float(components[1]) / 255.0f,
+                    float(components[2]) / 255.0f,
+                    1.0f
+                );
+            } else {
+                return Vec4f(
+                    float(components[0]) / 255.0f,
+                    float(components[1]) / 255.0f,
+                    float(components[2]) / 255.0f,
+                    float(components[3]) / 255.0f
+                );
+            }
         } else {
-            return Vec4f(
-                float(bytes[0]) / 255.0f,
-                float(bytes[1]) / 255.0f,
-                float(bytes[2]) / 255.0f,
-                float(bytes[3]) / 255.0f
-            );
+            if constexpr (NumComponents < 4) {
+                return Vec4f(
+                    components[0],
+                    components[1],
+                    components[2],
+                    1.0f
+                );
+            } else {
+                return Vec4f(
+                    components[0],
+                    components[1],
+                    components[2],
+                    components[3]
+                );
+            }
         }
     }
 
     void SetRGBA(const Vec4f &rgba)
     {
-        for (uint i = 0; i < MathUtil::Min(byte_size, 4); i++) {
-            bytes[i] = ubyte(rgba[i] * 255.0f);
+        if constexpr (std::is_same_v<ComponentType, ubyte>) {
+            for (uint i = 0; i < MathUtil::Min(NumComponents, 4); i++) {
+                components[i] = ubyte(rgba[i] * 255.0f);
+            }
+        } else {
+            for (uint i = 0; i < MathUtil::Min(NumComponents, 4); i++) {
+                components[i] = rgba[i];
+            }
         }
     }
 
@@ -206,11 +346,11 @@ struct Pixel
         { return GetRGBA(); }
 };
 
-template <uint NumComponents>
+template <uint NumComponents, class PixelComponentType = ubyte>
 class Bitmap
 {
 public:
-    using PixelType = Pixel<NumComponents>;
+    using PixelType = Pixel<PixelComponentType, NumComponents>;
 
     Bitmap()
         : m_width(0),
@@ -224,11 +364,11 @@ public:
     {
         m_pixels.Resize(width * height);
 
-        const uint bpp = PixelType::byte_size;
+        const uint num_components = PixelType::num_components;
 
-        for (uint i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += bpp, j++) {
-            for (uint k = 0; k < bpp; k++) {
-                m_pixels[j].bytes[k] = ubyte(floats[i + k] * 255.0f);
+        for (uint i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += num_components, j++) {
+            for (uint k = 0; k < num_components; k++) {
+                m_pixels[j].SetComponent(k, floats[i + k]);
             }
         }
     }
@@ -284,7 +424,8 @@ public:
     {
         return static_cast<SizeType>(m_width)
             * static_cast<SizeType>(m_height)
-            * static_cast<SizeType>(NumComponents);
+            * static_cast<SizeType>(NumComponents)
+            * sizeof(PixelComponentType);
     }
 
     PixelType &GetPixelAtIndex(uint index)
@@ -315,29 +456,15 @@ public:
     ByteBuffer ToByteBuffer() const
     {
         ByteBuffer byte_buffer;
-        byte_buffer.SetSize(m_pixels.Size() * PixelType::byte_size);
+        byte_buffer.SetSize(GetByteSize());
 
-        for (SizeType i = 0, j = 0; i < byte_buffer.Size() && j < m_pixels.Size(); i += PixelType::byte_size, j++) {
-            for (uint k = 0; k < PixelType::byte_size; k++) {
-                byte_buffer.Data()[i + k] = m_pixels[j].bytes[k];
+        for (SizeType i = 0, j = 0; i < byte_buffer.Size() && j < m_pixels.Size(); i += PixelType::num_components * sizeof(PixelComponentType), j++) {
+            for (uint k = 0; k < PixelType::num_components; k++) {
+                Memory::MemCpy(&byte_buffer.Data()[i + k * sizeof(PixelComponentType)], &m_pixels[j].components[k], sizeof(PixelComponentType));
             }
         }
 
         return byte_buffer;
-    }
-
-    Array<ubyte> GetUnpackedBytes() const
-    {
-        Array<ubyte> bytes;
-        bytes.Resize(m_pixels.Size() * PixelType::byte_size);
-
-        for (uint i = 0; i < m_pixels.Size(); i++) {
-            for (uint j = 0; j < PixelType::byte_size; j++) {
-                bytes[i * PixelType::byte_size + j] = m_pixels[i].bytes[j];
-            }
-        }
-
-        return bytes;
     }
 
     Array<ubyte> GetUnpackedBytes(uint bytes_per_pixel) const
@@ -346,8 +473,8 @@ public:
         bytes.Resize(m_pixels.Size() * bytes_per_pixel);
 
         for (uint i = 0; i < m_pixels.Size(); i++) {
-            for (uint j = 0; j < MathUtil::Min(PixelType::byte_size, bytes_per_pixel); j++) {
-                bytes[i * bytes_per_pixel + j] = m_pixels[i].bytes[j];
+            for (uint j = 0; j < MathUtil::Min(PixelType::num_components, bytes_per_pixel); j++) {
+                bytes[i * bytes_per_pixel + j] = ubyte(m_pixels[i].GetComponent(j) * 255.0f);
             }
         }
 
@@ -357,11 +484,11 @@ public:
     Array<float> GetUnpackedFloats() const
     {
         Array<float> floats;
-        floats.Resize(m_pixels.Size() * PixelType::byte_size);
+        floats.Resize(m_pixels.Size() * PixelType::num_components);
 
         for (uint i = 0; i < m_pixels.Size(); i++) {
-           for (uint j = 0; j < PixelType::byte_size; j++) {
-                floats[i * PixelType::byte_size + j] = float(m_pixels[i].bytes[j]) / 255.0f;
+           for (uint j = 0; j < PixelType::num_components; j++) {
+               floats[i * PixelType::num_components + j] = m_pixels[i].GetComponent(j);
            }
         }
 

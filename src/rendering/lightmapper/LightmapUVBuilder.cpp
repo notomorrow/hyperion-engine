@@ -10,34 +10,11 @@ namespace hyperion::v2 {
 
 // LightmapUVMap
 
-Bitmap<3> LightmapUVMap::ToRGB() const
+Bitmap<4, float> LightmapUVMap::ToRGBA32F() const
 {
     AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
 
-    Bitmap<3> bitmap(width, height);
-
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
-            const uint index = x + y * width;
-
-            const Vec3f color {
-                uvs[index].color.x,
-                uvs[index].color.y,
-                uvs[index].color.z
-            };
-
-            bitmap.GetPixelAtIndex(index) = { ubyte(color.x * 255.0f), ubyte(color.y * 255.0f), ubyte(color.z * 255.0f) };
-        }
-    }
-
-    return bitmap;
-}
-
-Bitmap<4> LightmapUVMap::ToRGBA() const
-{
-    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
-
-    Bitmap<4> bitmap(width, height);
+    Bitmap<4, float> bitmap(width, height);
 
     for (uint x = 0; x < width; x++) {
         for (uint y = 0; y < height; y++) {
@@ -50,7 +27,54 @@ Bitmap<4> LightmapUVMap::ToRGBA() const
                 uvs[index].color.w
             };
 
-            bitmap.GetPixelAtIndex(index) = { ubyte(color.x * 255.0f), ubyte(color.y * 255.0f), ubyte(color.z * 255.0f), ubyte(color.w * 255.0f) };
+            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+        }
+    }
+
+    return bitmap;
+}
+
+Bitmap<3, ubyte> LightmapUVMap::ToRGB8() const
+{
+    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
+
+    Bitmap<3, ubyte> bitmap(width, height);
+
+    for (uint x = 0; x < width; x++) {
+        for (uint y = 0; y < height; y++) {
+            const uint index = x + y * width;
+
+            const Vec3f color {
+                uvs[index].color.x,
+                uvs[index].color.y,
+                uvs[index].color.z
+            };
+
+            bitmap.GetPixelAtIndex(index).SetRGB(color);
+        }
+    }
+
+    return bitmap;
+}
+
+Bitmap<4, ubyte> LightmapUVMap::ToRGBA8() const
+{
+    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
+
+    Bitmap<4, ubyte> bitmap(width, height);
+
+    for (uint x = 0; x < width; x++) {
+        for (uint y = 0; y < height; y++) {
+            const uint index = x + y * width;
+
+            const Vec4f color {
+                uvs[index].color.x,
+                uvs[index].color.y,
+                uvs[index].color.z,
+                uvs[index].color.w
+            };
+
+            bitmap.GetPixelAtIndex(index).SetRGBA(color);
         }
     }
 
@@ -226,39 +250,40 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
             m_mesh_data[mesh_index].lightmap_uvs[verts[1].first] = Vec2f(verts[1].second) / Vec2f { float(atlas->width), float(atlas->height) };
             m_mesh_data[mesh_index].lightmap_uvs[verts[2].first] = Vec2f(verts[2].second) / Vec2f { float(atlas->width), float(atlas->height) };
 
-            Vec2i pts[3] = { verts[0].second, verts[1].second, verts[2].second };
+            const Vec2i pts[3] = { verts[0].second, verts[1].second, verts[2].second };
+            
+            const Vec2i clamp { int(uv_map.width - 1), int(uv_map.height - 1) };
 
-            Vec2i bboxmin(uv_map.width - 1,  uv_map.height - 1); 
-            Vec2i bboxmax(0, 0); 
-            Vec2i clamp(uv_map.width - 1, uv_map.height - 1);
+            Vec2i bboxmin { int(uv_map.width - 1), int(uv_map.height - 1) }; 
+            Vec2i bboxmax { 0, 0 }; 
 
-            for (int i = 0; i < 3; i++) { 
-                bboxmin.x = MathUtil::Max(0, MathUtil::Min(bboxmin.x, pts[i].x));
-	            bboxmin.y = MathUtil::Max(0, MathUtil::Min(bboxmin.y, pts[i].y));
+            for (int j = 0; j < 3; j++) { 
+                bboxmin.x = MathUtil::Max(0, MathUtil::Min(bboxmin.x, pts[j].x));
+	            bboxmin.y = MathUtil::Max(0, MathUtil::Min(bboxmin.y, pts[j].y));
 
-	            bboxmax.x = MathUtil::Min(clamp.x, MathUtil::Max(bboxmax.x, pts[i].x));
-	            bboxmax.y = MathUtil::Min(clamp.y, MathUtil::Max(bboxmax.y, pts[i].y));
+	            bboxmax.x = MathUtil::Min(clamp.x, MathUtil::Max(bboxmax.x, pts[j].x));
+	            bboxmax.y = MathUtil::Min(clamp.y, MathUtil::Max(bboxmax.y, pts[j].y));
             }
 
-            Vec2i P;
+            Vec2i point;
 
-            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) { 
-                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) { 
-                    const Vec3f bc_screen = MathUtil::CalculateBarycentricCoordinates(Vec2f(pts[0]), Vec2f(pts[1]), Vec2f(pts[2]), Vec2f(P));
+            for (point.x = bboxmin.x; point.x <= bboxmax.x; point.x++) { 
+                for (point.y = bboxmin.y; point.y <= bboxmax.y; point.y++) { 
+                    const Vec3f bc_screen = MathUtil::CalculateBarycentricCoordinates(Vec2f(pts[0]), Vec2f(pts[1]), Vec2f(pts[2]), Vec2f(point));
 
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) {
                         continue;
                     }
 
-                    const uint index = (P.x + atlas->width) % atlas->width
-                        + (atlas->height - P.y + atlas->height) % atlas->height * atlas->width;
+                    const uint index = (point.x + atlas->width) % atlas->width
+                        + (atlas->height - point.y + atlas->height) % atlas->height * atlas->width;
 
                     uv_map.uvs[index] = {
-                        m_mesh_data[mesh_index].mesh_id,                                // mesh_id
-                        m_mesh_data[mesh_index].transform,                              // transform
-                        i / 3,                                                          // triangle_index
-                        bc_screen,                                                      // barycentric_coords
-                        Vec2f(P) / Vec2f { float(atlas->width), float(atlas->height) }  // lightmap_uv
+                        m_mesh_data[mesh_index].mesh_id,                                    // mesh_id
+                        m_mesh_data[mesh_index].transform,                                  // transform
+                        i / 3,                                                              // triangle_index
+                        bc_screen,                                                          // barycentric_coords
+                        Vec2f(point) / Vec2f { float(atlas->width), float(atlas->height) }  // lightmap_uv
                     };
 
                     uv_map.mesh_to_uv_indices[mesh_index].PushBack(index);
