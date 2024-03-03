@@ -256,7 +256,7 @@ void main()
         const Light light = HYP_GET_LIGHT(closest_light_index);
 
         payload.distance = closest_light_dist;
-        payload.emissive += vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+        payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
         payload.entity_index = ~0u;
         payload.triangle_index = ~0u;
         payload.barycentric_coords = vec3(0.0);
@@ -267,7 +267,7 @@ void main()
     }
 
     payload.emissive = vec4(0.0);
-    payload.throughput *= material_color;
+    payload.throughput = material_color;
     payload.entity_index = entity_index;
     payload.triangle_index = gl_PrimitiveID;
     payload.barycentric_coords = barycentric_coords;
