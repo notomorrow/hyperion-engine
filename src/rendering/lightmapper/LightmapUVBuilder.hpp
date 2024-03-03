@@ -49,12 +49,13 @@ struct LightmapUVMap
     uint                            height = 0;
     Array<LightmapUV>               uvs;
     HashMap<ID<Mesh>, Array<uint>>  mesh_to_uv_indices;
-
-
+    
+    /*! \brief Write the UV map color data to RGBA32F format. */
+    Bitmap<4, float> ToRGBA32F() const;
     /*! \brief Write the UV map color data to RGB8 format. */
-    Bitmap<3> ToRGB() const;
+    Bitmap<3, ubyte> ToRGB8() const;
     /*! \brief Write the UV map color data to RGBA8 format. */
-    Bitmap<4> ToRGBA() const;
+    Bitmap<4, ubyte> ToRGBA8() const;
 
     /*! \brief Write the UV map color data to a 32-bit float array in RGBA32F format */
     Array<float> ToFloatArray() const;

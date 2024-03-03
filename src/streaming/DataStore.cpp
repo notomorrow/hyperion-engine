@@ -7,19 +7,64 @@ namespace hyperion::v2 {
 
 extern AssetManager *g_asset_manager;
 
-DataStoreBase::DataStoreBase(const String &prefix, DataStoreFlags flags)
+DataStoreBase::DataStoreBase(const String &prefix, DataStoreOptions options)
     : m_prefix(prefix),
-      m_flags(flags)
+      m_options(options)
 {
-    if (m_flags & DATA_STORE_FLAG_WRITE) {
+    if (m_options.flags & DATA_STORE_FLAG_WRITE) {
         AssertThrowMsg(MakeDirectory(), "Failed to create directory for data store at path %s", GetDirectory().Data());
+
+        // Clean up the directory if it's too large
+        DiscardOldFiles();
+    }
+}
+
+void DataStoreBase::DiscardOldFiles() const
+{
+    if (m_options.max_size == 0) {
+        return; // No limit
+    }
+
+    const FilePath path = GetDirectory();
+
+    SizeType directory_size = path.DirectorySize();
+
+    if (directory_size <= m_options.max_size) {
+        return;
+    }
+
+    FlatMap<uint64, FilePath> files_by_time;
+
+    for (const FilePath &file : path.GetAllFilesInDirectory()) {
+        files_by_time.Insert(file.LastModifiedTimestamp(), file);
+    }
+
+    while (directory_size > m_options.max_size) {
+        const auto it = files_by_time.Begin();
+
+        if (it == files_by_time.End()) {
+            break;
+        }
+
+        const FilePath &file = it->second;
+
+        directory_size -= file.FileSize();
+
+        if (!file.Remove()) {
+            DebugLog(
+                LogType::Warn,
+                "Failed to remove file %s\n",
+                file.Data()
+            );
+        }
+
+        files_by_time.Erase(it);
     }
 }
 
 bool DataStoreBase::MakeDirectory() const
 {
     const FilePath path = GetDirectory();
-    DebugLog(LogType::Debug, "Path: %s\n", path.Data());
 
     if (!path.Exists() || !path.IsDirectory()) {
         return path.MkDir() == 0;
@@ -30,7 +75,7 @@ bool DataStoreBase::MakeDirectory() const
 
 void DataStoreBase::Write(const String &key, const ByteBuffer &byte_buffer)
 {
-    AssertThrowMsg(m_flags & DATA_STORE_FLAG_WRITE, "Data store is not writable");
+    AssertThrowMsg(m_options.flags & DATA_STORE_FLAG_WRITE, "Data store is not writable");
 
     const FilePath filepath = GetDirectory() / key;
 
@@ -41,7 +86,7 @@ void DataStoreBase::Write(const String &key, const ByteBuffer &byte_buffer)
 
 bool DataStoreBase::Read(const String &key, ByteBuffer &out_byte_buffer) const
 {
-    AssertThrowMsg(m_flags & DATA_STORE_FLAG_READ, "Data store is not readable");
+    AssertThrowMsg(m_options.flags & DATA_STORE_FLAG_READ, "Data store is not readable");
 
     const FilePath directory = GetDirectory();
 

@@ -399,6 +399,62 @@ public:
         return out;
     }
 
+    DynString<char, true> ToUTF8() const
+    {
+        if constexpr (is_utf8) {
+            return *this;
+        } else if constexpr (is_ansi) {
+            return DynString<char, true>(Data());
+        } else if constexpr (is_utf16) {
+            uint32 len = utf::utf16_to_utf8(Data(), Data() + Size(), nullptr);
+
+            if (len == 0) {
+                return DynString<char, true>::empty;
+            }
+
+            utf::u8char *buffer = new utf::u8char[len + 1];
+            utf::utf16_to_utf8(Data(), Data() + Size(), buffer);
+
+            DynString<char, true> result(reinterpret_cast<const char *>(buffer));
+
+            delete[] buffer;
+
+            return result;
+        } else if constexpr (is_utf32) {
+            uint32 len = utf::utf32_to_utf8(Data(), Data() + Size(), nullptr);
+
+            if (len == 0) {
+                return DynString<char, true>::empty;
+            }
+
+            utf::u8char *buffer = new utf::u8char[len + 1];
+            utf::utf32_to_utf8(Data(), Data() + Size(), buffer);
+
+            DynString<char, true> result(reinterpret_cast<const char *>(buffer));
+
+            delete[] buffer;
+
+            return result;
+        } else if constexpr (is_wide) {
+            uint32 len = utf::wide_to_utf8(Data(), Data() + Size(), nullptr);
+
+            if (len == 0) {
+                return DynString<char, true>::empty;
+            }
+
+            utf::u8char *buffer = new utf::u8char[len + 1];
+            utf::wide_to_utf8(Data(), Data() + Size(), buffer);
+
+            DynString<char, true> result(reinterpret_cast<const char *>(buffer));
+
+            delete[] buffer;
+
+            return result;
+        } else {
+            return DynString<char, true>();
+        }
+    }
+
     template <class Integral>
     static typename std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>, DynString>
     ToString(Integral value)

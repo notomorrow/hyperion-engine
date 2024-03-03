@@ -106,7 +106,7 @@ private:
 class LightmapJob
 {
 public:
-    static constexpr uint num_multisamples = 1;
+    static constexpr uint num_multisamples = 8;
 
     LightmapJob(Scene *scene, Array<LightmapEntity> entities);
     LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache);

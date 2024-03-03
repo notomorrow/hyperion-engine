@@ -17,16 +17,24 @@ enum DataStoreFlagBits : DataStoreFlags
     DATA_STORE_FLAG_RW      = DATA_STORE_FLAG_READ | DATA_STORE_FLAG_WRITE
 };
 
+struct DataStoreOptions
+{
+    DataStoreFlags  flags = DATA_STORE_FLAG_RW;
+    // max size in bytes before old data is discarded - 0 means no limit
+    uint64          max_size = 5ull * 1024ull * 1024ull * 1024ull /* 5GB */;
+};
+
 class DataStoreBase
 {
 public:
-    DataStoreBase(const String &prefix, DataStoreFlags flags);
+    DataStoreBase(const String &prefix, DataStoreOptions options);
     DataStoreBase(const DataStoreBase &other)               = delete;
     DataStoreBase &operator=(const DataStoreBase &other)    = delete;
     DataStoreBase(DataStoreBase &&other)                    = default;
     DataStoreBase &operator=(DataStoreBase &&other)         = default;
     virtual ~DataStoreBase()                                = default;
 
+    void DiscardOldFiles() const;
     FilePath GetDirectory() const;
     bool MakeDirectory() const;
 
@@ -34,16 +42,16 @@ public:
     virtual bool Read(const String &key, ByteBuffer &out_byte_buffer) const;
 
 private:
-    String          m_prefix;
-    DataStoreFlags  m_flags;
+    String              m_prefix;
+    DataStoreOptions    m_options;
 };
 
-template <auto Prefix, DataStoreFlags Flags>
+template <auto Prefix, DataStoreFlags Flags, uint64 MaxSize = 1ull * 1024ull * 1024ull * 1024ull>
 class DataStore : public DataStoreBase
 {
 public:
     DataStore()
-        : DataStoreBase(&Prefix.data[0], Flags)
+        : DataStoreBase(&Prefix.data[0], DataStoreOptions { Flags, MaxSize })
     {
     }
 

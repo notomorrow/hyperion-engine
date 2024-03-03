@@ -109,27 +109,7 @@ void main()
     uint ray_seed = InitRandomSeed(((rt_radiance_uniforms.ray_offset + ray_index) * 2), ((rt_radiance_uniforms.ray_offset + ray_index) * 2) + 1);
 
     for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
-
-        // vec2 blue_noise_sample = vec2(
-        //     SampleBlueNoise(int(((rt_radiance_uniforms.ray_offset + ray_index) * 2) * NUM_SAMPLES + sample_index * 2), int(((rt_radiance_uniforms.ray_offset + ray_index) * 2) * NUM_SAMPLES + sample_index * 2 + 1), 0, 0),
-        //     SampleBlueNoise(int(((rt_radiance_uniforms.ray_offset + ray_index) * 2) * NUM_SAMPLES + sample_index * 2), int(((rt_radiance_uniforms.ray_offset + ray_index) * 2) * NUM_SAMPLES + sample_index * 2 + 1), 0, 1)
-        // );
-
-        // vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
-        // vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
-
         vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
-
-        // vec3 tangent;
-        // vec3 bitangent;
-        // ComputeOrthonormalBasis(normal, tangent, bitangent);
-
-        // vec3 H = ImportanceSampleGGX(rnd, normal, 1.0);
-        // H = tangent * H.x + bitangent * H.y + normal * H.z;
-
-        // vec3 direction = H;
-        // vec3 origin = ray.origin.xyz + normal * RAY_OFFSET;
-
         vec3 H;
 
 #ifdef DEBUG_TEST
@@ -139,8 +119,6 @@ void main()
             vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
             ray.direction.xyz
         ));
-
-        // vec3 direction = ray.direction.xyz;
 #endif
 
         vec3 origin = ray.origin.xyz + ray.direction.xyz * RAY_OFFSET;
@@ -214,6 +192,7 @@ void main()
     }
 
     vec4 color = radiance / float(NUM_SAMPLES);
+    color.rgb = TonemapReinhard(color.rgb);
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
     hits[ray_index] = color;
