@@ -36,6 +36,12 @@ enum LightmapTraceMode
     LIGHTMAP_TRACE_MODE_CPU
 };
 
+enum LightmapShadingType
+{
+    LIGHTMAP_SHADING_TYPE_IRRADIANCE,
+    LIGHTMAP_SHADING_TYPE_RADIANCE
+};
+
 struct LightmapRay
 {
     Ray         ray;
@@ -75,7 +81,7 @@ static_assert(sizeof(LightmapHitsBuffer) == max_ray_hits_gpu * 16);
 class LightmapPathTracer
 {
 public:
-    LightmapPathTracer(Handle<TLAS> tlas);
+    LightmapPathTracer(Handle<TLAS> tlas, LightmapShadingType shading_type);
     LightmapPathTracer(const LightmapPathTracer &other)                 = delete;
     LightmapPathTracer &operator=(const LightmapPathTracer &other)      = delete;
     LightmapPathTracer(LightmapPathTracer &&other) noexcept             = delete;
@@ -95,6 +101,7 @@ private:
     void UpdateUniforms(Frame *frame, uint32 ray_offset);
 
     Handle<TLAS>                                        m_tlas;
+    LightmapShadingType                                 m_shading_type;
     
     FixedArray<GPUBufferRef, max_frames_in_flight>      m_uniform_buffers;
     FixedArray<GPUBufferRef, max_frames_in_flight>      m_rays_buffers;
@@ -106,7 +113,7 @@ private:
 class LightmapJob
 {
 public:
-    static constexpr uint num_multisamples = 8;
+    static constexpr uint num_multisamples = 1;
 
     LightmapJob(Scene *scene, Array<LightmapEntity> entities);
     LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache);
@@ -212,7 +219,8 @@ private:
 
     LightmapTraceMode               m_trace_mode;
 
-    UniquePtr<LightmapPathTracer>   m_path_tracer;
+    UniquePtr<LightmapPathTracer>   m_path_tracer_radiance;
+    UniquePtr<LightmapPathTracer>   m_path_tracer_irradiance;
 
     Queue<UniquePtr<LightmapJob>>   m_queue;
     Mutex                           m_queue_mutex;

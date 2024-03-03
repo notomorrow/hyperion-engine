@@ -181,6 +181,7 @@ rchit = rt/pathtracer/PathTracer.rchit
 rmiss = rt/pathtracer/PathTracer.rmiss
 
 [LightmapPathTracer]
+permute = MODE(IRRADIANCE RADIANCE)
 rgen = rt/lightmapper/LightmapPathTracer.rgen
 rchit = rt/lightmapper/LightmapPathTracer.rchit
 rmiss = rt/lightmapper/LightmapPathTracer.rmiss

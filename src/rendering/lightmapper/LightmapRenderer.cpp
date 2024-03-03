@@ -35,8 +35,9 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
 
 // LightmapPathTracer
 
-LightmapPathTracer::LightmapPathTracer(Handle<TLAS> tlas)
+LightmapPathTracer::LightmapPathTracer(Handle<TLAS> tlas, LightmapShadingType shading_type)
     : m_tlas(std::move(tlas)),
+      m_shading_type(shading_type),
       m_uniform_buffers({
           MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER),
           MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER)
@@ -89,7 +90,18 @@ void LightmapPathTracer::Create()
         );
     }
 
-    Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(LightmapPathTracer));
+    ShaderProperties shader_properties;
+
+    switch (m_shading_type) {
+    case LIGHTMAP_SHADING_TYPE_RADIANCE:
+        shader_properties.Set("MODE_RADIANCE");
+        break;
+    case LIGHTMAP_SHADING_TYPE_IRRADIANCE:
+        shader_properties.Set("MODE_IRRADIANCE");
+        break;
+    }
+
+    Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(LightmapPathTracer), shader_properties);
 
     if (!InitObject(shader)) {
         return;
@@ -607,7 +619,8 @@ void LightmapRenderer::InitGame()
 
 void LightmapRenderer::OnRemoved()
 {
-    m_path_tracer.Reset();
+    m_path_tracer_radiance.Reset();
+    m_path_tracer_irradiance.Reset();
 
     Mutex::Guard guard(m_queue_mutex);
 
@@ -672,13 +685,18 @@ void LightmapRenderer::OnRender(Frame *frame)
         return;
     }
 
-    if (!m_path_tracer) {
-        m_path_tracer.Reset(new LightmapPathTracer(m_parent->GetScene()->GetTLAS()));
-        m_path_tracer->Create();
+    if (!m_path_tracer_radiance) {
+        m_path_tracer_radiance.Reset(new LightmapPathTracer(m_parent->GetScene()->GetTLAS(), LIGHTMAP_SHADING_TYPE_RADIANCE));
+        m_path_tracer_radiance->Create();
+    }
+
+    if (!m_path_tracer_irradiance) {
+        m_path_tracer_irradiance.Reset(new LightmapPathTracer(m_parent->GetScene()->GetTLAS(), LIGHTMAP_SHADING_TYPE_IRRADIANCE));
+        m_path_tracer_irradiance->Create();
     }
 
     // Wait for path tracer to be ready to process rays
-    if (!m_path_tracer->GetPipeline()->IsCreated()) {
+    if (!m_path_tracer_radiance->GetPipeline()->IsCreated() || !m_path_tracer_irradiance->GetPipeline()->IsCreated()) {
         return;
     }
     
@@ -707,11 +725,13 @@ void LightmapRenderer::OnRender(Frame *frame)
         // Read ray hits from last time this frame was rendered
         const Array<LightmapRay> &previous_rays = job->GetPreviousFrameRays(frame_index);
 
+        // @TODO Trace both radiance and irradiance
+
         // Read previous frame hits into CPU buffer
         if (previous_rays.Any()) {
             // @NOTE Use heap allocation to avoid stack overflow (max_ray_hits_gpu * sizeof(LightmapHit) > 1MB)
             LightmapHitsBuffer *hits_buffer(new LightmapHitsBuffer);
-            m_path_tracer->ReadHitsBuffer(hits_buffer, frame_index);
+            m_path_tracer_radiance->ReadHitsBuffer(hits_buffer, frame_index);
 
             job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size());
 
@@ -727,7 +747,7 @@ void LightmapRenderer::OnRender(Frame *frame)
 
     if (current_frame_rays.Any()) {
         // Enqueue trace command
-        m_path_tracer->Trace(frame, current_frame_rays, ray_offset);
+        m_path_tracer_radiance->Trace(frame, current_frame_rays, ray_offset);
     }
 }
 

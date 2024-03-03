@@ -17,3 +17,6 @@
 [submodule "submodules/xatlas"]
 	path = submodules/xatlas
 	url = https://github.com/jpcy/xatlas.git
+[submodule "submodules/oidn"]
+	path = submodules/oidn
+	url = https://github.com/OpenImageDenoise/oidn

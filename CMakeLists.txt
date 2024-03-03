@@ -185,6 +185,19 @@ if(GST_FOUND)
     )
 endif()
 
+# # if submodule 'oidn' exists , link with it
+# if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/oidn/CMakeLists.txt")
+#     add_definitions(-DHYP_OIDN=1)
+# 
+#     include_directories(submodules/oidn/include)
+#     add_subdirectory(submodules/oidn)
+# 
+#     set(COMMON_LIBRARIES
+#         ${COMMON_LIBRARIES}
+#         OpenImageDenoise
+#     )
+# endif()
+
 # if dotnet headers exist, set HYP_DOTNET to 1
 if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
     # set CLI_CMAKE_PKG_RID
