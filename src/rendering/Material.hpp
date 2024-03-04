@@ -61,14 +61,14 @@ public:
         MATERIAL_TEXTURE_PARALLAX_MAP                   = 1 << 3,
         MATERIAL_TEXTURE_METALNESS_MAP                  = 1 << 4,
         MATERIAL_TEXTURE_ROUGHNESS_MAP                  = 1 << 5,
-        MATERIAL_TEXTURE_LIGHT_MAP                      = 1 << 6,
-        MATERIAL_TEXTURE_COLOR_MAP                      = 1 << 7,
-        MATERIAL_TEXTURE_POSITION_MAP                   = 1 << 8,
-        MATERIAL_TEXTURE_DATA_MAP                       = 1 << 9,
-        MATERIAL_TEXTURE_SSAO_MAP                       = 1 << 10,
-        MATERIAL_TEXTURE_TANGENT_MAP                    = 1 << 11,
-        MATERIAL_TEXTURE_BITANGENT_MAP                  = 1 << 12,
-        MATERIAL_TEXTURE_DEPTH_MAP                      = 1 << 13,
+        MATERIAL_TEXTURE_RADIANCE_MAP                   = 1 << 6,
+        MATERIAL_TEXTURE_IRRADIANCE_MAP                 = 1 << 7,
+        MATERIAL_TEXTURE_RESERVED0                      = 1 << 8,
+        MATERIAL_TEXTURE_RESERVED1                      = 1 << 9,
+        MATERIAL_TEXTURE_RESERVED2                      = 1 << 10,
+        MATERIAL_TEXTURE_RESERVED3                      = 1 << 11,
+        MATERIAL_TEXTURE_RESERVED4                      = 1 << 12,
+        MATERIAL_TEXTURE_RESERVED5                      = 1 << 13,
 
         // terrain
 

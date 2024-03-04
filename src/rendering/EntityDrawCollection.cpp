@@ -30,7 +30,9 @@ struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(UpdateDrawCollectionRenderSide)() override = default;
+
+    virtual Result operator()() override
     {
         collection->SetRenderSideList(attributes, std::move(entity_list));
 
@@ -231,7 +233,7 @@ void RenderList::UpdateRenderGroups()
 
     for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(THREAD_TYPE_GAME)) {
         for (auto &it : collection_per_pass_type) {
-            // temp
+            // temp check
             AssertThrow(it.first.GetMaterialAttributes().shader_definition.IsValid());
             iterators.PushBack(&it);
         }
@@ -247,7 +249,7 @@ void RenderList::UpdateRenderGroups()
         if (!entity_list.render_group.IsValid()) {
             if (added_render_groups[index].second.IsValid()) {
 #ifdef HYP_DEBUG_MODE
-                AssertThrowMsg(attributes == added_render_groups[index].first, "Attributes to not match with assigned index of %u", index);
+                AssertThrowMsg(attributes == added_render_groups[index].first, "Attributes do not match with assigned index of %u", index);
 #endif
 
                 entity_list.render_group = added_render_groups[index].second;

@@ -52,8 +52,8 @@ class DeferredPass : public FullScreenPass
 
 public:
     DeferredPass(bool is_indirect_pass);
-    DeferredPass(const DeferredPass &other) = delete;
-    DeferredPass &operator=(const DeferredPass &other) = delete;
+    DeferredPass(const DeferredPass &other)             = delete;
+    DeferredPass &operator=(const DeferredPass &other)  = delete;
     virtual ~DeferredPass() override;
 
     void CreateShader();
@@ -66,6 +66,29 @@ private:
     const bool m_is_indirect_pass;
 };
 
+//enum LightmapPassMode
+//{
+//    LIGHTMAP_PASS_MODE_RADIANCE,
+//    LIGHTMAP_PASS_MODE_IRRADIANCE
+//};
+//
+//class LightmapPass : public FullScreenPass
+//{
+//public:
+//    LightmapPass(LightmapPassMode mode);
+//    LightmapPass(const LightmapPass &other)             = delete;
+//    LightmapPass &operator=(const LightmapPass &other)  = delete;
+//    virtual ~LightmapPass() override;
+//
+//    void CreateShader();
+//    virtual void Create() override;
+//    virtual void Record(uint frame_index) override;
+//    virtual void Render(Frame *frame) override;
+//
+//private:
+//    const LightmapPassMode  m_mode;
+//};
+
 enum EnvGridPassMode
 {
     ENV_GRID_PASS_MODE_RADIANCE,
@@ -76,8 +99,8 @@ class EnvGridPass : public FullScreenPass
 {
 public:
     EnvGridPass(EnvGridPassMode mode);
-    EnvGridPass(const EnvGridPass &other) = delete;
-    EnvGridPass &operator=(const EnvGridPass &other) = delete;
+    EnvGridPass(const EnvGridPass &other)               = delete;
+    EnvGridPass &operator=(const EnvGridPass &other)    = delete;
     virtual ~EnvGridPass() override;
 
     TemporalBlending *GetTemporalBlending() const

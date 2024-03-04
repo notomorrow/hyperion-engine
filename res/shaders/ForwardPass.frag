@@ -23,7 +23,6 @@ layout(location=16) in flat uint v_object_mask;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
-layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
 layout(location=6) out vec4 gbuffer_ws_normals;
@@ -334,17 +333,22 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
+    vec4 irradiance = vec4(0.0);
+    vec4 radiance = vec4(0.0);
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP)) {
-        vec4 lightmap_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_LIGHT_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
-
-        // gbuffer_albedo = vec4(v_texcoord1.xy - lightmap_texture.rg, 0.0, 0.0);
-        gbuffer_albedo = vec4(lightmap_texture.rgb, 0.0);
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)) {
+        irradiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
     }
+
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)) {
+        radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+    }
+
+    // TEMP testing lightmaps
+    gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
-    gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

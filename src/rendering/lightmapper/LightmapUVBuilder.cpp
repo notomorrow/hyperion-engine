@@ -10,7 +10,7 @@ namespace hyperion::v2 {
 
 // LightmapUVMap
 
-Bitmap<4, float> LightmapUVMap::ToRGBA32F() const
+Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 {
     AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
 
@@ -20,88 +20,38 @@ Bitmap<4, float> LightmapUVMap::ToRGBA32F() const
         for (uint y = 0; y < height; y++) {
             const uint index = x + y * width;
 
-            const Vec4f color {
-                uvs[index].color.x,
-                uvs[index].color.y,
-                uvs[index].color.z,
-                uvs[index].color.w
-            };
-
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+            bitmap.GetPixelAtIndex(index).SetRGBA({
+                uvs[index].radiance.x,
+                uvs[index].radiance.y,
+                uvs[index].radiance.z,
+                uvs[index].radiance.w
+            });
         }
     }
 
     return bitmap;
 }
 
-Bitmap<3, ubyte> LightmapUVMap::ToRGB8() const
+Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 {
     AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
 
-    Bitmap<3, ubyte> bitmap(width, height);
+    Bitmap<4, float> bitmap(width, height);
 
     for (uint x = 0; x < width; x++) {
         for (uint y = 0; y < height; y++) {
             const uint index = x + y * width;
 
-            const Vec3f color {
-                uvs[index].color.x,
-                uvs[index].color.y,
-                uvs[index].color.z
-            };
-
-            bitmap.GetPixelAtIndex(index).SetRGB(color);
+            bitmap.GetPixelAtIndex(index).SetRGBA({
+                uvs[index].irradiance.x,
+                uvs[index].irradiance.y,
+                uvs[index].irradiance.z,
+                uvs[index].irradiance.w
+            });
         }
     }
 
     return bitmap;
-}
-
-Bitmap<4, ubyte> LightmapUVMap::ToRGBA8() const
-{
-    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
-
-    Bitmap<4, ubyte> bitmap(width, height);
-
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
-            const uint index = x + y * width;
-
-            const Vec4f color {
-                uvs[index].color.x,
-                uvs[index].color.y,
-                uvs[index].color.z,
-                uvs[index].color.w
-            };
-
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
-        }
-    }
-
-    return bitmap;
-}
-
-Array<float> LightmapUVMap::ToFloatArray() const
-{
-    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
-
-    // RGBA32F format
-    Array<float> float_array;
-    float_array.Resize(width * height * 4);
-
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
-            const uint index = (x + width) % width
-                + (height - y + height) % height * width;
-
-            float_array[index * 4 + 0] = uvs[index].color.x;
-            float_array[index * 4 + 1] = uvs[index].color.y;
-            float_array[index * 4 + 2] = uvs[index].color.z;
-            float_array[index * 4 + 3] = uvs[index].color.w;
-        }
-    }
-
-    return float_array;
 }
 
 // LightmapUVBuilder

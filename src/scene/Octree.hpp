@@ -22,7 +22,7 @@ class Entity;
 class EntityManager;
 class Camera;
 
-/*! \brief A 64-bit integer that represents an octant in an octree
+/*! \brief Represents an octant in an octree
  *  \details The bits are ordered as follows:
  *  - 0-2: index of topmost parent octant
  *  - 3-5: index of second parent octant
