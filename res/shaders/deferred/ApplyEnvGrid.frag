@@ -109,18 +109,10 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, v_texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
-#if MODE == 0
-
-#if 1
+#if MODE == 0 // Irradiance
     irradiance = CalculateEnvProbeIrradiance(P, N);
 
     color_output = vec4(irradiance, 1.0);
-#else
-    irradiance = ComputeLightFieldProbeIrradiance(P, N, V, env_grid.center.xyz, env_grid.aabb_extent.xyz, ivec3(env_grid.density.xyz));
-
-    color_output = vec4(irradiance, 1.0);
-#endif
-
 #else // Radiance
 
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 1.0);

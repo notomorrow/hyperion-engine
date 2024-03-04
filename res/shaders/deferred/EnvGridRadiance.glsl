@@ -12,7 +12,7 @@ vec4 FetchVoxel(vec3 position, float lod)
 {
     vec4 rgba = textureLod(sampler3D(voxel_image, sampler_linear), position, lod);
     // rgba.rgb = ReverseTonemapReinhardSimple(rgba.rgb);
-    rgba.rgb = pow(rgba.rgb, vec3(2.2));
+    // rgba.rgb = pow(rgba.rgb, vec3(2.2));
     return rgba;
 }
 
@@ -24,7 +24,7 @@ vec3 VctWorldToTexCoord(vec3 world_position, in AABB voxel_grid_aabb)
     const vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
 
     const vec3 scaled_position = (world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
-    const vec3 voxel_storage_position = (scaled_position * 0.5 + 0.5);
+    const vec3 voxel_storage_position = (scaled_position + 0.5);
 
     return clamp(voxel_storage_position, vec3(0.0), vec3(1.0));
 }
@@ -74,7 +74,7 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, vec3 V, float roughness, in AABB 
     const float greatest_extent = 256.0;
     const float voxel_size = 1.0 / greatest_extent;
 
-    return ConeTrace(voxel_size, voxel_coord + N * max(0.01, voxel_size), R, RoughnessToConeAngle(roughness), 0.65, false);
+    return ConeTrace(voxel_size, voxel_coord + N * max(0.01, voxel_size), R, RoughnessToConeAngle(roughness), 0.65, true);
 }
 
 vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, ivec3 grid_size, in AABB voxel_grid_aabb)

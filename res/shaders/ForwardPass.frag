@@ -344,8 +344,8 @@ void main()
         radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
     }
 
-    // TEMP testing lightmaps
-    gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
+    // // TEMP testing lightmaps
+    // gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);

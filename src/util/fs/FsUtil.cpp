@@ -179,7 +179,11 @@ Array<FilePath> FilePath::GetAllFilesInDirectory() const
 
     for (const auto &entry : std::filesystem::directory_iterator(Data())) {
         if (entry.is_regular_file()) {
+#ifdef HYP_WINDOWS
             files.PushBack(WideString(entry.path().c_str()).ToUTF8());
+#else
+            files.PushBack(entry.path().c_str());
+#endif
         }
     }
 

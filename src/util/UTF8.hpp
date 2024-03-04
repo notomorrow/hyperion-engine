@@ -657,7 +657,8 @@ inline uint32 wide_to_utf8(const wchar_t *start, const wchar_t *end, u8char *res
 
     return len;
 #else
-    return utf32to8(reinterpret_cast<u32char *>(start), reinterpret_cast<u32char *>(end), result);
+    static_assert(sizeof(wchar_t) == sizeof(u32char), "wchar_t must be the same size as u32char");
+    return utf::utf32_to_utf8(reinterpret_cast<const u32char *>(start), reinterpret_cast<const u32char *>(end), result);
 #endif
 }
 

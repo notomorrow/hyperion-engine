@@ -202,11 +202,11 @@ void EnvGrid::SetCameraData(const Vec3f &position)
                     MathUtil::Mod(scrolled_coord.z, Vec3i::Type(m_density.depth))
                 };
                 
-                const int32 scrolled_clamped_index = scrolled_coord_clamped.x * m_density.width * m_density.height
+                const int scrolled_clamped_index = scrolled_coord_clamped.x * m_density.width * m_density.height
                     + scrolled_coord_clamped.y * m_density.width
                     + scrolled_coord_clamped.z;
 
-                const int32 index = x * m_density.width * m_density.height
+                const int index = x * m_density.width * m_density.height
                     + y * m_density.width
                     + z;
 
@@ -533,17 +533,13 @@ void EnvGrid::OnRender(Frame *frame)
 
                 if (binding_index != invalid_probe_index) {
                     if (m_next_render_indices.Size() < max_queued_probes_for_render) {
-                        EnvProbe::UpdateEnvProbeShaderData(
-                            probe->GetID(),
-                            probe->GetDrawProxy(),
+                        probe->UpdateRenderData(
                             ~0u,
                             probe->m_grid_slot,
                             m_density
                         );
 
-                        // m_shader_data.probe_indices[binding_index.GetProbeIndex()] = probe.GetID().ToIndex();
-
-                        // render this probe next frame, since the data will have been updated on the gpu on start of the frame
+                        // render this probe in the next frame, since the data will have been updated on the gpu on start of the frame
                         m_next_render_indices.Push(indirect_index);
 
                         m_current_probe_index = (found_index + 1) % m_env_probe_collection.num_probes;
@@ -594,11 +590,11 @@ void EnvGrid::CreateVoxelGridData()
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
         nullptr
     ));
-        AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
+    AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
 
     m_voxel_grid_texture->GetImage()->SetIsRWTexture(true);
     InitObject(m_voxel_grid_texture);
-        AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
+    AssertThrow(m_voxel_grid_texture->GetImageView() != nullptr);
 
     // Set our voxel grid texture in the global descriptor set so we can use it in shaders
     PUSH_RENDER_COMMAND(
@@ -613,8 +609,8 @@ void EnvGrid::CreateVoxelGridData()
     AssertThrowMsg(m_framebuffer->GetAttachmentMap()->Size() >= 3, "Framebuffer must have at least 3 attachments (color, normals, distances)");
 
     Handle<Shader> voxelize_probe_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_VOXELIZE" }});
-    Handle<Shader> clear_voxels_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_CLEAR" }});
     Handle<Shader> offset_voxel_grid_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_OFFSET" }});
+    Handle<Shader> clear_voxels_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_ClearProbeVoxels));
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
 
@@ -806,7 +802,7 @@ void EnvGrid::CreateFramebuffer()
         0,
         MakeRenderObject<Image>(renderer::FramebufferImageCube(
             framebuffer_dimensions,
-            InternalFormat::RGBA8_SRGB,
+            InternalFormat::RGBA8,
             nullptr
         )),
         RenderPassStage::SHADER,
@@ -1070,19 +1066,25 @@ void EnvGrid::VoxelizeProbe(
 {
     AssertThrow(m_voxel_grid_texture.IsValid());
 
+    const Extent3D &voxel_grid_texture_extent = m_voxel_grid_texture->GetImage()->GetExtent();
+
+    // size of a probe in the voxel grid
+    const Extent3D probe_voxel_extent = voxel_grid_texture_extent / m_density;
+
     const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(probe_index);
     AssertThrow(probe.IsValid());
     AssertThrow(probe->m_grid_slot < max_bound_ambient_probes);
-    AssertThrow(probe->m_grid_slot == probe_index);
+    // AssertThrow(probe->m_grid_slot == probe_index);
 
     const ImageRef &color_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
     const Extent2D cubemap_dimensions = Extent2D(color_image->GetExtent());
 
     struct alignas(128)
     {
-        ShaderVec4<uint32>  probe_grid_position;
-        ShaderVec4<uint32>  cubemap_dimensions;
-        ShaderVec4<float32> world_position;
+        Vec4u   probe_grid_position;
+        Vec4u   voxel_texture_dimensions;
+        Vec4u   cubemap_dimensions;
+        Vec4f   world_position;
     } push_constants;
 
     push_constants.probe_grid_position = {
@@ -1092,11 +1094,13 @@ void EnvGrid::VoxelizeProbe(
         probe.GetID().ToIndex()
     };
 
+    push_constants.voxel_texture_dimensions = Vec4u(voxel_grid_texture_extent, 0);
     push_constants.cubemap_dimensions = { cubemap_dimensions.width, cubemap_dimensions.height, 0, 0 };
+    push_constants.world_position = Vec4f(probe->GetDrawProxy().aabb.GetCenter(), 1.0f);
 
-    push_constants.world_position = Vector4(probe->GetAABB().GetCenter(), 1.0f);
-    
-    {   // Clear our voxel grid at the start of each probe
+    color_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+
+    if (false) {   // Clear our voxel grid at the start of each probe
         m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
         m_clear_voxels->GetDescriptorTable().Get()->Bind(
@@ -1116,9 +1120,9 @@ void EnvGrid::VoxelizeProbe(
         m_clear_voxels->Dispatch(
             frame->GetCommandBuffer(), 
             Extent3D {
-                (cubemap_dimensions.width + 31) / 32,
-                (cubemap_dimensions.height + 31) / 32,
-                1
+                (probe_voxel_extent.width + 7) / 8,
+                (probe_voxel_extent.height + 7) / 8,
+                (probe_voxel_extent.depth + 7) / 8
             }
         );
     }
