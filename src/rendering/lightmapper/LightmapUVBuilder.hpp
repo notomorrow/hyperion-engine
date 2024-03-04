@@ -3,15 +3,26 @@
 
 #include <core/lib/String.hpp>
 #include <core/lib/HashMap.hpp>
-#include <rendering/lightmapper/Lightmap.hpp>
+
 #include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
+
+#include <scene/Entity.hpp>
 
 #include <math/Transform.hpp>
-#include <util/img/Bitmap.hpp>
+#include <math/Matrix4.hpp>
 
 #include <util/img/Bitmap.hpp>
 
 namespace hyperion::v2 {
+
+struct LightmapEntity
+{
+    ID<Entity>          entity_id;
+    Handle<Mesh>        mesh;
+    Handle<Material>    material;
+    Matrix4             transform;
+};
 
 struct LightmapUVBuilderParams
 {
@@ -40,7 +51,8 @@ struct LightmapUV
     uint        triangle_index;
     Vec3f       barycentric_coords;
     Vec2f       lightmap_uv;
-    Vec4f       color = Vec4f::zero; // To be set by the lightmap renderer
+    Vec4f       radiance = Vec4f::zero;
+    Vec4f       irradiance = Vec4f::zero;
 };
 
 struct LightmapUVMap
@@ -50,15 +62,10 @@ struct LightmapUVMap
     Array<LightmapUV>               uvs;
     HashMap<ID<Mesh>, Array<uint>>  mesh_to_uv_indices;
     
-    /*! \brief Write the UV map color data to RGBA32F format. */
-    Bitmap<4, float> ToRGBA32F() const;
-    /*! \brief Write the UV map color data to RGB8 format. */
-    Bitmap<3, ubyte> ToRGB8() const;
-    /*! \brief Write the UV map color data to RGBA8 format. */
-    Bitmap<4, ubyte> ToRGBA8() const;
-
-    /*! \brief Write the UV map color data to a 32-bit float array in RGBA32F format */
-    Array<float> ToFloatArray() const;
+    /*! \brief Write the UV map radiance data to RGBA32F format. */
+    Bitmap<4, float> ToBitmapRadiance() const;
+    /*! \brief Write the UV map irradiance data to RGBA32F format. */
+    Bitmap<4, float> ToBitmapIrradiance() const;
 };
 
 class LightmapUVBuilder

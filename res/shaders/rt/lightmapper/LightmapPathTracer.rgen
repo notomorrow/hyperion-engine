@@ -87,7 +87,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #define RAY_OFFSET 0.05
 #define NUM_SAMPLES 16
-#define NUM_BOUNCES 2
+#define NUM_BOUNCES 3
 
 // uncomment to see the actual object colors
 // #define DEBUG_TEST
@@ -237,7 +237,7 @@ void main()
     }
 
     vec4 color = radiance / float(NUM_SAMPLES);
-    color.rgb = TonemapReinhard(color.rgb);
+    // color.rgb = TonemapReinhard(color.rgb);
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
     hits[ray_index] = color;

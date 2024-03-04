@@ -40,9 +40,7 @@
 
 #include <Types.hpp>
 
-#include <memory>
 #include <mutex>
-#include <stack>
 
 namespace hyperion::v2 {
 

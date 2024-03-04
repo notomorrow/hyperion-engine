@@ -38,7 +38,9 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(BindEnvProbe)() override = default;
+
+    virtual Result operator()() override
     {
         g_engine->GetRenderState().BindEnvProbe(env_probe_type, id);
 
@@ -57,7 +59,9 @@ struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(UnbindEnvProbe)() override = default;
+
+    virtual Result operator()() override
     {
         g_engine->GetRenderState().UnbindEnvProbe(env_probe_type, id);
 
@@ -74,7 +78,9 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(DestroyCubemapRenderPass)() override = default;
+
+    virtual Result operator()() override
     {
         auto result = Result::OK;
 
@@ -94,7 +100,9 @@ struct RENDER_COMMAND(CreateSHData) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateSHData)() override = default;
+
+    virtual Result operator()() override
     {
         HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(g_engine->GetGPUDevice(), sizeof(SHTile) * num_tiles.Size() * 6));
 

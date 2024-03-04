@@ -320,7 +320,8 @@ public:
         } \
     }
 
-DEF_HANDLE(Texture,                      16384);
+DEF_HANDLE(Texture,                      32768);
+DEF_HANDLE(Lightmap,                     32768);
 DEF_HANDLE(Camera,                       64);
 DEF_HANDLE(Entity,                       32768);
 DEF_HANDLE(Node,                         65536);

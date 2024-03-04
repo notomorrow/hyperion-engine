@@ -18,4 +18,4 @@ DebugHBIL = false
 DebugReflections = false
 DebugIrradiance = false
 DebugEnvGridProbes = false
-PathTracer = true
+PathTracer = false

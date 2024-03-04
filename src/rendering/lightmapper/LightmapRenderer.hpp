@@ -155,14 +155,14 @@ public:
     /*! \brief Trace rays on the CPU.
      *  \param rays The rays to trace.    
      */
-    void TraceRaysOnCPU(const Array<LightmapRay> &rays);
+    void TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type);
 
     /*! \brief Integrate ray hits into the lightmap.
      *  \param rays The rays that were traced.
      *  \param hits The hits to integrate.
      *  \param num_hits The number of hits (must be the same as the number of rays).
      */
-    void IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits);
+    void IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits, LightmapShadingType shading_type);
 
     bool IsCompleted() const;
     bool IsStarted() const;

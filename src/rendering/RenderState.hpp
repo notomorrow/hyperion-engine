@@ -7,6 +7,7 @@
 #include <core/lib/Stack.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
+#include <rendering/Lightmap.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <scene/Scene.hpp>
@@ -27,16 +28,16 @@ using RenderStateMask = uint32;
 
 enum RenderStateMaskBits : RenderStateMask
 {
-    RENDER_STATE_NONE = 0x0,
-    RENDER_STATE_SCENE = 0x1,
-    RENDER_STATE_LIGHTS = 0x2,
-    RENDER_STATE_ENV_PROBES = 0x4,
-    RENDER_STATE_ACTIVE_ENV_PROBE = 0x8,
-    RENDER_STATE_UNUSED = 0x10, // placeholder
-    RENDER_STATE_CAMERA = 0x20,
-    RENDER_STATE_FRAME_COUNTER = 0x40,
+    RENDER_STATE_NONE               = 0x0,
+    RENDER_STATE_SCENE              = 0x1,
+    RENDER_STATE_LIGHTS             = 0x2,
+    RENDER_STATE_ENV_PROBES         = 0x4,
+    RENDER_STATE_ACTIVE_ENV_PROBE   = 0x8,
+    RENDER_STATE_LIGHTMAPS          = 0x10,
+    RENDER_STATE_CAMERA             = 0x20,
+    RENDER_STATE_FRAME_COUNTER      = 0x40,
 
-    RENDER_STATE_ALL = 0xFFFFFFFFu
+    RENDER_STATE_ALL                = 0xFFFFFFFFu
 };
 
 // Basic render side binding, by default holding only ID of an object.
@@ -97,6 +98,7 @@ struct RenderState
     FixedArray<ArrayMap<ID<EnvProbe>, Optional<uint>>, ENV_PROBE_TYPE_MAX>  bound_env_probes; // map to texture slot
     ID<EnvGrid>                                                             bound_env_grid;
     Stack<ID<EnvProbe>>                                                     env_probe_bindings;
+    FlatMap<ID<Lightmap>, Handle<Lightmap>>                                 bound_lightmaps;
     uint32                                                                  frame_counter = ~0u;
 
     void AdvanceFrameCounter()
@@ -133,6 +135,16 @@ struct RenderState
     void UnbindLight(ID<Light> id)
     {
         lights.Erase(id);
+    }
+
+    void BindLightmap(Handle<Lightmap> lightmap)
+    {
+        bound_lightmaps.Insert(lightmap.GetID(), std::move(lightmap));
+    }
+
+    void UnbindLightmap(ID<Lightmap> id)
+    {
+        bound_lightmaps.Erase(id);
     }
 
     void BindScene(const Scene *scene)
@@ -270,6 +282,10 @@ struct RenderState
 
         if (mask & RENDER_STATE_ACTIVE_ENV_PROBE) {
             env_probe_bindings = { };
+        }
+
+        if (mask & RENDER_STATE_LIGHTMAPS) {
+            bound_lightmaps = { };
         }
 
         if (mask & RENDER_STATE_FRAME_COUNTER) {

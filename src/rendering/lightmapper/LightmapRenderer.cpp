@@ -414,7 +414,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
     }
 }
 
-void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits)
+void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits, LightmapShadingType shading_type)
 {
     for (uint i = 0; i < num_hits; i++) {
         const LightmapRay &ray = rays[i];
@@ -423,7 +423,14 @@ void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *h
         LightmapUVMap &uv_map = GetUVMap();
         LightmapUV &uv = uv_map.uvs[ray.texel_index];
 
-        uv.color += Vec4f(hit.color * (1.0f / float(num_multisamples)));
+        switch (shading_type) {
+        case LIGHTMAP_SHADING_TYPE_RADIANCE:
+            uv.radiance = (uv.radiance * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
+            break;
+        case LIGHTMAP_SHADING_TYPE_IRRADIANCE:
+            uv.irradiance = (uv.irradiance * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
+            break;
+        }
 
         //uv.color = (uv.color * (Vec4f(1.0f) - Vec4f(hit.color.w))) + Vec4f(hit.color * hit.color.w);
     }
@@ -437,7 +444,7 @@ Optional<LightmapHit> LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray)
         // distance, hit
         FlatMap<float, LightmapHit> results;
 
-        for (const auto &hit : octree_results) {
+        for (const RayHit &hit : octree_results) {
             // now ray test each result as triangle mesh to find exact hit point
             if (ID<Entity> entity_id = ID<Entity>(hit.id)) {
                 const MeshComponent *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(entity_id);
@@ -492,14 +499,14 @@ Optional<LightmapHit> LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray)
     return { };
 }
 
-void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays)
+void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type)
 {
-    rays.ParallelForEach(TaskSystem::GetInstance(), [this](const LightmapRay &ray, uint index, uint batch_index)
+    rays.ParallelForEach(TaskSystem::GetInstance(), [this, shading_type](const LightmapRay &ray, uint index, uint batch_index)
     {
         Optional<LightmapHit> hit = TraceSingleRayOnCPU(ray);
 
         if (hit.HasValue()) {
-            IntegrateRayHits(&ray, &hit.Get(), 1);
+            IntegrateRayHits(&ray, &hit.Get(), 1, shading_type);
         }
     });
 }
@@ -666,7 +673,8 @@ void LightmapRenderer::OnUpdate(GameCounter::TickUnit delta)
         job->GatherRays(max_ray_hits_cpu, rays);
 
         if (rays.Any()) {
-            job->TraceRaysOnCPU(rays);
+            job->TraceRaysOnCPU(rays, LIGHTMAP_SHADING_TYPE_IRRADIANCE);
+            job->TraceRaysOnCPU(rays, LIGHTMAP_SHADING_TYPE_RADIANCE);
         }
     }
 }
@@ -724,16 +732,17 @@ void LightmapRenderer::OnRender(Frame *frame)
 
         // Read ray hits from last time this frame was rendered
         const Array<LightmapRay> &previous_rays = job->GetPreviousFrameRays(frame_index);
-
-        // @TODO Trace both radiance and irradiance
-
+        
         // Read previous frame hits into CPU buffer
         if (previous_rays.Any()) {
             // @NOTE Use heap allocation to avoid stack overflow (max_ray_hits_gpu * sizeof(LightmapHit) > 1MB)
             LightmapHitsBuffer *hits_buffer(new LightmapHitsBuffer);
-            m_path_tracer_radiance->ReadHitsBuffer(hits_buffer, frame_index);
 
-            job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size());
+            m_path_tracer_radiance->ReadHitsBuffer(hits_buffer, frame_index);
+            job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size(), LIGHTMAP_SHADING_TYPE_RADIANCE);
+
+            m_path_tracer_irradiance->ReadHitsBuffer(hits_buffer, frame_index);
+            job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size(), LIGHTMAP_SHADING_TYPE_IRRADIANCE);
 
             delete hits_buffer;
         }
@@ -746,8 +755,8 @@ void LightmapRenderer::OnRender(Frame *frame)
     }
 
     if (current_frame_rays.Any()) {
-        // Enqueue trace command
         m_path_tracer_radiance->Trace(frame, current_frame_rays, ray_offset);
+        m_path_tracer_irradiance->Trace(frame, current_frame_rays, ray_offset);
     }
 }
 
@@ -757,81 +766,94 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
 
     const LightmapUVMap &uv_map = job->GetUVMap();
 
-    Bitmap<4, float> rgba_bitmap = uv_map.ToRGBA32F();
-    Bitmap<4, float> rgba_bitmap_dilated = rgba_bitmap;
+    FixedArray<Bitmap<4, float>, 2> bitmaps = {
+        uv_map.ToBitmapRadiance(),
+        uv_map.ToBitmapIrradiance()
+    };
 
-    // Dilate lightmap
-    for (uint x = 0; x < rgba_bitmap.GetWidth(); x++) {
-        for (uint y = 0; y < rgba_bitmap.GetHeight(); y++) {
-            Vec3f color = rgba_bitmap.GetPixel(x, y);
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y - 1));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x, y - 1));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y - 1));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x - 1, y + 1));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x, y + 1));
-            color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(rgba_bitmap.GetPixel(x + 1, y + 1));
+    for (auto &bitmap : bitmaps) {
+        Bitmap<4, float> bitmap_dilated = bitmap;
 
-            rgba_bitmap_dilated.GetPixel(x, y) = color;
-        }
-    }
+        // Dilate lightmap
+        for (uint x = 0; x < bitmap.GetWidth(); x++) {
+            for (uint y = 0; y < bitmap.GetHeight(); y++) {
+                Vec3f color = bitmap.GetPixel(x, y);
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y - 1));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x, y - 1));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y - 1));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y + 1));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x, y + 1));
+                color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y + 1));
 
-    rgba_bitmap = rgba_bitmap_dilated;
-
-    // Apply bilateral blur
-    Bitmap<4, float> rgba_bitmap_blurred = rgba_bitmap;
-
-    for (uint x = 0; x < rgba_bitmap.GetWidth(); x++) {
-        for (uint y = 0; y < rgba_bitmap.GetHeight(); y++) {
-            Vec3f color = Vec3f(0.0f);
-
-            float total_weight = 0.0f;
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    const uint nx = x + dx;
-                    const uint ny = y + dy;
-
-                    if (nx >= rgba_bitmap.GetWidth() || ny >= rgba_bitmap.GetHeight()) {
-                        continue;
-                    }
-
-                    const Vec3f neighbor_color = rgba_bitmap.GetPixel(nx, ny);
-
-                    const float spatial_weight = MathUtil::Exp(-float(dx * dx + dy * dy) / (2.0f * 1.0f));
-                    const float color_weight = MathUtil::Exp(-(neighbor_color - rgba_bitmap.GetPixel(x, y)).LengthSquared() / (2.0f * 0.1f));
-
-                    const float weight = spatial_weight * color_weight;
-
-                    color += neighbor_color * weight;
-                    total_weight += weight;
-                }
+                bitmap_dilated.GetPixel(x, y) = color;
             }
-
-            rgba_bitmap_blurred.GetPixel(x, y) = color / MathUtil::Max(total_weight, MathUtil::epsilon_f);
         }
-    }
 
-    rgba_bitmap = rgba_bitmap_blurred;
+        bitmap = bitmap_dilated;
+
+        // Apply bilateral blur
+        Bitmap<4, float> bitmap_blurred = bitmap;
+
+        for (uint x = 0; x < bitmap.GetWidth(); x++) {
+            for (uint y = 0; y < bitmap.GetHeight(); y++) {
+                Vec3f color = Vec3f(0.0f);
+
+                float total_weight = 0.0f;
+
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        const uint nx = x + dx;
+                        const uint ny = y + dy;
+
+                        if (nx >= bitmap.GetWidth() || ny >= bitmap.GetHeight()) {
+                            continue;
+                        }
+
+                        const Vec3f neighbor_color = bitmap.GetPixel(nx, ny);
+
+                        const float spatial_weight = MathUtil::Exp(-float(dx * dx + dy * dy) / (2.0f * 1.0f));
+                        const float color_weight = MathUtil::Exp(-(neighbor_color - bitmap.GetPixel(x, y)).LengthSquared() / (2.0f * 0.1f));
+
+                        const float weight = spatial_weight * color_weight;
+
+                        color += neighbor_color * weight;
+                        total_weight += weight;
+                    }
+                }
+
+                bitmap_blurred.GetPixel(x, y) = color / MathUtil::Max(total_weight, MathUtil::epsilon_f);
+            }
+        }
+
+        bitmap = bitmap_blurred;
+    }
     
     // Temp; write to rgb8 bitmap
-    rgba_bitmap.Write("lightmap_" + String::ToString(rand() % 150) + ".bmp");
+    uint num = rand() % 150;
+    bitmaps[0].Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
+    bitmaps[1].Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
 
-    ByteBuffer bitmap_bytebuffer(rgba_bitmap.ToByteBuffer());
-    UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(bitmap_bytebuffer)));
-    (void)streamed_data->Load();
+    FixedArray<Handle<Texture>, 2> textures;
 
-    Handle<Texture> lightmap_texture = CreateObject<Texture>(
-        Extent3D { uv_map.width, uv_map.height, 1 },
-        InternalFormat::RGBA32F,
-        ImageType::TEXTURE_TYPE_2D,
-        FilterMode::TEXTURE_FILTER_LINEAR,
-        WrapMode::TEXTURE_WRAP_REPEAT,
-        std::move(streamed_data)
-    );
+    for (uint i = 0; i < 2; i++) {
+        UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(bitmaps[i].ToByteBuffer()));
+        (void)streamed_data->Load();
 
-    InitObject(lightmap_texture);
+        Handle<Texture> texture = CreateObject<Texture>(
+            Extent3D { uv_map.width, uv_map.height, 1 },
+            InternalFormat::RGBA32F,
+            ImageType::TEXTURE_TYPE_2D,
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_REPEAT,
+            std::move(streamed_data)
+        );
+
+        InitObject(texture);
+
+        textures[i] = std::move(texture);
+    }
 
     for (const auto &it : job->GetEntities()) {
         if (!it.material) {
@@ -839,7 +861,8 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
             continue;
         }
         
-        it.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
+        it.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_RADIANCE_MAP, textures[0]);
+        it.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_IRRADIANCE_MAP, textures[1]);
     }
 
     m_queue.Pop();

@@ -18,11 +18,6 @@ layout(location=2) in vec2 v_texcoord0;
 layout(location=3) in vec4 v_color;
 
 layout(location = 0) out vec4 gbuffer_albedo;
-// layout(location=1) out vec4 gbuffer_normals;
-// layout(location=2) out vec4 gbuffer_material;
-// layout(location=3) out vec4 gbuffer_tangents;
-// layout(location=4) out vec2 gbuffer_velocity;
-// layout(location=5) out vec4 gbuffer_mask;
 
 HYP_DESCRIPTOR_SRV(ParticleDescriptorSet, ParticleTexture) uniform texture2D albedo_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
