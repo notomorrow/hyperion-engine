@@ -129,15 +129,16 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb)
     return view_matrices;
 }
 
-void EnvProbe::UpdateEnvProbeShaderData(
-    ID<EnvProbe> id,
-    const EnvProbeDrawProxy &proxy,
+void EnvProbe::UpdateRenderData(
     uint32 texture_slot,
     uint32 grid_slot,
     Extent3D grid_size
 )
 {
-    const FixedArray<Matrix4, 6> view_matrices = CreateCubemapMatrices(proxy.aabb);
+    const BoundingBox &aabb = GetDrawProxy().aabb;
+    const Vec3f world_position = aabb.GetCenter();
+
+    const FixedArray<Matrix4, 6> view_matrices = CreateCubemapMatrices(aabb);
 
     EnvProbeShaderData data {
         .face_view_matrices = {
@@ -148,14 +149,14 @@ void EnvProbe::UpdateEnvProbeShaderData(
             ShaderMat4(view_matrices[4]),
             ShaderMat4(view_matrices[5])
         },
-        .aabb_max = Vector4(proxy.aabb.max, 1.0f),
-        .aabb_min = Vector4(proxy.aabb.min, 1.0f),
-        .world_position = Vector4(proxy.world_position, 1.0f),
-        .texture_index = texture_slot,
-        .flags = proxy.flags,
-        .camera_near = proxy.camera_near,
-        .camera_far = proxy.camera_far,
-        .position_in_grid = grid_slot != ~0u
+        .aabb_max           = Vec4f(aabb.max, 1.0f),
+        .aabb_min           = Vec4f(aabb.min, 1.0f),
+        .world_position     = Vec4f(world_position, 1.0f),
+        .texture_index      = texture_slot,
+        .flags              = GetDrawProxy().flags,
+        .camera_near        = GetDrawProxy().camera_near,
+        .camera_far         = GetDrawProxy().camera_far,
+        .position_in_grid   = grid_slot != ~0u
             ? ShaderVec4<int32> {
                   int32(grid_slot % grid_size.width),
                   int32((grid_slot % (grid_size.width * grid_size.height)) / grid_size.width),
@@ -163,10 +164,10 @@ void EnvProbe::UpdateEnvProbeShaderData(
                   int32(grid_slot)
               }
             : ShaderVec4<int32> { 0, 0, 0, 0 },
-        .position_offset = { 0, 0, 0, 0 }
+        .position_offset    = { 0, 0, 0, 0 }
     };
 
-    g_engine->GetRenderData()->env_probes.Set(id.ToIndex(), data);
+    g_engine->GetRenderData()->env_probes.Set(GetID().ToIndex(), data);
 }
 
 EnvProbe::EnvProbe(
@@ -428,7 +429,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     if (m_octant_hash_code != octant_hash) {
         SetNeedsUpdate(true);
 
-        //DebugLog(LogType::Debug, "Probe #%u octree hash changed (%llu != %llu)\n", GetID().Value(), octant_hash.Value(), m_octant_hash_code.Value());
+        // DebugLog(LogType::Debug, "Probe #%u octree hash changed (%llu != %llu), new octant ID: %u:%u\n", GetID().Value(), octant_hash.Value(), m_octant_hash_code.Value(),
+        //     octree->GetOctantID().GetDepth(), octree->GetOctantID().GetIndex());
 
         m_octant_hash_code = octant_hash;
     }
@@ -610,9 +612,7 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         m_draw_proxy.flags |= shadow_flags << 3;
     }
 
-    UpdateEnvProbeShaderData(
-        GetID(),
-        m_draw_proxy,
+    UpdateRenderData(
         texture_slot,
         IsControlledByEnvGrid() ? m_grid_slot : ~0u,
         IsControlledByEnvGrid() ? m_bound_index.grid_size : Extent3D { }

@@ -71,8 +71,11 @@ comp = sh/ComputeSH.comp
 comp = light_field/PackLightFieldProbe.comp
 
 [EnvProbe_VoxelizeProbe]
-permute = MODE(CLEAR VOXELIZE OFFSET)
+permute = MODE(VOXELIZE OFFSET)
 comp = light_field/VoxelizeProbe.comp.glsl
+
+[EnvProbe_ClearProbeVoxels]
+comp = light_field/ClearProbeVoxels.comp.glsl
 
 [LightField_CopyBorderTexels]
 permute = DEPTH

@@ -126,12 +126,10 @@ public:
     friend struct RenderCommand_UpdateEnvProbeDrawProxy;
     friend struct RenderCommand_DestroyCubemapRenderPass;
 
-    static void UpdateEnvProbeShaderData(
-        ID<EnvProbe> id,
-        const EnvProbeDrawProxy &proxy,
-        uint32 texture_slot = ~0u,
-        uint32 grid_slot = ~0u,
-        Extent3D grid_size = Extent3D { 0, 0, 0 }
+    void UpdateRenderData(
+        uint32 texture_slot,
+        uint32 grid_slot,
+        Extent3D grid_size
     );
     
     EnvProbe(
@@ -233,7 +231,6 @@ public:
     void UpdateRenderData(bool set_texture = false);
     void BindToIndex(const EnvProbeIndex &probe_index);
 
-    uint32 m_temp_render_frame_id = 0;
     uint32 m_grid_slot = ~0u; // temp
     
 private:

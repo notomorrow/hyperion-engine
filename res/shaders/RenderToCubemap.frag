@@ -49,7 +49,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/object.inc"
 #include "include/packing.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.1
+#define HYP_CUBEMAP_AMBIENT 0.01
 
 #ifdef MODE_AMBIENT
     #define LIGHTING
@@ -211,8 +211,8 @@ void main()
 #ifdef TONEMAP
     output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 #endif
-    output_color.a = 1.0;
 
+    output_color.a = 1.0;
 #endif
 
 #ifdef WRITE_NORMALS

@@ -45,5 +45,5 @@ void main()
     vec4 color = GetVoxelAtTexel(texcoord);
     vec4 final_color = color;
 
-    imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1.0)), final_color);
+    imageStore(mip_out, clamp(ivec3(coord), ivec3(0), ivec3(mip_dimensions.xyz) - ivec3(1)), final_color);
 }
