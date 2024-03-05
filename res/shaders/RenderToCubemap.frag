@@ -48,6 +48,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/Octahedron.glsl"
 #include "include/object.inc"
 #include "include/packing.inc"
+#include "include/brdf.inc"
 
 #define HYP_CUBEMAP_AMBIENT 0.01
 
@@ -169,6 +170,7 @@ void main()
 #else
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
+    const float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
 
 #if defined(LIGHTING) || defined(SHADOWS)
     vec3 L = light.position_intensity.xyz;
@@ -191,15 +193,57 @@ void main()
 #ifdef LIGHTING
     const vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
-    output_color.rgb = albedo.rgb * vec3(HYP_CUBEMAP_AMBIENT);   
+    const vec3 H = normalize(L + V);
 
-    // if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
-        #ifdef SHADOWS
-            output_color.rgb += albedo.rgb * HYP_FMATH_ONE_OVER_PI * NdotL * light_color.rgb * light.position_intensity.w * shadow;
-        #else
-            output_color.rgb += albedo.rgb * HYP_FMATH_ONE_OVER_PI * NdotL * light_color.rgb * light.position_intensity.w;
-        #endif
-    // }
+    const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
+    const float NdotH = max(HYP_FMATH_EPSILON, dot(N, H));
+    const float LdotH = max(HYP_FMATH_EPSILON, dot(L, H));
+    const float HdotV = max(HYP_FMATH_EPSILON, dot(H, V));
+
+    const vec3 F0 = CalculateF0(albedo.rgb, metalness);
+    vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+
+    vec3 indirect_lighting = vec3(0.0);
+    vec3 direct_lighting = vec3(0.0);
+
+    { // indirect
+        const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
+        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
+        const vec3 E = CalculateE(F0, dfg);
+        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+
+        vec3 Fd = albedo.rgb * vec3(HYP_CUBEMAP_AMBIENT) * (1.0 - E);
+
+        indirect_lighting = Fd;
+    }
+
+    { // direct
+        const float D = CalculateDistributionTerm(roughness, NdotH);
+        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+        const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
+
+        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
+        const vec3 E = CalculateE(F0, dfg);
+        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+
+        const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
+        const vec3 specular_lobe = D * G * F;
+
+        vec3 specular = specular_lobe;
+
+        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
+            ? GetSquareFalloffAttenuation(v_position, light.position_intensity.xyz, light.radius)
+            : 1.0;
+
+        vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
+        vec3 diffuse = diffuse_lobe;
+
+        vec3 direct_component = diffuse + specular * energy_compensation;
+
+        direct_lighting += direct_component * (light_color.rgb * NdotL * shadow * light.position_intensity.w * attenuation);
+    }
+
+    output_color.rgb += indirect_lighting + direct_lighting;
 #else
     output_color.rgb = albedo.rgb;
 
