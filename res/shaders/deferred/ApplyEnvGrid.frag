@@ -79,6 +79,8 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
+#if MODE == 1
+    // Skip every other pixel for radiance
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
@@ -88,6 +90,7 @@ void main()
         color_output = vec4(0.0);
         return;
     }
+#endif
 
     vec3 irradiance = vec3(0.0);
 
@@ -115,7 +118,4 @@ void main()
 
     color_output = radiance;
 #endif
-
-    // must set alpha to 1.0 for blending
-    color_output.a = 1.0;
 }
