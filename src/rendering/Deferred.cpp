@@ -15,11 +15,16 @@ using renderer::Rect;
 using renderer::Result;
 using renderer::GPUBufferType;
 
-const Extent2D DeferredRenderer::mip_chain_extent(512, 512);
-const InternalFormat DeferredRenderer::mip_chain_format = InternalFormat::R10G10B10A2;
+static const Extent2D mip_chain_extent { 512, 512 };
+static const InternalFormat mip_chain_format = InternalFormat::R10G10B10A2;
 
-const Extent2D DeferredRenderer::hbao_extent(512, 512);
-const Extent2D DeferredRenderer::ssr_extent(512, 512);
+static const Extent2D hbao_extent { 512, 512 };
+static const Extent2D ssr_extent { 512, 512 };
+
+static const InternalFormat env_grid_radiance_format = InternalFormat::RGBA16F;
+static const InternalFormat env_grid_irradiance_format = InternalFormat::R11G11B10F;
+static const Extent2D env_grid_irradiance_extent { 1024, 768 };
+static const Extent2D env_grid_radiance_extent { 1024, 768 };
 
 #pragma region Render commands
 
@@ -222,13 +227,26 @@ void DeferredPass::Render(Frame *frame)
 // ===== Env Grid Pass Begin =====
 
 EnvGridPass::EnvGridPass(EnvGridPassMode mode)
-    : FullScreenPass(InternalFormat::RGBA16F),
-      m_mode(mode)
+    : FullScreenPass(
+        mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE
+            ? env_grid_radiance_format
+            : env_grid_irradiance_format,
+        mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE
+            ? env_grid_radiance_extent
+            : env_grid_irradiance_extent
+      ),
+      m_mode(mode),
+      m_is_first_frame(true)
 {
 }
 
 EnvGridPass::~EnvGridPass()
 {
+    if (m_render_texture_to_screen_pass) {
+        m_render_texture_to_screen_pass->Destroy();
+        m_render_texture_to_screen_pass.Reset();
+    }
+
     if (m_temporal_blending) {
         m_temporal_blending->Destroy();
         m_temporal_blending.Reset();
@@ -272,31 +290,91 @@ void EnvGridPass::Create()
         MaterialAttributes {
             .bucket     = Bucket::BUCKET_INTERNAL,
             .fill_mode  = FillMode::FILL,
-            .blend_mode = BlendMode::ADDITIVE
+            .blend_mode = BlendMode::NORMAL
         }
     );
 
     FullScreenPass::CreatePipeline(renderable_attributes);
 
-    // if (m_mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
-    //     m_temporal_blending.Reset(new TemporalBlending(
-    //         m_framebuffer->GetExtent(),
-    //         InternalFormat::RGBA16F,
-    //         TemporalBlendTechnique::TECHNIQUE_1,
-    //         TemporalBlendFeedback::LOW,
-    //         m_framebuffer
-    //     ));
+    if (m_mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
+        m_temporal_blending.Reset(new TemporalBlending(
+            m_framebuffer->GetExtent(),
+            InternalFormat::RGBA16F,
+            TemporalBlendTechnique::TECHNIQUE_1,
+            TemporalBlendFeedback::LOW,
+            m_framebuffer
+        ));
         
-    //     m_temporal_blending->Create();
-    // }
+        m_temporal_blending->Create();
+    }
+
+    // Create render texture to screen pass.
+    // this is used to render the previous frame's result to the screen,
+    // so we can blend it with the current frame's result (checkerboarded)
+    auto render_texture_to_screen_shader = g_shader_manager->GetOrCreate(HYP_NAME(RenderTextureToScreen));
+    AssertThrow(InitObject(render_texture_to_screen_shader));
+
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(InTexture), m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());    
+
+    m_render_texture_to_screen_pass.Reset(new FullScreenPass(
+        render_texture_to_screen_shader,
+        std::move(descriptor_table),
+        m_image_format,
+        m_extent
+    ));
+
+    m_render_texture_to_screen_pass->Create();
 }
 
 void EnvGridPass::Record(uint frame_index)
 {
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+}
 
-    // TODO: Do for each env grid in view
-    auto record_result = command_buffer->Record(
+void EnvGridPass::Render(Frame *frame)
+{
+    const uint frame_index = frame->GetFrameIndex();
+
+    GetFramebuffer()->BeginCapture(frame_index, frame->GetCommandBuffer());
+
+    // render previous frame's result to screen
+    if (!m_is_first_frame) {
+        m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
+            g_engine->GetGPUInstance()->GetDevice(),
+            m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
+            [this, frame_index](CommandBuffer *cmd)
+            {
+                // render previous frame's result to screen
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable().Get()->Bind<GraphicsPipelineRef>(
+                    cmd,
+                    frame_index,
+                    m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
+                    { }
+                );
+
+                m_full_screen_quad->Render(cmd);
+
+                HYPERION_RETURN_OK;
+            });
+
+        HYPERION_ASSERT_RESULT(m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
+    } else {
+        m_is_first_frame = false;
+    }
+
+    const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
+
+    command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
         m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
         [this, frame_index](CommandBuffer *cmd)
@@ -338,12 +416,9 @@ void EnvGridPass::Record(uint frame_index)
             HYPERION_RETURN_OK;
         });
 
-    HYPERION_ASSERT_RESULT(record_result);
-}
+    HYPERION_ASSERT_RESULT(m_command_buffers[frame_index]->SubmitSecondary(frame->GetCommandBuffer()));
 
-void EnvGridPass::Render(Frame *frame)
-{
-    FullScreenPass::Render(frame);
+    GetFramebuffer()->EndCapture(frame_index, frame->GetCommandBuffer());
 
     if (m_temporal_blending) {
         m_temporal_blending->Render(frame);
@@ -573,8 +648,7 @@ void DeferredRenderer::CreateDescriptorSets()
             ->SetElement(HYP_NAME(EnvGridIrradianceResultTexture), m_env_grid_irradiance_pass.GetAttachmentUsage(0)->GetImageView());
 
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-            ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetAttachmentUsage(0)->GetImageView());
-                //.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
+            ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
             ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());

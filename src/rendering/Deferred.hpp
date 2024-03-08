@@ -95,6 +95,20 @@ enum EnvGridPassMode
     ENV_GRID_PASS_MODE_IRRADIANCE
 };
 
+// class RenderTextureToScreenPass : public FullScreenPass
+// {
+// public:
+//     RenderTextureToScreenPass(Extent2D extent);
+//     RenderTextureToScreenPass(const RenderTextureToScreenPass &other)               = delete;
+//     RenderTextureToScreenPass &operator=(const RenderTextureToScreenPass &other)    = delete;
+//     virtual ~RenderTextureToScreenPass() override;
+
+//     void CreateShader();
+//     virtual void Create() override;
+//     virtual void Record(uint frame_index) override;
+//     virtual void Render(Frame *frame) override;
+// };
+
 class EnvGridPass : public FullScreenPass
 {
 public:
@@ -114,6 +128,9 @@ public:
 private:
     const EnvGridPassMode       m_mode;
     UniquePtr<TemporalBlending> m_temporal_blending;
+
+    UniquePtr<FullScreenPass>   m_render_texture_to_screen_pass;
+    bool                        m_is_first_frame;
 };
 
 class ReflectionProbePass : public FullScreenPass
@@ -131,12 +148,6 @@ public:
 
 class DeferredRenderer
 {
-    static const Extent2D mip_chain_extent;
-    static const InternalFormat mip_chain_format;
-
-    static const Extent2D hbao_extent;
-    static const Extent2D ssr_extent;
-
 public:
     DeferredRenderer();
     DeferredRenderer(const DeferredRenderer &other)             = delete;
