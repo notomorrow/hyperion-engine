@@ -343,6 +343,10 @@ void EnvGridPass::Record(uint frame_index)
 void EnvGridPass::Render(Frame *frame)
 {
     const uint frame_index = frame->GetFrameIndex();
+    
+    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+    const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+    const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
 
     GetFramebuffer()->BeginCapture(frame_index, frame->GetCommandBuffer());
 
@@ -351,7 +355,7 @@ void EnvGridPass::Render(Frame *frame)
         m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
             g_engine->GetGPUInstance()->GetDevice(),
             m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
-            [this, frame_index](CommandBuffer *cmd)
+            [this, frame_index, scene_index, camera_index, env_grid_index](CommandBuffer *cmd)
             {
                 // render previous frame's result to screen
                 m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
@@ -359,7 +363,18 @@ void EnvGridPass::Render(Frame *frame)
                     cmd,
                     frame_index,
                     m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
-                    { }
+                    {
+                        {
+                            HYP_NAME(Scene),
+                            {
+                                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
+                                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                            }
+                        }
+                    }
                 );
 
                 m_full_screen_quad->Render(cmd);
@@ -377,12 +392,8 @@ void EnvGridPass::Render(Frame *frame)
     command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
         m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
-        [this, frame_index](CommandBuffer *cmd)
+        [this, frame_index, scene_index, camera_index, env_grid_index](CommandBuffer *cmd)
         {
-            const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
-            const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
-            const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
-
             const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
             const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
 
