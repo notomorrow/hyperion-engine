@@ -6,7 +6,7 @@
 #include "../include/BlueNoise.glsl"
 #include "../include/Octahedron.glsl"
 
-#define HYP_VCT_USE_ROUGHNESS_SCATTERING
+// #define HYP_VCT_USE_ROUGHNESS_SCATTERING
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -125,7 +125,7 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
 #else
     const vec3 R = normalize(reflect(-V, N));
 #endif
-
+    
     return ConeTraceSpecular(world_position, N, R, V, roughness, voxel_grid_aabb);
 }
 

@@ -114,27 +114,6 @@ vec3 CalculateRefraction(
 
 #ifndef HYP_DEFERRED_NO_ENV_GRID
 
-int GetLocalEnvProbeIndex(vec3 world_position, out ivec3 unit_diff)
-{
-    const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-    
-    const vec3 diff = world_position - env_grid.center.xyz;
-    const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
-
-    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
-        unit_diff = ivec3(0);
-        return -1;
-    }
-
-    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
-
-    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
-        + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z);
-
-    return probe_index_at_point;
-}
-
 float[9] ProjectSHBands(vec3 N)
 {
     float bands[9];
@@ -154,8 +133,7 @@ float[9] ProjectSHBands(vec3 N)
 
 vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
 {
-    ivec3 base_probe_coord;
-    int base_probe_index_at_point = int(GetLocalEnvProbeIndex(P, base_probe_coord));
+    int base_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, P));
 
     if (base_probe_index_at_point < 0 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
         return vec3(0.0);
@@ -167,12 +145,12 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
         return vec3(0.0);
     }
 
-    // const vec3 base_probe_position = env_grid.aabb_min.xyz + (size_of_probe * vec3(base_probe_coord)) + (size_of_probe * 0.5);
+    const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
 
     const vec3 base_probe_position = env_probes[base_probe_index].world_position.xyz;
 
-    const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-    const vec3 alpha = clamp((P - base_probe_position) / size_of_probe + 0.5, vec3(0.0), vec3(1.0));
+    const vec3 alpha = clamp((P - base_probe_position) / size_of_probe, vec3(0.0), vec3(1.0)); //clamp(abs((P - base_probe_position) / size_of_probe * 0.5), vec3(0.0), vec3(1.0));
+    // const vec3 alpha = vec3(1.0) - clamp(distance(P, base_probe_position) / size_of_probe * 0.5, vec3(0.0), vec3(1.0)); //clamp(abs((P - base_probe_position) / size_of_probe * 0.5), vec3(0.0), vec3(1.0));
     
     SH9 sh9;
 
@@ -183,10 +161,10 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
     for (int i = 0; i < 8; i++) {
         ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
 
-        vec3 neighbor_probe_position = base_probe_position + (size_of_probe * vec3(offset));
+        // Add (size_of_probe * 0.5) to bias it to ensure the correct probe is selected
+        vec3 neighbor_probe_position = base_probe_position + (size_of_probe * vec3(offset)) + (size_of_probe * 0.5);
 
-        ivec3 neighbor_probe_coord;
-        int neighbor_probe_index_at_point = int(GetLocalEnvProbeIndex(neighbor_probe_position, neighbor_probe_coord));
+        int neighbor_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, neighbor_probe_position));
 
         if (neighbor_probe_index_at_point < 0 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
             continue;
@@ -261,7 +239,6 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
     ibl = vec4(0.0);
 
     if (probe.texture_index == ~0u) {
-        ibl = vec4(1.0, 0.0, 1.0, 0.0);
         return;
     }
     
@@ -283,11 +260,11 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
     );
 }
 
-vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float perceptual_roughness)
+vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float roughness)
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = float(8.0) * perceptual_roughness * (2.0 - perceptual_roughness);
+    const float lod = float(8.0) * roughness * (2.0 - roughness);
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 

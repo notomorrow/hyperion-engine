@@ -217,10 +217,13 @@ public:
                         String value;
 
                         if (auto err = in.GetProperty(param_string + ".key").ReadString(key)) {
+                            DebugLog(LogType::Error, "Failed to read key for descriptor usage 'key' parameter %s\n", param_string.Data());
+                            
                             return err;
                         }
 
                         if (auto err = in.GetProperty(param_string + ".value").ReadString(value)) {
+                            DebugLog(LogType::Error, "Failed to read value for descriptor usage 'value' parameter %s\n", param_string.Data());
                             return err;
                         }
 

@@ -168,46 +168,46 @@ private:
         uint32 probe_index
     );
 
-    EnvGridType m_type;
+    EnvGridType                 m_type;
 
-    BoundingBox m_aabb;
-    BoundingBox m_voxel_grid_aabb;
-    Vec3f m_offset;
-    Extent3D m_density;
+    BoundingBox                 m_aabb;
+    BoundingBox                 m_voxel_grid_aabb;
+    Vec3f                       m_offset;
+    Extent3D                    m_density;
     
-    Handle<Camera> m_camera;
-    RenderList m_render_list;
+    Handle<Camera>              m_camera;
+    RenderList                  m_render_list;
 
-    Handle<Shader> m_ambient_shader;
-    Handle<Framebuffer> m_framebuffer;
+    Handle<Shader>              m_ambient_shader;
+    Handle<Framebuffer>         m_framebuffer;
+
+    EnvProbeCollection          m_env_probe_collection;
+
+    EnvGridShaderData           m_shader_data;
+    uint                        m_current_probe_index;
+
+    AtomicVar<EnvGridFlags>     m_flags;
+
+    ComputePipelineRef          m_clear_sh;
+    ComputePipelineRef          m_compute_sh;
+    ComputePipelineRef          m_finalize_sh;
+    DescriptorTableRef          m_compute_sh_descriptor_table;
+
+    GPUBufferRef                m_sh_tiles_buffer;
+
+    Handle<Texture>             m_probe_data_texture;
+
+    ComputePipelineRef          m_clear_voxels;
+    ComputePipelineRef          m_voxelize_probe;
+    ComputePipelineRef          m_offset_voxel_grid;
+    ComputePipelineRef          m_generate_voxel_grid_mipmaps;
     
-    // Array<Handle<EnvProbe>> m_ambient_probes;
-    // Array<const EnvProbeDrawProxy *> m_env_probe_draw_proxies;
+    Handle<Texture>             m_voxel_grid_texture;
 
-    EnvProbeCollection m_env_probe_collection;
+    Array<ImageViewRef>         m_voxel_grid_mips;
+    Array<DescriptorTableRef>   m_generate_voxel_grid_mipmaps_descriptor_tables;
 
-    EnvGridShaderData m_shader_data;
-    uint m_current_probe_index;
-
-    AtomicVar<EnvGridFlags> m_flags;
-
-    ComputePipelineRef m_clear_sh;
-    ComputePipelineRef m_compute_sh;
-    ComputePipelineRef m_finalize_sh;
-    DescriptorTableRef m_compute_sh_descriptor_table;
-    GPUBufferRef m_sh_tiles_buffer;
-
-    ComputePipelineRef m_clear_voxels;
-    ComputePipelineRef m_voxelize_probe;
-    ComputePipelineRef m_offset_voxel_grid;
-    ComputePipelineRef m_generate_voxel_grid_mipmaps;
-    
-    Handle<Texture> m_voxel_grid_texture;
-
-    Array<ImageViewRef> m_voxel_grid_mips;
-    Array<DescriptorTableRef> m_generate_voxel_grid_mipmaps_descriptor_tables;
-
-    Queue<uint> m_next_render_indices;
+    Queue<uint>                 m_next_render_indices;
 };
 
 } // namespace hyperion::v2

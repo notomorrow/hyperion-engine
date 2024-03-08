@@ -706,7 +706,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");////testbed/testbed2.obj");//living_room/living_room.obj");//
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");//testbed/testbed2.obj");//living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -826,12 +826,12 @@ void SampleStreamer::InitGame()
             
             GetScene()->GetRoot().AddChild(node);
 
-            // // Add a reflection probe
-            // // TEMP: Commented out due to blending issues with multiple reflection probes
-            // m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
-            //     HYP_NAME(ReflectionProbe0),
-            //     node.GetWorldAABB()
-            // );
+            // Add a reflection probe
+            // TEMP: Commented out due to blending issues with multiple reflection probes
+            m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
+                HYP_NAME(ReflectionProbe0),
+                node.GetWorldAABB()
+            );
 
             for (auto &node : node.GetChildren()) {
                 if (auto child_entity = node.GetEntity()) {

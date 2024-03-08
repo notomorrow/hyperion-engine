@@ -245,8 +245,6 @@ static ByteBuffer CompileToSPIRV(
     uint spirv_api_version = GLSLANG_TARGET_SPV_1_2;
     uint spirv_version = 450;
 
-    // Maybe remove... Some platforms giving crash
-    // when loading vk1.2 shaders. But we need it for raytracing.
     if (ShaderModule::IsRaytracingType(type)) {
         vulkan_api_version = MathUtil::Max(vulkan_api_version, VK_API_VERSION_1_2);
         spirv_api_version = MathUtil::Max(spirv_api_version, GLSLANG_TARGET_SPV_1_4);
@@ -288,6 +286,13 @@ static ByteBuffer CompileToSPIRV(
     }
 
     // @TODO: use shader->preprocessedGLSL before working with our internal methods like HYP_DESCRIPTOR_*
+
+    DebugLog(
+        LogType::Debug,
+        "Preprocessed GLSL for %s:\n%s\n",
+        filename.Data(),
+        glslang_shader_get_preprocessed_code(shader)
+    );
 
     if (!glslang_shader_parse(shader, &input)) {
         GLSL_ERROR(LogType::Error, "GLSL parsing failed %s\n", filename.Data());

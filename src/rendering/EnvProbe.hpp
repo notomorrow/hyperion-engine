@@ -190,6 +190,17 @@ public:
         }
     }
 
+    Vec3f GetOrigin() const
+    {
+        // ambient probes use the min point of the aabb as the origin,
+        // so it can blend between 7 other probes
+        if (m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT) {
+            return m_aabb.GetMin();
+        } else {
+            return m_aabb.GetCenter();
+        }
+    }
+
     HYP_FORCE_INLINE Handle<Texture> &GetTexture()
         { return m_texture; }
 

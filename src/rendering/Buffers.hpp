@@ -257,8 +257,10 @@ static_assert(sizeof(EnvProbeShaderData) == 512);
 
 struct alignas(16) ImmediateDrawShaderData
 {
-    ShaderMat4 transform;
-    uint32 color_packed;
+    ShaderMat4  transform;
+    uint32      color_packed;
+    uint32      probe_type;
+    uint32      probe_id;
 };
 
 static_assert(sizeof(ImmediateDrawShaderData) == 80);
@@ -308,6 +310,13 @@ struct alignas(256) SHGridBuffer
 };
 
 // static_assert(sizeof(SHGridBuffer) == 9216);
+
+struct alignas(16) EnvGridProbeDataBuffer
+{
+    static constexpr Vec2u probe_storage_resolution = { 64, 64 };
+
+    Vec2u   data[probe_storage_resolution.x * probe_storage_resolution.y][max_bound_ambient_probes];
+};
 
 struct alignas(16) SHTile
 {

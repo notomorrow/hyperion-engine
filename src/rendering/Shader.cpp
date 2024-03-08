@@ -21,9 +21,9 @@ struct RENDER_COMMAND(CreateShaderProgram) : renderer::RenderCommand
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateShaderProgram)() = default;
+    virtual ~RENDER_COMMAND(CreateShaderProgram)() override = default;
 
-    virtual Result operator()()
+    virtual Result operator()() override
     {
         if (!compiled_shader.IsValid()) {
             return { Result::RENDERER_ERR, "Invalid compiled shader" };
@@ -56,7 +56,9 @@ struct RENDER_COMMAND(DestroyShaderProgram) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(DestroyShaderProgram)() = default;
+
+    virtual Result operator()() override
     {
         return shader_program->Destroy(g_engine->GetGPUDevice());
     }
@@ -72,7 +74,9 @@ struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridBuffer) : renderer::Rend
         AssertThrow(this->sh_grid_buffer.IsValid());
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridBuffer)() = default;
+
+    virtual Result operator()() override
     {
         // @TODO: Make GPU only buffer
         HYPERION_BUBBLE_ERRORS(sh_grid_buffer->Create(g_engine->GetGPUDevice(), sizeof(SHGridBuffer)));
@@ -91,7 +95,9 @@ struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages) : renderer::Rend
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages)() = default;
+
+    virtual Result operator()() override
     {
         for (auto &item : grid_textures) {
             HYPERION_BUBBLE_ERRORS(item.image->Create(g_engine->GetGPUDevice()));

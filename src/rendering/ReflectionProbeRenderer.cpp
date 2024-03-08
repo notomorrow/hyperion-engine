@@ -11,7 +11,7 @@ namespace hyperion::v2 {
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const Vector3 &origin
-) : RenderComponent(name, 5),
+) : RenderComponent(name),
     m_aabb(BoundingBox(origin - 150.0f, origin + 150.0f))
 {
 }
@@ -19,7 +19,7 @@ ReflectionProbeRenderer::ReflectionProbeRenderer(
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const BoundingBox &aabb
-) : RenderComponent(name, 5),
+) : RenderComponent(name),
     m_aabb(aabb)
 {
 }
@@ -77,6 +77,14 @@ void ReflectionProbeRenderer::OnRender(Frame *frame)
     Threads::AssertOnThread(THREAD_RENDER);
 
     m_env_probe->Render(frame);
+
+    if (g_engine->GetConfig().Get(CONFIG_DEBUG_REFLECTION_PROBES)) {
+        g_engine->GetDebugDrawer().ReflectionProbeSphere(
+            m_env_probe->GetDrawProxy().world_position,
+            0.5f,
+            m_env_probe->GetID()
+        );
+    }
 
     // if (m_env_probe->GetDrawProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
     //     if (!m_last_visibility_state) {

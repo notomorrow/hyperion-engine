@@ -2,10 +2,9 @@
 #version 450
 
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_scalar_block_layout : require
 
 #include "Shared.glsl"
-
-#define LOWRES_DITHER (PROBE_SIDE_LENGTH / PROBE_SIDE_LENGTH_LOWRES)
 
 #ifdef MODE_OFFSET
 
@@ -53,42 +52,11 @@ layout(push_constant) uniform PushConstant
 #endif
 };
 
-vec3 MapXYSToDirection(uint face_index, vec2 uv) {
-    vec3 dir = vec3(0.0);
-
-    float u = uv.x;
-    float v = -uv.y;
-
-    // +x, -x, +y, -y, +z, -z
-    switch (face_index) {
-    case 0:
-        dir = normalize(vec3(1.0, v, -u));
-        break;
-    case 1:
-        dir = normalize(vec3(-1.0, v, u));
-        break;
-    case 2:
-        dir = normalize(vec3(u, 1.0, -v));
-        break;
-    case 3:
-        dir = normalize(vec3(u, -1.0, v));
-        break;
-    case 4:
-        dir = normalize(vec3(u, v, 1.0));
-        break;
-    case 5:
-        dir = normalize(vec3(-u, v, -1.0));
-        break;
-    }
-
-    return dir;
-}
-
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {
-    ivec2 oct_coord = ivec2(coord) % ivec2(cubemap_dimensions.xy);
+    ivec2 oct_coord = ivec2(coord) % ivec2(256);
     
-    return (vec2(oct_coord) + vec2(0.5)) * (2.0 / vec2(cubemap_dimensions.xy)) - vec2(1.0);
+    return (vec2(oct_coord) + vec2(0.5)) * (2.0 / vec2(256.0)) - vec2(1.0);
 }
 
 #ifdef MODE_OFFSET
@@ -117,9 +85,23 @@ void DoPixel(uint probe_index, uvec3 coord)
 
     vec3 dir = normalize(DecodeOctahedralCoord(NormalizeOctahedralCoord(coord.xy)));
     float depth_sample = TextureCube(sampler_nearest, depth_texture, dir).r;
+    vec4 color_sample = TextureCube(sampler_linear, color_texture, dir);
 
-    vec3 probe_world_position = (env_probe.aabb_max.xyz + env_probe.aabb_min.xyz) * 0.5;
     vec3 point_world_position = world_position.xyz + dir * depth_sample;
+
+    // int index = GetLocalEnvProbeIndex(env_grid, point_world_position);
+
+    // if (index < 0 || index >= HYP_MAX_BOUND_AMBIENT_PROBES)
+    // {
+    //     return;
+    // }
+
+    // const uvec2 env_grid_dimensions_2d = uvec2(env_grid.density.x * env_grid.density.y, env_grid.density.z);
+    // const uvec3 probe_grid_position_3d = env_probe.position_in_grid.xyz;
+    // const uvec2 probe_coord = uvec2(uint(index) % env_grid_dimensions_2d.x, uint(index) / env_grid_dimensions_2d.x) * 256 + coord.xy;
+
+    // imageStore(env_grid_probe_data, ivec2(probe_coord), color_sample);
+
 
     // Voxel grid aabb must be 1:1:1 cube
     vec3 voxel_grid_aabb_min = vec3(min(env_grid.voxel_grid_aabb_min.x, min(env_grid.voxel_grid_aabb_min.y, env_grid.voxel_grid_aabb_min.z)));
@@ -138,8 +120,6 @@ void DoPixel(uint probe_index, uvec3 coord)
     }
 
 #ifdef MODE_VOXELIZE
-    vec4 color_sample = TextureCube(sampler_nearest, color_texture, dir);
-
     imageStore(voxel_grid_image, voxel_storage_position, color_sample);//vec4(UINT_TO_VEC4(probe_grid_position.w).rgb, 1.0));
 #endif
 }
