@@ -16,8 +16,10 @@ static const Extent2D sh_probe_dimensions = Extent2D { 16, 16 };
 
 static const InternalFormat ambient_probe_format = InternalFormat::R10G10B10A2;
 
-static const Extent2D framebuffer_dimensions = Extent2D { 256, 256 };
 static const Extent3D voxel_grid_dimensions = Extent3D { 256, 256, 256 };
+static const InternalFormat voxel_grid_format = InternalFormat::RGBA8;
+
+static const Extent2D framebuffer_dimensions = Extent2D { 256, 256 };
 static const EnvProbeIndex invalid_probe_index = EnvProbeIndex();
 
 static Extent2D GetProbeDimensions(EnvProbeType env_probe_type)
@@ -610,7 +612,7 @@ void EnvGrid::CreateVoxelGridData()
     // Create our voxel grid texture
     m_voxel_grid_texture = CreateObject<Texture>(Texture3D(
         voxel_grid_dimensions,
-        InternalFormat::RGBA8,
+        voxel_grid_format,
         FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
         nullptr

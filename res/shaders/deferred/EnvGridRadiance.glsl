@@ -6,7 +6,7 @@
 #include "../include/BlueNoise.glsl"
 #include "../include/Octahedron.glsl"
 
-// #define HYP_VCT_USE_ROUGHNESS_SCATTERING
+#define HYP_VCT_USE_ROUGHNESS_SCATTERING
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -37,31 +37,6 @@ vec3 VctWorldToTexCoord(vec3 world_position, in AABB voxel_grid_aabb)
 
 vec4 ConeTrace(in AABB voxel_grid_aabb, float voxel_size, vec3 origin, vec3 dir, float ratio, float max_dist, float sampling_factor)
 {
-    // float dist = 2.0 * voxel_size;
-    // vec4 color = vec4(0.0);
-
-    // const uint max_iterations = 1024;
-    // uint iter = 0;
-
-    // while (color.a < 1.0 && dist < max_dist && iter < max_iterations) {
-    //     float diameter = 2.0 * tan(ratio / 2.0) * dist;
-    //     float mip_level = log2(diameter / voxel_size);
-
-    //     vec3 sample_pos = origin + dir * dist;
-
-    //     vec4 voxel_color = FetchVoxel(sample_pos, mip_level);
-
-    //     color.rgb += (1.0 - color.a) * voxel_color.a * voxel_color.rgb;
-    //     color.a += (1.0 - color.a) * voxel_color.a;
-
-    //     dist += diameter;
-
-    //     iter++;
-    // }
-
-    // return color;
-
-
     const float min_diameter = voxel_size;
     const float min_diameter_inv = 1.0 / min_diameter;
 
@@ -79,7 +54,7 @@ vec4 ConeTrace(in AABB voxel_grid_aabb, float voxel_size, vec3 origin, vec3 dir,
 
         vec4 voxel_color = FetchVoxel(sample_pos, lod);
         // voxel_color.rgb *= mix(1.0, voxel_color.a, float(include_lighting));
-        // voxel_color.rgb *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
+        voxel_color.rgb *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
 
         float weight = (1.0 - accum.a);
         accum += voxel_color * weight;
@@ -98,7 +73,7 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, vec3 V, float roughness, in AABB 
     const float greatest_extent = 256.0;
     const float voxel_size = 1.0 / greatest_extent;
 
-    return ConeTrace(voxel_grid_aabb, voxel_size, VctWorldToTexCoord(P, voxel_grid_aabb) + (N * voxel_size * 2.0), R, RoughnessToConeAngle(roughness), 0.4, 0.5);
+    return ConeTrace(voxel_grid_aabb, voxel_size, VctWorldToTexCoord(P, voxel_grid_aabb) + (N * voxel_size), R, RoughnessToConeAngle(roughness), 0.25, 0.5);
 }
 
 vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, ivec3 grid_size, in AABB voxel_grid_aabb)

@@ -89,20 +89,6 @@ void DoPixel(uint probe_index, uvec3 coord)
 
     vec3 point_world_position = world_position.xyz + dir * depth_sample;
 
-    // int index = GetLocalEnvProbeIndex(env_grid, point_world_position);
-
-    // if (index < 0 || index >= HYP_MAX_BOUND_AMBIENT_PROBES)
-    // {
-    //     return;
-    // }
-
-    // const uvec2 env_grid_dimensions_2d = uvec2(env_grid.density.x * env_grid.density.y, env_grid.density.z);
-    // const uvec3 probe_grid_position_3d = env_probe.position_in_grid.xyz;
-    // const uvec2 probe_coord = uvec2(uint(index) % env_grid_dimensions_2d.x, uint(index) / env_grid_dimensions_2d.x) * 256 + coord.xy;
-
-    // imageStore(env_grid_probe_data, ivec2(probe_coord), color_sample);
-
-
     // Voxel grid aabb must be 1:1:1 cube
     vec3 voxel_grid_aabb_min = vec3(min(env_grid.voxel_grid_aabb_min.x, min(env_grid.voxel_grid_aabb_min.y, env_grid.voxel_grid_aabb_min.z)));
     vec3 voxel_grid_aabb_max = vec3(max(env_grid.voxel_grid_aabb_max.x, max(env_grid.voxel_grid_aabb_max.y, env_grid.voxel_grid_aabb_max.z)));
@@ -120,7 +106,9 @@ void DoPixel(uint probe_index, uvec3 coord)
     }
 
 #ifdef MODE_VOXELIZE
-    imageStore(voxel_grid_image, voxel_storage_position, color_sample);//vec4(UINT_TO_VEC4(probe_grid_position.w).rgb, 1.0));
+    color_sample.rgb = pow(color_sample.rgb, vec3(1.0 / 2.2));
+
+    imageStore(voxel_grid_image, voxel_storage_position, color_sample);
 #endif
 }
 

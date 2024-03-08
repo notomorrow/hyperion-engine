@@ -54,6 +54,10 @@ vert = PostEffect.vert
 frag = Blit.frag
 vert = PostEffect.vert
 
+[RenderTextureToScreen]
+frag = RenderTextureToScreen.frag
+vert = PostEffect.vert
+
 [RenderToCubemap]
 permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
 frag = RenderToCubemap.frag

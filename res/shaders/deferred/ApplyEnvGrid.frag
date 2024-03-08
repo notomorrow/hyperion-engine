@@ -77,13 +77,18 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-int CubeRoot(int x)
-{
-    return int(round(pow(float(x), 1.0 / 3.0)));
-}
-
 void main()
 {
+    uvec2 screen_resolution = uvec2(camera.dimensions.xy);
+    uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
+    const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
+
+    if ((pixel_coord.x & (pixel_coord.y & 1)) != (scene.frame_counter & 1))
+    {
+        color_output = vec4(0.0);
+        return;
+    }
+
     vec3 irradiance = vec3(0.0);
 
     const mat4 inverse_proj = inverse(camera.projection);
@@ -99,25 +104,6 @@ void main()
 
     color_output = vec4(irradiance, 1.0);
 #else // Radiance
-
-    uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 1.0);
-    uvec2 screen_resolution = uvec2(camera.dimensions.xy);
-    uvec2 half_screen_resolution = uvec2(camera.dimensions.xy / 2);
-    uint frame_counter = scene.frame_counter;
-
-    // // Checkerboard pattern -- we dispatch half the number of threads as the image resolution,
-    // // and alternate between even and odd pixels each frame.
-    // const uint pixel_index = pixel_coord.y * half_screen_resolution.x + pixel_coord.x;
-    // const uvec2 pixel_coord_checkerboard = uvec2(
-    //     pixel_index % half_screen_resolution.x,
-    //     pixel_index / half_screen_resolution.x
-    // );
-
-    // if (pixel_coord != pixel_coord_checkerboard)
-    // {
-    //     return;
-    // }
-
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
@@ -125,8 +111,11 @@ void main()
     voxel_grid_aabb.min = env_grid.voxel_grid_aabb_min.xyz;
     voxel_grid_aabb.max = env_grid.voxel_grid_aabb_max.xyz;
 
-    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
+    vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 
     color_output = radiance;
 #endif
+
+    // must set alpha to 1.0 for blending
+    color_output.a = 1.0;
 }
