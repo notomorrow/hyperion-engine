@@ -3,8 +3,8 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define NUM_SAMPLES_X 4
-#define NUM_SAMPLES_Y 4
+#define NUM_SAMPLES_X 16
+#define NUM_SAMPLES_Y 16
 
 struct SHTile
 {
@@ -12,12 +12,13 @@ struct SHTile
 };
 
 #ifdef MODE_BUILD_COEFFICIENTS
-layout(local_size_x = 6, local_size_y = NUM_SAMPLES_X, local_size_z = NUM_SAMPLES_Y) in;
+layout(local_size_x = 6, local_size_y = 4, local_size_z = 4) in;
 #else
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 #endif
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -42,11 +43,6 @@ layout(push_constant) uniform PushConstant
     uvec4 probe_grid_position;
     uvec4 cubemap_dimensions;
 };
-
-ivec2 GetCoefficientCoord(int coefficient_index)
-{
-    return ivec2(coefficient_index / 3, coefficient_index % 3);
-}
 
 #define CURRENT_TILE sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
 
@@ -149,25 +145,33 @@ void main(void)
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
-    const vec2 size_per_sample = vec2(cubemap_dimensions.xy) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
-    const vec2 sample_fract = size_per_sample * vec2(sample_index);
+    const ivec2 size_per_sample = ivec2(cubemap_dimensions.xy) / ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
+
+    // middle of this part of the face
+    const ivec2 sample_coord = ivec2(vec2(size_per_sample * sample_index) + (vec2(size_per_sample) * 0.5));
 
     const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
-    const vec2 uv = vec2((sample_fract + 0.5) * texel_size);
+
+    // +0.5 to sample in the middle of the texel
+    const vec2 uv = vec2((vec2(sample_coord) + 0.5) * texel_size);
+
+    // [-1, 1] range
     const vec2 sample_point = uv * 2.0 - 1.0;
     
     const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
     // vec4 environment_map_sample = TextureCube(sampler_linear, environment_maps[0], dir);
     vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
-    cubemap_sample.rgb = pow(cubemap_sample.rgb, vec3(2.2));
+    // cubemap_sample.rgb = pow(cubemap_sample.rgb, vec3(2.2));
 
     // vec4 combined_sample = environment_map_sample * (1.0 - cubemap_sample.a) + (vec4(cubemap_sample.rgb, 1.0) * cubemap_sample.a);
 
     float sh_values[27] = ProjectOntoSH9Color(dir, cubemap_sample.rgb);
 
     float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
-    float weight = TexelSolidAngle(sample_point);
+    float weight = 4.0 / (sqrt(temp) * temp);
+    
+    // float weight = TexelSolidAngle(sample_point);
 
     for (int i = 0; i < 9; i++) {
         vec3 sh_color = vec3(

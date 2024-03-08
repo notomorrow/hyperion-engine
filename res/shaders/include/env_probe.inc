@@ -7,6 +7,12 @@
 
 // ENV PROBES
 
+#define ENV_PROBE_TYPE_INVALID      ~0u
+#define ENV_PROBE_TYPE_REFLECTION   0
+#define ENV_PROBE_TYPE_SHADOW       1
+#define ENV_PROBE_TYPE_AMBIENT      2
+#define ENV_PROBE_TYPE_MAX          3
+
 struct EnvProbe
 {
     mat4 face_view_matrices[6];
@@ -51,9 +57,7 @@ struct SH9
 
 #define HYP_ENV_PROBE_PARALLAX_CORRECTED 0x1
 
-#define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9 // + HYP_MAX_BOUND_AMBIENT_PROBES * 9 / 4
-//#define SH_GRID_BUFFER_DEPTH_VALUES_OFFSET HYP_MAX_BOUND_AMBIENT_PROBES * 9
-//#define SH_GRID_BUFFER_DEPTH_VALUE(index) sh_grid_buffer[SH_GRID_BUFFER_DEPTH_VALUES_OFFSET + (index >> 2)][index & 3]
+#define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
     #ifndef HYP_DEFERRED_NO_ENV_GRID
@@ -85,13 +89,52 @@ struct SH9
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
 #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
+// int GetLocalEnvProbeIndex(in EnvGrid env_grid, vec3 world_position)
+// {
+//     const vec3 grid_center = (env_grid.aabb_max.xyz + env_grid.aabb_min.xyz) * 0.5;
+//     const vec3 grid_aabb_extent = (env_grid.aabb_max.xyz - env_grid.aabb_min.xyz);
+//     const uvec3 grid_size = env_grid.density.xyz;
+
+//     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
+//     const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
+//     const ivec3 position_offset = position_units % ivec3(grid_size);
+
+//     int probe_index_at_point = (int(position_offset.x) * int(grid_size.y) * int(grid_size.z))
+//         + (int(position_offset.y) * int(grid_size.z))
+//         + int(position_offset.z);
+
+//     return probe_index_at_point;
+// }
+
+
+int GetLocalEnvProbeIndex(in EnvGrid env_grid, vec3 world_position)
+{
+    const vec3 diff = world_position - env_grid.center.xyz;
+    const vec3 pos_clamped = (diff / env_grid.aabb_extent.xyz) + 0.5;
+
+    ivec3 unit_diff;
+
+    if (any(greaterThanEqual(pos_clamped, vec3(1.0))) || any(lessThan(pos_clamped, vec3(0.0)))) {
+        unit_diff = ivec3(0);
+        return -1;
+    }
+
+    unit_diff = ivec3(pos_clamped * vec3(env_grid.density.xyz));
+
+    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
+        + (int(unit_diff.y) * int(env_grid.density.z))
+        + int(unit_diff.z);
+
+    return probe_index_at_point;
+}
+
 vec4 EnvProbeSample(
     sampler samp, textureCube tex,
     vec3 coord, float lod
 )
 {
     vec4 color = textureLod(samplerCube(tex, samp), coord, lod);
-    //color.rgb = pow(color.rgb, vec3(2.2));
+    // color.rgb = pow(color.rgb, vec3(2.2));
     return color;
 }
 

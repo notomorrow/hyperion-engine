@@ -13,6 +13,8 @@ layout(location=15) out flat uint v_object_index;
 
 #ifdef IMMEDIATE_MODE
 layout(location=16) out vec4 v_color;
+layout(location=17) out flat uint v_probe_id;
+layout(location=18) out flat uint v_probe_type;
 #endif
 
 HYP_ATTRIBUTE(0) vec3 a_position;
@@ -26,16 +28,20 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "include/scene.inc"
+#include "include/env_probe.inc"
 
 #ifdef IMMEDIATE_MODE
+
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, size = 80) readonly buffer ImmediateDrawsBuffer
 {
     mat4 model_matrix;
 
     uint color_packed;
-    uint _pad0;
-    uint _pad1;
+    uint probe_type;
+    uint probe_id;
     uint _pad2;
 };
 
@@ -43,7 +49,6 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, size
 #define PREV_MODEL_MATRIX (model_matrix)
 #else
 #include "include/object.inc"
-
 HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
@@ -77,11 +82,27 @@ void main()
 	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
 
-#ifndef IMMEDIATE_MODE
-    v_object_index = OBJECT_INDEX;
-#else
+#ifdef IMMEDIATE_MODE
     v_object_index = ~0u; // unused
     v_color = UINT_TO_VEC4(color_packed);
+
+    v_probe_id = probe_id;
+    v_probe_type = probe_type;
+
+    if (probe_type == ENV_PROBE_TYPE_AMBIENT && probe_id != 0)
+    {
+        const int storage_index = env_probes[probe_id - 1].position_in_grid.w * 9;
+
+        SH9 sh9;
+
+        for (int j = 0; j < 9; j++) {
+            sh9.values[j] = sh_grid_buffer[min(storage_index + j, SH_GRID_BUFFER_SIZE - 1)].rgb;
+        }
+
+        v_color = vec4(SphericalHarmonicsSample(sh9, a_normal), 1.0);
+    }
+#else
+    v_object_index = OBJECT_INDEX;
 #endif
 
     mat4 jitter_matrix = mat4(1.0);

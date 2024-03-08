@@ -1,4 +1,5 @@
 #include <rendering/debug/DebugDrawer.hpp>
+#include <rendering/EnvProbe.hpp>
 #include <util/MeshBuilder.hpp>
 #include <Engine.hpp>
 
@@ -20,7 +21,7 @@ void DebugDrawer::Create()
     m_shapes[uint(DebugDrawShape::PLANE)] = MeshBuilder::Quad();
 
     for (auto &shape : m_shapes) {
-        AssertThrow(InitObject(shape));
+        InitObject(shape);
     }
 
     m_shader = g_shader_manager->GetOrCreate(
@@ -54,7 +55,7 @@ void DebugDrawer::Create()
                 .vertex_attributes = renderer::static_mesh_vertex_attributes
             },
             MaterialAttributes {
-                .bucket = Bucket::BUCKET_TRANSLUCENT,
+                .bucket = Bucket::BUCKET_OPAQUE,
                 .fill_mode = FillMode::FILL,
                 .blend_mode = BlendMode::NONE,
                 .cull_faces = FaceCullMode::NONE
@@ -68,7 +69,7 @@ void DebugDrawer::Create()
             .Get(m_render_group->GetRenderableAttributes().GetMaterialAttributes().bucket)
             .AddFramebuffersToRenderGroup(m_render_group);
 
-        g_engine->InitObject(m_render_group);
+        InitObject(m_render_group);
     }
 }
 
@@ -103,9 +104,27 @@ void DebugDrawer::Render(Frame *frame)
     for (SizeType index = 0; index < m_draw_commands.Size(); index++) {
         const auto &draw_command = m_draw_commands[index];
 
+        ID<EnvProbe> env_probe_id = ID<EnvProbe>::invalid;
+        uint32 env_probe_type = uint32(ENV_PROBE_TYPE_INVALID);
+
+        switch (draw_command.type) {
+        case DebugDrawType::AMBIENT_PROBE:
+            env_probe_type = uint32(ENV_PROBE_TYPE_AMBIENT);
+            env_probe_id = draw_command.env_probe_id;
+            break;
+        case DebugDrawType::REFLECTION_PROBE:
+            env_probe_type = uint32(ENV_PROBE_TYPE_REFLECTION);
+            env_probe_id = draw_command.env_probe_id;
+            break;
+        default:
+            break;
+        }
+
         const ImmediateDrawShaderData shader_data {
             draw_command.transform_matrix,
-            draw_command.color.Packed()
+            draw_command.color.Packed(),
+            env_probe_type,
+            env_probe_id.Value()
         };
 
         g_engine->GetRenderData()->immediate_draws.Set(index, shader_data);
@@ -140,6 +159,16 @@ void DebugDrawer::Render(Frame *frame)
                     { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
                     { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
                     { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                }
+            },
+            {
+                HYP_NAME(Object),
+                {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+                    { HYP_NAME(MaterialsBuffer), HYP_RENDER_OBJECT_OFFSET(Material, 0) },
+#endif
+                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, 0) },
+                    { HYP_NAME(EntityInstanceBatchesBuffer), 0 }
                 }
             }
         }
@@ -184,31 +213,55 @@ void DebugDrawer::CommitCommands(DebugDrawCommandList &&command_list)
     m_draw_commands_pending_addition.Concat(std::move(command_list.m_draw_commands));
 }
 
-void DebugDrawer::Sphere(const Vector3 &position, float radius, Color color)
+void DebugDrawer::Sphere(const Vec3f &position, float radius, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
+        DebugDrawType::DEFAULT,
         Transform(position, radius, Quaternion::identity).GetMatrix(),
         color
     });
 }
 
-void DebugDrawer::Box(const Vector3 &position, const Vector3 &size, Color color)
+void DebugDrawer::AmbientProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id)
+{
+    m_draw_commands.PushBack(DebugDrawCommand {
+        DebugDrawShape::SPHERE,
+        DebugDrawType::AMBIENT_PROBE,
+        Transform(position, radius, Quaternion::identity).GetMatrix(),
+        Color { },
+        env_probe_id
+    });
+}
+
+void DebugDrawer::ReflectionProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id)
+{
+    m_draw_commands.PushBack(DebugDrawCommand {
+        DebugDrawShape::SPHERE,
+        DebugDrawType::REFLECTION_PROBE,
+        Transform(position, radius, Quaternion::identity).GetMatrix(),
+        Color { },
+        env_probe_id
+    });
+}
+
+void DebugDrawer::Box(const Vec3f &position, const Vec3f &size, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::BOX,
+        DebugDrawType::DEFAULT,
         Transform(position, size, Quaternion::identity).GetMatrix(),
         color
     });
 }
 
-void DebugDrawer::Plane(const FixedArray<Vector3, 4> &points, Color color)
+void DebugDrawer::Plane(const FixedArray<Vec3f, 4> &points, Color color)
 {
-    Vector3 x = (points[1] - points[0]).Normalize();
-    Vector3 y = (points[2] - points[0]).Normalize();
-    Vector3 z = x.Cross(y).Normalize();
+    Vec3f x = (points[1] - points[0]).Normalize();
+    Vec3f y = (points[2] - points[0]).Normalize();
+    Vec3f z = x.Cross(y).Normalize();
 
-    const Vector3 center = points.Avg();
+    const Vec3f center = points.Avg();
 
     Matrix4 transform_matrix;
     transform_matrix.rows[0] = Vector4(x, 0.0f);
@@ -218,6 +271,7 @@ void DebugDrawer::Plane(const FixedArray<Vector3, 4> &points, Color color)
 
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::PLANE,
+        DebugDrawType::DEFAULT,
         transform_matrix,
         color
     });
@@ -225,29 +279,32 @@ void DebugDrawer::Plane(const FixedArray<Vector3, 4> &points, Color color)
 
 // command list methods
 
-void DebugDrawCommandList::Sphere(const Vector3 &position, float radius, Color color)
+void DebugDrawCommandList::Sphere(const Vec3f &position, float radius, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
+        DebugDrawType::DEFAULT,
         Transform(position, radius, Quaternion::identity).GetMatrix(),
         color
     });
 }
 
-void DebugDrawCommandList::Box(const Vector3 &position, const Vector3 &size, Color color)
+void DebugDrawCommandList::Box(const Vec3f &position, const Vec3f &size, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::BOX,
+        DebugDrawType::DEFAULT,
         Transform(position, size, Quaternion::identity).GetMatrix(),
         color
     });
 }
 
-void DebugDrawCommandList::Plane(const Vector3 &position, const Vector2 &size, Color color)
+void DebugDrawCommandList::Plane(const Vec3f &position, const Vector2 &size, Color color)
 {
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::PLANE,
-        Transform(position, Vector3(size.x, size.y, 1.0f), Quaternion::identity).GetMatrix(),
+        DebugDrawType::DEFAULT,
+        Transform(position, Vec3f(size.x, size.y, 1.0f), Quaternion::identity).GetMatrix(),
         color
     });
 }

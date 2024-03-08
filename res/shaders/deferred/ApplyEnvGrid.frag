@@ -54,21 +54,6 @@ HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvPr
 
 #include "./DeferredLighting.glsl"
 
-int GetLocalEnvProbeIndex(vec3 world_position, vec3 grid_center, vec3 grid_aabb_extent, ivec3 grid_size, out ivec3 unit_diff)
-{
-    const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
-    const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
-    const ivec3 position_offset = position_units % grid_size;
-
-    unit_diff = position_offset;
-
-    int probe_index_at_point = (int(unit_diff.x) * int(env_grid.density.y) * int(env_grid.density.z))
-        + (int(unit_diff.y) * int(env_grid.density.z))
-        + int(unit_diff.z);
-
-    return probe_index_at_point;
-}
-
 #if MODE == 0
 #include "../light_field/ComputeIrradiance.glsl"
 #elif MODE == 1

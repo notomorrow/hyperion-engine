@@ -28,8 +28,6 @@
 #include <mutex>
 #include <atomic>
 
-#include <memory>
-
 namespace hyperion::v2 {
 
 class Engine;
@@ -37,7 +35,7 @@ class DebugDrawer;
 
 using renderer::Frame;
 
-enum class DebugDrawShape
+enum class DebugDrawShape : uint
 {
     SPHERE,
     BOX,
@@ -46,11 +44,23 @@ enum class DebugDrawShape
     MAX
 };
 
+enum class DebugDrawType : uint
+{
+    DEFAULT,
+
+    AMBIENT_PROBE,
+    REFLECTION_PROBE,
+
+    MAX
+};
+
 struct DebugDrawCommand
 {
-    DebugDrawShape shape;
-    Matrix4 transform_matrix;
-    Color color;
+    DebugDrawShape  shape;
+    DebugDrawType   type;
+    Matrix4         transform_matrix;
+    Color           color;
+    ID<EnvProbe>    env_probe_id = ID<EnvProbe>::invalid;
 };
 
 class DebugDrawCommandList
@@ -66,14 +76,14 @@ class DebugDrawCommandList
     DebugDrawCommandList &operator=(const DebugDrawCommandList &other) = delete;
 
 public:
-    void Sphere(const Vector3 &position, float radius = 0.15f, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
-    void Box(const Vector3 &position, const Vector3 &size = Vector3::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
-    void Plane(const Vector3 &position, const Vector2 &size = Vector2::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Sphere(const Vec3f &position, float radius = 0.15f, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Box(const Vec3f &position, const Vec3f &size = Vec3f::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Plane(const Vec3f &position, const Vec2f &size = Vec2f::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
 
     void Commit();
 
 private:
-    DebugDrawer *m_debug_drawer;
+    DebugDrawer             *m_debug_drawer;
     Array<DebugDrawCommand> m_draw_commands;
 };
 
@@ -89,9 +99,11 @@ public:
 
     void CommitCommands(DebugDrawCommandList &&command_list);
     
-    void Sphere(const Vector3 &position, float radius = 1.0f, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
-    void Box(const Vector3 &position, const Vector3 &size = Vector3::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
-    void Plane(const FixedArray<Vector3, 4> &points, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Sphere(const Vec3f &position, float radius = 1.0f, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void AmbientProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id);
+    void ReflectionProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id);
+    void Box(const Vec3f &position, const Vec3f &size = Vec3f::one, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
+    void Plane(const FixedArray<Vec3f, 4> &points, Color color = Color(0.0f, 1.0f, 0.0f, 1.0f));
 
 private:
     void UpdateDrawCommands();

@@ -39,6 +39,8 @@ HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_result;
 
+// HYP_DESCRIPTOR_SRV(Scene, EnvGridProbeDataTexture) uniform texture2D env_grid_probe_data;
+
 layout(location=0) out vec4 out_color;
 
 void main()
@@ -82,6 +84,9 @@ void main()
     // );
 
     out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
+
+    // // Draw env_grid_probe_data buffer to screen.
+    // out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, env_grid_probe_data, v_texcoord0).rgb, 1.0);
     
 
 

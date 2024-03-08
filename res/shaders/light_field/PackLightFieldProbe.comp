@@ -56,37 +56,6 @@ layout(push_constant) uniform PushConstant
     uvec4 grid_dimensions;
 };
 
-vec3 MapXYSToDirection(uint face_index, vec2 uv) {
-    vec3 dir = vec3(0.0);
-
-    float u = uv.x;
-    float v = -uv.y;
-
-    // +x, -x, +y, -y, +z, -z
-    switch (face_index) {
-    case 0:
-        dir = normalize(vec3(1.0, v, -u));
-        break;
-    case 1:
-        dir = normalize(vec3(-1.0, v, u));
-        break;
-    case 2:
-        dir = normalize(vec3(u, 1.0, -v));
-        break;
-    case 3:
-        dir = normalize(vec3(u, -1.0, v));
-        break;
-    case 4:
-        dir = normalize(vec3(u, v, 1.0));
-        break;
-    case 5:
-        dir = normalize(vec3(-u, v, -1.0));
-        break;
-    }
-
-    return dir;
-}
-
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {
     ivec2 oct_frag_coord = ivec2((int(coord.x) - 2) % PROBE_SIDE_LENGTH_BORDER, (int(coord.y) - 2) % PROBE_SIDE_LENGTH_BORDER);

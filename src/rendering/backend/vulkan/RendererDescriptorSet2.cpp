@@ -144,6 +144,18 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
             const uint descriptor_index = decl_ptr->CalculateFlatIndex(descriptor.slot, descriptor.name);
             AssertThrow(descriptor_index != uint(-1));
 
+            DebugLog(
+                LogType::Debug,
+                "Set element %s.%s[%u] (slot: %d, count: %u, size: %u, is_dynamic: %d)\n",
+                decl_ptr->name.LookupString(),
+                descriptor.name.LookupString(),
+                descriptor_index,
+                int(descriptor.slot),
+                descriptor.count,
+                descriptor.size,
+                descriptor.is_dynamic
+            );
+
             switch (descriptor.slot) {
             case DescriptorSlot::DESCRIPTOR_SLOT_SRV:
                 AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptor_index, descriptor.count);
@@ -339,13 +351,13 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                     || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
                 const GPUBufferRef<Platform::VULKAN> &ref = value_it->second.Get<GPUBufferRef<Platform::VULKAN>>();
-                AssertThrowMsg(ref.IsValid(), "Invalid buffer reference for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref.IsValid(), "Invalid buffer reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
                 if (is_dynamic) {
-                    AssertThrowMsg(layout_element->size != 0, "Buffer size not set for dynamic buffer element: %s, index %u", name.LookupString(), i);
+                    AssertThrowMsg(layout_element->size != 0, "Buffer size not set for dynamic buffer element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
                 }
 
-                AssertThrowMsg(ref->buffer != VK_NULL_HANDLE, "Invalid buffer for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref->buffer != VK_NULL_HANDLE, "Invalid buffer for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
                 
                 descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
                     .buffer = ref->buffer,
@@ -356,9 +368,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
 
                 const ImageViewRef<Platform::VULKAN> &ref = value_it->second.Get<ImageViewRef<Platform::VULKAN>>();
-                AssertThrowMsg(ref.IsValid(), "Invalid image view reference for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref.IsValid(), "Invalid image view reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
-                AssertThrowMsg(ref->GetImageView() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s, texture index %u\tImageViewRef index %u", name.LookupString(), i, ref.index);
+                AssertThrowMsg(ref->GetImageView() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     .sampler        = VK_NULL_HANDLE,
@@ -367,9 +379,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
-                AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
-                AssertThrowMsg(ref->GetSampler() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref->GetSampler() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
                 descriptor_element_info.image_info = VkDescriptorImageInfo {
                     .sampler        = ref->GetSampler(),
@@ -378,9 +390,9 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                 };
             } else if (value_it->second.Is<TLASRef<Platform::VULKAN>>()) {
                 const TLASRef<Platform::VULKAN> &ref = value_it->second.Get<TLASRef<Platform::VULKAN>>();
-                AssertThrowMsg(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
-                AssertThrowMsg(ref->GetAccelerationStructure() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s, index %u", name.LookupString(), i);
+                AssertThrowMsg(ref->GetAccelerationStructure() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);
 
                 descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
                     .sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,

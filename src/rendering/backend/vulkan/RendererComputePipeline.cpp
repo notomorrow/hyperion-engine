@@ -131,6 +131,23 @@ Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devic
         "Using %llu descriptor set layouts in pipeline\n",
         used_layouts.Size()
     );
+
+    for (const DescriptorSet2Ref<Platform::VULKAN> &descriptor_set : (*m_descriptor_table)->GetSets()[0]) {
+        DebugLog(
+            LogType::Debug,
+            "\tDescriptor set layout: %s\n",
+            descriptor_set->GetLayout().GetName().LookupString()
+        );
+
+        for (const auto &it : descriptor_set->GetLayout().GetElements()) {
+            DebugLog(
+                LogType::Debug,
+                "\t\tDescriptor: %s  binding: %u\n",
+                it.first.LookupString(),
+                it.second.binding
+            );
+        }
+    }
     
     if (used_layouts.Size() > max_set_layouts) {
         DebugLog(
@@ -145,7 +162,6 @@ Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devic
 
     layout_info.setLayoutCount = uint32(used_layouts.Size());
     layout_info.pSetLayouts = used_layouts.Data();
-    
     layout_info.pushConstantRangeCount = uint32(std::size(push_constant_ranges));
     layout_info.pPushConstantRanges = push_constant_ranges;
 

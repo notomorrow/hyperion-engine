@@ -10,11 +10,10 @@ struct RenderCommand_DestroyCubemapRenderPass;
 
 using renderer::Result;
 
-static const Extent2D num_tiles = { 4, 4 };
-static const InternalFormat reflection_probe_format = InternalFormat::R11G11B10F;
+static const InternalFormat reflection_probe_format = InternalFormat::R10G10B10A2;
 static const InternalFormat shadow_probe_format = InternalFormat::RG32F;
 
-static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb);
+static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, const Vec3f &origin);
 
 #pragma region Render commands
 
@@ -22,7 +21,6 @@ Result RENDER_COMMAND(UpdateEnvProbeDrawProxy)::operator()()
 {
     // update m_draw_proxy on render thread.
     env_probe.m_draw_proxy = draw_proxy;
-    env_probe.m_view_matrices = CreateCubemapMatrices(draw_proxy.aabb);
 
     HYPERION_RETURN_OK;
 }
@@ -90,33 +88,11 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateSHData) : renderer::RenderCommand
-{
-    GPUBufferRef sh_tiles_buffer;
-
-    RENDER_COMMAND(CreateSHData)(
-        const GPUBufferRef &sh_tiles_buffer
-    ) : sh_tiles_buffer(sh_tiles_buffer)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(CreateSHData)() override = default;
-
-    virtual Result operator()() override
-    {
-        HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(g_engine->GetGPUDevice(), sizeof(SHTile) * num_tiles.Size() * 6));
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 #pragma endregion
 
-static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb)
+static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, const Vec3f &origin)
 {
     FixedArray<Matrix4, 6> view_matrices;
-
-    const Vector3 origin = aabb.GetCenter();
 
     for (uint i = 0; i < 6; i++) {
         view_matrices[i] = Matrix4::LookAt(
@@ -136,9 +112,9 @@ void EnvProbe::UpdateRenderData(
 )
 {
     const BoundingBox &aabb = GetDrawProxy().aabb;
-    const Vec3f world_position = aabb.GetCenter();
+    const Vec3f world_position = GetDrawProxy().world_position;
 
-    const FixedArray<Matrix4, 6> view_matrices = CreateCubemapMatrices(aabb);
+    const FixedArray<Matrix4, 6> view_matrices = CreateCubemapMatrices(aabb, world_position);
 
     EnvProbeShaderData data {
         .face_view_matrices = {
@@ -237,7 +213,7 @@ void EnvProbe::Init()
     m_draw_proxy = EnvProbeDrawProxy {
         .id = m_id,
         .aabb = m_aabb,
-        .world_position = m_aabb.GetCenter(),
+        .world_position = GetOrigin(),
         .camera_near = m_camera_near,
         .camera_far = m_camera_far,
         .flags = (IsReflectionProbe() ? ENV_PROBE_FLAGS_PARALLAX_CORRECTED : ENV_PROBE_FLAGS_NONE)
@@ -246,7 +222,7 @@ void EnvProbe::Init()
         .grid_slot = m_grid_slot
     };
 
-    m_view_matrices = CreateCubemapMatrices(m_aabb);
+    m_view_matrices = CreateCubemapMatrices(m_aabb, GetOrigin());
 
     if (!IsControlledByEnvGrid()) {
         if (IsReflectionProbe()) {
@@ -467,7 +443,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     PUSH_RENDER_COMMAND(UpdateEnvProbeDrawProxy, *this, EnvProbeDrawProxy {
         .id = m_id,
         .aabb = m_aabb,
-        .world_position = m_aabb.GetCenter(),
+        .world_position = GetOrigin(),
         .camera_near = m_camera_near,
         .camera_far = m_camera_far,
         .flags = (IsReflectionProbe() ? ENV_PROBE_FLAGS_PARALLAX_CORRECTED : ENV_PROBE_FLAGS_NONE)
@@ -551,13 +527,13 @@ void EnvProbe::Render(Frame *frame)
 
         m_render_list.CollectDrawCalls(
             frame,
-            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT) | (1 << BUCKET_SKYBOX)),
+            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
             nullptr
         );
 
         m_render_list.ExecuteDrawCalls(
             frame,
-            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT) | (1 << BUCKET_SKYBOX))
+            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
         );
 
         g_engine->GetRenderState().UnbindCamera();
