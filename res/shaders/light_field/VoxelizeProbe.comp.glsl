@@ -95,8 +95,8 @@ void DoPixel(uint probe_index, uvec3 coord)
     vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
     vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
 
-    vec3 scaled_position = (point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
-    voxel_storage_position = ivec3(((scaled_position + 0.5) * vec3(voxel_texture_dimensions.xyz)));
+    vec3 scaled_position = ((point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent) + vec3(0.5);
+    voxel_storage_position = ivec3((scaled_position * vec3(voxel_texture_dimensions.xyz)));
 
     if (voxel_storage_position.x < 0 || voxel_storage_position.x >= voxel_texture_dimensions.x ||
         voxel_storage_position.y < 0 || voxel_storage_position.y >= voxel_texture_dimensions.y ||
@@ -108,7 +108,7 @@ void DoPixel(uint probe_index, uvec3 coord)
 #ifdef MODE_VOXELIZE
     color_sample.rgb = pow(color_sample.rgb, vec3(1.0 / 2.2));
 
-    imageStore(voxel_grid_image, voxel_storage_position, color_sample);
+    imageStore(voxel_grid_image, voxel_storage_position, color_sample);//vec4(UINT_TO_VEC4(env_probe.position_in_grid.w).rgb, 1.0));
 #endif
 }
 

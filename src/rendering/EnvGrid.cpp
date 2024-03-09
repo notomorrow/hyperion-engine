@@ -36,20 +36,19 @@ static Extent2D GetProbeDimensions(EnvProbeType env_probe_type)
 
 static EnvProbeIndex GetProbeBindingIndex(const Vec3f &probe_position, const BoundingBox &grid_aabb, const Extent3D &grid_density)
 {
-    const Vec3f size_of_probe = (grid_aabb.GetExtent() / Vec3f(grid_density));
-    
-    Vec3f probe_diff_units = probe_position / size_of_probe + Vec3f(grid_density) * 0.5f;
-    probe_diff_units = MathUtil::Trunc(probe_diff_units);
+    const Vec3f diff = probe_position - grid_aabb.GetCenter();
+    const Vec3f pos_clamped = (diff / grid_aabb.GetExtent()) + Vec3f(0.5f);
+    const Vec3f diff_units = MathUtil::Trunc(pos_clamped * Vec3f(grid_density));
 
-    const int probe_index_at_point = (int(probe_diff_units.x) * int(grid_density.height) * int(grid_density.depth))
-        + (int(probe_diff_units.y) * int(grid_density.depth))
-        + int(probe_diff_units.z);
+    const int probe_index_at_point = (int(diff_units.x) * int(grid_density.height) * int(grid_density.depth))
+        + (int(diff_units.y) * int(grid_density.depth))
+        + int(diff_units.z);
 
     EnvProbeIndex calculated_probe_index = invalid_probe_index;
     
     if (probe_index_at_point >= 0 && uint(probe_index_at_point) < max_bound_ambient_probes) {
         calculated_probe_index = EnvProbeIndex(
-            Extent3D { uint(probe_diff_units.x), uint(probe_diff_units.y), uint(probe_diff_units.z) },
+            Extent3D { uint(diff_units.x), uint(diff_units.y), uint(diff_units.z) },
             grid_density
         );
     }
@@ -175,16 +174,16 @@ void EnvGrid::SetCameraData(const Vec3f &position)
     };
 
     const Vec3i current_grid_position {
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.x / size_of_probe.x),
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.y / size_of_probe.y),
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.z / size_of_probe.z)
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.x / size_of_probe.x),
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.y / size_of_probe.y),
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.z / size_of_probe.z)
     };
 
     if (current_grid_position == position_snapped) {
         return;
     }
 
-    m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe + m_offset);
+    m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe);
 
     // If the grid has moved, we need to offset the voxel grid.
     m_flags.BitOr(ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET, MemoryOrder::ACQUIRE_RELEASE);
@@ -396,16 +395,15 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 
     m_camera->Update(delta);
 
-    GetParent()->GetScene()->CollectEntities(
+    GetParent()->GetScene()->CollectStaticEntities(
         m_render_list,
         m_camera,
         RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {
-                .shader_definition = m_ambient_shader->GetCompiledShader().GetDefinition(),
-                .bucket = BUCKET_INTERNAL,
-                .cull_faces = FaceCullMode::NONE
-                // .flags = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
+                .shader_definition  = m_ambient_shader->GetCompiledShader().GetDefinition(),
+                .bucket             = BUCKET_INTERNAL,
+                .cull_faces         = FaceCullMode::BACK
             }
         ),
         true // skip frustum culling
@@ -463,20 +461,6 @@ void EnvGrid::OnRender(Frame *frame)
 
     for (SizeType index = 0; index < std::size(m_shader_data.probe_indices); index++) {
         m_shader_data.probe_indices[index] = m_env_probe_collection.GetEnvProbeOnRenderThread(index).GetID().ToIndex();
-
-        // const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeOnRenderThread(index);
-
-        // if (!probe.IsValid()) {
-        //     continue;
-        // }
-
-        // const EnvProbeIndex binding_index = GetProbeBindingIndex(probe->GetDrawProxy().world_position, m_aabb, m_density);
-
-        // if (binding_index == invalid_probe_index) {
-        //     continue;
-        // }
-
-        // m_shader_data.probe_indices[binding_index.GetProbeIndex()] = probe.GetID().ToIndex();
     }
 
     if (g_engine->GetConfig().Get(CONFIG_DEBUG_ENV_GRID_PROBES)) {
@@ -490,7 +474,7 @@ void EnvGrid::OnRender(Frame *frame)
 
             g_engine->GetDebugDrawer().AmbientProbeSphere(
                 probe->GetDrawProxy().world_position,
-                0.5f,
+                0.25f,
                 probe->GetID()
             );
         }
@@ -554,11 +538,14 @@ void EnvGrid::OnRender(Frame *frame)
                 } else {
                     DebugLog(
                         LogType::Warn,
-                        "Probe %u out of range of max bound env probes (position: %u, %u, %u)\n",
+                        "EnvProbe #%u out of range of max bound env probes (position: %u, %u, %u, world position: %f, %f, %f)\n",
                         probe->GetID().Value(),
                         binding_index.position[0],
                         binding_index.position[1],
-                        binding_index.position[2]
+                        binding_index.position[2],
+                        probe->GetDrawProxy().world_position.x,
+                        probe->GetDrawProxy().world_position.y,
+                        probe->GetDrawProxy().world_position.z
                     );
                 }
 
@@ -1131,7 +1118,7 @@ void EnvGrid::VoxelizeProbe(
 
     // m_probe_data_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    if (false) {   // Clear our voxel grid at the start of each probe
+    if (true) {   // Clear our voxel grid at the start of each probe
         m_voxel_grid_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
         m_clear_voxels->GetDescriptorTable().Get()->Bind(

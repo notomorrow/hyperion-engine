@@ -60,7 +60,8 @@ Node::Node(
     m_name(name),
     m_parent_node(nullptr),
     m_local_transform(local_transform),
-    m_scene(scene)
+    m_scene(scene),
+    m_transform_locked(false)
 {
     SetEntity(entity);
 }
@@ -73,7 +74,8 @@ Node::Node(Node &&other) noexcept
       m_world_transform(other.m_world_transform),
       m_local_aabb(other.m_local_aabb),
       m_world_aabb(other.m_world_aabb),
-      m_scene(other.m_scene)
+      m_scene(other.m_scene),
+      m_transform_locked(other.m_transform_locked)
 {
     other.m_type = Type::NODE;
     other.m_parent_node = nullptr;
@@ -82,6 +84,7 @@ Node::Node(Node &&other) noexcept
     other.m_local_aabb = BoundingBox::empty;
     other.m_world_aabb = BoundingBox::empty;
     other.m_scene = nullptr;
+    other.m_transform_locked = false;
 
     m_entity = std::move(other.m_entity);
 
@@ -115,6 +118,9 @@ Node &Node::operator=(Node &&other) noexcept
 
     m_parent_node = other.m_parent_node;
     other.m_parent_node = nullptr;
+
+    m_transform_locked = other.m_transform_locked;
+    other.m_transform_locked = false;
 
     m_local_transform = other.m_local_transform;
     other.m_local_transform = Transform::identity;
@@ -392,34 +398,75 @@ NodeProxy Node::Select(const char *selector) const
 
 Node::NodeList::Iterator Node::FindChild(const Node *node)
 {
-    return m_child_nodes.FindIf([node](const auto &it) {
+    return m_child_nodes.FindIf([node](const auto &it)
+    {
         return it.Get() == node;
     });
 }
 
 Node::NodeList::ConstIterator Node::FindChild(const Node *node) const
 {
-    return m_child_nodes.FindIf([node](const auto &it) {
+    return m_child_nodes.FindIf([node](const auto &it)
+    {
         return it.Get() == node;
     });
 }
 
 Node::NodeList::Iterator Node::FindChild(const char *name)
 {
-    return m_child_nodes.FindIf([name](const auto &it) {
+    return m_child_nodes.FindIf([name](const auto &it)
+    {
         return it.GetName() == name;
     });
 }
 
 Node::NodeList::ConstIterator Node::FindChild(const char *name) const
 {
-    return m_child_nodes.FindIf([name](const auto &it) {
+    return m_child_nodes.FindIf([name](const auto &it)
+    {
         return it.GetName() == name;
     });
 }
 
+void Node::LockTransform()
+{
+    m_transform_locked = true;
+
+    // set entity to unmoveable
+    if (m_entity.IsValid()) {
+        if (!m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
+            m_scene->GetEntityManager()->AddTag<UNMOVEABLE>(m_entity);
+        }
+    }
+
+    for (auto &child : m_child_nodes) {
+        if (!child) {
+            continue;
+        }
+
+        child.Get()->LockTransform();
+    }
+}
+
+void Node::UnlockTransform()
+{
+    m_transform_locked = false;
+
+    for (auto &child : m_child_nodes) {
+        if (!child) {
+            continue;
+        }
+
+        child.Get()->UnlockTransform();
+    }
+}
+
 void Node::SetLocalTransform(const Transform &transform)
 {
+    if (m_transform_locked) {
+        return;
+    }
+
     m_local_transform = transform;
     
     UpdateWorldTransform();
@@ -445,6 +492,11 @@ void Node::SetEntity(ID<Entity> entity)
         }
 
         RefreshEntityTransform();
+
+        // set entity to unmoveable by default
+        if (!m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
+            m_scene->GetEntityManager()->AddTag<UNMOVEABLE>(m_entity);
+        }
     } else {
         m_local_aabb = BoundingBox::empty;
 
@@ -456,6 +508,10 @@ void Node::SetEntity(ID<Entity> entity)
 
 void Node::UpdateWorldTransform()
 {
+    if (m_transform_locked) {
+        return;
+    }
+
     if (m_type == Type::BONE) {
         static_cast<Bone *>(this)->UpdateBoneTransform();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
@@ -486,6 +542,10 @@ void Node::UpdateWorldTransform()
     }
 
     if (m_entity.IsValid()) {
+        if (m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
+            m_scene->GetEntityManager()->RemoveTag<UNMOVEABLE>(m_entity);
+        }
+
         if (auto *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
             transform_component->transform = m_world_transform;
         } else {
@@ -493,8 +553,6 @@ void Node::UpdateWorldTransform()
                 m_world_transform
             });
         }
-
-        // m_entity->SetTransform(m_world_transform);
     }
 }
 
@@ -516,10 +574,6 @@ void Node::RefreshEntityTransform()
                 m_world_transform
             });
         }
-
-        // m_local_aabb = m_entity->GetLocalAABB();
-
-        // m_entity->SetTransform(m_world_transform);
     }
 
     m_world_aabb = m_local_aabb * m_world_transform;

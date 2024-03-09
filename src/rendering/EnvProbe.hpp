@@ -34,6 +34,7 @@ enum EnvProbeType : uint
     ENV_PROBE_TYPE_INVALID = uint(-1),
 
     ENV_PROBE_TYPE_REFLECTION = 0,
+    ENV_PROBE_TYPE_SKY,
     ENV_PROBE_TYPE_SHADOW,
 
     // These below types are controlled by EnvGrid
@@ -157,6 +158,9 @@ public:
     HYP_FORCE_INLINE bool IsReflectionProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_REFLECTION; }
 
+    HYP_FORCE_INLINE bool IsSkyProbe() const
+        { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SKY; }
+
     HYP_FORCE_INLINE bool IsShadowProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SHADOW; }
 
@@ -245,6 +249,9 @@ public:
     uint32 m_grid_slot = ~0u; // temp
     
 private:
+    bool OnlyCollectStaticEntities() const
+        { return IsSkyProbe() || IsAmbientProbe(); }
+
     void CreateShader();
     void CreateFramebuffer();
 
@@ -273,7 +280,6 @@ private:
     AtomicVar<bool>                                     m_is_rendered;
     AtomicVar<int32>                                    m_needs_render_counter;
     HashCode                                            m_octant_hash_code;
-
 };
 
 } // namespace hyperion::v2

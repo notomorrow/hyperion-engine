@@ -823,6 +823,7 @@ void SampleStreamer::InitGame()
             node.Scale(3.0f);
             // node.Scale(0.0125f);
             node.SetName("test_model");
+            node.LockTransform();
             
             GetScene()->GetRoot().AddChild(node);
 
@@ -848,14 +849,18 @@ void SampleStreamer::InitGame()
             });
 
             m_scene->GetEntityManager()->AddComponent(env_grid_entity, BoundingBoxComponent {
-                node.GetLocalAABB(),
-                node.GetWorldAABB()
+                node.GetLocalAABB() * 2.0f,
+                node.GetWorldAABB() * 2.0f
             });
 
             // Add env grid component
             m_scene->GetEntityManager()->AddComponent(env_grid_entity, EnvGridComponent {
                 EnvGridType::ENV_GRID_TYPE_SH
             });
+
+            auto env_grid_node = m_scene->GetRoot().AddChild();
+            env_grid_node.SetEntity(env_grid_entity);
+            env_grid_node.SetName("EnvGrid");
         }
     }
     
@@ -1108,10 +1113,10 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
         }
     }
 
-    auto env_grid_node = m_scene->FindNodeByName("EnvGridEntity");
+    auto env_grid_node = m_scene->FindNodeByName("EnvGrid");
 
     if (env_grid_node) {
-        // env_grid_entity->SetTranslation(m_scene->GetCamera()->GetTranslation());
+        env_grid_node.SetWorldTranslation(m_scene->GetCamera()->GetTranslation());
     }
 
     if (m_rtc_instance) {

@@ -283,6 +283,29 @@ const BoundingBox &NodeProxy::GetWorldAABB() const
     return BoundingBox::empty;
 }
 
+bool NodeProxy::IsTransformLocked() const
+{
+    if (Get()) {
+        return Get()->IsTransformLocked();
+    }
+
+    return false;
+}
+
+void NodeProxy::LockTransform()
+{
+    if (Get()) {
+        Get()->LockTransform();
+    }
+}
+
+void NodeProxy::UnlockTransform()
+{
+    if (Get()) {
+        Get()->UnlockTransform();
+    }
+}
+
 HashCode NodeProxy::GetHashCode() const
 {
     HashCode hc;
@@ -292,12 +315,6 @@ HashCode NodeProxy::GetHashCode() const
     }
 
     return hc;
-}
-
-
-static NodeProxy ScriptCreateNodeProxy(void *)
-{
-    return NodeProxy(new Node);
 }
 
 } // namespace hyperion::v2

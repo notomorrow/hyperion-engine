@@ -207,6 +207,25 @@ namespace Hyperion
             }
         }
 
+        public bool TransformLocked
+        {
+            get
+            {
+                return Node_IsTransformLocked(managedNode);
+            }
+            set
+            {
+                if (value)
+                {
+                    Node_LockTransform(managedNode);
+                }
+                else
+                {
+                    Node_UnlockTransform(managedNode);
+                }
+            }
+        }
+
         public Entity Entity
         {
             get
@@ -324,5 +343,14 @@ namespace Hyperion
 
         [DllImport("libhyperion", EntryPoint = "Node_GetLocalAABB")]
         private static extern BoundingBox Node_GetLocalAABB(ManagedNode managedNode);
+
+        [DllImport("libhyperion", EntryPoint = "Node_IsTransformLocked")]
+        private static extern bool Node_IsTransformLocked(ManagedNode managedNode);
+
+        [DllImport("libhyperion", EntryPoint = "Node_LockTransform")]
+        private static extern void Node_LockTransform(ManagedNode managedNode);
+
+        [DllImport("libhyperion", EntryPoint = "Node_UnlockTransform")]
+        private static extern void Node_UnlockTransform(ManagedNode managedNode);
     }
 }
