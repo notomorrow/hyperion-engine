@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_STRING_VIEW_HPP
 #define HYPERION_V2_LIB_STRING_VIEW_HPP
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <algorithm>
 #include <cstring>

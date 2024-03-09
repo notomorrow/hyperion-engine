@@ -8,7 +8,6 @@
 #include <Aftermath/GFSDK_Aftermath_Defines.h>
 
 #include <asset/ByteWriter.hpp>
-#include <core/Memory.hpp>
 
 #include <chrono>
 #include <thread>

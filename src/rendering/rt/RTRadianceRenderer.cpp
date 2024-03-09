@@ -1,10 +1,7 @@
 #include <rendering/rt/RTRadianceRenderer.hpp>
+#include <rendering/rt/DDGI.hpp>
 #include <rendering/backend/RendererResult.hpp>
 #include <Engine.hpp>
-
-#include <core/Memory.hpp>
-
-#include "ProbeSystem.hpp"
 
 namespace hyperion::v2 {
 

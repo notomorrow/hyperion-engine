@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_VALUE_STORAGE_HPP
 #define HYPERION_V2_LIB_VALUE_STORAGE_HPP
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <Types.hpp>
 
 #include <type_traits>

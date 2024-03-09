@@ -2,7 +2,7 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <core/lib/FlatSet.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <system/Debug.hpp>
 

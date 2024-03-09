@@ -2,7 +2,7 @@
 #define HYPERION_V2_LIB_CONTAINER_BASE_H
 
 #include <core/lib/Pair.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <util/Defines.hpp>
 #include <HashCode.hpp>
 #include <Types.hpp>

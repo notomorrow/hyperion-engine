@@ -3,7 +3,7 @@
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/Span.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <HashCode.hpp>
 #include <Constants.hpp>
 

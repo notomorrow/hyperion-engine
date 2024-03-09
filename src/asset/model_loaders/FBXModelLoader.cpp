@@ -11,7 +11,7 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <rendering/Material.hpp>
 #include <util/fs/FsUtil.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <algorithm>
 #include <stack>

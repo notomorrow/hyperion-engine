@@ -4,7 +4,7 @@
 #include <Types.hpp>
 #include <Constants.hpp>
 #include <HashCode.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <core/lib/Variant.hpp>
 #include <util/Defines.hpp>
 

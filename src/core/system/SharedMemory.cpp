@@ -1,5 +1,5 @@
 #include <core/system/SharedMemory.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <util/Defines.hpp>
 #include <system/Debug.hpp>
 

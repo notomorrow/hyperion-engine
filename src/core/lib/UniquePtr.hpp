@@ -3,7 +3,7 @@
 
 #include <util/Defines.hpp>
 #include <core/lib/TypeID.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/Any.hpp>
 #include <Types.hpp>
