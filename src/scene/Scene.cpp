@@ -306,7 +306,86 @@ void Scene::CollectEntities(
             entity_id,
             mesh_component.mesh,
             mesh_component.material,
-            Handle<Skeleton>::empty, // TEMP
+            mesh_component.skeleton,
+            transform_component.transform.GetMatrix(),
+            mesh_component.previous_model_matrix,
+            bounding_box_component.world_aabb,
+            override_attributes_ptr
+        );
+    }
+}
+
+void Scene::CollectStaticEntities(
+    RenderList &render_list,
+    const Handle<Camera> &camera,
+    Optional<RenderableAttributeSet> override_attributes,
+    bool skip_frustum_culling
+) const
+{
+    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+
+    // clear out existing entities before populating
+    render_list.ClearEntities();
+
+    if (!camera) {
+        return;
+    }
+
+    const ID<Camera> camera_id = camera->GetID();
+
+    RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
+    const uint32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
+    
+    const uint8 visibility_cursor = m_octree.LoadVisibilityCursor();
+    const VisibilityState &parent_visibility_state = m_octree.GetVisibilityState();
+
+    for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<UNMOVEABLE>>()) {
+        auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] = it;
+
+        { // Temp hacks, beware! 
+            if (!mesh_component.mesh.IsValid()) {
+                continue;
+            }
+
+            AssertThrow(mesh_component.material.IsValid());
+            AssertThrow(mesh_component.material->GetRenderAttributes().shader_definition.IsValid());
+        }
+
+        if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+            // Visibility check
+            if (!visibility_state_component.visibility_state.ValidToParent(parent_visibility_state, visibility_cursor)) {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                DebugLog(
+                    LogType::Debug,
+                    "Skipping entity #%u due to visibility state being invalid.\n",
+                    entity_id.Value()
+                );
+#endif
+
+                continue;
+            }
+
+            if (!visibility_state_component.visibility_state.Get(camera_id, visibility_cursor)) {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                DebugLog(
+                    LogType::Debug,
+                    "Skipping entity #%u due to visibility state being false\n",
+                    entity_id.Value()
+                );
+#endif
+
+                continue;
+            }
+#endif
+        }
+
+        render_list.PushEntityToRender(
+            camera,
+            entity_id,
+            mesh_component.mesh,
+            mesh_component.material,
+            mesh_component.skeleton,
             transform_component.transform.GetMatrix(),
             mesh_component.previous_model_matrix,
             bounding_box_component.world_aabb,

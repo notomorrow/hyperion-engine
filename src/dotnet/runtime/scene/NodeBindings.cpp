@@ -329,6 +329,39 @@ extern "C" {
         node->SetLocalScale(scale);
     }
 
+    bool Node_IsTransformLocked(ManagedNode managed_node)
+    {
+        Node *node = managed_node.GetNode();
+
+        if (node == nullptr) {
+            return false;
+        }
+
+        return node->IsTransformLocked();
+    }
+
+    void Node_LockTransform(ManagedNode managed_node)
+    {
+        Node *node = managed_node.GetNode();
+
+        if (node == nullptr) {
+            return;
+        }
+
+        node->LockTransform();
+    }
+
+    void Node_UnlockTransform(ManagedNode managed_node)
+    {
+        Node *node = managed_node.GetNode();
+
+        if (node == nullptr) {
+            return;
+        }
+
+        node->UnlockTransform();
+    }
+
     void Node_Scale(ManagedNode managed_node, ManagedVec3f scale)
     {
         Node *node = managed_node.GetNode();

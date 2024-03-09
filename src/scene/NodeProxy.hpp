@@ -258,6 +258,15 @@ public:
      */
     const BoundingBox &GetWorldAABB() const;
 
+    /*! \brief If the Node is present, returns true if the Node's transform is locked. */
+    bool IsTransformLocked() const;
+
+    /*! \brief If the Node is present, locks the Node's transform, preventing it from being modified. */
+    void LockTransform();
+
+    /*! \brief Unlock the Node's transform, allowing it to be modified again. */
+    void UnlockTransform();
+
     HashCode GetHashCode() const;
 
 private:

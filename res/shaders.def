@@ -71,9 +71,6 @@ vert = RenderToCubemap.vert
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
 comp = sh/ComputeSH.comp
 
-[PackLightFieldProbe]
-comp = light_field/PackLightFieldProbe.comp
-
 [EnvProbe_VoxelizeProbe]
 permute = MODE(VOXELIZE OFFSET)
 comp = light_field/VoxelizeProbe.comp.glsl

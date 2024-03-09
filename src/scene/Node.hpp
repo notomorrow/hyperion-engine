@@ -320,6 +320,12 @@ public:
     /*! \brief Search child nodes (breadth-first) until a node with the given name is found. */
     NodeProxy FindChildByName(const String &) const;
 
+    bool IsTransformLocked() const
+        { return m_transform_locked; }
+
+    void LockTransform();
+    void UnlockTransform();
+
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -365,6 +371,8 @@ protected:
     Array<NodeProxy>    m_descendents;
 
     Scene               *m_scene;
+
+    bool                m_transform_locked;
 };
 
 } // namespace hyperion::v2

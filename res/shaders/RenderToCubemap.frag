@@ -137,7 +137,6 @@ void main()
     vec3 R = reflect(-V, N);
 
     const float min_extent = min(abs(v_env_probe_extent.x), min(abs(v_env_probe_extent.y), abs(v_env_probe_extent.z))) * 0.5;
-    const vec3 env_probe_center = current_env_probe.world_position.xyz;
 
     vec4 albedo = CURRENT_MATERIAL.albedo;
 
@@ -155,7 +154,7 @@ void main()
 
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
     // Write distance, mean distance for variance.
-    const float dist = distance(v_position, env_probe_center);
+    const float dist = distance(v_position, current_env_probe.world_position.xyz);
 
     vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
 #endif

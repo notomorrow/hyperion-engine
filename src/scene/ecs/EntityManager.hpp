@@ -17,6 +17,7 @@
 #include <scene/ecs/ComponentContainer.hpp>
 #include <scene/ecs/ComponentInterface.hpp>
 #include <scene/ecs/System.hpp>
+#include <scene/ecs/EntityTag.hpp>
 
 #include <GameCounter.hpp>
 
@@ -214,68 +215,6 @@ private:
 
 class EntityManager
 {
-#if 0
-    static struct ComponentSetMutexHolder
-    {
-        struct MutexMap
-        {
-            // Mutex for accessing the map
-            Mutex                       mutex;
-
-            // Maps component type ID to mutex, used for accessing components via dynamic TypeID
-            HashMap<TypeID, Mutex *>    map;
-
-            MutexMap()                                  = default;
-            MutexMap(const MutexMap &)                  = delete;
-            MutexMap &operator=(const MutexMap &)       = delete;
-            MutexMap(MutexMap &&) noexcept              = delete;
-            MutexMap &operator=(MutexMap &&) noexcept   = delete;
-            ~MutexMap()                                 = default;
-        };
-
-        struct MutexDeclaration
-        {
-            Mutex mutex;
-
-            MutexDeclaration(TypeID type_id, MutexMap &mutex_map)
-            {
-                Mutex::Guard guard(mutex_map.mutex);
-
-                mutex_map.map.Set(type_id, &mutex);
-            }
-
-            MutexDeclaration(const MutexDeclaration &)                  = delete;
-            MutexDeclaration &operator=(const MutexDeclaration &)       = delete;
-            MutexDeclaration(MutexDeclaration &&) noexcept              = delete;
-            MutexDeclaration &operator=(MutexDeclaration &&) noexcept   = delete;
-            ~MutexDeclaration()                                         = default;
-        };
-
-        static MutexMap s_mutex_map;
-
-        template <class Component>
-        static Mutex &GetMutex()
-        {
-            static MutexDeclaration mutex_declaration(TypeID::ForType<Component>(), s_mutex_map);
-
-            return mutex_declaration.mutex;
-        }
-
-        static Mutex *TryGetMutex(TypeID component_type_id)
-        {
-            Mutex::Guard guard(s_mutex_map.mutex);
-
-            auto it = s_mutex_map.map.Find(component_type_id);
-
-            if (it == s_mutex_map.map.End()) {
-                return nullptr;
-            }
-
-            return it->second;
-        }
-    } s_component_set_mutex_holder;
-#endif
-
 public:
     EntityManager(ThreadMask owner_thread_mask, Scene *scene)
         : m_owner_thread_mask(owner_thread_mask),
@@ -322,6 +261,24 @@ public:
         Threads::AssertOnThread(m_owner_thread_mask);
 
         return m_entities.Find(id) != m_entities.End();
+    }
+
+    template <EntityTag tag>
+    bool HasTag(ID<Entity> id) const
+    {
+        return HasComponent<EntityTagComponent<tag>>(id);
+    }
+
+    template <EntityTag tag>
+    void AddTag(ID<Entity> id)
+    {
+        AddComponent<EntityTagComponent<tag>>(id, EntityTagComponent<tag>());
+    }
+
+    template <EntityTag tag>
+    void RemoveTag(ID<Entity> id)
+    {
+        RemoveComponent<EntityTagComponent<tag>>(id);
     }
 
     template <class Component>
@@ -494,14 +451,16 @@ public:
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
 
-        // Notify systems that entity is being removed from them
-        NotifySystemsOfEntityRemoved(entity, it->second.components);
-
         auto component_it = it->second.components.Find<Component>();
         AssertThrowMsg(component_it != it->second.components.End(), "Entity does not have component");
 
         const TypeID component_type_id = component_it->first;
         const ComponentID component_id = component_it->second;
+
+        // Notify systems that entity is being removed from them
+        TypeMap<ComponentID> removed_component_ids;
+        removed_component_ids.Set(component_type_id, component_id);
+        NotifySystemsOfEntityRemoved(entity, removed_component_ids);
 
         GetContainer<Component>().RemoveComponent(component_id);
 

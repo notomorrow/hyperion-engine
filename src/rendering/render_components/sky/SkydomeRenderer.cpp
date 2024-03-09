@@ -1,6 +1,8 @@
 #include <rendering/render_components/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
+#include <scene/ecs/EntityManager.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -29,11 +31,7 @@ void SkydomeRenderer::Init()
         m_virtual_scene,
         BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f)),
         m_dimensions,
-        ENV_PROBE_TYPE_REFLECTION,
-        g_shader_manager->GetOrCreate({
-            HYP_NAME(RenderToCubemap_Skydome),
-            ShaderProperties(renderer::static_mesh_vertex_attributes)
-        })
+        ENV_PROBE_TYPE_SKY
     );
     
     InitObject(m_env_probe);
@@ -46,6 +44,7 @@ void SkydomeRenderer::InitGame()
 {
     auto dome_node = g_asset_manager->Load<Node>("models/inv_sphere.obj");
     dome_node.Scale(Vec3f(10.0f));
+    dome_node.LockTransform();
 
     m_virtual_scene->GetRoot().AddChild(dome_node);
 }

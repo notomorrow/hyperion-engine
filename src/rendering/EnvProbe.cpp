@@ -225,7 +225,7 @@ void EnvProbe::Init()
     m_view_matrices = CreateCubemapMatrices(m_aabb, GetOrigin());
 
     if (!IsControlledByEnvGrid()) {
-        if (IsReflectionProbe()) {
+        if (IsReflectionProbe() || IsSkyProbe()) {
             m_texture = CreateObject<Texture>(TextureCube(
                 m_dimensions,
                 reflection_probe_format,
@@ -301,6 +301,13 @@ void EnvProbe::CreateShader()
         m_shader = g_shader_manager->GetOrCreate({
             HYP_NAME(RenderToCubemap),
             ShaderProperties(renderer::static_mesh_vertex_attributes, { "MODE_REFLECTION" })
+        });
+
+        break;
+    case EnvProbeType::ENV_PROBE_TYPE_SKY:
+        m_shader = g_shader_manager->GetOrCreate({
+            HYP_NAME(RenderToCubemap_Skydome),
+            ShaderProperties(renderer::static_mesh_vertex_attributes)
         });
 
         break;
@@ -423,19 +430,35 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
         m_camera->Update(delta);
 
-        m_parent_scene->CollectEntities(
-            m_render_list,
-            m_camera,
-            RenderableAttributeSet(
-                MeshAttributes { },
-                MaterialAttributes {
-                    .shader_definition = m_shader->GetCompiledShader().GetDefinition(),
-                    .bucket = BUCKET_INTERNAL,
-                    .cull_faces = FaceCullMode::NONE
-                }
-            ),
-            true // skip frustum culling
-        );
+        if (OnlyCollectStaticEntities()) {
+            m_parent_scene->CollectStaticEntities(
+                m_render_list,
+                m_camera,
+                RenderableAttributeSet(
+                    MeshAttributes { },
+                    MaterialAttributes {
+                        .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
+                        .bucket             = BUCKET_INTERNAL,
+                        .cull_faces         = FaceCullMode::NONE
+                    }
+                ),
+                true // skip frustum culling
+            );
+        } else {
+            m_parent_scene->CollectEntities(
+                m_render_list,
+                m_camera,
+                RenderableAttributeSet(
+                    MeshAttributes { },
+                    MaterialAttributes {
+                        .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
+                        .bucket             = BUCKET_INTERNAL,
+                        .cull_faces         = FaceCullMode::NONE
+                    }
+                ),
+                true // skip frustum culling
+            );
+        }
 
         m_render_list.UpdateRenderGroups();
     }
@@ -462,6 +485,12 @@ void EnvProbe::Render(Frame *frame)
     AssertReady();
 
     if (IsControlledByEnvGrid()) {
+        DebugLog(
+            LogType::Warn,
+            "EnvProbe #%u is controlled by an EnvGrid, but Render() is being called!\n",
+            GetID().Value()
+        );
+
         return;
     }
 
@@ -548,7 +577,7 @@ void EnvProbe::Render(Frame *frame)
 
     m_texture->GetImage()->Blit(command_buffer, framebuffer_image);
 
-    if (GetEnvProbeType() == ENV_PROBE_TYPE_REFLECTION) {
+    if (IsReflectionProbe() || IsSkyProbe()) {
         HYPERION_PASS_ERRORS(
             m_texture->GetImage()->GenerateMipmaps(g_engine->GetGPUDevice(), command_buffer),
             result
@@ -602,6 +631,7 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             switch (GetEnvProbeType()) {
             case ENV_PROBE_TYPE_REFLECTION:
+            case ENV_PROBE_TYPE_SKY: // fallthrough
                 g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
                     ->SetElement(HYP_NAME(EnvProbeTextures), texture_slot, m_texture->GetImageView());
 
@@ -631,7 +661,7 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
         }
 
         set_texture = false;
-    } else if (IsReflectionProbe()) {
+    } else if (IsReflectionProbe() || IsSkyProbe()) {
         if (probe_index.GetProbeIndex() >= max_bound_reflection_probes) {
             DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound reflection probes\n", probe_index.GetProbeIndex());
 

@@ -61,8 +61,8 @@ void main(void)
     vec3 voxel_grid_aabb_extent = voxel_grid_aabb_max - voxel_grid_aabb_min;
     vec3 voxel_grid_aabb_center = voxel_grid_aabb_min + voxel_grid_aabb_extent * 0.5;
 
-    vec3 scaled_position = (world_position.xyz - voxel_grid_aabb_center) / voxel_grid_aabb_extent;
-    ivec3 voxel_storage_position = ivec3(((scaled_position + 0.5) * vec3(voxel_texture_dimensions.xyz)) + vec3(gl_GlobalInvocationID.xyz));
+    vec3 scaled_position = ((env_probe.world_position.xyz - voxel_grid_aabb_center) / voxel_grid_aabb_extent) + vec3(0.5);
+    ivec3 voxel_storage_position = ivec3((scaled_position * vec3(voxel_texture_dimensions.xyz)) + vec3(gl_GlobalInvocationID.xyz));
 
     // ivec3 voxel_storage_position = ivec3(gl_GlobalInvocationID.xyz) + probe_voxel_grid_offset;
 
