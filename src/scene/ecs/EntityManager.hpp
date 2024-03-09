@@ -564,17 +564,15 @@ private:
     {
         AssertThrow(system_ptr != nullptr);
 
-        if (m_system_execution_groups.Empty()) {
-            m_system_execution_groups.PushBack({ });
-        }
-
         SystemType *ptr = nullptr;
 
-        for (auto &system_execution_group : m_system_execution_groups) {
-            if (system_execution_group.IsValidForExecutionGroup(system_ptr.Get())) {
-                ptr = static_cast<SystemType *>(system_execution_group.AddSystem<SystemType>(std::move(system_ptr)));
+        if (system_ptr->AllowParallelExecution()) {
+            for (auto &system_execution_group : m_system_execution_groups) {
+                if (system_execution_group.IsValidForExecutionGroup(system_ptr.Get())) {
+                    ptr = static_cast<SystemType *>(system_execution_group.AddSystem<SystemType>(std::move(system_ptr)));
 
-                break;
+                    break;
+                }
             }
         }
 

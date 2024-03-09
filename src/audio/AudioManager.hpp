@@ -4,33 +4,41 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include "../math/Vector3.hpp"
+#include <core/lib/DynArray.hpp>
+#include <core/lib/String.hpp>
+
+#include <math/Vector3.hpp>
 
 namespace hyperion {
 class AudioManager {
 public:
-    static AudioManager *GetInstance();
-    static void Deinitialize();
+  static AudioManager *GetInstance();
+  static void Deinitialize();
 
-    AudioManager();
-    ~AudioManager();
+  AudioManager();
+  ~AudioManager();
 
-    bool Initialize();
-    bool IsInitialized() const { return m_is_initialized; }
-    void ListDevices();
-    ALCdevice *GetDevice() const { return m_device; }
-    ALCcontext *GetContext() const { return m_context; }
+  bool Initialize();
 
-    void SetListenerPosition(const Vector3 &position);
-    void SetListenerOrientation(const Vector3 &forward, const Vector3 &up);
+  bool IsInitialized() const
+    { return m_is_initialized; }
+
+  Array<String> ListDevices() const;
+
+  ALCdevice *GetDevice() const { return m_device; }
+
+  ALCcontext *GetContext() const { return m_context; }
+
+  void SetListenerPosition(const Vec3f &position);
+  void SetListenerOrientation(const Vec3f &forward, const Vec3f &up);
 
 private:
-    static AudioManager *instance;
+  static AudioManager *instance;
 
-    bool m_is_initialized;
+  bool          m_is_initialized;
 
-    ALCdevice *m_device;
-    ALCcontext *m_context;
+  ALCdevice     *m_device;
+  ALCcontext    *m_context;
 };
 } // namespace hyperion
 

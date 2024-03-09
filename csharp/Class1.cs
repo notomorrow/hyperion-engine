@@ -3,6 +3,26 @@ using System.Runtime.InteropServices;
 
 using Hyperion;
 
+public class TestScript : Script
+{
+    public void Init(Entity entity)
+    {
+        base.Init(entity);
+        
+        // Logger.Log(LogType.Info, "Init a script with entity ID: " + Entity.ID);
+    }
+
+    public void Destroy()
+    {
+        // Logger.Log(LogType.Info, "Destroy a script");
+    }
+
+    public void Update(float deltaTime)
+    {
+        // Logger.Log(LogType.Info, "Update a script");
+    }
+}
+
 public class TestGame : Game
 {
     public override void Init()

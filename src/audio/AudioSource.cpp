@@ -18,7 +18,17 @@ AudioSource::AudioSource(Format format, const ByteBuffer &byte_buffer, SizeType 
 
 AudioSource::~AudioSource()
 {
-    Teardown();
+    Stop();
+
+    if (m_source_id != ~0u) {
+        alDeleteSources(1, &m_source_id);
+        m_source_id = ~0u;
+    }
+
+    if (m_buffer_id != ~0u) {
+        alDeleteBuffers(1, &m_buffer_id);
+        m_buffer_id = ~0u;
+    }
 }
 
 void AudioSource::Init()
@@ -58,20 +68,6 @@ void AudioSource::Init()
         // drop reference
         m_data = ByteBuffer();
     }
-
-    OnTeardown([this](...) {
-        Stop();
-
-        if (m_source_id != ~0u) {
-            alDeleteSources(1, &m_source_id);
-            m_source_id = ~0u;
-        }
-
-        if (m_buffer_id != ~0u) {
-            alDeleteBuffers(1, &m_buffer_id);
-            m_buffer_id = ~0u;
-        }
-    });
 }
 
 AudioSource::State AudioSource::GetState() const

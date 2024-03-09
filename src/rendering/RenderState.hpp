@@ -209,13 +209,17 @@ struct RenderState
     {
         AssertThrow(type < ENV_PROBE_TYPE_MAX);
 
-        constexpr uint max_counts[ENV_PROBE_TYPE_MAX] = {
-            max_bound_reflection_probes,
-            max_bound_point_shadow_maps,
-            max_bound_ambient_probes
+        constexpr EnvProbeBindingSlot binding_slots[ENV_PROBE_TYPE_MAX] = {
+            ENV_PROBE_BINDING_SLOT_CUBEMAP,         // reflection
+            ENV_PROBE_BINDING_SLOT_CUBEMAP,         // sky
+            ENV_PROBE_BINDING_SLOT_SHADOW_CUBEMAP,  // shadow
+            ENV_PROBE_BINDING_SLOT_INVALID          // ambient
         };
 
-        const bool has_texture_slot = type < ENV_PROBE_TYPE_AMBIENT;
+        constexpr uint max_counts[ENV_PROBE_BINDING_SLOT_MAX] = {
+            max_bound_reflection_probes,
+            max_bound_point_shadow_maps
+        };
 
         const auto it = bound_env_probes[type].Find(probe_id);
 
@@ -230,8 +234,10 @@ struct RenderState
             return;
         }
 
-        if (has_texture_slot) {
-            if (m_env_probe_texture_slot_counters[type] >= max_counts[type]) {
+        const uint texture_slot_index = binding_slots[type];
+
+        if (texture_slot_index != ENV_PROBE_BINDING_SLOT_INVALID) {
+            if (m_env_probe_texture_slot_counters[texture_slot_index] >= max_counts[texture_slot_index]) {
                 DebugLog(
                     LogType::Warn,
                     "Maximum bound probes of type %u exceeded! (%u)\n",
@@ -245,8 +251,8 @@ struct RenderState
 
         bound_env_probes[type].Insert(
             probe_id,
-            has_texture_slot
-                ? Optional<uint>(m_env_probe_texture_slot_counters[type]++)
+            texture_slot_index != ENV_PROBE_BINDING_SLOT_INVALID
+                ? Optional<uint>(m_env_probe_texture_slot_counters[texture_slot_index]++)
                 : Optional<uint>()
         );
     }
@@ -294,7 +300,7 @@ struct RenderState
     }
 
 private:
-    FixedArray<uint, ENV_PROBE_TYPE_MAX> m_env_probe_texture_slot_counters { };
+    FixedArray<uint, ENV_PROBE_BINDING_SLOT_MAX>    m_env_probe_texture_slot_counters { };
 };
 
 } // namespace hyperion::v2

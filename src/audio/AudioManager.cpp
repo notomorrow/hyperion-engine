@@ -1,7 +1,7 @@
 #include "AudioManager.hpp"
 
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
 namespace hyperion {
 AudioManager *AudioManager::instance = nullptr;
@@ -11,12 +11,13 @@ AudioManager *AudioManager::GetInstance()
     if (instance == nullptr) {
         instance = new AudioManager();
     }
+
     return instance;
 }
 
 AudioManager::AudioManager()
+    : m_is_initialized(false)
 {
-    m_is_initialized = false;
 }
 
 AudioManager::~AudioManager()
@@ -26,6 +27,7 @@ AudioManager::~AudioManager()
         alcDestroyContext(m_context);
         alcCloseDevice(m_device);
     }
+
     m_is_initialized = false;
 }
 
@@ -33,7 +35,6 @@ void AudioManager::Deinitialize()
 {
     delete instance;
     instance = nullptr;
-
 }
 
 bool AudioManager::Initialize()
@@ -53,7 +54,7 @@ bool AudioManager::Initialize()
         return false;
     }
 
-    ALfloat orientation[] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat orientation[] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     alListener3f(AL_POSITION, 0, 0, 0);
     alListener3f(AL_VELOCITY, 0, 0, 0);
     alListenerfv(AL_ORIENTATION, orientation);
@@ -62,31 +63,34 @@ bool AudioManager::Initialize()
     return true;
 }
 
-void AudioManager::ListDevices()
+Array<String> AudioManager::ListDevices() const
 {
+    Array<String> devices;
+
     const ALCchar *device = alcGetString(NULL, ALC_DEVICE_SPECIFIER);
     const ALCchar *next = device + 1;
-    size_t len = 0;
+    SizeType len = 0;
 
-    std::cout << "Devices list:\n";
-    std::cout << "----------\n";
     while (device && *device != '\0' && next && *next != '\0') {
-        std::cout << device << "\n";
+        devices.PushBack(device);
         len = std::strlen(device);
         device += (len + 1);
         next += (len + 2);
     }
-    std::cout << "----------\n";
+
+    return devices;
 }
 
-void AudioManager::SetListenerPosition(const Vector3 &position)
+void AudioManager::SetListenerPosition(const Vec3f &position)
 {
     alListener3f(AL_POSITION, position.x, position.y, position.z);
 }
 
-void AudioManager::SetListenerOrientation(const Vector3 &forward, const Vector3 &up)
+void AudioManager::SetListenerOrientation(
+    const Vec3f &forward,
+    const Vec3f &up)
 {
-    const float values[] = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
+    const float values[] = {forward.x, forward.y, forward.z, up.x, up.y, up.z};
     alListenerfv(AL_ORIENTATION, values);
 }
 } // namespace hyperion

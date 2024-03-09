@@ -11,7 +11,6 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 
 #include <scene/controllers/FollowCameraController.hpp>
-#include <scene/controllers/physics/RigidBodyController.hpp>
 
 #include <Game.hpp>
 #include <GameThread.hpp>

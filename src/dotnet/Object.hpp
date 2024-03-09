@@ -31,6 +31,9 @@ public:
     // Destructor frees the managed object
     ~Object();
 
+    Class *GetClass() const
+        { return m_class_ptr; }
+
     template <class ReturnType, class... Args>
     ReturnType InvokeMethod(const String &method_name, Args &&... args)
     {
