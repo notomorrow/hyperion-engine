@@ -10,7 +10,8 @@ namespace hyperion::dotnet {
 
 extern "C" {
 
-struct ManagedGuid {
+struct ManagedGuid
+{
     uint64 low;
     uint64 high;
 };

@@ -18,6 +18,9 @@ class SystemBase
 public:
     virtual ~SystemBase() = default;
 
+    virtual bool AllowParallelExecution() const
+        { return true; }
+
     /*! \brief Returns the TypeIDs of the components this System operates on.
      *  To be used by the EntityManager in order to properly order the Systems based on their dependencies.
      *

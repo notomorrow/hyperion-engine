@@ -471,8 +471,8 @@ void ReflectionProbePass::Create()
             .vertex_attributes = renderer::static_mesh_vertex_attributes
         },
         MaterialAttributes {
-            .bucket = Bucket::BUCKET_INTERNAL,
-            .fill_mode = FillMode::FILL,
+            .bucket     = Bucket::BUCKET_INTERNAL,
+            .fill_mode  = FillMode::FILL,
             .blend_mode = BlendMode::NORMAL
         }
     );
@@ -507,45 +507,49 @@ void ReflectionProbePass::Record(uint frame_index)
                     global_descriptor_set_index
                 );
             
-            // Render each reflection probe
+            // Render each probe
 
             uint counter = 0;
 
-            for (const auto &it : g_engine->render_state.bound_env_probes[ENV_PROBE_TYPE_REFLECTION]) {
-                if (counter >= max_bound_reflection_probes) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Attempting to render too many reflection probes.\n"
-                    );
+            // Sky renders first
+            static const FixedArray<EnvProbeType, 2> reflection_probe_types {
+                ENV_PROBE_TYPE_SKY,
+                ENV_PROBE_TYPE_REFLECTION
+            };
 
-                    break;
+            for (EnvProbeType env_probe_type : reflection_probe_types) {
+                for (const auto &it : g_engine->render_state.bound_env_probes[env_probe_type]) {
+                    if (counter >= max_bound_reflection_probes) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Attempting to render too many reflection probes.\n"
+                        );
+
+                        break;
+                    }
+
+                    const ID<EnvProbe> &env_probe_id = it.first;
+
+                    // TODO: Add visibility check so we skip probes that don't have any impact on the current view
+
+                    m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                        ->Bind(
+                            cmd,
+                            m_render_group->GetPipeline(),
+                            {
+                                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, env_probe_id.ToIndex()) }
+                            },
+                            scene_descriptor_set_index
+                        );
+
+                    m_full_screen_quad->Render(cmd);
+
+                    ++counter;
                 }
-
-                const ID<EnvProbe> &env_probe_id = it.first;
-
-                if (!it.second.HasValue()) {
-                    continue;
-                }
-
-                // TODO: Add visibility check so we skip probes that don't have any impact on the current view
-
-                m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
-                    ->Bind(
-                        cmd,
-                        m_render_group->GetPipeline(),
-                        {
-                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, env_probe_id.ToIndex()) }
-                        },
-                        scene_descriptor_set_index
-                    );
-
-                m_full_screen_quad->Render(cmd);
-
-                ++counter;
             }
 
             HYPERION_RETURN_OK;
@@ -738,7 +742,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const bool use_hbil = g_engine->GetConfig().Get(CONFIG_HBIL);
     const bool use_env_grid_irradiance = g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI);
     const bool use_env_grid_radiance = g_engine->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS);
-    const bool use_reflection_probes = g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any();
+    const bool use_reflection_probes = g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_SKY].Any()
+        || g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any();
     const bool use_temporal_aa = g_engine->GetConfig().Get(CONFIG_TEMPORAL_AA) && m_temporal_aa != nullptr;
 
     if (use_temporal_aa) {

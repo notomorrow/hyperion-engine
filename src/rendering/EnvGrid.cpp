@@ -174,16 +174,16 @@ void EnvGrid::SetCameraData(const Vec3f &position)
     };
 
     const Vec3i current_grid_position {
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.x / size_of_probe.x),
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.y / size_of_probe.y),
-        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center.z / size_of_probe.z)
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.x / size_of_probe.x),
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.y / size_of_probe.y),
+        MathUtil::Floor<float, Vec3i::Type>(current_aabb_center_minus_offset.z / size_of_probe.z)
     };
 
     if (current_grid_position == position_snapped) {
         return;
     }
 
-    m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe);
+    m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe + m_offset);
 
     // If the grid has moved, we need to offset the voxel grid.
     m_flags.BitOr(ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET, MemoryOrder::ACQUIRE_RELEASE);

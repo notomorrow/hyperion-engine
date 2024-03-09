@@ -26,6 +26,14 @@ static_assert(sizeof(ManagedHandle) == 4, "ManagedHandle must be 4 bytes to matc
 static_assert(std::is_trivial_v<ManagedHandle>, "ManagedHandle must be a trivial type to be used in C#");
 
 template <class T>
+static inline ManagedHandle CreateManagedHandleFromID(ID<T> id)
+{
+    ManagedHandle result { id.Value() };
+
+    return result;
+}
+
+template <class T>
 static inline ManagedHandle CreateManagedHandleFromHandle(Handle<T> handle)
 {
     ManagedHandle result { handle.GetID().Value() };

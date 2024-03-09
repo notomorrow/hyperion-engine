@@ -72,37 +72,7 @@ void EntityManagerCommandQueue::Execute(EntityManager &mgr, GameCounter::TickUni
     }
 }
 
-#if 0
-void EntityManagerCommandQueue::WaitForFree()
-{
-    switch (m_policy) {
-    case ENTITY_MANAGER_COMMAND_QUEUE_POLICY_EXEC_ON_OWNER_THREAD: {
-        std::unique_lock<std::mutex> lock(m_mutex);
-
-        m_has_commands.wait(
-            lock,
-            [this]()
-            { 
-                return m_count.Get(MemoryOrder::ACQUIRE) == 0;
-            }
-        );
-
-        break;
-    }
-    case ENTITY_MANAGER_COMMAND_QUEUE_POLICY_DISCARD:
-        // Do nothing
-        break;
-    }
-}
-#endif
-
 // EntityManager
-
-#if 0
-EntityManager::ComponentSetMutexHolder::MutexMap EntityManager::ComponentSetMutexHolder::s_mutex_map = { };
-
-EntityManager::ComponentSetMutexHolder EntityManager::s_component_set_mutex_holder = { };
-#endif
 
 ID<Entity> EntityManager::AddEntity()
 {

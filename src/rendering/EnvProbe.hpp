@@ -29,6 +29,15 @@ class Framebuffer;
 using renderer::Attachment;
 using renderer::Image;
 
+enum EnvProbeBindingSlot : uint
+{
+    ENV_PROBE_BINDING_SLOT_INVALID          = uint(-1),
+
+    ENV_PROBE_BINDING_SLOT_CUBEMAP          = 0,
+    ENV_PROBE_BINDING_SLOT_SHADOW_CUBEMAP   = 1,
+    ENV_PROBE_BINDING_SLOT_MAX
+};
+
 enum EnvProbeType : uint
 {
     ENV_PROBE_TYPE_INVALID = uint(-1),
@@ -250,7 +259,7 @@ public:
     
 private:
     bool OnlyCollectStaticEntities() const
-        { return IsSkyProbe() || IsAmbientProbe(); }
+        { return IsAmbientProbe(); }
 
     void CreateShader();
     void CreateFramebuffer();

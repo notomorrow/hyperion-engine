@@ -18,6 +18,7 @@
 #include <scene/ecs/systems/BLASUpdaterSystem.hpp>
 #include <scene/ecs/systems/PhysicsSystem.hpp>
 #include <scene/ecs/systems/TerrainSystem.hpp>
+#include <scene/ecs/systems/ScriptSystem.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
@@ -118,6 +119,7 @@ Scene::Scene(
     m_entity_manager->AddSystem<BLASUpdaterSystem>();
     m_entity_manager->AddSystem<PhysicsSystem>();
     m_entity_manager->AddSystem<TerrainSystem>();
+    m_entity_manager->AddSystem<ScriptSystem>();
 
     m_root_node_proxy.Get()->SetScene(this);
 }

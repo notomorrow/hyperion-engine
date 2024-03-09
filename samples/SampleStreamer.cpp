@@ -21,6 +21,7 @@
 #include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
 #include <scene/ecs/components/BLASComponent.hpp>
+#include <scene/ecs/components/ScriptComponent.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -121,7 +122,7 @@ void SampleStreamer::InitGame()
         const uint16 signalling_server_port = uint16(arg_parse_result["SignallingServerPort"].Get<int>());
 
         // g_engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
-        
+
         m_rtc_instance.Reset(new RTCInstance(
             RTCServerParams {
                 RTCServerAddress { signalling_server_ip, signalling_server_port, "/server" }
@@ -176,7 +177,7 @@ void SampleStreamer::InitGame()
                 JSONValue &json_value = json_parse_result.value;
 
                 DebugLog(LogType::Debug, " -> %s\n", json_value.ToString().Data());
-                
+
                 m_message_queue.Push(std::move(json_value));
             });
 
@@ -279,7 +280,7 @@ void SampleStreamer::InitGame()
                 { Material::MATERIAL_KEY_ROUGHNESS, 0.01f }
             }
         );
-        
+
         m_scene->GetEntityManager()->AddComponent(entity_id, MeshComponent {
             cube,
             material
@@ -313,7 +314,7 @@ void SampleStreamer::InitGame()
                 }
             )
         });
-        
+
         m_scene->GetEntityManager()->AddComponent(entity_id, MeshComponent {
             cube,
             g_material_system->GetOrCreate(
@@ -429,7 +430,7 @@ void SampleStreamer::InitGame()
             light
         });
     }
-    
+
 
     // Add Skybox
     {
@@ -574,7 +575,7 @@ void SampleStreamer::InitGame()
             }
 
         end = std::chrono::high_resolution_clock::now();
-        
+
         DebugLog(LogType::Debug, "HashMap lookup timing: %f\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0f);
 
 
@@ -659,7 +660,7 @@ void SampleStreamer::InitGame()
 
         DebugLog(LogType::Debug, "ArrayMap lookup timing: %f\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0f);
 
-        
+
         // test std::map
 
         start = std::chrono::high_resolution_clock::now();
@@ -706,7 +707,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//testbed/testbed2.obj");//living_room/living_room.obj");//
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");//testbed/testbed2.obj");//living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -820,11 +821,11 @@ void SampleStreamer::InitGame()
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
             //node.Scale(0.25f);
-            node.Scale(3.0f);
-            // node.Scale(0.0125f);
+            //node.Scale(3.0f);
+            node.Scale(0.0125f);
             node.SetName("test_model");
             node.LockTransform();
-            
+
             GetScene()->GetRoot().AddChild(node);
 
             // Add a reflection probe
@@ -849,8 +850,8 @@ void SampleStreamer::InitGame()
             });
 
             m_scene->GetEntityManager()->AddComponent(env_grid_entity, BoundingBoxComponent {
-                node.GetLocalAABB() * 2.0f,
-                node.GetWorldAABB() * 2.0f
+                node.GetLocalAABB() * 1.0f,
+                node.GetWorldAABB() * 1.0f
             });
 
             // Add env grid component
@@ -858,12 +859,19 @@ void SampleStreamer::InitGame()
                 EnvGridType::ENV_GRID_TYPE_SH
             });
 
+            m_scene->GetEntityManager()->AddComponent(env_grid_entity, ScriptComponent {
+                {
+                    .assembly_name = "csharp/bin/Debug/net8.0/csharp.dll",
+                    .class_name = "TestScript"
+                }
+            });
+
             auto env_grid_node = m_scene->GetRoot().AddChild();
             env_grid_node.SetEntity(env_grid_entity);
             env_grid_node.SetName("EnvGrid");
         }
     }
-    
+
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
 
     //RC<LightmapRenderer> lightmap_renderer = m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(HYP_NAME(LightmapRenderer0));
@@ -1011,7 +1019,7 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
                 ply_model->custom_data["rot_1"].Read(index * sizeof(float), &rotation.x);
                 ply_model->custom_data["rot_2"].Read(index * sizeof(float), &rotation.y);
                 ply_model->custom_data["rot_3"].Read(index * sizeof(float), &rotation.z);
-                
+
                 rotation.Normalize();
 
                 out_point.rotation = rotation;
@@ -1051,9 +1059,9 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
                 );
             }
         }
-        
+
         uint camera_definition_index = 0;
-        
+
         RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
         camera_track->SetDuration(60.0);
 
@@ -1116,7 +1124,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
     auto env_grid_node = m_scene->FindNodeByName("EnvGrid");
 
     if (env_grid_node) {
-        env_grid_node.SetWorldTranslation(m_scene->GetCamera()->GetTranslation());
+        // env_grid_node.SetWorldTranslation(m_scene->GetCamera()->GetTranslation());
     }
 
     if (m_rtc_instance) {
@@ -1126,7 +1134,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 
             const String message_type = message["type"].ToString();
             const String id = message["id"].ToString();
-            
+
             if (message_type == "request") {
                 RC<RTCClient> client = m_rtc_instance->GetServer()->CreateClient(id);
                 DebugLog(LogType::Debug, "Adding client with ID %s\n", id.Data());
@@ -1138,7 +1146,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
                     if (!data.bytes.HasValue()) {
                         return;
                     }
-                    
+
                     json::ParseResult json_parse_result = json::JSON::Parse(String(data.bytes.Get()));
 
                     if (!json_parse_result.ok) {
@@ -1202,7 +1210,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
                     tracks.PushBack(track);
                 }
             }
-            
+
             RTCStreamDestination dest;
             dest.tracks = std::move(tracks);
 
@@ -1367,7 +1375,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
                         if (mesh_component != nullptr && mesh_component->mesh.IsValid() && transform_component != nullptr) {
                             auto streamed_mesh_data = mesh_component->mesh->GetStreamedMeshData();
                             auto ref = streamed_mesh_data->AcquireRef();
-                            
+
                             ray.TestTriangleList(
                                 ref->GetMeshData().vertices,
                                 ref->GetMeshData().indices,

@@ -15,7 +15,6 @@ extern "C" {
     struct ManagedMethod;
 }
 
-
 class Class;
 
 class ClassHolder
