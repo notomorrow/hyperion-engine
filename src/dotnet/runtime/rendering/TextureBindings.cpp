@@ -3,7 +3,7 @@
 #include <rendering/Texture.hpp>
 
 #include <core/lib/TypeID.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>

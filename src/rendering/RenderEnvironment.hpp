@@ -7,7 +7,7 @@
 #include <rendering/GaussianSplatting.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/rt/RTRadianceRenderer.hpp>
-#include <rendering/rt/ProbeSystem.hpp>
+#include <rendering/rt/DDGI.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 
@@ -241,7 +241,7 @@ private:
     Handle<GaussianSplatting>                       m_gaussian_splatting;
 
     UniquePtr<RTRadianceRenderer>                   m_rt_radiance;
-    ProbeGrid                                       m_probe_system;
+    DDGI                                            m_ddgi;
     bool                                            m_has_rt_radiance;
     bool                                            m_has_ddgi_probes;
     Handle<TLAS>                                    m_tlas;

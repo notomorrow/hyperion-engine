@@ -6,7 +6,7 @@
 #include <math/Transform.hpp>
 #include <math/BoundingBox.hpp>
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <type_traits>
 

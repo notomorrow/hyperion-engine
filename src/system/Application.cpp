@@ -5,7 +5,7 @@
 #include "Application.hpp"
 #include "Debug.hpp"
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>

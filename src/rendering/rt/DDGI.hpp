@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_PROBE_SYSTEM_H
-#define HYPERION_V2_PROBE_SYSTEM_H
+#ifndef HYPERION_V2_DDGI_HPP
+#define HYPERION_V2_DDGI_HPP
 
 #include <core/Containers.hpp>
 
@@ -45,7 +45,7 @@ struct ProbeRayData
 
 static_assert(sizeof(ProbeRayData) == 64);
 
-struct ProbeGridInfo
+struct DDGIInfo
 {
     static constexpr uint irradiance_octahedron_size = 8;
     static constexpr uint depth_octahedron_size = 16;
@@ -100,13 +100,13 @@ struct Probe
     Vector3 position;
 };
 
-class ProbeGrid
+class DDGI
 {
 public:
-    ProbeGrid(ProbeGridInfo &&grid_info);
-    ProbeGrid(const ProbeGrid &other) = delete;
-    ProbeGrid &operator=(const ProbeGrid &other) = delete;
-    ~ProbeGrid();
+    DDGI(DDGIInfo &&grid_info);
+    DDGI(const DDGI &other) = delete;
+    DDGI &operator=(const DDGI &other) = delete;
+    ~DDGI();
 
     const Array<Probe> &GetProbes() const
         { return m_probes; }
@@ -138,32 +138,34 @@ private:
     void UpdateUniforms(Frame *frame);
     void SubmitPushConstants(CommandBuffer *command_buffer);
 
-    ProbeGridInfo           m_grid_info;
-    Array<Probe>            m_probes;
+    DDGIInfo                                    m_grid_info;
+    Array<Probe>                                m_probes;
     
-    FixedArray<uint32, max_frames_in_flight> m_updates;
+    FixedArray<uint32, max_frames_in_flight>    m_updates;
 
-    ComputePipelineRef m_update_irradiance,
-        m_update_depth,
-        m_copy_border_texels_irradiance,
-        m_copy_border_texels_depth;
+    ComputePipelineRef                          m_update_irradiance;
+    ComputePipelineRef                          m_update_depth;
+    ComputePipelineRef                          m_copy_border_texels_irradiance;
+    ComputePipelineRef                          m_copy_border_texels_depth;
 
-    Handle<Shader> m_shader;
+    Handle<Shader>                              m_shader;
 
-    RaytracingPipelineRef   m_pipeline;
-    GPUBufferRef            m_uniform_buffer;
-    GPUBufferRef            m_radiance_buffer;
-    ImageRef                m_irradiance_image;
-    ImageViewRef            m_irradiance_image_view;
-    ImageRef                m_depth_image;
-    ImageViewRef            m_depth_image_view;
+    RaytracingPipelineRef                       m_pipeline;
 
-    Handle<TLAS>            m_tlas;
+    GPUBufferRef                                m_uniform_buffer;
+    GPUBufferRef                                m_radiance_buffer;
 
-    DDGIUniforms            m_uniforms;
+    ImageRef                                    m_irradiance_image;
+    ImageViewRef                                m_irradiance_image_view;
+    ImageRef                                    m_depth_image;
+    ImageViewRef                                m_depth_image_view;
 
-    RotationMatrixGenerator m_random_generator;
-    uint32                  m_time;
+    Handle<TLAS>                                m_tlas;
+
+    DDGIUniforms                                m_uniforms;
+
+    RotationMatrixGenerator                     m_random_generator;
+    uint32                                      m_time;
 };
 
 } // namespace hyperion::v2

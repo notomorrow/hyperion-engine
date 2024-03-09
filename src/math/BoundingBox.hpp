@@ -4,7 +4,7 @@
 #include <math/Vector3.hpp>
 #include <math/Transform.hpp>
 #include <core/lib/FixedArray.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <HashCode.hpp>
 #include <Types.hpp>
 

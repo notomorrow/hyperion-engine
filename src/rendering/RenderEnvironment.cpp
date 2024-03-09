@@ -49,7 +49,7 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
       m_frame_counter(0),
       m_current_enabled_render_components_mask(0),
       m_next_enabled_render_components_mask(0),
-      m_probe_system({
+      m_ddgi({
           .aabb = {{-25.0f, -5.0f, -25.0f}, {25.0f, 30.0f, 25.0f}}
       }),
       m_has_rt_radiance(false),
@@ -103,8 +103,8 @@ void RenderEnvironment::Init()
         m_rt_radiance->SetTLAS(m_tlas);
         m_rt_radiance->Create();
 
-        m_probe_system.SetTLAS(m_tlas);
-        m_probe_system.Init();
+        m_ddgi.SetTLAS(m_tlas);
+        m_ddgi.Init();
 
         m_has_rt_radiance = true;
         m_has_ddgi_probes = true;
@@ -139,7 +139,7 @@ void RenderEnvironment::Init()
         }
 
         if (m_has_ddgi_probes) {
-            m_probe_system.Destroy();
+            m_ddgi.Destroy();
 
             m_has_ddgi_probes = false;
         }
@@ -190,7 +190,7 @@ void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
     }
 
     if (m_has_ddgi_probes) {
-        m_probe_system.ApplyTLASUpdates(flags);
+        m_ddgi.ApplyTLASUpdates(flags);
     }
 }
 
@@ -216,11 +216,11 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
     if (m_has_ddgi_probes) {
         const DirectionalLightShadowRenderer *shadow_map_renderer = GetRenderComponent<DirectionalLightShadowRenderer>();
 
-        m_probe_system.RenderProbes(frame);
-        m_probe_system.ComputeIrradiance(frame);
+        m_ddgi.RenderProbes(frame);
+        m_ddgi.ComputeIrradiance(frame);
 
         if (g_engine->GetConfig().Get(CONFIG_RT_GI_DEBUG_PROBES)) {
-            for (const Probe &probe : m_probe_system.GetProbes()) {
+            for (const Probe &probe : m_ddgi.GetProbes()) {
                 g_engine->GetDebugDrawer().Sphere(probe.position);
             }
         }
@@ -321,14 +321,14 @@ void RenderEnvironment::RenderComponents(Frame *frame)
                 }
 
                 if (m_has_ddgi_probes) {
-                    m_probe_system.Destroy();
+                    m_ddgi.Destroy();
                 }
                 
-                m_probe_system.SetTLAS(m_tlas);
+                m_ddgi.SetTLAS(m_tlas);
                 m_rt_radiance->SetTLAS(m_tlas);
 
                 m_rt_radiance->Create();
-                m_probe_system.Init();
+                m_ddgi.Init();
 
                 m_has_rt_radiance = true;
                 m_has_ddgi_probes = true;
@@ -340,7 +340,7 @@ void RenderEnvironment::RenderComponents(Frame *frame)
                 }
 
                 if (m_has_ddgi_probes) {
-                    m_probe_system.Destroy();
+                    m_ddgi.Destroy();
                 }
 
                 m_has_rt_radiance = false;

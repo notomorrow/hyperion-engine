@@ -1,7 +1,7 @@
 #ifndef BYTE_WRITER_H
 #define BYTE_WRITER_H
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/DynArray.hpp>
 #include <Types.hpp>

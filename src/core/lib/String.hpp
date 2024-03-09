@@ -4,10 +4,10 @@
 #include <math/MathUtil.hpp>
 #include <util/UTF8.hpp>
 
-#include "DynArray.hpp"
-#include "FixedArray.hpp"
-#include "ByteBuffer.hpp"
-#include "CMemory.hpp"
+#include <core/lib/DynArray.hpp>
+#include <core/lib/FixedArray.hpp>
+#include <core/lib/ByteBuffer.hpp>
+#include <core/lib/Memory.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>
 #include <HashCode.hpp>

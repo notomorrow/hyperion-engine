@@ -1,5 +1,5 @@
 #include <asset/serialization/fbom/FBOMData.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 
 namespace hyperion::v2::fbom {
 

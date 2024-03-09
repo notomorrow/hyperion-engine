@@ -2,7 +2,7 @@
 #define HYPERION_V2_LIB_ANY_HPP
 
 #include <core/lib/TypeID.hpp>
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <system/Debug.hpp>
 #include <Types.hpp>
 

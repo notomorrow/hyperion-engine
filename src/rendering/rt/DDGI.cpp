@@ -1,4 +1,4 @@
-#include <rendering/rt/ProbeSystem.hpp>
+#include <rendering/rt/DDGI.hpp>
 #include <Engine.hpp>
 #include <Types.hpp>
 
@@ -20,16 +20,16 @@ enum ProbeSystemUpdates : uint32
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(CreateProbeGridImage) : renderer::RenderCommand
+struct RENDER_COMMAND(CreateDDGIImage) : renderer::RenderCommand
 {
     ImageRef storage_image;
 
-    RENDER_COMMAND(CreateProbeGridImage)(const ImageRef &storage_image)
+    RENDER_COMMAND(CreateDDGIImage)(const ImageRef &storage_image)
         : storage_image(storage_image)
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateProbeGridImage)() override = default;
+    virtual ~RENDER_COMMAND(CreateDDGIImage)() override = default;
 
     virtual Result operator()() override
     {
@@ -37,18 +37,18 @@ struct RENDER_COMMAND(CreateProbeGridImage) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridImageView) : renderer::RenderCommand
+struct RENDER_COMMAND(CreateDDGIImageView) : renderer::RenderCommand
 {
     ImageViewRef image_view;
     ImageRef image;
 
-    RENDER_COMMAND(CreateProbeGridImageView)(const ImageViewRef &image_view, const ImageRef &image)
+    RENDER_COMMAND(CreateDDGIImageView)(const ImageViewRef &image_view, const ImageRef &image)
         : image_view(image_view),
           image(image)
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateProbeGridImageView)() override = default;
+    virtual ~RENDER_COMMAND(CreateDDGIImageView)() override = default;
 
     virtual Result operator()() override
     {
@@ -114,18 +114,18 @@ struct RENDER_COMMAND(UnsetDDGIDescriptors) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : renderer::RenderCommand
+struct RENDER_COMMAND(CreateDDGIUniformBuffer) : renderer::RenderCommand
 {
     GPUBufferRef uniform_buffer;
     DDGIUniforms uniforms;
 
-    RENDER_COMMAND(CreateProbeGridUniformBuffer)(const GPUBufferRef &uniform_buffer, const DDGIUniforms &uniforms)
+    RENDER_COMMAND(CreateDDGIUniformBuffer)(const GPUBufferRef &uniform_buffer, const DDGIUniforms &uniforms)
         : uniform_buffer(uniform_buffer),
           uniforms(uniforms)
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateProbeGridUniformBuffer)() override = default;
+    virtual ~RENDER_COMMAND(CreateDDGIUniformBuffer)() override = default;
 
     virtual Result operator()() override
     {
@@ -136,18 +136,18 @@ struct RENDER_COMMAND(CreateProbeGridUniformBuffer) : renderer::RenderCommand
     }
 };
 
-struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : renderer::RenderCommand
+struct RENDER_COMMAND(CreateDDGIRadianceBuffer) : renderer::RenderCommand
 {
     GPUBufferRef radiance_buffer;
-    ProbeGridInfo grid_info;
+    DDGIInfo grid_info;
 
-    RENDER_COMMAND(CreateProbeGridRadianceBuffer)(const GPUBufferRef &radiance_buffer, const ProbeGridInfo &grid_info)
+    RENDER_COMMAND(CreateDDGIRadianceBuffer)(const GPUBufferRef &radiance_buffer, const DDGIInfo &grid_info)
         : radiance_buffer(radiance_buffer),
           grid_info(grid_info)
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateProbeGridRadianceBuffer)() override = default;
+    virtual ~RENDER_COMMAND(CreateDDGIRadianceBuffer)() override = default;
 
     virtual Result operator()() override
     {
@@ -160,18 +160,18 @@ struct RENDER_COMMAND(CreateProbeGridRadianceBuffer) : renderer::RenderCommand
 
 #pragma endregion
 
-ProbeGrid::ProbeGrid(ProbeGridInfo &&grid_info)
+DDGI::DDGI(DDGIInfo &&grid_info)
     : m_grid_info(std::move(grid_info)),
       m_updates { PROBE_SYSTEM_UPDATES_NONE, PROBE_SYSTEM_UPDATES_NONE },
       m_time(0)
 {
 }
 
-ProbeGrid::~ProbeGrid()
+DDGI::~DDGI()
 {
 }
 
-void ProbeGrid::Init()
+void DDGI::Init()
 {
     AssertThrowMsg(
         InitObject(m_tlas),
@@ -211,7 +211,7 @@ void ProbeGrid::Init()
     );
 }
 
-void ProbeGrid::Destroy()
+void DDGI::Destroy()
 {
     m_shader.Reset();
     
@@ -232,7 +232,7 @@ void ProbeGrid::Destroy()
     HYP_SYNC_RENDER();
 }
 
-void ProbeGrid::CreatePipelines()
+void DDGI::CreatePipelines()
 {
     m_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTProbe));
     InitObject(m_shader);
@@ -306,7 +306,7 @@ void ProbeGrid::CreatePipelines()
     }
 }
 
-void ProbeGrid::CreateUniformBuffer()
+void DDGI::CreateUniformBuffer()
 {
     m_uniform_buffer = MakeRenderObject<GPUBuffer>(UniformBuffer());
 
@@ -348,20 +348,20 @@ void ProbeGrid::CreateUniformBuffer()
     };
 
     PUSH_RENDER_COMMAND(
-        CreateProbeGridUniformBuffer,
+        CreateDDGIUniformBuffer,
         m_uniform_buffer,
         m_uniforms
     );
 }
 
-void ProbeGrid::CreateStorageBuffers()
+void DDGI::CreateStorageBuffers()
 {
     const Extent3D probe_counts = m_grid_info.NumProbesPerDimension();
 
     m_radiance_buffer = MakeRenderObject<GPUBuffer>(StorageBuffer());
 
     PUSH_RENDER_COMMAND(
-        CreateProbeGridRadianceBuffer,
+        CreateDDGIRadianceBuffer,
         m_radiance_buffer,
         m_grid_info
     );
@@ -382,13 +382,13 @@ void ProbeGrid::CreateStorageBuffers()
             UniquePtr<MemoryStreamedData>::Construct(ByteBuffer(extent.Size() * SizeType(NumComponents(irradiance_format))))
         ));
 
-        PUSH_RENDER_COMMAND(CreateProbeGridImage, m_irradiance_image);
+        PUSH_RENDER_COMMAND(CreateDDGIImage, m_irradiance_image);
     }
 
     { // irradiance image view
         m_irradiance_image_view = MakeRenderObject<ImageView>();
 
-        PUSH_RENDER_COMMAND(CreateProbeGridImageView, m_irradiance_image_view, m_irradiance_image);
+        PUSH_RENDER_COMMAND(CreateDDGIImageView, m_irradiance_image_view, m_irradiance_image);
     }
 
     { // depth image
@@ -407,17 +407,17 @@ void ProbeGrid::CreateStorageBuffers()
             UniquePtr<MemoryStreamedData>::Construct(ByteBuffer(extent.Size() * SizeType(NumComponents(depth_format))))
         ));
 
-        PUSH_RENDER_COMMAND(CreateProbeGridImage, m_depth_image);
+        PUSH_RENDER_COMMAND(CreateDDGIImage, m_depth_image);
     }
 
     { // depth image view
         m_depth_image_view = MakeRenderObject<ImageView>();
 
-        PUSH_RENDER_COMMAND(CreateProbeGridImageView, m_depth_image_view, m_depth_image);
+        PUSH_RENDER_COMMAND(CreateDDGIImageView, m_depth_image_view, m_depth_image);
     }
 }
 
-void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
+void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
 {
     if (!flags) {
         return;
@@ -443,11 +443,11 @@ void ProbeGrid::ApplyTLASUpdates(RTUpdateStateFlags flags)
     }
 }
 
-void ProbeGrid::SubmitPushConstants(CommandBuffer *command_buffer)
+void DDGI::SubmitPushConstants(CommandBuffer *command_buffer)
 {
     m_random_generator.Next();
 
-    std::memcpy(
+    Memory::MemCpy(
         m_pipeline->push_constants.probe_data.matrix,
         m_random_generator.matrix.values,
         sizeof(m_pipeline->push_constants.probe_data.matrix)
@@ -458,7 +458,7 @@ void ProbeGrid::SubmitPushConstants(CommandBuffer *command_buffer)
     m_pipeline->SubmitPushConstants(command_buffer);
 }
 
-void ProbeGrid::UpdateUniforms(Frame *frame)
+void DDGI::UpdateUniforms(Frame *frame)
 {
     const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
@@ -485,7 +485,7 @@ void ProbeGrid::UpdateUniforms(Frame *frame)
     m_uniforms.params[2] &= ~PROBE_SYSTEM_FLAGS_FIRST_RUN;
 }
 
-void ProbeGrid::RenderProbes(Frame *frame)
+void DDGI::RenderProbes(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -527,7 +527,7 @@ void ProbeGrid::RenderProbes(Frame *frame)
     m_radiance_buffer->InsertBarrier(frame->GetCommandBuffer(), ResourceState::UNORDERED_ACCESS);
 }
 
-void ProbeGrid::ComputeIrradiance(Frame *frame)
+void DDGI::ComputeIrradiance(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 

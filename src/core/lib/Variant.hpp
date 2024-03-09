@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_LIB_VARIANT_H
 #define HYPERION_V2_LIB_VARIANT_H
 
-#include <core/lib/CMemory.hpp>
+#include <core/lib/Memory.hpp>
 #include <core/lib/TypeID.hpp>
 #include <core/lib/Traits.hpp>
 #include <Constants.hpp>

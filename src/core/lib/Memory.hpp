@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_LIB_C_MEMORY_HPP
-#define HYPERION_V2_LIB_C_MEMORY_HPP
+#ifndef HYPERION_V2_LIB_MEMORY_HPP
+#define HYPERION_V2_LIB_MEMORY_HPP
 
 #include <util/Defines.hpp>
 #include <Types.hpp>
