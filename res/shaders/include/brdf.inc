@@ -6,7 +6,13 @@
 float GetSquareFalloffAttenuation(vec3 P, vec3 L, float radius)
 {
     const vec3 position_to_light = P - L;
-    float distance_square = dot(position_to_light, position_to_light);
+
+    const float dist = length(position_to_light);
+    const float distance_square = dot(position_to_light, position_to_light);
+    // const float radius_square = radius * radius;
+
+    // return 2.0 / (distance_square + radius_square + (dist * sqrt(distance_square + radius_square)));
+
     float inv_radius = 1.0 / radius;
     float factor = distance_square * HYP_FMATH_SQR(inv_radius);
     float smooth_factor = max(1.0 - HYP_FMATH_SQR(factor), 0.0);
