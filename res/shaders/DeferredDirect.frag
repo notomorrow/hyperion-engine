@@ -179,7 +179,7 @@ void main()
         vec4 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
         vec4 diffuse = diffuse_lobe;
 
-        vec4 direct_component = diffuse + specular;// * vec4(energy_compensation, 1.0);
+        vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
 
         // direct_component.rgb *= (exposure);
         result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);

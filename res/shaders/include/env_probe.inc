@@ -9,9 +9,10 @@
 
 #define ENV_PROBE_TYPE_INVALID      ~0u
 #define ENV_PROBE_TYPE_REFLECTION   0
-#define ENV_PROBE_TYPE_SHADOW       1
-#define ENV_PROBE_TYPE_AMBIENT      2
-#define ENV_PROBE_TYPE_MAX          3
+#define ENV_PROBE_TYPE_SKY          1
+#define ENV_PROBE_TYPE_SHADOW       2
+#define ENV_PROBE_TYPE_AMBIENT      3
+#define ENV_PROBE_TYPE_MAX          4
 
 struct EnvProbe
 {
