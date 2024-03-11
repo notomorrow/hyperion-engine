@@ -24,7 +24,7 @@ void main(void)
     const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
 	const vec2 texcoord = vec2(coord) / vec2(image_dimensions);
 
-    const float radius = 0.75;
+    const float radius = 2.5;
 
     vec2 result = vec2(0.0);
 
