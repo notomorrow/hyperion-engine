@@ -24,6 +24,8 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
         return;
     }
 
+    // This system must be ran before WorldAABBUpdaterSystem so that the bounding box is up to date
+
     if (bounding_box_component.world_aabb.IsFinite()) {
         Octree &octree = entity_manager.GetScene()->GetOctree();
 
@@ -42,6 +44,8 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
         } else {
             DebugLog(LogType::Warn, "Failed to insert entity %u into octree: %s\n", entity.Value(), insert_result.first.message);
         }
+    } else {
+        DebugLog(LogType::Warn, "Entity %u has infinite bounding box, skipping octree insertion\n", entity.Value());
     }
 
     visibility_state_component.last_aabb_hash = bounding_box_component.world_aabb.GetHashCode();
@@ -82,7 +86,7 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
             auto update_result = octree.Update(entity_id, bounding_box_component.world_aabb, false);
 
             if (!update_result.first) {
-                DebugLog(LogType::Warn, "Failed to update entity %u in octree: %s\n", entity_id.Value(), update_result.first.message);
+                // DebugLog(LogType::Warn, "Failed to update entity %u in octree: %s\n", entity_id.Value(), update_result.first.message);
 
                 continue;
             }

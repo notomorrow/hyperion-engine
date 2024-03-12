@@ -19,11 +19,20 @@ void EnvGridUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entit
         return;
     }
 
+    bool use_voxel_grid = false;
+
+    if (g_engine->GetConfig().Get(CONFIG_ENV_GRID_REFLECTIONS).GetBool()) {
+        use_voxel_grid = true;
+    }
+
     env_grid_component.render_component = entity_manager.GetScene()->GetEnvironment()->AddRenderComponent<EnvGrid>(
         Name::Unique("env_grid_renderer"),
-        env_grid_component.env_grid_type,
-        bounding_box_component.world_aabb,
-        env_grid_component.grid_size
+        EnvGridOptions {
+            env_grid_component.env_grid_type,
+            bounding_box_component.world_aabb,
+            env_grid_component.grid_size,
+            use_voxel_grid
+        }
     );
 }
 

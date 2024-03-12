@@ -119,6 +119,23 @@ public:
             filepath.Data()
         );
 
+        // static constexpr uint32 major_minor_mask = (0xffu << 16u) | (0xffu << 8u);
+        // const uint32 engine_version_major_minor = engine_version & major_minor_mask;
+        // const uint32 assembly_engine_version = native_interop_class_object->InvokeStaticMethod<uint32>("GetEngineVersion");
+
+        // if ((assembly_engine_version & major_minor_mask) != engine_version_major_minor) {
+        //     DebugLog(
+        //         LogType::Error,
+        //         "Assembly engine version mismatch: Assembly version: %u.%u, Engine version: %u.%u\n",
+        //         (assembly_engine_version >> 16u) & 0xffu,
+        //         (assembly_engine_version >> 8u) & 0xffu,
+        //         (engine_version >> 16u) & 0xffu,
+        //         (engine_version >> 8u) & 0xffu
+        //     );
+
+        //     return nullptr;
+        // }
+
         native_interop_class_object->InvokeStaticMethod<void, void *, char *>("InitializeAssembly", reinterpret_cast<void *>(&assembly->GetClassObjectHolder()), filepath.Data());
 
         return assembly;
@@ -200,7 +217,7 @@ private:
     bool InitDotNetRuntime()
     {
         AssertThrow(m_cxt == nullptr);
-        
+
         if (m_init_fptr(GetRuntimeConfigPath().Data(), nullptr, &m_cxt) != 0) {
             return false;
         }

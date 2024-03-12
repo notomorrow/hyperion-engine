@@ -16,8 +16,8 @@ class VisibilityStateUpdaterSystem : public System<
 public:
     virtual ~VisibilityStateUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity_id) override;
-    virtual void OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity_id) override;
+    virtual void OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity) override;
+    virtual void OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity) override;
 
     virtual void Process(EntityManager &entity_manager, GameCounter::TickUnit delta) override;
 };

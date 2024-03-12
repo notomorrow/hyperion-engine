@@ -139,13 +139,12 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 
 #pragma endregion
 
-EnvGrid::EnvGrid(Name name, EnvGridType type, const BoundingBox &aabb, const Extent3D &density)
+EnvGrid::EnvGrid(Name name, EnvGridOptions options)
     : RenderComponent(name),
-      m_type(type),
-      m_aabb(aabb),
-      m_voxel_grid_aabb(aabb),
-      m_offset(aabb.GetCenter()),
-      m_density(density),
+      m_options(options),
+      m_aabb(options.aabb),
+      m_voxel_grid_aabb(options.aabb),
+      m_offset(options.aabb.GetCenter()),
       m_current_probe_index(0),
       m_flags(ENV_GRID_FLAGS_RESET_REQUESTED)
 {
@@ -195,24 +194,24 @@ void EnvGrid::SetCameraData(const Vec3f &position)
     Array<uint> updates;
     updates.Resize(m_env_probe_collection.num_probes);
 
-    for (uint x = 0; x < m_density.width; x++) {
-        for (uint y = 0; y < m_density.height; y++) {
-            for (uint z = 0; z < m_density.depth; z++) {
+    for (uint x = 0; x < m_options.density.width; x++) {
+        for (uint y = 0; y < m_options.density.height; y++) {
+            for (uint z = 0; z < m_options.density.depth; z++) {
                 const Vec3i coord { Vec3i::Type(x), Vec3i::Type(y), Vec3i::Type(z) };
                 const Vec3i scrolled_coord = coord + position_snapped;
 
                 const Vec3i scrolled_coord_clamped {
-                    MathUtil::Mod(scrolled_coord.x, Vec3i::Type(m_density.width)),
-                    MathUtil::Mod(scrolled_coord.y, Vec3i::Type(m_density.height)),
-                    MathUtil::Mod(scrolled_coord.z, Vec3i::Type(m_density.depth))
+                    MathUtil::Mod(scrolled_coord.x, Vec3i::Type(m_options.density.width)),
+                    MathUtil::Mod(scrolled_coord.y, Vec3i::Type(m_options.density.height)),
+                    MathUtil::Mod(scrolled_coord.z, Vec3i::Type(m_options.density.depth))
                 };
 
-                const int scrolled_clamped_index = scrolled_coord_clamped.x * m_density.width * m_density.height
-                    + scrolled_coord_clamped.y * m_density.width
+                const int scrolled_clamped_index = scrolled_coord_clamped.x * m_options.density.width * m_options.density.height
+                    + scrolled_coord_clamped.y * m_options.density.width
                     + scrolled_coord_clamped.z;
 
-                const int index = x * m_density.width * m_density.height
-                    + y * m_density.width
+                const int index = x * m_options.density.width * m_options.density.height
+                    + y * m_options.density.width
                     + z;
 
                 AssertThrow(scrolled_clamped_index >= 0);
@@ -261,7 +260,7 @@ void EnvGrid::Init()
     Handle<Scene> scene(GetParent()->GetScene()->GetID());
     AssertThrow(scene.IsValid());
 
-    const SizeType num_ambient_probes = m_density.Size();
+    const SizeType num_ambient_probes = m_options.density.Size();
     const Vec3f aabb_extent = m_aabb.GetExtent();
 
     const EnvProbeType probe_type = GetEnvProbeType();
@@ -273,17 +272,17 @@ void EnvGrid::Init()
         // m_ambient_probes.Resize(num_ambient_probes);
         // m_env_probe_draw_proxies.Resize(num_ambient_probes);
 
-        for (SizeType x = 0; x < m_density.width; x++) {
-            for (SizeType y = 0; y < m_density.height; y++) {
-                for (SizeType z = 0; z < m_density.depth; z++) {
-                    const SizeType index = x * m_density.width * m_density.height
-                        + y * m_density.width
+        for (SizeType x = 0; x < m_options.density.width; x++) {
+            for (SizeType y = 0; y < m_options.density.height; y++) {
+                for (SizeType z = 0; z < m_options.density.depth; z++) {
+                    const SizeType index = x * m_options.density.width * m_options.density.height
+                        + y * m_options.density.width
                         + z;
 
                     const EnvProbeIndex binding_index = GetProbeBindingIndex(
                         m_aabb.min + (Vec3f(float(x), float(y), float(z)) * SizeOfProbe()),
                         m_aabb,
-                        m_density
+                        m_options.density
                     );
 
                     const BoundingBox env_probe_aabb(
@@ -328,7 +327,7 @@ void EnvGrid::Init()
         m_shader_data.aabb_min = Vector4(m_aabb.min, 1.0f);
         m_shader_data.voxel_grid_aabb_max = Vector4(m_voxel_grid_aabb.max, 1.0f);
         m_shader_data.voxel_grid_aabb_min = Vector4(m_voxel_grid_aabb.min, 1.0f);
-        m_shader_data.density = { m_density.width, m_density.height, m_density.depth, 0 };
+        m_shader_data.density = { m_options.density.width, m_options.density.height, m_options.density.depth, 0 };
         m_shader_data.enabled_indices_mask = { 0, 0, 0, 0 };
     }
 
@@ -336,7 +335,7 @@ void EnvGrid::Init()
         m_camera = CreateObject<Camera>(
             90.0f,
             -int(probe_dimensions.width), int(probe_dimensions.height),
-            0.05f, m_aabb.GetRadius()//(m_aabb.GetExtent() / Vec3f(m_density)).Max()
+            0.05f, m_aabb.GetRadius()//(m_aabb.GetExtent() / Vec3f(m_options.density)).Max()
         );
 
         m_camera->SetTranslation(m_aabb.GetCenter());
@@ -436,20 +435,22 @@ void EnvGrid::OnRender(Frame *frame)
 
     const BoundingBox grid_aabb = m_aabb;
 
-    if (flags & ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET) {
-        DebugLog(LogType::Debug, "Offsetting voxel grid\n");
+    if (m_options.use_voxel_grid) {
+        if (flags & ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET) {
+            DebugLog(LogType::Debug, "Offsetting voxel grid\n");
 
-        // // Offset the voxel grid.
-        // const Vec3f offset = (grid_aabb.GetCenter() - Vector4(m_shader_data.center).GetXYZ()) / SizeOfProbe();
-        // const Vec3i offset_i {
-        //     MathUtil::Floor<float, Vec3i::Type>(offset.x),
-        //     MathUtil::Floor<float, Vec3i::Type>(offset.y),
-        //     MathUtil::Floor<float, Vec3i::Type>(offset.z)
-        // };
+            // // Offset the voxel grid.
+            // const Vec3f offset = (grid_aabb.GetCenter() - Vector4(m_shader_data.center).GetXYZ()) / SizeOfProbe();
+            // const Vec3i offset_i {
+            //     MathUtil::Floor<float, Vec3i::Type>(offset.x),
+            //     MathUtil::Floor<float, Vec3i::Type>(offset.y),
+            //     MathUtil::Floor<float, Vec3i::Type>(offset.z)
+            // };
 
-        // OffsetVoxelGrid(frame, offset_i);
+            // OffsetVoxelGrid(frame, offset_i);
 
-        new_flags &= ~ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET;
+            new_flags &= ~ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET;
+        }
     }
 
     // if (flags & ENV_GRID_FLAGS_RESET_REQUESTED) {
@@ -519,14 +520,14 @@ void EnvGrid::OnRender(Frame *frame)
                 const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(indirect_index);
                 AssertThrow(probe.IsValid());
 
-                const EnvProbeIndex binding_index = GetProbeBindingIndex(probe->GetDrawProxy().world_position, grid_aabb, m_density);
+                const EnvProbeIndex binding_index = GetProbeBindingIndex(probe->GetDrawProxy().world_position, grid_aabb, m_options.density);
 
                 if (binding_index != invalid_probe_index) {
                     if (m_next_render_indices.Size() < max_queued_probes_for_render) {
                         probe->UpdateRenderData(
                             ~0u,
                             indirect_index,
-                            m_density
+                            m_options.density
                         );
 
                         // render this probe in the next frame, since the data will have been updated on the gpu on start of the frame
@@ -559,7 +560,7 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.center = Vector4(grid_aabb.GetCenter(), 1.0f);
     m_shader_data.aabb_max = Vector4(grid_aabb.GetMax(), 1.0f);
     m_shader_data.aabb_min = Vector4(grid_aabb.GetMin(), 1.0f);
-    m_shader_data.density = { m_density.width, m_density.height, m_density.depth, 0 };
+    m_shader_data.density = { m_options.density.width, m_options.density.height, m_options.density.depth, 0 };
 
     g_engine->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
 
@@ -575,27 +576,9 @@ void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, Rend
 
 void EnvGrid::CreateVoxelGridData()
 {
-    // const Extent2D probe_data_texture_extent {
-    //     framebuffer_dimensions.width * m_density.width * m_density.height,
-    //     framebuffer_dimensions.height * m_density.depth
-    // };
-
-    // m_probe_data_texture = CreateObject<Texture>(Texture2D(
-    //     probe_data_texture_extent,
-    //     InternalFormat::RGBA16F,
-    //     FilterMode::TEXTURE_FILTER_LINEAR,
-    //     WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-    //     nullptr
-    // ));
-    // m_probe_data_texture->GetImage()->SetIsRWTexture(true);
-    // InitObject(m_probe_data_texture);
-
-    // PUSH_RENDER_COMMAND(
-    //     SetElementInGlobalDescriptorSet,
-    //     HYP_NAME(Scene),
-    //     HYP_NAME(EnvGridProbeDataTexture),
-    //     m_probe_data_texture->GetImageView()
-    // );
+    if (!m_options.use_voxel_grid) {
+        return;
+    }
 
     // Create our voxel grid texture
     m_voxel_grid_texture = CreateObject<Texture>(Texture3D(
@@ -910,7 +893,9 @@ void EnvGrid::RenderEnvProbe(
         break;
     }
 
-    VoxelizeProbe(frame, probe_index);
+    if (m_options.use_voxel_grid) {
+        VoxelizeProbe(frame, probe_index);
+    }
 
     probe->SetNeedsRender(false);
 }
@@ -939,9 +924,9 @@ void EnvGrid::ComputeSH(
     } push_constants;
 
     push_constants.probe_grid_position = {
-        probe_index % m_density.width,
-        (probe_index % (m_density.width * m_density.height)) / m_density.width,
-        probe_index / (m_density.width * m_density.height),
+        probe_index % m_options.density.width,
+        (probe_index % (m_options.density.width * m_options.density.height)) / m_options.density.width,
+        probe_index / (m_options.density.width * m_options.density.height),
         probe_index
     };
 
@@ -1081,7 +1066,7 @@ void EnvGrid::VoxelizeProbe(
     const Extent3D &voxel_grid_texture_extent = m_voxel_grid_texture->GetImage()->GetExtent();
 
     // size of a probe in the voxel grid
-    const Extent3D probe_voxel_extent = voxel_grid_texture_extent / m_density;
+    const Extent3D probe_voxel_extent = voxel_grid_texture_extent / m_options.density;
 
     const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(probe_index);
     AssertThrow(probe.IsValid());
@@ -1098,9 +1083,9 @@ void EnvGrid::VoxelizeProbe(
     } push_constants;
 
     push_constants.probe_grid_position = {
-        probe_index % m_density.width,
-        (probe_index % (m_density.width * m_density.height)) / m_density.width,
-        probe_index / (m_density.width * m_density.height),
+        probe_index % m_options.density.width,
+        (probe_index % (m_options.density.width * m_options.density.height)) / m_options.density.width,
+        probe_index / (m_options.density.width * m_options.density.height),
         probe.GetID().ToIndex()
     };
 

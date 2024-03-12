@@ -101,18 +101,26 @@ struct EnvProbeCollection
         { return probes[indirect_indices[max_bound_ambient_probes + index]]; }
 };
 
+struct EnvGridOptions
+{
+    EnvGridType type = ENV_GRID_TYPE_SH;
+    BoundingBox aabb;
+    Extent3D    density = { 0, 0, 0 };
+    bool        use_voxel_grid = false;
+};
+
 class EnvGrid : public RenderComponent<EnvGrid>
 {
 public:
     friend struct RenderCommand_UpdateEnvProbeAABBsInGrid;
 
-    EnvGrid(Name name, EnvGridType type, const BoundingBox &aabb, const Extent3D &density);
+    EnvGrid(Name name, EnvGridOptions options);
     EnvGrid(const EnvGrid &other) = delete;
     EnvGrid &operator=(const EnvGrid &other) = delete;
     virtual ~EnvGrid();
 
     HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
-        { return m_type; }
+        { return m_options.type; }
 
     void SetCameraData(const Vec3f &camera_position);
 
@@ -125,7 +133,7 @@ public:
 
 private:
     Vec3f SizeOfProbe() const
-        { return m_aabb.GetExtent() / Vec3f(m_density); }
+        { return m_aabb.GetExtent() / Vec3f(m_options.density); }
 
     EnvProbeType GetEnvProbeType() const
     {
@@ -168,12 +176,11 @@ private:
         uint32 probe_index
     );
 
-    EnvGridType                 m_type;
+    const EnvGridOptions        m_options;
 
     BoundingBox                 m_aabb;
     BoundingBox                 m_voxel_grid_aabb;
     Vec3f                       m_offset;
-    Extent3D                    m_density;
     
     Handle<Camera>              m_camera;
     RenderList                  m_render_list;
