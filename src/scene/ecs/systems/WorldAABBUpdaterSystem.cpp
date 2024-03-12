@@ -4,6 +4,32 @@
 
 namespace hyperion::v2 {
 
+void WorldAABBUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
+{
+    SystemBase::OnEntityAdded(entity_manager, entity);
+
+    BoundingBoxComponent &bounding_box_component = entity_manager.GetComponent<BoundingBoxComponent>(entity);
+    TransformComponent &transform_component = entity_manager.GetComponent<TransformComponent>(entity);
+
+    bounding_box_component.world_aabb = BoundingBox::empty;
+
+    if (!bounding_box_component.local_aabb.Empty()) {
+        for (const Vec3f &corner : bounding_box_component.local_aabb.GetCorners()) {
+            bounding_box_component.world_aabb.Extend(transform_component.transform.GetMatrix() * corner);
+        }
+    }
+
+    bounding_box_component.transform_hash_code = transform_component.transform.GetHashCode();
+
+    MeshComponent &mesh_component = entity_manager.GetComponent<MeshComponent>(entity);
+    mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
+}
+
+void WorldAABBUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity)
+{
+    SystemBase::OnEntityRemoved(entity_manager, entity);
+}
+
 void WorldAABBUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)
 {
     for (auto [entity_id, bounding_box_component, transform_component, mesh_component] : entity_manager.GetEntitySet<BoundingBoxComponent, TransformComponent, MeshComponent>()) {

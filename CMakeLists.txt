@@ -42,6 +42,10 @@ else()
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 endif()
 
+set(HYP_VERSION_MAJOR 1)
+set(HYP_VERSION_MINOR 1)
+set(HYP_VERSION_PATCH 15)
+
 set(OpenGL_GL_PREFERENCE GLVND)
 
 link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib ${VCPKG_INSTALLED_DIR}/x64-windows/lib "Z:/gstreamer/1.0/msvc_x86_64/lib")
@@ -54,7 +58,7 @@ pkg_check_modules(GST gstreamer-1.0>=1.4
 # # TODO: Add windows, linux mono support
 # set(ENV{PKG_CONFIG_PATH} "/Library/Frameworks/Mono.framework/Versions/Current/lib/pkgconfig")
 # pkg_check_modules(MONO mono-2)
-                      
+
 find_package(Threads REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(OpenAL)
@@ -91,6 +95,10 @@ if(${OpenAL_FOUND})
 endif()
 
 add_definitions(-DHYP_ROOT_DIR="${CMAKE_CURRENT_LIST_DIR}")
+add_definitions(-DHYP_VERSION_MAJOR=${HYP_VERSION_MAJOR})
+add_definitions(-DHYP_VERSION_MINOR=${HYP_VERSION_MINOR})
+add_definitions(-DHYP_VERSION_PATCH=${HYP_VERSION_PATCH})
+
 add_definitions(-DSDL_MAIN_HANDLED=1)
 add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
@@ -143,10 +151,10 @@ if (${NATIVE})
 
     # if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt")
     #     add_definitions(-DHYP_ZLIB=1)
-    # 
+    #
     #     include_directories(submodules/zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
     #     add_subdirectory(submodules/zlib)
-    #     
+    #
     #     set(COMMON_LIBRARIES
     #         ${COMMON_LIBRARIES}
     #         zlibstatic
@@ -159,7 +167,7 @@ if (${NATIVE})
 
         include_directories(submodules/libdatachannel PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/libdatachannel/include")
         add_subdirectory(submodules/libdatachannel)
-        
+
         set(COMMON_LIBRARIES
             ${COMMON_LIBRARIES}
             datachannel-static
@@ -178,7 +186,7 @@ if(GST_FOUND)
 
     message(STATUS "GStreamer found, linking to it: ${GST_LIBRARIES}\nInclude directories: ${GST_INCLUDE_DIRS}")
 
-    
+
     set(COMMON_LIBRARIES
         ${COMMON_LIBRARIES}
         ${GST_LIBRARIES}
@@ -188,10 +196,10 @@ endif()
 # # if submodule 'oidn' exists , link with it
 # if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/oidn/CMakeLists.txt")
 #     add_definitions(-DHYP_OIDN=1)
-# 
+#
 #     include_directories(submodules/oidn/include)
 #     add_subdirectory(submodules/oidn)
-# 
+#
 #     set(COMMON_LIBRARIES
 #         ${COMMON_LIBRARIES}
 #         OpenImageDenoise
@@ -234,7 +242,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
     # Run dotnet.sh to build the dotnet runtime
 
     # copy all .so and .a files to lib/<platform name>
-    
+
     if(UNIX)
         execute_process(
             COMMAND ${CMAKE_SOURCE_DIR}/submodules/runtime/build.sh
@@ -254,7 +262,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
 
     foreach(DOTNET_LIB ${DOTNET_LIBS})
         message(STATUS "Copying ${DOTNET_LIB} to ${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}")
-    
+
         file(COPY ${DOTNET_LIB} DESTINATION ${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME})
     endforeach()
 
@@ -276,7 +284,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
     # add_subdirectory(submodules/dotnet/runtime/src/native/corehost/nethost/)
 
     # Find the nethost library, which is required for .NET core
-    # to find host fxr 
+    # to find host fxr
     # find_package(nethost REQUIRED)
 
 endif()
@@ -353,18 +361,27 @@ function(create_csharp_library output_name csharp_sources)
     set(CSHARP_PROJECT_DIR ${CMAKE_CURRENT_BINARY_DIR}/${output_name})
     file(MAKE_DIRECTORY ${CSHARP_PROJECT_DIR})
 
+    # # if it is HyperionCore, we'll add a new file to the sources that will be used to hold the engine version
+    
+    # if(${output_name} STREQUAL "HyperionCore")
+    #     file(WRITE ${CSHARP_PROJECT_DIR}/AssemblyInfo.cs "using System.Reflection;\n")
+    #     file(APPEND ${CSHARP_PROJECT_DIR}/AssemblyInfo.cs "[assembly: AssemblyVersion(\"${HYP_VERSION_MAJOR}.${HYP_VERSION_MINOR}.${HYP_VERSION_PATCH}\")]\n")
+
+    #     list(APPEND csharp_sources "${CSHARP_PROJECT_DIR}/AssemblyInfo.cs")
+    # endif()
 
     # generate .csproj file
     file(WRITE ${CSHARP_PROJECT_DIR}/${output_name}.csproj "<Project Sdk=\"Microsoft.NET.Sdk\">\n")
 
-    
+
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "  <PropertyGroup>\n")
-    file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <Version>1.0.0</Version>\n")
+    file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <Version>${HYP_VERSION_MAJOR}.${HYP_VERSION_MINOR}.${HYP_VERSION_PATCH}.0</Version>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <OutputType>Library</OutputType>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <TargetFramework>net8.0</TargetFramework>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <ImplicitUsings>enable</ImplicitUsings>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <Nullable>enable</Nullable>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>\n")
+    file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "    <AssemblyName>${output_name}</AssemblyName>\n")
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "  </PropertyGroup>\n")
 
     file(APPEND ${CSHARP_PROJECT_DIR}/${output_name}.csproj "  <ItemGroup>\n")

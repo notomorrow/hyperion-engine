@@ -18,6 +18,36 @@ using namespace hyperion::v2;
 using namespace hyperion::dotnet;
 
 extern "C" {
+    bool NativeInterop_VerifyEngineVersion(uint32 assembly_engine_version, bool major, bool minor, bool patch)
+    {
+        static constexpr uint32 major_mask = (0xffu << 16u);
+        static constexpr uint32 minor_mask = (0xffu << 8u);
+        static constexpr uint32 patch_mask = 0xffu;
+
+        const uint32 mask = (major ? major_mask : 0u)
+            | (minor ? minor_mask : 0u)
+            | (patch ? patch_mask : 0u);
+
+        const uint32 engine_version_major_minor = engine_version & mask;
+
+        if ((assembly_engine_version & mask) != engine_version_major_minor) {
+            DebugLog(
+                LogType::Error,
+                "Assembly engine version mismatch: Assembly version: %u.%u.%u, Engine version: %u.%u.%u\n",
+                (assembly_engine_version >> 16u) & 0xffu,
+                (assembly_engine_version >> 8u) & 0xffu,
+                assembly_engine_version & 0xffu,
+                (engine_version >> 16u) & 0xffu,
+                (engine_version >> 8u) & 0xffu,
+                engine_version & 0xffu
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
     void NativeInterop_Initialize(void *invoke_method_fptr)
     {
         // g_invoke_method_fptr = reinterpret_cast<void *(*)(ManagedMethod *, void **)>(invoke_method_fptr);

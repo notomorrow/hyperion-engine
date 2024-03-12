@@ -9,9 +9,19 @@
 
 namespace hyperion {
 
-constexpr uint8 engine_major_version = 1;
-constexpr uint8 engine_minor_version = 0;
-constexpr uint8 engine_patch_version = 0;
+#if !defined(HYP_VERSION_MAJOR) || !defined(HYP_VERSION_MINOR) || !defined(HYP_VERSION_PATCH)
+#error "HYP_VERSION_MAJOR, HYP_VERSION_MINOR, and HYP_VERSION_PATCH must be defined"
+
+// Define to let build continue
+#define HYP_VERSION_MAJOR 0
+#define HYP_VERSION_MINOR 0
+#define HYP_VERSION_PATCH 0
+
+#endif
+
+constexpr uint8 engine_major_version = HYP_VERSION_MAJOR;
+constexpr uint8 engine_minor_version = HYP_VERSION_MINOR;
+constexpr uint8 engine_patch_version = HYP_VERSION_PATCH;
 constexpr uint32 engine_version = (engine_major_version << 16) | (engine_minor_version << 8) | engine_patch_version;
 constexpr uint64 engine_binary_magic_number = (uint64(0x505948) << 32) | engine_version;
 
@@ -24,7 +34,7 @@ constexpr uint max_bound_ambient_probes = 1024;
 constexpr uint max_bound_point_shadow_maps = 16;
 constexpr uint max_bound_environment_maps = 1;
 constexpr uint max_bound_textures = 16;
-    
+
 constexpr uint max_bindless_resources = 4096;
 
 constexpr uint num_gbuffer_textures = 8;

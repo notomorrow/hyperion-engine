@@ -24,6 +24,30 @@ namespace Hyperion
                 throw new Exception("Failed to load assembly: " + assemblyPath);
             }
 
+            var hyperionCoreDependency = assembly.GetReferencedAssemblies().Find(asm => asm.Name.ToString() == "HyperionCore");
+
+            if (hyperionCoreDependency == null)
+            {
+                throw new Exception("Failed to find HyperionCore dependency");
+            }
+
+            AssemblyName hyperionCoreAssemblyName = new AssemblyName(hyperionCoreDependency.FullName);
+            string versionString = hyperionCoreAssemblyName.Version.ToString();
+
+            var versionParts = versionString.Split('.');
+
+            uint majorVersion = versionParts.Length > 0 ? uint.Parse(versionParts[0]) : 0;
+            uint minorVersion = versionParts.Length > 1 ? uint.Parse(versionParts[1]) : 0;
+            uint patchVersion = versionParts.Length > 2 ? uint.Parse(versionParts[2]) : 0;
+
+            uint assemblyEngineVersion = (majorVersion << 16) | (minorVersion << 8) | patchVersion;
+
+            // Verify the engine version (major, minor)
+            if (!NativeInterop_VerifyEngineVersion(assemblyEngineVersion, true, true, false))
+            {
+                throw new Exception("Assembly version does not match engine version");
+            }
+
             Type[] types = assembly.GetTypes();
 
             foreach (Type type in types)
@@ -71,7 +95,7 @@ namespace Hyperion
                 {
                     throw new Exception("Failed to find empty constructor for type: " + type.Name);
                 }
-                
+
                 constructorInfo.Invoke(obj, null);
 
                 return ManagedObjectCache.Instance.AddObject(obj);
@@ -181,6 +205,9 @@ namespace Hyperion
 
         [DllImport("libhyperion", EntryPoint = "ManagedClass_Create")]
         private static extern ManagedClass ManagedClass_Create(IntPtr classHolderPtr, int typeHash, string typeName);
+
+        [DllImport("libhyperion", EntryPoint = "NativeInterop_VerifyEngineVersion")]
+        private static extern bool NativeInterop_VerifyEngineVersion(uint assemblyEngineVersion, bool major, bool minor, bool patch);
 
         [DllImport("libhyperion", EntryPoint = "NativeInterop_Initialize")]
         private static extern void NativeInterop_Initialize(IntPtr invokeMethodPtr);

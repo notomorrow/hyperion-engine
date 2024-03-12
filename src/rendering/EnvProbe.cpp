@@ -443,7 +443,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
                         .bucket             = BUCKET_INTERNAL,
-                        .cull_faces         = FaceCullMode::NONE
+                        .cull_faces         = FaceCullMode::BACK
                     }
                 ),
                 true // skip frustum culling
@@ -460,7 +460,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
                         .bucket             = BUCKET_INTERNAL,
-                        .cull_faces         = FaceCullMode::NONE
+                        .cull_faces         = FaceCullMode::BACK
                     }
                 ),
                 true // skip frustum culling (for now, until Camera can have multiple frustums for cubemaps)

@@ -367,12 +367,12 @@ void Octree::ClearInternal(Array<Node> &out_nodes)
 
 Octree::InsertResult Octree::Insert(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild)
 {
-    // if (!aabb.IsValid()) {
-    //     return {
-    //         { Octree::Result::OCTREE_ERR, "AABB is in invalid state" },
-    //         OctantID::invalid
-    //     };
-    // }
+    if (!aabb.IsValid()) {
+        return {
+            { Octree::Result::OCTREE_ERR, "AABB is in invalid state" },
+            OctantID::invalid
+        };
+    }
 
     if (!aabb.IsFinite()) {
         return {
@@ -819,14 +819,16 @@ Octree::InsertResult Octree::Rebuild()
         m_aabb = BoundingBox::empty;
     }
 
-    for (auto &node : new_nodes) {
+    for (auto &it : new_nodes) {
+        AssertThrowMsg(it.aabb.IsFinite(), "Element AABB must be finite");
+
         if (IsRoot()) {
-            m_aabb.Extend(node.aabb);
+            m_aabb.Extend(it.aabb);
         } else {
-            AssertThrow(m_aabb.Contains(node.aabb));
+            AssertThrow(m_aabb.Contains(it.aabb));
         }
 
-        auto insert_result = Insert(node.id, node.aabb, true /* allow rebuild */);
+        auto insert_result = Insert(it.id, it.aabb, true /* allow rebuild */);
 
         if (!insert_result.first) {
             return insert_result;
@@ -846,8 +848,10 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox &new_aabb)
 
     m_aabb = new_aabb;
 
-    for (auto &node : new_nodes) {
-        auto insert_result = Insert(node.id, node.aabb, true /* allow rebuild */);
+    for (auto &it : new_nodes) {
+        AssertThrowMsg(it.aabb.IsFinite(), "Element AABB must be finite");
+
+        auto insert_result = Insert(it.id, it.aabb, true /* allow rebuild */);
 
         if (!insert_result.first) {
             return insert_result;
@@ -862,6 +866,20 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox &new_aabb)
 
 Octree::InsertResult Octree::RebuildExtendInternal(const BoundingBox &extend_include_aabb)
 {
+    if (!extend_include_aabb.IsValid()) {
+        return {
+            { Octree::Result::OCTREE_ERR, "AABB is in invalid state" },
+            OctantID::invalid
+        };
+    }
+
+    if (!extend_include_aabb.IsFinite()) {
+        return {
+            { Octree::Result::OCTREE_ERR, "AABB is not finite" },
+            OctantID::invalid
+        };
+    }
+
     // have to grow the aabb by rebuilding the octree
     BoundingBox new_aabb(m_aabb);
     // extend the new aabb to include the entity
@@ -926,7 +944,13 @@ void Octree::PerformUpdates()
 
     RebuildNodesHash();
 
-    if (rebuild_result.first) {
+    if (!rebuild_result.first) {
+        DebugLog(
+            LogType::Warn,
+            "Failed to rebuild octree when performing updates: %s\n",
+            rebuild_result.first.message
+        );
+    } else {
         // set rebuild state to invalid if rebuild was successful
         m_state->rebuild_state = OctantID::invalid;
     }
