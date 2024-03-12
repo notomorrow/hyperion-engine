@@ -131,6 +131,12 @@ float[27] ProjectOntoSH9Color(vec3 dir, vec3 color)
     return sh_colors;
 }
 
+#ifdef MODE_FINALIZE
+
+// shared memory between workgroup for finalizing the SH coefficients
+shared vec4 shared_memory[6 * 9];
+#endif
+
 void main(void)
 {
     const int face_index = int(gl_GlobalInvocationID.x);
@@ -143,6 +149,8 @@ void main(void)
 #ifdef MODE_CLEAR
     for (int i = 0; i < 9; i++) {
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
+
+        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
     const ivec2 size_per_sample = ivec2(cubemap_dimensions.xy) / ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
@@ -183,33 +191,33 @@ void main(void)
         CURRENT_TILE.coeffs_weights[i] = vec4(sh_color * weight, weight);
     }
 #elif defined(MODE_FINALIZE)
-    float total_weight = 0.0;
-
-    vec3 sh_result[9];
-
     for (int i = 0; i < 9; i++) {
-        sh_result[i] = vec3(0.0);
+        shared_memory[face_index * 9 + i] = vec4(0.0);
     }
 
-    for (int face = 0; face < 6; ++face) {
-        for (int sample_x = 0; sample_x < NUM_SAMPLES_X; ++sample_x) {
-            for (int sample_y = 0; sample_y < NUM_SAMPLES_Y; ++sample_y) {
-                for (int i = 0; i < 9; i++) {
-                    const vec3 coeff = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].rgb;
-                    const float weight = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].a;
+    for (int i = 0; i < 9; i++) {
+        const vec3 coeff = sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y].coeffs_weights[i].rgb;
+        const float weight = sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y].coeffs_weights[i].a;
 
-                    sh_result[i] += coeff;
+        barrier();
 
-                    total_weight += weight;
-                }
-            }
+        shared_memory[face_index * 9 + i] += vec4(coeff * weight, weight);
+
+        barrier();
+    }
+
+    for (int i = 0; i < 9; i++) {
+        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] += shared_memory[face_index * 9 + i];
+    }
+
+    // On the last sample, normalize the SH coefficients
+    if (face_index == 5 && sample_index.x == NUM_SAMPLES_X - 1 && sample_index.y == NUM_SAMPLES_Y - 1) {
+        for (int i = 0; i < 9; i++) {
+            vec4 sh = sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)];
+            float weight = sh.a;
+
+            sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] *= (4.0 * HYP_FMATH_PI) / max(weight, 0.0001);
         }
-    }
-
-    for (int i = 0; i < 9; i++) {
-        vec3 result = vec3(sh_result[i] *= (4.0 * HYP_FMATH_PI) / total_weight);
-
-        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(result, 1.0);
     }
 #endif
 }

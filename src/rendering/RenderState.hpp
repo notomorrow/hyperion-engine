@@ -238,12 +238,12 @@ struct RenderState
 
         if (binding_slot != ENV_PROBE_BINDING_SLOT_INVALID) {
             if (m_env_probe_texture_slot_counters[uint(binding_slot)] >= max_counts[uint(binding_slot)]) {
-                DebugLog(
+                /*DebugLog(
                     LogType::Warn,
                     "Maximum bound probes of type %u exceeded! (%u)\n",
                     type,
                     max_counts[uint(binding_slot)]
-                );
+                );*/
 
                 return;
             }

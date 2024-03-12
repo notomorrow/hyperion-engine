@@ -65,7 +65,7 @@ vert = RenderToCubemap.vert
 
 [RenderToCubemap_Skydome]
 frag = sky/RenderToCubemap.frag
-vert = RenderToCubemap.vert
+vert = sky/RenderToCubemap.vert
 
 [ComputeSH]
 permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)

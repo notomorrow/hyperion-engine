@@ -33,6 +33,48 @@ extern "C" struct ManagedVec3f
 static_assert(std::is_trivial_v<ManagedVec3f>, "ManagedVec3f must be a trivial type to be used in C#");
 static_assert(sizeof(ManagedVec3f) == 16, "ManagedVec3f must be 16 bytes to be used in C#");
 
+extern "C" struct ManagedVec3i
+{
+    int32 x;
+    int32 y;
+    int32 z;
+    int32 _pad;
+
+    ManagedVec3i() = default;
+
+    ManagedVec3i(const Vec3i &v)
+        : x(v.x), y(v.y), z(v.z), _pad(0)
+    {
+    }
+
+    operator Vec3i() const
+        { return Vec3i { x, y, z }; }
+};
+
+static_assert(std::is_trivial_v<ManagedVec3i>, "ManagedVec3i must be a trivial type to be used in C#");
+static_assert(sizeof(ManagedVec3i) == 16, "ManagedVec3i must be 16 bytes to be used in C#");
+
+extern "C" struct ManagedVec3u
+{
+    uint32 x;
+    uint32 y;
+    uint32 z;
+    uint32 _pad;
+
+    ManagedVec3u() = default;
+
+    ManagedVec3u(const Vec3u &v)
+        : x(v.x), y(v.y), z(v.z), _pad(0)
+    {
+    }
+
+    operator Vec3u() const
+        { return Vec3u { x, y, z }; }
+};
+
+static_assert(std::is_trivial_v<ManagedVec3u>, "ManagedVec3u must be a trivial type to be used in C#");
+static_assert(sizeof(ManagedVec3u) == 16, "ManagedVec3u must be 16 bytes to be used in C#");
+
 extern "C" struct ManagedQuaternion
 {
     float x;

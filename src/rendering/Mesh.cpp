@@ -666,7 +666,7 @@ void Mesh::CalculateTangents()
         Vector3 bitangent;
     };
 
-    std::unordered_map<Index, Array<TangentBitangentPair>> data;
+    std::unordered_map<uint32, Array<TangentBitangentPair>> data;
 
     for (SizeType i = 0; i < mesh_data.indices.Size();) {
         const SizeType count = MathUtil::Min(3, mesh_data.indices.Size() - i);
@@ -679,14 +679,14 @@ void Mesh::CalculateTangents()
             uv[j] = v[j].GetTexCoord0();
         }
 
-        Index i0 = mesh_data.indices[i];
-        Index i1 = mesh_data.indices[i + 1];
-        Index i2 = mesh_data.indices[i + 2];
+        uint32 i0 = mesh_data.indices[i];
+        uint32 i1 = mesh_data.indices[i + 1];
+        uint32 i2 = mesh_data.indices[i + 2];
 
-        const Vector3 edge1 = v[1].GetPosition() - v[0].GetPosition();
-        const Vector3 edge2 = v[2].GetPosition() - v[0].GetPosition();
-        const Vector2 edge1uv = uv[1] - uv[0];
-        const Vector2 edge2uv = uv[2] - uv[0];
+        const Vec3f edge1 = v[1].GetPosition() - v[0].GetPosition();
+        const Vec3f edge2 = v[2].GetPosition() - v[0].GetPosition();
+        const Vec2f edge1uv = uv[1] - uv[0];
+        const Vec2f edge2uv = uv[2] - uv[0];
 
         const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
 
@@ -710,7 +710,7 @@ void Mesh::CalculateTangents()
         const auto &tangent_bitangents = data[i];
 
         // find average
-        Vector3 average_tangent, average_bitangent;
+        Vec3f average_tangent, average_bitangent;
 
         for (const auto &item : tangent_bitangents) {
             average_tangent += item.tangent * (1.0f / tangent_bitangents.Size());

@@ -41,6 +41,13 @@ void HandleSignal(int signum)
 
 int main(int argc, char **argv)
 {
+    DebugLog(
+        LogType::Info,
+        "Starting application\n"
+    );
+
+    fflush(stdout);
+
     signal(SIGINT, HandleSignal);
     
     // handle fatal crashes
@@ -79,6 +86,12 @@ int main(int argc, char **argv)
     RC<Application> application(new SDLApplication("My Application", argc, argv));
 
     if (!(window_flags & WINDOW_FLAGS_NO_GFX)) {
+        DebugLog(
+            LogType::Info,
+            "Creating window with flags: %u\n",
+            window_flags
+        );
+
         application->SetCurrentWindow(application->CreateSystemWindow({
             "Hyperion Engine",
             1080, 720,

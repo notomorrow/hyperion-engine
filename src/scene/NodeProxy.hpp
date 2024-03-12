@@ -270,36 +270,6 @@ public:
     HashCode GetHashCode() const;
 };
 
-class WeakNodeProxy : public Weak<Node>
-{
-protected:
-    using Base = Weak<Node>;
-
-public:
-    WeakNodeProxy() = default;
-
-    WeakNodeProxy(const NodeProxy &node) : Base(node) {}
-
-    WeakNodeProxy(const WeakNodeProxy &other)
-        : Base(other)
-    {
-    }
-    WeakNodeProxy &operator=(const WeakNodeProxy &other)
-        { Base::operator=(other); return *this; }
-
-    WeakNodeProxy(WeakNodeProxy &&other)  noexcept
-        : Base(std::move(other))
-    {
-    }
-
-    WeakNodeProxy &operator=(WeakNodeProxy &&other) noexcept
-        { Base::operator=(std::move(other)); return *this; }
-
-    ~WeakNodeProxy() = default;
-
-    NodeProxy Lock() const { return NodeProxy(Base::Lock()); }
-};
-
 } // namespace hyperion::v2
 
 #endif
