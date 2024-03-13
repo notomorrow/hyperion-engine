@@ -470,7 +470,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");//testbed/testbed2.obj");//living_room/living_room.obj");//
+        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//testbed/testbed2.obj");//living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -584,19 +584,19 @@ void SampleStreamer::InitGame()
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
             //node.Scale(0.25f);
-            //node.Scale(3.0f);
-            node.Scale(0.0125f);
+            node.Scale(3.0f);
+            // node.Scale(0.0125f);
             node.SetName("test_model");
             node.LockTransform();
 
             GetScene()->GetRoot().AddChild(node);
 
-            // Add a reflection probe
-            // TEMP: Commented out due to blending issues with multiple reflection probes
-            m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
-                HYP_NAME(ReflectionProbe0),
-                node.GetWorldAABB()
-            );
+            // // Add a reflection probe
+            // // TEMP: Commented out due to blending issues with multiple reflection probes
+            // m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
+            //     HYP_NAME(ReflectionProbe0),
+            //     node.GetWorldAABB()
+            // );
 
             for (auto &node : node.GetChildren()) {
                 if (auto child_entity = node.GetEntity()) {

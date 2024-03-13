@@ -197,10 +197,11 @@ private:
 
     ComputePipelineRef          m_clear_sh;
     ComputePipelineRef          m_compute_sh;
+    ComputePipelineRef          m_reduce_sh;
     ComputePipelineRef          m_finalize_sh;
-    DescriptorTableRef          m_compute_sh_descriptor_table;
 
-    GPUBufferRef                m_sh_tiles_buffer;
+    Array<DescriptorTableRef>   m_compute_sh_descriptor_tables;
+    Array<GPUBufferRef>         m_sh_tiles_buffers;
 
     Handle<Texture>             m_probe_data_texture;
 

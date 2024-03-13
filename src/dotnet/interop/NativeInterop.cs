@@ -24,15 +24,19 @@ namespace Hyperion
                 throw new Exception("Failed to load assembly: " + assemblyPath);
             }
 
-            var hyperionCoreDependency = assembly.GetReferencedAssemblies().Find(asm => asm.Name.ToString() == "HyperionCore");
+            for (int i = 0; i < assembly.GetReferencedAssemblies().Length; i++)
+            {
+                Logger.Log(LogType.Info, "Found assembly: {0}", assembly.GetReferencedAssemblies()[i].Name);
+            }
+
+            AssemblyName hyperionCoreDependency = Array.Find(assembly.GetReferencedAssemblies(), (assemblyName) => assemblyName.Name == "HyperionCore");
 
             if (hyperionCoreDependency == null)
             {
                 throw new Exception("Failed to find HyperionCore dependency");
             }
 
-            AssemblyName hyperionCoreAssemblyName = new AssemblyName(hyperionCoreDependency.FullName);
-            string versionString = hyperionCoreAssemblyName.Version.ToString();
+            string versionString = hyperionCoreDependency.Version.ToString();
 
             var versionParts = versionString.Split('.');
 

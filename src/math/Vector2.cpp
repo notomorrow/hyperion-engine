@@ -100,6 +100,30 @@ Vec2<float> Vec2<float>::UnitY()
     return Vec2<float>(0, 1);
 }
 
+template<>
+int math::detail::Vec2<int>::Max() const
+{
+    return MathUtil::Max(x, y);
+}
+
+template<>
+int math::detail::Vec2<int>::Min() const
+{
+    return MathUtil::Min(x, y);
+}
+
+template<>
+uint math::detail::Vec2<uint>::Max() const
+{
+    return MathUtil::Max(x, y);
+}
+
+template<>
+uint math::detail::Vec2<uint>::Min() const
+{
+    return MathUtil::Min(x, y);
+}
+
 } // namespace detail
 } // namespace math
 

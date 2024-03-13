@@ -107,11 +107,7 @@ class ObjectContainer : public ObjectContainerBase
             { return uint(ref_count_weak.load()); }
 
         HYP_FORCE_INLINE T &Get()
-        {
-            AssertThrow(HasValue());
-
-            return *reinterpret_cast<T *>(bytes);
-        }
+            { return *reinterpret_cast<T *>(bytes); }
 
         HYP_FORCE_INLINE T *GetPointer()
             { return reinterpret_cast<T *>(bytes); }

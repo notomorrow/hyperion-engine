@@ -68,7 +68,7 @@ frag = sky/RenderToCubemap.frag
 vert = sky/RenderToCubemap.vert
 
 [ComputeSH]
-permute = MODE(CLEAR BUILD_COEFFICIENTS FINALIZE)
+permute = MODE(CLEAR BUILD_COEFFICIENTS REDUCE FINALIZE)
 comp = sh/ComputeSH.comp
 
 [EnvProbe_VoxelizeProbe]

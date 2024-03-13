@@ -11,10 +11,12 @@ struct SHTile
     vec4 coeffs_weights[9];
 };
 
-#ifdef MODE_BUILD_COEFFICIENTS
+#if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
+layout(local_size_x = 1, local_size_y = NUM_SAMPLES_X, local_size_z = NUM_SAMPLES_Y) in;
+#elif defined(MODE_REDUCE)
 layout(local_size_x = 6, local_size_y = 4, local_size_z = 4) in;
-#else
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+#elif defined(MODE_FINALIZE)
+layout(local_size_x = 1) in;
 #endif
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
@@ -33,18 +35,19 @@ HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 
 HYP_DESCRIPTOR_SRV(ComputeSHDescriptorSet, InCubemap) uniform textureCube cubemap;
-HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, SHTilesBuffer, size = 13824) buffer SHTilesBuffer
-{
-    SHTile sh_tiles[6 * NUM_SAMPLES_X * NUM_SAMPLES_Y];
-};
+HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, InputSHTilesBuffer) buffer InputSHTilesBuffer { SHTile sh_tiles[]; };
+HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, OutputSHTilesBuffer) buffer OutputSHTilesBuffer { SHTile sh_tiles_output[]; };
 
 layout(push_constant) uniform PushConstant
 {
-    uvec4 probe_grid_position;
-    uvec4 cubemap_dimensions;
+    uvec4   probe_grid_position;
+    uvec4   cubemap_dimensions;
+    uvec4   level_dimensions;
 };
 
+#if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
 #define CURRENT_TILE sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
+#endif
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
     vec3 dir = vec3(0.0);
@@ -131,28 +134,36 @@ float[27] ProjectOntoSH9Color(vec3 dir, vec3 color)
     return sh_colors;
 }
 
-#ifdef MODE_FINALIZE
-
-// shared memory between workgroup for finalizing the SH coefficients
-shared vec4 shared_memory[6 * 9];
+#ifdef MODE_REDUCE
+// shared memory (per face) at the final reduce stage
+shared vec4 shared_memory[9][6];
 #endif
 
 void main(void)
 {
+#ifdef MODE_CLEAR
     const int face_index = int(gl_GlobalInvocationID.x);
-    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
 
     if (face_index >= 6) {
         return;
     }
 
-#ifdef MODE_CLEAR
+    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
+
     for (int i = 0; i < 9; i++) {
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
 
         sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
+    const int face_index = int(gl_GlobalInvocationID.x);
+
+    if (face_index >= 6) {
+        return;
+    }
+
+    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
+
     const ivec2 size_per_sample = ivec2(cubemap_dimensions.xy) / ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
 
     // middle of this part of the face
@@ -190,34 +201,55 @@ void main(void)
 
         CURRENT_TILE.coeffs_weights[i] = vec4(sh_color * weight, weight);
     }
+#elif defined(MODE_REDUCE)
+    const int face_index = int(gl_GlobalInvocationID.x);
+
+    if (face_index >= 6) {
+        return;
+    }
+
+    const ivec2 input_index = ivec2(gl_GlobalInvocationID.yz * 2);
+    const ivec2 output_index = ivec2(gl_GlobalInvocationID.yz);
+
+    const ivec2 prev_dimensions = ivec2(level_dimensions.xy);
+    const ivec2 next_dimensions = ivec2(level_dimensions.zw);
+
+    if (any(greaterThanEqual(input_index, prev_dimensions))) {
+        return;
+    }
+
+    if (any(greaterThanEqual(input_index + 1, prev_dimensions))) {
+        return;
+    }
+
+    if (any(greaterThanEqual(output_index, next_dimensions))) {
+        return;
+    }
+
+
+    // for (int i = 0; i < 9; i++) {
+    //     sh_tiles_output[(face_index * next_dimensions.x * next_dimensions.y) + (output_index.x * next_dimensions.y) + output_index.y].coeffs_weights[i] =
+    //         sh_tiles[(face_index * prev_dimensions.x * prev_dimensions.y) + (input_index.x * prev_dimensions.y) + input_index.y].coeffs_weights[i];
+    // }
+
+    for (int i = 0; i < 9; i++) {
+        sh_tiles_output[(face_index * next_dimensions.x * next_dimensions.y) + (output_index.x * next_dimensions.y) + output_index.y].coeffs_weights[i] =
+            sh_tiles[(face_index * prev_dimensions.x * prev_dimensions.y) + (input_index.x * prev_dimensions.y) + input_index.y].coeffs_weights[i]
+            + sh_tiles[(face_index * prev_dimensions.x * prev_dimensions.y) + ((input_index.x + 1) * prev_dimensions.y) + input_index.y].coeffs_weights[i]
+            + sh_tiles[(face_index * prev_dimensions.x * prev_dimensions.y) + ((input_index.x + 1) * prev_dimensions.y) + (input_index.y + 1)].coeffs_weights[i]
+            + sh_tiles[(face_index * prev_dimensions.x * prev_dimensions.y) + (input_index.x * prev_dimensions.y) + (input_index.y + 1)].coeffs_weights[i];
+    }
 #elif defined(MODE_FINALIZE)
-    for (int i = 0; i < 9; i++) {
-        shared_memory[face_index * 9 + i] = vec4(0.0);
-    }
-
-    for (int i = 0; i < 9; i++) {
-        const vec3 coeff = sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y].coeffs_weights[i].rgb;
-        const float weight = sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y].coeffs_weights[i].a;
-
-        barrier();
-
-        shared_memory[face_index * 9 + i] += vec4(coeff * weight, weight);
-
-        barrier();
-    }
-
-    for (int i = 0; i < 9; i++) {
-        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] += shared_memory[face_index * 9 + i];
-    }
-
-    // On the last sample, normalize the SH coefficients
-    if (face_index == 5 && sample_index.x == NUM_SAMPLES_X - 1 && sample_index.y == NUM_SAMPLES_Y - 1) {
+    for (int face_index = 0; face_index < 6; face_index++) {
         for (int i = 0; i < 9; i++) {
-            vec4 sh = sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)];
-            float weight = sh.a;
-
-            sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] *= (4.0 * HYP_FMATH_PI) / max(weight, 0.0001);
+            sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] += sh_tiles[face_index].coeffs_weights[i];
         }
+    }
+
+    for (int i = 0; i < 9; i++) {
+        float weight = sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)].a;
+    
+        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] *= (4.0 * HYP_FMATH_PI) / max(weight, 0.0001);
     }
 #endif
 }

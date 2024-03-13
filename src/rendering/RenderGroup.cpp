@@ -254,7 +254,7 @@ void RenderGroup::CollectDrawCalls()
 
     m_indirect_renderer->GetDrawState().ResetDrawState();
 
-    m_divided_draw_calls.Clear();
+    m_divided_draw_calls = { };
 
     DrawCallCollection previous_draw_state = std::move(m_draw_state);
 
@@ -314,7 +314,7 @@ void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_dat
 static void GetDividedDrawCalls(
     const Array<DrawCall> &draw_calls,
     uint num_batches,
-    Array<Array<DrawCall>> &out_divided_draw_calls
+    Array<Span<const DrawCall>> &out_divided_draw_calls
 )
 {
     out_divided_draw_calls.Resize(num_batches);
@@ -325,12 +325,22 @@ static void GetDividedDrawCalls(
     uint draw_call_index = 0;
 
     for (SizeType container_index = 0; container_index < num_async_rendering_command_buffers; container_index++) {
-        auto &container = out_divided_draw_calls[container_index];
-        container.Reserve(num_draw_calls_divided);
 
-        for (SizeType i = 0; i < num_draw_calls_divided && draw_call_index < num_draw_calls; i++, draw_call_index++) {
-            container.PushBack(draw_calls[draw_call_index]);
-        }
+        const uint diff_to_next_or_end = MathUtil::Min(num_draw_calls_divided, num_draw_calls - draw_call_index);
+
+        out_divided_draw_calls[container_index] = {
+            draw_calls.Begin() + draw_call_index,
+            draw_calls.Begin() + draw_call_index + diff_to_next_or_end
+        };
+
+        draw_call_index += diff_to_next_or_end;
+
+        // auto &container = out_divided_draw_calls[container_index];
+        // container.Reserve(num_draw_calls_divided);
+
+        // for (SizeType i = 0; i < num_draw_calls_divided && draw_call_index < num_draw_calls; i++, draw_call_index++) {
+        //     container.PushBack(draw_calls[draw_call_index]);
+        // }
     }
 }
 
@@ -440,7 +450,7 @@ RenderAll(
     uint &command_buffer_index,
     const GraphicsPipelineRef &pipeline,
     IndirectRenderer *indirect_renderer,
-    Array<Array<DrawCall>> &divided_draw_calls,
+    Array<Span<const DrawCall>> &divided_draw_calls,
     const DrawCallCollection &draw_state
 )
 {
@@ -474,9 +484,9 @@ RenderAll(
         THREAD_POOL_RENDER,
         num_batches,
         divided_draw_calls,
-        [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index](const Array<DrawCall> &draw_calls, uint index, uint)
+        [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index](const Span<const DrawCall> &draw_calls, uint index, uint)
         {
-            if (draw_calls.Empty()) {
+            if (!draw_calls) {
                 return;
             }
 

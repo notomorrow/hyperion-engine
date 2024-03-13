@@ -164,10 +164,11 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
                 mip_width = MathUtil::Max(1u, extent.width >> (mip_level));
                 mip_height = MathUtil::Max(1u, extent.height >> (mip_level));
 
-                struct alignas(128) {
-                    ShaderVec4<uint32> dimensions;
-                    ShaderVec4<uint32> prev_dimensions;
-                    uint32 mip_level;
+                struct alignas(128)
+                {
+                    ShaderVec4<uint32>  dimensions;
+                    ShaderVec4<uint32>  prev_dimensions;
+                    uint32              mip_level;
                 } push_constants;
 
                 push_constants.dimensions = { mip_width, mip_height, 0, 0 };
@@ -284,8 +285,8 @@ public:
 
             DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
-            const uint32 mip_width = MathUtil::Max(1u, extent.width >> (mip_level));
-            const uint32 mip_height = MathUtil::Max(1u, extent.height >> (mip_level));
+            const uint32 mip_width = MathUtil::Max(1u, extent.width >> mip_level);
+            const uint32 mip_height = MathUtil::Max(1u, extent.height >> mip_level);
 
             ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
             PUSH_RENDER_COMMAND(CreateMipImageView, m_image, mip_image_view, mip_level);
