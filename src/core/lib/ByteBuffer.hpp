@@ -36,12 +36,12 @@ public:
 
     explicit ByteBuffer(const ByteView &view)
     {
-        SetData(view.size, view.ptr);
+        SetData(view.Size(), view.Data());
     }
 
     explicit ByteBuffer(const ConstByteView &view)
     {
-        SetData(view.size, view.ptr);
+        SetData(view.Size(), view.Data());
     }
 
     ByteBuffer(const ByteBuffer &other)

@@ -14,6 +14,9 @@ const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
     { THREAD_TASK_5,    ThreadID { uint(THREAD_TASK_5),     HYP_NAME_UNSAFE(TaskThread5) } },
     { THREAD_TASK_6,    ThreadID { uint(THREAD_TASK_6),     HYP_NAME_UNSAFE(TaskThread6) } },
     { THREAD_TASK_7,    ThreadID { uint(THREAD_TASK_7),     HYP_NAME_UNSAFE(TaskThread7) } },
+    { THREAD_TASK_8,    ThreadID { uint(THREAD_TASK_8),     HYP_NAME_UNSAFE(TaskThread8) } },
+    { THREAD_TASK_9,    ThreadID { uint(THREAD_TASK_9),     HYP_NAME_UNSAFE(TaskThread9) } },
+    { THREAD_TASK_10,   ThreadID { uint(THREAD_TASK_10),    HYP_NAME_UNSAFE(TaskThread10) } }
 };
 
 #ifdef HYP_ENABLE_THREAD_ID
@@ -21,7 +24,6 @@ thread_local ThreadID current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NAME
 #else
 static const ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif
-
 
 void Threads::SetThreadID(const ThreadID &id)
 {

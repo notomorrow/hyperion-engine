@@ -162,7 +162,7 @@ private:
     AsyncCommandBuffers m_command_buffers;
 
     // cache so we don't allocate every frame
-    Array<Array<DrawCall>> m_divided_draw_calls;
+    Array<Span<const DrawCall>> m_divided_draw_calls;
 
     // cycle through command buffers, so you can call Render()
     // multiple times in a single pass, only running into issues if you

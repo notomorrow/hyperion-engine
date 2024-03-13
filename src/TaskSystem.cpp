@@ -4,7 +4,7 @@ namespace hyperion::v2 {
 
 const FlatMap<TaskThreadPoolName, uint> TaskSystem::s_thread_pool_sizes = {
     { TaskThreadPoolName::THREAD_POOL_GENERIC,          4u },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,           2u },
+    { TaskThreadPoolName::THREAD_POOL_RENDER,           4u },
     { TaskThreadPoolName::THREAD_POOL_RENDER_COLLECT,   2u }
 };
 
