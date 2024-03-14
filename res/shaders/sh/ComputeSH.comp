@@ -152,8 +152,12 @@ void main(void)
 
     for (int i = 0; i < 9; i++) {
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
+    }
 
-        sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
+    if (all(equal(gl_GlobalInvocationID.xyz, ivec3(0)))) {
+        for (int i = 0; i < 9; i++) {
+            sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
+        }
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
     const int face_index = int(gl_GlobalInvocationID.x);
@@ -180,7 +184,7 @@ void main(void)
     const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
     // vec4 environment_map_sample = TextureCube(sampler_linear, environment_maps[0], dir);
-    vec4 cubemap_sample = TextureCube(sampler_linear, cubemap, dir);
+    vec4 cubemap_sample = TextureCube(sampler_nearest, cubemap, dir);
     // cubemap_sample.rgb = pow(cubemap_sample.rgb, vec3(2.2));
 
     // vec4 combined_sample = environment_map_sample * (1.0 - cubemap_sample.a) + (vec4(cubemap_sample.rgb, 1.0) * cubemap_sample.a);

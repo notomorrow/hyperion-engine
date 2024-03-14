@@ -23,6 +23,7 @@ void SkySystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 
     if (!mesh_component.mesh) {
         mesh_component.mesh = MeshBuilder::Cube();
+        // mesh_component.mesh->InvertNormals();
         InitObject(mesh_component.mesh);
 
         mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;

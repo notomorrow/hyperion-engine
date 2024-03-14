@@ -79,19 +79,6 @@ constexpr uint ArraySize(const T (&)[N])
     return N;
 }
 
-/*! \brief Converts a value of type \ref{To} to a value of type \ref{From}.
- *  Both types must be standard layout and have the same size.
- *  \tparam To The type to convert to.
- *  \tparam From The type to convert from.
- *  \param from The value to convert.
- *  \return The value of type \ref{From} converted to type \ref{To}.
- */
-template <class To, class From>
-static HYP_FORCE_INLINE To BitCast(const From &from)
-{
-    return ValueStorage<To>(&from).Get();
-}
-
 } // namespace hyperion
 
 #endif

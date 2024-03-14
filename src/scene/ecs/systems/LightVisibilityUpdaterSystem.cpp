@@ -12,6 +12,8 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
 
     LightComponent &light_component = entity_manager.GetComponent<LightComponent>(entity);
 
+    entity_manager.AddTag<EntityTag::LIGHT>(entity);
+
     if (!light_component.light) {
         return;
     }
@@ -67,6 +69,8 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
 void LightVisibilityUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity)
 {
     SystemBase::OnEntityRemoved(entity_manager, entity);
+
+    entity_manager.RemoveTag<EntityTag::LIGHT>(entity);
 }
 
 void LightVisibilityUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)

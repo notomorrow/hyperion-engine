@@ -397,26 +397,27 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
     Octree const *octree = &m_parent_scene->GetOctree();
     m_parent_scene->GetOctree().GetFittingOctant(m_aabb, octree);
-    const HashCode octant_hash = octree->GetNodesHash();
-
-    // if (IsShadowProbe()) {
-    //     DebugLog(
-    //         LogType::Debug,
-    //         "Shadow probe #%u (Octant ID: %u:%u) octant hash: %u, \
-    //             EnvProbe AABB: [%f, %f, %f]\t[%f, %f, %f]\n\t \
-    //             Octant AABB: [%f, %f, %f]\t[%f, %f, %f]\n",
-    //         GetID().Value(),
-    //         octree->GetOctantID().GetDepth(),
-    //         octree->GetOctantID().GetIndex(),
-    //         octant_hash.Value(),
-    //         m_aabb.min.x, m_aabb.min.y, m_aabb.min.z,
-    //         m_aabb.max.x, m_aabb.max.y, m_aabb.max.z,
-    //         octree->GetAABB().min.x, octree->GetAABB().min.y, octree->GetAABB().min.z,
-    //         octree->GetAABB().max.x, octree->GetAABB().max.y, octree->GetAABB().max.z
-    //     );
-    // }
+    HashCode octant_hash;
+    
+    if (OnlyCollectStaticEntities()) {
+        // Static entities and lights changing affect the probe
+        octant_hash = octree->GetEntryListHash<EntityTag::STATIC>()
+            .Add(octree->GetEntryListHash<EntityTag::LIGHT>());
+    } else {
+        octant_hash = octree->GetEntryListHash<EntityTag::NONE>();
+    }
 
     if (m_octant_hash_code != octant_hash) {
+        DebugLog(
+            LogType::Debug,
+            "EnvProbe #%u (Octant ID: %u:%u) octant hash changed: %u -> %u\n",
+            GetID().Value(),
+            octree->GetOctantID().GetDepth(),
+            octree->GetOctantID().GetIndex(),
+            m_octant_hash_code.Value(),
+            octant_hash.Value()
+        );
+
         SetNeedsUpdate(true);
 
         m_octant_hash_code = octant_hash;
@@ -443,7 +444,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
                         .bucket             = BUCKET_INTERNAL,
-                        .cull_faces         = FaceCullMode::BACK
+                        .cull_faces         = FaceCullMode::NONE
                     }
                 ),
                 true // skip frustum culling
@@ -460,7 +461,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
                         .bucket             = BUCKET_INTERNAL,
-                        .cull_faces         = FaceCullMode::BACK
+                        .cull_faces         = FaceCullMode::NONE
                     }
                 ),
                 true // skip frustum culling (for now, until Camera can have multiple frustums for cubemaps)
@@ -505,7 +506,7 @@ void EnvProbe::Render(Frame *frame)
         return;
     }
 
-    // DebugLog(LogType::Debug, "Rendering probe #%u\n", GetID().Value());
+    DebugLog(LogType::Debug, "Rendering probe #%u, type: %u\n", GetID().Value(), GetEnvProbeType());
 
     AssertThrow(m_texture.IsValid());
 

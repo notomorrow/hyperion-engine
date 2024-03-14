@@ -230,6 +230,9 @@ void Scene::Update(GameCounter::TickUnit delta)
 
     m_entity_manager->Update(delta);
 
+    // Rebuild any octants that have had structural changes
+    m_octree.PerformUpdates();
+
     EnqueueRenderUpdates();
 
     if (IsWorldScene()) {
@@ -341,7 +344,7 @@ void Scene::CollectStaticEntities(
     const uint8 visibility_cursor = m_octree.LoadVisibilityCursor();
     const VisibilityState &parent_visibility_state = m_octree.GetVisibilityState();
 
-    for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<UNMOVEABLE>>()) {
+    for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>()) {
         auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] = it;
 
         { // Temp hacks, beware! 

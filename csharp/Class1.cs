@@ -31,7 +31,7 @@ public class TestScript : Script
             }
         });
 
-        Scene.EntityManager.AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent { });
+        // Scene.EntityManager.AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent { });
 
         Logger.Log(LogType.Info, "Init script, added light entity: " + lightEntity.ID);
     }

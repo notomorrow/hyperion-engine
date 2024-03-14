@@ -732,6 +732,12 @@ void Mesh::CalculateTangents()
 
 void Mesh::InvertNormals()
 {
+    if (!m_streamed_mesh_data) {
+        DebugLog(LogType::Warn, "Cannot invert normals before mesh data is set!\n");
+
+        return;
+    }
+
     MeshData mesh_data = m_streamed_mesh_data->GetMeshData();
 
     for (Vertex &vertex : mesh_data.vertices) {
@@ -743,6 +749,12 @@ void Mesh::InvertNormals()
 
 void Mesh::CalculateAABB()
 {
+    if (!m_streamed_mesh_data) {
+        DebugLog(LogType::Warn, "Cannot calculate Mesh bounds before mesh data is set!\n");
+
+        return;
+    }
+
     const MeshData &mesh_data = m_streamed_mesh_data->GetMeshData();
 
     BoundingBox aabb = BoundingBox::empty;

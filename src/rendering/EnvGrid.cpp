@@ -338,7 +338,7 @@ void EnvGrid::Init()
         m_camera = CreateObject<Camera>(
             90.0f,
             -int(probe_dimensions.width), int(probe_dimensions.height),
-            0.05f, m_aabb.GetRadius()//(m_aabb.GetExtent() / Vec3f(m_options.density)).Max()
+            0.05f, m_aabb.GetExtent().Max()//(m_aabb.GetExtent() / Vec3f(m_options.density)).Max()
         );
 
         m_camera->SetTranslation(m_aabb.GetCenter());
@@ -1063,7 +1063,6 @@ void EnvGrid::ComputeSH(
 
     // Finalize - build into final buffer
     m_sh_tiles_buffers.Back()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    
     g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
     m_compute_sh_descriptor_tables.Back()->Bind(

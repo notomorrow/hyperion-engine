@@ -272,13 +272,37 @@ public:
     template <EntityTag tag>
     void AddTag(ID<Entity> id)
     {
+        if (HasTag<tag>(id)) {
+            return;
+        }
+
         AddComponent<EntityTagComponent<tag>>(id, EntityTagComponent<tag>());
     }
 
     template <EntityTag tag>
     void RemoveTag(ID<Entity> id)
     {
+        if (!HasTag<tag>(id)) {
+            return;
+        }
+
         RemoveComponent<EntityTagComponent<tag>>(id);
+    }
+
+    Array<EntityTag> GetTags(ID<Entity> id) const
+    {
+        Array<EntityTag> tags;
+        GetTagsHelper(id, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), tags);
+
+        return tags;
+    }
+
+    uint32 GetTagsMask(ID<Entity> id) const
+    {
+        uint32 mask = 0;
+        GetTagsHelper(id, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), mask);
+
+        return mask;
     }
 
     template <class Component>
@@ -536,6 +560,18 @@ public:
         { m_command_queue.Push(std::move(command)); }
 
 private:
+    template <uint32... indices>
+    void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, indices...>, Array<EntityTag> &out_tags) const
+    {
+        ((HasTag<EntityTag(indices + 1)>(id) ? (void)(out_tags.PushBack(EntityTag(indices + 1))) : void()), ...);
+    }
+
+    template <uint32... indices>
+    void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, indices...>, uint32 &out_mask) const
+    {
+        ((HasTag<EntityTag(indices + 1)>(id) ? (void)(out_mask |= (1u << uint32(indices))) : void()), ...);
+    }
+
     template <class Component>
     ComponentContainer<Component> &GetContainer()
     {
