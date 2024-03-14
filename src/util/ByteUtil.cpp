@@ -3,27 +3,18 @@
 
 namespace hyperion {
 
-uint ByteUtil::HighestSetBitIndex(uint64 bits)
+uint ByteUtil::LowestSetBitIndex(uint64 bits)
 {
-#ifdef HYP_WINDOWS
-    unsigned long index;
-    _BitScanReverse64(&index, bits);
-    return uint(index);
-#elif defined(HYP_CLANG_OR_GCC)
-    return 63 - __builtin_clzll(bits);
+#ifdef HYP_CLANG_OR_GCC
+    const int bit_index = __builtin_ffsll(bits) - 1;
+#elif defined(HYP_MSVC)
+    unsigned long bit_index = 0;
+    _BitScanForward64(&bit_index, bits);
 #else
-    // uint index = 0;
-
-    // if (bits & 0xFFFFFFFF00000000) { bits >>= 32; index += 32; }
-    // if (bits & 0x00000000FFFF0000) { bits >>= 16; index += 16; }
-    // if (bits & 0x000000000000FF00) { bits >>=  8; index +=  8; }
-    // if (bits & 0x00000000000000F0) { bits >>=  4; index +=  4; }
-    // if (bits & 0x000000000000000C) { bits >>=  2; index +=  2; }
-    // if (bits & 0x0000000000000002) { bits >>=  1; index +=  1; }
-
-    // return index;
-    #error "ByteUtil::HighestSetBitIndex() not implemented for this platform"
+    #error "ByteUtil::LowestSetBitIndex() not implemented for this platform"
 #endif
+
+    return uint(bit_index);
 }
 
 } // namespace hyperion

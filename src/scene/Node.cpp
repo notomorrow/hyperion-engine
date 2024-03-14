@@ -432,10 +432,10 @@ void Node::LockTransform()
 {
     m_transform_locked = true;
 
-    // set entity to unmoveable
+    // set entity to static
     if (m_entity.IsValid()) {
-        if (!m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
-            m_scene->GetEntityManager()->AddTag<UNMOVEABLE>(m_entity);
+        if (!m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
+            m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
         }
     }
 
@@ -493,9 +493,9 @@ void Node::SetEntity(ID<Entity> entity)
 
         RefreshEntityTransform();
 
-        // set entity to unmoveable by default
-        if (!m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
-            m_scene->GetEntityManager()->AddTag<UNMOVEABLE>(m_entity);
+        // set entity to static by default
+        if (!m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
+            m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
         }
     } else {
         m_local_aabb = BoundingBox::empty;
@@ -542,8 +542,8 @@ void Node::UpdateWorldTransform()
     }
 
     if (m_entity.IsValid()) {
-        if (m_scene->GetEntityManager()->HasTag<UNMOVEABLE>(m_entity)) {
-            m_scene->GetEntityManager()->RemoveTag<UNMOVEABLE>(m_entity);
+        if (m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
+            m_scene->GetEntityManager()->RemoveTag<EntityTag::STATIC>(m_entity);
         }
 
         if (auto *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {

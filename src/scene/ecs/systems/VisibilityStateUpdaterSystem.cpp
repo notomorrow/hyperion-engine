@@ -109,9 +109,6 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
             visibility_state_component.visibility_state.snapshots[visibility_cursor] = octant_visibility_state.snapshots[visibility_cursor];
         }
     }
-
-    // Rebuild any octants that have had structural changes
-    octree.PerformUpdates();
 }
 
 } // namespace hyperion::v2

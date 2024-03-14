@@ -5,10 +5,13 @@
 
 namespace hyperion::v2 {
 
-enum EntityTag : uint32
+enum class EntityTag : uint32
 {
     NONE,
-    UNMOVEABLE
+    STATIC,
+    LIGHT,
+
+    MAX
 };
 
 /*! \brief An EntityTag is a special component that is used to tag an entity with a specific flag.

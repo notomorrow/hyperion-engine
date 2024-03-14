@@ -1131,7 +1131,7 @@ void Octree::UpdateVisibilityState(Camera *camera, uint8 cursor)
 
 void Octree::ResetNodesHash()
 {
-    m_nodes_hash = { 0 };
+    m_entry_hashes = { };
 }
 
 void Octree::RebuildNodesHash(uint level)
@@ -1139,7 +1139,31 @@ void Octree::RebuildNodesHash(uint level)
     ResetNodesHash();
 
     for (const Node &item : m_nodes) {
-        m_nodes_hash.Add(item.GetHashCode());
+        const HashCode entry_hash_code = item.GetHashCode();
+        m_entry_hashes[0].Add(entry_hash_code);
+
+        Array<EntityTag> tags = m_entity_manager->GetTags(item.id);
+
+        for (uint i = 0; i < uint(tags.Size()); i++) {
+            const uint num_combinations = (1u << i);
+
+            for (uint k = 0; k < num_combinations; k++) {
+                uint32 mask = (1u << (uint32(tags[i]) - 1));
+
+                for (uint j = 0; j < i; j++) {
+                    if ((k & (1u << j)) != (1u << j)) {
+                        continue;
+                    }
+                    
+                    mask |= (1u << (uint32(tags[j]) - 1));
+                }
+
+                AssertThrow(m_entry_hashes.Size() > mask);
+
+                m_entry_hashes[mask].Add(entry_hash_code);
+            }
+        }
+        
     }
 
     if (m_is_divided) {
@@ -1148,7 +1172,9 @@ void Octree::RebuildNodesHash(uint level)
 
             octant.octree->RebuildNodesHash(level + 1);
 
-            m_nodes_hash.Add(octant.octree->GetNodesHash());
+            for (uint i = 0; i < uint(m_entry_hashes.Size()); i++) {
+                m_entry_hashes[i].Add(octant.octree->GetEntryListHash(i));
+            }
         }
     }
 }

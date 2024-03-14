@@ -591,12 +591,12 @@ void SampleStreamer::InitGame()
 
             GetScene()->GetRoot().AddChild(node);
 
-            // // Add a reflection probe
-            // // TEMP: Commented out due to blending issues with multiple reflection probes
-            // m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
-            //     HYP_NAME(ReflectionProbe0),
-            //     node.GetWorldAABB()
-            // );
+            // Add a reflection probe
+            // TEMP: Commented out due to blending issues with multiple reflection probes
+            m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
+                HYP_NAME(ReflectionProbe0),
+                node.GetWorldAABB()
+            );
 
             for (auto &node : node.GetChildren()) {
                 if (auto child_entity = node.GetEntity()) {
@@ -622,12 +622,12 @@ void SampleStreamer::InitGame()
                 EnvGridType::ENV_GRID_TYPE_SH
             });
 
-            /*m_scene->GetEntityManager()->AddComponent(env_grid_entity, ScriptComponent {
+            m_scene->GetEntityManager()->AddComponent(env_grid_entity, ScriptComponent {
                 {
                     .assembly_name = "csharp/bin/Debug/net8.0/csharp.dll",
                     .class_name = "TestScript"
                 }
-            });*/
+            });
 
             auto env_grid_node = m_scene->GetRoot().AddChild();
             env_grid_node.SetEntity(env_grid_entity);

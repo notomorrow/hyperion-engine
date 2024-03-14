@@ -6,6 +6,7 @@
 #include <core/lib/HashMap.hpp>
 #include <scene/Entity.hpp>
 #include <scene/VisibilityState.hpp>
+#include <scene/ecs/EntityTag.hpp>
 #include <util/ByteUtil.hpp>
 
 #include <math/Vector3.hpp>
@@ -283,22 +284,23 @@ public:
     bool IsDivided() const
         { return m_is_divided; }
 
-    /*! \brief Get a hashcode of all entities currently in this Octant (child octants affect this too) */
-    HashCode GetNodesHash() const
+    /*! \brief Get a hashcode of all entities currently in this Octant that have the given tags (child octants affect this too)
+    */
+    template <EntityTag... tags>
+    HashCode GetEntryListHash() const
     {
-        HashCode hc;
+        const uint32 mask = ((tags == EntityTag::NONE ? 0 : (1u << (uint32(tags) - 1))) | ...);
 
-        hc.Add(m_nodes_hash);
+        return m_entry_hashes[mask];
+    }
 
-        // if (m_is_divided) {
-        //     for (const Octant &octant : m_octants) {
-        //         AssertThrow(octant.octree != nullptr);
+    /*! \brief Get a hashcode of all entities currently in this Octant that match the mask tag (child octants affect this too)
+    */
+    HashCode GetEntryListHash(uint32 entity_tag_mask) const
+    {
+        AssertThrow(entity_tag_mask < m_entry_hashes.Size());
 
-        //         hc.Add(octant.octree->GetNodesHash());
-        //     }
-        // }
-
-        return hc;
+        return m_entry_hashes[entity_tag_mask];
     }
         
     void Clear();
@@ -370,17 +372,17 @@ private:
     /* Called from entity - remove the pointer */
     // void OnEntityRemoved(Entity *entity);
 
-    RC<EntityManager>       m_entity_manager;
+    RC<EntityManager>                                   m_entity_manager;
     
-    Array<Node>             m_nodes;
-    HashCode                m_nodes_hash;
-    Octree                  *m_parent;
-    BoundingBox             m_aabb;
-    FixedArray<Octant, 8>   m_octants;
-    bool                    m_is_divided;
-    OctreeState             *m_state;
-    VisibilityState         m_visibility_state;
-    OctantID                m_octant_id;
+    Array<Node>                                         m_nodes;
+    FixedArray<HashCode, 1u << uint(EntityTag::MAX)>    m_entry_hashes;
+    Octree                                              *m_parent;
+    BoundingBox                                         m_aabb;
+    FixedArray<Octant, 8>                               m_octants;
+    bool                                                m_is_divided;
+    OctreeState                                         *m_state;
+    VisibilityState                                     m_visibility_state;
+    OctantID                                            m_octant_id;
 };
 
 } // namespace hyperion::v2
