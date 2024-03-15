@@ -358,7 +358,7 @@ void IndirectRenderer::Create()
     Handle<Shader> object_visibility_shader = g_shader_manager->GetOrCreate(HYP_NAME(ObjectVisibility));
     AssertThrow(object_visibility_shader.IsValid());
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = object_visibility_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = object_visibility_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 

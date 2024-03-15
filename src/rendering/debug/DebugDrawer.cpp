@@ -34,7 +34,7 @@ void DebugDrawer::Create()
 
     AssertThrow(InitObject(m_shader));
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
     AssertThrow(descriptor_table != nullptr);

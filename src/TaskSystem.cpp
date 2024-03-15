@@ -73,6 +73,10 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
 
     const ThreadID &current_thread_id = Threads::CurrentThreadID();
 
+    if (Threads::IsThreadInMask(current_thread_id, THREAD_TASK)) {
+        DebugLog(LogType::Warn, "Enqueing tasks from within a task thread may have performance implications\n");
+    }
+
     // if (in_task_thread) {
     //     for (auto &task : batch->tasks) {
     //         task.Execute();

@@ -612,7 +612,7 @@ void EnvGrid::CreateVoxelGridData()
     Handle<Shader> offset_voxel_grid_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_VoxelizeProbe), {{ "MODE_OFFSET" }});
     Handle<Shader> clear_voxels_shader = g_shader_manager->GetOrCreate(HYP_NAME(EnvProbe_ClearProbeVoxels));
 
-    const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
@@ -666,7 +666,7 @@ void EnvGrid::CreateVoxelGridData()
         Handle<Shader> generate_voxel_grid_mipmaps_shader = g_shader_manager->GetOrCreate(HYP_NAME(VCTGenerateMipmap));
         AssertThrow(generate_voxel_grid_mipmaps_shader.IsValid());
 
-        renderer::DescriptorTableDeclaration generate_voxel_grid_mipmaps_descriptor_table_decl = generate_voxel_grid_mipmaps_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+        renderer::DescriptorTableDeclaration generate_voxel_grid_mipmaps_descriptor_table_decl = generate_voxel_grid_mipmaps_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
         const uint num_voxel_grid_mip_levels = m_voxel_grid_texture->GetImage()->NumMipmaps();
         m_voxel_grid_mips.Resize(num_voxel_grid_mip_levels);
@@ -739,7 +739,7 @@ void EnvGrid::CreateSHData()
         AssertThrow(shader.IsValid());
     }
 
-    const renderer::DescriptorTableDeclaration descriptor_table_decl = shaders[0]->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shaders[0]->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     m_compute_sh_descriptor_tables.Resize(sh_num_levels);
     

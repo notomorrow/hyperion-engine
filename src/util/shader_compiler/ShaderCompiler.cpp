@@ -1508,9 +1508,9 @@ bool ShaderCompiler::CompileBundle(
         CompiledShader compiled_shader(
             ShaderDefinition {
                 bundle.name,
-                properties,
-                bundle.descriptor_usages
+                properties
             },
+            bundle.descriptor_usages,
             bundle.entry_point_name
         );
 

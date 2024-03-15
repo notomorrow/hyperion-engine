@@ -91,7 +91,7 @@ void HBAO::CreatePass()
 
     g_engine->InitObject(hbao_shader);
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = hbao_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = hbao_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());

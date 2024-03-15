@@ -101,6 +101,18 @@
     </Expand>
   </Type>
 
+  <Type Name="hyperion::Span&lt;*&gt;">
+    <DisplayString>{{ Address={((void*)first)} Size={(last - first)} }}</DisplayString>
+    <Expand>
+      <Item Name="[Size]">(last - first)</Item>
+
+      <ArrayItems>
+        <Size>(last - first)</Size>
+        <ValuePointer>(first)</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
   <Type Name="hyperion::detail::UniquePtr&lt;*&gt;">
     <DisplayString>{{ {($T1 *)m_holder.value} }}</DisplayString>
     <Expand>
@@ -124,6 +136,13 @@
     </Expand>
   </Type>
 
+  <Type Name="hyperion::AtomicVar&lt;*&gt;">
+    <DisplayString>{{ Value={m_value} }}</DisplayString>
+    <Expand>
+      <Item Name="[Value]">m_value</Item>
+    </Expand>
+  </Type>
+
   <Type Name="hyperion::ID&lt;*&gt;">
     <DisplayString>{{ Value={value} }}</DisplayString>
   </Type>
@@ -131,13 +150,11 @@
   <Type Name="hyperion::v2::Handle&lt;*&gt;">
     <DisplayString Condition="index != 0">{{ Index={index} }}</DisplayString>
     <DisplayString Condition="index == 0">{{ &lt;Empty&gt; }}</DisplayString>
-  </Type>
-
-  <Type Name="hyperion::v2::RenderObjectHandle&lt;*&gt;">
-    <DisplayString>{{ Index={index} }}</DisplayString>
 
     <Expand>
-      <ExpandedItem>($T1 *)(&amp;(_container->m_data.m_values[index]))</ExpandedItem>
+      <!--<Item Name="[Data]">(0)</Item>-->
+      <ExpandedItem Condition="index != 0">($T1 *)(&amp;(s_container-&gt;m_data.m_values[index - 1]))</ExpandedItem>
+      <ExpandedItem Condition="index == 0">($T1 *)0</ExpandedItem>
     </Expand>
   </Type>
 
@@ -182,6 +199,18 @@
           <Exec>bucket_ptr++</Exec>
         </Loop>
       </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::renderer::RenderObjectHandle_Strong&lt;*,*&gt;">
+    <DisplayString>{{ Index={index} Strong={_container->m_data.m_values[index].ref_count_strong.m_value} Weak={_container->m_data.m_values[index].ref_count_weak.m_value} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[Strong]">(_container->m_data.m_values[index].ref_count_strong.m_value)</Item>
+      <Item Name="[Weak]">_container->m_data.m_values[index].ref_count_weak.m_value</Item>
+      <!--<Item Name="[Name]">_container->m_debug_names.m_values[index]</Item>-->
+
+      <ExpandedItem>($T1 *)(&amp;(_container->m_data.m_values[index]))</ExpandedItem>
     </Expand>
   </Type>
 

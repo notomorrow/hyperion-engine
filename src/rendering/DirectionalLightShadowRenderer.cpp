@@ -283,7 +283,7 @@ void ShadowPass::CreateComputePipelines()
     Handle<Shader> blur_shadow_map_shader = g_shader_manager->GetOrCreate(HYP_NAME(BlurShadowMap));
     AssertThrow(blur_shadow_map_shader.IsValid());
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = blur_shadow_map_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = blur_shadow_map_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
@@ -423,7 +423,7 @@ void ShadowPass::Render(Frame *frame)
 }
 
 DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Extent2D resolution)
-    : RenderComponent(name),
+    : RenderComponent(name, 100),
       m_resolution(resolution)
 {
 }

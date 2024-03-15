@@ -3,6 +3,8 @@
 #include <Engine.hpp>
 #include <Constants.hpp>
 
+#include <core/lib/util/ForEach.hpp>
+
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
 namespace hyperion::v2 {
@@ -198,7 +200,7 @@ void RenderGroup::Init()
     m_pipeline->SetShaderProgram(m_shader->GetShaderProgram());
 
     if (!m_pipeline->GetDescriptorTable().HasValue()) {
-        renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+        renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
         AssertThrow(descriptor_table != nullptr);
@@ -480,10 +482,11 @@ RenderAll(
     // always run renderer items as HIGH priority,
     // so we do not lock up because we're waiting for a large process to
     // complete in the same thread
-    TaskSystem::GetInstance().ParallelForEach(
-        THREAD_POOL_RENDER,
-        num_batches,
-        divided_draw_calls,
+#if defined(HYP_FEATURES_PARALLEL_RENDERING) && HYP_FEATURES_PARALLEL_RENDERING
+    ParallelForEach(divided_draw_calls, num_batches, THREAD_POOL_RENDER,
+#else
+    ForEachInBatches(divided_draw_calls, num_batches,
+#endif
         [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index](const Span<const DrawCall> &draw_calls, uint index, uint)
         {
             if (!draw_calls) {
@@ -507,11 +510,6 @@ RenderAll(
 
                     for (const DrawCall &draw_call : draw_calls) {
                         const EntityInstanceBatch &entity_batch = g_engine->GetRenderData()->entity_instance_batches.Get(draw_call.batch_index);
-#ifdef HYP_DEBUG_MODE
-                        AssertThrow(draw_call.mesh_id.IsValid());
-                        AssertThrow(mesh_container.GetPointer(draw_call.mesh_id.ToIndex()) != nullptr);
-#endif
-
 
                         BindPerObjectDescriptorSets(
                             frame,
@@ -523,9 +521,6 @@ RenderAll(
                         );
 
                         if constexpr (IsIndirect) {
-#ifdef HYP_DEBUG_MODE
-                            AssertThrow(draw_call.draw_command_index * sizeof(IndirectDrawCommand) < indirect_renderer->GetDrawState().GetIndirectBuffer(frame_index)->size);
-#endif
                             mesh_container.Get(draw_call.mesh_id.ToIndex())
                                 .RenderIndirect(
                                     secondary,

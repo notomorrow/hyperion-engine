@@ -155,7 +155,7 @@ void TemporalBlending::CreateDescriptorSets()
     Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalBlending), GetShaderProperties());
     AssertThrow(shader.IsValid());
 
-    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     m_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 

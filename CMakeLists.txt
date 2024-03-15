@@ -299,6 +299,9 @@ if(WIN32)
     if(EXISTS "${CMAKE_SOURCE_DIR}/lib/windows/64/GFSDK_Aftermath_Lib.x64.lib")
         set(COMMON_LIBRARIES ${COMMON_LIBRARIES} windows/64/GFSDK_Aftermath_Lib.x64)
         add_definitions(-DHYP_AFTERMATH=1)
+
+        # copy the dll to the build directory
+        file(COPY "${CMAKE_SOURCE_DIR}/lib/windows/64/GFSDK_Aftermath_Lib.x64.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     endif()
 endif()
 

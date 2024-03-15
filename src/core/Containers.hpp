@@ -528,13 +528,7 @@ private:
 
 enum class EngineCallback
 {
-    NONE,
-
-    CREATE_GRAPHICS_PIPELINES,
-    DESTROY_GRAPHICS_PIPELINES,
-
-    CREATE_RAYTRACING_PIPELINES,
-    DESTROY_RAYTRACING_PIPELINES
+    NONE
 };
 
 using EngineCallbacks = Callbacks<EngineCallback, Engine *>;

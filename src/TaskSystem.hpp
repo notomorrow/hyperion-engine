@@ -252,7 +252,7 @@ public:
     template <class Container, class Lambda>
     void ParallelForEach(TaskThreadPoolName pool, uint num_batches, Container &&items, Lambda &&lambda)
     {
-        // static_assert(Container::is_contiguous, "Container must be contiguous to perform ParallelForEach");
+        //static_assert(Container::is_contiguous, "Container must be contiguous to use ParallelForEach");
 
         const uint num_items = uint(items.Size());
 

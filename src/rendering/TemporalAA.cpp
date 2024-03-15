@@ -98,7 +98,7 @@ void TemporalAA::CreateComputePipelines()
 {
     auto shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalAA));
 
-    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 

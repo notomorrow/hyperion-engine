@@ -34,7 +34,7 @@ public:
     ~RenderListContainer() = default;
 
     uint NumRenderLists() const
-        { return m_num_render_lists.load(); }
+        { return m_num_render_lists.Get(MemoryOrder::ACQUIRE); }
 
     void AddScene(const Scene *scene)
     {
@@ -45,7 +45,7 @@ public:
 
         m_render_lists_by_id_index[scene_index].SetCamera(scene->GetCamera());
 
-        const uint render_list_index = m_num_render_lists.fetch_add(1u);
+        const uint render_list_index = m_num_render_lists.Increment(1u, MemoryOrder::ACQUIRE_RELEASE);
         m_render_lists[render_list_index] = &m_render_lists_by_id_index[scene_index];
     }
 
@@ -55,7 +55,7 @@ public:
 
         const uint scene_index = scene->GetID().ToIndex();
         
-        m_num_render_lists.fetch_sub(1u);
+        m_num_render_lists.Decrement(1u, MemoryOrder::RELEASE);
         m_render_lists_by_id_index[scene_index].SetCamera(Handle<Camera>::empty);
         m_render_lists_by_id_index[scene_index].Reset();
     }
@@ -72,7 +72,7 @@ public:
 private:
     FixedArray<RenderList *, max_scenes>    m_render_lists;
     FixedArray<RenderList, max_scenes>      m_render_lists_by_id_index;
-    std::atomic<uint>                       m_num_render_lists;
+    AtomicVar<uint32>                       m_num_render_lists;
 };
 
 class World : public BasicObject<STUB_CLASS(World)>

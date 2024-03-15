@@ -106,20 +106,20 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     LogType lt = LogType::Info;
 
     switch (severity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            lt = LogType::RenDebug;
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            lt = LogType::RenWarn;
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            lt = LogType::RenError;
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            lt = LogType::RenInfo;
-            break;
-        default:
-            break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        lt = LogType::RenDebug;
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        lt = LogType::RenWarn;
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        lt = LogType::RenError;
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        lt = LogType::RenInfo;
+        break;
+    default:
+        break;
     }
 
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
@@ -244,10 +244,8 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
     if (!m_application->GetVkExtensions(extension_names)) {
         return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
     }
-
-#ifndef HYPERION_BUILD_RELEASE
+    
     extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
 
 #if VK_HEADER_VERSION >= 216
     // add our enumeration extension to our instance extensions

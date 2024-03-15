@@ -349,12 +349,7 @@ void Engine::Compile()
     }
 
     m_deferred_renderer.Create();
-
-    HYP_SYNC_RENDER();
-
-    callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
-
+    
     HYP_SYNC_RENDER();
 
     m_is_render_loop_active = true;

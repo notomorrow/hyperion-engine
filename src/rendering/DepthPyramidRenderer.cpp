@@ -116,7 +116,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
     Handle<Shader> shader = g_shader_manager->GetOrCreate(HYP_NAME(GenerateDepthPyramid), { });
     AssertThrow(shader.IsValid());
     
-    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     m_mip_descriptor_tables.Reserve(num_mip_levels);
 

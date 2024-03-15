@@ -22,6 +22,8 @@ struct Handle
     using IDType = ID<T>;
 
     static_assert(has_opaque_handle_defined<T>, "Type does not support handles");
+    
+    static ObjectContainer<T> *s_container;
 
     static const Handle empty;
 
@@ -339,9 +341,21 @@ struct WeakHandle
 template <class T>
 const Handle<T> Handle<T>::empty = { };
 
+template <class T>
+ObjectContainer<T> *Handle<T>::s_container = nullptr;
+
 template <class T, class Engine, class ...Args>
 static HYP_FORCE_INLINE Handle<T> CreateObjectIntern(Engine *engine, Args &&... args)
 {
+    // Struct to set the container for Handle<T> on first call
+    static struct Initializer
+    {
+        Initializer()
+        {
+            Handle<T>::s_container = &GetContainer<T>();
+        }
+    } initializer;
+
     return engine->template CreateObject<T>(std::forward<Args>(args)...);
 }
 
@@ -352,26 +366,6 @@ template <class T, class ...Args>
 static HYP_FORCE_INLINE Handle<T> CreateObject(Args &&... args)
 {
     return CreateObjectIntern<T>(GetEngine(), std::forward<Args>(args)...);
-}
-
-// Version of CreateObject for within scripts,
-// taking single void * parameter for the allocated object
-template <class T>
-static HYP_FORCE_INLINE Handle<T> ScriptCreateObject(const void *)
-{
-    return CreateObject<T>();
-}
-
-template <class T>
-static HYP_FORCE_INLINE ID<T> ScriptGetHandleID(const Handle<T> &handle)
-{
-    return handle.GetID();
-}
-
-template <class T>
-static HYP_FORCE_INLINE typename ID<T>::ValueType ScriptGetHandleIDValue(const Handle<T> &handle)
-{
-    return handle.GetID().Value();
 }
 
 } // namespace hyperion::v2

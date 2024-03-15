@@ -32,10 +32,10 @@ public:
         const VertexAttributeSet optional_vertex_attributes = in_object.GetDefinition().GetProperties().GetOptionalVertexAttributes();
         out.SetProperty("optional_vertex_attributes", FBOMData::FromUnsignedLong(optional_vertex_attributes.flag_mask));
 
-        out.SetProperty("num_descriptor_usages", FBOMData::FromUnsignedInt(uint32(in_object.GetDefinition().GetDescriptorUsages().Size())));
+        out.SetProperty("num_descriptor_usages", FBOMData::FromUnsignedInt(uint32(in_object.GetDescriptorUsages().Size())));
 
-        for (SizeType index = 0; index < in_object.GetDefinition().GetDescriptorUsages().Size(); index++) {
-            const DescriptorUsage &item = in_object.GetDefinition().GetDescriptorUsages()[index];
+        for (SizeType index = 0; index < in_object.GetDescriptorUsages().Size(); index++) {
+            const DescriptorUsage &item = in_object.GetDescriptorUsages()[index];
 
             out.SetProperty(
                 String("descriptor_usages.") + String::ToString(index) + ".slot",
@@ -230,7 +230,7 @@ public:
                         usage.params[key] = value;
                     }
 
-                    compiled_shader->GetDefinition().GetDescriptorUsages().Add(std::move(usage));
+                    compiled_shader->GetDescriptorUsages().Add(std::move(usage));
                 }
             }
         }

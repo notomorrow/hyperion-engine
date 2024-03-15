@@ -1,18 +1,19 @@
-#include "ParticleSystem.hpp"
-
-#include <Engine.hpp>
-#include <scene/camera/OrthoCamera.hpp>
-#include <math/MathUtil.hpp>
-#include <math/Color.hpp>
-#include <util/MeshBuilder.hpp>
-#include <util/NoiseFactory.hpp>
+#include <rendering/ParticleSystem.hpp>
 
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/lib/util/ForEach.hpp>
+
+#include <math/MathUtil.hpp>
+#include <math/Color.hpp>
+#include <util/MeshBuilder.hpp>
+#include <util/NoiseFactory.hpp>
 #include <util/fs/FsUtil.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 
@@ -251,7 +252,7 @@ void ParticleSpawner::CreateRenderGroup()
     m_shader = g_shader_manager->GetOrCreate(HYP_NAME(Particle));
     InitObject(m_shader);
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
@@ -296,7 +297,7 @@ void ParticleSpawner::CreateComputePipelines()
     Handle<Shader> update_particles_shader = g_shader_manager->GetOrCreate(HYP_NAME(UpdateParticles), properties);
     InitObject(update_particles_shader);
 
-    renderer::DescriptorTableDeclaration descriptor_table_decl = update_particles_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    renderer::DescriptorTableDeclaration descriptor_table_decl = update_particles_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
@@ -500,13 +501,10 @@ void ParticleSystem::Render(Frame *frame)
     const uint frame_index = frame->GetFrameIndex();
 
     FixedArray<uint, num_async_rendering_command_buffers> command_buffers_recorded_states { };
-
-    // always run renderer items as HIGH priority,
-    // so we do not lock up because we're waiting for a large process to
-    // complete in the same thread
-    TaskSystem::GetInstance().ParallelForEach(
-        THREAD_POOL_RENDER,
+    
+    ForEachInBatches(
         m_particle_spawners.GetItems(),
+        num_async_rendering_command_buffers,
         [this, &command_buffers_recorded_states, frame_index](const Handle<ParticleSpawner> &particle_spawner, uint index, uint batch_index) {
             const GraphicsPipelineRef &pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
 

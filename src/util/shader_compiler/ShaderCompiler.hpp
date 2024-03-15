@@ -757,7 +757,6 @@ struct ShaderDefinition
 {
     Name                name;
     ShaderProperties    properties;
-    DescriptorUsageSet  descriptor_usages;
 
     HYP_FORCE_INLINE
     Name GetName() const
@@ -770,14 +769,6 @@ struct ShaderDefinition
     HYP_FORCE_INLINE
     const ShaderProperties &GetProperties() const
         { return properties; }
-
-    HYP_FORCE_INLINE
-    DescriptorUsageSet &GetDescriptorUsages()
-        { return descriptor_usages; }
-
-    HYP_FORCE_INLINE
-    const DescriptorUsageSet &GetDescriptorUsages() const
-        { return descriptor_usages; }
 
     HYP_FORCE_INLINE
     explicit operator bool() const
@@ -810,12 +801,14 @@ struct ShaderDefinition
 struct CompiledShader
 {
     ShaderDefinition                                definition;
+    DescriptorUsageSet                              descriptor_usages;
     String                                          entry_point_name = "main";
-    HeapArray<ByteBuffer, ShaderModuleType::MAX>  modules;
+    HeapArray<ByteBuffer, ShaderModuleType::MAX>    modules;
 
     CompiledShader() = default;
-    CompiledShader(ShaderDefinition shader_definition, String entry_point_name = "main")
+    CompiledShader(ShaderDefinition shader_definition, DescriptorUsageSet descriptor_usages, String entry_point_name = "main")
         : definition(std::move(shader_definition)),
+          descriptor_usages(std::move(descriptor_usages)),
           entry_point_name(std::move(entry_point_name))
     {
     }
@@ -825,31 +818,48 @@ struct CompiledShader
     CompiledShader(CompiledShader &&other) noexcept             = default;
     CompiledShader &operator=(CompiledShader &&other) noexcept  = default;
     ~CompiledShader()                                           = default;
-
+    
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return modules.Any([](const ByteBuffer &buffer) { return buffer.Any(); }); }
-
-    ShaderDefinition &GetDefinition()
-        { return definition; }
-
-    const ShaderDefinition &GetDefinition() const
-        { return definition; }
-
+    
+    HYP_FORCE_INLINE
     Name GetName() const
         { return definition.name; }
+    
+    HYP_FORCE_INLINE
+    ShaderDefinition &GetDefinition()
+        { return definition; }
+    
+    HYP_FORCE_INLINE
+    const ShaderDefinition &GetDefinition() const
+        { return definition; }
+    
+    HYP_FORCE_INLINE
+    DescriptorUsageSet &GetDescriptorUsages()
+        { return descriptor_usages; }
 
+    HYP_FORCE_INLINE
+    const DescriptorUsageSet &GetDescriptorUsages() const
+        { return descriptor_usages; }
+    
+    HYP_FORCE_INLINE
     const String &GetEntryPointName() const
         { return entry_point_name; }
-
+    
+    HYP_FORCE_INLINE
     const ShaderProperties &GetProperties() const
         { return definition.properties; }
-
+    
+    HYP_FORCE_INLINE
     const HeapArray<ByteBuffer, ShaderModuleType::MAX> &GetModules() const
         { return modules; }
-
+    
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         HashCode hc;

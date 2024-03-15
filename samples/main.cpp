@@ -41,13 +41,6 @@ void HandleSignal(int signum)
 
 int main(int argc, char **argv)
 {
-    DebugLog(
-        LogType::Info,
-        "Starting application\n"
-    );
-
-    fflush(stdout);
-
     signal(SIGINT, HandleSignal);
     
     // handle fatal crashes

@@ -496,7 +496,7 @@ void GaussianSplattingInstance::CreateShader()
 void GaussianSplattingInstance::CreateRenderGroup()
 {
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
-        m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable()
+        m_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -548,7 +548,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     InitObject(update_splats_shader);
 
     DescriptorTableRef update_splats_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
-        update_splats_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable()
+        update_splats_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -586,7 +586,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     InitObject(update_splat_distances_shader);
 
     DescriptorTableRef update_splat_distances_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
-        update_splat_distances_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable()
+        update_splat_distances_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -626,7 +626,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
 
     for (uint sort_stage_index = 0; sort_stage_index < SortStage::SORT_STAGE_MAX; sort_stage_index++) {
         DescriptorTableRef sort_splats_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
-            sort_splats_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable()
+            sort_splats_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable()
         );
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

@@ -237,7 +237,7 @@ void DDGI::CreatePipelines()
     m_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTProbe));
     InitObject(m_shader);
 
-    const DescriptorTableDeclaration raytracing_pipeline_descriptor_table_decl = m_shader->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+    const DescriptorTableDeclaration raytracing_pipeline_descriptor_table_decl = m_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
     DescriptorTableRef raytracing_pipeline_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(raytracing_pipeline_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -280,7 +280,7 @@ void DDGI::CreatePipelines()
     for (auto &it : shaders) {
         InitObject(it.first);
         
-        const DescriptorTableDeclaration descriptor_table_decl = it.first->GetCompiledShader().GetDefinition().GetDescriptorUsages().BuildDescriptorTable();
+        const DescriptorTableDeclaration descriptor_table_decl = it.first->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
