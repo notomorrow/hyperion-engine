@@ -26,7 +26,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
 
     // This system must be ran before WorldAABBUpdaterSystem so that the bounding box is up to date
 
-    if (bounding_box_component.world_aabb.IsFinite()) {
+    if (bounding_box_component.world_aabb.IsValid()) {
         Octree &octree = entity_manager.GetScene()->GetOctree();
 
         const Octree::InsertResult insert_result = octree.Insert(
@@ -45,7 +45,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
             DebugLog(LogType::Warn, "Failed to insert entity %u into octree: %s\n", entity.Value(), insert_result.first.message);
         }
     } else {
-        DebugLog(LogType::Warn, "Entity %u has infinite bounding box, skipping octree insertion\n", entity.Value());
+        DebugLog(LogType::Warn, "Entity %u has invalid bounding box, skipping octree insertion\n", entity.Value());
     }
 
     visibility_state_component.last_aabb_hash = bounding_box_component.world_aabb.GetHashCode();

@@ -49,7 +49,7 @@ private:
     //     return Serialize(*extracted_value.Get(), out);
     // }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override final
     {
         UniquePtr<void> ptr;
 

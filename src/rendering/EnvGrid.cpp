@@ -14,6 +14,7 @@ static const Vec2u sh_num_samples = { 16, 16 };
 static const Extent2D sh_num_tiles = Extent2D(sh_num_samples);
 static const Extent2D sh_probe_dimensions = Extent2D { 16, 16 };
 static const uint sh_num_levels = MathUtil::Max(1u, uint(MathUtil::FastLog2(sh_num_samples.Max()) + 1));
+static const bool sh_parallel_reduce = false;
 
 static const uint max_queued_probes_for_render = 1;
 
@@ -1011,61 +1012,64 @@ void EnvGrid::ComputeSH(
     m_compute_sh->Dispatch(frame->GetCommandBuffer(), Extent3D { 6, 1, 1 });
 
     // Parallel reduce
+    if (sh_parallel_reduce) {
+        for (uint i = 1; i < sh_num_levels; i++) {
+            m_sh_tiles_buffers[i - 1]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    for (uint i = 1; i < sh_num_levels; i++) {
-        m_sh_tiles_buffers[i - 1]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-        m_compute_sh_descriptor_tables[i - 1]->Bind(
-            frame,
-            m_reduce_sh,
-            {
+            m_compute_sh_descriptor_tables[i - 1]->Bind(
+                frame,
+                m_reduce_sh,
                 {
-                    HYP_NAME(Scene),
                     {
-                        { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                        { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                        { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-                        { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, probe.GetID().ToIndex()) }
+                        HYP_NAME(Scene),
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, probe.GetID().ToIndex()) }
+                        }
                     }
                 }
-            }
-        );
-        
-        const Vec2u prev_dimensions {
-            MathUtil::Max(1u, sh_num_samples.x >> (i - 1)),
-            MathUtil::Max(1u, sh_num_samples.y >> (i - 1))
-        };
+            );
+            
+            const Vec2u prev_dimensions {
+                MathUtil::Max(1u, sh_num_samples.x >> (i - 1)),
+                MathUtil::Max(1u, sh_num_samples.y >> (i - 1))
+            };
 
-        const Vec2u next_dimensions {
-            MathUtil::Max(1u, sh_num_samples.x >> i),
-            MathUtil::Max(1u, sh_num_samples.y >> i)
-        };
+            const Vec2u next_dimensions {
+                MathUtil::Max(1u, sh_num_samples.x >> i),
+                MathUtil::Max(1u, sh_num_samples.y >> i)
+            };
 
-        AssertThrow(prev_dimensions.x >= 2);
-        AssertThrow(prev_dimensions.x > next_dimensions.x);
-        AssertThrow(prev_dimensions.y > next_dimensions.y);
+            AssertThrow(prev_dimensions.x >= 2);
+            AssertThrow(prev_dimensions.x > next_dimensions.x);
+            AssertThrow(prev_dimensions.y > next_dimensions.y);
 
-        push_constants.level_dimensions = {
-            prev_dimensions.x,
-            prev_dimensions.y,
-            next_dimensions.x,
-            next_dimensions.y
-        };
+            push_constants.level_dimensions = {
+                prev_dimensions.x,
+                prev_dimensions.y,
+                next_dimensions.x,
+                next_dimensions.y
+            };
 
-        m_reduce_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-        m_reduce_sh->Dispatch(frame->GetCommandBuffer(), Extent3D {
-            1,
-            (next_dimensions.x + 3) / 4,
-            (next_dimensions.y + 3) / 4
-        });
+            m_reduce_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
+            m_reduce_sh->Dispatch(frame->GetCommandBuffer(), Extent3D {
+                1,
+                (next_dimensions.x + 3) / 4,
+                (next_dimensions.y + 3) / 4
+            });
+        }
     }
 
+    const uint finalize_sh_buffer_index = sh_parallel_reduce ? sh_num_levels - 1 : 0;
+
     // Finalize - build into final buffer
-    m_sh_tiles_buffers.Back()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    m_sh_tiles_buffers[finalize_sh_buffer_index]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
     g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_compute_sh_descriptor_tables.Back()->Bind(
+    m_compute_sh_descriptor_tables[finalize_sh_buffer_index]->Bind(
         frame,
         m_finalize_sh,
         {
@@ -1084,6 +1088,8 @@ void EnvGrid::ComputeSH(
 
     m_finalize_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
     m_finalize_sh->Dispatch(frame->GetCommandBuffer(), Extent3D { 1, 1, 1 });
+
+    g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
 }
 
 void EnvGrid::OffsetVoxelGrid(

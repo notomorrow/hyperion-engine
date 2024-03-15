@@ -1,4 +1,5 @@
 #include <core/lib/DynArray.hpp>
+#include <core/Util.hpp>
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/RenderGroup.hpp>
@@ -116,7 +117,7 @@ void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attri
 
     // Set each bitset to be the bits that are in the previous bitset, but not in the new one.
     // This will give us a list of IDs that were removed.
-    for (uint i = 0; i < std::size(prev_bitsets); i++) {
+    for (uint i = 0; i < ArraySize(prev_bitsets); i++) {
         // If any of the bitsets are different sizes, resize them to match the largest one,
         // this makes ~ and & operations work as expected
         if (prev_bitsets[i].NumBits() > new_bitsets[i].NumBits()) {

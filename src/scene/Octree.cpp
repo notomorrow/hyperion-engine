@@ -374,49 +374,44 @@ Octree::InsertResult Octree::Insert(ID<Entity> id, const BoundingBox &aabb, bool
         };
     }
 
-    if (!aabb.IsFinite()) {
-        return {
-            { Octree::Result::OCTREE_ERR, "AABB is not finite" },
-            OctantID::invalid
-        };
-    }
+    if (aabb.IsFinite()) {
+        if (allow_rebuild) {
+            if (!m_aabb.Contains(aabb)) {
+                auto rebuild_result = RebuildExtendInternal(aabb);
 
-    if (allow_rebuild) {
-        if (!m_aabb.Contains(aabb)) {
-            auto rebuild_result = RebuildExtendInternal(aabb);
-
-            if (!rebuild_result.first) {
+                if (!rebuild_result.first) {
 #ifdef HYP_OCTREE_DEBUG
-                DebugLog(
-                    LogType::Warn,
-                    "Failed to rebuild octree when inserting entity #%lu\n",
-                    id.Value()
-                );
+                    DebugLog(
+                        LogType::Warn,
+                        "Failed to rebuild octree when inserting entity #%lu\n",
+                        id.Value()
+                    );
 #endif
 
-                return rebuild_result;
+                    return rebuild_result;
+                }
             }
         }
-    }
 
-    // stop recursing if we are at max depth
-    if (m_octant_id.GetDepth() < OctantID::max_depth - 1) {
-        for (Octant &octant : m_octants) {
-            if (octant.aabb.Contains(aabb)) {
-                if (!IsDivided()) {
-                    if (allow_rebuild) {
-                        Divide();
-                    } else {
-                        // do not use this octant if it has not been divided yet.
-                        // instead, we'll insert into the current octant and mark it dirty
-                        // so it will get added after the fact.
-                        continue;
+        // stop recursing if we are at max depth
+        if (m_octant_id.GetDepth() < OctantID::max_depth - 1) {
+            for (Octant &octant : m_octants) {
+                if (octant.aabb.Contains(aabb)) {
+                    if (!IsDivided()) {
+                        if (allow_rebuild) {
+                            Divide();
+                        } else {
+                            // do not use this octant if it has not been divided yet.
+                            // instead, we'll insert into the current octant and mark it dirty
+                            // so it will get added after the fact.
+                            continue;
+                        }
                     }
+
+                    AssertThrow(octant.octree != nullptr);
+
+                    return octant.octree->Insert(id, aabb, allow_rebuild);
                 }
-
-                AssertThrow(octant.octree != nullptr);
-
-                return octant.octree->Insert(id, aabb, allow_rebuild);
             }
         }
     }
@@ -820,12 +815,12 @@ Octree::InsertResult Octree::Rebuild()
     }
 
     for (auto &it : new_nodes) {
-        AssertThrowMsg(it.aabb.IsFinite(), "Element AABB must be finite");
-
-        if (IsRoot()) {
-            m_aabb.Extend(it.aabb);
-        } else {
-            AssertThrow(m_aabb.Contains(it.aabb));
+        if (it.aabb.IsFinite()) {
+            if (IsRoot()) {
+                m_aabb.Extend(it.aabb);
+            } else {
+                AssertThrow(m_aabb.Contains(it.aabb));
+            }
         }
 
         auto insert_result = Insert(it.id, it.aabb, true /* allow rebuild */);
@@ -849,8 +844,6 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox &new_aabb)
     m_aabb = new_aabb;
 
     for (auto &it : new_nodes) {
-        AssertThrowMsg(it.aabb.IsFinite(), "Element AABB must be finite");
-
         auto insert_result = Insert(it.id, it.aabb, true /* allow rebuild */);
 
         if (!insert_result.first) {
