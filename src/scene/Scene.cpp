@@ -301,6 +301,68 @@ void Scene::CollectEntities(
     }
 }
 
+void Scene::CollectDynamicEntities(
+    RenderList &render_list,
+    const Handle<Camera> &camera,
+    Optional<RenderableAttributeSet> override_attributes,
+    bool skip_frustum_culling
+) const
+{
+    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+
+    // clear out existing entities before populating
+    render_list.ClearEntities();
+
+    if (!camera) {
+        return;
+    }
+
+    const ID<Camera> camera_id = camera.GetID();
+
+    RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
+    const uint32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
+    
+    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
+
+    for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>()) {
+        auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] = it;
+
+        if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+            if (!visibility_state_component.visibility_state) {
+                continue;
+            }
+
+
+            if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                DebugLog(
+                    LogType::Debug,
+                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
+                    entity_id.Value(),
+                    camera_id.Value()
+                );
+#endif
+
+                continue;
+            }
+#endif
+        }
+
+        render_list.PushEntityToRender(
+            camera,
+            entity_id,
+            mesh_component.mesh,
+            mesh_component.material,
+            mesh_component.skeleton,
+            transform_component.transform.GetMatrix(),
+            mesh_component.previous_model_matrix,
+            bounding_box_component.world_aabb,
+            override_attributes_ptr
+        );
+    }
+}
+
 void Scene::CollectStaticEntities(
     RenderList &render_list,
     const Handle<Camera> &camera,

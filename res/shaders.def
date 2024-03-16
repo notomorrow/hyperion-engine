@@ -133,6 +133,11 @@ vert = Default.vert
 [BlurShadowMap]
 comp = shadow/BlurShadowMap.comp
 
+[CombineShadowMaps]
+permute = STAGE(STATICS DYNAMICS)
+frag = shadow/CombineShadowMaps.frag
+vert = PostEffect.vert
+
 [SSRWriteUVs]
 permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING, ROUGHNESS_SCATTERING
 comp = ssr/ssr_write_uvs.comp

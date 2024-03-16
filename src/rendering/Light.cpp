@@ -19,7 +19,9 @@ struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(UnbindLight)() override = default;
+
+    virtual Result operator()() override
     {
         g_engine->GetRenderState().UnbindLight(id);
 
@@ -38,7 +40,9 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(UpdateLightShaderData)() override = default;
+
+    virtual Result operator()() override
     {
         light.m_draw_proxy = draw_proxy;
         

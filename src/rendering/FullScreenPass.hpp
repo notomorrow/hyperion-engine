@@ -58,6 +58,12 @@ public:
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     virtual ~FullScreenPass();
 
+    Extent2D GetExtent() const
+        { return m_extent; }
+
+    InternalFormat GetFormat() const
+        { return m_image_format; }
+
     const AttachmentUsageRef &GetAttachmentUsage(uint attachment_index) const
         { return GetFramebuffer()->GetAttachmentUsages()[attachment_index]; }
 

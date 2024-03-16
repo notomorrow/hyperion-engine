@@ -105,7 +105,7 @@ Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     Array<VkAttachmentReference> color_attachment_usages;
 
     VkSubpassDescription subpass_description { };
-    subpass_description.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.pDepthStencilAttachment = nullptr;
 
     uint next_binding = 0;
@@ -123,15 +123,20 @@ Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
             depth_attachment_usage = attachment_usage->GetHandle();
             subpass_description.pDepthStencilAttachment = &depth_attachment_usage;
 
-            m_clear_values.PushBack(VkClearValue {
+            m_vk_clear_values.PushBack(VkClearValue {
                 .depthStencil = { 1.0f, 0 }
             });
         } else {
             color_attachment_usages.PushBack(attachment_usage->GetHandle());
 
-            m_clear_values.PushBack(VkClearValue {
+            m_vk_clear_values.PushBack(VkClearValue {
                 .color = {
-                    .float32 = { 0.0f, 0.0f, 0.0f, 0.0f }
+                    .float32 = {
+                        m_clear_color.x,
+                        m_clear_color.y,
+                        m_clear_color.z,
+                        m_clear_color.w
+                    }
                 }
             });
         }
@@ -193,8 +198,8 @@ void RenderPass<Platform::VULKAN>::Begin(CommandBuffer<Platform::VULKAN> *cmd, F
     render_pass_info.framebuffer        = framebuffer->GetHandle();
     render_pass_info.renderArea.offset  = { 0, 0 };
     render_pass_info.renderArea.extent  = VkExtent2D { framebuffer->GetWidth(), framebuffer->GetHeight() };
-    render_pass_info.clearValueCount    = uint32(m_clear_values.Size());
-    render_pass_info.pClearValues       = m_clear_values.Data();
+    render_pass_info.clearValueCount    = uint32(m_vk_clear_values.Size());
+    render_pass_info.pClearValues       = m_vk_clear_values.Data();
 
     VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE;
 

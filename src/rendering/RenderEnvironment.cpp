@@ -198,8 +198,6 @@ void RenderEnvironment::RenderRTRadiance(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
     AssertReady();
-
-    AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
     
     if (m_has_rt_radiance) {
         m_rt_radiance->Render(frame);

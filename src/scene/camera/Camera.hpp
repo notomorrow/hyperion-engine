@@ -244,6 +244,8 @@ public:
     const Matrix4 &GetViewProjectionMatrix() const { return m_view_proj_mat; }
     void SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat);
 
+    const Matrix4 &GetPreviousViewMatrix() const { return m_previous_view_matrix; }
+
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into ndc coordinates */
     Vector3 TransformScreenToNDC(const Vector2 &screen) const;
 

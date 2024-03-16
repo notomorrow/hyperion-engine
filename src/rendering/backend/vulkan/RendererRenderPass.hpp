@@ -6,6 +6,7 @@
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererAttachment.hpp>
 
+#include <math/Vector4.hpp>
 #include <core/lib/DynArray.hpp>
 
 #include <Types.hpp>
@@ -45,6 +46,12 @@ public:
     RenderPassStage GetStage() const
         { return m_stage; }
 
+    Vec4f GetClearColor() const
+        { return m_clear_color; }
+
+    void SetClearColor(const Vec4f &clear_color)
+        { m_clear_color = clear_color; }
+
     bool IsMultiview() const
         { return m_num_multiview_layers != 0; }
 
@@ -75,10 +82,12 @@ private:
     RenderPassMode                              m_mode;
     uint                                        m_num_multiview_layers;
 
+    Vec4f                                       m_clear_color;
+
     Array<AttachmentUsageRef<Platform::VULKAN>> m_render_pass_attachment_usages;
 
     Array<VkSubpassDependency>                  m_dependencies;
-    Array<VkClearValue>                         m_clear_values;
+    Array<VkClearValue>                         m_vk_clear_values;
 
     VkRenderPass                                m_handle;
 };

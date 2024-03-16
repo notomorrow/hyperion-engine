@@ -55,6 +55,9 @@ public:
     );
 
     ~RTRadianceRenderer();
+
+    bool IsPathTracer() const
+        { return m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER; }
     
     void SetTLAS(Handle<TLAS> tlas)
         { m_tlas = std::move(tlas); }
@@ -72,7 +75,6 @@ private:
     void CreateRaytracingPipeline();
     void CreateTemporalBlending();
     void UpdateUniforms(Frame *frame);
-    void SubmitPushConstants(CommandBuffer *command_buffer);
     
     struct ImageOutput
     {
@@ -110,7 +112,7 @@ private:
     UniquePtr<TemporalBlending>                         m_temporal_blending;
 
     RaytracingPipelineRef                               m_raytracing_pipeline;
-    GPUBufferRef                                        m_uniform_buffer;
+    FixedArray<GPUBufferRef, max_frames_in_flight>      m_uniform_buffers;
 
     Matrix4                                             m_previous_view_matrix;
 };

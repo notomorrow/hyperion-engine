@@ -168,6 +168,13 @@ public:
         bool skip_frustum_culling = false
     ) const;
 
+    void CollectDynamicEntities(
+        RenderList &render_list, 
+        const Handle<Camera> &camera,
+        Optional<RenderableAttributeSet> override_attributes = { },
+        bool skip_frustum_culling = false
+    ) const;
+
     void CollectStaticEntities(
         RenderList &render_list, 
         const Handle<Camera> &camera,

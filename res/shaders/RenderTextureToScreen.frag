@@ -33,6 +33,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 void main()
 {
+#if 0
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
@@ -43,6 +44,7 @@ void main()
         color_output = vec4(0.0);
         return;
     }
+#endif
 
     color_output = Texture2D(sampler_nearest, src_image, v_texcoord);
 }

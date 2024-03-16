@@ -434,9 +434,8 @@ void Node::LockTransform()
 
     // set entity to static
     if (m_entity.IsValid()) {
-        if (!m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
-            m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
-        }
+        m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
+        m_scene->GetEntityManager()->RemoveTag<EntityTag::DYNAMIC>(m_entity);
     }
 
     for (auto &child : m_child_nodes) {
@@ -494,9 +493,8 @@ void Node::SetEntity(ID<Entity> entity)
         RefreshEntityTransform();
 
         // set entity to static by default
-        if (!m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
-            m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
-        }
+        m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
+        m_scene->GetEntityManager()->RemoveTag<EntityTag::DYNAMIC>(m_entity);
     } else {
         m_local_aabb = BoundingBox::empty;
 
@@ -542,9 +540,8 @@ void Node::UpdateWorldTransform()
     }
 
     if (m_entity.IsValid()) {
-        if (m_scene->GetEntityManager()->HasTag<EntityTag::STATIC>(m_entity)) {
-            m_scene->GetEntityManager()->RemoveTag<EntityTag::STATIC>(m_entity);
-        }
+        m_scene->GetEntityManager()->AddTag<EntityTag::DYNAMIC>(m_entity);
+        m_scene->GetEntityManager()->RemoveTag<EntityTag::STATIC>(m_entity);
 
         if (auto *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
             transform_component->transform = m_world_transform;

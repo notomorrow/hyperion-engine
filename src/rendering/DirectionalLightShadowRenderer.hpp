@@ -25,29 +25,27 @@ using renderer::Frame;
 using renderer::Image;
 using renderer::ImageView;
 
-enum class ShadowMode
+enum class ShadowMode : uint
 {
     STANDARD,
     PCF,
     CONTACT_HARDENED,
-    VSM
+    VSM,
+
+    MAX
 };
 
 struct ShadowMapCameraData
 {
-    Matrix4 view;
-    Matrix4 projection;
+    Matrix4     view;
+    Matrix4     projection;
     BoundingBox aabb;
 };
 
-struct RenderCommand_CreateShadowMapDescriptors;
-
 class ShadowPass : public FullScreenPass
 {
-    friend struct RenderCommand_CreateShadowMapDescriptors;
-
 public:
-    ShadowPass(const Handle<Scene> &parent_scene, Extent2D resolution);
+    ShadowPass(const Handle<Scene> &parent_scene, ShadowMode shadow_mode, Extent2D extent);
     ShadowPass(const ShadowPass &other) = delete;
     ShadowPass &operator=(const ShadowPass &other) = delete;
     virtual ~ShadowPass();
@@ -56,8 +54,11 @@ public:
 
     const Handle<Light> &GetLight() const { return m_light; }
 
-    RenderList &GetRenderList() { return m_render_list; }
-    const RenderList &GetRenderList() const { return m_render_list; }
+    RenderList &GetRenderListStatics() { return m_render_list_statics; }
+    const RenderList &GetRenderListStatics() const { return m_render_list_statics; }
+
+    RenderList &GetRenderListDynamics() { return m_render_list_dynamics; }
+    const RenderList &GetRenderListDynamics() const { return m_render_list_dynamics; }
 
     void SetLight(const Handle<Light> &light)
     {
@@ -74,9 +75,6 @@ public:
     const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin) { m_origin = origin; }
 
-    Extent2D GetResolution() const
-        { return m_resolution; }
-
     uint GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
@@ -90,7 +88,7 @@ public:
     }
 
     const Handle<Texture> &GetShadowMap() const
-        { return m_shadow_map; }
+        { return m_shadow_map_all; }
 
     void CreateShader();
     virtual void CreateFramebuffer() override;
@@ -102,19 +100,23 @@ public:
 
 private:
     void CreateShadowMap();
+    void CreateCombineShadowMapsPass();
     void CreateComputePipelines();
 
     Handle<Scene>                   m_parent_scene;
     Handle<Light>                   m_light;
     ShadowMode                      m_shadow_mode;
     Handle<Camera>                  m_camera;
-    RenderList                      m_render_list;
+    RenderList                      m_render_list_statics;
+    RenderList                      m_render_list_dynamics;
     Vector3                         m_origin;
     uint                            m_shadow_map_index;
-    Extent2D                        m_resolution;
+    
+    Handle<Texture>                 m_shadow_map_statics;
+    Handle<Texture>                 m_shadow_map_dynamics;
+    Handle<Texture>                 m_shadow_map_all;
 
-    Handle<Texture>                 m_shadow_map;
-
+    UniquePtr<FullScreenPass>       m_combine_shadow_maps_pass;
     ComputePipelineRef              m_blur_shadow_map_pipeline;
 };
 

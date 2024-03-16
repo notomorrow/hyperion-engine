@@ -22,7 +22,9 @@ struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateCommandBuffers)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint i = 0; i < max_frames_in_flight; i++) {
             HYPERION_BUBBLE_ERRORS(command_buffers[i]->Create(

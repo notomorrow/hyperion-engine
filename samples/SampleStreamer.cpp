@@ -434,7 +434,7 @@ void SampleStreamer::InitGame()
 
 
     // Add Skybox
-    if (false) {
+    if (true) {
         auto skybox_entity = m_scene->GetEntityManager()->AddEntity();
 
         m_scene->GetEntityManager()->AddComponent(skybox_entity, TransformComponent {

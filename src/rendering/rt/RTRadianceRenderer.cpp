@@ -58,21 +58,25 @@ struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet) : renderer::Ren
     }
 };
 
-struct RENDER_COMMAND(CreateRTRadianceUniformBuffer) : renderer::RenderCommand
+struct RENDER_COMMAND(CreateRTRadianceUniformBuffers) : renderer::RenderCommand
 {
-    GPUBufferRef uniform_buffer;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  uniform_buffers;
 
-    RENDER_COMMAND(CreateRTRadianceUniformBuffer)(const GPUBufferRef &uniform_buffer)
-        : uniform_buffer(uniform_buffer)
+    RENDER_COMMAND(CreateRTRadianceUniformBuffers)(FixedArray<GPUBufferRef, max_frames_in_flight> uniform_buffers)
+        : uniform_buffers(std::move(uniform_buffers))
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateRTRadianceUniformBuffer)() override = default;
+    virtual ~RENDER_COMMAND(CreateRTRadianceUniformBuffers)() override = default;
 
     virtual Result operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
-        uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            GPUBufferRef &uniform_buffer = uniform_buffers[frame_index];
+
+            HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
+            uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
+        }
 
         HYPERION_RETURN_OK;
     }
@@ -123,7 +127,7 @@ void RTRadianceRenderer::Destroy()
 
     SafeRelease(std::move(m_raytracing_pipeline));
 
-    SafeRelease(std::move(m_uniform_buffer));
+    SafeRelease(std::move(m_uniform_buffers));
     
     // remove result image from global descriptor set
     g_safe_deleter->SafeReleaseHandle(std::move(m_texture));
@@ -147,7 +151,7 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
     uniforms.num_bound_lights = num_bound_lights;
 
-    m_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
+    m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
 
     if (m_updates[frame->GetFrameIndex()]) {
         m_raytracing_pipeline->GetDescriptorTable().Get()->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex());
@@ -156,17 +160,11 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
     }
 }
 
-void RTRadianceRenderer::SubmitPushConstants(CommandBuffer *command_buffer)
-{
-}
-
 void RTRadianceRenderer::Render(Frame *frame)
 {
     UpdateUniforms(frame);
 
     m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
-
-    SubmitPushConstants(frame->GetCommandBuffer());
 
     m_raytracing_pipeline->GetDescriptorTable().Get()->Bind(
         frame,
@@ -208,7 +206,7 @@ void RTRadianceRenderer::Render(Frame *frame)
     );
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
-    if (m_temporal_blending->GetTechnique() == TemporalBlendTechnique::TECHNIQUE_4 && g_engine->GetRenderState().GetCamera().camera.view != m_previous_view_matrix) {
+    if (IsPathTracer() && g_engine->GetRenderState().GetCamera().camera.view != m_previous_view_matrix) {
         m_temporal_blending->ResetProgressiveBlending();
 
         m_previous_view_matrix = g_engine->GetRenderState().GetCamera().camera.view;
@@ -233,9 +231,12 @@ void RTRadianceRenderer::CreateImages()
 
 void RTRadianceRenderer::CreateUniformBuffer()
 {
-    m_uniform_buffer = MakeRenderObject<GPUBuffer>(UniformBuffer());
+    m_uniform_buffers = {
+        MakeRenderObject<GPUBuffer>(UniformBuffer()),
+        MakeRenderObject<GPUBuffer>(UniformBuffer())
+    };
 
-    PUSH_RENDER_COMMAND(CreateRTRadianceUniformBuffer, m_uniform_buffer);
+    PUSH_RENDER_COMMAND(CreateRTRadianceUniformBuffers, m_uniform_buffers);
 }
 
 void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
@@ -266,7 +267,7 @@ void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
 
 void RTRadianceRenderer::CreateRaytracingPipeline()
 {
-    if (m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER) {
+    if (IsPathTracer()) {
         m_shader = g_shader_manager->GetOrCreate(HYP_NAME(PathTracer));
     } else {
         m_shader = g_shader_manager->GetOrCreate(HYP_NAME(RTRadiance));
@@ -291,7 +292,7 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
         
         descriptor_set->SetElement(HYP_NAME(LightsBuffer), g_engine->GetRenderData()->lights.GetBuffer());
         descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer());
-        descriptor_set->SetElement(HYP_NAME(RTRadianceUniforms), m_uniform_buffer);
+        descriptor_set->SetElement(HYP_NAME(RTRadianceUniforms), m_uniform_buffers[frame_index]);
     }
 
     DeferCreate(
@@ -323,10 +324,10 @@ void RTRadianceRenderer::CreateTemporalBlending()
     m_temporal_blending.Reset(new TemporalBlending(
         m_extent,
         InternalFormat::RGBA8,
-        (m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER)
+        IsPathTracer()
             ? TemporalBlendTechnique::TECHNIQUE_4 // progressive blending
             : TemporalBlendTechnique::TECHNIQUE_1,
-        (m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER)
+        IsPathTracer()
             ? TemporalBlendFeedback::HIGH
             : TemporalBlendFeedback::LOW,
         FixedArray<ImageViewRef, max_frames_in_flight> {

@@ -32,7 +32,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[HYP_MAX_SHADOW_MAPS];
 
-HYP_DESCRIPTOR_UAV(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
@@ -222,7 +222,7 @@ void main()
         local_light *= light.position_intensity.w * attenuation;
 
         if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-            local_light *= GetShadowStandard(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
+            local_light *= GetShadowStandard(light.shadow_map_index, position.xyz);
         }
 
         direct_lighting += material_color.rgb * HYP_FMATH_ONE_OVER_PI * local_light;

@@ -9,6 +9,7 @@ enum class EntityTag : uint32
 {
     NONE,
     STATIC,
+    DYNAMIC,
     LIGHT,
 
     MAX

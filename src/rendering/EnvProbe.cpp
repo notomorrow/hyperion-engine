@@ -211,7 +211,7 @@ void EnvProbe::Init()
     BasicObject::Init();
 
     m_draw_proxy = EnvProbeDrawProxy {
-        .id = m_id,
+        .id = GetID(),
         .aabb = m_aabb,
         .world_position = GetOrigin(),
         .camera_near = m_camera_near,
@@ -374,7 +374,7 @@ void EnvProbe::EnqueueBind() const
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
-        PUSH_RENDER_COMMAND(BindEnvProbe, GetEnvProbeType(), m_id);
+        PUSH_RENDER_COMMAND(BindEnvProbe, GetEnvProbeType(), GetID());
     }
 }
 
@@ -384,7 +384,7 @@ void EnvProbe::EnqueueUnbind() const
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
-        PUSH_RENDER_COMMAND(UnbindEnvProbe, GetEnvProbeType(), m_id);
+        PUSH_RENDER_COMMAND(UnbindEnvProbe, GetEnvProbeType(), GetID());
     }
 }
 
