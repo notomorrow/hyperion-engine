@@ -20,8 +20,8 @@ namespace Hyperion
     public struct VisibilityStateComponent : IComponent
     {
         public VisibilityStateFlags visibilityStateFlags;
-        public IntPtr visibilityStatePtr;
         public OctantID octantID;
+        public IntPtr visibilityStatePtr;
         private HashCode lastAabbHash;
     }
 }

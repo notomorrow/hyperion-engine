@@ -470,7 +470,7 @@ void Engine::RenderNextFrame(Game *game)
     PreFrameUpdate(frame);
 
     HYPERION_ASSERT_RESULT(frame->BeginCapture(GetGPUInstance()->GetDevice()));
-
+    
     m_world->PreRender(frame);
 
     game->OnFrameBegin(frame);

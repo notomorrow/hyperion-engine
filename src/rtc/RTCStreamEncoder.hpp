@@ -6,9 +6,11 @@
 #include <core/lib/UniquePtr.hpp>
 #include <core/lib/Optional.hpp>
 
-namespace hyperion::v2 {
-
+namespace hyperion {
 class TaskThread;
+} // namespace hyperion
+
+namespace hyperion::v2 {
 
 class RTCTrack;
 

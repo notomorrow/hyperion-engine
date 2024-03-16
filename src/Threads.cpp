@@ -1,6 +1,6 @@
-#include "Threads.hpp"
+#include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
     { THREAD_MAIN,      ThreadID { uint(THREAD_MAIN),       HYP_NAME_UNSAFE(MainThread) } },
@@ -151,4 +151,4 @@ void Threads::Sleep(uint32 milliseconds)
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -202,7 +202,7 @@ void SampleStreamer::InitGame()
         0.01f, 30000.0f
     ));
 
-    auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
+    /*auto particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
         .texture = g_asset_manager->Load<Texture>("textures/spark.png"),
         .max_particles = 1000,
         .origin = Vector3(0.0f, 0.0f, 0.0f),
@@ -215,7 +215,7 @@ void SampleStreamer::InitGame()
 
     InitObject(particle_spawner);
 
-    m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(particle_spawner);
+    m_scene->GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(particle_spawner);*/
 
     /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
         Vector3(0.0f, 7.0f, 0.0f), Vector3(0.0f, 0.0f, 5.0f)
@@ -434,7 +434,7 @@ void SampleStreamer::InitGame()
 
 
     // Add Skybox
-    {
+    if (false) {
         auto skybox_entity = m_scene->GetEntityManager()->AddEntity();
 
         m_scene->GetEntityManager()->AddComponent(skybox_entity, TransformComponent {
@@ -580,7 +580,7 @@ void SampleStreamer::InitGame()
 
             // mesh_component.material->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_LIGHT_MAP, lightmap_texture);
         }
-
+        
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
             //node.Scale(0.25f);
@@ -591,12 +591,14 @@ void SampleStreamer::InitGame()
 
             GetScene()->GetRoot().AddChild(node);
 
+#if 0
             // Add a reflection probe
             // TEMP: Commented out due to blending issues with multiple reflection probes
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
                 HYP_NAME(ReflectionProbe0),
                 node.GetWorldAABB()
             );
+#endif
 
             for (auto &node : node.GetChildren()) {
                 if (auto child_entity = node.GetEntity()) {
@@ -606,7 +608,7 @@ void SampleStreamer::InitGame()
                 }
             }
 
-            auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
+            /*auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
             m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
                 node.GetWorldTransform()
@@ -631,7 +633,7 @@ void SampleStreamer::InitGame()
 
             auto env_grid_node = m_scene->GetRoot().AddChild();
             env_grid_node.SetEntity(env_grid_entity);
-            env_grid_node.SetName("EnvGrid");
+            env_grid_node.SetName("EnvGrid");*/
         }
     }
 

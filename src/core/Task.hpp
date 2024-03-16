@@ -9,7 +9,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct TaskID
 {
@@ -78,6 +78,6 @@ struct Task
         { return fn(std::forward<Args>(args)...); }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

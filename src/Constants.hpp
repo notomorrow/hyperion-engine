@@ -40,7 +40,7 @@ constexpr uint max_bindless_resources = 4096;
 constexpr uint num_gbuffer_textures = 8;
 
 // perform occlusion culling using indirect draw
-constexpr bool use_draw_indirect = true;
+constexpr bool use_draw_indirect = false;
 constexpr bool use_parallel_rendering = HYP_FEATURES_PARALLEL_RENDERING;
 
 template <class ...T>

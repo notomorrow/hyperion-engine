@@ -8,7 +8,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using ThreadMask = uint32;
 
@@ -72,6 +72,6 @@ public:
     static void Sleep(uint32 milliseconds);
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

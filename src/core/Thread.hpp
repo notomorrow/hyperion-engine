@@ -11,7 +11,7 @@
 #include <thread>
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct ThreadID
 {
@@ -222,6 +222,6 @@ bool Thread<SchedulerType, Args...>::CanJoin() const
     return m_thread->joinable();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

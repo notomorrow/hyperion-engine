@@ -1,6 +1,6 @@
 #include <TaskThread.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 TaskThread::TaskThread(const ThreadID &thread_id)
     : Thread(thread_id),
@@ -40,4 +40,4 @@ void TaskThread::operator()()
 
     m_is_running.Set(false, MemoryOrder::RELAXED);
 }
-} // namespace hyperion::v2
+} // namespace hyperion

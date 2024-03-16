@@ -65,9 +65,7 @@ void SkySystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity
 
 void SkySystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)
 {
-    for (auto [entity_id, sky_component, mesh_component] : entity_manager.GetEntitySet<SkyComponent, MeshComponent>()) {
-
-    }
+    // do nothing
 }
 
 } // namespace hyperion::v2

@@ -5,9 +5,11 @@
 #include <core/lib/ByteBuffer.hpp>
 #include <core/lib/UniquePtr.hpp>
 
-namespace hyperion::v2 {
-
+namespace hyperion {
 class TaskThread;
+} // namespace hyperion
+
+namespace hyperion::v2 {
 
 class RTCStreamEncoder;
 class RTCTrack;

@@ -17,7 +17,7 @@ class SystemWindow;
 
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct ThreadID;
 
@@ -46,6 +46,6 @@ protected:
     Queue<Scheduler::ScheduledTask> m_task_queue;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

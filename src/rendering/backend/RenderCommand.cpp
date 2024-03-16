@@ -4,8 +4,6 @@
 
 namespace hyperion::renderer {
 
-using ::hyperion::v2::Threads;
-
 FixedArray<RenderCommandHolder, max_render_command_types> RenderCommands::holders = { };
 AtomicVar<SizeType> RenderCommands::render_command_type_index = { 0 };
 RenderScheduler RenderCommands::scheduler = { };
@@ -37,7 +35,7 @@ Result RenderCommands::Flush()
         HYPERION_RETURN_OK;
     }
 
-    Threads::AssertOnThread(v2::THREAD_RENDER);
+    Threads::AssertOnThread(THREAD_RENDER);
 
     Array<RenderCommand *> commands;
 
@@ -118,7 +116,7 @@ Result RenderCommands::FlushOrWait()
         HYPERION_RETURN_OK;
     }
 
-    if (Threads::IsOnThread(v2::THREAD_RENDER)) {
+    if (Threads::IsOnThread(THREAD_RENDER)) {
         return Flush();
     }
 
@@ -129,7 +127,7 @@ Result RenderCommands::FlushOrWait()
 
 void RenderCommands::Wait()
 {
-    Threads::AssertOnThread(~v2::THREAD_RENDER);
+    Threads::AssertOnThread(~THREAD_RENDER);
 
     std::unique_lock lock(mtx);
     flushed_cv.wait(lock, [] { return RenderCommands::Count() == 0; });

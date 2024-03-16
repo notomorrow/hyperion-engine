@@ -11,7 +11,7 @@
 #include <pthread.h>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const ThreadID ThreadID::invalid = ThreadID { ~0u, HYP_NAME(InvalidThreadID) };
 
@@ -68,4 +68,4 @@ void SetCurrentThreadID(const ThreadID &thread_id)
 #endif
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

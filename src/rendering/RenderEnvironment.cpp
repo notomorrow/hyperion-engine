@@ -68,7 +68,7 @@ void RenderEnvironment::SetTLAS(const Handle<TLAS> &tlas)
 
     InitObject(m_tlas);
 
-    m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_TLAS);
+    m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_TLAS, MemoryOrder::RELEASE);
 }
 
 void RenderEnvironment::SetTLAS(Handle<TLAS> &&tlas)
@@ -77,7 +77,7 @@ void RenderEnvironment::SetTLAS(Handle<TLAS> &&tlas)
 
     InitObject(m_tlas);
 
-    m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_TLAS);
+    m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_TLAS, MemoryOrder::RELEASE);
 }
 
 void RenderEnvironment::Init()
@@ -144,7 +144,7 @@ void RenderEnvironment::Init()
             m_has_ddgi_probes = false;
         }
 
-        const auto update_marker_value = m_update_marker.load();
+        const auto update_marker_value = m_update_marker.Get(MemoryOrder::ACQUIRE);
 
         PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
 
@@ -155,7 +155,7 @@ void RenderEnvironment::Init()
             m_render_components_pending_removal.Clear();
         }
 
-        m_update_marker.fetch_and(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS);
+        m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS, MemoryOrder::RELEASE);
 
         HYP_SYNC_RENDER();
     });
@@ -234,12 +234,8 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
     m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;
 
-    const RenderEnvironmentUpdates update_marker_value = m_update_marker.load();
+    const RenderEnvironmentUpdates update_marker_value = m_update_marker.Get(MemoryOrder::ACQUIRE);
     RenderEnvironmentUpdates inverse_mask = 0;
-
-    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_ENTITIES) {
-        inverse_mask |= RENDER_ENVIRONMENT_UPDATES_ENTITIES;
-    }
 
     for (const auto &it : m_render_components) {
         for (const auto &component_tag_pair : it.second) {
@@ -368,7 +364,7 @@ void RenderEnvironment::RenderComponents(Frame *frame)
     }
 
     if (update_marker_value) {
-        m_update_marker.fetch_and(~inverse_mask);
+        m_update_marker.BitAnd(~inverse_mask, MemoryOrder::RELEASE);
     }
 
     ++m_frame_counter;

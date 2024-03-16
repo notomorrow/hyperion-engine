@@ -11,7 +11,7 @@
 
 namespace hyperion::v2 {
 
-static constexpr bool do_parallel_collection = false;
+static constexpr bool do_parallel_collection = true;
 
 #pragma region Render commands
 
@@ -329,12 +329,6 @@ void RenderList::PushEntityToRender(
         material.IsValid() ? material->GetRenderAttributes() : MaterialAttributes { }
     };
 
-    // Temp
-    if (material.IsValid()) {
-        AssertThrow(material->GetRenderAttributes().shader_definition.IsValid());
-        AssertThrow(attributes.GetShaderDefinition().IsValid());
-    }
-
     if (framebuffer) {
         attributes.SetFramebufferID(framebuffer->GetID());
     }
@@ -343,9 +337,7 @@ void RenderList::PushEntityToRender(
         if (const ShaderDefinition &override_shader_definition = override_attributes->GetShaderDefinition()) {
             attributes.SetShaderDefinition(override_shader_definition);
         }
-
-        AssertThrow(attributes.GetShaderDefinition().IsValid());
-
+        
         ShaderDefinition shader_definition = override_attributes->GetShaderDefinition().IsValid()
             ? override_attributes->GetShaderDefinition()
             : attributes.GetShaderDefinition();
@@ -367,8 +359,6 @@ void RenderList::PushEntityToRender(
         attributes.SetMaterialAttributes(new_material_attributes);
         attributes.SetStencilState(override_attributes->GetStencilState());
     }
-
-    AssertThrow(attributes.GetMaterialAttributes().shader_definition.IsValid());
 
     m_draw_collection->Insert(attributes, EntityDrawData {
         entity_id,

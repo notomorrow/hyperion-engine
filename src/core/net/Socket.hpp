@@ -55,10 +55,6 @@ protected:
 
 };
 
-using hyperion::v2::Thread;
-using hyperion::v2::Scheduler;
-using hyperion::v2::Task;
-
 class SocketServerThread final : public Thread<Scheduler<Task<void>>, SocketServer *>
 {
 public:

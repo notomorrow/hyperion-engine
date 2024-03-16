@@ -6,6 +6,7 @@
 #include <core/lib/util/ForEach.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion::v2 {
 
@@ -346,104 +347,6 @@ static void GetDividedDrawCalls(
     }
 }
 
-static void BindGlobalDescriptorSets(
-    Frame *frame,
-    renderer::GraphicsPipeline *pipeline,
-    CommandBuffer *command_buffer
-)
-{
-    const uint frame_index = frame->GetFrameIndex();
-
-    const uint global_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
-    AssertThrow(global_descriptor_set_index != -1);
-
-    const uint scene_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
-    AssertThrow(scene_descriptor_set_index != -1);
-
-    pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-        ->Bind(
-            command_buffer,
-            pipeline,
-            { },
-            global_descriptor_set_index
-        );
-
-    pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
-        ->Bind(
-            command_buffer,
-            pipeline,
-            {
-                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
-            },
-            scene_descriptor_set_index
-        );
-
-#ifdef HYP_FEATURES_BINDLESS_TEXTURES
-    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
-
-    if (material_descriptor_set_index != ~0u) {
-        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
-            ->Bind(command_buffer, pipeline, material_descriptor_set_index);
-    }
-#endif
-}
-
-static void BindPerObjectDescriptorSets(
-    Frame *frame,
-    renderer::GraphicsPipeline *pipeline,
-    CommandBuffer *command_buffer,
-    uint batch_index,
-    uint skeleton_index,
-    uint material_index
-)
-{
-    const uint frame_index = frame->GetFrameIndex();
-
-    const uint entity_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Object));
-
-#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-    if (entity_descriptor_set_index != ~0u) {
-        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-            ->Bind(
-                command_buffer,
-                pipeline,
-                {
-                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-                },
-                entity_descriptor_set_index
-            );
-    }
-#else
-    if (entity_descriptor_set_index != ~0u) {
-        pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index)
-            ->Bind(
-                command_buffer,
-                pipeline,
-                {
-                    { HYP_NAME(MaterialsBuffer), HYP_RENDER_OBJECT_OFFSET(Material, material_index) },
-                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, skeleton_index) },
-                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(batch_index * sizeof(EntityInstanceBatch)) }
-                },
-                entity_descriptor_set_index
-            );
-    }
-#endif
-
-#ifndef HYP_FEATURES_BINDLESS_TEXTURES
-    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
-
-    if (material_descriptor_set_index != ~0u) {
-        g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(ID<Material>::FromIndex(material_index), frame_index)
-            ->Bind(command_buffer, pipeline, material_descriptor_set_index);
-    }
-#endif
-}
-
 template <bool IsIndirect>
 static HYP_FORCE_INLINE void
 RenderAll(
@@ -456,6 +359,8 @@ RenderAll(
     const DrawCallCollection &draw_state
 )
 {
+    static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
+
     if (draw_state.draw_calls.Empty()) {
         return;
     }
@@ -478,16 +383,27 @@ RenderAll(
     // rather than using a single integer, we have to set states in a fixed array
     // because otherwise we'd need to use an atomic integer
     FixedArray<uint, num_async_rendering_command_buffers> command_buffers_recorded_states { };
+
+    const uint global_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+    const DescriptorSet2Ref &global_descriptor_set = pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index);
+
+    const uint scene_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+    const DescriptorSet2Ref &scene_descriptor_set = pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index);
     
-    // always run renderer items as HIGH priority,
-    // so we do not lock up because we're waiting for a large process to
-    // complete in the same thread
+    const uint material_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
+    const DescriptorSet2Ref &material_descriptor_set = use_bindless_textures
+        ? pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
+        : DescriptorSet2Ref::unset;
+    
+    const uint entity_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Object));
+    const DescriptorSet2Ref &entity_descriptor_set = pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index);
+    
 #if defined(HYP_FEATURES_PARALLEL_RENDERING) && HYP_FEATURES_PARALLEL_RENDERING
     ParallelForEach(divided_draw_calls, num_batches, THREAD_POOL_RENDER,
 #else
     ForEachInBatches(divided_draw_calls, num_batches,
 #endif
-        [frame, pipeline, indirect_renderer, &command_buffers, &command_buffers_recorded_states, frame_index](const Span<const DrawCall> &draw_calls, uint index, uint)
+        [&](Span<const DrawCall> draw_calls, uint index, uint)
         {
             if (!draw_calls) {
                 return;
@@ -501,24 +417,65 @@ RenderAll(
                 [&](CommandBuffer *secondary)
                 {
                     pipeline->Bind(secondary);
-
-                    BindGlobalDescriptorSets(
-                        frame,
+                    
+                    global_descriptor_set->Bind(
+                        secondary,
                         pipeline,
-                        secondary
+                        { },
+                        global_descriptor_set_index
                     );
+
+                    scene_descriptor_set->Bind(
+                        secondary,
+                        pipeline,
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        },
+                        scene_descriptor_set_index
+                    );
+
+                    // Bind textures globally (bindless)
+                    if (material_descriptor_set_index != ~0u && use_bindless_textures) {
+                        material_descriptor_set->Bind(secondary, pipeline, material_descriptor_set_index);
+                    }
 
                     for (const DrawCall &draw_call : draw_calls) {
                         const EntityInstanceBatch &entity_batch = g_engine->GetRenderData()->entity_instance_batches.Get(draw_call.batch_index);
+                        
+                        if (entity_descriptor_set.IsValid()) {
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+                            entity_descriptor_set->Bind(
+                                secondary,
+                                pipeline,
+                                {
+                                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, draw_call.skeleton_id.ToIndex()) },
+                                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(draw_call.batch_index * sizeof(EntityInstanceBatch)) }
+                                },
+                                entity_descriptor_set_index
+                            );
+#else
+                            entity_descriptor_set->Bind(
+                                secondary,
+                                pipeline,
+                                {
+                                    { HYP_NAME(MaterialsBuffer), HYP_RENDER_OBJECT_OFFSET(Material, draw_call.material_id.ToIndex()) },
+                                    { HYP_NAME(SkeletonsBuffer), HYP_RENDER_OBJECT_OFFSET(Skeleton, draw_call.skeleton_id.ToIndex()) },
+                                    { HYP_NAME(EntityInstanceBatchesBuffer), uint32(draw_call.batch_index * sizeof(EntityInstanceBatch)) }
+                                },
+                                entity_descriptor_set_index
+                            );
+#endif
+                        }
 
-                        BindPerObjectDescriptorSets(
-                            frame,
-                            pipeline,
-                            secondary,
-                            draw_call.batch_index,
-                            draw_call.skeleton_id.ToIndex(),
-                            draw_call.material_id.ToIndex()
-                        );
+                        // Bind material descriptor set
+                        if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
+                            g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(draw_call.material_id, frame_index)
+                                ->Bind(secondary, pipeline, material_descriptor_set_index);
+                        }
 
                         if constexpr (IsIndirect) {
                             mesh_container.Get(draw_call.mesh_id.ToIndex())

@@ -19,8 +19,6 @@ namespace hyperion {
 namespace renderer {
 
 using renderer::Result;
-using v2::ThreadID;
-using v2::Threads;
 
 #define RENDER_COMMAND(name) RenderCommand_##name
 
@@ -34,7 +32,7 @@ using v2::Threads;
  */
 #define EXEC_RENDER_COMMAND_INLINE(name, ...) \
     do { \
-        ::hyperion::v2::Threads::AssertOnThread(::hyperion::v2::THREAD_RENDER); \
+        ::hyperion::Threads::AssertOnThread(::hyperion::THREAD_RENDER); \
         RENDER_COMMAND(name)(__VA_ARGS__)(); \
     } while (0)
 

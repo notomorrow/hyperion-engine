@@ -15,20 +15,20 @@
 
 #include <atomic>
 
-namespace hyperion::v2 {
-
-struct TaskRef
-{
-    TaskThread  *runner;
-    TaskID      id;
-};
-
+namespace hyperion {
+    
 enum TaskThreadPoolName : uint
 {
     THREAD_POOL_GENERIC,
     THREAD_POOL_RENDER_COLLECT,
     THREAD_POOL_RENDER,
     THREAD_POOL_MAX
+};
+
+struct TaskRef
+{
+    TaskThread  *runner;
+    TaskID      id;
 };
 
 struct TaskBatch
@@ -332,6 +332,6 @@ private:
     AtomicVar<bool>                             m_running;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

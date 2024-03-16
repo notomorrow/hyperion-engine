@@ -19,7 +19,7 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class SchedulerBase
 {
@@ -333,6 +333,6 @@ private:
     ScheduledFunctionQueue  m_enqueued_tasks;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

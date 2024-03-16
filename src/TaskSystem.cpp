@@ -1,6 +1,6 @@
 #include <TaskSystem.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const FlatMap<TaskThreadPoolName, uint> TaskSystem::s_thread_pool_sizes = {
     { TaskThreadPoolName::THREAD_POOL_GENERIC,          4u },
@@ -184,4 +184,4 @@ Array<bool> TaskSystem::DequeueBatch(TaskBatch *batch)
     return results;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

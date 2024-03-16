@@ -248,8 +248,6 @@ void Scene::CollectEntities(
     bool skip_frustum_culling
 ) const
 {
-    HYP_DISABLE_OPTIMIZATION;
-
     Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
 
     // clear out existing entities before populating
@@ -262,8 +260,7 @@ void Scene::CollectEntities(
     const ID<Camera> camera_id = camera.GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
-    const uint32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
-    
+
     const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
 
     for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent>()) {

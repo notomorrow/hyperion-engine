@@ -1,6 +1,6 @@
 #include <core/Scheduler.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void SchedulerBase::RequestStop()
 {
@@ -39,4 +39,4 @@ void SchedulerBase::WakeUpOwnerThread()
     m_has_tasks.notify_all();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

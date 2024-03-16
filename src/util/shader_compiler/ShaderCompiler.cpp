@@ -1,18 +1,21 @@
 #include <util/shader_compiler/ShaderCompiler.hpp>
-#include <asset/ByteWriter.hpp>
-#include <asset/BufferedByteReader.hpp>
-#include <asset/serialization/fbom/FBOM.hpp>
-#include <asset/serialization/fbom/marshals/ShaderBundleMarshal.hpp>
-#include <math/MathUtil.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
 #include <util/fs/FsUtil.hpp>
 #include <util/json/JSON.hpp>
 #include <util/Defines.hpp>
+
+#include <core/lib/util/ForEach.hpp>
+
+#include <asset/ByteWriter.hpp>
+#include <asset/BufferedByteReader.hpp>
+#include <asset/serialization/fbom/FBOM.hpp>
+#include <asset/serialization/fbom/marshals/ShaderBundleMarshal.hpp>
+
+#include <math/MathUtil.hpp>
+
 #include <Constants.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
-
-#include <bitset>
 
 #ifdef HYP_GLSLANG
 
@@ -375,7 +378,8 @@ static const FlatMap<String, ShaderModuleType> shader_type_names = {
 
 static void ForEachPermutation(
     const ShaderProperties &versions,
-    Proc<void, const ShaderProperties &> callback
+    Proc<void, const ShaderProperties &> callback,
+    bool parallel
 )
 {
     Array<ShaderProperty> variable_properties;
@@ -460,8 +464,15 @@ static void ForEachPermutation(
     );
 #endif
 
-    for (const Array<ShaderProperty> &properties : all_combinations) {
-        callback(ShaderProperties(properties));
+    if (parallel) {
+        ParallelForEach(all_combinations, [&callback](const Array<ShaderProperty> &properties, uint, uint)
+        {
+            callback(ShaderProperties(properties));
+        });
+    } else {
+        for (const Array<ShaderProperty> &properties : all_combinations) {
+            callback(ShaderProperties(properties));
+        }
     }
 }
 
@@ -667,7 +678,7 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
             }
 
             mtx.unlock();
-        });
+        }, true);
 
         const auto it = batch.compiled_shaders.FindIf([properties_hash = additional_versions.GetHashCode()](const CompiledShader &item)
         {
@@ -894,7 +905,8 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
     std::mutex results_mutex;
 
     // Compile all shaders ahead of time
-    for (auto &bundle : bundles) {
+    ParallelForEach(bundles, [&](auto &bundle, uint, uint)
+    {
         if (bundle.HasRTShaders() && !supports_rt_shaders) {
             DebugLog(
                 LogType::Warn,
@@ -902,7 +914,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
                 bundle.name.LookupString()
             );
 
-            continue;
+            return;
         }
 
         if (bundle.HasVertexShader()) {
@@ -917,8 +929,8 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
             results_mutex.lock();
             results[&bundle] = GetCompiledShader(bundle.name, properties, compiled_shader);
             results_mutex.unlock();
-        });
-    }
+        }, false);
+    });
 
     return results.Every([](const KeyValuePair<Bundle *, bool> &it)
     {
@@ -1660,7 +1672,7 @@ bool ShaderCompiler::CompileBundle(
         compiled_shaders_mutex.lock();
         out.compiled_shaders.PushBack(std::move(compiled_shader));
         compiled_shaders_mutex.unlock();
-    });
+    }, true);
 
     const FilePath final_output_path = g_asset_manager->GetBasePath() / "data/compiled_shaders" / String(bundle.name.LookupString()) + ".hypshader";
 

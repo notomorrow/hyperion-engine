@@ -36,9 +36,9 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 {
     RENDER_ENVIRONMENT_UPDATES_NONE = 0x0,
     RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS = 0x1,
-    RENDER_ENVIRONMENT_UPDATES_ENTITIES = 0x2,
+    RENDER_ENVIRONMENT_UPDATES_PLACEHOLDER = 0x2,
 
-    RENDER_ENVIRONMENT_UPDATES_CONTAINERS = RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS | RENDER_ENVIRONMENT_UPDATES_ENTITIES,
+    RENDER_ENVIRONMENT_UPDATES_CONTAINERS = RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS,
 
     RENDER_ENVIRONMENT_UPDATES_TLAS = 0x4
 };
@@ -112,7 +112,7 @@ public:
             m_render_components_pending_addition.Set<T>(std::move(component_map));
         }
         
-        m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS);
+        m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, MemoryOrder::RELEASE);
 
         return component;
     }
@@ -200,7 +200,7 @@ public:
             name
         });
 
-        m_update_marker.fetch_or(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS);
+        m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, MemoryOrder::RELEASE);
     }
 
     // only touch from render thread!
@@ -226,7 +226,7 @@ private:
 
     Scene                                           *m_scene;
 
-    std::atomic<RenderEnvironmentUpdates>           m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
+    AtomicVar<RenderEnvironmentUpdates>             m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
     TypeMap<FlatMap<Name, RC<RenderComponentBase>>> m_render_components; // only touch from render thread
     TypeMap<FlatMap<Name, RC<RenderComponentBase>>> m_render_components_pending_init;
