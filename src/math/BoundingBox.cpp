@@ -60,6 +60,17 @@ void BoundingBox::SetCenter(const Vec3f &center)
     min = center - dimensions * 0.5f;
 }
 
+void BoundingBox::SetCorners(const FixedArray<Vec3f, 8> &corners)
+{
+    min = corners[0];
+    max = corners[0];
+
+    for (uint i = 1; i < 8; ++i) {
+        min = Vec3f::Min(min, corners[i]);
+        max = Vec3f::Max(max, corners[i]);
+    }
+}
+
 void BoundingBox::SetExtent(const Vec3f &dimensions)
 {
     Vec3f center = GetCenter();

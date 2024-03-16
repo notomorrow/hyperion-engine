@@ -15,11 +15,7 @@ class Camera;
 
 struct VisibilityStateSnapshot
 {
-    using Bitmask   = uint64;
-    using Nonce     = uint16;
-
-    Bitmask bits { 0u };
-    Nonce   nonce { 0u };
+    uint16 validity_marker { 0u };
 
     VisibilityStateSnapshot()                                                       = default;
     VisibilityStateSnapshot(const VisibilityStateSnapshot &other)                   = default;
@@ -29,33 +25,13 @@ struct VisibilityStateSnapshot
     ~VisibilityStateSnapshot()                                                      = default;
 
     HYP_FORCE_INLINE
-    Bitmask Get(ID<Camera> id) const
-        { return bits & (1ull << Bitmask(id.ToIndex())); }
-
-    HYP_FORCE_INLINE
-    void Set(ID<Camera> id, bool visible)
-    {
-        if (visible) {
-            bits |= (1ull << Bitmask(id.ToIndex()));
-        } else {
-            bits &= (~(1ull << id.ToIndex()));
-        }
-    }
-
-    HYP_FORCE_INLINE
     bool ValidToParent(const VisibilityStateSnapshot &parent) const
-        { return nonce == parent.nonce; }
+        { return validity_marker == parent.validity_marker; }
 };
 
 struct VisibilityState
 {
-    using Bitmask   = VisibilityStateSnapshot::Bitmask;
-    using Nonce     = VisibilityStateSnapshot::Nonce;
-
-    static constexpr uint max_visibility_states = sizeof(Bitmask) * CHAR_BIT;
-    static constexpr uint cursor_size = 3u;
-
-    FixedArray<VisibilityStateSnapshot, cursor_size> snapshots { };
+    HashMap<ID<Camera>, VisibilityStateSnapshot>    snapshots;
 
     VisibilityState()                                               = default;
     VisibilityState(const VisibilityState &other)                   = default;
@@ -64,28 +40,36 @@ struct VisibilityState
     VisibilityState &operator=(VisibilityState &&other) noexcept    = default;
     ~VisibilityState()                                              = default;
 
-    HYP_FORCE_INLINE
-    bool Get(ID<Camera> id, uint8 cursor) const
-        { return snapshots[cursor].Get(id); }
-
-    HYP_FORCE_INLINE
-    void SetVisible(ID<Camera> id, uint8 cursor)
-        { snapshots[cursor].Set(id, true); }
-
-    HYP_FORCE_INLINE
-    void SetHidden(ID<Camera> id, uint8 cursor)
-        { snapshots[cursor].Set(id, false); }
-
-    HYP_FORCE_INLINE
-    bool ValidToParent(const VisibilityState &parent, uint8 cursor) const
-        { return snapshots[cursor].ValidToParent(parent.snapshots[cursor]); }
-
-    void ForceAllVisible()
+    /*! \brief Advances the validity marker of all snapshots. */
+    void Next()
     {
         for (auto &snapshot : snapshots) {
-            snapshot.bits = MathUtil::MaxSafeValue<Bitmask>();
-            snapshot.nonce = MathUtil::MaxSafeValue<Nonce>();
+            snapshot.second.validity_marker++;
         }
+    }
+
+    HYP_FORCE_INLINE
+    VisibilityStateSnapshot &GetSnapshot(ID<Camera> id)
+    {
+        auto it = snapshots.Find(id);
+
+        if (it == snapshots.End()) {
+            it = snapshots.Insert(id, VisibilityStateSnapshot()).first;
+        }
+
+        return it->second;
+    }
+
+    HYP_FORCE_INLINE
+    void SetSnapshot(ID<Camera> id, uint16 validity_marker)
+    {
+        auto it = snapshots.Find(id);
+
+        if (it == snapshots.End()) {
+            it = snapshots.Insert(id, VisibilityStateSnapshot()).first;
+        }
+
+        it->second.validity_marker = validity_marker;
     }
 };
 

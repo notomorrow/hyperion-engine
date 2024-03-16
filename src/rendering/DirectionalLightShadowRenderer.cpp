@@ -423,7 +423,7 @@ void ShadowPass::Render(Frame *frame)
 }
 
 DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Extent2D resolution)
-    : RenderComponent(name, 100),
+    : RenderComponent(name),
       m_resolution(resolution)
 {
 }
@@ -463,6 +463,8 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 
     m_shadow_pass->GetCamera()->Update(delta);
 
+    GetParent()->GetScene()->GetOctree().CalculateVisibility(m_shadow_pass->GetCamera());
+
     GetParent()->GetScene()->CollectEntities(
         m_shadow_pass->GetRenderList(),
         m_shadow_pass->GetCamera(),
@@ -475,8 +477,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
                     ? FaceCullMode::BACK
                     : FaceCullMode::FRONT
             }
-        ),
-        true // no culling for now
+        )
     );
 
     m_shadow_pass->GetRenderList().UpdateRenderGroups();

@@ -44,6 +44,8 @@ public:
     Vec3f GetCenter() const
         { return (max + min) * 0.5f; }
 
+    void SetCorners(const FixedArray<Vec3f, 8> &corners);
+
     void SetCenter(const Vec3f &center);
 
     HYP_FORCE_INLINE

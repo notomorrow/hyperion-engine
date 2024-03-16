@@ -297,4 +297,14 @@
     #define HYP_IMPORT
 #endif
 
+// Optimization
+
+#ifdef HYP_MSVC
+    #define HYP_DISABLE_OPTIMIZATION __pragma(optimize("", off))
+    #define HYP_ENABLE_OPTIMIZATION __pragma(optimize("", on))
+#elif defined(HYP_CLANG_OR_GCC)
+    #define HYP_DISABLE_OPTIMIZATION _Pragma("GCC push_options") _Pragma("GCC optimize (\"O0\")")
+    #define HYP_ENABLE_OPTIMIZATION _Pragma("GCC pop_options")
+#endif
+
 #endif // !HYPERION_DEFINES_H

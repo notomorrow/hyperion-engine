@@ -110,8 +110,8 @@ Scene::Scene(
     m_entity_manager->AddSystem<WorldAABBUpdaterSystem>();
     m_entity_manager->AddSystem<EntityDrawDataUpdaterSystem>();
     m_entity_manager->AddSystem<LightVisibilityUpdaterSystem>();
-    m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
     m_entity_manager->AddSystem<ShadowMapUpdaterSystem>();
+    m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
     m_entity_manager->AddSystem<EnvGridUpdaterSystem>();
     m_entity_manager->AddSystem<AnimationSystem>();
     m_entity_manager->AddSystem<SkySystem>();
@@ -214,13 +214,16 @@ void Scene::Update(GameCounter::TickUnit delta)
 
     AssertReady();
 
+    // Rebuild any octants that have had structural changes
+    m_octree.PerformUpdates();
+
     m_octree.NextVisibilityState();
 
     if (m_camera) {
         m_camera->Update(delta);
 
         // update octree visibility states using the camera
-        m_octree.CalculateVisibility(m_camera.Get());
+        m_octree.CalculateVisibility(m_camera);
 
         if (m_camera->GetViewProjectionMatrix() != m_last_view_projection_matrix) {
             m_last_view_projection_matrix = m_camera->GetViewProjectionMatrix();
@@ -230,15 +233,12 @@ void Scene::Update(GameCounter::TickUnit delta)
 
     m_entity_manager->Update(delta);
 
-    // Rebuild any octants that have had structural changes
-    m_octree.PerformUpdates();
-
-    EnqueueRenderUpdates();
-
     if (IsWorldScene()) {
         // update render environment
         m_environment->Update(delta);
     }
+
+    EnqueueRenderUpdates();
 }
 
 void Scene::CollectEntities(
@@ -248,6 +248,8 @@ void Scene::CollectEntities(
     bool skip_frustum_culling
 ) const
 {
+    HYP_DISABLE_OPTIMIZATION;
+
     Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
 
     // clear out existing entities before populating
@@ -257,47 +259,29 @@ void Scene::CollectEntities(
         return;
     }
 
-    const ID<Camera> camera_id = camera->GetID();
+    const ID<Camera> camera_id = camera.GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
     const uint32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
     
-    const uint8 visibility_cursor = m_octree.LoadVisibilityCursor();
-    const VisibilityState &parent_visibility_state = m_octree.GetVisibilityState();
+    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
 
     for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent>()) {
         auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component] = it;
 
-        { // Temp hacks, beware! 
-            if (!mesh_component.mesh.IsValid()) {
-                continue;
-            }
-
-            AssertThrow(mesh_component.material.IsValid());
-            AssertThrow(mesh_component.material->GetRenderAttributes().shader_definition.IsValid());
-        }
-
         if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-            // Visibility check
-            if (!visibility_state_component.visibility_state.ValidToParent(parent_visibility_state, visibility_cursor)) {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                DebugLog(
-                    LogType::Debug,
-                    "Skipping entity #%u due to visibility state being invalid.\n",
-                    entity_id.Value()
-                );
-#endif
-
+            if (!visibility_state_component.visibility_state) {
                 continue;
             }
 
-            if (!visibility_state_component.visibility_state.Get(camera_id, visibility_cursor)) {
+            if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
                 DebugLog(
                     LogType::Debug,
-                    "Skipping entity #%u due to visibility state being false\n",
-                    entity_id.Value()
+                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
+                    entity_id.Value(),
+                    camera_id.Value()
                 );
 #endif
 
@@ -336,47 +320,30 @@ void Scene::CollectStaticEntities(
         return;
     }
 
-    const ID<Camera> camera_id = camera->GetID();
+    const ID<Camera> camera_id = camera.GetID();
 
     RenderableAttributeSet *override_attributes_ptr = override_attributes.TryGet();
     const uint32 override_flags = override_attributes_ptr ? override_attributes_ptr->GetOverrideFlags() : 0;
     
-    const uint8 visibility_cursor = m_octree.LoadVisibilityCursor();
-    const VisibilityState &parent_visibility_state = m_octree.GetVisibilityState();
+    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
 
     for (auto it : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>()) {
         auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] = it;
 
-        { // Temp hacks, beware! 
-            if (!mesh_component.mesh.IsValid()) {
-                continue;
-            }
-
-            AssertThrow(mesh_component.material.IsValid());
-            AssertThrow(mesh_component.material->GetRenderAttributes().shader_definition.IsValid());
-        }
-
         if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-            // Visibility check
-            if (!visibility_state_component.visibility_state.ValidToParent(parent_visibility_state, visibility_cursor)) {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                DebugLog(
-                    LogType::Debug,
-                    "Skipping entity #%u due to visibility state being invalid.\n",
-                    entity_id.Value()
-                );
-#endif
-
+            if (!visibility_state_component.visibility_state) {
                 continue;
             }
 
-            if (!visibility_state_component.visibility_state.Get(camera_id, visibility_cursor)) {
+
+            if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
                 DebugLog(
                     LogType::Debug,
-                    "Skipping entity #%u due to visibility state being false\n",
-                    entity_id.Value()
+                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
+                    entity_id.Value(),
+                    camera_id.Value()
                 );
 #endif
 

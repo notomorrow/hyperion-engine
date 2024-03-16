@@ -239,17 +239,6 @@ public:
         }
     };
 
-    static bool IsVisible(
-        const Octree *parent,
-        const Octree *child
-    );
-
-    static bool IsVisible(
-        const Octree *parent,
-        const Octree *child,
-        uint8 cursor
-    );
-
     Octree(RC<EntityManager> entity_manager, const BoundingBox &aabb = default_bounds);
     Octree(const Octree &other) = delete;
     Octree &operator=(const Octree &other) = delete;
@@ -257,7 +246,7 @@ public:
     Octree &operator=(Octree &&other) noexcept = delete;
     ~Octree();
 
-    const VisibilityState &GetVisibilityState() const
+    const RC<VisibilityState> &GetVisibilityState() const
         { return m_visibility_state; }
 
     BoundingBox &GetAABB()
@@ -317,8 +306,7 @@ public:
     bool GetFittingOctant(const BoundingBox &aabb, Octree const *&out) const;
 
     void NextVisibilityState();
-    void CalculateVisibility(Camera *camera);
-    uint8 LoadVisibilityCursor() const;
+    void CalculateVisibility(const Handle<Camera> &camera);
 
     void PerformUpdates();
 
@@ -338,8 +326,6 @@ private:
         and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
      */
     InsertResult Move(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild, const Array<Node>::Iterator *it = nullptr);
-
-    void ForceVisibilityStates();
 
     auto FindNode(ID<Entity> id)
     {
@@ -367,7 +353,7 @@ private:
     InsertResult UpdateInternal(ID<Entity> id, const BoundingBox &aabb, bool allow_rebuild);
     Result RemoveInternal(ID<Entity> id, bool allow_rebuild);
     InsertResult RebuildExtendInternal(const BoundingBox &extend_include_aabb);
-    void UpdateVisibilityState(Camera *camera, uint8 cursor);
+    void UpdateVisibilityState(const Handle<Camera> &camera, uint16 validity_marker);
 
     /* Called from entity - remove the pointer */
     // void OnEntityRemoved(Entity *entity);
@@ -381,7 +367,7 @@ private:
     FixedArray<Octant, 8>                               m_octants;
     bool                                                m_is_divided;
     OctreeState                                         *m_state;
-    VisibilityState                                     m_visibility_state;
+    RC<VisibilityState>                                 m_visibility_state;
     OctantID                                            m_octant_id;
 };
 

@@ -49,29 +49,6 @@ void OctreeState::MarkOctantDirty(OctantID octant_id)
     AssertThrow(rebuild_state != OctantID::invalid);
 }
 
-bool Octree::IsVisible(
-    const Octree *root,
-    const Octree *child
-)
-{
-    return child->m_visibility_state.ValidToParent(
-        root->m_visibility_state,
-        (root->GetState()->visibility_cursor + VisibilityState::cursor_size - 1) % VisibilityState::cursor_size
-    );
-}
-
-bool Octree::IsVisible(
-    const Octree *root,
-    const Octree *child,
-    uint8 cursor
-)
-{
-    return child->m_visibility_state.ValidToParent(
-        root->m_visibility_state,
-        cursor
-    );
-}
-
 Octree::Octree(RC<EntityManager> entity_manager, const BoundingBox &aabb)
     : Octree(std::move(entity_manager), aabb, nullptr, 0)
 {
@@ -84,7 +61,7 @@ Octree::Octree(RC<EntityManager> entity_manager, const BoundingBox &aabb, Octree
       m_parent(nullptr),
       m_is_divided(false),
       m_state(nullptr),
-      m_visibility_state { },
+      m_visibility_state(new VisibilityState { }),
       m_octant_id(index, OctantID::invalid)
 {
     if (parent != nullptr) {
@@ -334,7 +311,9 @@ void Octree::ClearInternal(Array<Node> &out_nodes)
         {
             for (auto &node : nodes) {
                 if (mgr.HasEntity(node.id)) {
-                    mgr.GetComponent<VisibilityStateComponent>(node.id).octant_id = OctantID::invalid;
+                    VisibilityStateComponent &visibility_state_component = mgr.GetComponent<VisibilityStateComponent>(node.id);
+                    visibility_state_component.octant_id = OctantID::invalid;
+                    visibility_state_component.visibility_state = nullptr;
                 }
             }
         });
@@ -439,7 +418,8 @@ Octree::InsertResult Octree::InsertInternal(ID<Entity> id, const BoundingBox &aa
             if (mgr.HasEntity(id)) {
                 if (!mgr.HasComponent<VisibilityStateComponent>(id)) {
                     mgr.AddComponent(id, VisibilityStateComponent {
-                        .octant_id = octant_id
+                        .octant_id = octant_id,
+                        .visibility_state = nullptr
                     });
 
 #ifdef HYP_OCTREE_DEBUG
@@ -452,7 +432,9 @@ Octree::InsertResult Octree::InsertInternal(ID<Entity> id, const BoundingBox &aa
                     );
 #endif
                 } else {
-                    mgr.GetComponent<VisibilityStateComponent>(id).octant_id = octant_id;
+                    VisibilityStateComponent &visibility_state_component = mgr.GetComponent<VisibilityStateComponent>(id);
+                    visibility_state_component.octant_id = octant_id;
+                    visibility_state_component.visibility_state = nullptr;
 
 #ifdef HYP_OCTREE_DEBUG
                     DebugLog(
@@ -519,7 +501,9 @@ Octree::Result Octree::RemoveInternal(ID<Entity> id, bool allow_rebuild)
         m_entity_manager->PushCommand([id](EntityManager &mgr, GameCounter::TickUnit delta)
         {
             if (mgr.HasEntity(id)) {
-                mgr.GetComponent<VisibilityStateComponent>(id).octant_id = OctantID::invalid;
+                VisibilityStateComponent &visibility_state_component = mgr.GetComponent<VisibilityStateComponent>(id);
+                visibility_state_component.octant_id = OctantID::invalid;
+                visibility_state_component.visibility_state = nullptr;
             }
         });
     }
@@ -710,7 +694,9 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
             m_entity_manager->PushCommand([id, octant_id = m_octant_id](EntityManager &mgr, GameCounter::TickUnit delta)
             {
                 if (mgr.HasEntity(id)) {
-                    mgr.GetComponent<VisibilityStateComponent>(id).octant_id = octant_id;
+                    VisibilityStateComponent &visibility_state_component = mgr.GetComponent<VisibilityStateComponent>(id);
+                    visibility_state_component.octant_id = octant_id;
+                    visibility_state_component.visibility_state = nullptr;
                 }
             });
 
@@ -884,44 +870,6 @@ Octree::InsertResult Octree::RebuildExtendInternal(const BoundingBox &extend_inc
     return Rebuild(new_aabb);
 }
 
-void Octree::ForceVisibilityStates()
-{
-#if HYP_OCTREE_DEBUG
-    DebugLog(
-        LogType::Debug,
-        "ForceVisibilityStates: %u:%u\n",
-        m_octant_id.GetDepth(),
-        m_octant_id.GetIndex()
-    );
-#endif
-
-    m_visibility_state.ForceAllVisible();
-    
-    for (auto &node : m_nodes) {
-        if (m_entity_manager) {
-            m_entity_manager->PushCommand([id = node.id, octant_id = m_octant_id](EntityManager &mgr, GameCounter::TickUnit delta)
-            {
-                if (mgr.HasEntity(id)) {
-                    VisibilityStateComponent *visibility_state_component = mgr.TryGetComponent<VisibilityStateComponent>(id);
-
-                    if (visibility_state_component) {
-                        visibility_state_component->octant_id = octant_id;
-                        visibility_state_component->visibility_state.ForceAllVisible();
-                    }
-                }
-            });
-        }
-    }
-
-    if (m_is_divided) {
-        for (Octant &octant : m_octants) {
-            AssertThrow(octant.octree != nullptr);
-
-            octant.octree->ForceVisibilityStates();
-        }
-    }
-}
-
 void Octree::PerformUpdates()
 {
     AssertThrow(m_state != nullptr);
@@ -1060,64 +1008,43 @@ bool Octree::GetFittingOctant(const BoundingBox &aabb, Octree const *&out) const
 
 void Octree::NextVisibilityState()
 {
-    const uint8 cursor = (++m_state->visibility_cursor) % VisibilityState::cursor_size;
-    m_visibility_state.snapshots[cursor].nonce++;
+    m_visibility_state->Next();
 }
 
-uint8 Octree::LoadVisibilityCursor() const
-{
-    return m_state->visibility_cursor % VisibilityState::cursor_size;
-}
-
-void Octree::CalculateVisibility(Camera *camera)
+void Octree::CalculateVisibility(const Handle<Camera> &camera)
 {
     if (camera == nullptr) {
-        return;
-    }
-
-    if (camera->GetID().ToIndex() >= VisibilityState::max_visibility_states) {
-#ifdef HYP_OCTREE_DEBUG
-        DebugLog(
-            LogType::Warn,
-            "Camera ID #%lu out of bounds of octree visibility bitset. Cannot update visibility state.\n",
-            camera->GetID().Value()
-        );
-#endif
-
         return;
     }
 
     const Frustum &frustum = camera->GetFrustum();
 
     if (frustum.ContainsAABB(m_aabb)) {
-        const uint8 cursor = LoadVisibilityCursor();
-
-        UpdateVisibilityState(camera, cursor);
+        UpdateVisibilityState(camera, m_visibility_state->GetSnapshot(camera.GetID()).validity_marker);
+    } else {
+        DebugLog(LogType::Debug,
+            "Camera frustum for camera #%lu does not contain octree aabb [%f, %f, %f] - [%f, %f, %f].\n",
+            camera->GetID().Value(),
+            m_aabb.GetMin().x, m_aabb.GetMin().y, m_aabb.GetMin().z,
+            m_aabb.GetMax().x, m_aabb.GetMax().y, m_aabb.GetMax().z);
     }
 }
 
-void Octree::UpdateVisibilityState(Camera *camera, uint8 cursor)
+void Octree::UpdateVisibilityState(const Handle<Camera> &camera, uint16 validity_marker)
 {
     /* assume we are already visible from CalculateVisibility() check */
     const Frustum &frustum = camera->GetFrustum();
 
-    m_visibility_state.SetVisible(camera->GetID(), cursor);
+    auto &snapshot = m_visibility_state->GetSnapshot(camera.GetID());
+    snapshot.validity_marker = validity_marker;
 
     if (m_is_divided) {
-        const VisibilityStateSnapshot::Nonce nonce = m_visibility_state.snapshots[cursor].nonce;
-
         for (Octant &octant : m_octants) {
             if (!frustum.ContainsAABB(octant.aabb)) {
                 continue;
             }
 
-            // if (nonce != octant.octree->m_visibility_state.snapshots[cursor].nonce.load(std::memory_order_relaxed)) {
-            //     // clear it out after first set
-            //     octant.octree->m_visibility_state.snapshots[cursor].bits.store(0u, std::memory_order_relaxed);
-            // }
-            
-            octant.octree->m_visibility_state.snapshots[cursor].nonce = nonce;
-            octant.octree->UpdateVisibilityState(camera, cursor);
+            octant.octree->UpdateVisibilityState(camera, validity_marker);
         }
     }
 }

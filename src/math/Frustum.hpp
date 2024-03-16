@@ -30,7 +30,7 @@ public:
     const Vec4f &GetPlane(uint index) const
         { return m_planes[index]; }
 
-    const Vec3f &GetCorner(uint index)
+    const Vec3f &GetCorner(uint index) const
         { return m_corners[index]; }
 
     const FixedArray<Vec3f, 8> &GetCorners() const

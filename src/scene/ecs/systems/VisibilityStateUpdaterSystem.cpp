@@ -18,13 +18,16 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
     );
 
     VisibilityStateComponent &visibility_state_component = entity_manager.GetComponent<VisibilityStateComponent>(entity);
-    BoundingBoxComponent &bounding_box_component = entity_manager.GetComponent<BoundingBoxComponent>(entity);
 
     if (visibility_state_component.octant_id != OctantID::invalid) {
         return;
     }
 
+    visibility_state_component.visibility_state = nullptr;
+
     // This system must be ran before WorldAABBUpdaterSystem so that the bounding box is up to date
+
+    BoundingBoxComponent &bounding_box_component = entity_manager.GetComponent<BoundingBoxComponent>(entity);
 
     if (bounding_box_component.world_aabb.IsValid()) {
         Octree &octree = entity_manager.GetScene()->GetOctree();
@@ -39,6 +42,10 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
             AssertThrowMsg(insert_result.second != OctantID::invalid, "Invalid octant ID returned from Insert()");
 
             visibility_state_component.octant_id = insert_result.second;
+
+            if (Octree *octant = octree.GetChildOctant(visibility_state_component.octant_id)) {
+                visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
+            }
 
             DebugLog(LogType::Debug, "Inserted entity %u into octree, inserted at %u, %u\n", entity.Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
         } else {
@@ -56,6 +63,7 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager
     SystemBase::OnEntityRemoved(entity_manager, entity);
 
     VisibilityStateComponent &visibility_state_component = entity_manager.GetComponent<VisibilityStateComponent>(entity);
+    visibility_state_component.visibility_state = nullptr;
 
     if (visibility_state_component.octant_id != OctantID::invalid) {
         Octree &octree = entity_manager.GetScene()->GetOctree();
@@ -73,8 +81,6 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager
 void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)
 {
     Octree &octree = entity_manager.GetScene()->GetOctree();
-
-    const uint8 visibility_cursor = octree.LoadVisibilityCursor();
 
     for (auto [entity_id, visibility_state_component, bounding_box_component] : entity_manager.GetEntitySet<VisibilityStateComponent, BoundingBoxComponent>()) {
         bool needs_octree_update = false;
@@ -97,17 +103,17 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
             visibility_state_component.last_aabb_hash = aabb_hash_code;
         }
 
-        if (visibility_state_component.octant_id == OctantID::invalid) {
-            continue;
+        if (visibility_state_component.octant_id != OctantID::invalid) {
+            Octree *octant = octree.GetChildOctant(visibility_state_component.octant_id);
+
+            if (octant) {
+                visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
+
+                continue;
+            }
         }
 
-        Octree *octant = octree.GetChildOctant(visibility_state_component.octant_id);
-
-        if (octant) {
-            const VisibilityState &octant_visibility_state = octant->GetVisibilityState();
-
-            visibility_state_component.visibility_state.snapshots[visibility_cursor] = octant_visibility_state.snapshots[visibility_cursor];
-        }
+        visibility_state_component.visibility_state = nullptr;
     }
 }
 

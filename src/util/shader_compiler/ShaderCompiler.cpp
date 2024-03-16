@@ -28,6 +28,8 @@ using renderer::g_static_descriptor_table_decl;
 
 static const bool should_compile_missing_variants = true;
 
+// #define HYP_SHADER_COMPILER_LOGGING
+
 enum class ShaderLanguage
 {
     GLSL,
@@ -287,12 +289,14 @@ static ByteBuffer CompileToSPIRV(
 
     // @TODO: use shader->preprocessedGLSL before working with our internal methods like HYP_DESCRIPTOR_*
 
+#ifdef HYP_SHADER_COMPILER_LOGGING
     DebugLog(
         LogType::Debug,
         "Preprocessed GLSL for %s:\n%s\n",
         filename.Data(),
         glslang_shader_get_preprocessed_code(shader)
     );
+#endif
 
     if (!glslang_shader_parse(shader, &input)) {
         GLSL_ERROR(LogType::Error, "GLSL parsing failed %s\n", filename.Data());
@@ -448,29 +452,17 @@ static void ForEachPermutation(
         all_combinations.Concat(std::move(current_group_combinations));
     }
 
-    AssertThrowMsg(all_combinations.Size() == total_count, "Math is incorrect");
-
+#ifdef HYP_SHADER_COMPILER_LOGGING
     DebugLog(
         LogType::Debug,
         "Processing %llu shader combinations:\n",
         all_combinations.Size()
     );
+#endif
 
-    TaskSystem::GetInstance().ParallelForEach(
-        all_combinations,
-        [&callback](const Array<ShaderProperty> &properties, uint index, uint batch_index) {
-            const ShaderProperties combination_properties(properties);
-
-            DebugLog(
-                LogType::Debug,
-                "Processing combination #%u: %s\n",
-                index,
-                combination_properties.ToString().Data()
-            );
-
-            callback(combination_properties);
-        }
-    );
+    for (const Array<ShaderProperty> &properties : all_combinations) {
+        callback(ShaderProperties(properties));
+    }
 }
 
 DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
@@ -650,17 +642,19 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
 
     Array<ShaderProperties> missing_variants;
     Array<ShaderProperties> found_variants;
-    std::mutex              mtx;
-    bool                    requested_found = false;
+    std::mutex mtx;
+    bool requested_found = false;
 
     {
         // grab each defined property, and iterate over each combination
         // now check that each combination is already in the bundle
-        ForEachPermutation(bundle.versions, [&](const ShaderProperties &properties) {
+        ForEachPermutation(bundle.versions, [&](const ShaderProperties &properties)
+        {
             // get hashcode of this set of properties
             const HashCode properties_hash = properties.GetHashCode();
 
-            const auto it = batch.compiled_shaders.FindIf([properties_hash](const CompiledShader &item) {
+            const auto it = batch.compiled_shaders.FindIf([properties_hash](const CompiledShader &item)
+            {
                 return item.GetDefinition().GetProperties().GetHashCode() == properties_hash;
             });
 
@@ -675,7 +669,8 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
             mtx.unlock();
         });
 
-        const auto it = batch.compiled_shaders.FindIf([properties_hash = additional_versions.GetHashCode()](const CompiledShader &item) {
+        const auto it = batch.compiled_shaders.FindIf([properties_hash = additional_versions.GetHashCode()](const CompiledShader &item)
+        {
             return item.GetDefinition().GetProperties().GetHashCode() == properties_hash;
         });
 
@@ -896,8 +891,9 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
     const bool supports_rt_shaders = g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported();
 
     FlatMap<Bundle *, bool> results;
+    std::mutex results_mutex;
 
-    // // Compile all shaders ahead of time
+    // Compile all shaders ahead of time
     for (auto &bundle : bundles) {
         if (bundle.HasRTShaders() && !supports_rt_shaders) {
             DebugLog(
@@ -914,14 +910,18 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
             bundle.versions.Merge(ShaderProperties(static_mesh_vertex_attributes | skeleton_vertex_attributes));
         }
 
-        ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProperties &properties) {
+        ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProperties &properties)
+        {
             CompiledShader compiled_shader;
 
+            results_mutex.lock();
             results[&bundle] = GetCompiledShader(bundle.name, properties, compiled_shader);
+            results_mutex.unlock();
         });
     }
 
-    return results.Every([](const KeyValuePair<Bundle *, bool> &it) {
+    return results.Every([](const KeyValuePair<Bundle *, bool> &it)
+    {
         if (!it.second) {
             String permutation_string;
 
@@ -1363,10 +1363,13 @@ bool ShaderCompiler::CompileBundle(
         });
     }
 
-    //TaskSystem::GetInstance().EnqueueBatch(&task_batch);
-    //task_batch.AwaitCompletion();
-
-    task_batch.ForceExecute(); // not async, running into lock issues
+    if (Threads::IsOnThread(THREAD_TASK)) {
+        // run on this thread if we are already in a task thread
+        task_batch.ExecuteBlocking();
+    } else {
+        TaskSystem::GetInstance().EnqueueBatch(&task_batch);
+        task_batch.AwaitCompletion();
+    }
 
     Array<ProcessError> all_process_errors;
 

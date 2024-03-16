@@ -70,7 +70,7 @@ struct TaskBatch
     }
 
     /*! \brief Execute each non-enqueued task in serial (not async). */
-    void ForceExecute()
+    void ExecuteBlocking()
     {
         for (auto &task : tasks) {
             task.Execute();
@@ -209,7 +209,7 @@ public:
             batch.AwaitCompletion();
         } else if (batch.tasks.Size() == 1) {
             // no point in enqueing for just 1 task, execute immediately
-            batch.ForceExecute();
+            batch.ExecuteBlocking();
         }
     }
 
@@ -286,7 +286,7 @@ public:
             batch.AwaitCompletion();
         } else if (batch.tasks.Size() == 1) {
             // no point in enqueing for just 1 task, execute immediately
-            batch.ForceExecute();
+            batch.ExecuteBlocking();
         }
     }
 

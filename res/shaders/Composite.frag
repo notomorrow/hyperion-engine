@@ -40,6 +40,7 @@ HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_resul
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_result;
 
 // HYP_DESCRIPTOR_SRV(Scene, EnvGridProbeDataTexture) uniform texture2D env_grid_probe_data;
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
 
 layout(location=0) out vec4 out_color;
 
@@ -95,5 +96,5 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, v_texcoord0).rgb;
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, ssr_result, v_texcoord0).rgb;
 
-    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, rt_radiance_result, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[0], v_texcoord0).rgb;
 }

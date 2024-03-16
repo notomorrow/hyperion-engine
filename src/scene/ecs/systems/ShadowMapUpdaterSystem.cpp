@@ -126,15 +126,16 @@ void ShadowMapUpdaterSystem::Process(EntityManager &entity_manager, GameCounter:
             aabb.max.z = shadow_map_component.radius;
             aabb.min.z = -shadow_map_component.radius;
 
-            const Matrix4 new_projection = Matrix4::Orthographic(aabb.min.x, aabb.max.x, aabb.min.y, aabb.max.y, aabb.min.z, aabb.max.z);
-
             light_component.light->SetShadowMapIndex(shadow_renderer->GetComponentIndex());
 
             shadow_renderer->GetPass()->GetCamera()->SetToOrthographicProjection(aabb.min.x, aabb.max.x, aabb.min.y, aabb.max.y, aabb.min.z, aabb.max.z);
 
+            // shadow_renderer->GetPass()->GetCamera()->Update(delta);
+            // entity_manager.GetScene()->GetOctree().CalculateVisibility(shadow_renderer->GetPass()->GetCamera().Get());
+
             shadow_renderer->SetCameraData({
                 shadow_camera->GetViewMatrix(),
-                new_projection,
+                shadow_camera->GetProjectionMatrix(),
                 aabb
             });
 

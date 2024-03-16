@@ -11,19 +11,24 @@ namespace Hyperion
     {
         public static readonly RefCountedPtr Null = new RefCountedPtr(IntPtr.Zero);
 
-        private IntPtr ptr;
+        private IntPtr ctrlBlock;
 
-        public RefCountedPtr(IntPtr ptr)
+        public RefCountedPtr(IntPtr ctrlBlock)
         {
-            this.ptr = ptr;
+            this.ctrlBlock = ctrlBlock;
         }
+    }
 
-        public IntPtr Address
+    [StructLayout(LayoutKind.Sequential, Size = 8)]
+    public struct WeakRefCountedPtr
+    {
+        public static readonly WeakRefCountedPtr Null = new WeakRefCountedPtr(IntPtr.Zero);
+
+        private IntPtr ctrlBlock;
+
+        public WeakRefCountedPtr(IntPtr ctrlBlock)
         {
-            get
-            {
-                return ptr;
-            }
+            this.ctrlBlock = ctrlBlock;
         }
     }
 }

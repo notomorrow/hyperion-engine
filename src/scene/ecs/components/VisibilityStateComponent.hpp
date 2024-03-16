@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_ECS_VISIBILITY_STATE_COMPONENT_HPP
 #define HYPERION_V2_ECS_VISIBILITY_STATE_COMPONENT_HPP
 
+#include <core/lib/RefCountedPtr.hpp>
+
 #include <scene/VisibilityState.hpp>
 #include <scene/Octree.hpp>
 
@@ -18,13 +20,12 @@ struct VisibilityStateComponent
 {
     VisibilityStateFlags    flags = VISIBILITY_STATE_FLAG_NONE;
 
-    VisibilityState         visibility_state;
+    VisibilityState         *visibility_state = nullptr;
     OctantID                octant_id = OctantID::invalid;
 
     HashCode                last_aabb_hash;
 };
-
-static_assert(sizeof(VisibilityStateComponent) == 80, "VisibilityStateComponent must be 80 bytes to match C#");
+static_assert(sizeof(VisibilityStateComponent) == 40, "VisibilityStateComponent must match C# struct size");
 
 } // namespace hyperion::v2
 
