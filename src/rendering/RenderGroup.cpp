@@ -397,7 +397,9 @@ RenderAll(
     
     const uint entity_descriptor_set_index = pipeline->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Object));
     const DescriptorSet2Ref &entity_descriptor_set = pipeline->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Object), frame_index);
-    
+
+    AtomicVar<uint32> num_rendered_objects { 0u };
+
 #if defined(HYP_FEATURES_PARALLEL_RENDERING) && HYP_FEATURES_PARALLEL_RENDERING
     ParallelForEach(divided_draw_calls, num_batches, THREAD_POOL_RENDER,
 #else
@@ -488,6 +490,8 @@ RenderAll(
                             mesh_container.Get(draw_call.mesh_id.ToIndex())
                                 .Render(secondary, entity_batch.num_entities);
                         }
+
+                        num_rendered_objects.Increment(1u, MemoryOrder::RELAXED);
                     }
 
                     HYPERION_RETURN_OK;
@@ -507,6 +511,10 @@ RenderAll(
     }
 
     command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % uint(command_buffers.Size());
+
+    DebugLog(
+        LogType::Debug, "Rendered %u objects for RenderGroup\n",
+            num_rendered_objects.Get(MemoryOrder::RELAXED));
 }
 
 void RenderGroup::PerformRendering(Frame *frame)
@@ -517,6 +525,8 @@ void RenderGroup::PerformRendering(Frame *frame)
     if (m_draw_state.draw_calls.Empty()) {
         return;
     }
+
+    DebugLog(LogType::Debug, "Rendering RenderGroup with Shader %s\n", m_shader->GetCompiledShader().GetName().LookupString());
 
     RenderAll<false>(
         frame,
@@ -537,6 +547,8 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
     if (m_draw_state.draw_calls.Empty()) {
         return;
     }
+
+    DebugLog(LogType::Debug, "Rendering RenderGroup with Shader %s (indriect)\n", m_shader->GetCompiledShader().GetName().LookupString());
 
     RenderAll<true>(
         frame,

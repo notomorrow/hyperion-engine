@@ -306,7 +306,7 @@ void EnvProbe::CreateShader()
         break;
     case EnvProbeType::ENV_PROBE_TYPE_SKY:
         m_shader = g_shader_manager->GetOrCreate({
-            HYP_NAME(RenderToCubemap_Skydome),
+            HYP_NAME(RenderSky),
             ShaderProperties(static_mesh_vertex_attributes)
         });
 
@@ -424,7 +424,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
     }
 
     if (!NeedsUpdate()) {
-        return;
+    //    return;
     }
 
     // Ambient probes do not use their own render list,
@@ -503,7 +503,7 @@ void EnvProbe::Render(Frame *frame)
     }
 
     if (!NeedsRender()) {
-        return;
+        //return;
     }
 
     DebugLog(LogType::Debug, "Rendering probe #%u, type: %u\n", GetID().Value(), GetEnvProbeType());

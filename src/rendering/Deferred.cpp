@@ -549,6 +549,12 @@ void ReflectionProbePass::Record(uint frame_index)
                 }
             }
 
+            DebugLog(
+                LogType::Debug,
+                "Rendered %u reflection probes\n",
+                counter
+            );
+
             HYPERION_RETURN_OK;
         });
 

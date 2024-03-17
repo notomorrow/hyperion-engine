@@ -951,7 +951,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
 
 struct LoadedSourceFile
 {
-    ShaderModuleType          type;
+    ShaderModuleType            type;
     ShaderLanguage              language;
     ShaderCompiler::SourceFile  file;
     uint64                      last_modified_timestamp;

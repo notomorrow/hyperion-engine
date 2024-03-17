@@ -18,20 +18,22 @@ struct RENDER_COMMAND(UpdateEntityDrawDatas) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(UpdateEntityDrawDatas)() override = default;
+
+    virtual Result operator()() override
     {
         for (const EntityDrawData &entity_draw_data : entity_draw_datas) {
             // @TODO: Change it to use EntityDrawData instead of ObjectShaderData.
             g_engine->GetRenderData()->objects.Set(entity_draw_data.entity_id.ToIndex(), ObjectShaderData {
                 .model_matrix = entity_draw_data.model_matrix,
                 .previous_model_matrix = entity_draw_data.previous_model_matrix,
-                .world_aabb_max = Vector4(entity_draw_data.aabb.max, 1.0f),
-                .world_aabb_min = Vector4(entity_draw_data.aabb.min, 1.0f),
+                .world_aabb_max = Vec4f(entity_draw_data.aabb.max, 1.0f),
+                .world_aabb_min = Vec4f(entity_draw_data.aabb.min, 1.0f),
                 .entity_index = entity_draw_data.entity_id.ToIndex(),
                 .material_index = entity_draw_data.material_id.ToIndex(),
                 .skeleton_index = entity_draw_data.skeleton_id.ToIndex(),
                 .bucket = entity_draw_data.bucket,
-                .flags = entity_draw_data.skeleton_id ? ENTITY_GPU_FLAG_HAS_SKELETON : ENTITY_GPU_FLAG_NONE
+                .flags = entity_draw_data.skeleton_id.IsValid() ? ENTITY_GPU_FLAG_HAS_SKELETON : ENTITY_GPU_FLAG_NONE
             });
         }
 

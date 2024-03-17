@@ -192,7 +192,9 @@ public:
     DynString Substr(SizeType first, SizeType last = MathUtil::MaxSafeValue<SizeType>()) const;
 
     DynString Escape() const;
-    
+
+    DynString ReplaceAll(const DynString &search, const DynString &replace) const;
+
     template <class ... SeparatorType>
     Array<DynString> Split(SeparatorType ... separators) const 
     {
@@ -784,7 +786,7 @@ auto DynString<T, IsUtf8>::operator[](SizeType index) const -> const T
 template <class T, bool IsUtf8>
 auto DynString<T, IsUtf8>::GetChar(SizeType index) const -> std::conditional_t<IsUtf8, u32char, T>
 {
-    if constexpr (is_utf8) {
+    if constexpr (IsUtf8) {
         const SizeType size = Size();
 
         AssertThrow(index < size);
@@ -1012,6 +1014,33 @@ auto DynString<T, IsUtf8>::TrimmedRight() const -> DynString
 
     return res;
 }
+template <class T, bool IsUtf8>
+DynString<T, IsUtf8> DynString<T, IsUtf8>::ReplaceAll(const DynString &search, const DynString &replace) const
+{
+    DynString tmp(*this);
+
+    DynString result;
+    result.Reserve(Size());
+
+    SizeType index = 0;
+
+    while (index < Length()) {
+        auto found_index = tmp.FindIndex(search);
+
+        if (found_index == not_found) {
+            result.Append(tmp);
+            break;
+        }
+
+        result.Append(tmp.Substr(0, found_index));
+        result.Append(replace);
+
+        tmp = tmp.Substr(found_index + search.Length());
+        index += found_index + search.Length();
+    }
+
+    return result;
+}
 
 template <class T, bool IsUtf8>
 DynString<T, IsUtf8> DynString<T, IsUtf8>::Escape() const
@@ -1146,14 +1175,16 @@ auto DynString<T, IsUtf8>::Substr(SizeType first, SizeType last) const -> DynStr
     if constexpr (IsUtf8) {
         DynString result;
 
+        SizeType char_index = 0;
+
         for (SizeType i = 0; i < size;) {
             auto c = Base::operator[](i);
 
-            if (i >= last) {
+            if (char_index >= last) {
                 break;
             }
 
-            if (i >= first) {
+            if (char_index >= first) {
                 if (c >= 0 && c <= 127) {
                     result.Append(Base::operator[](i++));
                 } else if ((c & 0xE0) == 0xC0) {
@@ -1192,6 +1223,8 @@ auto DynString<T, IsUtf8>::Substr(SizeType first, SizeType last) const -> DynStr
                     i += 4;
                 }
             }
+
+            ++char_index;
         }
 
         return result;
@@ -1253,7 +1286,14 @@ template <class T, bool IsUtf8>
 SizeType DynString<T, IsUtf8>::FindIndex(const DynString &other) const
 {
     if (auto *ptr = StrStr(other)) {
-        return static_cast<SizeType>(ptr - Data());
+        if constexpr (IsUtf8) {
+            int *count;
+            const int len = utf8_strlen(Data(), ptr, count);
+
+            return SizeType(len);
+        } else {
+            return static_cast<SizeType>(ptr - Data());
+        }
     }
 
     return not_found;

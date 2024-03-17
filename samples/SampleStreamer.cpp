@@ -401,18 +401,18 @@ void SampleStreamer::InitGame()
 
     Array<Handle<Light>> point_lights;
 
-    // point_lights.PushBack(CreateObject<Light>(PointLight(
-    //     Vector3(-5.0f, 0.5f, 0.0f),
-    //     Color(1.0f, 0.0f, 0.0f),
-    //     1.0f,
-    //     5.0f
-    // )));
-    // point_lights.PushBack(CreateObject<Light>(PointLight(
-    //     Vector3(5.0f, 2.0f, 0.0f),
-    //     Color(0.0f, 1.0f, 0.0f),
-    //     1.0f,
-    //     15.0f
-    // )));
+    //point_lights.PushBack(CreateObject<Light>(PointLight(
+    //    Vector3(-5.0f, 0.5f, 0.0f),
+    //    Color(1.0f, 0.0f, 0.0f),
+    //    1.0f,
+    //    5.0f
+    //)));
+    //point_lights.PushBack(CreateObject<Light>(PointLight(
+    //    Vector3(5.0f, 2.0f, 0.0f),
+    //    Color(0.0f, 1.0f, 0.0f),
+    //    1.0f,
+    //    15.0f
+    //)));
 
     for (auto &light : point_lights) {
         auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
@@ -444,18 +444,6 @@ void SampleStreamer::InitGame()
                 Quaternion::Identity()
             )
         });
-
-        // m_scene->GetEntityManager()->AddComponent(skybox_entity, MeshComponent {
-        //     MeshBuilder::Cube(),
-        //     g_material_system->GetOrCreate({
-        //         .shader_definition = ShaderDefinition {
-        //             HYP_NAME(Skybox),
-        //             ShaderProperties(static_mesh_vertex_attributes)
-        //         },
-        //         .bucket = Bucket::BUCKET_SKYBOX,
-        //         .cull_faces = FaceCullMode::FRONT
-        //     })
-        // });
 
         m_scene->GetEntityManager()->AddComponent(skybox_entity, SkyComponent { });
         m_scene->GetEntityManager()->AddComponent(skybox_entity, MeshComponent { });

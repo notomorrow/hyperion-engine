@@ -63,9 +63,9 @@ permute = MODE(REFLECTION AMBIENT SHADOWS), WRITE_NORMALS, WRITE_MOMENTS
 frag = RenderToCubemap.frag
 vert = RenderToCubemap.vert
 
-[RenderToCubemap_Skydome]
-frag = sky/RenderToCubemap.frag
-vert = sky/RenderToCubemap.vert
+[RenderSky]
+frag = sky/RenderSky.frag
+vert = sky/RenderSky.vert
 
 [ComputeSH]
 permute = MODE(CLEAR BUILD_COEFFICIENTS REDUCE FINALIZE)
