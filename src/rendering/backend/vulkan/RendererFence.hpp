@@ -22,9 +22,9 @@ template <>
 class Fence<Platform::VULKAN>
 {
 public:
-    Fence(bool create_signaled = false);
-    Fence(const Fence &other) = delete;
-    Fence &operator=(const Fence &other) = delete;
+    Fence();
+    Fence(const Fence &other)               = delete;
+    Fence &operator=(const Fence &other)    = delete;
     ~Fence();
 
     VkFence &GetHandle() { return m_handle; }
@@ -37,7 +37,6 @@ public:
 
 private:
     VkFence m_handle;
-    bool m_create_signaled;
 };
 
 } // namespace platform

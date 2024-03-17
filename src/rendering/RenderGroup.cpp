@@ -75,7 +75,7 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
             for (uint j = 0; j < uint(command_buffers[i].Size()); j++) {
                 HYPERION_BUBBLE_ERRORS(command_buffers[i][j]->Create(
                     g_engine->GetGPUInstance()->GetDevice(),
-                    g_engine->GetGPUInstance()->GetGraphicsCommandPool(j)
+                    g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[j]
                 ));
             }
         }

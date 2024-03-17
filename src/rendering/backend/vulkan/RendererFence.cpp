@@ -5,9 +5,8 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
-Fence<Platform::VULKAN>::Fence(bool create_signaled)
-    : m_handle(VK_NULL_HANDLE),
-      m_create_signaled(create_signaled)
+Fence<Platform::VULKAN>::Fence()
+    : m_handle(VK_NULL_HANDLE)
 {
 }
 
@@ -21,12 +20,8 @@ Result Fence<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     AssertThrow(m_handle == VK_NULL_HANDLE);
 
     // Create fence to ensure that the command buffer has finished executing
-    VkFenceCreateInfo fence_create_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    fence_create_info.flags = 0;
-
-    if (m_create_signaled) {
-        fence_create_info.flags |= VK_FENCE_CREATE_SIGNALED_BIT;
-    }
+    VkFenceCreateInfo fence_create_info { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     
     HYPERION_VK_CHECK(vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &m_handle));
 

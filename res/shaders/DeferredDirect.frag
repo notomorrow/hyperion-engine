@@ -81,7 +81,7 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
-    vec4 albedo = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture, texcoord);
+    vec4 albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
     uint mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
     vec3 normal = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
 
@@ -91,7 +91,7 @@ void main()
 
     float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
-    vec4 material = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
+    vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;
@@ -115,7 +115,7 @@ void main()
     float ao = 1.0;
     float shadow = 1.0;
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, texcoord);
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
     vec3 L = light.position_intensity.xyz;
@@ -162,7 +162,7 @@ void main()
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
         const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
-        const float perceptual_roughness = sqrt(roughness);
+        //const float perceptual_roughness = sqrt(roughness);
         const vec4 dfg = CalculateDFG(F, roughness, NdotV);
         const vec4 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0.rgb, dfg.rgb);

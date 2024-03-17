@@ -29,7 +29,7 @@ struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
         for (uint i = 0; i < max_frames_in_flight; i++) {
             HYPERION_BUBBLE_ERRORS(command_buffers[i]->Create(
                 g_engine->GetGPUDevice(),
-                g_engine->GetGPUInstance()->GetGraphicsCommandPool()
+                g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[0]
             ));
         }
 

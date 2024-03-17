@@ -591,7 +591,7 @@ void SampleStreamer::InitGame()
 
             GetScene()->GetRoot().AddChild(node);
 
-#if 0
+#if 1
             // Add a reflection probe
             // TEMP: Commented out due to blending issues with multiple reflection probes
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
@@ -608,7 +608,7 @@ void SampleStreamer::InitGame()
                 }
             }
 
-            /*auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
+            auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
             m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
                 node.GetWorldTransform()
@@ -633,7 +633,7 @@ void SampleStreamer::InitGame()
 
             auto env_grid_node = m_scene->GetRoot().AddChild();
             env_grid_node.SetEntity(env_grid_entity);
-            env_grid_node.SetName("EnvGrid");*/
+            env_grid_node.SetName("EnvGrid");
         }
     }
 

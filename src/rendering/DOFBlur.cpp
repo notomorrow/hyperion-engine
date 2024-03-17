@@ -60,8 +60,9 @@ void DOFBlur::Destroy()
 
 void DOFBlur::Render(Frame *frame)
 {
-    struct alignas(128) {
-        ShaderVec2<uint32> dimension;
+    struct alignas(128)
+    {
+        Vec2u   dimension;
     } push_constants;
 
     push_constants.dimension = m_extent;

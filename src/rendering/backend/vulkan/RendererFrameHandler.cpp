@@ -22,7 +22,10 @@ FrameHandler<Platform::VULKAN>::FrameHandler(uint num_frames, NextImageFunction 
 }
 
 template <>
-Result FrameHandler<Platform::VULKAN>::CreateFrames(Device<Platform::VULKAN> *device, DeviceQueue *queue)
+Result FrameHandler<Platform::VULKAN>::CreateFrames(
+    Device<Platform::VULKAN> *device,
+    DeviceQueue<Platform::VULKAN> *queue
+)
 {
     for (uint i = 0; i < m_frames.Size(); i++) {
         auto command_buffer = MakeRenderObject<renderer::CommandBuffer, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
@@ -81,7 +84,7 @@ void FrameHandler<Platform::VULKAN>::NextFrame()
 
 template <>
 Result FrameHandler<Platform::VULKAN>::PresentFrame(
-    DeviceQueue *queue,
+    DeviceQueue<Platform::VULKAN> *queue,
     Swapchain<Platform::VULKAN> *swapchain
 ) const
 {
@@ -90,10 +93,8 @@ Result FrameHandler<Platform::VULKAN>::PresentFrame(
     const auto &signal_semaphores = frame->GetPresentSemaphores().GetSignalSemaphoresView();
 
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-
     present_info.waitSemaphoreCount = uint32(signal_semaphores.size());
     present_info.pWaitSemaphores = signal_semaphores.data();
-
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &swapchain->swapchain;
     present_info.pImageIndices = &m_acquired_image_index;

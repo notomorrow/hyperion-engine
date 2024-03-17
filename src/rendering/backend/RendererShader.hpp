@@ -28,17 +28,22 @@ struct ShaderObject
 enum ShaderModuleType : uint
 {
     UNSET = 0,
+
+    /* Graphics and general purpose shaders */
     VERTEX,
     FRAGMENT,
     GEOMETRY,
     COMPUTE,
+
     /* Mesh shaders */
     TASK,
     MESH,
+
     /* Tesselation */
     TESS_CONTROL,
     TESS_EVAL,
-    /* Raytracing */
+
+    /* Raytracing hardware specific */
     RAY_GEN,
     RAY_INTERSECT,
     RAY_ANY_HIT,

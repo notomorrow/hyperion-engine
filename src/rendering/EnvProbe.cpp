@@ -118,12 +118,12 @@ void EnvProbe::UpdateRenderData(
 
     EnvProbeShaderData data {
         .face_view_matrices = {
-            ShaderMat4(view_matrices[0]),
-            ShaderMat4(view_matrices[1]),
-            ShaderMat4(view_matrices[2]),
-            ShaderMat4(view_matrices[3]),
-            ShaderMat4(view_matrices[4]),
-            ShaderMat4(view_matrices[5])
+            view_matrices[0],
+            view_matrices[1],
+            view_matrices[2],
+            view_matrices[3],
+            view_matrices[4],
+            view_matrices[5]
         },
         .aabb_max           = Vec4f(aabb.max, 1.0f),
         .aabb_min           = Vec4f(aabb.min, 1.0f),
@@ -133,14 +133,14 @@ void EnvProbe::UpdateRenderData(
         .camera_near        = GetDrawProxy().camera_near,
         .camera_far         = GetDrawProxy().camera_far,
         .position_in_grid   = grid_slot != ~0u
-            ? ShaderVec4<int32> {
+            ? Vec4i {
                   int32(grid_slot % grid_size.width),
                   int32((grid_slot % (grid_size.width * grid_size.height)) / grid_size.width),
                   int32(grid_slot / (grid_size.width * grid_size.height)),
                   int32(grid_slot)
               }
-            : ShaderVec4<int32> { 0, 0, 0, 0 },
-        .position_offset    = { 0, 0, 0, 0 }
+            : Vec4i::zero,
+        .position_offset    = Vec4i::zero
     };
 
     g_engine->GetRenderData()->env_probes.Set(GetID().ToIndex(), data);

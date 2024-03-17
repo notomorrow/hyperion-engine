@@ -7,12 +7,17 @@
 namespace hyperion {
 namespace renderer {
 
-struct DeviceQueue
+namespace platform {
+
+template <>
+struct DeviceQueue<Platform::VULKAN>
 {
-    uint                            family;
+    DeviceQueueType                 type;
     VkQueue                         queue;
     FixedArray<VkCommandPool, 8>    command_pools;
 };
+
+} // namespace platform
 
 } // namespace renderer
 } // namespace hyperion

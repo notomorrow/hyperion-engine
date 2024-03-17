@@ -462,7 +462,10 @@ Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(
     return result;
 }
 
-void GPUBuffer<Platform::VULKAN>::InsertBarrier(CommandBuffer<Platform::VULKAN> *command_buffer, ResourceState new_state) const
+void GPUBuffer<Platform::VULKAN>::InsertBarrier(
+    CommandBuffer<Platform::VULKAN> *command_buffer,
+    ResourceState new_state
+) const
 {
     if (buffer == nullptr) {
         DebugLog(
@@ -486,6 +489,43 @@ void GPUBuffer<Platform::VULKAN>::InsertBarrier(CommandBuffer<Platform::VULKAN> 
         command_buffer->GetCommandBuffer(),
         GetShaderStageMask(resource_state, true),
         GetShaderStageMask(new_state, false),
+        0,
+        0, nullptr,
+        1, &barrier,
+        0, nullptr
+    );
+
+    resource_state = new_state;
+}
+
+void GPUBuffer<Platform::VULKAN>::InsertBarrier(
+    CommandBuffer<Platform::VULKAN> *command_buffer,
+    ResourceState new_state,
+    ShaderModuleType shader_type
+) const
+{
+    if (buffer == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Attempt to insert a resource barrier but buffer was not defined\n"
+        );
+
+        return;
+    }
+
+    VkBufferMemoryBarrier barrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+    barrier.srcAccessMask = GetAccessMask(resource_state);
+    barrier.dstAccessMask = GetAccessMask(new_state);
+    barrier.buffer = buffer;
+    barrier.offset = 0;
+    barrier.size = size;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    vkCmdPipelineBarrier(
+        command_buffer->GetCommandBuffer(),
+        GetShaderStageMask(resource_state, true, shader_type),
+        GetShaderStageMask(new_state, false, shader_type),
         0,
         0, nullptr,
         1, &barrier,

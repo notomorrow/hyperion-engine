@@ -45,25 +45,11 @@ class Instance<Platform::VULKAN>
     Result SetupDebug();
     Result SetupDebugMessenger();
 
-    Result CreateCommandPool(DeviceQueue &queue, uint index);
-
 public:
     Instance(RC<Application> application);
     Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
-                                                          
-    DeviceQueue &GetGraphicsQueue() { return this->queue_graphics; }
-    const DeviceQueue &GetGraphicsQueue() const { return this->queue_graphics; }
-    DeviceQueue &GetTransferQueue() { return this->queue_transfer; }
-    const DeviceQueue &GetTransferQueue() const { return this->queue_transfer; }
-    DeviceQueue &GetPresentQueue() { return this->queue_present; }
-    const DeviceQueue &GetPresentQueue() const { return this->queue_present; }
-    DeviceQueue &GetComputeQueue() { return this->queue_compute; }
-    const DeviceQueue &GetComputeQueue() const { return this->queue_compute; }
-                                                          
-    VkCommandPool GetGraphicsCommandPool(uint index = 0) const { return this->queue_graphics.command_pools[index]; }
-    VkCommandPool GetComputeCommandPool(uint index = 0) const { return this->queue_compute.command_pools[index]; }
-    
+
     VkInstance GetInstance() const
         { return this->instance; }
 
@@ -110,11 +96,6 @@ private:
 
     Device<Platform::VULKAN>        *m_device = nullptr;
     Swapchain<Platform::VULKAN>     *m_swapchain = nullptr;
-
-    DeviceQueue                     queue_graphics;
-    DeviceQueue                     queue_transfer;
-    DeviceQueue                     queue_present;
-    DeviceQueue                     queue_compute;
     
     Array<const char *>             validation_layers;
 

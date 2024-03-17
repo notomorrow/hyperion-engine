@@ -10,6 +10,7 @@
 
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererQueue.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 
@@ -29,6 +30,9 @@ class Instance;
 template <PlatformType PLATFORM>
 class DescriptorSetManager;
 
+template <PlatformType PLATFORM>
+class AsyncCompute;
+
 template <>
 class Device<Platform::VULKAN>
 {
@@ -36,6 +40,10 @@ class Device<Platform::VULKAN>
 
 public:
     Device(VkPhysicalDevice physical, VkSurfaceKHR surface);
+    Device(const Device &)                  = delete;
+    Device &operator=(const Device &)       = delete;
+    Device(Device &&) noexcept              = delete;
+    Device &operator=(Device &&) noexcept   = delete;
     ~Device();
 
     void Destroy();
@@ -46,6 +54,9 @@ public:
 
     DescriptorSetManager<Platform::VULKAN> *GetDescriptorSetManager() const
         { return m_descriptor_set_manager.Get(); }
+
+    AsyncCompute<Platform::VULKAN> *GetAsyncCompute() const
+        { return m_async_compute.Get(); }
 
     VkDevice GetDevice();
     VkSurfaceKHR GetRenderSurface();
@@ -59,6 +70,15 @@ public:
 
     const QueueFamilyIndices &GetQueueFamilyIndices() const { return m_queue_family_indices; }
     const Features &GetFeatures() const { return *m_features; }
+                                                          
+    DeviceQueue<Platform::VULKAN> &GetGraphicsQueue() { return m_queue_graphics; }
+    const DeviceQueue<Platform::VULKAN> &GetGraphicsQueue() const { return m_queue_graphics; }
+    DeviceQueue<Platform::VULKAN> &GetTransferQueue() { return m_queue_transfer; }
+    const DeviceQueue<Platform::VULKAN> &GetTransferQueue() const { return m_queue_transfer; }
+    DeviceQueue<Platform::VULKAN> &GetPresentQueue() { return m_queue_present; }
+    const DeviceQueue<Platform::VULKAN> &GetPresentQueue() const { return m_queue_present; }
+    DeviceQueue<Platform::VULKAN> &GetComputeQueue() { return m_queue_compute; }
+    const DeviceQueue<Platform::VULKAN> &GetComputeQueue() const { return m_queue_compute; }
 
     VkQueue GetQueue(uint32 queue_family_index, uint32 queue_index = 0);
 
@@ -82,10 +102,17 @@ private:
     UniquePtr<Features>                                 m_features;
     QueueFamilyIndices                                  m_queue_family_indices;
 
+    DeviceQueue<Platform::VULKAN>                       m_queue_graphics;
+    DeviceQueue<Platform::VULKAN>                       m_queue_transfer;
+    DeviceQueue<Platform::VULKAN>                       m_queue_present;
+    DeviceQueue<Platform::VULKAN>                       m_queue_compute;
+
     ExtensionMap                                        m_required_extensions;
 
     UniquePtr<DescriptorPool>                           m_descriptor_pool;
     UniquePtr<DescriptorSetManager<Platform::VULKAN>>   m_descriptor_set_manager;
+
+    UniquePtr<AsyncCompute<Platform::VULKAN>>           m_async_compute;
 };
 
 } // namespace platform

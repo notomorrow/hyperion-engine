@@ -840,6 +840,8 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
+            Threads::AssertOnThread(THREAD_RENDER);
+
             if (!Base::num_items.Get(MemoryOrder::ACQUIRE)) {
                 return;
             }
@@ -881,6 +883,8 @@ struct RenderObjectDeleter
 
         virtual void ForceDeleteAll() override
         {
+            Threads::AssertOnThread(THREAD_RENDER);
+
             if (!Base::num_items.Get(MemoryOrder::ACQUIRE)) {
                 return;
             }
@@ -968,6 +972,18 @@ FixedArray<DeletionQueueBase *, RenderObjectDeleter<PLATFORM>::max_queues + 1> R
 
 template <renderer::PlatformType PLATFORM>
 AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::queue_index = { 0 };
+
+template <renderer::PlatformType PLATFORM>
+static inline void ForceDeleteAllEnqueuedRenderObjects()
+{
+    RenderObjectDeleter<PLATFORM>::ForceDeleteAll();
+}
+
+template <class T, renderer::PlatformType PLATFORM>
+static inline void ForceDeleteAllEnqueuedRenderObjects()
+{
+    RenderObjectDeleter<PLATFORM>::template GetQueue<T>().ForceDeleteAll();
+}
 
 template <class T, renderer::PlatformType PLATFORM>
 static inline void SafeRelease(renderer::RenderObjectHandle_Strong<T, PLATFORM> &&handle)

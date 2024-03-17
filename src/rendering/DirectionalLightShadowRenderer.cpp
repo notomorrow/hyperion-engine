@@ -505,7 +505,7 @@ void ShadowPass::Render(Frame *frame)
             command_buffer,
             Pipeline::PushConstantData {
                 .blur_shadow_map_data = {
-                    .image_dimensions = ShaderVec2<uint32>(m_framebuffer->GetExtent())
+                    .image_dimensions = Vec2u(m_framebuffer->GetExtent())
                 }
             }
         );

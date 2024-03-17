@@ -35,9 +35,9 @@ class SingleTimeCommands
 public:
     SingleTimeCommands() : command_buffer{}, pool{}, family_indices{} {}
 
-    void Push(const std::function<Result(const CommandBufferRef_VULKAN &)> &fn)
+    void Push(Proc<Result, const platform::CommandBufferRef<Platform::VULKAN> &> &&fn)
     {
-        m_functions.push_back(fn);
+        m_functions.PushBack(std::move(fn));
     }
 
     Result Execute(Device *device)
@@ -54,7 +54,7 @@ public:
             }
         }
 
-        m_functions.clear();
+        m_functions.Clear();
 
         HYPERION_PASS_ERRORS(End(device), result);
 
@@ -66,13 +66,13 @@ public:
     QueueFamilyIndices      family_indices;
 
 private:
-    std::vector<std::function<Result(const CommandBufferRef_VULKAN &)>> m_functions;
-    std::unique_ptr<Fence> m_fence;
+    Array<Proc<Result, const platform::CommandBufferRef<Platform::VULKAN> &>>   m_functions;
+    platform::FenceRef<Platform::VULKAN>                                        m_fence;
 
     Result Begin(Device *device)
     {
-        command_buffer = MakeRenderObject<CommandBuffer, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
-        m_fence = std::make_unique<Fence>();
+        command_buffer = MakeRenderObject<platform::CommandBuffer<Platform::VULKAN>, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+        m_fence = MakeRenderObject<platform::Fence<Platform::VULKAN>, Platform::VULKAN>();
 
         HYPERION_BUBBLE_ERRORS(command_buffer->Create(device, pool));
 
@@ -86,11 +86,12 @@ private:
         HYPERION_PASS_ERRORS(command_buffer->End(device), result);
 
         HYPERION_PASS_ERRORS(m_fence->Create(device), result);
+        HYPERION_PASS_ERRORS(m_fence->Reset(device), result);
 
         // Submit to the queue
         auto queue_graphics = device->GetQueue(family_indices.graphics_family.Get(), 0);
 
-        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence.get(), nullptr), result);
+        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence, nullptr), result);
         
         HYPERION_PASS_ERRORS(m_fence->WaitForGPU(device), result);
         HYPERION_PASS_ERRORS(m_fence->Destroy(device), result);

@@ -122,61 +122,61 @@ enum EntityGPUDataFlags : uint32
 
 struct alignas(256) ObjectShaderData
 {
-    ShaderMat4 model_matrix;
-    ShaderMat4 previous_model_matrix;
+    Matrix4 model_matrix;
+    Matrix4 previous_model_matrix;
 
-    ShaderVec4<float> _pad0;
-    ShaderVec4<float> _pad1;
-    ShaderVec4<float> world_aabb_max;
-    ShaderVec4<float> world_aabb_min;
+    Vec4f   _pad0;
+    Vec4f   _pad1;
+    Vec4f   world_aabb_max;
+    Vec4f   world_aabb_min;
 
-    uint32 entity_index;
-    uint32 _unused;
-    uint32 material_index;
-    uint32 skeleton_index;
+    uint32  entity_index;
+    uint32  _unused;
+    uint32  material_index;
+    uint32  skeleton_index;
 
-    uint32 bucket;
-    uint32 flags;
-    uint32 _pad3;
-    uint32 _pad4;
+    uint32  bucket;
+    uint32  flags;
+    uint32  _pad3;
+    uint32  _pad4;
 
-    ShaderVec4<float> _pad5;
-    ShaderVec4<float> _pad6;
+    Vec4f   _pad5;
+    Vec4f   _pad6;
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
 
 struct MaterialShaderData
 {
-    ShaderVec4<float> albedo;
+    Vec4f               albedo;
     
     // 4 vec4s of 0.0..1.0 values stuffed into uint32s
-    ShaderVec4<uint32> packed_params;
+    Vec4u               packed_params;
     
-    ShaderVec2<float> uv_scale;
-    float32 parallax_height;
-    float32 _pad0;
+    Vec2f               uv_scale;
+    float               parallax_height;
+    float               _pad0;
     
-    uint32 texture_index[16];
+    uint32              texture_index[16];
     
-    uint32 texture_usage;
-    uint32 _pad1;
-    uint32 _pad2;
-    uint32 _pad3;
+    uint32              texture_usage;
+    uint32              _pad1;
+    uint32              _pad2;
+    uint32              _pad3;
 };
 
 static_assert(sizeof(MaterialShaderData) == 128);
 
 struct SceneShaderData
 {
-    ShaderVec4<float> aabb_max;
-    ShaderVec4<float> aabb_min;
-    ShaderVec4<float> fog_params;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec4f   fog_params;
 
-    float global_timer;
-    uint32 frame_counter;
-    uint32 enabled_render_components_mask;
-    uint32 enabled_environment_maps_mask;
+    float   global_timer;
+    uint32  frame_counter;
+    uint32  enabled_render_components_mask;
+    uint32  enabled_environment_maps_mask;
 
     HYP_PAD_STRUCT_HERE(uint8, 64 + 128);
 };
@@ -185,82 +185,82 @@ static_assert(sizeof(SceneShaderData) == 256);
 
 struct alignas(256) CameraShaderData
 {
-    ShaderMat4 view;
-    ShaderMat4 projection;
-    ShaderMat4 previous_view;
+    Matrix4     view;
+    Matrix4     projection;
+    Matrix4     previous_view;
 
-    ShaderVec4<uint32> dimensions;
-    ShaderVec4<float> camera_position;
-    ShaderVec4<float> camera_direction;
-    ShaderVec4<float> jitter;
+    Vec4u       dimensions;
+    Vec4f       camera_position;
+    Vec4f       camera_direction;
+    Vec4f       jitter;
     
-    float camera_near;
-    float camera_far;
-    float camera_fov;
-    float _pad0;
+    float       camera_near;
+    float       camera_far;
+    float       camera_fov;
+    float       _pad0;
 };
 
 static_assert(sizeof(CameraShaderData) == 512);
 
 struct alignas(256) EnvGridShaderData
 {
-    uint32 probe_indices[max_bound_ambient_probes];
+    uint32  probe_indices[max_bound_ambient_probes];
 
-    ShaderVec4<float> center;
-    ShaderVec4<float> extent;
-    ShaderVec4<float> aabb_max;
-    ShaderVec4<float> aabb_min;
+    Vec4f   center;
+    Vec4f   extent;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
 
-    ShaderVec4<uint32> density;
-    ShaderVec4<uint32> enabled_indices_mask;
+    Vec4u   density;
+    Vec4u   enabled_indices_mask;
 
-    ShaderVec4<float> voxel_grid_aabb_max;
-    ShaderVec4<float> voxel_grid_aabb_min;
+    Vec4f   voxel_grid_aabb_max;
+    Vec4f   voxel_grid_aabb_min;
 };
 
 static_assert(sizeof(EnvGridShaderData) == 4352);
 
 struct alignas(256) ShadowShaderData
 {
-    ShaderMat4 projection;
-    ShaderMat4 view;
-    ShaderVec4<float> aabb_max;
-    ShaderVec4<float> aabb_min;
-    ShaderVec2<uint32> dimensions;
-    uint32 flags;
+    Matrix4 projection;
+    Matrix4 view;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec2u   dimensions;
+    uint32  flags;
 };
 
 static_assert(sizeof(ShadowShaderData) == 256);
 
 struct alignas(256) EnvProbeShaderData
 {
-    ShaderMat4 face_view_matrices[6];
+    Matrix4 face_view_matrices[6];
 
-    ShaderVec4<float> aabb_max;
-    ShaderVec4<float> aabb_min;
-    ShaderVec4<float> world_position;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec4f   world_position;
 
-    uint32 texture_index;
-    uint32 flags;
-    float camera_near;
-    float camera_far;
+    uint32  texture_index;
+    uint32  flags;
+    float   camera_near;
+    float   camera_far;
 
-    ShaderVec2<uint32> dimensions;
-    ShaderVec2<uint32> _pad2;
+    Vec2u   dimensions;
+    Vec2u   _pad2;
 
-    ShaderVec4<int32> position_in_grid;
-    ShaderVec4<int32> position_offset;
-    ShaderVec4<uint32> _pad5;
+    Vec4i   position_in_grid;
+    Vec4i   position_offset;
+    Vec4u   _pad5;
 };
 
 static_assert(sizeof(EnvProbeShaderData) == 512);
 
 struct alignas(16) ImmediateDrawShaderData
 {
-    ShaderMat4  transform;
-    uint32      color_packed;
-    uint32      probe_type;
-    uint32      probe_id;
+    Matrix4 transform;
+    uint32  color_packed;
+    uint32  probe_type;
+    uint32  probe_id;
 };
 
 static_assert(sizeof(ImmediateDrawShaderData) == 80);
@@ -288,7 +288,7 @@ struct alignas(64) LightShaderData
     HYP_PAD_STRUCT_HERE(uint32, 2);
     // 32
 
-    ShaderVec4<float> position_intensity;
+    Vec4f position_intensity;
     // 48
 
     HYP_PAD_STRUCT_HERE(ubyte, 64 - 48);
@@ -298,15 +298,14 @@ static_assert(sizeof(LightShaderData) == 64);
 
 struct alignas(256) SH9Buffer
 {
-    ShaderVec4<float> values[16];
+    Vec4f   values[16];
 };
 
 static_assert(sizeof(SH9Buffer) == 256);
 
 struct alignas(256) SHGridBuffer
 {
-    ShaderVec4<float> color_values[max_probes_in_sh_grid_buffer * 9];
-    // ShaderVec4<float> depth_values[max_probes_in_sh_grid_buffer * 9 / 4]; // group into 4s
+    Vec4f   color_values[max_probes_in_sh_grid_buffer * 9];
 };
 
 // static_assert(sizeof(SHGridBuffer) == 9216);
@@ -320,34 +319,34 @@ struct alignas(16) EnvGridProbeDataBuffer
 
 struct alignas(16) SHTile
 {
-    ShaderVec4<float> coeffs_weights[9];
+    Vec4f   coeffs_weights[9];
 };
 
 static_assert(sizeof(SHTile) == 144);
 
 struct alignas(16) VoxelUniforms
 {
-    ShaderVec4<float> extent;
-    ShaderVec4<float> aabb_max;
-    ShaderVec4<float> aabb_min;
-    ShaderVec4<uint32> dimensions; // num mipmaps stored in w component
+    Vec4f   extent;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec4u   dimensions; // num mipmaps stored in w component
 };
 
 static_assert(sizeof(VoxelUniforms) == 64);
 
 struct alignas(256) BlueNoiseBuffer
 {
-    ShaderVec4<int32> sobol_256spp_256d[256 * 256 / 4];
-    ShaderVec4<int32> scrambling_tile[128 * 128 * 8 / 4];
-    ShaderVec4<int32> ranking_tile[128 * 128 * 8 / 4];
+    Vec4i   sobol_256spp_256d[256 * 256 / 4];
+    Vec4i   scrambling_tile[128 * 128 * 8 / 4];
+    Vec4i   ranking_tile[128 * 128 * 8 / 4];
 };
 
 static_assert(sizeof(BlueNoiseBuffer) == 1310720);
 struct alignas(16) PostProcessingUniforms
 {
-    ShaderVec2<uint32> effect_counts; // pre, post
-    ShaderVec2<uint32> last_enabled_indices; // pre, post
-    ShaderVec2<uint32> masks; // pre, post
+    Vec2u   effect_counts; // pre, post
+    Vec2u   last_enabled_indices; // pre, post
+    Vec2u   masks; // pre, post
 };
 
 static_assert(sizeof(PostProcessingUniforms) == 32);

@@ -2,6 +2,7 @@
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/AsyncCompute.hpp>
 
 #include <cstring>
 #include <algorithm>
@@ -20,7 +21,8 @@ Device<Platform::VULKAN>::Device(VkPhysicalDevice physical, VkSurfaceKHR surface
       m_surface(surface),
       m_allocator(VK_NULL_HANDLE),
       m_features(UniquePtr<Features>::Construct()),
-      m_descriptor_set_manager(new DescriptorSetManager<Platform::VULKAN>)
+      m_descriptor_set_manager(new DescriptorSetManager<Platform::VULKAN>),
+      m_async_compute(new AsyncCompute<Platform::VULKAN>)
 {
     m_features->SetPhysicalDevice(m_physical);
     m_queue_family_indices = FindQueueFamilies(m_physical, m_surface);
@@ -313,11 +315,30 @@ Result Device<Platform::VULKAN>::DestroyAllocator()
 
     HYPERION_RETURN_OK;
 }
+
 Result Device<Platform::VULKAN>::Wait() const
 {
-    HYPERION_VK_CHECK(vkDeviceWaitIdle(m_device));
+    Result result = Result::OK;
 
-    HYPERION_RETURN_OK;
+    if (m_queue_graphics.queue != VK_NULL_HANDLE) {
+        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queue_graphics.queue), result);
+    }
+
+    if (m_queue_transfer.queue != VK_NULL_HANDLE) {
+        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queue_transfer.queue), result);
+    }
+
+    if (m_queue_compute.queue != VK_NULL_HANDLE) {
+        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queue_compute.queue), result);
+    }
+
+    if (m_queue_present.queue != VK_NULL_HANDLE) {
+        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queue_present.queue), result);
+    }
+
+    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(m_device), result);
+
+    return result;
 }
 
 Result Device<Platform::VULKAN>::Create(const std::set<uint32> &required_queue_families)
@@ -415,6 +436,64 @@ Result Device<Platform::VULKAN>::Create(const std::set<uint32> &required_queue_f
     DebugLog(LogType::Info, "Raytracing supported? : %d\n", m_features->IsRaytracingSupported());
 
     HYPERION_BUBBLE_ERRORS(m_descriptor_set_manager->Create(this));
+    
+    {  // Create device queues
+        m_queue_graphics = DeviceQueue<Platform::VULKAN> {
+            .type   = DeviceQueueType::GRAPHICS,
+            .queue  = GetQueue(m_queue_family_indices.graphics_family.Get())
+        };
+
+        m_queue_transfer = DeviceQueue<Platform::VULKAN> {
+            .type   = DeviceQueueType::TRANSFER,
+            .queue  = GetQueue(m_queue_family_indices.transfer_family.Get())
+        };
+
+        m_queue_present = DeviceQueue<Platform::VULKAN> {
+            .type   = DeviceQueueType::PRESENT,
+            .queue  = GetQueue(m_queue_family_indices.present_family.Get())
+        };
+
+        m_queue_compute = DeviceQueue<Platform::VULKAN> {
+            .type   = DeviceQueueType::COMPUTE,
+            .queue  = GetQueue(m_queue_family_indices.compute_family.Get())
+        };
+
+        DeviceQueue<Platform::VULKAN> *queues_with_command_buffers[] = { &m_queue_graphics, &m_queue_transfer, &m_queue_compute };
+
+        for (auto &it : queues_with_command_buffers) {
+            for (uint command_buffer_index = 0; command_buffer_index < it->command_pools.Size(); command_buffer_index++) {
+                uint32 family_index = 0;
+
+                switch (it->type) {
+                case DeviceQueueType::GRAPHICS:
+                    family_index = m_queue_family_indices.graphics_family.Get();
+                    break;
+                case DeviceQueueType::TRANSFER:
+                    family_index = m_queue_family_indices.transfer_family.Get();
+                    break;
+                case DeviceQueueType::COMPUTE:
+                    family_index = m_queue_family_indices.compute_family.Get();
+                    break;
+                case DeviceQueueType::PRESENT:
+                    family_index = m_queue_family_indices.present_family.Get();
+                    break;
+                default:
+                    AssertThrowMsg(false, "Unknown queue type");
+                }
+
+                VkCommandPoolCreateInfo pool_info { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+                pool_info.queueFamilyIndex = family_index;
+                pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+                HYPERION_VK_CHECK_MSG(
+                    vkCreateCommandPool(GetDevice(), &pool_info, nullptr, &it->command_pools[command_buffer_index]),
+                    "Could not create Vulkan command pool"
+                );
+            }
+        }
+    }
+
+    HYPERION_BUBBLE_ERRORS(m_async_compute->Create(this));
 
     HYPERION_RETURN_OK;
 }
@@ -431,7 +510,21 @@ VkQueue Device<Platform::VULKAN>::GetQueue(uint32 queue_family_index, uint32 que
 
 void Device<Platform::VULKAN>::Destroy()
 {
+    m_async_compute.Reset();
+    
     m_descriptor_set_manager->Destroy(this);
+
+    DeviceQueue<Platform::VULKAN> *queues[] = { &m_queue_graphics, &m_queue_transfer, &m_queue_compute, &m_queue_present };
+
+    for (DeviceQueue<Platform::VULKAN> *queue : queues) {
+        for (VkCommandPool command_pool : queue->command_pools) {
+            vkDestroyCommandPool(m_device, command_pool, nullptr);
+        }
+
+        queue->command_pools = { };
+    }
+
+    ForceDeleteAllEnqueuedRenderObjects<Platform::VULKAN>();
 
     if (m_device != VK_NULL_HANDLE) {
         /* By the time this destructor is called there should never

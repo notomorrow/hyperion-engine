@@ -173,7 +173,7 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
             for (uint i = 0; i < uint(command_buffers[frame_index].Size()); i++) {
                 HYPERION_BUBBLE_ERRORS(command_buffers[frame_index][i]->Create(
                     g_engine->GetGPUInstance()->GetDevice(),
-                    g_engine->GetGPUInstance()->GetGraphicsCommandPool(i)
+                    g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[i]
                 ));
             }
         }

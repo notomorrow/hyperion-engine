@@ -11,7 +11,7 @@ namespace hyperion::v2 {
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const Vector3 &origin
-) : RenderComponent(name, 60),
+) : RenderComponent(name),
     m_aabb(BoundingBox(origin - 150.0f, origin + 150.0f))
 {
 }
@@ -19,7 +19,7 @@ ReflectionProbeRenderer::ReflectionProbeRenderer(
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const BoundingBox &aabb
-) : RenderComponent(name, 60),
+) : RenderComponent(name),
     m_aabb(aabb)
 {
 }
@@ -75,6 +75,12 @@ void ReflectionProbeRenderer::OnUpdate(GameCounter::TickUnit delta)
 void ReflectionProbeRenderer::OnRender(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
+
+    DebugLog(
+        LogType::Debug,
+        "Rendering reflection probe %s\n",
+        GetName().LookupString()
+    );
 
     m_env_probe->Render(frame);
 

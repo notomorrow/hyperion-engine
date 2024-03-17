@@ -17,7 +17,7 @@ enum class EntityTag : uint32
 
 /*! \brief An EntityTag is a special component that is used to tag an entity with a specific flag.
  * 
- *  \tparam Tag The flag value
+ *  \tparam tag The flag value
  */
 template <EntityTag tag>
 struct EntityTagComponent

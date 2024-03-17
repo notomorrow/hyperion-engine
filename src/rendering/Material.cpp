@@ -256,12 +256,12 @@ void Material::EnqueueDescriptorSetCreate()
         }
     }
 
-    g_engine->GetMaterialDescriptorSetManager().EnqueueAdd(m_id, std::move(texture_bindings));
+    g_engine->GetMaterialDescriptorSetManager().EnqueueAdd(GetID(), std::move(texture_bindings));
 }
 
 void Material::EnqueueDescriptorSetDestroy()
 {
-    g_engine->GetMaterialDescriptorSetManager().EnqueueRemove(m_id);
+    g_engine->GetMaterialDescriptorSetManager().EnqueueRemove(GetID());
 }
 
 void Material::EnqueueRenderUpdates()
@@ -279,8 +279,8 @@ void Material::EnqueueRenderUpdates()
     }
 
     MaterialShaderData shader_data {
-        .albedo = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
-        .packed_params = ShaderVec4<uint32>(
+        .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
+        .packed_params = Vec4u(
             ByteUtil::PackVec4f(Vec4f(
                 GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
                 GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -293,13 +293,13 @@ void Material::EnqueueRenderUpdates()
             ByteUtil::PackVec4f(Vec4f { }),
             ByteUtil::PackVec4f(Vec4f { })
         ),
-        .uv_scale = GetParameter<Vector2>(MATERIAL_KEY_UV_SCALE),
+        .uv_scale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
         .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
     };
 
     PUSH_RENDER_COMMAND(
         UpdateMaterialRenderData,
-        m_id,
+        GetID(),
         shader_data,
         num_bound_textures,
         std::move(bound_texture_ids)

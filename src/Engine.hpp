@@ -137,50 +137,100 @@ public:
     ~Engine();
 
     bool InitializeGame(Game *game);
+
+    HYP_FORCE_INLINE
+    Instance *GetGPUInstance() const
+        { return m_instance.Get(); }
+
+    HYP_FORCE_INLINE
+    Device *GetGPUDevice() const
+        { return m_instance ? m_instance->GetDevice() : nullptr; }
     
-    Instance *GetGPUInstance() const { return m_instance.Get(); }
-    Device *GetGPUDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
-
-    DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
-    const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
-
-    DeferredSystem &GetDeferredSystem() { return m_render_list_container; }
-    const DeferredSystem &GetDeferredSystem() const { return m_render_list_container; }
-
-    RenderState &GetRenderState() { return render_state; }
-    const RenderState &GetRenderState() const { return render_state; }
-
-    ShaderGlobals *GetRenderData() const { return m_render_data.Get(); }
+    HYP_FORCE_INLINE
+    DeferredRenderer &GetDeferredRenderer()
+        { return m_deferred_renderer; }
     
-    PlaceholderData *GetPlaceholderData() const { return m_placeholder_data.Get(); }
+    HYP_FORCE_INLINE
+    const DeferredRenderer &GetDeferredRenderer() const
+        { return m_deferred_renderer; }
     
-    ObjectPool &GetObjectPool() { return m_object_pool; }
-    const ObjectPool &GetObjectPool() const { return m_object_pool; }
+    HYP_FORCE_INLINE
+    DeferredSystem &GetDeferredSystem()
+        { return m_render_list_container; }
+    
+    HYP_FORCE_INLINE
+    const DeferredSystem &GetDeferredSystem() const
+        { return m_render_list_container; }
+    
+    HYP_FORCE_INLINE
+    RenderState &GetRenderState()
+        { return render_state; }
 
-    Handle<World> &GetWorld() { return m_world; }
-    const Handle<World> &GetWorld() const { return m_world; }
-
-    Configuration &GetConfig() { return m_configuration; }
-    const Configuration &GetConfig() const { return m_configuration; }
-
-    ShaderCompiler &GetShaderCompiler() { return m_shader_compiler; }
-    const ShaderCompiler &GetShaderCompiler() const { return m_shader_compiler; }
-
-    DebugDrawer &GetDebugDrawer() { return m_debug_drawer; }
-    const DebugDrawer &GetDebugDrawer() const { return m_debug_drawer; }
-
+    HYP_FORCE_INLINE
+    const RenderState &GetRenderState() const
+        { return render_state; }
+    
+    HYP_FORCE_INLINE
+    ShaderGlobals *GetRenderData() const
+        { return m_render_data.Get(); }
+    
+    HYP_FORCE_INLINE
+    PlaceholderData *GetPlaceholderData() const
+        { return m_placeholder_data.Get(); }
+    
+    HYP_FORCE_INLINE
+    ObjectPool &GetObjectPool()
+        { return m_object_pool; }
+    
+    HYP_FORCE_INLINE
+    const ObjectPool &GetObjectPool() const
+        { return m_object_pool; }
+    
+    HYP_FORCE_INLINE
+    const Handle<World> &GetWorld() const
+        { return m_world; }
+    
+    HYP_FORCE_INLINE
+    Configuration &GetConfig()
+        { return m_configuration; }
+    
+    HYP_FORCE_INLINE
+    const Configuration &GetConfig() const
+        { return m_configuration; }
+    
+    HYP_FORCE_INLINE
+    ShaderCompiler &GetShaderCompiler()
+        { return m_shader_compiler; }
+    
+    HYP_FORCE_INLINE
+    const ShaderCompiler &GetShaderCompiler() const
+        { return m_shader_compiler; }
+    
+    HYP_FORCE_INLINE
+    DebugDrawer &GetDebugDrawer()
+        { return m_debug_drawer; }
+    
+    HYP_FORCE_INLINE
+    const DebugDrawer &GetDebugDrawer() const
+        { return m_debug_drawer; }
+    
+    HYP_FORCE_INLINE
     InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.At(type); }
-
+    
+    HYP_FORCE_INLINE
     const FinalPass &GetFinalPass() const
         { return m_final_pass; }
-
+    
+    HYP_FORCE_INLINE
     const DescriptorTableRef &GetGlobalDescriptorTable() const
         { return m_global_descriptor_table; }
-
+    
+    HYP_FORCE_INLINE
     MaterialDescriptorSetManager &GetMaterialDescriptorSetManager()
         { return m_material_descriptor_set_manager; }
-
+    
+    HYP_FORCE_INLINE
     const MaterialDescriptorSetManager &GetMaterialDescriptorSetManager() const
         { return m_material_descriptor_set_manager; }
 

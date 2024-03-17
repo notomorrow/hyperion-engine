@@ -106,7 +106,7 @@ void main()
     vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi_result, v_texcoord0);
+    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
     if (perform_lighting && !bool(mask & 0x10)) {
@@ -126,14 +126,14 @@ void main()
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
 #ifdef REFLECTION_PROBE_ENABLED
-        vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, texcoord);
+        vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_NEAREST, reflection_probes_texture, texcoord);
         ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb);
 #endif
 
-        vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_LINEAR, env_grid_radiance_texture, texcoord);
+        vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
         ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb);
         
-        irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
+        irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
 #ifdef SSR_ENABLED
         CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);

@@ -171,6 +171,12 @@ public:
         ResourceState new_state
     ) const;
 
+    void InsertBarrier(
+        CommandBuffer<Platform::VULKAN> *command_buffer,
+        ResourceState new_state,
+        ShaderModuleType shader_type
+    ) const;
+
     void CopyFrom(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         const GPUBuffer *src_buffer,

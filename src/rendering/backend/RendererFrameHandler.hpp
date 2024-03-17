@@ -12,8 +12,6 @@
 namespace hyperion {
 namespace renderer {
 
-struct DeviceQueue;
-
 namespace platform {
 
 template <PlatformType PLATFORM>
@@ -27,6 +25,9 @@ class CommandBuffer;
 
 template <PlatformType PLATFORM>
 class Swapchain;
+
+template <PlatformType PLATFORM>
+struct DeviceQueue;
 
 template <PlatformType PLATFORM>
 class FrameHandler
@@ -54,11 +55,11 @@ public:
      * Really only useful for our main swapchain surface */
     Result PrepareFrame(Device<PLATFORM> *device, Swapchain<PLATFORM> *swapchain);
     /* Submit the frame for presentation */
-    Result PresentFrame(DeviceQueue *queue, Swapchain<PLATFORM> *swapchain) const;
+    Result PresentFrame(DeviceQueue<PLATFORM> *queue, Swapchain<PLATFORM> *swapchain) const;
     /* Advance the current frame index; call at the end of a render loop. */
     void NextFrame();
     /* Create our Frame objects (count is same as num_frames) */
-    Result CreateFrames(Device<PLATFORM> *device, DeviceQueue *queue);
+    Result CreateFrames(Device<PLATFORM> *device, DeviceQueue<PLATFORM> *queue);
     Result Destroy(Device<PLATFORM> *device);
 
 private:

@@ -9,6 +9,7 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/AsyncCompute.hpp>
 
 #include <scene/controllers/FollowCameraController.hpp>
 
@@ -453,7 +454,7 @@ void Engine::RenderNextFrame(Game *game)
     //     return;
     // }
 
-    auto frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
+    Result frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
         GetGPUInstance()->GetDevice(),
         GetGPUInstance()->GetSwapchain()
     );
@@ -466,6 +467,8 @@ void Engine::RenderNextFrame(Game *game)
     }
 
     const FrameRef &frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
+    
+    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->PrepareForFrame(GetGPUDevice(), frame));
 
     PreFrameUpdate(frame);
 
@@ -483,7 +486,7 @@ void Engine::RenderNextFrame(Game *game)
 
     HYPERION_ASSERT_RESULT(frame->EndCapture(GetGPUInstance()->GetDevice()));
 
-    frame_result = frame->Submit(&GetGPUInstance()->GetGraphicsQueue());
+    frame_result = frame->Submit(&GetGPUDevice()->GetGraphicsQueue());
 
     if (!frame_result) {
         m_crash_handler.HandleGPUCrash(frame_result);
@@ -494,7 +497,9 @@ void Engine::RenderNextFrame(Game *game)
 
     game->OnFrameEnd(frame);
 
-    GetGPUInstance()->GetFrameHandler()->PresentFrame(&GetGPUInstance()->GetGraphicsQueue(), GetGPUInstance()->GetSwapchain());
+    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->Submit(GetGPUDevice(), frame));
+
+    GetGPUInstance()->GetFrameHandler()->PresentFrame(&GetGPUDevice()->GetGraphicsQueue(), GetGPUInstance()->GetSwapchain());
     GetGPUInstance()->GetFrameHandler()->NextFrame();
 }
 

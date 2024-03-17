@@ -195,7 +195,7 @@ struct RENDER_COMMAND(CreateGaussianSplattingCommandBuffers) : renderer::RenderC
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_BUBBLE_ERRORS(command_buffers[frame_index]->Create(
                 g_engine->GetGPUInstance()->GetDevice(),
-                g_engine->GetGPUInstance()->GetGraphicsCommandPool(0)
+                g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[0]
             ));
         }
 

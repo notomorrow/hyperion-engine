@@ -16,7 +16,7 @@ namespace hyperion {
 
 class Matrix3;
 
-class Matrix4
+class alignas(16) Matrix4
 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
@@ -24,25 +24,25 @@ public:
     static const Matrix4 zeros;
     static const Matrix4 ones;
 
-    static Matrix4 Translation(const Vector3 &translation);
+    static Matrix4 Translation(const Vec3f &translation);
     static Matrix4 Rotation(const Quaternion &rotation);
-    static Matrix4 Rotation(const Vector3 &axis, float radians);
-    static Matrix4 Scaling(const Vector3 &scaling);
+    static Matrix4 Rotation(const Vec3f &axis, float radians);
+    static Matrix4 Scaling(const Vec3f &scaling);
     static Matrix4 Perspective(float fov, int w, int h, float n, float f);
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
-    static Matrix4 Jitter(uint index, uint width, uint height, Vector4 &out_jitter);
-    static Matrix4 LookAt(const Vector3 &dir, const Vector3 &up);
-    static Matrix4 LookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
+    static Matrix4 Jitter(uint index, uint width, uint height, Vec4f &out_jitter);
+    static Matrix4 LookAt(const Vec3f &dir, const Vec3f &up);
+    static Matrix4 LookAt(const Vec3f &pos, const Vec3f &target, const Vec3f &up);
 
     union
     {
-        Vector4 rows[4];
+        Vec4f   rows[4];
         float   values[16];
     };
 
     Matrix4();
     explicit Matrix4(const Matrix3 &matrix3);
-    explicit Matrix4(const Vector4 *rows);
+    explicit Matrix4(const Vec4f *rows);
     explicit Matrix4(const float *v);
     Matrix4(const Matrix4 &other);
 
@@ -65,13 +65,13 @@ public:
     Matrix4 &operator*=(const Matrix4 &other);
     Matrix4 operator*(float scalar) const;
     Matrix4 &operator*=(float scalar);
-    Vector3 operator*(const Vector3 &vec) const;
-    Vector4 operator*(const Vector4 &vec) const;
+    Vec3f operator*(const Vec3f &vec) const;
+    Vec4f operator*(const Vec4f &vec) const;
 
-    Vector3 ExtractTransformScale() const;
+    Vec3f ExtractTransformScale() const;
     Quaternion ExtractRotation() const;
 
-    Vector4 GetColumn(uint index) const;
+    Vec4f GetColumn(uint index) const;
 
     HYP_FORCE_INLINE
     bool operator==(const Matrix4 &other) const
@@ -89,10 +89,10 @@ public:
 #pragma endregion
 
     HYP_FORCE_INLINE
-    constexpr Vector4 &operator[](uint row) { return rows[row]; }
+    constexpr Vec4f &operator[](uint row) { return rows[row]; }
 
     HYP_FORCE_INLINE
-    constexpr const Vector4 &operator[](uint row) const { return rows[row]; }
+    constexpr const Vec4f &operator[](uint row) const { return rows[row]; }
 
     static Matrix4 Zeros();
     static Matrix4 Ones();

@@ -169,23 +169,6 @@ Instance<Platform::VULKAN>::Instance(RC<Application> application)
     m_swapchain = new Swapchain<Platform::VULKAN>();
 }
 
-Result Instance<Platform::VULKAN>::CreateCommandPool(DeviceQueue &queue, uint index)
-{
-    VkCommandPoolCreateInfo pool_info { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-    pool_info.queueFamilyIndex = queue.family;
-    /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
-    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateCommandPool(m_device->GetDevice(), &pool_info, nullptr, &queue.command_pools[index]),
-        "Could not create Vulkan command pool"
-    );
-
-    DebugLog(LogType::Debug, "Create command pool for queue %d\n", queue.family);
-
-    HYPERION_RETURN_OK;
-}
-
 Result Instance<Platform::VULKAN>::SetupDebugMessenger()
 {
 #ifndef HYPERION_BUILD_RELEASE
@@ -287,7 +270,7 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
     this->frame_handler = new FrameHandler<Platform::VULKAN>(m_swapchain->NumImages(), HandleNextFrame);
     
     /* Our command pool will have a command buffer for each frame we can render to. */
-    HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(m_device, &queue_graphics));
+    HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(m_device, &m_device->GetGraphicsQueue()));
 
     SetupDebugMessenger();
     m_device->SetupAllocator(this);
@@ -311,24 +294,13 @@ Result Instance<Platform::VULKAN>::Destroy()
     auto result = Result::OK;
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
-    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(m_device->GetDevice()), result);
+    HYPERION_PASS_ERRORS(m_device->Wait(), result);
 
     HYPERION_PASS_ERRORS(m_staging_buffer_pool.Destroy(m_device), result);
 
     this->frame_handler->Destroy(m_device);
     delete this->frame_handler;
     this->frame_handler = nullptr;
-
-    HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(this->queue_graphics.queue), result);
-    HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(this->queue_compute.queue), result);
-
-    for (auto &command_pool : queue_graphics.command_pools) {
-        vkDestroyCommandPool(m_device->GetDevice(), command_pool, nullptr);
-    }
-
-    for (auto &command_pool : queue_compute.command_pools) {
-        vkDestroyCommandPool(m_device->GetDevice(), command_pool, nullptr);
-    }
 
     m_device->DestroyAllocator();
 
@@ -452,33 +424,7 @@ Result Instance<Platform::VULKAN>::InitializeDevice(VkPhysicalDevice physical_de
     HYPERION_BUBBLE_ERRORS(m_device->Create(required_queue_family_indices));
 
     /* Get the internal queues from our device */
-    this->queue_graphics = {
-        .family = family_indices.graphics_family.Get(),
-        .queue  = m_device->GetQueue(family_indices.graphics_family.Get())
-    };
-
-    this->queue_transfer = {
-        .family = family_indices.transfer_family.Get(),
-        .queue  = m_device->GetQueue(family_indices.transfer_family.Get())
-    };
-
-    this->queue_present = {
-        .family = family_indices.present_family.Get(),
-        .queue  = m_device->GetQueue(family_indices.present_family.Get())
-    };
-
-    this->queue_compute = {
-        .family = family_indices.compute_family.Get(),
-        .queue  = m_device->GetQueue(family_indices.compute_family.Get())
-    };
-
-    for (uint i = 0; i < uint(queue_graphics.command_pools.Size()); i++) {
-        HYPERION_BUBBLE_ERRORS(CreateCommandPool(queue_graphics, i));
-    }
-
-    for (uint i = 0; i < uint(queue_compute.command_pools.Size()); i++) {
-        HYPERION_BUBBLE_ERRORS(CreateCommandPool(queue_compute, i));
-    }
+    
 
     HYPERION_RETURN_OK;
 }
@@ -510,7 +456,7 @@ helpers::SingleTimeCommands Instance<Platform::VULKAN>::GetSingleTimeCommands()
     const QueueFamilyIndices &family_indices = m_device->GetQueueFamilyIndices();
 
     helpers::SingleTimeCommands single_time_commands { };
-    single_time_commands.pool = this->queue_graphics.command_pools[0];
+    single_time_commands.pool = m_device->GetGraphicsQueue().command_pools[0];
     single_time_commands.family_indices = family_indices;
 
     return single_time_commands;

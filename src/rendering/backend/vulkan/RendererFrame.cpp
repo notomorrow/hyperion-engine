@@ -51,7 +51,7 @@ Result Frame<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Command
     
     HYPERION_BUBBLE_ERRORS(m_present_semaphores.Create(device));
 
-    m_queue_submit_fence = MakeRenderObject<Fence<Platform::VULKAN>, Platform::VULKAN>(true);
+    m_queue_submit_fence = MakeRenderObject<Fence<Platform::VULKAN>, Platform::VULKAN>();
 
     HYPERION_BUBBLE_ERRORS(m_queue_submit_fence->Create(device));
 
@@ -86,7 +86,7 @@ Result Frame<Platform::VULKAN>::EndCapture(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Frame<Platform::VULKAN>::Submit(DeviceQueue *queue)
+Result Frame<Platform::VULKAN>::Submit(DeviceQueue<Platform::VULKAN> *queue)
 {
     return m_command_buffer->SubmitPrimary(
         queue->queue,

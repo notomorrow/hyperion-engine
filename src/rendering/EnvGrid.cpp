@@ -1,5 +1,7 @@
 #include <rendering/EnvGrid.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/backend/AsyncCompute.hpp>
+
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
@@ -411,7 +413,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
                 .cull_faces         = FaceCullMode::BACK
             }
         ),
-        true // skip frustum culling
+        true // skip frustum culling, until Camera supports multiple frustums.
     );
 
     m_render_list.UpdateRenderGroups();
@@ -559,10 +561,10 @@ void EnvGrid::OnRender(Frame *frame)
         }
     }
 
-    m_shader_data.extent = Vector4(grid_aabb.GetExtent(), 1.0f);
-    m_shader_data.center = Vector4(grid_aabb.GetCenter(), 1.0f);
-    m_shader_data.aabb_max = Vector4(grid_aabb.GetMax(), 1.0f);
-    m_shader_data.aabb_min = Vector4(grid_aabb.GetMin(), 1.0f);
+    m_shader_data.extent = Vec4f(grid_aabb.GetExtent(), 1.0f);
+    m_shader_data.center = Vec4f(grid_aabb.GetCenter(), 1.0f);
+    m_shader_data.aabb_max = Vec4f(grid_aabb.GetMax(), 1.0f);
+    m_shader_data.aabb_min = Vec4f(grid_aabb.GetMin(), 1.0f);
     m_shader_data.density = { m_options.density.width, m_options.density.height, m_options.density.depth, 0 };
 
     g_engine->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
@@ -886,9 +888,9 @@ void EnvGrid::RenderEnvProbe(
 
     {
         struct alignas(128) { uint32 env_probe_index; } push_constants;
-        push_constants.env_probe_index = probe->GetID().ToIndex();
+        push_constants.env_probe_index = probe.GetID().ToIndex();
 
-        g_engine->GetRenderState().SetActiveEnvProbe(probe->GetID());
+        g_engine->GetRenderState().SetActiveEnvProbe(probe.GetID());
         g_engine->GetRenderState().BindScene(GetParent()->GetScene());
 
         m_render_list.CollectDrawCalls(
@@ -965,13 +967,24 @@ void EnvGrid::ComputeSH(
         descriptor_set_ref->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex());
     }
 
-    m_sh_tiles_buffers[0]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
+        frame,
+        m_sh_tiles_buffers[0],
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(frame,
+        g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    m_compute_sh_descriptor_tables[0]->Bind(
+    m_clear_sh->SetPushConstants(&push_constants, sizeof(push_constants));
+
+    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
         frame,
         m_clear_sh,
+        { 6, 1, 1 },
+        m_compute_sh_descriptor_tables[0],
         {
             {
                 HYP_NAME(Scene),
@@ -986,14 +999,19 @@ void EnvGrid::ComputeSH(
         }
     );
 
-    m_clear_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    m_clear_sh->Dispatch(frame->GetCommandBuffer(), Extent3D { 6, 1, 1 });
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
+        frame,
+        m_sh_tiles_buffers[0],
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    m_sh_tiles_buffers[0]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    m_compute_sh->SetPushConstants(&push_constants, sizeof(push_constants));
 
-    m_compute_sh_descriptor_tables[0]->Bind(
+    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
         frame,
         m_compute_sh,
+        { 6, 1, 1 },
+        m_compute_sh_descriptor_tables[0],
         {
             {
                 HYP_NAME(Scene),
@@ -1007,30 +1025,14 @@ void EnvGrid::ComputeSH(
             }
         }
     );
-
-    m_compute_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    m_compute_sh->Dispatch(frame->GetCommandBuffer(), Extent3D { 6, 1, 1 });
 
     // Parallel reduce
     if (sh_parallel_reduce) {
         for (uint i = 1; i < sh_num_levels; i++) {
-            m_sh_tiles_buffers[i - 1]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
-            m_compute_sh_descriptor_tables[i - 1]->Bind(
+            g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
                 frame,
-                m_reduce_sh,
-                {
-                    {
-                        HYP_NAME(Scene),
-                        {
-                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
-                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, probe.GetID().ToIndex()) }
-                        }
-                    }
-                }
+                m_sh_tiles_buffers[i - 1],
+                renderer::ResourceState::UNORDERED_ACCESS
             );
             
             const Vec2u prev_dimensions {
@@ -1054,24 +1056,51 @@ void EnvGrid::ComputeSH(
                 next_dimensions.y
             };
 
-            m_reduce_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-            m_reduce_sh->Dispatch(frame->GetCommandBuffer(), Extent3D {
-                1,
-                (next_dimensions.x + 3) / 4,
-                (next_dimensions.y + 3) / 4
-            });
+            m_reduce_sh->SetPushConstants(&push_constants, sizeof(push_constants));
+
+            g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
+                frame,
+                m_reduce_sh,
+                { 1, (next_dimensions.x + 3) / 4, (next_dimensions.y + 3) / 4 },
+                m_compute_sh_descriptor_tables[i - 1],
+                {
+                    {
+                        HYP_NAME(Scene),
+                        {
+                            { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                            { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                            { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, GetComponentIndex()) },
+                            { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, probe.GetID().ToIndex()) }
+                        }
+                    }
+                }
+            );
         }
     }
 
     const uint finalize_sh_buffer_index = sh_parallel_reduce ? sh_num_levels - 1 : 0;
 
     // Finalize - build into final buffer
-    m_sh_tiles_buffers[finalize_sh_buffer_index]->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-    g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
+        frame,
+        m_sh_tiles_buffers[finalize_sh_buffer_index],
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    m_compute_sh_descriptor_tables[finalize_sh_buffer_index]->Bind(
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
+        frame,
+        g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
+
+    m_finalize_sh->SetPushConstants(&push_constants, sizeof(push_constants));
+
+    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
         frame,
         m_finalize_sh,
+        { 1, 1, 1 },
+        m_compute_sh_descriptor_tables[finalize_sh_buffer_index],
         {
             {
                 HYP_NAME(Scene),
@@ -1086,10 +1115,11 @@ void EnvGrid::ComputeSH(
         }
     );
 
-    m_finalize_sh->Bind(frame->GetCommandBuffer(), &push_constants, sizeof(push_constants));
-    m_finalize_sh->Dispatch(frame->GetCommandBuffer(), Extent3D { 1, 1, 1 });
-
-    g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
+        frame,
+        g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 }
 
 void EnvGrid::OffsetVoxelGrid(
@@ -1101,9 +1131,9 @@ void EnvGrid::OffsetVoxelGrid(
 
     struct alignas(128)
     {
-        ShaderVec4<uint32>  probe_grid_position;
-        ShaderVec4<uint32>  cubemap_dimensions;
-        ShaderVec4<int32>   offset;
+        Vec4u   probe_grid_position;
+        Vec4u   cubemap_dimensions;
+        Vec4i   offset;
     } push_constants;
 
     Memory::MemSet(&push_constants, 0, sizeof(push_constants));
@@ -1267,8 +1297,8 @@ void EnvGrid::VoxelizeProbe(
                 frame->GetCommandBuffer(),
                 Pipeline::PushConstantData {
                     .voxel_mip_data = {
-                        .mip_dimensions = renderer::ShaderVec4<uint32>(Vec3u(mip_extent), 0),
-                        .prev_mip_dimensions = renderer::ShaderVec4<uint32>(Vec3u(prev_mip_extent), 0),
+                        .mip_dimensions = renderer::ShaderVec4<uint32>(mip_extent.width, mip_extent.height, mip_extent.depth, 0),
+                        .prev_mip_dimensions = renderer::ShaderVec4<uint32>(prev_mip_extent.width, prev_mip_extent.height, prev_mip_extent.depth, 0),
                         .mip_level = mip_level
                     }
                 }

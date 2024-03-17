@@ -12,8 +12,6 @@
 namespace hyperion {
 namespace renderer {
 
-struct DeviceQueue;
-
 using ::hyperion::non_owning_ptr;
 
 namespace platform {
@@ -29,6 +27,9 @@ class CommandBuffer;
 
 template <PlatformType PLATFORM>
 class Device;
+
+template <PlatformType PLATFORM>
+struct DeviceQueue;
 
 template <PlatformType PLATFORM>
 class Frame
@@ -72,7 +73,7 @@ public:
     /* Stop recording into the command buffer */
     Result EndCapture(Device<PLATFORM> *device);
     /* Submit command buffer to the given queue */
-    Result Submit(DeviceQueue *queue);
+    Result Submit(DeviceQueue<PLATFORM> *queue);
     
     CommandBufferRef<PLATFORM>  m_command_buffer;
 

@@ -1,0 +1,93 @@
+#ifndef HYPERION_V2_BACKEND_RENDERER_ASYNC_COMPUTE_HPP
+#define HYPERION_V2_BACKEND_RENDERER_ASYNC_COMPUTE_HPP
+
+#include <util/Defines.hpp>
+#include <math/MathUtil.hpp>
+#include <math/Extent.hpp>
+
+#include <core/lib/FixedArray.hpp>
+#include <core/lib/ArrayMap.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/Platform.hpp>
+#include <rendering/backend/RendererResult.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+
+#include <Types.hpp>
+
+namespace hyperion::renderer {
+
+namespace platform {
+
+template <PlatformType PLATFORM>
+class Device;
+
+template <PlatformType PLATFORM>
+class Frame;
+
+template <PlatformType PLATFORM>
+class DescriptorTable;
+
+template <PlatformType PLATFORM>
+class AsyncCompute
+{
+public:
+    AsyncCompute();
+    AsyncCompute(const AsyncCompute &)                  = delete;
+    AsyncCompute &operator=(const AsyncCompute &)       = delete;
+    AsyncCompute(AsyncCompute &&) noexcept              = delete;
+    AsyncCompute &operator=(AsyncCompute &&) noexcept   = delete;
+    ~AsyncCompute();
+
+    bool IsSupported() const
+        { return m_is_supported; }
+
+    Result Create(Device<PLATFORM> *device);
+    Result Submit(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+
+    Result PrepareForFrame(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+    Result WaitForFence(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+
+    void InsertBarrier(
+        Frame<PLATFORM> *frame,
+        const GPUBufferRef<PLATFORM> &buffer,
+        ResourceState resource_state
+    ) const;
+
+    void Dispatch(
+        Frame<PLATFORM> *frame,
+        const ComputePipelineRef<PLATFORM> &ref,
+        Extent3D extent
+    ) const;
+
+    void Dispatch(
+        Frame<PLATFORM> *frame,
+        const ComputePipelineRef<PLATFORM> &ref,
+        Extent3D extent,
+        const DescriptorTableRef<PLATFORM> &descriptor_table,
+        const ArrayMap<Name, ArrayMap<Name, uint>> &offsets = { }
+    ) const;
+
+private:
+    FixedArray<CommandBufferRef<PLATFORM>, max_frames_in_flight>    m_command_buffers;
+    FixedArray<FenceRef<PLATFORM>, max_frames_in_flight>            m_fences;
+    bool                                                            m_is_supported;
+    bool                                                            m_is_fallback;
+};
+
+} // namespace platform
+
+} // namespace hyperion::renderer
+
+// to reduce noise, pull the above enum classes into hyperion namespace
+namespace hyperion {
+
+namespace renderer {
+
+using AsyncCompute = platform::AsyncCompute<Platform::CURRENT>;
+
+} // namespace renderer
+
+} // namespace hyperion
+
+#endif
