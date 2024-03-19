@@ -97,14 +97,66 @@ void DeferredPass::CreateShader()
             HYP_NAME(DeferredIndirect),
             GetDeferredShaderProperties()
         );
+
+        InitObject(m_shader);
     } else {
-        m_shader = g_shader_manager->GetOrCreate(
-            HYP_NAME(DeferredDirect),
-            GetDeferredShaderProperties()
-        );
+        static const FixedArray<ShaderProperties, uint(LightType::MAX)> light_type_properties {
+            ShaderProperties { { "LIGHT_TYPE_DIRECTIONAL" } },
+            ShaderProperties { { "LIGHT_TYPE_POINT" } },
+            ShaderProperties { { "LIGHT_TYPE_SPOT" } }
+        };
+
+        for (uint i = 0; i < uint(LightType::MAX); i++) {
+            ShaderProperties shader_properties = GetDeferredShaderProperties();
+            shader_properties.Merge(light_type_properties[i]);
+
+            m_direct_light_shaders[i] = g_shader_manager->GetOrCreate(
+                HYP_NAME(DeferredDirect),
+                shader_properties
+            );
+
+            InitObject(m_direct_light_shaders[i]);
+        }
+    }
+}
+
+void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
+{
+    if (m_is_indirect_pass) {
+        FullScreenPass::CreatePipeline(renderable_attributes);
+        return;
     }
 
-    InitObject(m_shader);
+    for (uint i = 0; i < uint(LightType::MAX); i++) {
+        Handle<Shader> &shader = m_direct_light_shaders[i];
+        AssertThrow(shader.IsValid());
+
+        Handle<RenderGroup> render_group;
+
+        if (m_descriptor_table.HasValue()) {
+            render_group = CreateObject<RenderGroup>(
+                Handle<Shader>(shader),
+                renderable_attributes,
+                m_descriptor_table.Get()
+            );
+        } else {
+            render_group = CreateObject<RenderGroup>(
+                Handle<Shader>(shader),
+                renderable_attributes
+            );
+        }
+
+        render_group->AddFramebuffer(Handle<Framebuffer>(m_framebuffer));
+
+        g_engine->AddRenderGroup(render_group);
+        InitObject(render_group);
+
+        m_direct_light_render_groups[i] = render_group;
+
+        if (i == 0) {
+            m_render_group = render_group;
+        }
+    }
 }
 
 void DeferredPass::CreateDescriptors()
@@ -131,7 +183,7 @@ void DeferredPass::Create()
         }
     );
 
-    FullScreenPass::CreatePipeline(renderable_attributes);
+    CreatePipeline(renderable_attributes);
 }
 
 void DeferredPass::Record(uint frame_index)
@@ -147,37 +199,55 @@ void DeferredPass::Record(uint frame_index)
         return;
     }
 
+    const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+
+    FixedArray<Array<decltype(g_engine->GetRenderState().lights)::Iterator>, uint(LightType::MAX)> light_iterators;
+
+    // Set up light iterators
+    for (auto &it : g_engine->GetRenderState().lights) {
+        const LightDrawProxy &light = it.second;
+
+        if (light.visibility_bits & (1ull << uint64(camera_index))) {
+            light_iterators[uint(light.type)].PushBack(&it);
+        }
+    }
+
     auto *command_buffer = m_command_buffers[frame_index].Get();
 
     auto record_result = command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
         m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
-        [this, frame_index](CommandBuffer *cmd)
+        [&](CommandBuffer *cmd)
         {
             const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-            const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
             const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
 
-            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
-            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
-
-            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
-            m_render_group->GetPipeline()->Bind(cmd);
-
-            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->Bind(
-                    cmd,
-                    m_render_group->GetPipeline(),
-                    { },
-                    global_descriptor_set_index
-                );
-
             // render with each light
-            for (const auto &it : g_engine->GetRenderState().lights) {
-                const ID<Light> light_id = it.first;
-                const LightDrawProxy &light = it.second;
+            for (uint light_type_index = 0; light_type_index < uint(LightType::MAX); light_type_index++) {
+                Handle<RenderGroup> &render_group = m_direct_light_render_groups[light_type_index];
 
-                if (light.visibility_bits & (1ull << SizeType(camera_index))) {
+                const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+                const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+
+                render_group->GetPipeline()->push_constants = m_push_constant_data;
+                render_group->GetPipeline()->Bind(cmd);
+
+                render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                    ->Bind(
+                        cmd,
+                        render_group->GetPipeline(),
+                        { },
+                        global_descriptor_set_index
+                    );
+
+                const LightType light_type = LightType(light_type_index);
+
+                const auto &light_it = light_iterators[light_type_index];
+
+                for (const auto &it : light_it) {
+                    const ID<Light> light_id = it->first;
+                    const LightDrawProxy &light = it->second;
+
                     // We'll use the EnvProbe slot to bind whatever EnvProbe
                     // is used for the light's shadow map (if applicable)
 
@@ -193,10 +263,10 @@ void DeferredPass::Record(uint frame_index)
                         }
                     }
 
-                    m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                    render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
                         ->Bind(
                             cmd,
-                            m_render_group->GetPipeline(),
+                            render_group->GetPipeline(),
                             {
                                 { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
                                 { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },

@@ -103,11 +103,14 @@ public:
         RC<Assembly> assembly(new Assembly());
 
         FilePath filepath(path);
-        AssertThrowMsg(
-            filepath.Exists(),
-            "Failed to find assembly at path: %s\n",
-            filepath.Data()
-        );
+        
+        if (!filepath.Exists()) {
+            filepath = FilePath::Current() / path;
+        }
+        
+        if (!filepath.Exists()) {
+            return nullptr;
+        }
 
         Class *native_interop_class_object = m_root_assembly->GetClassObjectHolder().FindClassByName("NativeInterop");
         AssertThrow(native_interop_class_object != nullptr);

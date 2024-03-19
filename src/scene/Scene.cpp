@@ -126,7 +126,13 @@ Scene::Scene(
 
 Scene::~Scene()
 {
-    Teardown();
+    m_camera.Reset();
+    m_tlas.Reset();
+    m_environment.Reset();
+
+    m_root_node_proxy.Get()->SetScene(nullptr);
+
+    HYP_SYNC_RENDER();
 }
     
 void Scene::Init()
@@ -160,20 +166,6 @@ void Scene::Init()
     }
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        auto *engine = g_engine;
-
-        m_camera.Reset();
-        m_tlas.Reset();
-        m_environment.Reset();
-
-        m_root_node_proxy.Get()->SetScene(nullptr);
-
-        HYP_SYNC_RENDER();
-
-        SetReady(false);
-    });
 }
 
 void Scene::SetCamera(Handle<Camera> camera)

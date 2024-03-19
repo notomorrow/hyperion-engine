@@ -717,6 +717,19 @@ struct DescriptorUsage
 
         return uint(-1);
     }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(slot);
+        hc.Add(set_name.GetHashCode());
+        hc.Add(descriptor_name.GetHashCode());
+        hc.Add(flags);
+        hc.Add(params.GetHashCode());
+
+        return hc;
+    
+    }
 };
 
 struct DescriptorUsageSet
@@ -751,6 +764,9 @@ struct DescriptorUsageSet
         { descriptor_usages.Merge(std::move(other.descriptor_usages)); }
 
     DescriptorTableDeclaration BuildDescriptorTable() const;
+
+    HashCode GetHashCode() const
+        { return descriptor_usages.GetHashCode(); }
 };
 
 struct ShaderDefinition

@@ -57,13 +57,17 @@ public:
     virtual ~DeferredPass() override;
 
     void CreateShader();
+    virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
     virtual void CreateDescriptors() override;
     virtual void Create() override;
     virtual void Record(uint frame_index) override;
     virtual void Render(Frame *frame) override;
 
 private:
-    const bool m_is_indirect_pass;
+    const bool                                              m_is_indirect_pass;
+
+    FixedArray<Handle<Shader>, uint(LightType::MAX)>        m_direct_light_shaders;
+    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>   m_direct_light_render_groups;
 };
 
 //enum LightmapPassMode
@@ -199,33 +203,33 @@ private:
 
     void GenerateMipChain(Frame *frame, Image *image);
 
-    DeferredPass m_indirect_pass;
-    DeferredPass m_direct_pass;
+    DeferredPass                                        m_indirect_pass;
+    DeferredPass                                        m_direct_pass;
 
-    EnvGridPass m_env_grid_radiance_pass;
-    EnvGridPass m_env_grid_irradiance_pass;
-    ReflectionProbePass m_reflection_probe_pass;
+    EnvGridPass                                         m_env_grid_radiance_pass;
+    EnvGridPass                                         m_env_grid_irradiance_pass;
+    ReflectionProbePass                                 m_reflection_probe_pass;
 
-    PostProcessing m_post_processing;
-    UniquePtr<HBAO> m_hbao;
-    UniquePtr<TemporalAA> m_temporal_aa;
+    PostProcessing                                      m_post_processing;
+    UniquePtr<HBAO>                                     m_hbao;
+    UniquePtr<TemporalAA>                               m_temporal_aa;
 
-    Handle<Framebuffer> m_opaque_fbo;
-    Handle<Framebuffer> m_translucent_fbo;
+    Handle<Framebuffer>                                 m_opaque_fbo;
+    Handle<Framebuffer>                                 m_translucent_fbo;
 
-    UniquePtr<FullScreenPass> m_combine_pass;
+    UniquePtr<FullScreenPass>                           m_combine_pass;
 
-    UniquePtr<SSRRenderer> m_ssr;
-    DepthPyramidRenderer m_dpr;
+    UniquePtr<SSRRenderer>                              m_ssr;
+    DepthPyramidRenderer                                m_dpr;
 
-    UniquePtr<DOFBlur> m_dof_blur;
+    UniquePtr<DOFBlur>                                  m_dof_blur;
 
-    FixedArray<Handle<Texture>, max_frames_in_flight> m_results;
-    Handle<Texture> m_mip_chain;
+    FixedArray<Handle<Texture>, max_frames_in_flight>   m_results;
+    Handle<Texture>                                     m_mip_chain;
 
-    GPUBufferRef m_blue_noise_buffer;
+    GPUBufferRef                                        m_blue_noise_buffer;
     
-    CullData m_cull_data;
+    CullData                                            m_cull_data;
 };
 
 } // namespace hyperion::v2

@@ -90,12 +90,6 @@ struct RenderCommandList
         Block *last_block = &blocks_buffer.Back();
 
         if (last_block->IsFull()) {
-            DebugLog(
-                LogType::Debug,
-                "Allocating new block for render commands of type %s.\n",
-                TypeName<T>().Data()
-            );
-
             blocks_buffer.EmplaceBack();
             last_block = &blocks_buffer.Back();
         }

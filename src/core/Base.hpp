@@ -165,13 +165,6 @@ protected:
     using ClassType = Type;
     using Base = BasicObject<Type>;
 
-    void Teardown()
-    {
-        // RemoveFromObjectSystem();
-
-        CallbackTrackable::Teardown();
-    }
-
     void Destroy()
     {
         m_init_called.store(false);

@@ -161,16 +161,13 @@ void Engine::FindTextureFormatDefaults()
 void Engine::Initialize(RC<Application> application)
 {
     Threads::AssertOnThread(THREAD_MAIN);
+    Threads::SetCurrentThreadPriority(ThreadPriorityValue::HIGHEST);
 
     game_thread.Reset(new GameThread);
 
     m_crash_handler.Initialize();
 
     TaskSystem::GetInstance().Start();
-
-#ifdef HYP_WINDOWS
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif
 
     AssertThrow(m_instance == nullptr);
     m_instance.Reset(new Instance(application));

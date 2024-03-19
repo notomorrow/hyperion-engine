@@ -139,7 +139,25 @@ RenderGroup::RenderGroup(
 
 RenderGroup::~RenderGroup()
 {
-    Teardown();
+    if (m_indirect_renderer != nullptr) {
+        m_indirect_renderer->Destroy();
+    }
+    
+    m_shader.Reset();
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        SafeRelease(std::move(m_command_buffers[frame_index]));
+    }
+
+    m_command_buffers = { };
+
+    for (auto &fbo : m_fbos) {
+        fbo.Reset();
+    }
+
+    SafeRelease(std::move(m_pipeline));
+    
+    HYP_SYNC_RENDER();
 }
 
 void RenderGroup::RemoveFramebuffer(ID<Framebuffer> id)
@@ -225,28 +243,6 @@ void RenderGroup::Init()
     );
         
     SetReady(true);
-
-    OnTeardown([this]()
-    {
-        SetReady(false);
-
-        m_indirect_renderer->Destroy();
-        m_shader.Reset();
-
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            SafeRelease(std::move(m_command_buffers[frame_index]));
-        }
-
-        m_command_buffers = { };
-
-        for (auto &fbo : m_fbos) {
-            fbo.Reset();
-        }
-
-        SafeRelease(std::move(m_pipeline));
-        
-        HYP_SYNC_RENDER();
-    });
 }
 
 void RenderGroup::CollectDrawCalls()

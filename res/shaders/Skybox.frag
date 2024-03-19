@@ -33,15 +33,9 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer Objec
 };
 
 #ifndef HYP_FEATURES_BINDLESS_TEXTURES
-HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
-#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
 HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-#endif
 #else
-HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
-#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform textureCube cubemap_textures[];
-#endif
 #endif
 
 // #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
@@ -69,11 +63,11 @@ void main()
 {
     vec3 normal = normalize(v_normal);
 
-//#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
     gbuffer_albedo = vec4(SAMPLE_TEXTURE_CUBE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
-//#else
- //   gbuffer_albedo = vec4(0.0);
-//#endif
+#else
+   gbuffer_albedo = vec4(0.0);
+#endif
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);

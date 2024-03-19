@@ -106,7 +106,7 @@ Light::Light(Light &&other) noexcept
 
 Light::~Light()
 {
-    Teardown();
+    PUSH_RENDER_COMMAND(UnbindLight, GetID());
 }
 
 void Light::Init()
@@ -131,14 +131,6 @@ void Light::Init()
     EnqueueRenderUpdates();
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        PUSH_RENDER_COMMAND(UnbindLight, m_id);
-
-        HYP_SYNC_RENDER();
-    });
 }
 
 #if 0

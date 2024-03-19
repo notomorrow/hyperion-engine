@@ -59,7 +59,37 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
 
 RenderEnvironment::~RenderEnvironment()
 {
-    Teardown();
+    m_particle_system.Reset();
+
+    m_gaussian_splatting.Reset();
+        
+    if (m_has_rt_radiance) {
+        m_rt_radiance->Destroy();
+        m_rt_radiance.Reset();
+
+        m_has_rt_radiance = false;
+    }
+
+    if (m_has_ddgi_probes) {
+        m_ddgi.Destroy();
+
+        m_has_ddgi_probes = false;
+    }
+
+    const auto update_marker_value = m_update_marker.Get(MemoryOrder::ACQUIRE);
+
+    PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
+
+    if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
+        std::lock_guard guard(m_render_component_mutex);
+
+        m_render_components_pending_addition.Clear();
+        m_render_components_pending_removal.Clear();
+    }
+
+    m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS, MemoryOrder::RELEASE);
+
+    HYP_SYNC_RENDER();
 }
 
 void RenderEnvironment::SetTLAS(const Handle<TLAS> &tlas)
@@ -123,42 +153,6 @@ void RenderEnvironment::Init()
     }
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        m_particle_system.Reset();
-
-        m_gaussian_splatting.Reset();
-            
-        if (m_has_rt_radiance) {
-            m_rt_radiance->Destroy();
-            m_rt_radiance.Reset();
-
-            m_has_rt_radiance = false;
-        }
-
-        if (m_has_ddgi_probes) {
-            m_ddgi.Destroy();
-
-            m_has_ddgi_probes = false;
-        }
-
-        const auto update_marker_value = m_update_marker.Get(MemoryOrder::ACQUIRE);
-
-        PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
-
-        if (update_marker_value & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
-            std::lock_guard guard(m_render_component_mutex);
-
-            m_render_components_pending_addition.Clear();
-            m_render_components_pending_removal.Clear();
-        }
-
-        m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS, MemoryOrder::RELEASE);
-
-        HYP_SYNC_RENDER();
-    });
 }
 
 void RenderEnvironment::Update(GameCounter::TickUnit delta)

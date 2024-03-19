@@ -172,7 +172,6 @@ UIScene::UIScene()
 
 UIScene::~UIScene()
 {
-    Teardown();
 }
 
 void UIScene::Init()
@@ -196,13 +195,6 @@ void UIScene::Init()
     // m_scene->GetCamera()->SetDirection(Vector3(0.0f, 0.0f, -1.0f));
 
     SetReady(true);
-
-    OnTeardown([this](...) {
-        SetReady(false);
-
-        // m_ui_objects.Clear();
-        m_scene.Reset();
-    });
 }
 
 NodeProxy UIScene::CreateButton(const Vector2 &position, const Vector2 &size, const String &text)

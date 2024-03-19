@@ -88,7 +88,13 @@ class TaskSystem
         Array<UniquePtr<TaskThread>>    threads;
     };
 
-    static const FlatMap<TaskThreadPoolName, uint> s_thread_pool_sizes;
+    struct TaskThreadPoolInfo
+    {
+        uint                num_task_threads = 0u;
+        ThreadPriorityValue priority = ThreadPriorityValue::NORMAL;
+    };
+
+    static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo>    s_thread_pool_infos;
 
 public:
     static TaskSystem &GetInstance();
@@ -100,22 +106,22 @@ public:
         for (uint i = 0; i < THREAD_POOL_MAX; i++) {
             const TaskThreadPoolName pool_name { i };
 
-            auto thread_pool_sizes_it = s_thread_pool_sizes.Find(pool_name);
+            auto thread_pool_infos_it = s_thread_pool_infos.Find(pool_name);
             AssertThrowMsg(
-                thread_pool_sizes_it != s_thread_pool_sizes.End(),
-                "TaskThreadPoolName for %u not found in s_thread_pool_sizes",
+                thread_pool_infos_it != s_thread_pool_infos.End(),
+                "TaskThreadPoolName for %u not found in s_thread_pool_infos",
                 i
             );
 
-            const uint sz = thread_pool_sizes_it->second;
+            const TaskThreadPoolInfo &task_thread_pool_info = thread_pool_infos_it->second;
 
             TaskThreadPool &pool = m_pools[i];
-            pool.threads.Resize(sz);
+            pool.threads.Resize(task_thread_pool_info.num_task_threads);
 
             for (auto &it : pool.threads) {
                 AssertThrow(THREAD_TASK & mask);
 
-                it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask))));
+                it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask)), task_thread_pool_info.priority));
                 mask <<= 1;
             }
         }

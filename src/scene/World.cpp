@@ -15,7 +15,22 @@ World::World()
 
 World::~World()
 {
-    Teardown();
+    for (Handle<Scene> &scene : m_scenes) {
+        if (!scene) {
+            continue;
+        }
+
+        scene->SetWorld(nullptr);
+    }
+    
+    m_scenes.Clear();
+    
+    m_scene_update_mutex.lock();
+    m_scenes_pending_addition.Clear();
+    m_scenes_pending_removal.Clear();
+    m_scene_update_mutex.unlock();
+
+    m_physics_world.Teardown();
 }
     
 void World::Init()
@@ -37,27 +52,6 @@ void World::Init()
     m_physics_world.Init();
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        for (Handle<Scene> &scene : m_scenes) {
-            if (!scene) {
-                continue;
-            }
-
-            scene->SetWorld(nullptr);
-        }
-        
-        m_scenes.Clear();
-        
-        m_scene_update_mutex.lock();
-        m_scenes_pending_addition.Clear();
-        m_scenes_pending_removal.Clear();
-        m_scene_update_mutex.unlock();
-
-        m_physics_world.Teardown();
-        
-        SetReady(false);
-    });
 }
 
 void World::PerformSceneUpdates()

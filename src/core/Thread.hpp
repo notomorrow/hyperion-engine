@@ -13,6 +13,15 @@
 
 namespace hyperion {
 
+enum class ThreadPriorityValue
+{
+    LOWEST,
+    LOW,
+    NORMAL,
+    HIGH,
+    HIGHEST
+};
+
 struct ThreadID
 {
     static const ThreadID invalid;
@@ -60,21 +69,31 @@ public:
     using Task      = typename Scheduler::Task;
 
     // Dynamic thread
-    Thread(Name dynamic_thread_name);
-    Thread(const ThreadID &id);
-    Thread(const Thread &other) = delete;
-    Thread &operator=(const Thread &other) = delete;
+    Thread(Name dynamic_thread_name, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
+    Thread(const ThreadID &id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
+    Thread(const Thread &other)                 = delete;
+    Thread &operator=(const Thread &other)      = delete;
     Thread(Thread &&other) noexcept;
-    Thread &operator=(Thread &&other) noexcept;
+    Thread &operator=(Thread &&other) noexcept  = delete;
     virtual ~Thread();
 
     /**
      * \brief Get the ID of this thread. This ID is unique to this thread and is used to identify it. 
      */
-    const ThreadID &GetID() const { return m_id; }
+    const ThreadID &GetID() const
+        { return m_id; }
 
-    Scheduler &GetScheduler() { return m_scheduler; }
-    const Scheduler &GetScheduler() const { return m_scheduler; }
+    /**
+     * \brief Get the priority of this thread.
+     */
+    ThreadPriorityValue GetPriority() const
+        { return m_priority; }
+
+    Scheduler &GetScheduler()
+        { return m_scheduler; }
+
+    const Scheduler &GetScheduler() const
+        { return m_scheduler; }
 
     /*! \brief Enqueue a task to be executed on this thread
      * @param task The task to be executed
@@ -109,23 +128,27 @@ public:
 protected:
     virtual void operator()(Args ...args) = 0;
 
-    const ThreadID  m_id;
-    Scheduler       m_scheduler;
+    const ThreadID              m_id;
+    const ThreadPriorityValue   m_priority;
+
+    Scheduler                   m_scheduler;
 
 private:
-    std::thread     *m_thread;
+    std::thread                 *m_thread;
 };
 
 template <class SchedulerType, class ...Args>
-Thread<SchedulerType, Args...>::Thread(Name dynamic_thread_name)
+Thread<SchedulerType, Args...>::Thread(Name dynamic_thread_name, ThreadPriorityValue priority)
     : m_id(ThreadID::CreateDynamicThreadID(dynamic_thread_name)),
+      m_priority(priority),
       m_thread(nullptr)
 {
 }
 
 template <class SchedulerType, class ...Args>
-Thread<SchedulerType, Args...>::Thread(const ThreadID &id)
+Thread<SchedulerType, Args...>::Thread(const ThreadID &id, ThreadPriorityValue priority)
     : m_id(id),
+      m_priority(priority),
       m_thread(nullptr)
 {
 }
@@ -133,22 +156,11 @@ Thread<SchedulerType, Args...>::Thread(const ThreadID &id)
 template <class SchedulerType, class ...Args>
 Thread<SchedulerType, Args...>::Thread(Thread &&other) noexcept
     : m_id(std::move(other.m_id)),
+      m_priority(other.m_priority),
       m_thread(other.m_thread),
       m_scheduler(std::move(other.m_scheduler))
 {
     other.m_thread = nullptr;
-}
-
-template <class SchedulerType, class ...Args>
-Thread<SchedulerType, Args...> &Thread<SchedulerType, Args...>::operator=(Thread &&other) noexcept
-{
-    m_id = std::move(other.m_id);
-    m_thread = other.m_thread;
-    m_scheduler = std::move(other.m_scheduler);
-
-    other.m_thread = nullptr;
-
-    return *this;
 }
 
 template <class SchedulerType, class ...Args>

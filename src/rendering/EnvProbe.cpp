@@ -199,7 +199,17 @@ void EnvProbe::SetIsVisible(ID<Camera> camera_id, bool is_visible)
 
 EnvProbe::~EnvProbe()
 {
-    Teardown();
+    m_render_list.Reset();
+    m_camera.Reset();
+
+    if (m_framebuffer) {
+        PUSH_RENDER_COMMAND(DestroyCubemapRenderPass, *this);
+    }
+    
+    m_texture.Reset();
+    m_shader.Reset();
+
+    HYP_SYNC_RENDER();
 }
 
 void EnvProbe::Init()
@@ -269,22 +279,6 @@ void EnvProbe::Init()
     //SetNeedsUpdate(false);
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        m_render_list.Reset();
-        m_camera.Reset();
-
-        if (m_framebuffer) {
-            PUSH_RENDER_COMMAND(DestroyCubemapRenderPass, *this);
-        }
-
-        SetReady(false);
-
-        m_texture.Reset();
-        m_shader.Reset();
-
-        HYP_SYNC_RENDER();
-    });
 }
 
 void EnvProbe::CreateShader()
@@ -321,6 +315,8 @@ void EnvProbe::CreateShader()
     case EnvProbeType::ENV_PROBE_TYPE_AMBIENT:
         // Do nothing
         return;
+    default:
+        AssertThrow(false);
     }
 
     InitObject(m_shader);
