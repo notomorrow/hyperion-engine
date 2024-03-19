@@ -957,14 +957,14 @@ struct LoadedSourceFile
     uint64                      last_modified_timestamp;
     String                      source;
 
-    FilePath GetOutputFilepath(const FilePath &base_path, Name bundle_name, const ShaderProperties &properties) const
+    FilePath GetOutputFilepath(const FilePath &base_path, const CompiledShader &compiled_shader) const
     {
         HashCode hc;
-        hc.Add(bundle_name);
         hc.Add(file.path);
-        hc.Add(properties);
+        hc.Add(compiled_shader.GetDefinition().GetHashCode());
+        hc.Add(compiled_shader.GetDescriptorUsages().GetHashCode());
 
-        return base_path / "data/compiled_shaders/tmp" / (String::ToString(hc.Value()) + ".spirv");
+        return base_path / "data/compiled_shaders/tmp" / FilePath(file.path).Basename() + "_" + (String::ToString(hc.Value()) + ".spirv");
     }
 
     HashCode GetHashCode() const
@@ -1537,11 +1537,10 @@ bool ShaderCompiler::CompileBundle(
 
         for (const LoadedSourceFile &item : loaded_source_files) {
             // check if a file exists w/ same hash
-
+            
             const auto output_filepath = item.GetOutputFilepath(
                 g_asset_manager->GetBasePath(),
-                bundle.name,
-                properties
+                compiled_shader
             );
 
             if (output_filepath.Exists()) {

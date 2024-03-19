@@ -45,7 +45,9 @@ enum class LightType : uint32
 {
     DIRECTIONAL,
     POINT,
-    SPOT
+    SPOT,
+
+    MAX
 };
 
 template <class T>

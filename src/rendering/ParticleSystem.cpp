@@ -338,8 +338,13 @@ ParticleSystem::~ParticleSystem()
     SafeRelease(std::move(m_staging_buffer));
 
     m_quad_mesh.Reset();
+    
+    PUSH_RENDER_COMMAND(
+        DestroyParticleSystem,
+        &m_particle_spawners
+    );
 
-    Teardown();
+    HYP_SYNC_RENDER();
 }
 
 void ParticleSystem::Init()
@@ -357,17 +362,6 @@ void ParticleSystem::Init()
     CreateCommandBuffers();
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        PUSH_RENDER_COMMAND(
-            DestroyParticleSystem,
-            &m_particle_spawners
-        );
-
-        HYP_SYNC_RENDER();
-
-        SetReady(false);
-    });
 }
 
 void ParticleSystem::CreateBuffers()

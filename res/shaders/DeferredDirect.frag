@@ -132,12 +132,15 @@ void main()
     vec4 light_rays = vec4(0.0);
     vec4 light_color = unpackUnorm4x8(light.color_encoded);
 
-    if (light.type == HYP_LIGHT_TYPE_POINT && light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+#ifdef LIGHT_TYPE_POINT
+    if (light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
         const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
         const uint shadow_flags = current_env_probe.flags >> 3;
 
         shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
-    } else if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+    }
+#elif defined(LIGHT_TYPE_DIRECTIONAL)
+    if (light.shadow_map_index != ~0u) {
         shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
 
 #ifdef LIGHT_RAYS_ENABLED
@@ -155,6 +158,7 @@ void main()
         light_rays = vec4(light_color * light_ray_attenuation);
 #endif
     }
+#endif
 
     if (perform_lighting && !bool(mask & 0x10)) {
         vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
@@ -170,9 +174,11 @@ void main()
         const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
         const vec4 specular_lobe = D * G * F;
 
-        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
-            : 1.0;
+#ifdef LIGHT_TYPE_POINT
+        const float attenuation = GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius);
+#else
+        const float attenuation = 1.0;
+#endif
 
         vec4 specular = specular_lobe;
 

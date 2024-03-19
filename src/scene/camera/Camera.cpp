@@ -144,7 +144,8 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
 
 Camera::~Camera()
 {
-    Teardown();
+    // Sync render commands to prevent dangling pointers to this
+    HYP_SYNC_RENDER();
 }
 
 void Camera::Init()
@@ -174,12 +175,6 @@ void Camera::Init()
     InitObject(m_framebuffer);
 
     SetReady(true);
-
-    OnTeardown([this]() {
-        SetReady(false);
-
-        HYP_SYNC_RENDER();
-    });
 }
 
 void Camera::SetFramebuffer(const Handle<Framebuffer> &framebuffer)

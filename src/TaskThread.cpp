@@ -2,8 +2,8 @@
 
 namespace hyperion {
 
-TaskThread::TaskThread(const ThreadID &thread_id)
-    : Thread(thread_id),
+TaskThread::TaskThread(const ThreadID &thread_id, ThreadPriorityValue priority)
+    : Thread(thread_id, priority),
       m_is_running(false),
       m_stop_requested(false),
       m_is_free(false)

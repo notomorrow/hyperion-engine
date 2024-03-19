@@ -24,7 +24,7 @@ struct ThreadID;
 class TaskThread : public Thread<Scheduler<Task<void>>>
 {
 public:
-    TaskThread(const ThreadID &thread_id);
+    TaskThread(const ThreadID &thread_id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
 
     virtual ~TaskThread() override = default;
 

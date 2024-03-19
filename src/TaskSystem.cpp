@@ -2,10 +2,10 @@
 
 namespace hyperion {
 
-const FlatMap<TaskThreadPoolName, uint> TaskSystem::s_thread_pool_sizes = {
-    { TaskThreadPoolName::THREAD_POOL_GENERIC,          4u },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,           4u },
-    { TaskThreadPoolName::THREAD_POOL_RENDER_COLLECT,   2u }
+const FlatMap<TaskThreadPoolName, TaskSystem::TaskThreadPoolInfo> TaskSystem::s_thread_pool_infos {
+    { TaskThreadPoolName::THREAD_POOL_GENERIC,          { 4u, ThreadPriorityValue::NORMAL } },
+    { TaskThreadPoolName::THREAD_POOL_RENDER,           { 4u, ThreadPriorityValue::HIGHEST } },
+    { TaskThreadPoolName::THREAD_POOL_RENDER_COLLECT,   { 2u, ThreadPriorityValue::HIGHEST } }
 };
 
 TaskSystem &TaskSystem::GetInstance()

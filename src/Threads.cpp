@@ -141,6 +141,64 @@ ThreadType Threads::GetThreadType()
         : (thread_id == THREAD_RENDER ? THREAD_TYPE_RENDER : THREAD_TYPE_INVALID);
 }
 
+void Threads::SetCurrentThreadPriority(ThreadPriorityValue priority)
+{
+#ifdef HYP_WINDOWS
+    int win_priority = THREAD_PRIORITY_NORMAL;
+
+    switch (priority) {
+    case ThreadPriorityValue::LOWEST:
+        win_priority = THREAD_PRIORITY_LOWEST;
+        break;
+
+    case ThreadPriorityValue::LOW:
+        win_priority = THREAD_PRIORITY_BELOW_NORMAL;
+        break;
+
+    case ThreadPriorityValue::NORMAL:
+        win_priority = THREAD_PRIORITY_NORMAL;
+        break;
+
+    case ThreadPriorityValue::HIGH:
+        win_priority = THREAD_PRIORITY_ABOVE_NORMAL;
+        break;
+
+    case ThreadPriorityValue::HIGHEST:
+        win_priority = THREAD_PRIORITY_HIGHEST;
+        break;
+    }
+
+    SetThreadPriority(GetCurrentThread(), win_priority);
+#elif defined(HYP_LINUX) || defined(HYP_APPLE)
+    int policy = SCHED_OTHER;
+    struct sched_param param;
+
+    switch (priority) {
+    case ThreadPriorityValue::LOWEST:
+        param.sched_priority = sched_get_priority_min(policy);
+        break;
+
+    case ThreadPriorityValue::LOW:
+        param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) / 4;
+        break;
+
+    case ThreadPriorityValue::NORMAL:
+        param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) / 2;
+        break;
+
+    case ThreadPriorityValue::HIGH:
+        param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) * 3 / 4;
+        break;
+
+    case ThreadPriorityValue::HIGHEST:
+        param.sched_priority = sched_get_priority_max(policy);
+        break;
+    }
+
+    pthread_setschedparam(pthread_self(), policy, &param);
+#endif
+}
+
 SizeType Threads::NumCores()
 {
     return std::thread::hardware_concurrency();

@@ -64,6 +64,7 @@ public:
     static const ThreadID &GetThreadID(ThreadName thread_name);
     static const ThreadID &CurrentThreadID();
     static void SetThreadID(const ThreadID &thread_id);
+    static void SetCurrentThreadPriority(ThreadPriorityValue priority);
 
     static ThreadType GetThreadType();
 
