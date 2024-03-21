@@ -223,6 +223,7 @@ void ShadowPass::CreateFramebuffer()
             MakeRenderObject<Image>(renderer::FramebufferImage2D(
                 GetExtent(),
                 GetFormat(),
+                FilterMode::TEXTURE_FILTER_NEAREST,
                 FilterMode::TEXTURE_FILTER_NEAREST
             )),
             RenderPassStage::SHADER

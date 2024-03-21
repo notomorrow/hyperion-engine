@@ -9,16 +9,18 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
-Sampler<Platform::VULKAN>::Sampler(FilterMode filter_mode, WrapMode wrap_mode)
+Sampler<Platform::VULKAN>::Sampler(FilterMode min_filter_mode, FilterMode mag_filter_mode, WrapMode wrap_mode)
     : m_sampler(VK_NULL_HANDLE),
-      m_filter_mode(filter_mode),
+      m_min_filter_mode(min_filter_mode),
+      m_mag_filter_mode(mag_filter_mode),
       m_wrap_mode(wrap_mode)
 {
 }
 
 Sampler<Platform::VULKAN>::Sampler(Sampler<Platform::VULKAN> &&other) noexcept
     : m_sampler(other.m_sampler),
-      m_filter_mode(other.m_filter_mode),
+      m_min_filter_mode(other.m_min_filter_mode),
+      m_mag_filter_mode(other.m_mag_filter_mode),
       m_wrap_mode(other.m_wrap_mode)
 {
     other.m_sampler = VK_NULL_HANDLE;
@@ -29,7 +31,8 @@ Sampler<Platform::VULKAN> &Sampler<Platform::VULKAN>::operator=(Sampler<Platform
     AssertThrowMsg(m_sampler == VK_NULL_HANDLE, "sampler should have been destroyed");
 
     m_sampler = other.m_sampler;
-    m_filter_mode = other.m_filter_mode;
+    m_min_filter_mode = other.m_min_filter_mode;
+    m_mag_filter_mode = other.m_mag_filter_mode;
     m_wrap_mode = other.m_wrap_mode;
 
     other.m_sampler = VK_NULL_HANDLE;
@@ -47,8 +50,8 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     AssertThrow(m_sampler == VK_NULL_HANDLE);
 
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-    sampler_info.magFilter = helpers::ToVkFilter(m_filter_mode);
-    sampler_info.minFilter = helpers::ToVkFilter(m_filter_mode);
+    sampler_info.magFilter = helpers::ToVkFilter(m_mag_filter_mode);
+    sampler_info.minFilter = helpers::ToVkFilter(m_min_filter_mode);
 
     sampler_info.addressModeU = helpers::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeV = helpers::ToVkSamplerAddressMode(m_wrap_mode);
@@ -67,7 +70,7 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     sampler_info.compareEnable = VK_FALSE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
     
-    switch (m_filter_mode) {
+    switch (m_min_filter_mode) {
     case FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP:
         sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
@@ -88,7 +91,7 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 
     VkSamplerReductionModeCreateInfoEXT reduction_info { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
 
-    if (m_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP) {
+    if (m_min_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP) {
         if (!device->GetFeatures().GetSamplerMinMaxProperties().filterMinmaxSingleComponentFormats) {
             return { Result::RENDERER_ERR, "Device does not support min/max sampler formats" };
         }

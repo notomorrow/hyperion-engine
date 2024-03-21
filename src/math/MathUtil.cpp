@@ -99,4 +99,15 @@ Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec2f &v0, const Vec2f &v1
     return Vec3f(-1,1,1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
 }
 
+void MathUtil::ComputeOrthonormalBasis(const Vec3f &normal, Vec3f &out_tangent, Vec3f &out_bitangent)
+{
+    Vec3f T;
+    T = normal.Cross(Vec3f::UnitY());
+    T = Lerp(normal.Cross(Vec3f::UnitX()), Vec3f::UnitX(), Step(epsilon_f, T.Dot(T)));
+    T.Normalize();
+
+    out_tangent = T;
+    out_bitangent = normal.Cross(T).Normalize();
+}
+
 } // namespace hyperion

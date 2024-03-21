@@ -18,6 +18,9 @@ namespace hyperion {
 struct BoundingSphere
 {
 public:
+    static const BoundingSphere empty;
+    static const BoundingSphere infinity;
+
     BoundingSphere();
     BoundingSphere(const Vec3f &center, float radius);
     BoundingSphere(const BoundingSphere &other);

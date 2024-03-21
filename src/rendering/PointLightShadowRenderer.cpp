@@ -33,7 +33,7 @@ void PointLightShadowRenderer::Init()
         return;
     }
 
-    m_aabb = m_light->GetWorldAABB();
+    m_aabb = m_light->GetAABB();
 
     m_env_probe = CreateObject<EnvProbe>(
         Handle<Scene>(GetParent()->GetScene()->GetID()),
@@ -74,7 +74,7 @@ void PointLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     AssertThrow(m_light.IsValid());
 
     const BoundingBox &env_probe_aabb = m_env_probe->GetAABB();
-    const BoundingBox light_aabb = m_light->GetWorldAABB();
+    const BoundingBox light_aabb = m_light->GetAABB();
 
     if (env_probe_aabb != light_aabb) {
         m_env_probe->SetAABB(light_aabb);

@@ -46,6 +46,7 @@ enum class LightType : uint32
     DIRECTIONAL,
     POINT,
     SPOT,
+    AREA_RECT,
 
     MAX
 };
@@ -159,13 +160,13 @@ struct DrawProxy<STUB_CLASS(Light)>
     float       radius;
     float       falloff;
     uint32      shadow_map_index;
-    Vector4     position_intensity;
+    Vec2f       area_size;
+    Vec4f       position_intensity;
+    Vec4f       normal;
     uint64      visibility_bits; // bitmask indicating if light is visible to cameras by camera ID
 };
 
 using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;
-
-
 
 template <class T>
 class HasDrawProxy

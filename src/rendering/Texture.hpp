@@ -102,11 +102,11 @@ public:
     Vec4f Sample(Vec2f uv) const;
 
 protected:
-    FilterMode m_filter_mode;
-    WrapMode m_wrap_mode;
+    FilterMode      m_filter_mode;
+    WrapMode        m_wrap_mode;
 
-    ImageRef m_image;
-    ImageViewRef m_image_view;
+    ImageRef        m_image;
+    ImageViewRef    m_image_view;
 };
 
 class Texture2D : public Texture

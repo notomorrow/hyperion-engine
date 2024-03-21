@@ -31,7 +31,7 @@ using renderer::g_static_descriptor_table_decl;
 
 static const bool should_compile_missing_variants = true;
 
-#define HYP_SHADER_COMPILER_LOGGING
+// #define HYP_SHADER_COMPILER_LOGGING
 
 enum class ShaderLanguage
 {
@@ -1287,7 +1287,9 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(const String &
         line_index++;
     }
 
+#ifdef HYP_SHADER_COMPILER_LOGGING
     DebugLog(LogType::Debug, "Processed source:\n%s\n", result.processed_source.Data());
+#endif
 
     return result;
 }

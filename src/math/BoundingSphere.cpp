@@ -1,9 +1,13 @@
-#include "BoundingSphere.hpp"
+#include <math/BoundingSphere.hpp>
+#include <math/MathUtil.hpp>
 
 #include <limits>
 #include <cmath>
 
 namespace hyperion {
+
+const BoundingSphere BoundingSphere::empty = BoundingSphere();
+const BoundingSphere BoundingSphere::infinity = BoundingSphere(Vec3f::Zero(), MathUtil::Infinity<float>());
 
 BoundingSphere::BoundingSphere()
     : center(Vec3f::Zero()),

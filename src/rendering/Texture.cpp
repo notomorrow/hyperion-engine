@@ -353,6 +353,7 @@ Texture::Texture()
               InternalFormat::RGBA8,
               ImageType::TEXTURE_TYPE_2D,
               FilterMode::TEXTURE_FILTER_NEAREST,
+              FilterMode::TEXTURE_FILTER_NEAREST,
               nullptr
           ),
           FilterMode::TEXTURE_FILTER_NEAREST,
@@ -373,6 +374,7 @@ Texture::Texture(
             extent,
             format,
             type,
+            filter_mode,
             filter_mode,
             std::move(streamed_data)
         ),

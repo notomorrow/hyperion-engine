@@ -300,7 +300,8 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             }
 
             texture->GetImage()->SetIsSRGB(it.mapping.srgb);
-            texture->GetImage()->SetFilterMode(it.mapping.filter_mode);
+            texture->GetImage()->SetMinFilterMode(it.mapping.filter_mode);
+            texture->GetImage()->SetMagFilterMode(FilterMode::TEXTURE_FILTER_LINEAR);
 
             texture->SetName(CreateNameFromDynamicString(it.name.Data()));
 

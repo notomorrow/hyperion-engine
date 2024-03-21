@@ -210,7 +210,7 @@ void main()
         indirect_lighting = Fd;
     }
 
-    { // direct
+    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) { // direct (temp light type check)
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
         const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
