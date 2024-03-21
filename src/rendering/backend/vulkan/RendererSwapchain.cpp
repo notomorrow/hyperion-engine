@@ -102,6 +102,7 @@ void Swapchain<Platform::VULKAN>::RetrieveImageHandles(Device<Platform::VULKAN> 
             image_format,
             ImageType::TEXTURE_TYPE_2D,
             FilterMode::TEXTURE_FILTER_NEAREST,
+            FilterMode::TEXTURE_FILTER_NEAREST,
             nullptr,
             IMAGE_FLAGS_NONE
         );

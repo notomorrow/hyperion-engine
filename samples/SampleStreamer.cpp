@@ -373,31 +373,33 @@ void SampleStreamer::InitGame()
         terrain_node.SetName("TerrainNode");
     }
 
-    auto sun = CreateObject<Light>(DirectionalLight(
-        Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
-        Color(1.0f, 0.7f, 0.4f),
-        1.0f
-    ));
+    if (false) { // add sun
+        auto sun = CreateObject<Light>(DirectionalLight(
+            Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
+            Color(1.0f, 0.7f, 0.4f),
+            1.0f
+        ));
 
-    InitObject(sun);
+        InitObject(sun);
 
-    auto sun_node = m_scene->GetRoot().AddChild();
-    sun_node.SetName("Sun");
+        auto sun_node = m_scene->GetRoot().AddChild();
+        sun_node.SetName("Sun");
 
-    auto sun_entity = m_scene->GetEntityManager()->AddEntity();
-    sun_node.SetEntity(sun_entity);
+        auto sun_entity = m_scene->GetEntityManager()->AddEntity();
+        sun_node.SetEntity(sun_entity);
 
-    sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
+        sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
 
-    m_scene->GetEntityManager()->AddComponent(sun_entity, LightComponent {
-        sun
-    });
+        m_scene->GetEntityManager()->AddComponent(sun_entity, LightComponent {
+            sun
+        });
 
-    m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
-        .filter = SHADOW_MAP_FILTER_PCF,
-        .radius = 20.0f,
-        .resolution = { 2048, 2048 }
-    });
+        m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
+            .filter = SHADOW_MAP_FILTER_PCF,
+            .radius = 20.0f,
+            .resolution = { 2048, 2048 }
+        });
+    }
 
     Array<Handle<Light>> point_lights;
 
@@ -432,6 +434,31 @@ void SampleStreamer::InitGame()
         });
     }
 
+    { // add test area light
+        auto light = CreateObject<Light>(RectangleLight(
+            Vec3f(0.0f, 1.25f, 0.0f),
+            Vec3f(0.0f, 0.0f, -1.0f).Normalize(),
+            Vec2f(2.0f, 2.0f),
+            Color(1.0f, 0.0f, 0.0f),
+            1.0f
+        ));
+
+        InitObject(light);
+
+        auto area_light_entity = m_scene->GetEntityManager()->AddEntity();
+
+        m_scene->GetEntityManager()->AddComponent(area_light_entity, TransformComponent {
+            Transform(
+                light->GetPosition(),
+                Vec3f(1.0f),
+                Quaternion::Identity()
+            )
+        });
+
+        m_scene->GetEntityManager()->AddComponent(area_light_entity, LightComponent {
+            light
+        });
+    }
 
     // Add Skybox
     if (true) {
@@ -458,7 +485,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");////testbed/testbed2.obj");//living_room/living_room.obj");//
+        batch->Add("test_model", "models/testbed/testbed.obj");//pica_pica/pica_pica.obj");//sponza/sponza.obj");//living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -571,9 +598,9 @@ void SampleStreamer::InitGame()
         
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            //node.Scale(0.25f);
+            node.Scale(2.0f);
             // node.Scale(3.0f);
-            node.Scale(0.0125f);
+            //node.Scale(0.0125f);
             node.SetName("test_model");
             node.LockTransform();
 

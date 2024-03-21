@@ -61,7 +61,9 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
                 .radius             = draw_proxy.radius,
                 .falloff            = draw_proxy.falloff,
                 .shadow_map_index   = draw_proxy.shadow_map_index,
-                .position_intensity = draw_proxy.position_intensity
+                .area_size          = draw_proxy.area_size,
+                .position_intensity = draw_proxy.position_intensity,
+                .normal             = draw_proxy.normal
             }
         );
 
@@ -73,7 +75,7 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
 
 Light::Light(
     LightType type,
-    const Vector3 &position,
+    const Vec3f &position,
     const Color &color,
     float intensity,
     float radius
@@ -89,10 +91,34 @@ Light::Light(
 {
 }
 
+Light::Light(
+    LightType type,
+    const Vec3f &position,
+    const Vec3f &normal,
+    const Vec2f &area_size,
+    const Color &color,
+    float intensity,
+    float radius
+) : BasicObject(),
+    m_type(type),
+    m_position(position),
+    m_normal(normal),
+    m_area_size(area_size),
+    m_color(color),
+    m_intensity(intensity),
+    m_radius(radius),
+    m_falloff(1.0f),
+    m_shadow_map_index(~0u),
+    m_shader_data_state(ShaderDataState::DIRTY)
+{
+}
+
 Light::Light(Light &&other) noexcept
     : BasicObject(std::move(other)),
       m_type(other.m_type),
       m_position(other.m_position),
+      m_normal(other.m_normal),
+      m_area_size(other.m_area_size),
       m_color(other.m_color),
       m_intensity(other.m_intensity),
       m_radius(other.m_radius),
@@ -118,14 +144,16 @@ void Light::Init()
     BasicObject::Init();
 
     m_draw_proxy = LightDrawProxy {
-        .id = m_id,
-        .type = m_type,
-        .color = m_color,
-        .radius = m_radius,
-        .falloff = m_falloff,
-        .shadow_map_index = m_shadow_map_index,
-        .position_intensity = Vector4(m_position, m_intensity),
-        .visibility_bits = m_visibility_bits.ToUInt64()
+        .id                 = m_id,
+        .type               = m_type,
+        .color              = m_color,
+        .radius             = m_radius,
+        .falloff            = m_falloff,
+        .shadow_map_index   = m_shadow_map_index,
+        .area_size          = m_area_size,
+        .position_intensity = Vec4f(m_position, m_intensity),
+        .normal             = Vec4f(m_normal, 0.0f),
+        .visibility_bits    = m_visibility_bits.ToUInt64()
     };
 
     EnqueueRenderUpdates();
@@ -164,14 +192,16 @@ void Light::EnqueueRenderUpdates()
         UpdateLightShaderData,
         *this,
         LightDrawProxy {
-            .id = m_id,
-            .type = m_type,
-            .color = m_color,
-            .radius = m_radius,
-            .falloff = m_falloff,
-            .shadow_map_index = m_shadow_map_index,
-            .position_intensity = Vector4(m_position, m_intensity),
-            .visibility_bits = m_visibility_bits.ToUInt64()
+            .id                 = m_id,
+            .type               = m_type,
+            .color              = m_color,
+            .radius             = m_radius,
+            .falloff            = m_falloff,
+            .shadow_map_index   = m_shadow_map_index,
+            .area_size          = m_area_size,
+            .position_intensity = Vec4f(m_position, m_intensity),
+            .normal             = Vec4f(m_normal, 0.0f),
+            .visibility_bits    = m_visibility_bits.ToUInt64()
         }
     );
 
@@ -194,13 +224,63 @@ void Light::SetIsVisible(ID<Camera> camera_id, bool is_visible)
     }
 }
 
-BoundingBox Light::GetWorldAABB() const
+Pair<Vec3f, Vec3f> Light::CalculateAreaLightRect() const
+{
+    Vec3f tangent;
+    Vec3f bitangent;
+    MathUtil::ComputeOrthonormalBasis(m_normal, tangent, bitangent);
+
+    const float half_width = m_area_size.x * 0.5f;
+    const float half_height = m_area_size.y * 0.5f;
+
+    const Vec3f center = m_position;
+
+    const Vec3f p0 = center - tangent * half_width - bitangent * half_height;
+    const Vec3f p1 = center + tangent * half_width - bitangent * half_height;
+    const Vec3f p2 = center + tangent * half_width + bitangent * half_height;
+    const Vec3f p3 = center - tangent * half_width + bitangent * half_height;
+
+    return { p0, p2 };
+}
+
+BoundingBox Light::GetAABB() const
 {
     if (m_type == LightType::DIRECTIONAL) {
         return BoundingBox::infinity;
     }
 
-    return BoundingBox(m_position - m_radius, m_position + m_radius);
+    if (m_type == LightType::AREA_RECT) {
+        const Pair<Vec3f, Vec3f> rect = CalculateAreaLightRect();
+
+        BoundingBox aabb;
+        aabb.Extend(rect.first);
+        aabb.Extend(rect.second);
+        aabb.Extend(m_position + m_normal * m_radius);
+
+        DebugLog(
+            LogType::Debug,
+            "Rect light aabb: [%f, %f, %f] - [%f, %f, %f]",
+            aabb.min.x, aabb.min.y, aabb.min.z,
+            aabb.max.x, aabb.max.y, aabb.max.z
+        );
+
+        return aabb;
+    }
+
+    if (m_type == LightType::POINT) {
+        return BoundingBox(GetBoundingSphere());
+    }
+
+    return BoundingBox::empty;
+}
+
+BoundingSphere Light::GetBoundingSphere() const
+{
+    if (m_type == LightType::DIRECTIONAL) {
+        return BoundingSphere::infinity;
+    }
+
+    return BoundingSphere(m_position, m_radius);
 }
 
 } // namespace hyperion::v2

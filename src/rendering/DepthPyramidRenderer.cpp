@@ -68,6 +68,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 
     m_depth_pyramid_sampler = MakeRenderObject<renderer::Sampler>(
         FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,
+        FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
     );
 
@@ -89,6 +90,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
         InternalFormat::R32F,
         ImageType::TEXTURE_TYPE_2D,
         FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,
+        FilterMode::TEXTURE_FILTER_NEAREST,
         nullptr
     ));
 

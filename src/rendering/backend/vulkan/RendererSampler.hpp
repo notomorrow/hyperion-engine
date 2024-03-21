@@ -22,7 +22,8 @@ class Sampler<Platform::VULKAN>
 {
 public:
     Sampler(
-        FilterMode filter_mode = FilterMode::TEXTURE_FILTER_NEAREST,
+        FilterMode min_filter_mode = FilterMode::TEXTURE_FILTER_NEAREST,
+        FilterMode mag_filter_mode = FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode wrap_mode = WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER
     );
 
@@ -35,8 +36,11 @@ public:
     VkSampler GetSampler() const
         { return m_sampler; }
 
-    FilterMode GetFilterMode() const
-        { return m_filter_mode; }
+    FilterMode GetMinFilterMode() const
+        { return m_min_filter_mode; }
+
+    FilterMode GetMagFilterMode() const
+        { return m_mag_filter_mode; }
 
     WrapMode GetWrapMode() const
         { return m_wrap_mode; }
@@ -46,7 +50,8 @@ public:
 
 private:
     VkSampler   m_sampler;
-    FilterMode  m_filter_mode;
+    FilterMode  m_min_filter_mode;
+    FilterMode  m_mag_filter_mode;
     WrapMode    m_wrap_mode;
 };
 

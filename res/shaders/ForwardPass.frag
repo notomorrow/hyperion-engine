@@ -342,7 +342,7 @@ void main()
     // gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
 
     gbuffer_normals = EncodeNormal(N);
-    gbuffer_material = vec4(roughness, metalness, transmission, ao);
+    gbuffer_material = vec4(0.09, metalness, transmission, ao);
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

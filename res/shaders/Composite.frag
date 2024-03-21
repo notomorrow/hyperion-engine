@@ -33,6 +33,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
 HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferred_direct_texture;
 HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
 HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
@@ -87,7 +88,7 @@ void main()
     out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
 
     // // Draw env_grid_probe_data buffer to screen.
-    // out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, env_grid_probe_data, v_texcoord0).rgb, 1.0);
+    // out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, deferred_direct_texture, v_texcoord0).rgb, 1.0);
     
 
 

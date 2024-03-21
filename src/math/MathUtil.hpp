@@ -245,8 +245,36 @@ public:
     }
 
     template <class T, class U, class V>
-    static constexpr auto Lerp(const T &from, const U &to, const V &amt) -> decltype(from + amt * (to - from))
+    static constexpr auto Lerp(const T &from, const U &to, const V &amt) -> std::enable_if_t<!is_math_vector_v<T>, decltype(from + amt * (to - from))>
         { return from + amt * (to - from); }
+
+    template <class T, class U, class V>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Lerp(const T &from, const U &to, const V &amt)
+    {
+        T result;
+
+        for (uint i = 0; i < ArraySize(result.values); i++) {
+            result.values[i] = Lerp(from.values[i], to.values[i], amt);
+        }
+
+        return result;
+    }
+
+    template <class T>
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, T) Step(T edge, T x)
+        { return x < edge ? 0.0f : 1.0f; }
+
+    template <class T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Step(const T &edge, const T &x)
+    {
+        T result;
+
+        for (uint i = 0; i < ArraySize(result.values); i++) {
+            result.values[i] = Step(edge.values[i], x.values[i]);
+        }
+
+        return result;
+    }
 
     template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Min(const T &a, const T &b)
@@ -543,6 +571,7 @@ public:
     static Vec3f ImportanceSampleGGX(Vec2f Xi, Vec3f N, float roughness);
     static Vec3f CalculateBarycentricCoordinates(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2, const Vec3f &p);
     static Vec3f CalculateBarycentricCoordinates(const Vec2f &v0, const Vec2f &v1, const Vec2f &v2, const Vec2f &p);
+    static void ComputeOrthonormalBasis(const Vec3f &normal, Vec3f &out_tangent, Vec3f &out_bitangent);
 };
 
 } // namespace hyperion

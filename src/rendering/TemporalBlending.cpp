@@ -141,6 +141,7 @@ void TemporalBlending::CreateImageOutputs()
             m_image_format,
             ImageType::TEXTURE_TYPE_2D,
             FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+            FilterMode::TEXTURE_FILTER_LINEAR,
             nullptr
         ));
 

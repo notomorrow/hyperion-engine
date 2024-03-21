@@ -277,21 +277,20 @@ static_assert(sizeof(ObjectInstance) == 16);
 
 struct alignas(64) LightShaderData
 {
-    uint32 light_id;
-    uint32 light_type;
-    uint32 color_packed;
-    float radius;
+    uint32  light_id;
+    uint32  light_type;
+    uint32  color_packed;
+    float   radius;
     // 16
 
-    float falloff;
-    uint32 shadow_map_index;
-    HYP_PAD_STRUCT_HERE(uint32, 2);
+    float   falloff;
+    uint32  shadow_map_index;
+    Vec2f   area_size;
     // 32
 
-    Vec4f position_intensity;
-    // 48
-
-    HYP_PAD_STRUCT_HERE(ubyte, 64 - 48);
+    Vec4f   position_intensity;
+    Vec4f   normal;
+    // 64
 };
 
 static_assert(sizeof(LightShaderData) == 64);

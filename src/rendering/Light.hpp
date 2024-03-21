@@ -34,6 +34,16 @@ public:
         float radius
     );
 
+    Light(
+        LightType type,
+        const Vec3f &position,
+        const Vec3f &normal,
+        const Vec2f &area_size,
+        const Color &color,
+        float intensity,
+        float radius
+    );
+
     Light(const Light &other) = delete;
     Light &operator=(const Light &other) = delete;
 
@@ -52,6 +62,24 @@ public:
     void SetPosition(const Vec3f &position)
     {
         m_position = position;
+        m_shader_data_state |= ShaderDataState::DIRTY;
+    }
+
+    const Vec3f &GetNormal() const
+        { return m_normal; }
+
+    void SetNormal(const Vec3f &normal)
+    {
+        m_normal = normal;
+        m_shader_data_state |= ShaderDataState::DIRTY;
+    }
+
+    const Vec2f &GetAreaSize() const
+        { return m_area_size; }
+
+    void SetAreaSize(const Vec2f &area_size)
+    {
+        m_area_size = area_size;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
@@ -112,7 +140,10 @@ public:
     bool IsVisible(ID<Camera> camera_id) const;
     void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
-    BoundingBox GetWorldAABB() const;
+    Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+
+    BoundingBox GetAABB() const;
+    BoundingSphere GetBoundingSphere() const;
 
     void Init();
     //void EnqueueBind() const;
@@ -122,9 +153,10 @@ public:
 protected:
     LightType   m_type;
     Vec3f       m_position;
+    Vec3f       m_normal;
+    Vec2f       m_area_size;
     Color       m_color;
     float       m_intensity;
-    /* Point, spot lights */
     float       m_radius;
     float       m_falloff;
     uint        m_shadow_map_index;
@@ -182,6 +214,29 @@ public:
         color,
         intensity,
         radius
+    )
+    {
+    }
+};
+
+class RectangleLight : public Light
+{
+public:
+    RectangleLight(
+        const Vec3f &position,
+        const Vec3f &normal,
+        const Vec2f &area_size,
+        const Color &color,
+        float intensity = 1.0f,
+        float distance = 1.0f
+    ) : Light(
+        LightType::AREA_RECT,
+        position,
+        normal,
+        area_size,
+        color,
+        intensity,
+        distance
     )
     {
     }

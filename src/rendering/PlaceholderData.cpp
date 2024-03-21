@@ -8,6 +8,7 @@ PlaceholderData::PlaceholderData()
           Extent2D(1, 1),
           renderer::InternalFormat::R8,
           renderer::FilterMode::TEXTURE_FILTER_NEAREST,
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           nullptr
       ))),
       m_image_view_2d_1x1_r8(MakeRenderObject<ImageView>()),
@@ -15,12 +16,14 @@ PlaceholderData::PlaceholderData()
           Extent3D(1, 1, 1),
           renderer::InternalFormat::R8,
           ImageType::TEXTURE_TYPE_2D,
-          FilterMode::TEXTURE_FILTER_NEAREST
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST
       ))),
       m_image_view_2d_1x1_r8_storage(MakeRenderObject<ImageView>()),
       m_image_3d_1x1x1_r8(MakeRenderObject<Image>(TextureImage3D(
           Extent3D(1, 1, 1),
           renderer::InternalFormat::R8,
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           nullptr
       ))),
@@ -29,25 +32,30 @@ PlaceholderData::PlaceholderData()
           Extent3D(1, 1, 1),
           InternalFormat::R8,
           ImageType::TEXTURE_TYPE_3D,
-          FilterMode::TEXTURE_FILTER_NEAREST
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST
       ))),
       m_image_view_3d_1x1x1_r8_storage(MakeRenderObject<ImageView>()),
       m_image_cube_1x1_r8(MakeRenderObject<Image>(TextureImageCube(
           Extent2D(1, 1),
           renderer::InternalFormat::R8,
           renderer::FilterMode::TEXTURE_FILTER_NEAREST,
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           nullptr
       ))),
       m_image_view_cube_1x1_r8(MakeRenderObject<ImageView>()),
       m_sampler_linear(MakeRenderObject<Sampler>(
           renderer::FilterMode::TEXTURE_FILTER_LINEAR,
-          renderer::WrapMode::TEXTURE_WRAP_REPEAT
+          renderer::FilterMode::TEXTURE_FILTER_LINEAR,
+          renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
       )),
       m_sampler_linear_mipmap(MakeRenderObject<Sampler>(
           renderer::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-          renderer::WrapMode::TEXTURE_WRAP_REPEAT
+          renderer::FilterMode::TEXTURE_FILTER_LINEAR,
+          renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
       )),
       m_sampler_nearest(MakeRenderObject<Sampler>(
+          renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           renderer::FilterMode::TEXTURE_FILTER_NEAREST,
           renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
       ))

@@ -172,8 +172,9 @@ void FinalPass::Create()
 
     m_last_frame_image = MakeRenderObject<renderer::Image>(renderer::TextureImage(
         Extent3D { g_engine->GetGPUInstance()->GetSwapchain()->extent, 1 },
-        InternalFormat::RGBA16F,
+        InternalFormat::R10G10B10A2,
         ImageType::TEXTURE_TYPE_2D,
+        FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         nullptr
     ));

@@ -1,5 +1,4 @@
-#include "Deferred.hpp"
-#include <Engine.hpp>
+#include <rendering/Deferred.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
@@ -7,6 +6,8 @@
 
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 
@@ -25,6 +26,18 @@ static const InternalFormat env_grid_radiance_format = InternalFormat::RGBA16F;
 static const InternalFormat env_grid_irradiance_format = InternalFormat::R11G11B10F;
 static const Extent2D env_grid_irradiance_extent { 1024, 768 };
 static const Extent2D env_grid_radiance_extent { 1024, 768 };
+
+static const float s_ltc_matrix[] = {
+#include <rendering/inl/LTCMatrix.inl>
+};
+
+static_assert(sizeof(s_ltc_matrix) == 64 * 64 * 4 * 4, "Invalid LTC matrix size");
+
+static const float s_ltc_brdf[] = {
+#include <rendering/inl/LTCBRDF.inl>
+};
+
+static_assert(sizeof(s_ltc_brdf) == 64 * 64 * 4 * 4, "Invalid LTC BRDF size");
 
 #pragma region Render commands
 
@@ -71,9 +84,10 @@ static ShaderProperties GetDeferredShaderProperties()
     properties.Set("HBIL_ENABLED", g_engine->GetConfig().Get(CONFIG_HBIL));
     properties.Set("HBAO_ENABLED", g_engine->GetConfig().Get(CONFIG_HBAO));
     properties.Set("LIGHT_RAYS_ENABLED", g_engine->GetConfig().Get(CONFIG_LIGHT_RAYS));
-    properties.Set("PATHTRACER", g_engine->GetConfig().Get(CONFIG_PATHTRACER));
 
-    if (g_engine->GetConfig().Get(CONFIG_DEBUG_REFLECTIONS)) {
+    if (g_engine->GetConfig().Get(CONFIG_PATHTRACER)) {
+        properties.Set("PATHTRACER");
+    } else if (g_engine->GetConfig().Get(CONFIG_DEBUG_REFLECTIONS)) {
         properties.Set("DEBUG_REFLECTIONS");
     } else if (g_engine->GetConfig().Get(CONFIG_DEBUG_IRRADIANCE)) {
         properties.Set("DEBUG_IRRADIANCE");
@@ -88,7 +102,10 @@ DeferredPass::DeferredPass(bool is_indirect_pass)
 {
 }
 
-DeferredPass::~DeferredPass() = default;
+DeferredPass::~DeferredPass()
+{
+    SafeRelease(std::move(m_ltc_sampler));
+}
 
 void DeferredPass::CreateShader()
 {
@@ -103,7 +120,8 @@ void DeferredPass::CreateShader()
         static const FixedArray<ShaderProperties, uint(LightType::MAX)> light_type_properties {
             ShaderProperties { { "LIGHT_TYPE_DIRECTIONAL" } },
             ShaderProperties { { "LIGHT_TYPE_POINT" } },
-            ShaderProperties { { "LIGHT_TYPE_SPOT" } }
+            ShaderProperties { { "LIGHT_TYPE_SPOT" } },
+            ShaderProperties { { "LIGHT_TYPE_AREA_RECT" } }
         };
 
         for (uint i = 0; i < uint(LightType::MAX); i++) {
@@ -127,24 +145,81 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
         return;
     }
 
+    { // linear transform cosines texture data
+        m_ltc_sampler = MakeRenderObject<renderer::Sampler>(
+            renderer::FilterMode::TEXTURE_FILTER_NEAREST,
+            renderer::FilterMode::TEXTURE_FILTER_LINEAR,
+            renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        );
+
+        DeferCreate(m_ltc_sampler, g_engine->GetGPUDevice());
+
+        Bitmap<4, float> bitmap(64, 64);
+
+        for (uint x = 0; x < 64; x++) {
+            for (uint y = 0; y < 64; y++) {
+                bitmap.SetPixel(
+                    x, y,
+                    {
+                        s_ltc_matrix[(x * 64 + y) * 4 + 0],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 1],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 2],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 3]
+                    }
+                );
+            }
+        }
+
+        UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));
+
+        m_ltc_matrix_texture = CreateObject<Texture>(Texture2D(
+            { 64, 64 },
+            InternalFormat::RGBA32F,
+            FilterMode::TEXTURE_FILTER_NEAREST,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            std::move(streamed_matrix_data)
+        ));
+
+        InitObject(m_ltc_matrix_texture);
+
+        ByteBuffer ltc_brdf_data(sizeof(s_ltc_brdf), s_ltc_brdf);
+        UniquePtr<StreamedData> streamed_brdf_data(new MemoryStreamedData(std::move(ltc_brdf_data)));
+
+        m_ltc_brdf_texture = CreateObject<Texture>(Texture2D(
+            { 64, 64 },
+            InternalFormat::RGBA32F,
+            FilterMode::TEXTURE_FILTER_NEAREST,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            std::move(streamed_brdf_data)
+        ));
+
+        InitObject(m_ltc_brdf_texture);
+    }
+
     for (uint i = 0; i < uint(LightType::MAX); i++) {
         Handle<Shader> &shader = m_direct_light_shaders[i];
         AssertThrow(shader.IsValid());
 
-        Handle<RenderGroup> render_group;
+        renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
 
-        if (m_descriptor_table.HasValue()) {
-            render_group = CreateObject<RenderGroup>(
-                Handle<Shader>(shader),
-                renderable_attributes,
-                m_descriptor_table.Get()
-            );
-        } else {
-            render_group = CreateObject<RenderGroup>(
-                Handle<Shader>(shader),
-                renderable_attributes
-            );
+        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index);
+            AssertThrow(descriptor_set != nullptr);
+
+            descriptor_set->SetElement(HYP_NAME(LTCSampler), m_ltc_sampler);
+            descriptor_set->SetElement(HYP_NAME(LTCMatrixTexture), m_ltc_matrix_texture->GetImageView());
+            descriptor_set->SetElement(HYP_NAME(LTCBRDFTexture), m_ltc_brdf_texture->GetImageView());
         }
+
+        DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+        Handle<RenderGroup> render_group = CreateObject<RenderGroup>(
+            Handle<Shader>(shader),
+            renderable_attributes,
+            descriptor_table
+        );
 
         render_group->AddFramebuffer(Handle<Framebuffer>(m_framebuffer));
 
@@ -228,6 +303,7 @@ void DeferredPass::Record(uint frame_index)
 
                 const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
                 const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+                const uint deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DeferredDirectDescriptorSet));
 
                 render_group->GetPipeline()->push_constants = m_push_constant_data;
                 render_group->GetPipeline()->Bind(cmd);
@@ -238,6 +314,14 @@ void DeferredPass::Record(uint frame_index)
                         render_group->GetPipeline(),
                         { },
                         global_descriptor_set_index
+                    );
+
+                render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index)
+                    ->Bind(
+                        cmd,
+                        render_group->GetPipeline(),
+                        { },
+                        deferred_direct_descriptor_set_index
                     );
 
                 const LightType light_type = LightType(light_type_index);
@@ -254,11 +338,11 @@ void DeferredPass::Record(uint frame_index)
                     uint shadow_probe_index = 0;
 
                     if (light.shadow_map_index != ~0u) {
-                        if (light.type == LightType::POINT) {
+                        if (light_type == LightType::POINT) {
                             AssertThrow(light.shadow_map_index < max_env_probes);
 
                             shadow_probe_index = light.shadow_map_index;
-                        } else if (light.type == LightType::DIRECTIONAL) {
+                        } else if (light_type == LightType::DIRECTIONAL) {
                             AssertThrow(light.shadow_map_index < max_shadow_maps);
                         }
                     }

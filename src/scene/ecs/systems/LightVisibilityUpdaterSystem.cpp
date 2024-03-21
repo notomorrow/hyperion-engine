@@ -41,8 +41,9 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
             bounding_box_component->local_aabb = BoundingBox::infinity;
             bounding_box_component->world_aabb = BoundingBox::infinity;
             break;
-        case LightType::POINT:
-            bounding_box_component->local_aabb = BoundingBox(BoundingSphere(light->GetPosition(), light->GetRadius()));
+        case LightType::POINT: // fallthrough
+        case LightType::AREA_RECT:
+            bounding_box_component->local_aabb = light->GetAABB();
             bounding_box_component->world_aabb = bounding_box_component->local_aabb * transform_component.transform;
             break;
         default:
@@ -100,9 +101,29 @@ void LightVisibilityUpdaterSystem::Process(EntityManager &entity_manager, GameCo
             light_component.transform_hash_code = transform_hash_code;
         }
 
-        const bool is_light_in_frustum = light_component.light->GetType() == LightType::DIRECTIONAL
-            || (camera.IsValid() && camera->GetFrustum().ContainsBoundingSphere(BoundingSphere(light_component.light->GetPosition(), light_component.light->GetRadius())));
+        bool is_light_in_frustum = false;
+        
+        if (camera.IsValid()) {
+            is_light_in_frustum = camera->GetFrustum().ContainsAABB(bounding_box_component.world_aabb);
 
+            switch (light_component.light->GetType()) {
+            case LightType::DIRECTIONAL:
+                is_light_in_frustum = true;
+                break;
+            case LightType::POINT:
+                is_light_in_frustum = camera->GetFrustum().ContainsBoundingSphere(light_component.light->GetBoundingSphere());
+                break;
+            case LightType::SPOT:
+                // @TODO Implement frustum culling for spot lights
+                break;
+            case LightType::AREA_RECT:
+                is_light_in_frustum = true;
+                break;
+            default:
+                break;
+            }
+        }
+        
         light_component.light->SetIsVisible(camera.GetID(), is_light_in_frustum);
         light_component.light->Update();
     }

@@ -9,31 +9,31 @@ public class TestScript : Script
     {
         base.Init(entity);
 
-        var lightEntity = Scene.EntityManager.AddEntity();
-        Scene.EntityManager.AddComponent<LightComponent>(lightEntity, new LightComponent
-        {
-            Light = new Light(
-                LightType.Point,
-                new Vec3f(0f, 0.5f, 0f),
-                new Color(1, 0, 0, 1),
-                1.0f,
-                25.0f
-            )
-        });
+        // var lightEntity = Scene.EntityManager.AddEntity();
+        // Scene.EntityManager.AddComponent<LightComponent>(lightEntity, new LightComponent
+        // {
+        //     Light = new Light(
+        //         LightType.Point,
+        //         new Vec3f(0f, 0.5f, 0f),
+        //         new Color(1, 0, 0, 1),
+        //         1.0f,
+        //         25.0f
+        //     )
+        // });
 
-        Scene.EntityManager.AddComponent<TransformComponent>(lightEntity, new TransformComponent
-        {
-            transform = new Transform
-            {
-                Translation = new Vec3f(0, 0.5f, 0),
-                Scale = new Vec3f(1, 1, 1),
-                Rotation = new Quaternion(0, 0, 0, 1)
-            }
-        });
+        // Scene.EntityManager.AddComponent<TransformComponent>(lightEntity, new TransformComponent
+        // {
+        //     transform = new Transform
+        //     {
+        //         Translation = new Vec3f(0, 0.5f, 0),
+        //         Scale = new Vec3f(1, 1, 1),
+        //         Rotation = new Quaternion(0, 0, 0, 1)
+        //     }
+        // });
 
-        // Scene.EntityManager.AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent { });
+        // // Scene.EntityManager.AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent { });
 
-        Logger.Log(LogType.Info, "Init script, added light entity: " + lightEntity.ID);
+        // Logger.Log(LogType.Info, "Init script, added light entity: " + lightEntity.ID);
     }
 
     public override void Destroy()

@@ -19,6 +19,45 @@ float GetSquareFalloffAttenuation(vec3 P, vec3 L, float radius)
     return HYP_FMATH_SQR(smooth_factor) / max(distance_square, 1e-4);
 }
 
+// http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
+float RightPyramidSolidAngle(float dist, float half_width, float half_height)
+{
+    float a = half_width;
+    float b = half_height;
+    float h = dist;
+    
+    return 4.0 * asin(a * b / sqrt((a * a + h * h) * (b * b + h * h)));
+}
+
+// https://github.com/turanszkij/WickedEngine/blob/62d1d02691286cc6c25da61294bfb416d018782b/WickedEngine/lightingHF.hlsli#L251C1-L257C2
+vec3 ClosestPointOnSegment(vec3 a, vec3 b, vec3 c)
+{
+    vec3 ab = b - a;
+    float t = dot(c - a, ab) / dot(ab, ab);
+
+    return a + clamp(t, 0.0, 1.0) * ab;
+}
+
+float RectangleSolidAngle(vec3 world_position, vec3 p0, vec3 p1, vec3 p2, vec3 p3)
+{
+    vec3 v0 = p0 - world_position;
+    vec3 v1 = p1 - world_position;
+    vec3 v2 = p2 - world_position;
+    vec3 v3 = p3 - world_position;
+
+    vec3 n0 = normalize(cross(v0, v1));
+    vec3 n1 = normalize(cross(v1, v2));
+    vec3 n2 = normalize(cross(v2, v3));
+    vec3 n3 = normalize(cross(v3, v0));
+
+    float g0 = acos(dot(-n0, n1));
+    float g1 = acos(dot(-n1, n2));
+    float g2 = acos(dot(-n2, n3));
+    float g3 = acos(dot(-n3, n0));
+
+    return g0 + g1 + g2 + g3 - 2.0 * HYP_FMATH_PI;
+}
+
 vec3 ImportanceSampleGTR2(float rgh, float r1, float r2)
 {
     float a = max(0.001, rgh);

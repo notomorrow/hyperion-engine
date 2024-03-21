@@ -19,14 +19,16 @@ Image<Platform::VULKAN>::Image(
     Extent3D extent,
     InternalFormat format,
     ImageType type,
-    FilterMode filter_mode,
+    FilterMode min_filter_mode,
+    FilterMode mag_filter_mode,
     UniquePtr<StreamedData> &&streamed_data,
     ImageFlags flags
 ) : Image(
         extent,
         format,
         type,
-        filter_mode,
+        min_filter_mode,
+        mag_filter_mode,
         { },
         std::move(streamed_data),
         flags
@@ -38,14 +40,16 @@ Image<Platform::VULKAN>::Image(
     Extent3D extent,
     InternalFormat format,
     ImageType type,
-    FilterMode filter_mode,
+    FilterMode min_filter_mode,
+    FilterMode mag_filter_mode,
     const InternalInfo &internal_info,
     UniquePtr<StreamedData> &&streamed_data,
     ImageFlags flags
 ) : m_extent(extent),
     m_format(format),
     m_type(type),
-    m_filter_mode(filter_mode),
+    m_min_filter_mode(min_filter_mode),
+    m_mag_filter_mode(mag_filter_mode),
     m_internal_info(internal_info),
     m_is_blended(false),
     m_is_rw_texture(false),
@@ -62,7 +66,8 @@ Image<Platform::VULKAN>::Image(Image &&other) noexcept
     : m_extent(other.m_extent),
       m_format(other.m_format),
       m_type(other.m_type),
-      m_filter_mode(other.m_filter_mode),
+      m_min_filter_mode(other.m_min_filter_mode),
+      m_mag_filter_mode(other.m_mag_filter_mode),
       m_internal_info(other.m_internal_info),
       m_is_blended(other.m_is_blended),
       m_is_rw_texture(other.m_is_rw_texture),
@@ -88,7 +93,8 @@ Image<Platform::VULKAN> &Image<Platform::VULKAN>::operator=(Image &&other) noexc
     m_extent = other.m_extent;
     m_format = other.m_format;
     m_type = other.m_type;
-    m_filter_mode = other.m_filter_mode;
+    m_min_filter_mode = other.m_min_filter_mode;
+    m_mag_filter_mode = other.m_mag_filter_mode;
     m_internal_info = other.m_internal_info;
     m_is_blended = other.m_is_blended;
     m_is_rw_texture = other.m_is_rw_texture;
@@ -193,7 +199,7 @@ Result Image<Platform::VULKAN>::CreateImage(
 
         m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-        switch (m_filter_mode) {
+        switch (m_min_filter_mode) {
         case FilterMode::TEXTURE_FILTER_LINEAR: // fallthrough
         case FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP:
             format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
@@ -358,7 +364,13 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
 
     if (HasAssignedImageData()) {
         auto loaded_data = m_streamed_data->Load();
-        AssertThrow(m_size == loaded_data.Size());
+
+        AssertThrowMsg(
+            m_size == loaded_data.Size(),
+            "Invalid image size -- loaded data size (%llu) does not match image size (%llu)",
+            loaded_data.Size(),
+            m_size
+        );
 
         AssertThrowMsg(m_size % m_bpp == 0, "Invalid image size");
         AssertThrowMsg((m_size / m_bpp) % NumFaces() == 0, "Invalid image size");
@@ -373,7 +385,8 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
 
         staging_buffer.Copy(device, m_size, loaded_data.Data());
 
-        commands.Push([&](const CommandBufferRef_VULKAN &command_buffer) {
+        commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer)
+        {
             m_image->InsertBarrier(
                 command_buffer,
                 sub_resource,
@@ -391,7 +404,7 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
         AssertThrowMsg(m_size / buffer_offset_step == num_faces, "Invalid image size");
 
         for (uint i = 0; i < num_faces; i++) {
-            commands.Push([this, &staging_buffer, &image_info, i, buffer_offset_step](const CommandBufferRef_VULKAN &command_buffer)
+            commands.Push([this, &staging_buffer, &image_info, i, buffer_offset_step](const CommandBufferRef<Platform::VULKAN> &command_buffer)
             {
                 const uint buffer_size = staging_buffer.size;
                 const uint buffer_offset_step_ = buffer_offset_step;
@@ -427,7 +440,7 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
 
             /* Generate our mipmaps
             */
-            commands.Push([this, device](const CommandBufferRef_VULKAN &command_buffer)
+            commands.Push([this, device](const CommandBufferRef<Platform::VULKAN> &command_buffer)
             {
                 return GenerateMipmaps(device, command_buffer);
             });
@@ -435,7 +448,8 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instanc
     }
 
     /* Transition from whatever the previous layout state was to our destination state */
-    commands.Push([&](const CommandBufferRef_VULKAN &command_buffer) {
+    commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer)
+    {
         m_image->InsertBarrier(
             command_buffer,
             sub_resource,
@@ -566,10 +580,10 @@ Result Image<Platform::VULKAN>::Blit(
             command_buffer->GetCommandBuffer(),
             src_image->GetGPUImage()->image,
             GPUMemory<Platform::VULKAN>::GetImageLayout(src_image->GetGPUImage()->GetResourceState()),
-            this->GetGPUImage()->image,
-            GPUMemory<Platform::VULKAN>::GetImageLayout(this->GetGPUImage()->GetResourceState()),
+            GetGPUImage()->image,
+            GPUMemory<Platform::VULKAN>::GetImageLayout(GetGPUImage()->GetResourceState()),
             1, &blit,
-            helpers::ToVkFilter(src_image->GetFilterMode())
+            helpers::ToVkFilter(src_image->GetMinFilterMode())
         );
     }
 
@@ -643,7 +657,7 @@ Result Image<Platform::VULKAN>::Blit(
             this->GetGPUImage()->image,
             GPUMemory<Platform::VULKAN>::GetImageLayout(this->GetGPUImage()->GetResourceState()),
             1, &blit,
-            helpers::ToVkFilter(src_image->GetFilterMode())
+            helpers::ToVkFilter(src_image->GetMinFilterMode())
         );
     }
 
@@ -853,7 +867,7 @@ ByteBuffer Image<Platform::VULKAN>::ReadBack(Device<Platform::VULKAN> *device, I
         }
 
 
-        commands.Push([this, &staging_buffer](const CommandBufferRef_VULKAN &command_buffer) {
+        commands.Push([this, &staging_buffer](const CommandBufferRef<Platform::VULKAN> &command_buffer) {
             CopyToBuffer(command_buffer, &staging_buffer);
 
             HYPERION_RETURN_OK;

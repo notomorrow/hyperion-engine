@@ -44,7 +44,8 @@ public:
         Extent3D extent,
         InternalFormat format,
         ImageType type,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data,
         ImageFlags flags = IMAGE_FLAGS_NONE
     );
@@ -53,7 +54,8 @@ public:
         Extent3D extent,
         InternalFormat format,
         ImageType type,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         const InternalInfo &internal_info,
         UniquePtr<StreamedData> &&streamed_data,
         ImageFlags flags = IMAGE_FLAGS_NONE
@@ -179,9 +181,9 @@ public:
 
     bool HasMipmaps() const
     {
-        return m_filter_mode == FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP
-            || m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
-            || m_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP;
+        return m_min_filter_mode == FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP
+            || m_min_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
+            || m_min_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP;
     }
 
     uint NumMipmaps() const
@@ -233,11 +235,17 @@ public:
                 ? m_num_layers
                 : 1; }
 
-    FilterMode GetFilterMode() const
-        { return m_filter_mode; }
+    FilterMode GetMinFilterMode() const
+        { return m_min_filter_mode; }
 
-    void SetFilterMode(FilterMode filter_mode)
-        { m_filter_mode = filter_mode; }
+    void SetMinFilterMode(FilterMode filter_mode)
+        { m_min_filter_mode = filter_mode; }
+
+    FilterMode GetMagFilterMode() const
+        { return m_mag_filter_mode; }
+
+    void SetMagFilterMode(FilterMode filter_mode)
+        { m_mag_filter_mode = filter_mode; }
 
     const Extent3D &GetExtent() const
         { return m_extent; }
@@ -258,7 +266,7 @@ public:
         { return m_type; }
 
 protected:
-    ImageFlags m_flags;
+    ImageFlags  m_flags;
     
 private:
     Result CreateImage(
@@ -278,7 +286,8 @@ private:
     Extent3D                                    m_extent;
     InternalFormat                              m_format;
     ImageType                                   m_type;
-    FilterMode                                  m_filter_mode;
+    FilterMode                                  m_min_filter_mode;
+    FilterMode                                  m_mag_filter_mode;
     UniquePtr<StreamedData>                     m_streamed_data;
 
     bool                                        m_is_blended;
@@ -303,6 +312,7 @@ public:
             InternalFormat::RGBA16F,
             ImageType::TEXTURE_TYPE_2D,
             FilterMode::TEXTURE_FILTER_NEAREST,
+            FilterMode::TEXTURE_FILTER_NEAREST,
             nullptr
         )
     {
@@ -318,6 +328,7 @@ public:
             format,
             type,
             FilterMode::TEXTURE_FILTER_NEAREST,
+            FilterMode::TEXTURE_FILTER_NEAREST,
             std::move(streamed_data)
         )
     {
@@ -327,13 +338,15 @@ public:
         Extent3D extent,
         InternalFormat format,
         ImageType type,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data = nullptr
     ) : Image<Platform::VULKAN>(
             extent,
             format,
             type,
-            filter_mode,
+            min_filter_mode,
+            mag_filter_mode,
             std::move(streamed_data)
         )
     {
@@ -436,13 +449,15 @@ public:
         Extent3D extent,
         InternalFormat format,
         ImageType type,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data
     ) : Image<Platform::VULKAN>(
         extent,
         format,
         type,
-        filter_mode,
+        min_filter_mode,
+        mag_filter_mode,
         std::move(streamed_data)
     )
     {
@@ -473,13 +488,15 @@ public:
     TextureImage2D(
         Extent2D extent,
         InternalFormat format,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data
     ) : TextureImage(
             Extent3D(extent),
             format,
             ImageType::TEXTURE_TYPE_2D,
-            filter_mode,
+            min_filter_mode,
+            mag_filter_mode,
             std::move(streamed_data)
         )
     {
@@ -510,13 +527,15 @@ public:
     TextureImage3D(
         Extent3D extent,
         InternalFormat format,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data
     ) : TextureImage(
             extent,
             format,
             ImageType::TEXTURE_TYPE_3D,
-            filter_mode,
+            min_filter_mode,
+            mag_filter_mode,
             std::move(streamed_data)
         )
     {
@@ -547,13 +566,15 @@ public:
     TextureImageCube(
         Extent2D extent,
         InternalFormat format,
-        FilterMode filter_mode,
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode,
         UniquePtr<StreamedData> &&streamed_data
     ) : TextureImage(
             Extent3D(extent),
             format,
             ImageType::TEXTURE_TYPE_CUBEMAP,
-            filter_mode,
+            min_filter_mode,
+            mag_filter_mode,
             std::move(streamed_data)
         )
     {
@@ -591,6 +612,7 @@ public:
             format,
             type,
             FilterMode::TEXTURE_FILTER_NEAREST,
+            FilterMode::TEXTURE_FILTER_NEAREST,
             std::move(streamed_data)
         )
     {
@@ -601,12 +623,14 @@ public:
         Extent3D extent,
         InternalFormat format,
         ImageType type,
-        FilterMode filter_mode
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode
     ) : Image<Platform::VULKAN>(
             extent,
             format,
             type,
-            filter_mode,
+            min_filter_mode,
+            mag_filter_mode,
             nullptr
         )
     {
@@ -634,12 +658,14 @@ public:
     FramebufferImage2D(
         Extent2D extent,
         InternalFormat format,
-        FilterMode filter_mode
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode
     ) : FramebufferImage(
             Extent3D(extent),
             format,
             ImageType::TEXTURE_TYPE_2D,
-            filter_mode
+            min_filter_mode,
+            mag_filter_mode
         )
     {
     }
@@ -665,12 +691,14 @@ public:
     FramebufferImageCube(
         Extent2D extent,
         InternalFormat format,
-        FilterMode filter_mode
+        FilterMode min_filter_mode,
+        FilterMode mag_filter_mode
     ) : FramebufferImage(
             Extent3D(extent),
             format,
             ImageType::TEXTURE_TYPE_CUBEMAP,
-            filter_mode
+            min_filter_mode,
+            mag_filter_mode
         )
     {
     }

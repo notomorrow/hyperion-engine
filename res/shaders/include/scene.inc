@@ -1,3 +1,6 @@
+#ifndef HYP_SCENE_GLSL
+#define HYP_SCENE_GLSL
+
 #include "defines.inc"
 
 struct Scene
@@ -41,18 +44,17 @@ struct Camera
 
 struct Light
 {
-    uint id;
-    uint type;
-    uint color_encoded;
-    float radius;
+    uint    id;
+    uint    type;
+    uint    color_encoded;
+    float   radius;
 
-    float falloff;
-    uint shadow_map_index; // ~0 == no shadow map
-    uint _pad0, _pad1;
+    float   falloff;
+    uint    shadow_map_index;       // ~0 == no shadow map
+    vec2    area_size;              // for area lights
 
-    vec4 position_intensity; // or direction for directional lights
-
-    vec4 _pad2; vec4 _pad3; vec4 _pad4;
+    vec4    position_intensity;     // position or direction
+    vec4    normal;                 // for area lights
 };
 
 #define SHADOW_FLAGS_PCF 0x1
@@ -107,5 +109,7 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly
 {
     ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
 };
+
+#endif
 
 #endif
