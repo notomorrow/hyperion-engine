@@ -166,7 +166,7 @@ void main()
     lut_uv = (lut_uv * lut_scale) + vec2(lut_bias);
     lut_uv = clamp(lut_uv, vec2(0.0), vec2(1.0));
 
-    const vec4 t1 = Texture2D(ltc_sampler, ltc_matrix_texture, v_texcoord0);//lut_uv);
+    const vec4 t1 = Texture2D(ltc_sampler, ltc_matrix_texture, lut_uv);
     const vec4 t2 = Texture2D(ltc_sampler, ltc_brdf_texture, lut_uv);
 
     const mat3 Minv = mat3(
@@ -205,7 +205,7 @@ void main()
     // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
     // area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
     area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
-    area_light_radiance = t1.rgb;//area_light_specular;//area_light_specular + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
+    area_light_radiance = area_light_specular + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
 
     // const vec3 H = normalize(L + V);
 

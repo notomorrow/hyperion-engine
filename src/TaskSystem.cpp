@@ -73,19 +73,9 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
 
     const ThreadID &current_thread_id = Threads::CurrentThreadID();
 
-    if (Threads::IsThreadInMask(current_thread_id, THREAD_TASK)) {
+    /*if (Threads::IsThreadInMask(current_thread_id, THREAD_TASK)) {
         DebugLog(LogType::Warn, "Enqueing tasks from within a task thread may have performance implications\n");
-    }
-
-    // if (in_task_thread) {
-    //     for (auto &task : batch->tasks) {
-    //         task.Execute();
-    //     }
-
-    //     // all have been moved
-    //     batch->tasks.Clear();
-    //     return batch;
-    // }
+    }*/
 
     TaskThreadPool &pool = GetPool(batch->pool);
 
@@ -105,14 +95,10 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
         // if we selected the current task thread. otherwise we will have a deadlock.
         // this does require that there are > 1 task thread in the pool.
         do {
-            if (num_spins >= 1) {
-                DebugLog(LogType::Warn, "On thread %s: %u spins while searching for available task threads\n", current_thread_id.name.LookupString(), num_spins);
+            if (num_spins >= max_spins) {
+                was_busy = true;
 
-                if (num_spins >= max_spins) {
-                    was_busy = true;
-
-                    break;
-                }
+                break;
             }
 
             task_thread = pool.threads[cycle].Get();

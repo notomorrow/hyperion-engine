@@ -25,10 +25,31 @@ thread_local ThreadID current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NAME
 static const ThreadID current_thread_id = Threads::thread_ids.At(THREAD_MAIN);
 #endif
 
-void Threads::SetThreadID(const ThreadID &id)
+void Threads::SetCurrentThreadID(ThreadID id)
 {
 #ifdef HYP_ENABLE_THREAD_ID
     current_thread_id = id;
+#endif
+    
+    DebugLog(LogType::Debug, "SetCurrentThreadID() %u\n", id.value);
+
+#ifdef HYP_WINDOWS
+    HRESULT set_thread_result = SetThreadDescription(
+        GetCurrentThread(),
+        &HYP_UTF8_TOWIDE(id.name.LookupString())[0]
+    );
+
+    if (FAILED(set_thread_result)) {
+        DebugLog(
+            LogType::Warn,
+            "Failed to set Win32 thread name for thread %s\n",
+            id.name.LookupString()
+        );
+    }
+#elif defined(HYP_MACOS)
+    pthread_setname_np(id.name.LookupString());
+#elif defined(HYP_LINUX)
+    pthread_setname_np(pthread_self(), id.name.LookupString());
 #endif
 }
 

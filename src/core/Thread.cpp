@@ -44,28 +44,13 @@ bool ThreadID::IsDynamic() const
 
 void SetCurrentThreadID(const ThreadID &thread_id)
 {
-    DebugLog(LogType::Debug, "SetCurrentThreadID() %u\n", thread_id.value);
-
-    Threads::SetThreadID(thread_id);
-
-#ifdef HYP_WINDOWS
-    HRESULT set_thread_result = SetThreadDescription(
-        GetCurrentThread(),
-        &HYP_UTF8_TOWIDE(thread_id.name.LookupString())[0]
-    );
-
-    if (FAILED(set_thread_result)) {
-        DebugLog(
-            LogType::Warn,
-            "Failed to set Win32 thread name for thread %s\n",
-            thread_id.name.LookupString()
-        );
-    }
-#elif defined(HYP_MACOS)
-    pthread_setname_np(thread_id.name.LookupString());
-#elif defined(HYP_LINUX)
-    pthread_setname_np(pthread_self(), thread_id.name.LookupString());
-#endif
+    Threads::SetCurrentThreadID(thread_id);
 }
+
+void SetCurrentThreadPriority(ThreadPriorityValue priority)
+{
+    Threads::SetCurrentThreadPriority(priority);
+}
+
 
 } // namespace hyperion
