@@ -60,6 +60,7 @@ static_assert(std::is_trivially_destructible_v<ThreadID>,
     "ThreadID must be trivially destructible! Otherwise thread_local current_thread_id var may  be generated using a wrapper function.");
 
 void SetCurrentThreadID(const ThreadID &thread_id);
+void SetCurrentThreadPriority(ThreadPriorityValue priority);
 
 template <class SchedulerType, class ...Args>
 class Thread
@@ -188,6 +189,8 @@ bool Thread<SchedulerType, Args...>::Start(Args ...args)
     m_thread = new std::thread([&self = *this, tuple_args](...) -> void
     {
         SetCurrentThreadID(self.GetID());
+        SetCurrentThreadPriority(self.GetPriority());
+
         self.m_scheduler.SetOwnerThread(self.GetID());
 
         self(std::get<Args>(tuple_args)...);

@@ -623,32 +623,34 @@ void SampleStreamer::InitGame()
                 }
             }
 
-            auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
+            if (false) {
+                auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
-            m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
-                node.GetWorldTransform()
-            });
+                m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
+                    node.GetWorldTransform()
+                });
 
-            m_scene->GetEntityManager()->AddComponent(env_grid_entity, BoundingBoxComponent {
-                node.GetLocalAABB() * 1.0f,
-                node.GetWorldAABB() * 1.0f
-            });
+                m_scene->GetEntityManager()->AddComponent(env_grid_entity, BoundingBoxComponent {
+                    node.GetLocalAABB() * 1.0f,
+                    node.GetWorldAABB() * 1.0f
+                });
 
-            // Add env grid component
-            m_scene->GetEntityManager()->AddComponent(env_grid_entity, EnvGridComponent {
-                EnvGridType::ENV_GRID_TYPE_SH
-            });
+                // Add env grid component
+                m_scene->GetEntityManager()->AddComponent(env_grid_entity, EnvGridComponent {
+                    EnvGridType::ENV_GRID_TYPE_SH
+                });
 
-            m_scene->GetEntityManager()->AddComponent(env_grid_entity, ScriptComponent {
-                {
-                    .assembly_name = "csharp/bin/Debug/net8.0/csharp.dll",
-                    .class_name = "TestScript"
-                }
-            });
+                m_scene->GetEntityManager()->AddComponent(env_grid_entity, ScriptComponent {
+                    {
+                        .assembly_name = "csharp/bin/Debug/net8.0/csharp.dll",
+                        .class_name = "TestScript"
+                    }
+                });
 
-            auto env_grid_node = m_scene->GetRoot().AddChild();
-            env_grid_node.SetEntity(env_grid_entity);
-            env_grid_node.SetName("EnvGrid");
+                auto env_grid_node = m_scene->GetRoot().AddChild();
+                env_grid_node.SetEntity(env_grid_entity);
+                env_grid_node.SetName("EnvGrid");
+            }
         }
     }
 

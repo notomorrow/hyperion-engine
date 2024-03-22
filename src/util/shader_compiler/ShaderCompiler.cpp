@@ -256,7 +256,24 @@ static ByteBuffer CompileToSPIRV(
         spirv_version = MathUtil::Max(spirv_version, 460);
     }
 
-    const glslang_input_t input {
+    struct CallbacksContext
+    {
+        String              filename;
+
+        Stack<Proc<void>>   deleters;
+
+        ~CallbacksContext()
+        {
+            // Run all deleters to free memory allocated in callbacks
+            while (!deleters.Empty()) {
+                deleters.Pop()();
+            }
+        }
+    } callbacks_context;
+
+    callbacks_context.filename = filename;
+
+    glslang_input_t input {
         .language = language == ShaderLanguage::HLSL ? GLSLANG_SOURCE_HLSL : GLSLANG_SOURCE_GLSL,
         .stage = stage,
         .client = GLSLANG_CLIENT_VULKAN,
@@ -270,6 +287,55 @@ static ByteBuffer CompileToSPIRV(
         .forward_compatible = false,
         .messages = GLSLANG_MSG_DEFAULT_BIT,
         .resource = reinterpret_cast<const glslang_resource_t *>(&default_resources),
+        .callbacks_ctx = &callbacks_context
+    };
+
+    input.callbacks.include_local = [](void *ctx, const char *header_name, const char *includer_name, size_t include_depth) -> glsl_include_result_t *
+    {
+        CallbacksContext *callbacks_context = static_cast<CallbacksContext *>(ctx);
+
+        const FilePath base_path = FilePath(callbacks_context->filename).BasePath();
+
+        const FilePath dir = include_depth > 1
+            ? FilePath(includer_name).BasePath()
+            : g_asset_manager->GetBasePath() / FilePath::Relative(base_path, g_asset_manager->GetBasePath());
+
+        const FilePath path = dir / header_name;
+
+        BufferedReader reader;
+
+        if (!path.Open(reader)) {
+            DebugLog(
+                LogType::Warn,
+                "Failed to open include file %s\n",
+                path.Data()
+            );
+
+            return nullptr;
+        }
+
+        String lines_joined = String::Join(reader.ReadAllLines(), '\n');
+
+        glsl_include_result_t *result = new glsl_include_result_t;
+
+        char *header_name_str = new char[path.Size() + 1];
+        Memory::MemCpy(header_name_str, path.Data(), path.Size() + 1);
+        result->header_name = header_name_str;
+
+        char *header_data_str = new char[lines_joined.Size() + 1];
+        Memory::MemCpy(header_data_str, lines_joined.Data(), lines_joined.Size() + 1);
+        result->header_data = header_data_str;
+
+        result->header_length = lines_joined.Size();
+
+        callbacks_context->deleters.Push([result]
+           {
+               delete[] result->header_name;
+               delete[] result->header_data;
+               delete result;
+           });
+
+        return result;
     };
 
     glslang_shader_t *shader = glslang_shader_create(&input);
@@ -1535,9 +1601,11 @@ bool ShaderCompiler::CompileBundle(
             bundle.entry_point_name
         );
 
-        bool any_files_compiled = false;
+        AtomicVar<bool> any_files_compiled { false };
+        AtomicVar<bool> any_files_errored { false };
 
-        for (const LoadedSourceFile &item : loaded_source_files) {
+        ParallelForEach(loaded_source_files, [&](const LoadedSourceFile &item, uint, uint)
+        {
             // check if a file exists w/ same hash
             
             const auto output_filepath = item.GetOutputFilepath(
@@ -1561,7 +1629,7 @@ bool ShaderCompiler::CompileBundle(
 
                         compiled_shader.modules[item.type] = reader.ReadBytes();
 
-                        continue;
+                        return;
                     }
 
                     DebugLog(
@@ -1630,12 +1698,8 @@ bool ShaderCompiler::CompileBundle(
                     preamble += "#define " + property.name + "\n";
                 }
             }
-
-            fs_mutex.lock();
-            FileSystem::PushDirectory(dir);
+            
             byte_buffer = CompileToSPIRV(item.type, item.language, std::move(preamble), item.source, item.file.path, properties, error_messages);
-            FileSystem::PopDirectory();
-            fs_mutex.unlock();
 
             if (byte_buffer.Empty()) {
                 DebugLog(
@@ -1648,6 +1712,8 @@ bool ShaderCompiler::CompileBundle(
                 error_messages_mutex.lock();
                 out.error_messages.Concat(std::move(error_messages));
                 error_messages_mutex.unlock();
+
+                any_files_errored.Set(true, MemoryOrder::RELAXED);
 
                 return;
             }
@@ -1662,18 +1728,20 @@ bool ShaderCompiler::CompileBundle(
                     output_filepath.Data()
                 );
 
+                any_files_errored.Set(true, MemoryOrder::RELAXED);
+
                 return;
             }
 
             spirv_writer.Write(byte_buffer.Data(), byte_buffer.Size());
             spirv_writer.Close();
 
-            any_files_compiled = true;
+            any_files_compiled.Set(true, MemoryOrder::RELAXED);
 
-            compiled_shader.modules[item.type] = byte_buffer;
-        }
+            compiled_shader.modules[item.type] = std::move(byte_buffer);
+        });
 
-        num_compiled_permutations.Increment(uint(any_files_compiled), MemoryOrder::RELAXED);
+        num_compiled_permutations.Increment(uint(!any_files_errored.Get(MemoryOrder::RELAXED) && any_files_compiled.Get(MemoryOrder::RELAXED)), MemoryOrder::RELAXED);
 
         compiled_shaders_mutex.lock();
         out.compiled_shaders.PushBack(std::move(compiled_shader));
