@@ -203,7 +203,6 @@ void main()
     // GGX BRDF shadowing and Fresnel
     // t2.x: shadowedF90 (F90 normally it should be 1.0)
     // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
-    // area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
     area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
     area_light_radiance = area_light_specular + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
 
