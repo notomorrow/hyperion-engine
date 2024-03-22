@@ -13,6 +13,8 @@ namespace hyperion::v2 {
 using renderer::ShaderVec2;
 using renderer::ShaderMat4;
 
+#pragma region Render commands
+
 struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::RenderCommand
 {
     Handle<Texture> result_texture;
@@ -37,6 +39,8 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
         HYPERION_RETURN_OK;
     }
 };
+
+#pragma endregion
 
 TemporalAA::TemporalAA(const Extent2D &extent)
     : m_extent(extent)

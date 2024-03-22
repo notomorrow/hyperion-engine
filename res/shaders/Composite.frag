@@ -87,8 +87,8 @@ void main()
 
     out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
 
-    // // Draw env_grid_probe_data buffer to screen.
-    //out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, deferred_direct_texture, v_texcoord0).rgb, 1.0);
+    // Draw env_grid_probe_data buffer to screen.
+    out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb, 1.0);
     
 
 

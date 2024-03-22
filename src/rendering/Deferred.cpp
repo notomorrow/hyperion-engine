@@ -41,6 +41,27 @@ static_assert(sizeof(s_ltc_brdf) == 64 * 64 * 4 * 4, "Invalid LTC BRDF size");
 
 #pragma region Render commands
 
+struct RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet) : renderer::RenderCommand
+{
+    ImageViewRef    result_image_view;
+
+    RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet)(
+        ImageViewRef result_image_view
+    ) : result_image_view(std::move(result_image_view))
+    {
+    }
+
+    virtual Result operator()()
+    {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                ->SetElement(HYP_NAME(DeferredResult), result_image_view);
+        }
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 struct RENDER_COMMAND(CreateBlueNoiseBuffer) : renderer::RenderCommand
 {
     GPUBufferRef buffer;
@@ -154,23 +175,26 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         DeferCreate(m_ltc_sampler, g_engine->GetGPUDevice());
 
-        Bitmap<4, float> bitmap(64, 64);
+        // Bitmap<4, float> bitmap(64, 64);
 
-        for (uint x = 0; x < 64; x++) {
-            for (uint y = 0; y < 64; y++) {
-                bitmap.SetPixel(
-                    x, y,
-                    {
-                        s_ltc_matrix[(x * 64 + y) * 4 + 0],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 1],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 2],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 3]
-                    }
-                );
-            }
-        }
+        // for (uint x = 0; x < 64; x++) {
+        //     for (uint y = 0; y < 64; y++) {
+        //         bitmap.SetPixel(
+        //             x, y,
+        //             {
+        //                 s_ltc_matrix[(x * 64 + y) * 4 + 0],
+        //                 s_ltc_matrix[(x * 64 + y) * 4 + 1],
+        //                 s_ltc_matrix[(x * 64 + y) * 4 + 2],
+        //                 s_ltc_matrix[(x * 64 + y) * 4 + 3]
+        //             }
+        //         );
+        //     }
+        // }
 
-        UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));
+        // UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));
+
+        ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
+        UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(std::move(ltc_matrix_data)));
 
         m_ltc_matrix_texture = CreateObject<Texture>(Texture2D(
             { 64, 64 },
@@ -838,6 +862,11 @@ void DeferredRenderer::CreateCombinePass()
 
     m_combine_pass.Reset(new FullScreenPass(shader, InternalFormat::RGBA16F));
     m_combine_pass->Create();
+
+    PUSH_RENDER_COMMAND(
+        SetDeferredResultInGlobalDescriptorSet,
+        GetCombinedResult()->GetImageView()
+    );
 }
 
 void DeferredRenderer::Destroy()
