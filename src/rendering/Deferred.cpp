@@ -175,23 +175,23 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         DeferCreate(m_ltc_sampler, g_engine->GetGPUDevice());
 
-        // Bitmap<4, float> bitmap(64, 64);
+       /* Bitmap<4, float> bitmap(64, 64);
 
-        // for (uint x = 0; x < 64; x++) {
-        //     for (uint y = 0; y < 64; y++) {
-        //         bitmap.SetPixel(
-        //             x, y,
-        //             {
-        //                 s_ltc_matrix[(x * 64 + y) * 4 + 0],
-        //                 s_ltc_matrix[(x * 64 + y) * 4 + 1],
-        //                 s_ltc_matrix[(x * 64 + y) * 4 + 2],
-        //                 s_ltc_matrix[(x * 64 + y) * 4 + 3]
-        //             }
-        //         );
-        //     }
-        // }
+        for (uint x = 0; x < 64; x++) {
+            for (uint y = 0; y < 64; y++) {
+                bitmap.SetPixel(
+                    x, y,
+                    {
+                        s_ltc_matrix[(x * 64 + y) * 4 + 0],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 1],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 2],
+                        s_ltc_matrix[(x * 64 + y) * 4 + 3]
+                    }
+                );
+            }
+        }
 
-        // UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));
+        UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));*/
 
         ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
         UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(std::move(ltc_matrix_data)));

@@ -152,6 +152,7 @@ vec3 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in ve
 
     vec2 uv = vec2(vsum.z * 0.5 + 0.5, len); // range [0, 1]
     uv = uv * lut_scale + vec2(lut_bias);
+    uv = clamp(uv, vec2(0.0), vec2(1.0));
 
     // Fetch the form factor for horizon clipping
     float scale = Texture2D(ltc_sampler, ltc_brdf_texture, uv).w;
