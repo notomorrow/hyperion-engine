@@ -8,7 +8,7 @@ const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_
     GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR) }, // color
     GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_NORMALS) }, // normal
     GBufferResource { GBufferFormat(InternalFormat::RGBA8) }, // material
-    GBufferResource { GBufferFormat(InternalFormat::RGBA16F) }, // (unused, currently)
+    GBufferResource { GBufferFormat(InternalFormat::RGBA16F) }, // tangent, bitangent
     GBufferResource { GBufferFormat(InternalFormat::RG16F) }, // velocity
     GBufferResource {  // objects mask
         GBufferFormat(Array<InternalFormat> {

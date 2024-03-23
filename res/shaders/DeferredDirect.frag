@@ -133,7 +133,7 @@ void main()
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
-    vec3 area_light_radiance;
+    vec4 area_light_radiance;
 
 #if defined(LIGHT_TYPE_DIRECTIONAL) || defined(LIGHT_TYPE_POINT)
     vec3 L = light.position_intensity.xyz;
@@ -163,7 +163,8 @@ void main()
     // const float theta = acos(NdotV);
     // vec2 lut_uv = (vec2(roughness, theta / HYP_FMATH_PI * 0.5));
     vec2 lut_uv = (vec2(roughness, sqrt(1.0 - NdotV)));
-    lut_uv = (lut_uv * lut_scale) + vec2(lut_bias);
+    lut_uv.y = 1.0 - lut_uv.y;
+    lut_uv = lut_uv * lut_scale + lut_bias;
     lut_uv = clamp(lut_uv, vec2(0.0), vec2(1.0));
 
     const vec4 t1 = Texture2D(ltc_sampler, ltc_matrix_texture, lut_uv);
@@ -197,14 +198,14 @@ void main()
 
     const vec3 pts[4] = vec3[4](p0, p1, p2, p3);
 
-    vec3 area_light_diffuse = vec3(CalculateAreaLightRadiance(light, mat3(1.0), pts, position.xyz, N, V, L));
-    vec3 area_light_specular = vec3(CalculateAreaLightRadiance(light, Minv, pts, position.xyz, N, V, tmp_l));
+    vec4 area_light_diffuse = CalculateAreaLightRadiance(light, mat3(1.0), pts, position.xyz, N, V);
+    vec4 area_light_specular = CalculateAreaLightRadiance(light, Minv, pts, position.xyz, N, V);
 
     // GGX BRDF shadowing and Fresnel
     // t2.x: shadowedF90 (F90 normally it should be 1.0)
     // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
     area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
-    area_light_radiance = area_light_specular + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
+    area_light_radiance = area_light_specular;// + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
 
     // const vec3 H = normalize(L + V);
 
@@ -281,7 +282,7 @@ void main()
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
 #ifdef LIGHT_TYPE_AREA_RECT
         // debugging area lights
-        result = vec4(area_light_radiance, 1.0);
+        result = area_light_radiance;
 #endif
     } else {
         result = albedo;

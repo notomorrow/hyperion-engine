@@ -51,7 +51,9 @@ struct RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet) : renderer::Render
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
@@ -193,26 +195,42 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));*/
 
-        ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
+        float16 *ltc_matrix_data_f16 = new float16[64 * 64 * 4];
+
+        for (uint i = 0; i < 64 * 64 * 4; i++) {
+            ltc_matrix_data_f16[i] = s_ltc_matrix[i];
+        }
+
+        ByteBuffer ltc_matrix_data(64 * 64 * 4 * sizeof(float16), ltc_matrix_data_f16);
         UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(std::move(ltc_matrix_data)));
+
+        delete[] ltc_matrix_data_f16;
 
         m_ltc_matrix_texture = CreateObject<Texture>(Texture2D(
             { 64, 64 },
-            InternalFormat::RGBA32F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
+            InternalFormat::RGBA16F,
+            FilterMode::TEXTURE_FILTER_LINEAR,
             WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
             std::move(streamed_matrix_data)
         ));
 
         InitObject(m_ltc_matrix_texture);
 
-        ByteBuffer ltc_brdf_data(sizeof(s_ltc_brdf), s_ltc_brdf);
+        float16 *ltc_brdf_data_f16 = new float16[64 * 64 * 4];
+
+        for (uint i = 0; i < 64 * 64 * 4; i++) {
+            ltc_brdf_data_f16[i] = s_ltc_brdf[i];
+        }
+
+        ByteBuffer ltc_brdf_data(64 * 64 * 4 * sizeof(float16), ltc_brdf_data_f16);
         UniquePtr<StreamedData> streamed_brdf_data(new MemoryStreamedData(std::move(ltc_brdf_data)));
+
+        delete[] ltc_brdf_data_f16;
 
         m_ltc_brdf_texture = CreateObject<Texture>(Texture2D(
             { 64, 64 },
-            InternalFormat::RGBA32F,
-            FilterMode::TEXTURE_FILTER_NEAREST,
+            InternalFormat::RGBA16F,
+            FilterMode::TEXTURE_FILTER_LINEAR,
             WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
             std::move(streamed_brdf_data)
         ));
