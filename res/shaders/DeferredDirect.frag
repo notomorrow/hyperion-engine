@@ -185,8 +185,6 @@ void main()
     const float half_width = light.area_size.x * 0.5;
     const float half_height = light.area_size.y * 0.5;
 
-    vec3 tmp_l;
-
     vec3 light_tangent;
     vec3 light_bitangent;
     ComputeOrthonormalBasis(light.normal.xyz, light_tangent, light_bitangent);
@@ -199,13 +197,15 @@ void main()
     const vec3 pts[4] = vec3[4](p0, p1, p2, p3);
 
     vec4 area_light_diffuse = CalculateAreaLightRadiance(light, mat3(1.0), pts, position.xyz, N, V);
+    area_light_diffuse *= diffuse_color * (1.0 / HYP_FMATH_PI);
+
     vec4 area_light_specular = CalculateAreaLightRadiance(light, Minv, pts, position.xyz, N, V);
 
     // GGX BRDF shadowing and Fresnel
     // t2.x: shadowedF90 (F90 normally it should be 1.0)
     // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
-    area_light_specular *= diffuse_color.rgb * t2.x + (1.0 - diffuse_color.rgb) * t2.y;
-    area_light_radiance = area_light_specular;// + (diffuse_color.rgb * area_light_diffuse * (1.0 / HYP_FMATH_PI));
+    area_light_specular *= diffuse_color * t2.x + (vec4(1.0) - diffuse_color) * t2.y;
+    area_light_radiance = area_light_specular + area_light_diffuse;
 
     // const vec3 H = normalize(L + V);
 
