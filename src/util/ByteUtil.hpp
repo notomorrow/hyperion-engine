@@ -8,36 +8,210 @@
 
 namespace hyperion {
 
+struct alignas(2) float16
+{
+    uint16 value;
+
+    float16() = default;
+    
+    float16(float value)
+    {
+        // Bit mask to extract bits from the float
+        const uint32 signMask = 0x80000000;
+        const uint32 expMask = 0x7F800000;
+        const uint32 fracMask = 0x007FFFFF;
+
+        // Extract bits by applying masks and shifting
+        uint32 floatBits = *reinterpret_cast<uint32 *>(&value);
+        uint32 sign = (floatBits & signMask) >> 16; // Shift sign to bit 15
+        int32 exponent = (floatBits & expMask) >> 23; // Get exponent
+        uint32 fraction = floatBits & fracMask; // Get fraction
+
+        // Normalize exponent to fit float16 format
+        exponent -= 127; // Subtract float32 bias
+        exponent += 15; // Add float16 bias
+
+        // Handle overflow/underflow cases
+        if (exponent >= 31) {
+            // Overflow, set to infinity or max
+            exponent = 31;
+            fraction = 0;
+        } else if (exponent <= 0) {
+            // Underflow, handle as subnormal or zero
+            if (exponent < -10) {
+                // Too small, becomes zero
+                exponent = 0;
+                fraction = 0;
+            } else {
+                // Subnormal numbers
+                fraction = (fraction | 0x00800000) >> (1 - exponent);
+                exponent = 0;
+            }
+        }
+
+        // Round and clamp fraction to fit 10 bits
+        fraction = fraction >> 13; // Shift to fit into 10 bits
+        // clamp to 10 bits
+        if (fraction > 0x3FF) {
+            fraction = 0x3FF;
+        }
+
+        // Combine sign, exponent, and fraction into a 16-bit integer
+        this->value = (sign | (exponent << 10) | fraction);
+    }
+
+    explicit operator float() const
+    {
+        // Masks for the float16 components
+        const uint16 signMask = 0x8000;
+        const uint16 expMask = 0x7C00;
+        const uint16 fracMask = 0x03FF;
+
+        // Extract the sign, exponent, and fraction from the float16 value
+        uint32 sign = (this->value & signMask) << 16; // Shift sign to the correct bit for a 32-bit float
+        int32 exponent = (this->value & expMask) >> 10; // Extract and shift exponent to proper position
+        uint32 fraction = (this->value & fracMask) << 13; // Shift fraction to align with 32-bit float
+
+        // Adjust the exponent from float16 bias (15) to float32 bias (127)
+        if (exponent == 0) {
+            if (fraction == 0) {
+                // Zero (sign bit only)
+                exponent = 0;
+            } else {
+                // Subnormal number, normalize it
+                while ((fraction & (1 << 23)) == 0) {
+                    fraction <<= 1;
+                    exponent--;
+                }
+                fraction &= ~(1 << 23); // Clear the leading 1 bit
+                exponent += 127; // Adjust bias
+            }
+        } else if (exponent == 31) {
+            // Inf or NaN
+            exponent = 255; // Adjust bias for 32-bit float
+        } else {
+            // Normalized number
+            exponent -= 15; // Adjust from float16 exponent bias
+            exponent += 127; // Adjust to float32 exponent bias
+        }
+
+        // Assemble the bits into a 32-bit integer, interpreting them as a float
+        uint32 floatBits = sign | (exponent << 23) | fraction;
+
+        return *reinterpret_cast<float*>(&floatBits);
+    }
+
+    float16 operator+(float16 other) const
+    {
+        return float16(float(*this) + float(other));
+    }
+
+    float16 operator-(float16 other) const
+    {
+        return float16(float(*this) - float(other));
+    }
+
+    float16 operator*(float16 other) const
+    {
+        return float16(float(*this) * float(other));
+    }
+
+    float16 operator/(float16 other) const
+    {
+        return float16(float(*this) / float(other));
+    }
+
+    float16 &operator+=(float16 other)
+    {
+        *this = *this + other;
+        return *this;
+    }
+
+    float16 &operator-=(float16 other)
+    {
+        *this = *this - other;
+        return *this;
+    }
+
+    float16 &operator*=(float16 other)
+    {
+        *this = *this * other;
+        return *this;
+    }
+
+    float16 &operator/=(float16 other)
+    {
+        *this = *this / other;
+        return *this;
+    }
+
+    float16 operator-() const
+    {
+        return float16(-float(*this));
+    }
+
+    bool operator==(float16 other) const
+    {
+        return float(*this) == float(other);
+    }
+
+    bool operator!=(float16 other) const
+    {
+        return float(*this) != float(other);
+    }
+
+    bool operator<(float16 other) const
+    {
+        return float(*this) < float(other);
+    }
+
+    bool operator<=(float16 other) const
+    {
+        return float(*this) <= float(other);
+    }
+
+    bool operator>(float16 other) const
+    {
+        return float(*this) > float(other);
+    }
+
+    bool operator>=(float16 other) const
+    {
+        return float(*this) >= float(other);
+    }
+
+    float16 operator++(int)
+    {
+        float16 result = *this;
+        *this += 1.0f;
+        return result;
+    }
+
+    float16 operator--(int)
+    {
+        float16 result = *this;
+        *this -= 1.0f;
+        return result;
+    }
+
+    float16 &operator++()
+    {
+        *this += 1.0f;
+        return *this;
+    }
+
+    float16 &operator--()
+    {
+        *this -= 1.0f;
+        return *this;
+    }
+};
+
+static_assert(sizeof(float16) == 2, "float16 must be 2 bytes in size");
+
 class ByteUtil
 {
 public:
-    /**
-     * \brief Pack a 32-bit float as a 16-bit float in the higher 16 bits of a uint32.
-     */
-    static inline uint32 PackFloat16(float value)
-    {
-        union {
-            uint32 u;
-            float f;
-        };
-
-        f = value * 65535.0f;
-
-        return u << 16;
-    }
-
-    static inline float UnpackFloat16(uint32 value)
-    {
-        union {
-            uint32 u;
-            float f;
-        };
-
-        u = value >> 16;
-
-        return f / 65535.0f;
-    }
-
     static inline uint32 PackFloat(float value)
     {
         union {

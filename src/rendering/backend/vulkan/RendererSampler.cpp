@@ -57,13 +57,13 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     sampler_info.addressModeV = helpers::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeW = helpers::ToVkSamplerAddressMode(m_wrap_mode);
 
-    if (device->GetFeatures().GetPhysicalDeviceFeatures().samplerAnisotropy) {
-        sampler_info.anisotropyEnable = VK_TRUE;
-        sampler_info.maxAnisotropy = 1.0f;//device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
-    } else {
+    //if (device->GetFeatures().GetPhysicalDeviceFeatures().samplerAnisotropy) {
+    //    sampler_info.anisotropyEnable = VK_TRUE;
+    //    sampler_info.maxAnisotropy = 1.0f;//device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+    //} else {
         sampler_info.anisotropyEnable = VK_FALSE;
         sampler_info.maxAnisotropy = 1.0f;
-    }
+    //}
 
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;

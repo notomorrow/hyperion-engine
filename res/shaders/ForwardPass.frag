@@ -23,6 +23,7 @@ layout(location=16) in flat uint v_object_mask;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
+layout(location=3) out vec4 gbuffer_tangents;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
 layout(location=6) out vec4 gbuffer_ws_normals;
@@ -343,6 +344,7 @@ void main()
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(0.09, metalness, transmission, ao);
+    gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(v_object_mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

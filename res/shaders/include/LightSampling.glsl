@@ -105,17 +105,26 @@ vec3 CalculateRectLightDiffuse(in Light light, in vec3 P, in vec3 N, in vec3 V)
     return vec3(illum);
 }
 
-vec3 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in vec3 P, in vec3 N, in vec3 V, out vec3 lightDir)
+
+vec4 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in vec3 P, in vec3 N, in vec3 V)
 {
     vec3 position_to_light = light.position_intensity.xyz - P;
 
     // construct an orthonormal basis around N
     vec3 T1 = normalize(V - N * dot(V, N));
     vec3 T2 = cross(N, T1);
+    mat3 tbn = transpose(mat3(T1, T2, N));
+    
+    //vec3 tangent;
+    //vec3 bitangent;
+    //ComputeOrthonormalBasis(light.normal.xyz, tangent, bitangent);
+
+    //mat3 tbn = (mat3(tangent, bitangent, light.normal.xyz));
+
 
     // Minv = inverse(Minv);
     // rotate area light in (T1, T2, N) basis
-    Minv = Minv * transpose(mat3(T1, T2, N));
+    Minv = Minv * tbn;
 
     // polygon (allocate 4 vertices for clipping)
     vec3 L[4];
@@ -132,8 +141,8 @@ vec3 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in ve
 
     // use tabulated horizon-clipped sphere
     // check if the shading point is behind the light
-    vec3 dir = normalize(position_to_light);
-    vec3 lightNormal = cross(pts[1].xyz - pts[0].xyz, pts[3].xyz - pts[0].xyz);
+    vec3 dir = pts[0] - P;//normalize(position_to_light);
+    vec3 lightNormal = cross(pts[1] - pts[0], pts[3] - pts[0]);
     bool behind = (dot(dir, /*light.normal.xyz*/lightNormal) < 0.0);
 
     vec3 vsum = vec3(0.0);
@@ -144,27 +153,31 @@ vec3 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in ve
 
     // form factor of the polygon in direction vsum
     float len = length(vsum);
-    vsum /= len;
+
+    float z = vsum.z / len;
     
     if (behind) {
-        vsum.z = -vsum.z;
+        z = -z;
     }
 
-    vec2 uv = vec2(vsum.z * 0.5 + 0.5, len); // range [0, 1]
-    uv = uv * lut_scale + vec2(lut_bias);
-    uv = clamp(uv, vec2(0.0), vec2(1.0));
+    vec2 uv = vec2(z * 0.5 + 0.5, len); // range [0, 1]
+    uv.y = 1.0 - uv.y;
+    uv = uv * lut_scale + lut_bias;
 
     // Fetch the form factor for horizon clipping
     float scale = Texture2D(ltc_sampler, ltc_brdf_texture, uv).w;
 
     float sum = len * scale;
-    if (!behind /* && !twoSided*/)
+    
+    //float sum = max((len * len + vsum.z) / (len + 1.0), 0.0);
+    if (!behind /* && !twoSided*/) {
         sum = 0.0;
+    }
 
-    // float sum = max((len * len + vsum.z) / (len + 1.0), 0.0);
+    // fix negative values
+    sum = max(sum, 0.0);
 
-    // Outgoing radiance (solid angle) for the entire polygon
-    return vec3(sum);
+    return vec4(sum);
 }
 
 #endif
