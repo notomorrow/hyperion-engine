@@ -1,10 +1,12 @@
 #include <rendering/Material.hpp>
-
-#include <Engine.hpp>
+#include <rendering/backend/RendererFeatures.hpp>
 
 #include <util/ByteUtil.hpp>
 
+
+#include <Engine.hpp>
 #include <Types.hpp>
+
 
 namespace hyperion::v2 {
 
@@ -40,14 +42,16 @@ struct RENDER_COMMAND(UpdateMaterialRenderData) : renderer::RenderCommand
 
         Memory::MemSet(shader_data.texture_index, 0, sizeof(shader_data.texture_index));
 
+        static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
+
         if (num_bound_textures != 0) {
             for (SizeType i = 0; i < bound_texture_ids.Size(); i++) {
                 if (bound_texture_ids[i] != Texture::empty_id) {
-#ifdef HYP_FEATURES_BINDLESS_TEXTURES
-                    shader_data.texture_index[i] = bound_texture_ids[i].ToIndex();
-#else
-                    shader_data.texture_index[i] = i;
-#endif
+                    if (use_bindless_textures) {
+                        shader_data.texture_index[i] = bound_texture_ids[i].ToIndex();
+                    } else {
+                        shader_data.texture_index[i] = i;
+                    }
 
                     shader_data.texture_usage |= 1 << i;
 
@@ -190,9 +194,9 @@ Material::~Material()
     }
 
     if (IsInitCalled()) {
-#ifndef HYP_FEATURES_BINDLESS_TEXTURES
-        EnqueueDescriptorSetDestroy();
-#endif
+        if (!g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+            EnqueueDescriptorSetDestroy();
+        }
 
         HYP_SYNC_RENDER();
     }
@@ -219,10 +223,10 @@ void Material::Init()
             InitObject(texture);
         }
     }
-
-#ifndef HYP_FEATURES_BINDLESS_TEXTURES
-    EnqueueDescriptorSetCreate();
-#endif
+    
+    if (!g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+        EnqueueDescriptorSetCreate();
+    }
 
     SetReady(true);
 
@@ -270,7 +274,12 @@ void Material::EnqueueRenderUpdates()
 
     FixedArray<ID<Texture>, max_bound_textures> bound_texture_ids { };
 
-    const uint num_bound_textures = max_textures_to_set;
+    static const uint num_bound_textures = MathUtil::Min(
+        max_textures,
+        g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()
+            ? max_bindless_resources
+            : max_bound_textures
+    );
 
     for (uint i = 0; i < num_bound_textures; i++) {
         if (const Handle<Texture> &texture = m_textures.ValueAt(i)) {
@@ -363,12 +372,10 @@ void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
     InitObject(texture);
 
     m_textures.Set(key, texture);
-
-#ifndef HYP_FEATURES_BINDLESS_TEXTURES
-    if (IsInitCalled()) {
+    
+    if (IsInitCalled() && !g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
         EnqueueTextureUpdate(key);
     }
-#endif
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
@@ -578,11 +585,33 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
     m_pending_mutex.Unlock();
 }
 
+void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
+{
+    if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+        return;
+    }
+
+    const renderer::DescriptorSetDeclaration *declaration = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material));
+    AssertThrow(declaration != nullptr);
+
+    const renderer::DescriptorSetLayout layout(*declaration);
+
+    const DescriptorSet2Ref invalid_descriptor_set = layout.CreateDescriptorSet();
+    
+    for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+        invalid_descriptor_set->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+    }
+
+    DeferCreate(invalid_descriptor_set, g_engine->GetGPUDevice());
+
+    m_material_descriptor_sets.Set(ID<Material>::invalid, { invalid_descriptor_set, invalid_descriptor_set });
+}
+
 const DescriptorSet2Ref &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> material, uint frame_index) const
 {
     Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
 
-    auto it = m_material_descriptor_sets.Find(material);
+    const auto it = m_material_descriptor_sets.Find(material);
 
     if (it == m_material_descriptor_sets.End()) {
         return DescriptorSet2Ref::unset;
@@ -625,7 +654,7 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material, FixedArray<
     const renderer::DescriptorSetDeclaration *declaration = g_engine->GetGlobalDescriptorTable()->GetDeclaration().FindDescriptorSetDeclaration(HYP_NAME(Material));
     AssertThrow(declaration != nullptr);
 
-    renderer::DescriptorSetLayout layout(*declaration);
+    const renderer::DescriptorSetLayout layout(*declaration);
 
     FixedArray<DescriptorSet2Ref, max_frames_in_flight> descriptor_sets;
 
@@ -658,14 +687,12 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material, FixedArray<
 void MaterialDescriptorSetManager::EnqueueRemove(ID<Material> material)
 {
     Mutex::Guard guard(m_pending_mutex);
-
-    decltype(m_pending_addition)::Iterator pending_addition_it = nullptr;
-
+    
     while (true) {
-        pending_addition_it = m_pending_addition.FindIf([material](const auto &item)
-        {
-            return item.first == material;
-        });
+        const auto pending_addition_it = m_pending_addition.FindIf([material](const auto &item)
+            {
+                return item.first == material;
+            });
 
         if (pending_addition_it == m_pending_addition.End()) {
             break;
@@ -686,7 +713,7 @@ void MaterialDescriptorSetManager::SetNeedsDescriptorSetUpdate(ID<Material> id)
     Mutex::Guard guard(m_descriptor_sets_to_update_mutex);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        auto it = m_descriptor_sets_to_update[frame_index].Find(id);
+        const auto it = m_descriptor_sets_to_update[frame_index].Find(id);
 
         if (it != m_descriptor_sets_to_update[frame_index].End()) {
             continue;
@@ -696,6 +723,12 @@ void MaterialDescriptorSetManager::SetNeedsDescriptorSetUpdate(ID<Material> id)
     }
 
     m_descriptor_sets_to_update_flag.Set(0x3, MemoryOrder::RELAXED);
+}
+
+
+void MaterialDescriptorSetManager::Initialize()
+{
+    CreateInvalidMaterialDescriptorSet();
 }
 
 void MaterialDescriptorSetManager::Update(Frame *frame)
@@ -710,7 +743,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
         Mutex::Guard guard(m_descriptor_sets_to_update_mutex);
 
         for (ID<Material> id : m_descriptor_sets_to_update[frame_index]) {
-            auto it = m_material_descriptor_sets.Find(id);
+            const auto it = m_material_descriptor_sets.Find(id);
 
             if (it == m_material_descriptor_sets.End()) {
                 continue;
@@ -733,7 +766,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
     Mutex::Guard guard(m_pending_mutex);
 
     for (auto it = m_pending_removal.Begin(); it != m_pending_removal.End();) {
-        auto material_descriptor_sets_it = m_material_descriptor_sets.Find(*it);
+        const auto material_descriptor_sets_it = m_material_descriptor_sets.Find(*it);
 
         if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
             m_material_descriptor_sets.Erase(material_descriptor_sets_it);

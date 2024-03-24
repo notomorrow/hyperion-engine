@@ -81,6 +81,8 @@ HYP_DESCRIPTOR_SSBO(DeferredDirectDescriptorSet, MaterialsBuffer, size = 8388608
     Material materials[HYP_MAX_MATERIALS];
 };
 
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
+
 #include "include/LightSampling.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS

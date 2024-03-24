@@ -77,19 +77,19 @@ void DrawCallCollection::PushDrawCall(BufferTicket<EntityInstanceBatch> batch_in
         index_map.Insert(id.Value(), Array<SizeType> { draw_calls.Size() });
     }
 
-    DrawCall draw_call;
+    if (!batch_index) {
+        batch_index = g_engine->GetRenderData()->entity_instance_batches.AcquireTicket();
+    }
 
+    DrawCall draw_call;
     draw_call.id = id;
     draw_call.draw_command_index = ~0u;
-
     draw_call.mesh_id = entity_draw_data.mesh_id;
     draw_call.material_id = entity_draw_data.material_id;
     draw_call.skeleton_id = entity_draw_data.skeleton_id;
-
     draw_call.entity_ids[0] = entity_draw_data.entity_id;
     draw_call.entity_id_count = 1;
-
-    draw_call.batch_index = batch_index == 0 ? g_engine->GetRenderData()->entity_instance_batches.AcquireTicket() : batch_index;
+    draw_call.batch_index = batch_index;
 
     PushEntityToBatch(draw_call.batch_index, entity_draw_data.entity_id);
 

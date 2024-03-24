@@ -234,7 +234,7 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
 
 #endif
 
-void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, inout vec4 ibl)
+void ApplyReflectionProbe(in EnvProbe probe, vec3 P, vec3 R, float lod, inout vec4 ibl)
 {
     ibl = vec4(0.0);
 
@@ -248,23 +248,33 @@ void ApplyReflectionProbe(const in EnvProbe probe, vec3 P, vec3 R, float lod, in
     const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
     const vec3 diff = P - center;
 
-    const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
+#ifdef ENV_PROBE_PARALLAX_CORRECTED
+    R = EnvProbeCoordParallaxCorrected(probe, P, R);
+#endif
 
     ibl = EnvProbeSample(
         sampler_linear,
         env_probe_textures[probe_texture_index],
-        is_parallax_corrected
-            ? EnvProbeCoordParallaxCorrected(probe, P, R)
-            : R,
+        R,
         lod
     );
 }
 
-vec4 CalculateReflectionProbe(const in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float roughness)
+vec4 CalculateReflectionProbe(in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 camera_position, float roughness)
 {
     vec4 ibl = vec4(0.0);
 
     const float lod = float(8.0) * roughness * (2.0 - roughness);
+
+#ifndef ENV_PROBE_PARALLAX_CORRECTED
+    // ENV_PROBE_PARALLAX_CORRECTED is not statically defined, we need to use flags on the EnvProbe struct
+    // at render time to determine if the probe is parallax corrected.
+    const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
+
+    if (is_parallax_corrected) {
+        R = EnvProbeCoordParallaxCorrected(probe, P, R);
+    }
+#endif
 
     ApplyReflectionProbe(probe, P, R, lod, ibl);
 

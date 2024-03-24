@@ -55,7 +55,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 16
+#define SAMPLE_COUNT 8
 
 void main()
 {

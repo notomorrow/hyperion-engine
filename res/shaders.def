@@ -19,6 +19,7 @@ frag = deferred/ApplyEnvGrid.frag
 vert = Deferred.vert
 
 [ApplyReflectionProbe]
+permute = ENV_PROBE_PARALLAX_CORRECTED
 frag = deferred/ApplyReflectionProbe.frag
 vert = Deferred.vert
 

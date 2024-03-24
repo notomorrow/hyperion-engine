@@ -41,8 +41,7 @@ bool RayPlaneIntersect(in Ray ray, vec4 plane, out float t)
     return t > 0.0;
 }
 
-#if 0
-vec4 SampleRectLightTexture(in vec3 pts[4])
+vec4 SampleRectLightTexture(in Light light, in vec3 pts[4])
 {
     if (light.material_id == ~0u || !HAS_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map)) {
         return vec4(1.0);
@@ -59,18 +58,26 @@ vec4 SampleRectLightTexture(in vec3 pts[4])
 
     float dp_v1_v2 = dot(v1, v2);
     float inv_dp_v1_v1 = 1.0 / dot(v1, v1);
-    vec3 v1_perp = v1 - v2 * dp_v1_v2 * inv_dp_v1_v1;
+    vec3 v1_perp = v2 - v1 * dp_v1_v2 * inv_dp_v1_v1;
 
-    vec2 uv = vec2(dot(P, v1) * inv_dp_v1_v1 - dp_v1_v2 * inv_dp_v1_v1, 1.0);
-    uv *= dot(P, v2) / dot(v1_perp, v1_perp);
+    vec2 uv;
+    uv.y = dot(P, v1_perp) / dot(v1_perp, v1_perp);
+    uv.x = dot(v1, P) * inv_dp_v1_v1 - dp_v1_v2 * inv_dp_v1_v1 * uv.y;
 
     float dist = abs(dist_area) / pow(area_sqr, 0.75);
 
-    float lod = log2(dist);
+    // @TODO Pre-filter area light texs
+    float lod = log(2048.0 * dist) / log(3.0);
 
-    return Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod);
+    float lod_a = floor(lod);
+    float lod_b = ceil(lod);
+    float t = lod - lod_a;
+
+    vec4 tex_a = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_a);
+    vec4 tex_b = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_b);
+
+    return mix(tex_a, tex_b, t);
 }
-#endif
 
 vec4 CalculateAreaLightRadiance(in Light light, in mat3 Minv, in vec3 pts[4], in vec3 P, in vec3 N, in vec3 V)
 {
@@ -91,7 +98,7 @@ vec4 CalculateAreaLightRadiance(in Light light, in mat3 Minv, in vec3 pts[4], in
     L[2] = Minv * (pts[2] - P);
     L[3] = Minv * (pts[3] - P);
 
-    //vec4 sampled_texture = SampleRectLightTexture(L);
+    vec4 sampled_texture = SampleRectLightTexture(light, L);
 
     for (int i = 0; i < 4; i++) {
         L[i] = normalize(L[i]);
@@ -134,7 +141,7 @@ vec4 CalculateAreaLightRadiance(in Light light, in mat3 Minv, in vec3 pts[4], in
     // fix negative values
     sum = max(sum, 0.0);
 
-    return vec4(sum);// * sampled_texture;
+    return vec4(sum) * sampled_texture;
 }
 
 #endif

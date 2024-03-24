@@ -281,6 +281,8 @@ void DeferredPass::Record(uint frame_index)
         return;
     }
 
+    static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
+
     const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
     FixedArray<Array<decltype(g_engine->GetRenderState().lights)::Iterator>, uint(LightType::MAX)> light_iterators;
@@ -306,12 +308,14 @@ void DeferredPass::Record(uint frame_index)
 
             // render with each light
             for (uint light_type_index = 0; light_type_index < uint(LightType::MAX); light_type_index++) {
+                const LightType light_type = LightType(light_type_index);
+
                 const Handle<RenderGroup> &render_group = m_direct_light_render_groups[light_type_index];
 
                 const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
                 const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
-                const uint deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DeferredDirectDescriptorSet));
                 const uint material_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
+                const uint deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DeferredDirectDescriptorSet));
 
                 render_group->GetPipeline()->push_constants = m_push_constant_data;
                 render_group->GetPipeline()->Bind(cmd);
@@ -320,19 +324,27 @@ void DeferredPass::Record(uint frame_index)
                     ->Bind(
                         cmd,
                         render_group->GetPipeline(),
-                        { },
                         global_descriptor_set_index
                     );
 
-                render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index)
-                    ->Bind(
-                        cmd,
-                        render_group->GetPipeline(),
-                        { },
-                        deferred_direct_descriptor_set_index
-                    );
+                // Bind textures globally (bindless)
+                if (material_descriptor_set_index != ~0u && use_bindless_textures) {
+                    render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Material), frame_index)
+                        ->Bind(
+                            cmd,
+                            render_group->GetPipeline(),
+                            material_descriptor_set_index
+                        );
+                }
 
-                const LightType light_type = LightType(light_type_index);
+                if (deferred_direct_descriptor_set_index != ~0u) {
+                    render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index)
+                        ->Bind(
+                            cmd,
+                            render_group->GetPipeline(),
+                            deferred_direct_descriptor_set_index
+                        );
+                }
 
                 const auto &light_it = light_iterators[light_type_index];
 
@@ -345,14 +357,8 @@ void DeferredPass::Record(uint frame_index)
 
                     uint shadow_probe_index = 0;
 
-                    if (light.shadow_map_index != ~0u) {
-                        if (light_type == LightType::POINT) {
-                            AssertThrow(light.shadow_map_index < max_env_probes);
-
-                            shadow_probe_index = light.shadow_map_index;
-                        } else if (light_type == LightType::DIRECTIONAL) {
-                            AssertThrow(light.shadow_map_index < max_shadow_maps);
-                        }
+                    if (light.shadow_map_index != ~0u && light_type == LightType::POINT) {
+                        shadow_probe_index = light.shadow_map_index;
                     }
 
                     render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
@@ -368,6 +374,12 @@ void DeferredPass::Record(uint frame_index)
                             },
                             scene_descriptor_set_index
                         );
+                    
+                    // Bind material descriptor set (for area lights)
+                    if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
+                        g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(light.material_id, frame_index)
+                            ->Bind(cmd, render_group->GetPipeline(), material_descriptor_set_index);
+                    }
 
                     m_full_screen_quad->Render(cmd);
                 }
@@ -503,7 +515,7 @@ void EnvGridPass::Render(Frame *frame)
 {
     const uint frame_index = frame->GetFrameIndex();
 
-    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+    const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
     const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
     const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
 
@@ -600,29 +612,76 @@ void EnvGridPass::Render(Frame *frame)
 // ===== Reflection Probe Pass Begin =====
 
 ReflectionProbePass::ReflectionProbePass()
-    : FullScreenPass(InternalFormat::RGBA16F)
+    : FullScreenPass(InternalFormat::R10G10B10A2)
 {
 }
 
 ReflectionProbePass::~ReflectionProbePass() = default;
 
-void ReflectionProbePass::CreateShader()
+
+void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
 {
-    ShaderProperties properties { };
+    // Default pass type (non parallax corrected)
 
-    m_shader = g_shader_manager->GetOrCreate(
-        HYP_NAME(ApplyReflectionProbe),
-        properties
-    );
+    static const FixedArray<Pair<ApplyReflectionProbeMode, ShaderProperties>, ApplyReflectionProbeMode::MAX> apply_reflection_probe_passes = {
+        Pair<ApplyReflectionProbeMode, ShaderProperties> {
+            ApplyReflectionProbeMode::DEFAULT,
+            ShaderProperties { }
+        },
+        Pair<ApplyReflectionProbeMode, ShaderProperties> {
+            ApplyReflectionProbeMode::PARALLAX_CORRECTED,
+            ShaderProperties { { "ENV_PROBE_PARALLAX_CORRECTED" } }
+        }
+    };
 
-    InitObject(m_shader);
+    for (const auto &it : apply_reflection_probe_passes) {
+        Handle<Shader> shader = g_shader_manager->GetOrCreate(
+            HYP_NAME(ApplyReflectionProbe),
+            it.second
+        );
+
+        AssertThrow(InitObject(shader));
+        
+        renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
+
+        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+        Handle<RenderGroup> render_group = CreateObject<RenderGroup>(
+            shader,
+            renderable_attributes,
+            descriptor_table
+        );
+
+        render_group->AddFramebuffer(Handle<Framebuffer>(m_framebuffer));
+
+        g_engine->AddRenderGroup(render_group);
+        InitObject(render_group);
+
+        m_render_groups[it.first] = std::move(render_group);
+    }
+}
+
+void ReflectionProbePass::CreateCommandBuffers()
+{
+    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
+        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            m_command_buffers[i][frame_index] = MakeRenderObject<CommandBuffer>(renderer::CommandBufferType::COMMAND_BUFFER_SECONDARY);
+
+            DeferCreate(
+                m_command_buffers[i][frame_index],
+                g_engine->GetGPUDevice(),
+                g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[0]
+            );
+        }
+    }
 }
 
 void ReflectionProbePass::Create()
 {
-    CreateShader();
     FullScreenPass::CreateQuad();
-    FullScreenPass::CreateCommandBuffers();
+
+    CreateCommandBuffers();
     FullScreenPass::CreateFramebuffer();
 
     RenderableAttributeSet renderable_attributes(
@@ -635,48 +694,89 @@ void ReflectionProbePass::Create()
         }
     );
 
-    FullScreenPass::CreatePipeline(renderable_attributes);
+    CreatePipeline(renderable_attributes);
 }
 
 void ReflectionProbePass::Record(uint frame_index)
 {
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+}
 
-    auto record_result = command_buffer->Record(
-        g_engine->GetGPUInstance()->GetDevice(),
-        m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
-        [this, frame_index](CommandBuffer *cmd)
-        {
-            m_render_group->GetPipeline()->push_constants = m_push_constant_data;
-            m_render_group->GetPipeline()->Bind(cmd);
+void ReflectionProbePass::Render(Frame *frame)
+{
+    // Sky renders first
+    static const FixedArray<EnvProbeType, 2> reflection_probe_types {
+        ENV_PROBE_TYPE_SKY,
+        ENV_PROBE_TYPE_REFLECTION
+    };
 
-            const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-            const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+    // Map each reflection probe type to the appropriate pass type
+    static const FixedArray<ApplyReflectionProbeMode, EnvProbeType::ENV_PROBE_TYPE_MAX> reflection_probe_modes {
+        ApplyReflectionProbeMode::DEFAULT,              // ENV_PROBE_TYPE_SKY
+        ApplyReflectionProbeMode::PARALLAX_CORRECTED    // ENV_PROBE_TYPE_REFLECTION
+    };
 
-            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
-            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+    FixedArray<Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>>, ApplyReflectionProbeMode::MAX> pass_ptrs;
 
-            m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-                ->Bind(
-                    cmd,
-                    m_render_group->GetPipeline(),
-                    { },
-                    global_descriptor_set_index
-                );
+    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
+        pass_ptrs[i] = {
+            &m_render_groups[i],
+            { }
+        };
+    }
 
-            // Render each probe
+    for (const EnvProbeType env_probe_type : reflection_probe_types) {
+        const ApplyReflectionProbeMode mode = reflection_probe_modes[env_probe_type];
 
-            uint counter = 0;
+        for (const auto &it : g_engine->render_state.bound_env_probes[env_probe_type]) {
+            const ID<EnvProbe> &env_probe_id = it.first;
 
-            // Sky renders first
-            static const FixedArray<EnvProbeType, 2> reflection_probe_types {
-                ENV_PROBE_TYPE_SKY,
-                ENV_PROBE_TYPE_REFLECTION
-            };
+            pass_ptrs[uint(mode)].second.PushBack(env_probe_id);
+        }
+    }
 
-            for (EnvProbeType env_probe_type : reflection_probe_types) {
-                for (const auto &it : g_engine->render_state.bound_env_probes[env_probe_type]) {
-                    if (counter >= max_bound_reflection_probes) {
+    const uint frame_index = frame->GetFrameIndex();
+    
+    GetFramebuffer()->BeginCapture(frame_index, frame->GetCommandBuffer());
+
+    uint num_rendered_env_probes = 0;
+
+    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
+        const Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>> &it = pass_ptrs[i];
+
+        if (it.second.Empty()) {
+            continue;
+        }
+
+        const CommandBufferRef &command_buffer = m_command_buffers[i][frame_index];
+        AssertThrow(command_buffer.IsValid());
+
+        const Handle<RenderGroup> &render_group = *it.first;
+        const Array<ID<EnvProbe>> &env_probes = it.second;
+
+        const Result record_result = command_buffer->Record(
+            g_engine->GetGPUInstance()->GetDevice(),
+            render_group->GetPipeline()->GetConstructionInfo().render_pass,
+            [this, frame_index, &render_group, &env_probes, &num_rendered_env_probes](CommandBuffer *cmd)
+            {
+                render_group->GetPipeline()->push_constants = m_push_constant_data;
+                render_group->GetPipeline()->Bind(cmd);
+
+                const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
+                const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+
+                const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
+                const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
+
+                render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Global), frame_index)
+                    ->Bind(
+                        cmd,
+                        render_group->GetPipeline(),
+                        { },
+                        global_descriptor_set_index
+                    );
+
+                for (const ID<EnvProbe> env_probe_id : env_probes) {
+                    if (num_rendered_env_probes >= max_bound_reflection_probes) {
                         DebugLog(
                             LogType::Warn,
                             "Attempting to render too many reflection probes.\n"
@@ -685,14 +785,12 @@ void ReflectionProbePass::Record(uint frame_index)
                         break;
                     }
 
-                    const ID<EnvProbe> &env_probe_id = it.first;
-
                     // TODO: Add visibility check so we skip probes that don't have any impact on the current view
 
-                    m_render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
+                    render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(Scene), frame_index)
                         ->Bind(
                             cmd,
-                            m_render_group->GetPipeline(),
+                            render_group->GetPipeline(),
                             {
                                 { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
                                 { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
@@ -705,14 +803,20 @@ void ReflectionProbePass::Record(uint frame_index)
 
                     m_full_screen_quad->Render(cmd);
 
-                    ++counter;
+                    ++num_rendered_env_probes;
                 }
-            }
 
-            HYPERION_RETURN_OK;
-        });
+                HYPERION_RETURN_OK;
+            });
 
-    HYPERION_ASSERT_RESULT(record_result);
+        HYPERION_ASSERT_RESULT(record_result);
+
+        HYPERION_ASSERT_RESULT(command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
+    }
+
+    GetFramebuffer()->EndCapture(frame_index, frame->GetCommandBuffer());
+
+    DebugLog(LogType::Debug, "Render %u EnvProbes\n", num_rendered_env_probes);
 }
 
 // ===== Reflection Probe Pass End =====

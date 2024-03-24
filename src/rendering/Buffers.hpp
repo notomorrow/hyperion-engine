@@ -2,8 +2,6 @@
 #define HYPERION_V2_BUFFERS_H
 
 #include <rendering/DrawProxy.hpp>
-#include <rendering/Light.hpp>
-
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/Platform.hpp>
 
@@ -54,10 +52,10 @@ using renderer::GPUBufferType;
 static constexpr SizeType max_entities_per_instance_batch = 60;
 static constexpr SizeType max_probes_in_sh_grid_buffer = max_bound_ambient_probes;
 
-enum EnvGridType : uint
+enum EnvGridType : uint32
 {
-    ENV_GRID_TYPE_INVALID = uint(-1),
-    ENV_GRID_TYPE_SH = 0,
+    ENV_GRID_TYPE_INVALID   = uint32(-1),
+    ENV_GRID_TYPE_SH        = 0,
     ENV_GRID_TYPE_MAX
 };
 
@@ -74,25 +72,25 @@ static_assert(sizeof(EntityInstanceBatch) == 256);
 
 struct alignas(16) ParticleShaderData
 {
-    ShaderVec4<float32> position;   //   4 x 4 = 16
-    ShaderVec4<float32> velocity;   // + 4 x 4 = 32
-    ShaderVec4<float32> color;      // + 4 x 4 = 48
-    ShaderVec4<float32> attributes; // + 4 x 4 = 64
+    Vec4f   position;   //   4 x 4 = 16
+    Vec4f   velocity;   // + 4 x 4 = 32
+    Vec4f   color;      // + 4 x 4 = 48
+    Vec4f   attributes; // + 4 x 4 = 64
 };
 
 static_assert(sizeof(ParticleShaderData) == 64);
 
 struct alignas(16) GaussianSplattingInstanceShaderData {
-    ShaderVec4<float32> position;   //   4 x 4 = 16
-    ShaderVec4<float32> rotation;   // + 4 x 4 = 32
-    ShaderVec4<float32> scale;      // + 4 x 4 = 48
-    ShaderVec4<float32> color;      // + 4 x 4 = 64
+    Vec4f   position;   //   4 x 4 = 16
+    Vec4f   rotation;   // + 4 x 4 = 32
+    Vec4f   scale;      // + 4 x 4 = 48
+    Vec4f   color;      // + 4 x 4 = 64
 };
 
 static_assert(sizeof(GaussianSplattingInstanceShaderData) == 64);
 
 struct alignas(16) GaussianSplattingSceneShaderData {
-    ShaderMat4 model_matrix;
+    Matrix4 model_matrix;
 };
 
 static_assert(sizeof(GaussianSplattingSceneShaderData) == 64);
@@ -116,8 +114,8 @@ static_assert(sizeof(SkeletonShaderData) % 256 == 0);
 
 enum EntityGPUDataFlags : uint32
 {
-    ENTITY_GPU_FLAG_NONE = 0x0,
-    ENTITY_GPU_FLAG_HAS_SKELETON = 0x1
+    ENTITY_GPU_FLAG_NONE            = 0x0,
+    ENTITY_GPU_FLAG_HAS_SKELETON    = 0x1
 };
 
 struct alignas(256) ObjectShaderData
@@ -482,7 +480,9 @@ public:
         m_staging_objects_pool.m_cpu_buffer.MarkDirty(index);
     }
 
-    
+
+    // @TODO: Optimize to use double buffering rather than needing mutex lock.
+
     BufferTicket<StructType>        current_index = 1; // reserve first index (0)
     Queue<BufferTicket<StructType>> free_indices;
     std::mutex                      m_mutex;

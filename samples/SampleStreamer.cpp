@@ -443,6 +443,25 @@ void SampleStreamer::InitGame()
             1.0f
         ));
 
+        light->SetMaterial(g_material_system->GetOrCreate(
+            {
+               .shader_definition = ShaderDefinition {
+                    HYP_NAME(Forward),
+                    ShaderProperties(static_mesh_vertex_attributes)
+                },
+               .bucket = Bucket::BUCKET_OPAQUE
+            },
+            {
+            },
+            {
+                {
+                    Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
+                    g_asset_manager->Load<Texture>("textures/dummy.jpg")
+                }
+            }
+        ));
+        AssertThrow(light->GetMaterial().IsValid());
+
         InitObject(light);
 
         auto area_light_entity = m_scene->GetEntityManager()->AddEntity();

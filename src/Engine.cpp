@@ -132,6 +132,7 @@ void Engine::FindTextureFormatDefaults()
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
             std::array{ //InternalFormat::RG16,
+                        InternalFormat::R11G11B10F,
                         InternalFormat::RGBA16F,
                         InternalFormat::RGBA32F,
                         InternalFormat::RGBA8 },
@@ -294,6 +295,8 @@ void Engine::Initialize(RC<Application> application)
     // m_global_descriptor_set_manager.Initialize(this);
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Create(m_instance->GetDevice()));
+
+    m_material_descriptor_set_manager.Initialize();
 
     m_render_list_container.Create();
 
