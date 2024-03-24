@@ -429,7 +429,6 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MeshAttributes { },
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
-                        .bucket             = BUCKET_INTERNAL,
                         .cull_faces         = FaceCullMode::NONE
                     }
                 ),

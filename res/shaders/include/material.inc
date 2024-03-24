@@ -93,6 +93,9 @@ struct Material
 #define SAMPLE_TEXTURE(mat, index, texcoord) \
     Texture2D(texture_sampler, GET_TEXTURE(mat, index), (texcoord))
 
+#define SAMPLE_TEXTURE_LOD(mat, index, texcoord, lod) \
+    Texture2DLod(texture_sampler, GET_TEXTURE(mat, index), (texcoord), (lod))
+
 #define SAMPLE_TEXTURE_NEAREST(mat, index, texcoord) \
     Texture2D(sampler_nearest, GET_TEXTURE(mat, index), (texcoord))
 

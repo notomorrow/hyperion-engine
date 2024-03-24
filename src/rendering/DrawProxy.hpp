@@ -154,16 +154,17 @@ using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
 template <>
 struct DrawProxy<STUB_CLASS(Light)>
 {
-    ID<Light>   id;
-    LightType   type;
-    Color       color;
-    float       radius;
-    float       falloff;
-    uint32      shadow_map_index;
-    Vec2f       area_size;
-    Vec4f       position_intensity;
-    Vec4f       normal;
-    uint64      visibility_bits; // bitmask indicating if light is visible to cameras by camera ID
+    ID<Light>       id;
+    LightType       type;
+    Color           color;
+    float           radius;
+    float           falloff;
+    uint32          shadow_map_index;
+    Vec2f           area_size;
+    Vec4f           position_intensity;
+    Vec4f           normal;
+    uint64          visibility_bits; // bitmask indicating if light is visible to cameras by camera ID
+    ID<Material>    material_id;
 };
 
 using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;

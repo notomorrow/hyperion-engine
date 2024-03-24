@@ -10,12 +10,6 @@
 #define PROBE_SIDE_LENGTH_BORDER_IRRADIANCE (PROBE_SIDE_LENGTH_IRRADIANCE + PROBE_BORDER_LENGTH)
 #define PROBE_SIDE_LENGTH_BORDER (PROBE_SIDE_LENGTH + PROBE_BORDER_LENGTH)
 
-struct Ray
-{
-    vec3 origin;
-    vec3 direction;
-};
-
 int idot(ivec3 a, ivec3 b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;

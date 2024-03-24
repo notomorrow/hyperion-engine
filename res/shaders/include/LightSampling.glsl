@@ -34,116 +34,74 @@ vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
     return cross(v1, v2) * IntegrateEdge(v1, v2);
 }
 
-vec3 PolygonIrradiance(in vec3 pts[4])
+bool RayPlaneIntersect(in Ray ray, vec4 plane, out float t)
 {
-    vec3 L0 = normalize(pts[0]);
-    vec3 L1 = normalize(pts[1]);
-    vec3 L2 = normalize(pts[2]);
-    vec3 L3 = normalize(pts[3]);
+    t = -dot(plane, vec4(ray.origin, 1.0)) / dot(plane.xyz, ray.direction);
 
-    float c01 = dot(L0, L1);
-    float c12 = dot(L1, L2);
-    float c23 = dot(L2, L3);
-    float c30 = dot(L3, L0);
-
-    float w01 = (1.5708 - 0.175 * c01) * inversesqrt(c01 + 1.0);
-    float w12 = (1.5708 - 0.175 * c12) * inversesqrt(c12 + 1.0);
-    float w23 = (1.5708 - 0.175 * c23) * inversesqrt(c23 + 1.0);
-    float w30 = (1.5708 - 0.175 * c30) * inversesqrt(c30 + 1.0);
-
-    vec3 L;
-    L = cross(L1, -w01 * L0 + w12 * L2);
-    L += cross(L3, w30 * L0 + -w23 * L2);
-
-    return L * 0.5;
+    return t > 0.0;
 }
 
-float SphereHorizonCosWarp(float cos_theta, float sin_alpha_sqr)
+#if 0
+vec4 SampleRectLightTexture(in vec3 pts[4])
 {
-    float sin_alpha = sqrt(sin_alpha_sqr);
-
-    if (cos_theta < sin_alpha)
-    {
-        cos_theta = max(cos_theta, -sin_alpha);
-        cos_theta = pow(sin_alpha + cos_theta, 2.0) / (4.0 * sin_alpha);
+    if (light.material_id == ~0u || !HAS_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map)) {
+        return vec4(1.0);
     }
 
-    return cos_theta;
+    vec3 v1 = pts[1] - pts[0];
+    vec3 v2 = pts[3] - pts[0];
+    vec3 ortho = cross(v1, v2);
+
+    float area_sqr = dot(ortho, ortho);
+    float dist_area = dot(ortho, pts[0]);
+
+    vec3 P = dist_area * ortho / area_sqr - pts[0];
+
+    float dp_v1_v2 = dot(v1, v2);
+    float inv_dp_v1_v1 = 1.0 / dot(v1, v1);
+    vec3 v1_perp = v1 - v2 * dp_v1_v2 * inv_dp_v1_v1;
+
+    vec2 uv = vec2(dot(P, v1) * inv_dp_v1_v1 - dp_v1_v2 * inv_dp_v1_v1, 1.0);
+    uv *= dot(P, v2) / dot(v1_perp, v1_perp);
+
+    float dist = abs(dist_area) / pow(area_sqr, 0.75);
+
+    float lod = log2(dist);
+
+    return Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod);
 }
+#endif
 
-vec3 CalculateRectLightDiffuse(in Light light, in vec3 P, in vec3 N, in vec3 V)
+vec4 CalculateAreaLightRadiance(in Light light, in mat3 Minv, in vec3 pts[4], in vec3 P, in vec3 N, in vec3 V)
 {
-    if (dot(P - light.position_intensity.xyz, light.normal.xyz) <= 0.0) {   
-        return vec3(0.0);
-    }
-
-    const float half_width = light.area_size.x * 0.5;
-    const float half_height = light.area_size.y * 0.5;
-
-    vec3 tangent;
-    vec3 bitangent;
-    ComputeOrthonormalBasis(light.normal.xyz, tangent, bitangent);
-    
-    const vec3 right = tangent;
-    const vec3 up = bitangent;
-
-    const vec3 p0 = light.position_intensity.xyz + right * half_width + up * half_height;
-    const vec3 p1 = light.position_intensity.xyz - right * half_width + up * half_height;
-    const vec3 p2 = light.position_intensity.xyz - right * half_width - up * half_height;
-    const vec3 p3 = light.position_intensity.xyz + right * half_width - up * half_height;
-
-    const float solid_angle = RectangleSolidAngle(P, p0, p1, p2, p3);
-
-    const float illum = solid_angle * 0.2 * (
-        clamp(dot(normalize(p0 - P), N), 0.0, 1.0)
-        + clamp(dot(normalize(p1 - P), N), 0.0, 1.0)
-        + clamp(dot(normalize(p2 - P), N), 0.0, 1.0)
-        + clamp(dot(normalize(p3 - P), N), 0.0, 1.0)
-        + clamp(dot(normalize(light.position_intensity.xyz - P), N), 0.0, 1.0)
-    );
-
-    return vec3(illum);
-}
-
-
-vec4 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in vec3 P, in vec3 N, in vec3 V)
-{
-    vec3 position_to_light = light.position_intensity.xyz - P;
-
     // construct an orthonormal basis around N
     vec3 T1 = normalize(V - N * dot(V, N));
     vec3 T2 = cross(N, T1);
     mat3 tbn = transpose(mat3(T1, T2, N));
-    
-    //vec3 tangent;
-    //vec3 bitangent;
-    //ComputeOrthonormalBasis(light.normal.xyz, tangent, bitangent);
 
-    //mat3 tbn = (mat3(tangent, bitangent, light.normal.xyz));
-
-
-    // Minv = inverse(Minv);
     // rotate area light in (T1, T2, N) basis
     Minv = Minv * tbn;
 
     // polygon (allocate 4 vertices for clipping)
     vec3 L[4];
+
     // transform polygon from LTC back to origin Do (cosine weighted)
     L[0] = Minv * (pts[0] - P);
     L[1] = Minv * (pts[1] - P);
     L[2] = Minv * (pts[2] - P);
     L[3] = Minv * (pts[3] - P);
 
-    L[0] = normalize(L[0]);
-    L[1] = normalize(L[1]);
-    L[2] = normalize(L[2]);
-    L[3] = normalize(L[3]);
+    //vec4 sampled_texture = SampleRectLightTexture(L);
+
+    for (int i = 0; i < 4; i++) {
+        L[i] = normalize(L[i]);
+    }
 
     // use tabulated horizon-clipped sphere
     // check if the shading point is behind the light
-    vec3 dir = pts[0] - P;//normalize(position_to_light);
-    vec3 lightNormal = cross(pts[1] - pts[0], pts[3] - pts[0]);
-    bool behind = (dot(dir, /*light.normal.xyz*/lightNormal) < 0.0);
+    vec3 dir = pts[0] - P;
+    vec3 light_normal = cross(pts[1] - pts[0], pts[3] - pts[0]);
+    bool behind = (dot(dir, light_normal) < 0.0);
 
     vec3 vsum = vec3(0.0);
     vsum += IntegrateEdgeVec(L[0], L[1]);
@@ -169,15 +127,14 @@ vec4 CalculateAreaLightRadiance(in Light light, mat3 Minv, in vec3 pts[4], in ve
 
     float sum = len * scale;
     
-    //float sum = max((len * len + vsum.z) / (len + 1.0), 0.0);
-    if (!behind /* && !twoSided*/) {
+    if (!behind) {
         sum = 0.0;
     }
 
     // fix negative values
     sum = max(sum, 0.0);
 
-    return vec4(sum);
+    return vec4(sum);// * sampled_texture;
 }
 
 #endif

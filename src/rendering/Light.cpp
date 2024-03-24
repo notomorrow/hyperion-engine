@@ -55,7 +55,7 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
         g_engine->GetRenderData()->lights.Set(
             light.GetID().ToIndex(),
             LightShaderData {
-                .light_id           = uint32(draw_proxy.id),
+                .light_id           = draw_proxy.id.Value(),
                 .light_type         = uint32(draw_proxy.type),
                 .color_packed       = uint32(draw_proxy.color),
                 .radius             = draw_proxy.radius,
@@ -63,7 +63,8 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
                 .shadow_map_index   = draw_proxy.shadow_map_index,
                 .area_size          = draw_proxy.area_size,
                 .position_intensity = draw_proxy.position_intensity,
-                .normal             = draw_proxy.normal
+                .normal             = draw_proxy.normal,
+                .material_id        = draw_proxy.material_id.Value()
             }
         );
 
@@ -144,7 +145,7 @@ void Light::Init()
     BasicObject::Init();
 
     m_draw_proxy = LightDrawProxy {
-        .id                 = m_id,
+        .id                 = GetID(),
         .type               = m_type,
         .color              = m_color,
         .radius             = m_radius,
@@ -153,7 +154,8 @@ void Light::Init()
         .area_size          = m_area_size,
         .position_intensity = Vec4f(m_position, m_intensity),
         .normal             = Vec4f(m_normal, 0.0f),
-        .visibility_bits    = m_visibility_bits.ToUInt64()
+        .visibility_bits    = m_visibility_bits.ToUInt64(),
+        .material_id        = m_material_id
     };
 
     EnqueueRenderUpdates();
@@ -176,7 +178,7 @@ void Light::EnqueueUnbind() const
     Threads::AssertOnThread(~THREAD_RENDER);
     AssertReady();
 
-    PUSH_RENDER_COMMAND(UnbindLight, m_id);
+    PUSH_RENDER_COMMAND(UnbindLight, GetID());
 }
 
 void Light::Update()
@@ -192,7 +194,7 @@ void Light::EnqueueRenderUpdates()
         UpdateLightShaderData,
         *this,
         LightDrawProxy {
-            .id                 = m_id,
+            .id                 = GetID(),
             .type               = m_type,
             .color              = m_color,
             .radius             = m_radius,
@@ -256,13 +258,6 @@ BoundingBox Light::GetAABB() const
         aabb.Extend(rect.first);
         aabb.Extend(rect.second);
         aabb.Extend(m_position + m_normal * m_radius);
-
-        DebugLog(
-            LogType::Debug,
-            "Rect light aabb: [%f, %f, %f] - [%f, %f, %f]",
-            aabb.min.x, aabb.min.y, aabb.min.z,
-            aabb.max.x, aabb.max.y, aabb.max.z
-        );
 
         return aabb;
     }

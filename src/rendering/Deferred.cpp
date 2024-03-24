@@ -27,17 +27,17 @@ static const InternalFormat env_grid_irradiance_format = InternalFormat::R11G11B
 static const Extent2D env_grid_irradiance_extent { 1024, 768 };
 static const Extent2D env_grid_radiance_extent { 1024, 768 };
 
-static const float s_ltc_matrix[] = {
+static const float16 s_ltc_matrix[] = {
 #include <rendering/inl/LTCMatrix.inl>
 };
 
-static_assert(sizeof(s_ltc_matrix) == 64 * 64 * 4 * 4, "Invalid LTC matrix size");
+static_assert(sizeof(s_ltc_matrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
 
-static const float s_ltc_brdf[] = {
+static const float16 s_ltc_brdf[] = {
 #include <rendering/inl/LTCBRDF.inl>
 };
 
-static_assert(sizeof(s_ltc_brdf) == 64 * 64 * 4 * 4, "Invalid LTC BRDF size");
+static_assert(sizeof(s_ltc_brdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
 
 #pragma region Render commands
 
@@ -177,34 +177,8 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         DeferCreate(m_ltc_sampler, g_engine->GetGPUDevice());
 
-       /* Bitmap<4, float> bitmap(64, 64);
-
-        for (uint x = 0; x < 64; x++) {
-            for (uint y = 0; y < 64; y++) {
-                bitmap.SetPixel(
-                    x, y,
-                    {
-                        s_ltc_matrix[(x * 64 + y) * 4 + 0],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 1],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 2],
-                        s_ltc_matrix[(x * 64 + y) * 4 + 3]
-                    }
-                );
-            }
-        }
-
-        UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(bitmap.ToByteBuffer()));*/
-
-        float16 *ltc_matrix_data_f16 = new float16[64 * 64 * 4];
-
-        for (uint i = 0; i < 64 * 64 * 4; i++) {
-            ltc_matrix_data_f16[i] = s_ltc_matrix[i];
-        }
-
-        ByteBuffer ltc_matrix_data(64 * 64 * 4 * sizeof(float16), ltc_matrix_data_f16);
+        ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
         UniquePtr<StreamedData> streamed_matrix_data(new MemoryStreamedData(std::move(ltc_matrix_data)));
-
-        delete[] ltc_matrix_data_f16;
 
         m_ltc_matrix_texture = CreateObject<Texture>(Texture2D(
             { 64, 64 },
@@ -216,16 +190,8 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         InitObject(m_ltc_matrix_texture);
 
-        float16 *ltc_brdf_data_f16 = new float16[64 * 64 * 4];
-
-        for (uint i = 0; i < 64 * 64 * 4; i++) {
-            ltc_brdf_data_f16[i] = s_ltc_brdf[i];
-        }
-
-        ByteBuffer ltc_brdf_data(64 * 64 * 4 * sizeof(float16), ltc_brdf_data_f16);
+        ByteBuffer ltc_brdf_data(sizeof(s_ltc_brdf), s_ltc_brdf);
         UniquePtr<StreamedData> streamed_brdf_data(new MemoryStreamedData(std::move(ltc_brdf_data)));
-
-        delete[] ltc_brdf_data_f16;
 
         m_ltc_brdf_texture = CreateObject<Texture>(Texture2D(
             { 64, 64 },
@@ -249,7 +215,9 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index);
             AssertThrow(descriptor_set != nullptr);
-
+            
+            descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer());
+            
             descriptor_set->SetElement(HYP_NAME(LTCSampler), m_ltc_sampler);
             descriptor_set->SetElement(HYP_NAME(LTCMatrixTexture), m_ltc_matrix_texture->GetImageView());
             descriptor_set->SetElement(HYP_NAME(LTCBRDFTexture), m_ltc_brdf_texture->GetImageView());
@@ -292,11 +260,8 @@ void DeferredPass::Create()
             .vertex_attributes = static_mesh_vertex_attributes
         },
         MaterialAttributes {
-            .bucket = Bucket::BUCKET_INTERNAL,
-            .fill_mode = FillMode::FILL,
-            .blend_mode = m_is_indirect_pass
-                ? BlendMode::NONE
-                : BlendMode::ADDITIVE
+            .fill_mode  = FillMode::FILL,
+            .blend_mode = m_is_indirect_pass ? BlendMode::NONE : BlendMode::ADDITIVE
         }
     );
 
@@ -328,8 +293,8 @@ void DeferredPass::Record(uint frame_index)
             light_iterators[uint(light.type)].PushBack(&it);
         }
     }
-
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+    
+    const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
     auto record_result = command_buffer->Record(
         g_engine->GetGPUInstance()->GetDevice(),
@@ -341,11 +306,12 @@ void DeferredPass::Record(uint frame_index)
 
             // render with each light
             for (uint light_type_index = 0; light_type_index < uint(LightType::MAX); light_type_index++) {
-                Handle<RenderGroup> &render_group = m_direct_light_render_groups[light_type_index];
+                const Handle<RenderGroup> &render_group = m_direct_light_render_groups[light_type_index];
 
                 const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
                 const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
                 const uint deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DeferredDirectDescriptorSet));
+                const uint material_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Material));
 
                 render_group->GetPipeline()->push_constants = m_push_constant_data;
                 render_group->GetPipeline()->Bind(cmd);
@@ -482,7 +448,6 @@ void EnvGridPass::Create()
             .vertex_attributes = static_mesh_vertex_attributes
         },
         MaterialAttributes {
-            .bucket     = Bucket::BUCKET_INTERNAL,
             .fill_mode  = FillMode::FILL,
             .blend_mode = BlendMode::NORMAL
         }
@@ -505,7 +470,7 @@ void EnvGridPass::Create()
     // Create render texture to screen pass.
     // this is used to render the previous frame's result to the screen,
     // so we can blend it with the current frame's result (checkerboarded)
-    auto render_texture_to_screen_shader = g_shader_manager->GetOrCreate(HYP_NAME(RenderTextureToScreen));
+    Handle<Shader> render_texture_to_screen_shader = g_shader_manager->GetOrCreate(HYP_NAME(RenderTextureToScreen));
     AssertThrow(InitObject(render_texture_to_screen_shader));
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
@@ -665,7 +630,6 @@ void ReflectionProbePass::Create()
             .vertex_attributes = static_mesh_vertex_attributes
         },
         MaterialAttributes {
-            .bucket     = Bucket::BUCKET_INTERNAL,
             .fill_mode  = FillMode::FILL,
             .blend_mode = BlendMode::NORMAL
         }

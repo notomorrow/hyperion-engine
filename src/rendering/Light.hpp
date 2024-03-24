@@ -53,54 +53,122 @@ public:
 
     ~Light();
 
+    /*! \brief Get the type of the light.
+     *
+     * \return The type.
+     */
     LightType GetType() const
         { return m_type; }
 
-    const Vec3f &GetPosition() const
+    /*! \brief Get the position for the light. For directional lights, this is the direction the light is pointing.
+     *
+     * \return The position or direction.
+     */
+    Vec3f GetPosition() const
         { return m_position; }
 
-    void SetPosition(const Vec3f &position)
+    /*! \brief Set the position for the light. For directional lights, this is the direction the light is pointing.
+     *
+     * \param position The position or direction to set.
+     */
+    void SetPosition(Vec3f position)
     {
+        if (m_position == position) {
+            return;
+        }
+
         m_position = position;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    const Vec3f &GetNormal() const
+    /*! \brief Get the normal for the light. This is used only for area lights.
+     *
+     * \return The normal.
+     */
+    Vec3f GetNormal() const
         { return m_normal; }
 
-    void SetNormal(const Vec3f &normal)
+    /*! \brief Set the normal for the light. This is used only for area lights.
+     *
+     * \param normal The normal to set.
+     */
+    void SetNormal(Vec3f normal)
     {
+        if (m_normal == normal) {
+            return;
+        }
+
         m_normal = normal;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    const Vec2f &GetAreaSize() const
+    /*! \brief Get the area size for the light. This is used only for area lights.
+     *
+     * \return The area size. (x = width, y = height)
+     */
+    Vec2f GetAreaSize() const
         { return m_area_size; }
 
-    void SetAreaSize(const Vec2f &area_size)
+    /*! \brief Set the area size for the light. This is used only for area lights.
+     *
+     * \param area_size The area size to set. (x = width, y = height)
+     */
+    void SetAreaSize(Vec2f area_size)
     {
+        if (m_area_size == area_size) {
+            return;
+        }
+
         m_area_size = area_size;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    const Color &GetColor() const
+    /*! \brief Get the color for the light.
+     *
+     * \return The color.
+     */
+    Color GetColor() const
         { return m_color; }
 
-    void SetColor(const Color &color)
+    /*! \brief Set the color for the light.
+     *
+     * \param color The color to set.
+     */
+    void SetColor(Color color)
     {
+        if (m_color == color) {
+            return;
+        }
+
         m_color = color;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    /*! \brief Get the intensity for the light. This is used to determine how bright the light is.
+     *
+     * \return The intensity.
+     */
     float GetIntensity() const
         { return m_intensity; }
 
+    /*! \brief Set the intensity for the light. This is used to determine how bright the light is.
+     *
+     * \param intensity The intensity to set.
+     */
     void SetIntensity(float intensity)
     {
+        if (m_intensity == intensity) {
+            return;
+        }
+
         m_intensity = intensity;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    /*! \brief Get the radius for the light. This is used to determine the maximum distance at which this light is visible. (point lights only)
+     *
+     * \return The radius.
+     */
     float GetRadius() const
     {
         switch (m_type) {
@@ -113,34 +181,104 @@ public:
         }
     }
 
+    /*! \brief Set the radius for the light. This is used to determine the maximum distance at which this light is visible. (point lights only)
+     *
+     * \param radius The radius to set.
+     */
     void SetRadius(float radius)
     {
+        if (m_type != LightType::POINT) {
+            return;
+        }
+
+        if (m_radius == radius) {
+            return;
+        }
+
         m_radius = radius;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    /*! \brief Get the falloff for the light. This is used to determine how the light intensity falls off with distance (point lights only).
+     *
+     * \return The falloff.
+     */
     float GetFalloff() const
         { return m_falloff; }
 
+    /*! \brief Set the falloff for the light. This is used to determine how the light intensity falls off with distance (point lights only).
+     *
+     * \param falloff The falloff to set.
+     */
     void SetFalloff(float falloff)
     {
+        if (m_type != LightType::POINT) {
+            return;
+        }
+
+        if (m_falloff == falloff) {
+            return;
+        }
+
         m_falloff = falloff;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    /*! \brief Get the shadow map index for the light. This is used when sampling shadow maps for the particular light.
+     *
+     * \return The shadow map index.
+     */
     uint GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
+    /*! \brief Set the shadow map index for the light. This is used when sampling shadow maps for the particular light.
+     *
+     * \param shadow_map_index The shadow map index to set.
+     */
     void SetShadowMapIndex(uint shadow_map_index)
     {
+        if (shadow_map_index == m_shadow_map_index) {
+            return;
+        }
+
         m_shadow_map_index = shadow_map_index;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    bool IsVisible(ID<Camera> camera_id) const;
-    void SetIsVisible(ID<Camera> camera_id, bool is_visible);
+    /*! \brief Get the material ID for the light. Used for area lights.
+     *
+     * \return The material ID.
+     */
+    ID<Material> GetMaterialID() const
+        { return m_material_id; }
 
-    Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+    /*! \brief Set the material ID for the light. Used for area lights.
+     *
+     * \param material_id The material ID to set.
+     */
+    void SetMaterialID(ID<Material> material_id)
+    {
+        if (material_id == m_material_id) {
+            return;
+        }
+
+        m_material_id = material_id;
+        m_shader_data_state |= ShaderDataState::DIRTY;
+    }
+
+    /*! \brief Check if the light is set as visible to the camera.
+     *
+     * \param camera_id The camera to check visibility for.
+     * \return True if the light is visible, false otherwise.
+     */
+    bool IsVisible(ID<Camera> camera_id) const;
+
+    /*! \brief Set the visibility of the light to the camera.
+     *
+     * \param camera_id The camera to set visibility for.
+     * \param is_visible True if the light is visible, false otherwise.
+     */
+    void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
     BoundingBox GetAABB() const;
     BoundingSphere GetBoundingSphere() const;
@@ -151,17 +289,20 @@ public:
     void Update();
 
 protected:
-    LightType   m_type;
-    Vec3f       m_position;
-    Vec3f       m_normal;
-    Vec2f       m_area_size;
-    Color       m_color;
-    float       m_intensity;
-    float       m_radius;
-    float       m_falloff;
-    uint        m_shadow_map_index;
+    LightType       m_type;
+    Vec3f           m_position;
+    Vec3f           m_normal;
+    Vec2f           m_area_size;
+    Color           m_color;
+    float           m_intensity;
+    float           m_radius;
+    float           m_falloff;
+    uint            m_shadow_map_index;
+    ID<Material>    m_material_id;
 
 private:
+    Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+
     void EnqueueRenderUpdates();
 
     mutable ShaderDataState m_shader_data_state;
