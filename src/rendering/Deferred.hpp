@@ -64,14 +64,14 @@ public:
     virtual void Render(Frame *frame) override;
 
 private:
-    const bool                                              m_is_indirect_pass;
+    const bool                                                              m_is_indirect_pass;
 
-    FixedArray<Handle<Shader>, uint(LightType::MAX)>        m_direct_light_shaders;
-    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>   m_direct_light_render_groups;
+    FixedArray<Handle<Shader>, uint(LightType::MAX)>                        m_direct_light_shaders;
+    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>                   m_direct_light_render_groups;
 
-    Handle<Texture>                                         m_ltc_matrix_texture;
-    Handle<Texture>                                         m_ltc_brdf_texture;
-    SamplerRef                                              m_ltc_sampler;
+    Handle<Texture>                                                         m_ltc_matrix_texture;
+    Handle<Texture>                                                         m_ltc_brdf_texture;
+    SamplerRef                                                              m_ltc_sampler;
 };
 
 //enum LightmapPassMode

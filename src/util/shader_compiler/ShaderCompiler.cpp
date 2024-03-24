@@ -274,20 +274,20 @@ static ByteBuffer CompileToSPIRV(
     callbacks_context.filename = filename;
 
     glslang_input_t input {
-        .language = language == ShaderLanguage::HLSL ? GLSLANG_SOURCE_HLSL : GLSLANG_SOURCE_GLSL,
-        .stage = stage,
-        .client = GLSLANG_CLIENT_VULKAN,
-        .client_version = static_cast<glslang_target_client_version_t>(vulkan_api_version),
-        .target_language = GLSLANG_TARGET_SPV,
-        .target_language_version = static_cast<glslang_target_language_version_t>(spirv_api_version),
-        .code = source.Data(),
-        .default_version = int(spirv_version),
-        .default_profile = GLSLANG_CORE_PROFILE,
-        .force_default_version_and_profile = false,
-        .forward_compatible = false,
-        .messages = GLSLANG_MSG_DEFAULT_BIT,
-        .resource = reinterpret_cast<const glslang_resource_t *>(&default_resources),
-        .callbacks_ctx = &callbacks_context
+        .language                           = language == ShaderLanguage::HLSL ? GLSLANG_SOURCE_HLSL : GLSLANG_SOURCE_GLSL,
+        .stage                              = stage,
+        .client                             = GLSLANG_CLIENT_VULKAN,
+        .client_version                     = static_cast<glslang_target_client_version_t>(vulkan_api_version),
+        .target_language                    = GLSLANG_TARGET_SPV,
+        .target_language_version            = static_cast<glslang_target_language_version_t>(spirv_api_version),
+        .code                               = source.Data(),
+        .default_version                    = int(spirv_version),
+        .default_profile                    = GLSLANG_CORE_PROFILE,
+        .force_default_version_and_profile  = false,
+        .forward_compatible                 = false,
+        .messages                           = GLSLANG_MSG_DEFAULT_BIT,
+        .resource                           = reinterpret_cast<const glslang_resource_t *>(&default_resources),
+        .callbacks_ctx                      = &callbacks_context
     };
 
     input.callbacks.include_local = [](void *ctx, const char *header_name, const char *includer_name, size_t include_depth) -> glsl_include_result_t *
@@ -350,7 +350,7 @@ static ByteBuffer CompileToSPIRV(
         GLSL_ERROR(LogType::Error, "GLSL preprocessing failed %s\n", filename.Data());
         GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
         GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
-        GLSL_ERROR(LogType::Error, "%s\n", input.code);
+
         glslang_shader_delete(shader);
 
         return ByteBuffer();
@@ -371,7 +371,7 @@ static ByteBuffer CompileToSPIRV(
         GLSL_ERROR(LogType::Error, "GLSL parsing failed %s\n", filename.Data());
         GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_log(shader));
         GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_info_debug_log(shader));
-        GLSL_ERROR(LogType::Error, "%s\n", glslang_shader_get_preprocessed_code(shader));
+
         glslang_shader_delete(shader);
 
         return ByteBuffer();
@@ -384,6 +384,7 @@ static ByteBuffer CompileToSPIRV(
         GLSL_ERROR(LogType::Error, "GLSL linking failed %s %s\n", filename.Data(), source.Data());
         GLSL_ERROR(LogType::Error, "%s\n", glslang_program_get_info_log(program));
         GLSL_ERROR(LogType::Error, "%s\n", glslang_program_get_info_debug_log(program));
+
         glslang_program_delete(program);
         glslang_shader_delete(shader);
 

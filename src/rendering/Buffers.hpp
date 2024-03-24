@@ -275,7 +275,7 @@ struct alignas(16) ObjectInstance
 
 static_assert(sizeof(ObjectInstance) == 16);
 
-struct alignas(64) LightShaderData
+struct alignas(128) LightShaderData
 {
     uint32  light_id;
     uint32  light_type;
@@ -291,9 +291,19 @@ struct alignas(64) LightShaderData
     Vec4f   position_intensity;
     Vec4f   normal;
     // 64
+
+    uint32  material_id;
+
+    uint32  _pad0;
+    uint32  _pad1;
+    uint32  _pad2;
+
+    Vec4u   pad3;
+    Vec4u   pad4;
+    Vec4u   pad5;
 };
 
-static_assert(sizeof(LightShaderData) == 64);
+static_assert(sizeof(LightShaderData) == 128);
 
 struct alignas(256) SH9Buffer
 {

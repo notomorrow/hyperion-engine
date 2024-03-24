@@ -58,8 +58,7 @@ void CompositePass::Create()
             .vertex_attributes = static_mesh_vertex_attributes
         },
         MaterialAttributes {
-            .bucket = Bucket::BUCKET_INTERNAL,
-            .fill_mode = FillMode::FILL,
+            .fill_mode  = FillMode::FILL,
             .blend_mode = BlendMode::NORMAL
         }
     );

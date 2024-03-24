@@ -12,6 +12,12 @@
 #define float3x3 mat3
 #define float4x4 mat4
 
+struct Ray
+{
+    vec3 origin;
+    vec3 direction;
+};
+
 int imod(int a, int b)
 {
     return (a % b + b) % b;

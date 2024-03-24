@@ -66,7 +66,9 @@ public:
     Result Create(Device<Platform::VULKAN> *device);
     Result Destroy(Device<Platform::VULKAN> *device);
     Result Update(Device<Platform::VULKAN> *device);
-    
+
+    bool HasElement(Name name) const;
+
     void SetElement(Name name, const GPUBufferRef<Platform::VULKAN> &ref);
     void SetElement(Name name, uint index, const GPUBufferRef<Platform::VULKAN> &ref);
     void SetElement(Name name, uint index, uint buffer_size, const GPUBufferRef<Platform::VULKAN> &ref);

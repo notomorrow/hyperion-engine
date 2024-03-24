@@ -353,8 +353,9 @@ public:
     template <class Component>
     Component *TryGetComponent(ID<Entity> entity)
     {
-        // // Temporarily remove this check because OnEntityAdded() and OnEntityRemoved() are called from the game thread
-        // Threads::AssertOnThread(m_owner_thread_mask);
+        // temp removed
+        //// OnEntityAdded() and OnEntityRemoved() are called from the game thread so include it in the mask
+        //Threads::AssertOnThread(m_owner_thread_mask | THREAD_GAME);
 
         auto it = m_entities.Find(entity);
 

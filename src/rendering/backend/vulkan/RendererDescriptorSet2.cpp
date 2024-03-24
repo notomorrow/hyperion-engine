@@ -448,6 +448,11 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
     return Result::OK;
 }
 
+bool DescriptorSet2<Platform::VULKAN>::HasElement(Name name) const
+{
+    return m_elements.Find(name) != m_elements.End();
+}
+
 void DescriptorSet2<Platform::VULKAN>::SetElement(Name name, const GPUBufferRef<Platform::VULKAN> &ref)
 {
     SetElement(name, 0, ref);

@@ -506,6 +506,8 @@ public:
     Result Create(Device<PLATFORM> *device);
     Result Destroy(Device<PLATFORM> *device);
     Result Update(Device<PLATFORM> *device);
+
+    bool HasElement(Name name) const;
     
     void SetElement(Name name, const GPUBufferRef<PLATFORM> &ref);
     void SetElement(Name name, uint index, const GPUBufferRef<PLATFORM> &ref);

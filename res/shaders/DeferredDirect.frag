@@ -76,6 +76,11 @@ HYP_DESCRIPTOR_SAMPLER(DeferredDirectDescriptorSet, LTCSampler) uniform sampler 
 HYP_DESCRIPTOR_SRV(DeferredDirectDescriptorSet, LTCMatrixTexture) uniform texture2D ltc_matrix_texture;
 HYP_DESCRIPTOR_SRV(DeferredDirectDescriptorSet, LTCBRDFTexture) uniform texture2D ltc_brdf_texture;
 
+HYP_DESCRIPTOR_SSBO(DeferredDirectDescriptorSet, MaterialsBuffer, size = 8388608) readonly buffer MaterialsBuffer
+{
+    Material materials[HYP_MAX_MATERIALS];
+};
+
 #include "include/LightSampling.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
