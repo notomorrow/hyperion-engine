@@ -143,15 +143,29 @@ private:
 
 class ReflectionProbePass : public FullScreenPass
 {
+    enum ApplyReflectionProbeMode : uint
+    {
+        DEFAULT = 0,
+        PARALLAX_CORRECTED,
+
+        MAX
+    };
+
 public:
     ReflectionProbePass();
     ReflectionProbePass(const ReflectionProbePass &other)               = delete;
     ReflectionProbePass &operator=(const ReflectionProbePass &other)    = delete;
     virtual ~ReflectionProbePass() override;
-
-    void CreateShader();
+    
+    virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
+    virtual void CreateCommandBuffers() override;
     virtual void Create() override;
     virtual void Record(uint frame_index) override;
+    virtual void Render(Frame *frame) override;
+
+private:
+    FixedArray<Handle<RenderGroup>, ApplyReflectionProbeMode::MAX>                                  m_render_groups;
+    FixedArray<FixedArray<CommandBufferRef, max_frames_in_flight>, ApplyReflectionProbeMode::MAX>   m_command_buffers;
 };
 
 class DeferredRenderer

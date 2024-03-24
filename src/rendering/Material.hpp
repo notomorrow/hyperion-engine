@@ -40,15 +40,6 @@ public:
     static constexpr uint max_parameters = 32u;
     static constexpr uint max_textures = 32u;
 
-    static constexpr uint max_textures_to_set = MathUtil::Min(
-        max_textures,
-#ifdef HYP_FEATURES_BINDLESS_TEXTURES
-        max_bindless_resources
-#else
-        max_bound_textures
-#endif
-    );
-
     using TextureKeyType = uint64;
 
     enum TextureKey : TextureKeyType
@@ -605,12 +596,17 @@ public:
 
     void SetNeedsDescriptorSetUpdate(ID<Material> id);
 
+    /*! \brief Initialize the MaterialDescriptorSetManager - Only to be used by the owning Engine instance. */
+    void Initialize();
+
     /*! \brief Update the manager. This will process any pending additions or removals
         and update the descriptor sets. Usable from the render thread.
      */
     void Update(Frame *frame);
 
 private:
+    void CreateInvalidMaterialDescriptorSet();
+
     FlatMap<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>      m_material_descriptor_sets;
 
     Array<Pair<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>>  m_pending_addition;

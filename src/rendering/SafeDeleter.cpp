@@ -69,7 +69,7 @@ void SafeDeleter::PerformEnqueuedDeletions()
 
 void SafeDeleter::ForceReleaseAll()
 {
-    if (auto deletion_flags = m_render_resource_deletion_flag.Get(MemoryOrder::ACQUIRE)) {
+    while (auto deletion_flags = m_render_resource_deletion_flag.Get(MemoryOrder::ACQUIRE)) {
         Mutex::Guard guard(m_render_resource_deletion_mutex);
 
         if (deletion_flags & RENDERABLE_DELETION_BUFFERS_OR_IMAGES) {

@@ -96,6 +96,7 @@ public:
     ~RenderResourceManager()                                                = default;
 
     template <class T>
+    HYP_FORCE_INLINE
     ResourceUsageMap<T> *GetResourceUsageMap()
     {
         ResourceUsageMapBase *ptr = m_resource_usage_maps[ResourceUsageTypeMap<T>::value].Get();
@@ -137,12 +138,14 @@ public:
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     void SetIsUsed(ID<T> id, bool is_used)
     {
         SetIsUsed<T>(id, Handle<T>(), is_used);
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     bool IsUsed(ID<T> id) const
     {
         if (!id) {

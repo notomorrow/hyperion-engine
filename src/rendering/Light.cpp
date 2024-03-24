@@ -126,13 +126,19 @@ Light::Light(Light &&other) noexcept
       m_falloff(other.m_falloff),
       m_shadow_map_index(other.m_shadow_map_index),
       m_visibility_bits(std::move(other.m_visibility_bits)),
-      m_shader_data_state(ShaderDataState::DIRTY)
+      m_shader_data_state(ShaderDataState::DIRTY),
+      m_material(std::move(other.m_material))
 {
     other.m_shadow_map_index = ~0u;
 }
 
 Light::~Light()
 {
+    // If material is set for this Light, defer its deletion for a few frames
+    if (m_material.IsValid()) {
+        g_safe_deleter->SafeReleaseHandle(std::move(m_material));
+    }
+
     PUSH_RENDER_COMMAND(UnbindLight, GetID());
 }
 
@@ -143,6 +149,8 @@ void Light::Init()
     }
 
     BasicObject::Init();
+
+    InitObject(m_material);
 
     m_draw_proxy = LightDrawProxy {
         .id                 = GetID(),
@@ -155,7 +163,7 @@ void Light::Init()
         .position_intensity = Vec4f(m_position, m_intensity),
         .normal             = Vec4f(m_normal, 0.0f),
         .visibility_bits    = m_visibility_bits.ToUInt64(),
-        .material_id        = m_material_id
+        .material_id        = m_material.GetID()
     };
 
     EnqueueRenderUpdates();
@@ -183,6 +191,10 @@ void Light::EnqueueUnbind() const
 
 void Light::Update()
 {
+    if (m_material.IsValid()) {
+        m_material->Update();
+    }
+
     if (m_shader_data_state.IsDirty()) {
         EnqueueRenderUpdates();
     }
@@ -203,7 +215,8 @@ void Light::EnqueueRenderUpdates()
             .area_size          = m_area_size,
             .position_intensity = Vec4f(m_position, m_intensity),
             .normal             = Vec4f(m_normal, 0.0f),
-            .visibility_bits    = m_visibility_bits.ToUInt64()
+            .visibility_bits    = m_visibility_bits.ToUInt64(),
+            .material_id        = m_material.GetID()
         }
     );
 

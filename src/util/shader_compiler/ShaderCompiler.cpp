@@ -648,7 +648,7 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties)
     }
 
 #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-        properties.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
+    properties.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
 #endif
 
     //props.Set(ShaderProperty("HYP_MAX_SHADOW_MAPS", false));

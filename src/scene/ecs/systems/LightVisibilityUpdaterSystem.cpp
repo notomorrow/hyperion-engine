@@ -66,14 +66,14 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
         }
     }
 
-    { // Check if there is a MeshComponent to get the material from
-        MeshComponent *mesh_component = entity_manager.TryGetComponent<MeshComponent>(entity);
+    //{ // Check if there is a MeshComponent to get the material from
+    //    MeshComponent *mesh_component = entity_manager.TryGetComponent<MeshComponent>(entity);
 
-        if (mesh_component) {
-            light->SetMaterialID(mesh_component->material.GetID());
-        }
-        
-    }
+    //    if (mesh_component) {
+    //        light->SetMaterial(mesh_component->material);
+    //    }
+    //    
+    //}
 }
 
 void LightVisibilityUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity)
@@ -94,11 +94,11 @@ void LightVisibilityUpdaterSystem::Process(EntityManager &entity_manager, GameCo
 
         // For area lights, update the material ID if the entity has a MeshComponent.
         if (light_component.light->GetType() == LightType::AREA_RECT) {
-            if (MeshComponent *mesh_component = entity_manager.TryGetComponent<MeshComponent>(entity_id)) {
-                light_component.light->SetMaterialID(mesh_component->material.GetID());
+            /*if (MeshComponent *mesh_component = entity_manager.TryGetComponent<MeshComponent>(entity_id)) {
+                light_component.light->SetMaterial(mesh_component->material);
             } else {
-                light_component.light->SetMaterialID(ID<Material>::invalid);
-            }
+                light_component.light->SetMaterial(Handle<Material>::empty);
+            }*/
         }
 
         const HashCode transform_hash_code = transform_component.transform.GetHashCode();

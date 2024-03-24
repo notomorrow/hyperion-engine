@@ -5,6 +5,7 @@
 #include <core/lib/Bitset.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <rendering/DrawProxy.hpp>
+#include <rendering/Material.hpp>
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
 #include <GameCounter.hpp>
@@ -245,24 +246,24 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
-    /*! \brief Get the material ID for the light. Used for area lights.
+    /*! \brief Get the material  for the light. Used for area lights.
      *
-     * \return The material ID.
+     * \return The material handle associated with the Light.
      */
-    ID<Material> GetMaterialID() const
-        { return m_material_id; }
+    const Handle<Material> &GetMaterial() const
+        { return m_material; }
 
-    /*! \brief Set the material ID for the light. Used for area lights.
+    /*! \brief Sets the material handle associated with the Light. Used for textured area lights.
      *
-     * \param material_id The material ID to set.
+     * \param material The material to set for this Light.
      */
-    void SetMaterialID(ID<Material> material_id)
+    void SetMaterial(Handle<Material> material)
     {
-        if (material_id == m_material_id) {
+        if (material == m_material) {
             return;
         }
 
-        m_material_id = material_id;
+        m_material = std::move(material);
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
@@ -289,16 +290,16 @@ public:
     void Update();
 
 protected:
-    LightType       m_type;
-    Vec3f           m_position;
-    Vec3f           m_normal;
-    Vec2f           m_area_size;
-    Color           m_color;
-    float           m_intensity;
-    float           m_radius;
-    float           m_falloff;
-    uint            m_shadow_map_index;
-    ID<Material>    m_material_id;
+    LightType           m_type;
+    Vec3f               m_position;
+    Vec3f               m_normal;
+    Vec2f               m_area_size;
+    Color               m_color;
+    float               m_intensity;
+    float               m_radius;
+    float               m_falloff;
+    uint                m_shadow_map_index;
+    Handle<Material>    m_material;
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
