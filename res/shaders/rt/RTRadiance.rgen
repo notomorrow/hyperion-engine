@@ -22,7 +22,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) uniform image2D image;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -140,7 +140,7 @@ void main()
         color += hit.payload.color;
     }
 
-    //color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
+    color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
     imageStore(image, storage_coord, color);
 }
