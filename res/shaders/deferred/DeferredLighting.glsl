@@ -321,7 +321,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
     rt_radiance *= float(enabled);
     //rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
 
-    reflections = reflections * (1.0 - rt_radiance.a) + (rt_radiance.rgb * rt_radiance.a);
+    reflections = mix(reflections, rt_radiance.rgb, rt_radiance.a);
 }
 #endif
 #endif

@@ -868,15 +868,7 @@ struct RenderObjectDeleter
                 if (object.GetRefCount() > 1) {
                     continue;
                 }
-
-#ifdef HYP_DEBUG_MODE
-                DebugLog(
-                    LogType::Debug,
-                    "Deleting render object of type %s (Name: %s)\n",
-                    TypeName<T>().Data(),
-                    object.GetName().LookupString()
-                );
-#endif
+                
                 HYPERION_ASSERT_RESULT(object->Destroy(v2::GetEngineDevice()));
             }
         }
