@@ -66,23 +66,23 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 
 HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std430) buffer HitsBuffer
 {
-    vec4 hits[512*512];
+    vec4    hits[512*512];
 };
 
-struct Ray
+struct LightmapRay
 {
-    vec4 origin;
-    vec4 direction;
+    vec4    origin;
+    vec4    direction;
 };
 
 HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std430) readonly buffer RaysBuffer
 {
-    Ray rays[];
+    LightmapRay rays[];
 };
 
 HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
 {
-    RTRadianceUniforms rt_radiance_uniforms;
+    RTRadianceUniforms  rt_radiance_uniforms;
 };
 
 #define RAY_OFFSET 0.05
@@ -102,7 +102,7 @@ struct RayBounceInfo
 void main() 
 {
     const uint ray_index = gl_LaunchIDEXT.x;
-    const Ray ray = rays[ray_index];
+    const LightmapRay ray = rays[ray_index];
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
