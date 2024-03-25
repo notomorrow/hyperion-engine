@@ -41,7 +41,7 @@ public:
 
     using Index = uint32;
 
-    static Pair<Array<Vertex>, Array<Index>> CalculateIndices(const Array<Vertex> &vertices);
+    static Pair<Array<Vertex>, Array<uint32>> CalculateIndices(const Array<Vertex> &vertices);
 
     Mesh();
 
@@ -58,14 +58,14 @@ public:
 
     Mesh(
         Array<Vertex> vertices,
-        Array<Index> indices,
+        Array<uint32> indices,
         Topology topology,
         const VertexAttributeSet &vertex_attributes
     );
 
     Mesh(
         Array<Vertex> vertices,
-        Array<Index> indices,
+        Array<uint32> indices,
         Topology topology = Topology::TRIANGLES
     );
 

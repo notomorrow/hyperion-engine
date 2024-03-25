@@ -612,12 +612,23 @@ void EnvGridPass::Render(Frame *frame)
 // ===== Reflection Probe Pass Begin =====
 
 ReflectionProbePass::ReflectionProbePass()
-    : FullScreenPass(InternalFormat::R10G10B10A2)
+    : FullScreenPass(InternalFormat::R10G10B10A2),
+      m_is_first_frame(true)
 {
 }
 
-ReflectionProbePass::~ReflectionProbePass() = default;
+ReflectionProbePass::~ReflectionProbePass()
+{
+    if (m_render_texture_to_screen_pass) {
+        m_render_texture_to_screen_pass->Destroy();
+        m_render_texture_to_screen_pass.Reset();
+    }
 
+    if (m_temporal_blending) {
+        m_temporal_blending->Destroy();
+        m_temporal_blending.Reset();
+    }
+}
 
 void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
 {
@@ -660,6 +671,8 @@ void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderabl
 
         m_render_groups[it.first] = std::move(render_group);
     }
+
+    m_render_group = m_render_groups[ApplyReflectionProbeMode::DEFAULT];
 }
 
 void ReflectionProbePass::CreateCommandBuffers()
@@ -695,6 +708,52 @@ void ReflectionProbePass::Create()
     );
 
     CreatePipeline(renderable_attributes);
+
+    m_previous_texture = CreateObject<Texture>(Texture2D(
+        m_extent,
+        m_image_format,
+        nullptr
+    ));
+
+    InitObject(m_previous_texture);
+
+    // Create temporal blending pass
+    m_temporal_blending.Reset(new TemporalBlending(
+        m_framebuffer->GetExtent(),
+        InternalFormat::RGBA16F,
+        TemporalBlendTechnique::TECHNIQUE_1,
+        TemporalBlendFeedback::LOW,
+        m_framebuffer
+    ));
+
+    m_temporal_blending->Create();
+    
+    // Create render texture to screen pass.
+    // this is used to render the previous frame's result to the screen,
+    // so we can blend it with the current frame's result (checkerboarded)
+    Handle<Shader> render_texture_to_screen_shader = g_shader_manager->GetOrCreate(HYP_NAME(RenderTextureToScreen));
+    AssertThrow(InitObject(render_texture_to_screen_shader));
+
+    const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader().GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(HYP_NAME(InTexture), m_previous_texture->GetImageView());//m_temporal_blending->GetImageOutput((frame_index + (max_frames_in_flight - 1)) % max_frames_in_flight).image_view);//m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+    m_render_texture_to_screen_pass.Reset(new FullScreenPass(
+        render_texture_to_screen_shader,
+        std::move(descriptor_table),
+        m_image_format,
+        m_extent
+    ));
+
+    m_render_texture_to_screen_pass->Create();
 }
 
 void ReflectionProbePass::Record(uint frame_index)
@@ -733,11 +792,51 @@ void ReflectionProbePass::Render(Frame *frame)
             pass_ptrs[uint(mode)].second.PushBack(env_probe_id);
         }
     }
+    
+    const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
+    const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
     const uint frame_index = frame->GetFrameIndex();
     
     GetFramebuffer()->BeginCapture(frame_index, frame->GetCommandBuffer());
 
+    // render previous frame's result to screen
+    if (!m_is_first_frame) {
+        m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
+            g_engine->GetGPUInstance()->GetDevice(),
+            m_render_group->GetPipeline()->GetConstructionInfo().render_pass,
+            [this, frame_index, scene_index, camera_index](CommandBuffer *cmd)
+            {
+                // render previous frame's result to screen
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable().Get()->Bind<GraphicsPipelineRef>(
+                    cmd,
+                    frame_index,
+                    m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
+                    {
+                        {
+                            HYP_NAME(Scene),
+                            {
+                                { HYP_NAME(ScenesBuffer), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
+                                { HYP_NAME(CamerasBuffer), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
+                                { HYP_NAME(LightsBuffer), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
+                                { HYP_NAME(EnvGridsBuffer), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
+                                { HYP_NAME(CurrentEnvProbe), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                            }
+                        }
+                    }
+                );
+
+                m_full_screen_quad->Render(cmd);
+
+                HYPERION_RETURN_OK;
+            });
+
+        HYPERION_ASSERT_RESULT(m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
+    } else {
+        m_is_first_frame = false;
+    }
+    
     uint num_rendered_env_probes = 0;
 
     for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
@@ -756,13 +855,10 @@ void ReflectionProbePass::Render(Frame *frame)
         const Result record_result = command_buffer->Record(
             g_engine->GetGPUInstance()->GetDevice(),
             render_group->GetPipeline()->GetConstructionInfo().render_pass,
-            [this, frame_index, &render_group, &env_probes, &num_rendered_env_probes](CommandBuffer *cmd)
+            [this, frame_index, scene_index, camera_index, &render_group, &env_probes, &num_rendered_env_probes](CommandBuffer *cmd)
             {
                 render_group->GetPipeline()->push_constants = m_push_constant_data;
                 render_group->GetPipeline()->Bind(cmd);
-
-                const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-                const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
                 const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Global));
                 const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(Scene));
@@ -816,7 +912,25 @@ void ReflectionProbePass::Render(Frame *frame)
 
     GetFramebuffer()->EndCapture(frame_index, frame->GetCommandBuffer());
 
-    DebugLog(LogType::Debug, "Render %u EnvProbes\n", num_rendered_env_probes);
+    { // Blit the result to the previous texture
+        const ImageRef &copy_src_image = GetFramebuffer()->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
+
+        copy_src_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_SRC);
+        m_previous_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_DST);
+
+        m_previous_texture->GetImage()->Blit(
+            frame->GetCommandBuffer(),
+            copy_src_image
+        );
+
+        m_previous_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+        copy_src_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    }
+    
+    // Perform temporal blending on the images
+    if (m_temporal_blending) {
+        m_temporal_blending->Render(frame);
+    }
 }
 
 // ===== Reflection Probe Pass End =====
@@ -927,7 +1041,7 @@ void DeferredRenderer::CreateDescriptorSets()
             ->SetElement(HYP_NAME(EnvGridRadianceResultTexture), m_env_grid_radiance_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
-            ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetAttachmentUsage(0)->GetImageView());
+            ->SetElement(HYP_NAME(ReflectionProbeResultTexture), m_reflection_probe_pass.GetTemporalBlending()->GetImageOutput(frame_index).image_view);
 
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
             ->SetElement(HYP_NAME(DeferredIndirectResultTexture), m_indirect_pass.GetAttachmentUsage(0)->GetImageView());
@@ -994,9 +1108,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
     CommandBuffer *primary = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
-
-    const auto &scene_binding = g_engine->render_state.GetScene();
-    const uint scene_index = scene_binding.id.ToIndex();
+    
+    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
 
     const bool do_particles = environment && environment->IsReady();
     const bool do_gaussian_splatting = false;//environment && environment->IsReady();
@@ -1016,7 +1129,12 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         ApplyCameraJitter();
     }
 
-    struct alignas(128) { uint32 flags; } deferred_data;
+    struct alignas(128)
+    {
+        uint32 flags;
+        uint32 screen_width;
+        uint32 screen_height;
+    } deferred_data;
 
     Memory::MemSet(&deferred_data, 0, sizeof(deferred_data));
 
@@ -1025,6 +1143,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
     deferred_data.flags |= use_rt_radiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
     deferred_data.flags |= use_ddgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
+
+    deferred_data.screen_width = g_engine->GetGPUInstance()->GetSwapchain()->extent.width;
+    deferred_data.screen_height = g_engine->GetGPUInstance()->GetSwapchain()->extent.height;
 
     CollectDrawCalls(frame);
 

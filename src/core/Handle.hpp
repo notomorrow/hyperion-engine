@@ -272,42 +272,55 @@ struct WeakHandle
         }
     }
 
+    HYP_FORCE_INLINE
     Handle<T> Lock() const
         { return Handle<T>(IDType { index }); }
-
+    
+    HYP_FORCE_INLINE
     bool operator!() const
         { return !IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return !IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return IsValid(); }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const WeakHandle &other) const
         { return index == other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const WeakHandle &other) const
         { return index == other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool operator<(const WeakHandle &other) const
         { return index < other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool operator==(const Handle<T> &other) const
         { return index == other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool operator!=(const Handle<T> &other) const
         { return index == other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool operator<(const Handle<T> &other) const
         { return index < other.index; }
-
+    
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return index != 0; }
-
+    
+    HYP_FORCE_INLINE
     IDType GetID() const
         { return { uint(index) }; }
 

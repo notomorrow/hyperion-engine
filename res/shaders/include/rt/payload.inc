@@ -1,6 +1,6 @@
 struct RayPayload
 {
-	vec3 color;
+	vec4 color;
 	float distance;
 	vec3 normal;
 	float roughness;

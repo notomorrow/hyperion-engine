@@ -203,12 +203,17 @@ void main()
 
     const float ambient = 0.025;
 
-    vec3 indirect_lighting = material_color.rgb * (1.0 - metalness) * vec3(ambient);
+    vec4 indirect_lighting = material_color * (1.0 - metalness) * vec4(ambient);
 
-    vec3 direct_lighting = vec3(0.0);
+    vec4 direct_lighting = vec4(0.0);
 
     for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
+
+        // Only support point and directional lights for RT reflections.
+        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL && light.type != HYP_LIGHT_TYPE_POINT) {
+            continue;
+        }
 
         const vec3 L = CalculateLightDirection(light, position);
         const float NdotL = max(dot(normal, L), 0.00001);
@@ -217,15 +222,13 @@ void main()
             ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
             : 1.0;
 
-        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(light.color_encoded).rgb;
-
-        local_light *= light.position_intensity.w * attenuation;
+        vec4 local_light = vec4(NdotL) * UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * attenuation;
 
         if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
             local_light *= GetShadowStandard(light.shadow_map_index, position.xyz);
         }
 
-        direct_lighting += material_color.rgb * HYP_FMATH_ONE_OVER_PI * local_light;
+        direct_lighting += material_color * HYP_FMATH_ONE_OVER_PI * local_light;
     }
     
     payload.color = indirect_lighting + direct_lighting;

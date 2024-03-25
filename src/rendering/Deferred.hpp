@@ -64,58 +64,21 @@ public:
     virtual void Render(Frame *frame) override;
 
 private:
-    const bool                                                              m_is_indirect_pass;
+    const bool                                              m_is_indirect_pass;
 
-    FixedArray<Handle<Shader>, uint(LightType::MAX)>                        m_direct_light_shaders;
-    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>                   m_direct_light_render_groups;
+    FixedArray<Handle<Shader>, uint(LightType::MAX)>        m_direct_light_shaders;
+    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>   m_direct_light_render_groups;
 
-    Handle<Texture>                                                         m_ltc_matrix_texture;
-    Handle<Texture>                                                         m_ltc_brdf_texture;
-    SamplerRef                                                              m_ltc_sampler;
+    Handle<Texture>                                         m_ltc_matrix_texture;
+    Handle<Texture>                                         m_ltc_brdf_texture;
+    SamplerRef                                              m_ltc_sampler;
 };
-
-//enum LightmapPassMode
-//{
-//    LIGHTMAP_PASS_MODE_RADIANCE,
-//    LIGHTMAP_PASS_MODE_IRRADIANCE
-//};
-//
-//class LightmapPass : public FullScreenPass
-//{
-//public:
-//    LightmapPass(LightmapPassMode mode);
-//    LightmapPass(const LightmapPass &other)             = delete;
-//    LightmapPass &operator=(const LightmapPass &other)  = delete;
-//    virtual ~LightmapPass() override;
-//
-//    void CreateShader();
-//    virtual void Create() override;
-//    virtual void Record(uint frame_index) override;
-//    virtual void Render(Frame *frame) override;
-//
-//private:
-//    const LightmapPassMode  m_mode;
-//};
 
 enum EnvGridPassMode
 {
     ENV_GRID_PASS_MODE_RADIANCE,
     ENV_GRID_PASS_MODE_IRRADIANCE
 };
-
-// class RenderTextureToScreenPass : public FullScreenPass
-// {
-// public:
-//     RenderTextureToScreenPass(Extent2D extent);
-//     RenderTextureToScreenPass(const RenderTextureToScreenPass &other)               = delete;
-//     RenderTextureToScreenPass &operator=(const RenderTextureToScreenPass &other)    = delete;
-//     virtual ~RenderTextureToScreenPass() override;
-
-//     void CreateShader();
-//     virtual void Create() override;
-//     virtual void Record(uint frame_index) override;
-//     virtual void Render(Frame *frame) override;
-// };
 
 class EnvGridPass : public FullScreenPass
 {
@@ -136,7 +99,6 @@ public:
 private:
     const EnvGridPassMode       m_mode;
     UniquePtr<TemporalBlending> m_temporal_blending;
-
     UniquePtr<FullScreenPass>   m_render_texture_to_screen_pass;
     bool                        m_is_first_frame;
 };
@@ -156,6 +118,9 @@ public:
     ReflectionProbePass(const ReflectionProbePass &other)               = delete;
     ReflectionProbePass &operator=(const ReflectionProbePass &other)    = delete;
     virtual ~ReflectionProbePass() override;
+
+    TemporalBlending *GetTemporalBlending() const
+        { return m_temporal_blending.Get(); }
     
     virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
     virtual void CreateCommandBuffers() override;
@@ -166,6 +131,10 @@ public:
 private:
     FixedArray<Handle<RenderGroup>, ApplyReflectionProbeMode::MAX>                                  m_render_groups;
     FixedArray<FixedArray<CommandBufferRef, max_frames_in_flight>, ApplyReflectionProbeMode::MAX>   m_command_buffers;
+    UniquePtr<TemporalBlending>                                                                     m_temporal_blending;
+    Handle<Texture>                                                                                 m_previous_texture;
+    UniquePtr<FullScreenPass>                                                                       m_render_texture_to_screen_pass;
+    bool                                                                                            m_is_first_frame;
 };
 
 class DeferredRenderer

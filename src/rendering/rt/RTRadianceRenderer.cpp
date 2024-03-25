@@ -219,7 +219,7 @@ void RTRadianceRenderer::CreateImages()
 {
     m_texture = CreateObject<Texture>(Texture2D(
         m_extent,
-        InternalFormat::RGBA8,
+        InternalFormat::RGBA16F,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
         nullptr
@@ -323,7 +323,7 @@ void RTRadianceRenderer::CreateTemporalBlending()
 {
     m_temporal_blending.Reset(new TemporalBlending(
         m_extent,
-        InternalFormat::RGBA8,
+        InternalFormat::RGBA16F,
         IsPathTracer()
             ? TemporalBlendTechnique::TECHNIQUE_4 // progressive blending
             : TemporalBlendTechnique::TECHNIQUE_1,

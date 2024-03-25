@@ -16,14 +16,14 @@ using renderer::GPUBufferType;
 
 struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
 {
-    Array<float>        vertex_data;
-    Array<Mesh::Index>  index_data;
-    GPUBufferRef        vbo;
-    GPUBufferRef        ibo;
+    Array<float>    vertex_data;
+    Array<uint32>   index_data;
+    GPUBufferRef    vbo;
+    GPUBufferRef    ibo;
 
     RENDER_COMMAND(UploadMeshData)(
         Array<float> vertex_data,
-        Array<Mesh::Index> index_data,
+        Array<uint32> index_data,
         GPUBufferRef vbo,
         GPUBufferRef ibo
     ) : vertex_data(std::move(vertex_data)),
@@ -52,7 +52,7 @@ struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
         auto *device = g_engine->GetGPUDevice();
 
         const SizeType packed_buffer_size = vertex_data.Size() * sizeof(float);
-        const SizeType packed_indices_size = index_data.Size() * sizeof(Mesh::Index);
+        const SizeType packed_indices_size = index_data.Size() * sizeof(uint32);
 
         HYPERION_BUBBLE_ERRORS(vbo->Create(device, packed_buffer_size));
         HYPERION_BUBBLE_ERRORS(ibo->Create(device, packed_indices_size));
@@ -117,12 +117,12 @@ struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
 
 #pragma endregion
 
-Pair<Array<Vertex>, Array<Mesh::Index>>
+Pair<Array<Vertex>, Array<uint32>>
 Mesh::CalculateIndices(const Array<Vertex> &vertices)
 {
-    std::unordered_map<Vertex, Index> index_map;
+    std::unordered_map<Vertex, uint32> index_map;
 
-    Array<Index> indices;
+    Array<uint32> indices;
     indices.Reserve(vertices.Size());
 
     /* This will be our resulting buffer with only the vertices we need. */
@@ -140,7 +140,7 @@ Mesh::CalculateIndices(const Array<Vertex> &vertices)
             continue;
         }
 
-        const auto mesh_index = static_cast<Index>(new_vertices.Size());
+        const uint32 mesh_index = uint32(new_vertices.Size());
 
         /* The vertex is unique, so we push it. */
         new_vertices.PushBack(vertex);
@@ -194,7 +194,7 @@ Mesh::Mesh(
 
 Mesh::Mesh(
     Array<Vertex> vertices,
-    Array<Index> indices,
+    Array<uint32> indices,
     Topology topology
 ) : Mesh(
         std::move(vertices),
@@ -207,7 +207,7 @@ Mesh::Mesh(
 
 Mesh::Mesh(
     Array<Vertex> vertices,
-    Array<Index> indices,
+    Array<uint32> indices,
     Topology topology,
     const VertexAttributeSet &vertex_attributes
 ) : BasicObject(),
@@ -322,7 +322,7 @@ void Mesh::SetVertices(Array<Vertex> vertices)
     SetVertices(std::move(vertices), std::move(indices));
 }
 
-void Mesh::SetVertices(Array<Vertex> vertices, Array<Index> indices)
+void Mesh::SetVertices(Array<Vertex> vertices, Array<uint32> indices)
 {
     SetStreamedMeshData(StreamedMeshData::FromMeshData({
        std::move(vertices),
@@ -358,7 +358,7 @@ void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
             // Create empty buffers
             m_streamed_mesh_data = StreamedMeshData::FromMeshData({
                 Array<Vertex> { },
-                Array<Index> { }
+                Array<uint32> { }
             });
         }
 
@@ -522,21 +522,21 @@ void Mesh::CalculateNormals(bool weighted)
         return;
     }
 
-    std::unordered_map<Index, Array<Vector3>> normals;
+    std::unordered_map<uint32, Array<Vec3f>> normals;
 
     // compute per-face normals (facet normals)
     for (SizeType i = 0; i < mesh_data.indices.Size(); i += 3) {
-        const Index i0 = mesh_data.indices[i];
-        const Index i1 = mesh_data.indices[i + 1];
-        const Index i2 = mesh_data.indices[i + 2];
+        const uint32 i0 = mesh_data.indices[i];
+        const uint32 i1 = mesh_data.indices[i + 1];
+        const uint32 i2 = mesh_data.indices[i + 2];
 
-        const Vector3 &p0 = mesh_data.vertices[i0].GetPosition();
-        const Vector3 &p1 = mesh_data.vertices[i1].GetPosition();
-        const Vector3 &p2 = mesh_data.vertices[i2].GetPosition();
+        const Vec3f &p0 = mesh_data.vertices[i0].GetPosition();
+        const Vec3f &p1 = mesh_data.vertices[i1].GetPosition();
+        const Vec3f &p2 = mesh_data.vertices[i2].GetPosition();
 
-        const Vector3 u = p2 - p0;
-        const Vector3 v = p1 - p0;
-        const Vector3 n = v.Cross(u).Normalize();
+        const Vec3f u = p2 - p0;
+        const Vec3f v = p1 - p0;
+        const Vec3f n = v.Cross(u).Normalize();
 
         normals[i0].PushBack(n);
         normals[i1].PushBack(n);
@@ -562,21 +562,21 @@ void Mesh::CalculateNormals(bool weighted)
     // weighted (smooth) normals
 
     for (SizeType i = 0; i < mesh_data.indices.Size(); i += 3) {
-        const Index i0 = mesh_data.indices[i];
-        const Index i1 = mesh_data.indices[i + 1];
-        const Index i2 = mesh_data.indices[i + 2];
+        const uint32 i0 = mesh_data.indices[i];
+        const uint32 i1 = mesh_data.indices[i + 1];
+        const uint32 i2 = mesh_data.indices[i + 2];
 
-        const auto &p0 = mesh_data.vertices[i0].GetPosition();
-        const auto &p1 = mesh_data.vertices[i1].GetPosition();
-        const auto &p2 = mesh_data.vertices[i2].GetPosition();
+        const Vec3f &p0 = mesh_data.vertices[i0].GetPosition();
+        const Vec3f &p1 = mesh_data.vertices[i1].GetPosition();
+        const Vec3f &p2 = mesh_data.vertices[i2].GetPosition();
 
-        const auto &n0 = mesh_data.vertices[i0].GetNormal();
-        const auto &n1 = mesh_data.vertices[i1].GetNormal();
-        const auto &n2 = mesh_data.vertices[i2].GetNormal();
+        const Vec3f &n0 = mesh_data.vertices[i0].GetNormal();
+        const Vec3f &n1 = mesh_data.vertices[i1].GetNormal();
+        const Vec3f &n2 = mesh_data.vertices[i2].GetNormal();
 
         // Vector3 n = FixedArray { n0, n1, n2 }.Avg();
 
-        FixedArray weighted_normals { n0, n1, n2 };
+        FixedArray<Vec3f, 3> weighted_normals { n0, n1, n2 };
 
         // nested loop through faces to get weighted neighbours
         // any code that uses this really should bake the normals in
@@ -586,40 +586,40 @@ void Mesh::CalculateNormals(bool weighted)
                 continue;
             }
 
-            const Index j0 = mesh_data.indices[j];
-            const Index j1 = mesh_data.indices[j + 1];
-            const Index j2 = mesh_data.indices[j + 2];
+            const uint32 j0 = mesh_data.indices[j];
+            const uint32 j1 = mesh_data.indices[j + 1];
+            const uint32 j2 = mesh_data.indices[j + 2];
 
-            const FixedArray face_positions {
+            const FixedArray<Vec3f, 3> face_positions {
                 mesh_data.vertices[j0].GetPosition(),
                 mesh_data.vertices[j1].GetPosition(),
                 mesh_data.vertices[j2].GetPosition()
             };
 
-            const FixedArray face_normals {
+            const FixedArray<Vec3f, 3> face_normals {
                 mesh_data.vertices[j0].GetNormal(),
                 mesh_data.vertices[j1].GetNormal(),
                 mesh_data.vertices[j2].GetNormal()
             };
 
-            const auto a = p1 - p0;
-            const auto b = p2 - p0;
-            const auto c = a.Cross(b);
+            const Vec3f a = p1 - p0;
+            const Vec3f b = p2 - p0;
+            const Vec3f c = a.Cross(b);
 
-            const auto area = 0.5f * MathUtil::Sqrt(c.Dot(c));
+            const float area = 0.5f * MathUtil::Sqrt(c.Dot(c));
 
             if (face_positions.Contains(p0)) {
-                const auto angle = (p0 - p1).AngleBetween(p0 - p2);
+                const float angle = (p0 - p1).AngleBetween(p0 - p2);
                 weighted_normals[0] += face_normals.Avg() * area * angle;
             }
 
             if (face_positions.Contains(p1)) {
-                const auto angle = (p1 - p0).AngleBetween(p1 - p2);
+                const float angle = (p1 - p0).AngleBetween(p1 - p2);
                 weighted_normals[1] += face_normals.Avg() * area * angle;
             }
 
             if (face_positions.Contains(p2)) {
-                const auto angle = (p2 - p0).AngleBetween(p2 - p1);
+                const float angle = (p2 - p0).AngleBetween(p2 - p1);
                 weighted_normals[2] += face_normals.Avg() * area * angle;
             }
 
@@ -662,8 +662,8 @@ void Mesh::CalculateTangents()
 
     struct TangentBitangentPair
     {
-        Vector3 tangent;
-        Vector3 bitangent;
+        Vec3f tangent;
+        Vec3f bitangent;
     };
 
     std::unordered_map<uint32, Array<TangentBitangentPair>> data;
@@ -672,7 +672,7 @@ void Mesh::CalculateTangents()
         const SizeType count = MathUtil::Min(3, mesh_data.indices.Size() - i);
 
         Vertex v[3];
-        Vector2 uv[3];
+        Vec2f uv[3];
 
         for (uint32 j = 0; j < count; j++) {
             v[j] = mesh_data.vertices[mesh_data.indices[i + j]];
