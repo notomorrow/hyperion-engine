@@ -244,9 +244,9 @@ Array<Vertex> TerrainMeshBuilder::BuildVertices() const
     return vertices;
 }
 
-Array<Mesh::Index> TerrainMeshBuilder::BuildIndices() const
+Array<uint32> TerrainMeshBuilder::BuildIndices() const
 {
-    Array<Mesh::Index> indices;
+    Array<uint32> indices;
     indices.Resize(6 * (m_height_data.patch_info.extent.width - 1) * (m_height_data.patch_info.extent.depth - 1));
 
     uint pitch = m_height_data.patch_info.extent.width;

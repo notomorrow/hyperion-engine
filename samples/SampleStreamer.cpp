@@ -373,10 +373,10 @@ void SampleStreamer::InitGame()
         terrain_node.SetName("TerrainNode");
     }
 
-    if (false) { // add sun
+    if (true) { // add sun
         auto sun = CreateObject<Light>(DirectionalLight(
             Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
-            Color(1.0f, 0.7f, 0.4f),
+            Color(1.0f),
             1.0f
         ));
 
@@ -624,7 +624,7 @@ void SampleStreamer::InitGame()
 
             GetScene()->GetRoot().AddChild(node);
 
-#if 1
+#if 0
             // Add a reflection probe
             // TEMP: Commented out due to blending issues with multiple reflection probes
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(

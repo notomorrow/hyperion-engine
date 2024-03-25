@@ -127,11 +127,11 @@ void main()
 
 #ifdef REFLECTION_PROBE_ENABLED
         vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_NEAREST, reflection_probes_texture, texcoord);
-        ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb);
+        ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb * reflection_probes_color.a);
 #endif
 
         vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
-        ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb);
+        ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
         
         irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
@@ -185,5 +185,5 @@ void main()
         result = albedo.rgb;
     }
 
-    output_color = vec4(0.0);//vec4(result, 1.0);
+    output_color = vec4(result, 1.0);
 }

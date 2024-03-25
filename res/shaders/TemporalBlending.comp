@@ -202,8 +202,8 @@ void main(void)
 #elif TEMPORAL_BLEND_TECHNIQUE == 4
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv);
 
-    color.a = 1.0;
-    previous_color.a = 1.0;
+    //color.a = 1.0;
+    //previous_color.a = 1.0;
 
     color = ADJUST_COLOR_IN(color);
     previous_color = ADJUST_COLOR_IN(previous_color);

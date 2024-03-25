@@ -59,6 +59,16 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
+    // Skip every other pixel for radiance
+    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
+    uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution - 1) + 0.5);
+
+    if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
+    {
+        color_output = vec4(0.0);
+        return;
+    }
+
     vec3 irradiance = vec3(0.0);
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
@@ -75,8 +85,6 @@ void main()
     vec4 ibl = vec4(0.0);
 
     const uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
-    
-    uvec2 pixel_coord = uvec2(v_texcoord * vec2(camera.dimensions.xy) - 0.5);
 
     vec3 tangent;
     vec3 bitangent;

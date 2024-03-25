@@ -109,7 +109,7 @@ public:
     EntitySet &operator=(const EntitySet &other)        = delete;
     EntitySet(EntitySet &&other) noexcept               = delete;
     EntitySet &operator=(EntitySet &&other) noexcept    = delete;
-    ~EntitySet()                                        = default;
+    virtual ~EntitySet() override                       = default;
 
     /*! \brief Gets the elements array of this set.
      *  The elements array contains the entities in this set and the corresponding component IDs.

@@ -128,6 +128,21 @@ public:
     )
     {
     }
+
+    Texture2D(
+        Extent2D extent,
+        InternalFormat format,
+        UniquePtr<StreamedData> &&streamed_data
+    ) : Texture(
+        Extent3D(extent),
+        format,
+        ImageType::TEXTURE_TYPE_2D,
+        FilterMode::TEXTURE_FILTER_LINEAR,
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        std::move(streamed_data)
+    )
+    {
+    }
 };
 
 class Texture3D : public Texture
@@ -145,6 +160,21 @@ public:
         ImageType::TEXTURE_TYPE_3D,
         filter_mode,
         wrap_mode,
+        std::move(streamed_data)
+    )
+    {
+    }
+
+    Texture3D(
+        Extent3D extent,
+        InternalFormat format,
+        UniquePtr<StreamedData> &&streamed_data
+    ) : Texture(
+        extent,
+        format,
+        ImageType::TEXTURE_TYPE_3D,
+        FilterMode::TEXTURE_FILTER_LINEAR,
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
         std::move(streamed_data)
     )
     {
@@ -170,6 +200,20 @@ public:
         )
     {
         m_image->SetNumLayers(num_layers);
+    }
+
+    TextureArray(
+        Extent2D extent,
+        InternalFormat format,
+        uint num_layers
+    ) : TextureArray(
+            extent,
+            format,
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            num_layers
+        )
+    {
     }
 
     uint NumLayers() const
@@ -211,7 +255,22 @@ public:
     {
     }
 
-    TextureCube(std::unique_ptr<Texture> &&other) noexcept
+    TextureCube(
+        Extent2D extent,
+        InternalFormat format,
+        UniquePtr<StreamedData> &&streamed_data
+    ) : Texture(
+            Extent3D(extent),
+            format,
+            ImageType::TEXTURE_TYPE_CUBEMAP,
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            std::move(streamed_data)
+        )
+    {
+    }
+
+    TextureCube(UniquePtr<Texture> &&other) noexcept
         : Texture(
               other
                 ? (other->IsTextureCube()
@@ -231,12 +290,11 @@ public:
             m_image->CopyImageData(other->GetImage()->GetStreamedData()->Load());
         }
 
-        other.reset();
+        other.Reset();
     }
 
-    TextureCube(
-        FixedArray<Handle<Texture>, 6> &&texture_faces
-    ) : Texture(
+    TextureCube(FixedArray<Handle<Texture>, 6> &&texture_faces)
+        : Texture(
             texture_faces[0] ? texture_faces[0]->GetExtent() : Extent3D { },
             texture_faces[0] ? texture_faces[0]->GetFormat() : InternalFormat::RGBA8,
             ImageType::TEXTURE_TYPE_CUBEMAP,

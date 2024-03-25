@@ -18,6 +18,8 @@
 struct DeferredParams
 {
     uint flags;
+    uint screen_width;
+    uint screen_height;
 };
 
 struct Refraction
@@ -316,8 +318,10 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_RT_RADIANCE_ENABLED);
 
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
-    rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
-    reflections = mix(reflections, rt_radiance.rgb, min(rt_radiance.a * float(enabled), 1.0));
+    rt_radiance *= float(enabled);
+    //rt_radiance.rgb = pow(rt_radiance.rgb, vec3(2.2));
+
+    reflections = reflections * (1.0 - rt_radiance.a) + (rt_radiance.rgb * rt_radiance.a);
 }
 #endif
 #endif

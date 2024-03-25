@@ -20,32 +20,40 @@ struct IDBase
 {
     using ValueType = uint;
 
-    HYP_FORCE_INLINE constexpr bool IsValid() const
+    HYP_FORCE_INLINE
+    constexpr bool IsValid() const
         { return bool(value); }
     
-    HYP_FORCE_INLINE explicit constexpr operator ValueType() const
+    HYP_FORCE_INLINE
+    explicit constexpr operator ValueType() const
         { return value; }
     
-    HYP_FORCE_INLINE constexpr ValueType Value() const
+    HYP_FORCE_INLINE
+    constexpr ValueType Value() const
         { return value; }
     
-    HYP_FORCE_INLINE explicit constexpr operator bool() const
+    HYP_FORCE_INLINE
+    explicit constexpr operator bool() const
         { return bool(value); }
 
-    HYP_FORCE_INLINE constexpr bool operator==(const IDBase &other) const
+    HYP_FORCE_INLINE
+    constexpr bool operator==(const IDBase &other) const
         { return value == other.value; }
 
-    HYP_FORCE_INLINE constexpr bool operator!=(const IDBase &other) const
+    HYP_FORCE_INLINE
+    constexpr bool operator!=(const IDBase &other) const
         { return value != other.value; }
 
-    HYP_FORCE_INLINE constexpr bool operator<(const IDBase &other) const
+    HYP_FORCE_INLINE
+    constexpr bool operator<(const IDBase &other) const
         { return value < other.value; }
 
     /*! \brief If the value is non-zero, returns the ID minus one,
         to be used as a storage index. If the value is zero (invalid state),
         zero is returned. Ideally a validation check would be performed before you use this,
         unless you are totally sure that 0 is a valid index. */
-    HYP_FORCE_INLINE uint ToIndex(uint invalid_value = 0) const
+    HYP_FORCE_INLINE
+    uint ToIndex(uint invalid_value = 0) const
         { return value ? value - 1 : invalid_value; }
 
     ValueType value { 0 };
@@ -78,18 +86,22 @@ struct EncodedID
     EncodedID(EncodedID &&other) noexcept = default;
     EncodedID &operator=(EncodedID &&other) noexcept = default;
 
-    HYP_FORCE_INLINE bool IsValid() const
+    HYP_FORCE_INLINE
+    bool IsValid() const
         { return type_id != TypeID::ForType<void>() && value != 0; }
 
-    HYP_FORCE_INLINE explicit operator bool() const
+    HYP_FORCE_INLINE
+    explicit operator bool() const
         { return IsValid(); }
 
     template <class T>
-    HYP_FORCE_INLINE bool operator==(const ID<T> &other) const
+    HYP_FORCE_INLINE
+    bool operator==(const ID<T> &other) const
         { return type_id == TypeID::ForType<NormalizedType<T>>() && value == other.value; }
 
     template <class T>
-    HYP_FORCE_INLINE bool operator!=(const ID<T> &other) const
+    HYP_FORCE_INLINE
+    bool operator!=(const ID<T> &other) const
         { return type_id != TypeID::ForType<NormalizedType<T>>() || value != other.value; }
 
     ~EncodedID() = default;
@@ -139,22 +151,28 @@ struct ID : IDBase
     ID &operator=(const IDBase &other) = delete; // delete so we cannot assign a type's ID to a different type
     ID &operator=(const ID &other) = default;
 
-    HYP_FORCE_INLINE explicit operator bool() const
+    HYP_FORCE_INLINE
+    explicit operator bool() const
         { return IDBase::operator bool(); }
 
-    HYP_FORCE_INLINE bool operator==(const ID &other) const
+    HYP_FORCE_INLINE
+    bool operator==(const ID &other) const
         { return IDBase::operator==(other); }
 
-    HYP_FORCE_INLINE bool operator==(const EncodedID &other) const
+    HYP_FORCE_INLINE
+    bool operator==(const EncodedID &other) const
         { return other.type_id == GetTypeID() && other.value == value; }
 
-    HYP_FORCE_INLINE bool operator!=(const ID &other) const
+    HYP_FORCE_INLINE
+    bool operator!=(const ID &other) const
         { return IDBase::operator!=(other); }
 
-    HYP_FORCE_INLINE bool operator!=(const EncodedID &other) const
+    HYP_FORCE_INLINE
+    bool operator!=(const EncodedID &other) const
         { return other.type_id != GetTypeID() || other.value != value; }
 
-    HYP_FORCE_INLINE bool operator<(const ID &other) const
+    HYP_FORCE_INLINE
+    bool operator<(const ID &other) const
         { return IDBase::operator<(other); }
 
     TypeID GetTypeID() const
