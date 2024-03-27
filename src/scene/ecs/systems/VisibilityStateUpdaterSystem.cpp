@@ -11,13 +11,9 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, 
 {
     SystemBase::OnEntityAdded(entity_manager, entity);
 
-    DebugLog(
-        LogType::Debug,
-        "VisibilityStateUpdaterSystem::OnEntityAdded(%u)\n",
-        entity.Value()
-    );
-
     VisibilityStateComponent &visibility_state_component = entity_manager.GetComponent<VisibilityStateComponent>(entity);
+
+    DebugLog(LogType:: Debug, "VisibilityStateUpdaterSystem::OnEntityAdded(%u)\n", entity.Value());
 
     if (visibility_state_component.octant_id != OctantID::invalid) {
         return;
@@ -83,14 +79,6 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
 
         const bool visibility_state_invalidated = visibility_state_component.flags & VISIBILITY_STATE_FLAG_INVALIDATED;
 
-        if (visibility_state_invalidated) {
-            DebugLog(
-                LogType::Debug,
-                "VisibilityStateUpdaterSystem::Process(%u): visibility state invalidated\n",
-                entity_id.Value()
-            );
-        }
-
         const HashCode aabb_hash_code = bounding_box_component.world_aabb.GetHashCode();
 
         needs_octree_update |= (aabb_hash_code != visibility_state_component.last_aabb_hash);
@@ -98,15 +86,41 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
 
         visibility_state_component.flags &= ~VISIBILITY_STATE_FLAG_INVALIDATED;
 
+        if (visibility_state_component.octant_id == OctantID::invalid) {
+            // entity was not in the octree, try to insert it
+            if (!bounding_box_component.world_aabb.IsValid()) {
+                DebugLog(LogType::Warn, "Entity %u has invalid bounding box, skipping octree insertion\n", entity_id.Value());
+
+                continue;
+            }
+
+            const Octree::InsertResult insert_result = octree.Insert(entity_id, bounding_box_component.world_aabb);
+
+            if (insert_result.first) {
+                AssertThrowMsg(insert_result.second != OctantID::invalid, "Invalid octant ID returned from Insert()");
+
+                visibility_state_component.octant_id = insert_result.second;
+                visibility_state_component.last_aabb_hash = aabb_hash_code;
+
+                if (Octree *octant = octree.GetChildOctant(visibility_state_component.octant_id)) {
+                    visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
+                }
+
+                DebugLog(LogType::Debug, "Inserted entity %u into octree, inserted at %u, %u\n", entity_id.Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
+            }
+
+            continue;
+        }
+
         if (needs_octree_update) {
             // force entry invalidation if the bounding box is not finite,
             // so directional lights changing cause the octree to be updated
             const bool force_entry_invalidation = visibility_state_invalidated;
 
-            auto update_result = octree.Update(entity_id, bounding_box_component.world_aabb, force_entry_invalidation);
+            const Octree::InsertResult update_result = octree.Update(entity_id, bounding_box_component.world_aabb, force_entry_invalidation);
 
             if (!update_result.first) {
-                // DebugLog(LogType::Warn, "Failed to update entity %u in octree: %s\n", entity_id.Value(), update_result.first.message);
+                DebugLog(LogType::Warn, "Failed to update entity %u in octree: %s\n", entity_id.Value(), update_result.first.message);
 
                 continue;
             }

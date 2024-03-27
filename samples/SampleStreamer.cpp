@@ -340,7 +340,7 @@ void SampleStreamer::InitGame()
 
     // m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture), window_size);
 
-    if (false) {
+    if (true) {
         auto terrain_node = m_scene->GetRoot().AddChild();
         auto terrain_entity = m_scene->GetEntityManager()->AddEntity();
 
@@ -395,20 +395,20 @@ void SampleStreamer::InitGame()
         });
 
         m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
-            .filter = SHADOW_MAP_FILTER_PCF,
-            .radius = 20.0f,
+            .mode       = ShadowMode::PCF,
+            .radius     = 18.0f,
             .resolution = { 2048, 2048 }
         });
     }
 
     Array<Handle<Light>> point_lights;
 
-    //point_lights.PushBack(CreateObject<Light>(PointLight(
+    // point_lights.PushBack(CreateObject<Light>(PointLight(
     //    Vector3(-5.0f, 0.5f, 0.0f),
     //    Color(1.0f, 0.0f, 0.0f),
     //    1.0f,
     //    5.0f
-    //)));
+    // )));
     //point_lights.PushBack(CreateObject<Light>(PointLight(
     //    Vector3(5.0f, 2.0f, 0.0f),
     //    Color(0.0f, 1.0f, 0.0f),
@@ -431,6 +431,35 @@ void SampleStreamer::InitGame()
 
         m_scene->GetEntityManager()->AddComponent(point_light_entity, LightComponent {
             light
+        });
+    }
+
+    { // Add test spotlight
+        auto spotlight = CreateObject<Light>(SpotLight(
+            Vec3f(0.0f, 0.1f, 0.0f),
+            Vec3f(-1.0f, 0.0f, 0.0f).Normalize(),
+            Color(0.0f, 1.0f, 0.0f),
+            50.0f,
+            15.0f,
+            Vec2f { MathUtil::Cos(MathUtil::DegToRad(50.0f)), MathUtil::Cos(MathUtil::DegToRad(10.0f)) }
+        ));
+
+        DebugLog(LogType::Debug, "Spot angles: %f, %f\n", spotlight->GetSpotAngles().x, spotlight->GetSpotAngles().y);
+
+        InitObject(spotlight);
+
+        auto spotlight_entity = m_scene->GetEntityManager()->AddEntity();
+
+        m_scene->GetEntityManager()->AddComponent(spotlight_entity, TransformComponent {
+            Transform(
+                spotlight->GetPosition(),
+                Vec3f(1.0f),
+                Quaternion::Identity()
+            )
+        });
+
+        m_scene->GetEntityManager()->AddComponent(spotlight_entity, LightComponent {
+            spotlight
         });
     }
 
@@ -486,7 +515,7 @@ void SampleStreamer::InitGame()
         m_scene->GetEntityManager()->AddComponent(skybox_entity, TransformComponent {
             Transform(
                 Vec3f::zero,
-                Vec3f(10.0f),
+                Vec3f(1000.0f),
                 Quaternion::Identity()
             )
         });
@@ -497,24 +526,24 @@ void SampleStreamer::InitGame()
             VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE
         });
         m_scene->GetEntityManager()->AddComponent(skybox_entity, BoundingBoxComponent {
-            BoundingBox(Vec3f(-100.0f), Vec3f(100.0f))
+            BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f))
         });
     }
 
     // add sample model
     {
         auto batch = g_asset_manager->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");//living_room/living_room.obj");//
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica.obj");////living_room/living_room.obj");//
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
         auto results = batch->AwaitResults();
 
-        if (false) {
+        if (true) {
             auto plane_node = m_scene->GetRoot().AddChild();
             plane_node.Rotate(Quaternion(Vec3f(1.0f, 0.0f, 0.0f), -M_PI_2));
-            plane_node.Scale(10.0f);
-            plane_node.Translate(Vec3f(0.0f, 1.0f, 0.0f));
+            plane_node.Scale(1.0f);
+            plane_node.Translate(Vec3f(0.0f, 2.0f, 0.0f));
 
             auto plane_entity = m_scene->GetEntityManager()->AddEntity();
             plane_node.SetEntity(plane_entity);
@@ -528,14 +557,21 @@ void SampleStreamer::InitGame()
                     {
                         .shader_definition = ShaderDefinition {
                             HYP_NAME(Forward),
-                            ShaderProperties(static_mesh_vertex_attributes)
+                            ShaderProperties(static_mesh_vertex_attributes, { { "FORWARD_LIGHTING" } })
                         },
-                        .bucket = Bucket::BUCKET_OPAQUE
+                        .bucket = Bucket::BUCKET_TRANSLUCENT
                     },
                     {
-                        { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f, 1.0f, 1.0f, 1.0f) },
+                        { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f, 0.0f, 0.0f, 1.0f) },
                         { Material::MATERIAL_KEY_METALNESS, 0.0f },
-                        { Material::MATERIAL_KEY_ROUGHNESS, 0.0f }
+                        { Material::MATERIAL_KEY_ROUGHNESS, 0.1f },
+                        { Material::MATERIAL_KEY_TRANSMISSION, 0.9f }
+                    },
+                    {
+                        {
+                            Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
+                            g_asset_manager->Load<Texture>("textures/dummy.jpg")
+                        }
                     }
                 )
             });
@@ -546,16 +582,16 @@ void SampleStreamer::InitGame()
 
             m_scene->GetEntityManager()->AddComponent(plane_entity, VisibilityStateComponent { });
 
-            m_scene->GetEntityManager()->AddComponent(plane_entity, RigidBodyComponent {
-                CreateObject<physics::RigidBody>(
-                    RC<physics::PhysicsShape>(new physics::BoxPhysicsShape(
-                        BoundingBox { Vec3f(-10.0f, -0.1f, -10.0f), Vec3f(10.0f, 0.1f, 10.0f) }
-                    )),
-                    physics::PhysicsMaterial {
-                        .mass = 0.0f // static
-                    }
-                )
-            });
+            // m_scene->GetEntityManager()->AddComponent(plane_entity, RigidBodyComponent {
+            //     CreateObject<physics::RigidBody>(
+            //         RC<physics::PhysicsShape>(new physics::BoxPhysicsShape(
+            //             BoundingBox { Vec3f(-10.0f, -0.1f, -10.0f), Vec3f(10.0f, 0.1f, 10.0f) }
+            //         )),
+            //         physics::PhysicsMaterial {
+            //             .mass = 0.0f // static
+            //         }
+            //     )
+            // });
         }
 
 #if 0
@@ -617,14 +653,14 @@ void SampleStreamer::InitGame()
         
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            node.Scale(3.0f);
-            //node.Scale(0.0125f);
+            // node.Scale(3.0f);
+            node.Scale(0.0125f);
             node.SetName("test_model");
             node.LockTransform();
 
             GetScene()->GetRoot().AddChild(node);
 
-#if 0
+#if 1
             // Add a reflection probe
             // TEMP: Commented out due to blending issues with multiple reflection probes
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
@@ -641,7 +677,7 @@ void SampleStreamer::InitGame()
                 }
             }
 
-            if (false) {
+            if (true) {
                 auto env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
                 m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
@@ -671,6 +707,18 @@ void SampleStreamer::InitGame()
             }
         }
     }
+
+    // auto my_button_entity = GetUI().GetScene()->GetEntityManager()->AddEntity();
+    // GetUI().GetScene()->GetEntityManager()->AddComponent<UIComponent>(my_button_entity, {
+    //     .type = UI_COMPONENT_TYPE_BUTTON,
+    //     .name = HYP_NAME(MyButton),
+    //     .bounds = {
+    //         .position = Vector2(0.0f, 0.0f),
+    //         .size = Vector2(100.0f, 50.0f)
+    //     }
+    // });
+
+    auto btn = GetUI().CreateButton(Vec2f { 0.0f, 0.0f }, Vec2f { 100.0f, 50.0f }, "My Button");
 
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
 

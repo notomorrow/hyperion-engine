@@ -185,6 +185,8 @@ private:
     void CreateDescriptorSets();
 
     void CollectDrawCalls(Frame *frame);
+
+    void RenderSkybox(Frame *frame);
     void RenderOpaqueObjects(Frame *frame);
     void RenderTranslucentObjects(Frame *frame);
 

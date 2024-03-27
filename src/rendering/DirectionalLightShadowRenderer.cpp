@@ -146,17 +146,16 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        ShadowShaderData data { };
-        data.projection = projection_matrix;
-        data.view = view_matrix;
-        data.aabb_max = Vector4(aabb.max, 1.0f);
-        data.aabb_min = Vector4(aabb.min, 1.0f);
-        data.dimensions = dimensions;
-        data.flags = uint32(flags);
-
         g_engine->GetRenderData()->shadow_map_data.Set(
             shadow_map_index,
-            data
+            ShadowShaderData {
+                .projection = projection_matrix,
+                .view       = view_matrix,
+                .aabb_max   = Vec4f(aabb.max, 1.0f),
+                .aabb_min   = Vec4f(aabb.min, 1.0f),
+                .dimensions = dimensions,
+                .flags      = uint32(flags)
+            }
         );
 
         HYPERION_RETURN_OK;
@@ -167,7 +166,7 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
 
 // ShadowPass
 
-ShadowPass::ShadowPass(const Handle<Scene> &parent_scene, ShadowMode shadow_mode, Extent2D extent)
+ShadowPass::ShadowPass(const Handle<Scene> &parent_scene, Extent2D extent, ShadowMode shadow_mode)
     : FullScreenPass(shadow_map_formats[uint(shadow_mode)], extent),
       m_parent_scene(parent_scene),
       m_shadow_mode(shadow_mode),
@@ -531,9 +530,10 @@ void ShadowPass::Render(Frame *frame)
     }
 }
 
-DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Extent2D resolution)
+DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Extent2D resolution, ShadowMode shadow_mode)
     : RenderComponent(name),
-      m_resolution(resolution)
+      m_resolution(resolution),
+      m_shadow_mode(shadow_mode)
 {
 }
 
@@ -550,7 +550,7 @@ void DirectionalLightShadowRenderer::Init()
 {
     AssertThrow(IsValidComponent());
 
-    m_shadow_pass.Reset(new ShadowPass(Handle<Scene>(GetParent()->GetScene()->GetID()), ShadowMode::PCF, m_resolution));
+    m_shadow_pass.Reset(new ShadowPass(Handle<Scene>(GetParent()->GetScene()->GetID()), m_resolution, m_shadow_mode));
 
     m_shadow_pass->SetShadowMapIndex(GetComponentIndex());
     m_shadow_pass->Create();

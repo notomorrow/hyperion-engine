@@ -25,7 +25,7 @@ static const InternalFormat ambient_probe_format = InternalFormat::R10G10B10A2;
 static const Extent3D voxel_grid_dimensions = Extent3D { 256, 256, 256 };
 static const InternalFormat voxel_grid_format = InternalFormat::RGBA8;
 
-static const Extent2D framebuffer_dimensions = Extent2D { 256, 256 };
+static const Extent2D framebuffer_dimensions = Extent2D { 128, 128 };
 static const EnvProbeIndex invalid_probe_index = EnvProbeIndex();
 
 static Extent2D GetProbeDimensions(EnvProbeType env_probe_type)
@@ -327,12 +327,12 @@ void EnvGrid::Init()
             m_shader_data.probe_indices[index] = invalid_probe_index.GetProbeIndex();
         }
 
-        m_shader_data.center = Vector4(m_aabb.GetCenter(), 1.0f);
-        m_shader_data.extent = Vector4(m_aabb.GetExtent(), 1.0f);
-        m_shader_data.aabb_max = Vector4(m_aabb.max, 1.0f);
-        m_shader_data.aabb_min = Vector4(m_aabb.min, 1.0f);
-        m_shader_data.voxel_grid_aabb_max = Vector4(m_voxel_grid_aabb.max, 1.0f);
-        m_shader_data.voxel_grid_aabb_min = Vector4(m_voxel_grid_aabb.min, 1.0f);
+        m_shader_data.center = Vec4f(m_aabb.GetCenter(), 1.0f);
+        m_shader_data.extent = Vec4f(m_aabb.GetExtent(), 1.0f);
+        m_shader_data.aabb_max = Vec4f(m_aabb.max, 1.0f);
+        m_shader_data.aabb_min = Vec4f(m_aabb.min, 1.0f);
+        m_shader_data.voxel_grid_aabb_max = Vec4f(m_voxel_grid_aabb.max, 1.0f);
+        m_shader_data.voxel_grid_aabb_min = Vec4f(m_voxel_grid_aabb.min, 1.0f);
         m_shader_data.density = { m_options.density.width, m_options.density.height, m_options.density.depth, 0 };
         m_shader_data.enabled_indices_mask = { 0, 0, 0, 0 };
     }
@@ -434,7 +434,6 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.enabled_indices_mask = { 0, 0, 0, 0 };
 
     const EnvGridFlags flags = m_flags.Get(MemoryOrder::ACQUIRE);
-
     EnvGridFlags new_flags = flags;
 
     const BoundingBox grid_aabb = m_aabb;

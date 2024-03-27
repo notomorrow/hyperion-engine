@@ -75,7 +75,7 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer Mat
 // #endif
 // #endif
 
-#define SUN_INTENSITY 25.0
+#define SUN_INTENSITY 15.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3
@@ -226,10 +226,8 @@ void main()
 #endif
 
     // exposure
-    //sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
-
-    // // sky will not be tonemapped outside of this:
-    // sky_color = vec4(1.0, 0.0, 0.0, 1.0);//TonemapReinhardSimple(sky_color.rgb);
+    sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
+    sky_color.rgb = Tonemap(sky_color.rgb);
 
     output_color = sky_color;
 }

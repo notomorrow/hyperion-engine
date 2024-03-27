@@ -64,6 +64,7 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
                 .area_size          = draw_proxy.area_size,
                 .position_intensity = draw_proxy.position_intensity,
                 .normal             = draw_proxy.normal,
+                .spot_angles        = draw_proxy.spot_angles,
                 .material_id        = draw_proxy.material_id.Value()
             }
         );
@@ -87,6 +88,7 @@ Light::Light(
     m_intensity(intensity),
     m_radius(radius),
     m_falloff(1.0f),
+    m_spot_angles(Vec2f::Zero()),
     m_shadow_map_index(~0u),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
@@ -109,6 +111,7 @@ Light::Light(
     m_intensity(intensity),
     m_radius(radius),
     m_falloff(1.0f),
+    m_spot_angles(Vec2f::Zero()),
     m_shadow_map_index(~0u),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
@@ -124,6 +127,7 @@ Light::Light(Light &&other) noexcept
       m_intensity(other.m_intensity),
       m_radius(other.m_radius),
       m_falloff(other.m_falloff),
+      m_spot_angles(other.m_spot_angles),
       m_shadow_map_index(other.m_shadow_map_index),
       m_visibility_bits(std::move(other.m_visibility_bits)),
       m_shader_data_state(ShaderDataState::DIRTY),
@@ -158,6 +162,7 @@ void Light::Init()
         .color              = m_color,
         .radius             = m_radius,
         .falloff            = m_falloff,
+        .spot_angles        = m_spot_angles,
         .shadow_map_index   = m_shadow_map_index,
         .area_size          = m_area_size,
         .position_intensity = Vec4f(m_position, m_intensity),
@@ -211,6 +216,7 @@ void Light::EnqueueRenderUpdates()
             .color              = m_color,
             .radius             = m_radius,
             .falloff            = m_falloff,
+            .spot_angles        = m_spot_angles,
             .shadow_map_index   = m_shadow_map_index,
             .area_size          = m_area_size,
             .position_intensity = Vec4f(m_position, m_intensity),

@@ -225,6 +225,31 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    /*! \brief Get the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
+     *
+     * \return The spotlight angles.
+     */
+    Vec2f GetSpotAngles() const
+        { return m_spot_angles; }
+
+    /*! \brief Set the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
+     *
+     * \param spot_angles The angles to set for the spotlight.
+     */
+    void SetSpotAngles(Vec2f spot_angles)
+    {
+        if (m_type != LightType::SPOT) {
+            return;
+        }
+
+        if (m_spot_angles == spot_angles) {
+            return;
+        }
+
+        m_spot_angles = spot_angles;
+        m_shader_data_state |= ShaderDataState::DIRTY;
+    }
+
     /*! \brief Get the shadow map index for the light. This is used when sampling shadow maps for the particular light.
      *
      * \return The shadow map index.
@@ -298,6 +323,7 @@ protected:
     float               m_intensity;
     float               m_radius;
     float               m_falloff;
+    Vec2f               m_spot_angles;
     uint                m_shadow_map_index;
     Handle<Material>    m_material;
 
@@ -308,78 +334,111 @@ private:
 
     mutable ShaderDataState m_shader_data_state;
 
-    Bitset m_visibility_bits;
+    Bitset                  m_visibility_bits;
 };
 
 class DirectionalLight : public Light
 {
 public:
-    static constexpr float default_intensity = 100000.0f;
-    static constexpr float default_radius = 0.0f;
+    static constexpr float default_intensity = 10.0f;
 
     DirectionalLight(
-        const Vec3f &direction,
-        const Color &color,
-        float intensity = default_intensity,
-        float radius = default_radius
+        Vec3f direction,
+        Color color,
+        float intensity = default_intensity
     ) : Light(
-        LightType::DIRECTIONAL,
-        direction,
-        color,
-        intensity,
-        radius
-    )
+            LightType::DIRECTIONAL,
+            direction,
+            color,
+            intensity,
+            0.0f
+        )
     {
     }
 
-    const Vec3f &GetDirection() const
+    Vec3f GetDirection() const
         { return GetPosition(); }
 
-    void SetDirection(const Vec3f &direction)
+    void SetDirection(Vec3f direction)
         { SetPosition(direction); }
 };
 
 class PointLight : public Light
 {
 public:
-    static constexpr float default_intensity = 25.0f;
+    static constexpr float default_intensity = 5.0f;
     static constexpr float default_radius = 15.0f;
 
     PointLight(
-        const Vec3f &position,
-        const Color &color,
+        Vec3f position,
+        Color color,
         float intensity = default_intensity,
         float radius = default_radius
     ) : Light(
-        LightType::POINT,
-        position,
-        color,
-        intensity,
-        radius
-    )
+            LightType::POINT,
+            position,
+            color,
+            intensity,
+            radius
+        )
     {
     }
+};
+
+class SpotLight : public Light
+{
+public:
+    static constexpr float default_intensity = 5.0f;
+    static constexpr float default_radius = 15.0f;
+    static constexpr float default_outer_angle = 45.0f;
+    static constexpr float default_inner_angle = 30.0f;
+
+    SpotLight(
+        Vec3f position,
+        Vec3f direction,
+        Color color,
+        float intensity = default_intensity,
+        float radius = default_radius,
+        Vec2f angles = { default_outer_angle, default_inner_angle }
+    ) : Light(
+            LightType::SPOT,
+            position,
+            direction,
+            Vec2f(0.0f, 0.0f),
+            color,
+            intensity,
+            radius
+        )
+    {
+        SetSpotAngles(angles);
+    }
+
+    Vec3f GetDirection() const
+        { return GetNormal(); }
+
+    void SetDirection(Vec3f direction)
+        { SetNormal(direction); }
 };
 
 class RectangleLight : public Light
 {
 public:
     RectangleLight(
-        const Vec3f &position,
-        const Vec3f &normal,
-        const Vec2f &area_size,
-        const Color &color,
+        Vec3f position,
+        Vec3f normal,
+        Vec2f area_size,
+        Color color,
         float intensity = 1.0f,
         float distance = 1.0f
     ) : Light(
-        LightType::AREA_RECT,
-        position,
-        normal,
-        area_size,
-        color,
-        intensity,
-        distance
-    )
+            LightType::AREA_RECT,
+            position,
+            normal,
+            area_size,
+            color,
+            intensity,
+            distance
+        )
     {
     }
 };

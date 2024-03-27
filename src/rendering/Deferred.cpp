@@ -612,7 +612,7 @@ void EnvGridPass::Render(Frame *frame)
 // ===== Reflection Probe Pass Begin =====
 
 ReflectionProbePass::ReflectionProbePass()
-    : FullScreenPass(InternalFormat::R10G10B10A2),
+    : FullScreenPass(InternalFormat::RGBA16F),
       m_is_first_frame(true)
 {
 }
@@ -721,7 +721,7 @@ void ReflectionProbePass::Create()
     m_temporal_blending.Reset(new TemporalBlending(
         m_framebuffer->GetExtent(),
         InternalFormat::RGBA16F,
-        TemporalBlendTechnique::TECHNIQUE_1,
+        TemporalBlendTechnique::TECHNIQUE_3,
         TemporalBlendFeedback::LOW,
         m_framebuffer
     ));
@@ -763,36 +763,33 @@ void ReflectionProbePass::Record(uint frame_index)
 void ReflectionProbePass::Render(Frame *frame)
 {
     // Sky renders first
-    static const FixedArray<EnvProbeType, 2> reflection_probe_types {
+    static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflection_probe_types {
         ENV_PROBE_TYPE_SKY,
         ENV_PROBE_TYPE_REFLECTION
     };
 
-    // Map each reflection probe type to the appropriate pass type
-    static const FixedArray<ApplyReflectionProbeMode, EnvProbeType::ENV_PROBE_TYPE_MAX> reflection_probe_modes {
+    static const FixedArray<ApplyReflectionProbeMode, ApplyReflectionProbeMode::MAX> reflection_probe_modes {
         ApplyReflectionProbeMode::DEFAULT,              // ENV_PROBE_TYPE_SKY
         ApplyReflectionProbeMode::PARALLAX_CORRECTED    // ENV_PROBE_TYPE_REFLECTION
     };
 
     FixedArray<Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>>, ApplyReflectionProbeMode::MAX> pass_ptrs;
 
-    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
-        pass_ptrs[i] = {
-            &m_render_groups[i],
+    for (uint mode_index = ApplyReflectionProbeMode::DEFAULT; mode_index < ApplyReflectionProbeMode::MAX; mode_index++) {
+        pass_ptrs[mode_index] = {
+            &m_render_groups[mode_index],
             { }
         };
-    }
 
-    for (const EnvProbeType env_probe_type : reflection_probe_types) {
-        const ApplyReflectionProbeMode mode = reflection_probe_modes[env_probe_type];
+        const EnvProbeType env_probe_type = reflection_probe_types[mode_index];
 
         for (const auto &it : g_engine->render_state.bound_env_probes[env_probe_type]) {
             const ID<EnvProbe> &env_probe_id = it.first;
 
-            pass_ptrs[uint(mode)].second.PushBack(env_probe_id);
+            pass_ptrs[mode_index].second.PushBack(env_probe_id);
         }
     }
-    
+
     const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
     const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
@@ -839,14 +836,17 @@ void ReflectionProbePass::Render(Frame *frame)
     
     uint num_rendered_env_probes = 0;
 
-    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
-        const Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>> &it = pass_ptrs[i];
+    for (uint reflection_probe_type_index = 0; reflection_probe_type_index < ArraySize(reflection_probe_types); reflection_probe_type_index++) {
+        const EnvProbeType env_probe_type = reflection_probe_types[reflection_probe_type_index];
+        const ApplyReflectionProbeMode mode = reflection_probe_modes[reflection_probe_type_index];
+
+        const Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>> &it = pass_ptrs[mode];
 
         if (it.second.Empty()) {
             continue;
         }
 
-        const CommandBufferRef &command_buffer = m_command_buffers[i][frame_index];
+        const CommandBufferRef &command_buffer = m_command_buffers[reflection_probe_type_index][frame_index];
         AssertThrow(command_buffer.IsValid());
 
         const Handle<RenderGroup> &render_group = *it.first;
@@ -1271,6 +1271,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
             has_set_active_env_probe = true;
         }
 
+        RenderSkybox(frame);
+
         // begin translucent with forward rendering
         RenderTranslucentObjects(frame);
 
@@ -1416,6 +1418,20 @@ void DeferredRenderer::CollectDrawCalls(Frame *frame)
     }
 }
 
+void DeferredRenderer::RenderSkybox(Frame *frame)
+{
+    const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
+
+    for (uint index = 0; index < num_render_lists; index++) {
+        g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->ExecuteDrawCalls(
+            frame,
+            Handle<Framebuffer>::empty,
+            Bitset((1 << BUCKET_SKYBOX)),
+            &m_cull_data
+        );
+    }
+}
+
 void DeferredRenderer::RenderOpaqueObjects(Frame *frame)
 {
     const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
@@ -1424,7 +1440,7 @@ void DeferredRenderer::RenderOpaqueObjects(Frame *frame)
         g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->ExecuteDrawCalls(
             frame,
             Handle<Framebuffer>::empty,
-            Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_SKYBOX)),
+            Bitset((1 << BUCKET_OPAQUE)),
             &m_cull_data
         );
     }

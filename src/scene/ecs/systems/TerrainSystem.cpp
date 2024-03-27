@@ -377,39 +377,51 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                 AssertThrowMsg(mesh.IsValid(), "Terrain mesh is invalid");
                 InitObject(mesh);
 
-                ID<Entity> patch_entity = state->GetPatchEntity(patch_info.coord);
+                entity_manager.PushCommand([state, coord = patch_info.coord, mesh = std::move(mesh), material = mesh_component.material](EntityManager &mgr, GameCounter::TickUnit delta) mutable
+                {
+                    const ID<Entity> patch_entity = state->GetPatchEntity(coord);
 
-                if (patch_entity.IsValid()) {
-                    entity_manager.PushCommand([patch_entity, mesh = std::move(mesh), material = mesh_component.material](EntityManager &mgr, GameCounter::TickUnit delta) mutable
-                    {
-                        MeshComponent *patch_mesh_component = mgr.TryGetComponent<MeshComponent>(patch_entity);
-                        BoundingBoxComponent *patch_bounding_box_component = mgr.TryGetComponent<BoundingBoxComponent>(patch_entity);
+                    if (!patch_entity.IsValid()) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Patch entity at [%d, %d] was not found when updating mesh\n",
+                            coord.x, coord.y
+                        );
 
-                        if (patch_bounding_box_component) {
-                            patch_bounding_box_component->local_aabb = mesh->GetAABB();
+                        return;
+                    }
+
+                    // Prevent patch entity from being removed while updating
+                    Mutex::Guard guard(state->patch_entities_mutex);
+
+                    MeshComponent *patch_mesh_component = mgr.TryGetComponent<MeshComponent>(patch_entity);
+                    BoundingBoxComponent *patch_bounding_box_component = mgr.TryGetComponent<BoundingBoxComponent>(patch_entity);
+                    TransformComponent *patch_transform_component = mgr.TryGetComponent<TransformComponent>(patch_entity);
+
+                    if (patch_bounding_box_component) {
+                        patch_bounding_box_component->local_aabb = mesh->GetAABB();
+
+                        if (patch_transform_component) {
+                            patch_bounding_box_component->world_aabb = BoundingBox::empty;
+
+                            for (const Vec3f &corner : patch_bounding_box_component->local_aabb.GetCorners()) {
+                                patch_bounding_box_component->world_aabb.Extend(patch_transform_component->transform.GetMatrix() * corner);
+                            }
                         }
+                    }
 
-                        if (patch_mesh_component) {
-                            patch_mesh_component->mesh = std::move(mesh);
-                            patch_mesh_component->material = std::move(material);
-                            patch_mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
-                        } else {
-                            // Add MeshComponent to patch entity
-                            mgr.AddComponent<MeshComponent>(patch_entity, MeshComponent {
-                                .mesh       = std::move(mesh),
-                                .material   = std::move(material)
-                            });
-                        }
-                    });
-
-
-                } else {
-                    DebugLog(
-                        LogType::Warn,
-                        "Patch entity at [%d, %d] does not exist after generation completeted!\n",
-                        patch_info.coord.x, patch_info.coord.y
-                    );
-                }
+                    if (patch_mesh_component) {
+                        patch_mesh_component->mesh = std::move(mesh);
+                        patch_mesh_component->material = std::move(material);
+                        patch_mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
+                    } else {
+                        // Add MeshComponent to patch entity
+                        mgr.AddComponent<MeshComponent>(patch_entity, MeshComponent {
+                            .mesh       = std::move(mesh),
+                            .material   = std::move(material)
+                        });
+                    }
+                });
             }
         }
 
@@ -459,7 +471,6 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                 entity_manager.PushCommand([state, patch_info, translation = transform_component.transform.GetTranslation()](EntityManager &mgr, GameCounter::TickUnit delta)
                 {
                     const ID<Entity> patch_entity = mgr.AddEntity();
-                    state->patch_entities.Insert(patch_info.coord, patch_entity);
 
                     // Add TerrainPatchComponent
                     mgr.AddComponent<TerrainPatchComponent>(patch_entity, TerrainPatchComponent {
@@ -482,10 +493,14 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
 
                     // Add BoundingBoxComponent
                     mgr.AddComponent<BoundingBoxComponent>(patch_entity, BoundingBoxComponent { });
+
+                    DebugLog(LogType::Debug, "Patch entity at [%d, %d] added\n", patch_info.coord.x, patch_info.coord.y);
+
+                    state->AddPatchEntity(patch_entity, patch_info.coord);
                 });
 
                 // add task to generation queue
-                const TaskRef task_ref = TaskSystem::GetInstance().ScheduleTask([patch_info, generation_queue = state->patch_generation_queue_shared, noise_combinator = state->noise_combinator]()
+                const TaskRef generation_task_ref = TaskSystem::GetInstance().ScheduleTask([patch_info, generation_queue = state->patch_generation_queue_shared, noise_combinator = state->noise_combinator]()
                 {
                     terrain::TerrainMeshBuilder mesh_builder(patch_info);
                     mesh_builder.GenerateHeights(*noise_combinator);
@@ -493,7 +508,9 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                     Handle<Mesh> mesh = mesh_builder.BuildMesh();
                     AssertThrowMsg(mesh.IsValid(), "Generated terrain mesh is invalid");
 
-                    generation_queue->mutex.Lock();
+                    DebugLog(LogType::Debug, "From thread: %s\tTerrain mesh has %u indices\n", Threads::CurrentThreadID().name.LookupString(), mesh->NumIndices());
+
+                    Mutex::Guard guard(generation_queue->mutex);
 
                     generation_queue->queue.Push(TerrainGenerationResult {
                         .patch_info = patch_info,
@@ -501,8 +518,6 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                     });
 
                     generation_queue->has_updates.Set(true, MemoryOrder::RELAXED);
-
-                    generation_queue->mutex.Unlock();
 
                     DebugLog(
                         LogType::Debug,
@@ -512,7 +527,7 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                     );
                 }, THREAD_POOL_GENERIC);
 
-                state->patch_generation_tasks.Insert(patch_info.coord, task_ref);
+                state->patch_generation_tasks.Insert(patch_info.coord, generation_task_ref);
 
                 break;
             }
@@ -539,148 +554,168 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                     state->queued_neighbors.Erase(queued_neighbors_it);
                 }
 
-                const ID<Entity> patch_entity = state->GetPatchEntity(update.coord);
+                // Push command to remove the entity
+                entity_manager.PushCommand([state, update](EntityManager &mgr, GameCounter::TickUnit delta)
+                {
+                    const ID<Entity> patch_entity = state->GetPatchEntity(update.coord);
 
-                if (patch_entity.IsValid()) {
-                    // Push command to remove the entity
-                    entity_manager.PushCommand([patch_entity](EntityManager &mgr, GameCounter::TickUnit delta)
-                    {
-                        if (mgr.HasEntity(patch_entity)) {
-                            mgr.RemoveEntity(patch_entity);
-                        }
-                    });
-                } else {
+                    if (!patch_entity.IsValid()) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Patch entity at [%d, %d] was not found when unloading\n",
+                            update.coord.x, update.coord.y
+                        );
+
+                        return;
+                    }
+
+                    AssertThrowMsg(
+                        state->RemovePatchEntity(patch_entity),
+                        "Failed to remove patch entity at [%d, %d]",
+                        update.coord.x,
+                        update.coord.y
+                    );
+
+                    if (mgr.HasEntity(patch_entity)) {
+                        mgr.RemoveEntity(patch_entity);
+                    }
+
                     DebugLog(
-                        LogType::Warn,
-                        "Patch entity at [%d, %d] was not found when unloading\n",
+                        LogType::Debug,
+                        "Patch entity at [%d, %d] removed\n",
                         update.coord.x, update.coord.y
                     );
-                }
+                });
 
                 break;
             }
             default: {
-                const ID<Entity> patch_entity = state->GetPatchEntity(update.coord);
+                // Push command to update patch state
+                entity_manager.PushCommand([state, update](EntityManager &mgr, GameCounter::TickUnit delta)
+                {
+                    const ID<Entity> patch_entity = state->GetPatchEntity(update.coord);
 
-                if (patch_entity.IsValid()) {
-                    // Push command to update patch state
-                    entity_manager.PushCommand([new_state = update.state, patch_entity](EntityManager &mgr, GameCounter::TickUnit delta)
-                    {
-                        TerrainPatchComponent *patch_component = mgr.TryGetComponent<TerrainPatchComponent>(patch_entity);
+                    if (!patch_entity.IsValid()) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Patch entity at [%d, %d] was not found when updating state\n",
+                            update.coord.x, update.coord.y
+                        );
 
-                        if (patch_component) {
-                            // set new state
-                            patch_component->patch_info.state = new_state;
-                        } else {
-                            DebugLog(
-                                LogType::Warn,
-                                "Patch entity did not have a TerrainPatchComponent when updating state\n"
-                            );
-                        }
-                    });
-                } else {
-                    DebugLog(
-                        LogType::Warn,
-                        "Patch entity at [%d, %d] was not found when updating state\n",
-                        update.coord.x, update.coord.y
-                    );
-                }
+                        return;
+                    }
+
+                    TerrainPatchComponent *patch_component = mgr.TryGetComponent<TerrainPatchComponent>(patch_entity);
+                    AssertThrowMsg(patch_component, "Patch entity did not have a TerrainPatchComponent when updating state");
+
+                    // set new state
+                    patch_component->patch_info.state = update.state;
+                });
 
                 break;
             }
             }
         }
 
-        for (auto &it : state->patch_entities) {
-            const auto in_range_it = patch_coords_in_range.Find(it.first);
+        {
+            Mutex::Guard guard(state->patch_entities_mutex);
 
-            const bool is_in_range = in_range_it != patch_coords_in_range.End();
+            for (auto &it : state->patch_entities) {
+                const auto in_range_it = patch_coords_in_range.Find(it.first);
 
-            if (is_in_range) {
-                patch_coords_to_add.Erase(it.first);
-            }
+                const bool is_in_range = in_range_it != patch_coords_in_range.End();
 
-            // Push command to update patch state
-            // @FIXME: thread safety issues with using state here
-            entity_manager.PushCommand([entity = it.second, is_in_range, state](EntityManager &mgr, GameCounter::TickUnit delta)
-            {
-                TerrainPatchComponent *terrian_patch_component = mgr.TryGetComponent<TerrainPatchComponent>(entity);
+                if (is_in_range) {
+                    patch_coords_to_add.Erase(it.first);
+                }
 
-                if (!terrian_patch_component) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Patch entity did not have a TerrainPatchComponent when updating state\n"
+                // Push command to update patch state
+                // @FIXME: thread safety issues with using state here
+                entity_manager.PushCommand([patch_coord = it.first, is_in_range, state](EntityManager &mgr, GameCounter::TickUnit delta)
+                {
+                    const ID<Entity> entity = state->GetPatchEntity(patch_coord);
+
+                    if (!entity.IsValid()) {
+                        // Patch entity was removed, skip
+                        return;
+                    }
+
+                    TerrainPatchComponent *terrian_patch_component = mgr.TryGetComponent<TerrainPatchComponent>(entity);
+
+                    AssertThrowMsg(
+                        terrian_patch_component,
+                        "Patch entity at [%d, %d] did not have a TerrainPatchComponent when updating state",
+                        patch_coord.x,
+                        patch_coord.y
                     );
 
-                    return;
-                }
+                    const TerrainPatchInfo &patch_info = terrian_patch_component->patch_info;
 
-                const TerrainPatchInfo &patch_info = terrian_patch_component->patch_info;
+                    switch (patch_info.state) {
+                    case TerrainPatchState::LOADED: {
+                        // reset unload timer
+                        terrian_patch_component->patch_info.unload_timer = 0.0f;
 
-                switch (patch_info.state) {
-                case TerrainPatchState::LOADED: {
-                    // reset unload timer
-                    terrian_patch_component->patch_info.unload_timer = 0.0f;
+                        auto queued_neighbors_it = state->queued_neighbors.Find(patch_info.coord);
 
-                    auto queued_neighbors_it = state->queued_neighbors.Find(patch_info.coord);
+                        // Remove loaded patch from queued neighbors
+                        if (queued_neighbors_it != state->queued_neighbors.End()) {
+                            state->queued_neighbors.Erase(queued_neighbors_it);
+                        }
 
-                    // Remove loaded patch from queued neighbors
-                    if (queued_neighbors_it != state->queued_neighbors.End()) {
-                        state->queued_neighbors.Erase(queued_neighbors_it);
-                    }
-
-                    if (!is_in_range) {
-                        DebugLog(
-                            LogType::Debug,
-                            "Patch [%d, %d] no longer in range, unloading\n",
-                            patch_info.coord.x, patch_info.coord.y
-                        );
-
-                        // Start unloading
-                        state->patch_update_queue.Push({
-                            .coord  = patch_info.coord,
-                            .state  = TerrainPatchState::UNLOADING
-                        });
-                    }
-
-                    break;
-                }
-                case TerrainPatchState::UNLOADING:
-                    if (is_in_range) {
-                        DebugLog(
-                            LogType::Debug,
-                            "Patch [%d, %d] back in range, stopping unloading\n",
-                            patch_info.coord.x, patch_info.coord.y
-                        );
-
-                        // Stop unloading
-                        state->patch_update_queue.Push({
-                            .coord  = patch_info.coord,
-                            .state  = TerrainPatchState::LOADED
-                        });
-                    } else {
-                        terrian_patch_component->patch_info.unload_timer += delta;
-
-                        if (terrian_patch_component->patch_info.unload_timer >= 10.0f) {
+                        if (!is_in_range) {
                             DebugLog(
                                 LogType::Debug,
-                                "Unloading patch at [%d, %d]\n",
+                                "Patch [%d, %d] no longer in range, unloading\n",
                                 patch_info.coord.x, patch_info.coord.y
                             );
 
-                            // Unload it now
+                            // Start unloading
                             state->patch_update_queue.Push({
                                 .coord  = patch_info.coord,
-                                .state  = TerrainPatchState::UNLOADED
+                                .state  = TerrainPatchState::UNLOADING
                             });
                         }
-                    }
 
-                    break;
-                default:
-                    break;
-                }
-            });
+                        break;
+                    }
+                    case TerrainPatchState::UNLOADING:
+                        if (is_in_range) {
+                            DebugLog(
+                                LogType::Debug,
+                                "Patch [%d, %d] back in range, stopping unloading\n",
+                                patch_info.coord.x, patch_info.coord.y
+                            );
+
+                            // Stop unloading
+                            state->patch_update_queue.Push({
+                                .coord  = patch_info.coord,
+                                .state  = TerrainPatchState::LOADED
+                            });
+                        } else {
+                            terrian_patch_component->patch_info.unload_timer += delta;
+
+                            if (terrian_patch_component->patch_info.unload_timer >= 10.0f) {
+                                DebugLog(
+                                    LogType::Debug,
+                                    "Unloading patch at [%d, %d]\n",
+                                    patch_info.coord.x, patch_info.coord.y
+                                );
+
+                                // Unload it now
+                                state->patch_update_queue.Push({
+                                    .coord  = patch_info.coord,
+                                    .state  = TerrainPatchState::UNLOADED
+                                });
+                            }
+                        }
+
+                        break;
+                    default:
+                        break;
+                    }
+                });
+            }
         }
 
         // enqueue a patch to be created for each patch in range
