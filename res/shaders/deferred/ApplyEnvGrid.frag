@@ -85,7 +85,7 @@ void main()
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
 
-    if ((pixel_coord.x & (pixel_coord.y & 1)) != (scene.frame_counter & 1))
+    if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
     {
         color_output = vec4(0.0);
         return;

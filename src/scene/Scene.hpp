@@ -9,6 +9,7 @@
 #include <core/Scheduler.hpp>
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
+
 #include <rendering/rt/TLAS.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/Shader.hpp>
@@ -16,11 +17,13 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/EntityDrawCollection.hpp>
+
 #include <scene/camera/Camera.hpp>
+
 #include <math/Color.hpp>
+
 #include <GameCounter.hpp>
 #include <Types.hpp>
-#include <unordered_map>
 
 namespace hyperion::v2 {
 

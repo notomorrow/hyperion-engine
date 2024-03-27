@@ -290,10 +290,8 @@ struct alignas(128) LightShaderData
     Vec4f   normal;
     // 64
 
+    Vec2f   spot_angles;
     uint32  material_id;
-
-    uint32  _pad0;
-    uint32  _pad1;
     uint32  _pad2;
 
     Vec4u   pad3;

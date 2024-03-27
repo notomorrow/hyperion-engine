@@ -52,16 +52,16 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
     virtual Result operator()() override
     {
         const SSRParams ssr_params {
-            .dimensions = { extent.width, extent.height, 0, 0 },
-            .ray_step = 0.1f,
-            .num_iterations = 128.0f,
-            .max_ray_distance = 150.0f,
-            .distance_bias = 0.1f,
-            .offset = 0.001f,
-            .eye_fade_start = 0.70f,
-            .eye_fade_end = 0.9f,
+            .dimensions             = { extent.width, extent.height, 0, 0 },
+            .ray_step               = 0.1f,
+            .num_iterations         = 128.0f,
+            .max_ray_distance       = 150.0f,
+            .distance_bias          = 0.1f,
+            .offset                 = 0.001f,
+            .eye_fade_start         = 0.90f,
+            .eye_fade_end           = 0.96f,
             .screen_edge_fade_start = 0.7f,
-            .screen_edge_fade_end = 0.98f
+            .screen_edge_fade_end   = 0.98f
         };
             
         HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
@@ -89,7 +89,9 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(CreateSSRDescriptors)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)
@@ -106,7 +108,9 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual ~RENDER_COMMAND(RemoveSSRDescriptors)() override = default;
+
+    virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index)

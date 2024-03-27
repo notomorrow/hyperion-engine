@@ -56,15 +56,48 @@ private:
         Queue<TerrainGenerationResult>          patch_generation_queue_owned;
         RC<TerrainGenerationQueue>              patch_generation_queue_shared;
 
-        FlatMap<TerrainPatchCoord, ID<Entity>>  patch_entities;
         FlatSet<TerrainPatchCoord>              queued_neighbors;
 
         Queue<TerrainPatchUpdate>               patch_update_queue;
 
         RC<NoiseCombinator>                     noise_combinator;
 
+        FlatMap<TerrainPatchCoord, ID<Entity>>  patch_entities;
+        mutable Mutex                           patch_entities_mutex;
+
+        void AddPatchEntity(ID<Entity> entity, const TerrainPatchCoord &coord)
+        {
+            Mutex::Guard guard(patch_entities_mutex);
+
+            patch_entities.Insert(coord, entity);
+        }
+
+        bool RemovePatchEntity(ID<Entity> entity)
+        {
+            Mutex::Guard guard(patch_entities_mutex);
+
+            for (auto it = patch_entities.Begin(); it != patch_entities.End(); ++it) {
+                if (it->second == entity) {
+                    patch_entities.Erase(it);
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        bool RemovePatchEntity(const TerrainPatchCoord &coord)
+        {
+            Mutex::Guard guard(patch_entities_mutex);
+
+            return patch_entities.Erase(coord);
+        }
+
         ID<Entity> GetPatchEntity(const TerrainPatchCoord &coord) const
         {
+            Mutex::Guard guard(patch_entities_mutex);
+
             const auto it = patch_entities.Find(coord);
 
             if (it != patch_entities.End()) {

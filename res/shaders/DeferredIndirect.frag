@@ -109,81 +109,77 @@ void main()
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
-    if (perform_lighting && !bool(mask & 0x10)) {
-        const float roughness = material.r;
-        const float metalness = material.g;
+    const float roughness = material.r;
+    const float metalness = material.g;
 
-        float NdotV = max(0.0001, dot(N, V));
+    float NdotV = max(0.0001, dot(N, V));
 
-        const vec3 diffuse_color = CalculateDiffuseColor(albedo_linear, metalness);
-        const vec3 F0 = CalculateF0(albedo_linear, metalness);
+    const vec3 diffuse_color = CalculateDiffuseColor(albedo_linear, metalness);
+    const vec3 F0 = CalculateF0(albedo_linear, metalness);
 
-        F = CalculateFresnelTerm(F0, roughness, NdotV);
+    F = CalculateFresnelTerm(F0, roughness, NdotV);
 
-        const float perceptual_roughness = sqrt(roughness);
-        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
-        const vec3 E = CalculateE(F0, dfg);
-        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+    const float perceptual_roughness = sqrt(roughness);
+    const vec3 dfg = CalculateDFG(F, roughness, NdotV);
+    const vec3 E = CalculateE(F0, dfg);
+    const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
 #ifdef REFLECTION_PROBE_ENABLED
-        vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_NEAREST, reflection_probes_texture, texcoord);
-        ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb * reflection_probes_color.a);
+    vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_NEAREST, reflection_probes_texture, texcoord);
+    ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb * reflection_probes_color.a);
 #endif
 
-        vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
-        ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
-        
-        irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
+    vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
+    ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
+
+    irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
 #ifdef SSR_ENABLED
-        CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
+    CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
 #endif
 
 #ifdef RT_REFLECTIONS_ENABLED
-        CalculateRaytracingReflection(deferred_params, texcoord, ibl);
+    CalculateRaytracingReflection(deferred_params, texcoord, ibl);
 #endif
 
 #ifdef RT_GI_ENABLED
-        irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
+    irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
 #endif
 
 #ifdef HBIL_ENABLED
-        CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
+    CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 #endif
 
-        vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
+    vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
 
-        vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
-        specular_ao *= energy_compensation;
+    vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+    specular_ao *= energy_compensation;
 
-        vec3 Fr = ibl * E * specular_ao;
+    vec3 Fr = ibl * E * specular_ao;
 
-        vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
-        Fd *= multibounce;
-        Fr *= multibounce;
+    vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
+    Fd *= multibounce;
+    Fr *= multibounce;
 
-        // Fr *= exposure * IBL_INTENSITY;
-        // Fd *= exposure * IBL_INTENSITY;
+    // Fr *= exposure * IBL_INTENSITY;
+    // Fd *= exposure * IBL_INTENSITY;
 
-        result = Fd + Fr;
+    result = Fd + Fr;
 
-        vec4 final_result = vec4(result, 1.0);
-        ApplyFog(position.xyz, final_result);
-        result = final_result.rgb;
+    // vec4 final_result = vec4(result, 1.0);
+    // ApplyFog(position.xyz, final_result);
+    // result = final_result.rgb;
 
-        // TEMP -- debugging
-        // result = albedo.rgb;
+    // TEMP -- debugging
+    // result = albedo.rgb;
 
 #ifdef PATHTRACER
-        result = CalculatePathTracing(deferred_params, texcoord).rgb;
+    result = CalculatePathTracing(deferred_params, texcoord).rgb;
 #elif defined(DEBUG_REFLECTIONS)
-        result = ibl.rgb;
+    result = ibl.rgb;
 #elif defined(DEBUG_IRRADIANCE)
-        result = irradiance.rgb;
+    result = irradiance.rgb;
 #endif
-    } else {
-        result = albedo.rgb;
-    }
 
     output_color = vec4(result, 1.0);
 }

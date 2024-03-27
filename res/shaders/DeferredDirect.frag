@@ -142,7 +142,7 @@ void main()
 
     vec4 area_light_radiance;
 
-#if defined(LIGHT_TYPE_DIRECTIONAL) || defined(LIGHT_TYPE_POINT)
+#if defined(LIGHT_TYPE_DIRECTIONAL) || defined(LIGHT_TYPE_POINT) || defined(LIGHT_TYPE_SPOT)
     vec3 L = light.position_intensity.xyz;
     L -= position.xyz * float(min(light.type, 1));
     L = normalize(L);
@@ -153,15 +153,6 @@ void main()
     const float LdotH = max(0.000001, dot(L, H));
     const float NdotH = max(0.000001, dot(N, H));
     const float HdotV = max(0.000001, dot(H, V));
-#elif defined(LIGHT_TYPE_SPOT)
-    // @TODO Implement spot light
-
-    vec3 L = vec3(0.0);
-
-    const float NdotL = 0.0;
-    const float LdotH = 0.0;
-    const float NdotH = 0.0;
-    const float HdotV = 0.0;
 #elif defined(LIGHT_TYPE_AREA_RECT)
     vec3 L;
 
@@ -182,12 +173,6 @@ void main()
         vec3(0.0, 1.0, 0.0),
         vec3(t1.z, 0.0, t1.w)
     );
-
-    // const mat3 Minv = mat3(
-    //     vec3(  1,   0, t1.y),
-    //     vec3(  0, t1.z,   0),
-    //     vec3(t1.w,   0, t1.x)
-    // );
 
     const float half_width = light.area_size.x * 0.5;
     const float half_height = light.area_size.y * 0.5;
@@ -214,8 +199,6 @@ void main()
     area_light_specular *= diffuse_color * t2.x + (vec4(1.0) - diffuse_color) * t2.y;
     area_light_radiance = area_light_specular + area_light_diffuse;
 
-    // const vec3 H = normalize(L + V);
-
     const float NdotL = 0.0;//dot(N, L);
     const float LdotH = 0.0;//dot(L, H);
     const float NdotH = 0.0;//dot(N, H);
@@ -223,7 +206,7 @@ void main()
 #endif
 
     vec4 light_rays = vec4(0.0);
-    vec4 light_color = unpackUnorm4x8(light.color_encoded);
+    vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
 #ifdef LIGHT_TYPE_POINT
     if (light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
@@ -251,11 +234,8 @@ void main()
         light_rays = vec4(light_color * light_ray_attenuation);
 #endif
     }
-#elif defined(LIGHT_TYPE_AREA_RECT)
-
 #endif
 
-    if (perform_lighting && !bool(mask & 0x10)) {
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
         const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
@@ -267,8 +247,15 @@ void main()
 
         const vec4 specular_lobe = D * G * F;
 
-#ifdef LIGHT_TYPE_POINT
-        const float attenuation = GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius);
+#if defined(LIGHT_TYPE_POINT) || defined(LIGHT_TYPE_SPOT)
+        float attenuation = GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius);
+
+#ifdef LIGHT_TYPE_SPOT
+        float theta = max(dot(-L, normalize(light.normal.xyz)), 0.0);
+
+        attenuation *= saturate((theta - light.spot_angles[0]) / (light.spot_angles[1] - light.spot_angles[0])) * step(light.spot_angles.x, theta);
+#endif
+
 #else
         const float attenuation = 1.0;
 #endif
@@ -280,20 +267,14 @@ void main()
 
         vec4 direct_component = diffuse + specular * vec4(energy_compensation, 1.0);
 
-        // direct_component.rgb *= (exposure);
         result += direct_component * (light_color * ao * NdotL * shadow * light.position_intensity.w * attenuation);
         result.a = attenuation;
-
-        // ApplyFog(position.xyz, result);
 
         // result = vec4(vec3(1.0 / max(dfg.y, 0.0001)), 1.0);
 #ifdef LIGHT_TYPE_AREA_RECT
         // debugging area lights
         result = area_light_radiance;
 #endif
-    } else {
-        result = albedo;
-    }
 
     result = (result * (1.0 - light_rays.a)) + light_rays;
 
@@ -302,7 +283,4 @@ void main()
 #else
     output_color = vec4(result);
 #endif
-
-
-    // output_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[0], texcoord).rg, 0.0, 1.0);
 }

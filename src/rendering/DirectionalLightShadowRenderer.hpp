@@ -8,6 +8,7 @@
 #include <rendering/Light.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EntityDrawCollection.hpp>
+#include <rendering/Shadows.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -25,16 +26,6 @@ using renderer::Frame;
 using renderer::Image;
 using renderer::ImageView;
 
-enum class ShadowMode : uint
-{
-    STANDARD,
-    PCF,
-    CONTACT_HARDENED,
-    VSM,
-
-    MAX
-};
-
 struct ShadowMapCameraData
 {
     Matrix4     view;
@@ -45,9 +36,9 @@ struct ShadowMapCameraData
 class ShadowPass : public FullScreenPass
 {
 public:
-    ShadowPass(const Handle<Scene> &parent_scene, ShadowMode shadow_mode, Extent2D extent);
-    ShadowPass(const ShadowPass &other) = delete;
-    ShadowPass &operator=(const ShadowPass &other) = delete;
+    ShadowPass(const Handle<Scene> &parent_scene, Extent2D extent, ShadowMode shadow_mode);
+    ShadowPass(const ShadowPass &other)             = delete;
+    ShadowPass &operator=(const ShadowPass &other)  = delete;
     virtual ~ShadowPass();
 
     const Handle<Camera> &GetCamera() const { return m_camera; }
@@ -123,7 +114,7 @@ private:
 class DirectionalLightShadowRenderer : public RenderComponent<DirectionalLightShadowRenderer>
 {
 public:
-    DirectionalLightShadowRenderer(Name name, Extent2D resolution);
+    DirectionalLightShadowRenderer(Name name, Extent2D resolution, ShadowMode shadow_mode);
     DirectionalLightShadowRenderer(const DirectionalLightShadowRenderer &other) = delete;
     DirectionalLightShadowRenderer &operator=(const DirectionalLightShadowRenderer &other) = delete;
     virtual ~DirectionalLightShadowRenderer();
@@ -143,6 +134,7 @@ private:
 
     UniquePtr<ShadowPass>   m_shadow_pass;
     Extent2D                m_resolution;
+    ShadowMode              m_shadow_mode;
 };
 
 } // namespace hyperion::v2

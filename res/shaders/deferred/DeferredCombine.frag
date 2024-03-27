@@ -153,13 +153,15 @@ void main()
     //     1.0
     // );
 
-    vec4 result = lit_result;
+    // initialize result with skybox color and opaque lit object result, based on mask (0x10 is sky)
+    vec4 result = mix(lit_result, forward_result, bvec4(bool(object_mask & 0x10)));
+    // // blend lit result with translucent and similar objects
+    result = mix(result, forward_result, forward_result.a);//bvec3(bool(object_mask & (0x04 | 0x02 | 0x08))));
 
-    if (bool(object_mask & (0x02 | 0x400)) && !bool(object_mask & 0x10)) {
-        result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
-    } else {
-        result.rgb += forward_result.rgb * forward_result.a;
-    }
+    // if (bool(object_mask & (0x02 | 0x400)) && !bool(object_mask & 0x10)) {
+    // } else {
+    //     result.rgb += forward_result.rgb * forward_result.a;
+    // }
 
     // result.rgb = forward_result.aaa;
 
@@ -171,4 +173,7 @@ void main()
     result.a = 1.0;
 
     color_output = result;
+
+    // color_output.rgb = forward_result.rgb;
+    color_output.a = 1.0;
 }

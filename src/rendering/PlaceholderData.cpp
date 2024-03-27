@@ -47,12 +47,12 @@ PlaceholderData::PlaceholderData()
       m_sampler_linear(MakeRenderObject<Sampler>(
           renderer::FilterMode::TEXTURE_FILTER_LINEAR,
           renderer::FilterMode::TEXTURE_FILTER_LINEAR,
-          renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+          renderer::WrapMode::TEXTURE_WRAP_REPEAT
       )),
       m_sampler_linear_mipmap(MakeRenderObject<Sampler>(
           renderer::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
           renderer::FilterMode::TEXTURE_FILTER_LINEAR,
-          renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+          renderer::WrapMode::TEXTURE_WRAP_REPEAT
       )),
       m_sampler_nearest(MakeRenderObject<Sampler>(
           renderer::FilterMode::TEXTURE_FILTER_NEAREST,

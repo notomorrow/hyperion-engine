@@ -159,6 +159,7 @@ struct DrawProxy<STUB_CLASS(Light)>
     Color           color;
     float           radius;
     float           falloff;
+    Vec2f           spot_angles;
     uint32          shadow_map_index;
     Vec2f           area_size;
     Vec4f           position_intensity;

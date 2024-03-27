@@ -32,7 +32,8 @@ void ShadowMapUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Ent
     case LightType::DIRECTIONAL:
         shadow_map_component.render_component = entity_manager.GetScene()->GetEnvironment()->AddRenderComponent<DirectionalLightShadowRenderer>(
             Name::Unique("shadow_map_renderer_directional"),
-            shadow_map_component.resolution
+            shadow_map_component.resolution,
+            shadow_map_component.mode
         );
 
         break;

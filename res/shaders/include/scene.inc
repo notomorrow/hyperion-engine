@@ -56,10 +56,8 @@ struct Light
     vec4    position_intensity;     // position or direction
     vec4    normal;                 // for area lights
 
+    vec2    spot_angles;            // for spot lights (x = outer, y = inner)
     uint    material_id;            // for area lights - ~0u == no material
-
-    uint    _pad0;
-    uint    _pad1;
     uint    _pad2;
 
     uvec4   _pad3;

@@ -14,7 +14,10 @@ layout(location=3) in flat uint v_object_index;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
-layout(location=4) out vec4 gbuffer_mask;
+layout(location=3) out vec4 gbuffer_tangents;
+layout(location=4) out vec2 gbuffer_velocity;
+layout(location=5) out vec4 gbuffer_mask;
+layout(location=6) out vec4 gbuffer_ws_normals;
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
 
@@ -64,12 +67,15 @@ void main()
     vec3 normal = normalize(v_normal);
 
 #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-    gbuffer_albedo = vec4(SAMPLE_TEXTURE_CUBE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
+    gbuffer_albedo = vec4(SAMPLE_TEXTURE_CUBE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0);
 #else
-   gbuffer_albedo = vec4(0.0);
+    gbuffer_albedo = vec4(0.0);
 #endif
 
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);
-    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
+    gbuffer_tangents = vec4(0.0, 0.0, 0.0, 1.0);
+    gbuffer_velocity = vec2(0.0);
+    gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_SKY);
+    gbuffer_ws_normals = vec4(0.0);
 }

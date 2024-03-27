@@ -329,7 +329,7 @@ public:
 } // namespace detail
 } // namespace containers
 
-template <class T, uint N>
+template <class T, SizeType N>
 constexpr uint ArraySize(const FixedArray<T, N> &)
 {
     return N;

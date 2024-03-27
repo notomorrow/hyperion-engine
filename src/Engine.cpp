@@ -99,10 +99,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_COLOR,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ InternalFormat::BGRA8_SRGB,
+            std::array{ InternalFormat::R10G10B10A2,
                         InternalFormat::RGBA16F,
-                        InternalFormat::RGBA32F,
-                        InternalFormat::RGBA16,
                         InternalFormat::RGBA8 },
             renderer::ImageSupportType::SRV
         )
