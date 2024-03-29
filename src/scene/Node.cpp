@@ -2,6 +2,7 @@
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
+#include <scene/ecs/components/NodeLinkComponent.hpp>
 #include <scene/animation/Bone.hpp>
 #include <system/Debug.hpp>
 #include <Engine.hpp>
@@ -88,7 +89,9 @@ Node::Node(Node &&other) noexcept
     other.m_scene = nullptr;
     other.m_transform_locked = false;
 
-    m_entity = std::move(other.m_entity);
+    auto entity = other.m_entity;
+    other.m_entity = ID<Entity>::invalid;
+    SetEntity(entity);
 
     m_child_nodes = std::move(other.m_child_nodes);
     other.m_child_nodes = {};
@@ -137,7 +140,9 @@ Node &Node::operator=(Node &&other) noexcept
     m_scene = other.m_scene;
     other.m_scene = nullptr;
 
-    m_entity = std::move(other.m_entity);
+    ID<Entity> entity = other.m_entity;
+    other.m_entity = ID<Entity>::invalid;
+    SetEntity(entity);
 
     m_name = std::move(other.m_name);
 
@@ -160,6 +165,23 @@ Node::~Node()
 {
     RemoveAllChildren();
     SetEntity(ID<Entity>::invalid);
+}
+
+bool Node::IsOrHasParent(const Node *node) const
+{
+    if (node == nullptr) {
+        return false;
+    }
+
+    if (node == this) {
+        return true;
+    }
+
+    if (m_parent_node == nullptr) {
+        return false;
+    }
+
+    return m_parent_node->IsOrHasParent(node);
 }
 
 void Node::SetScene(Scene *scene)
@@ -475,6 +497,11 @@ void Node::SetEntity(ID<Entity> entity)
         return;
     }
 
+    // Remove the NodeLinkComponent from the old entity
+    if (m_entity.IsValid()) {
+        m_scene->GetEntityManager()->RemoveComponent<NodeLinkComponent>(m_entity);
+    }
+
     if (entity.IsValid()) {
         m_entity = entity;
 
@@ -493,6 +520,15 @@ void Node::SetEntity(ID<Entity> entity)
         // set entity to static by default
         m_scene->GetEntityManager()->AddTag<EntityTag::STATIC>(m_entity);
         m_scene->GetEntityManager()->RemoveTag<EntityTag::DYNAMIC>(m_entity);
+        
+        // Update / add a NodeLinkComponent to the new entity
+        if (auto *node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(m_entity)) {
+            node_link_component->node = WeakRefCountedPtrFromThis();
+        } else {
+            m_scene->GetEntityManager()->AddComponent(m_entity, NodeLinkComponent {
+                WeakRefCountedPtrFromThis()
+            });
+        }
     } else {
         m_local_aabb = BoundingBox::empty;
 

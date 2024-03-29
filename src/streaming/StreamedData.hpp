@@ -84,7 +84,7 @@ class StreamedData : public EnableRefCountedPtrFromThis<StreamedData>
 public:
     friend class StreamedDataRefBase; // allow it to access m_use_count
 
-    StreamedData()          = default;
+    StreamedData() = default;
 
     StreamedData(const StreamedData &other)
         : m_use_count { other.m_use_count.Get(MemoryOrder::ACQUIRE) }

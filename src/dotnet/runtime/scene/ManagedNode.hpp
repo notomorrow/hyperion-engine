@@ -25,6 +25,18 @@ extern "C" struct ManagedNode
 
 static_assert(std::is_trivial_v<ManagedNode>, "ManagedNode must be a trivial type to be used in C#");
 
+static inline ManagedNode CreateManagedNodeFromWeakPtr(const Weak<Node> &weak)
+{
+    if (auto rc = weak.Lock()) {
+        // Take ownership of the ref count data
+        RC<Node>::RefCountDataType *ref_count_data = rc.Release();
+
+        return { ref_count_data };
+    }
+
+    return { nullptr };
+}
+
 static inline ManagedNode CreateManagedNodeFromNodeProxy(NodeProxy node_proxy)
 {
     // hacky cast to get around private inheritance

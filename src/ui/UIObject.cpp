@@ -30,12 +30,18 @@ namespace hyperion::v2 {
 
 UIObject::UIObject(ID<Entity> entity, UIScene *parent)
     : m_entity(entity),
-      m_parent(parent)
+      m_parent(parent),
+      m_alignment(UI_OBJECT_ALIGNMENT_TOP_LEFT),
+      m_position(0, 0),
+      m_size(100, 100)
 {
     AssertThrowMsg(entity.IsValid(), "Invalid Entity provided to UIObject!");
     AssertThrowMsg(parent != nullptr, "Invalid UIScene parent pointer provided to UIObject!");
 
     AddToScene();
+
+    UpdatePosition();
+    UpdateSize();
 
     struct ScriptedDelegate
     {
@@ -129,34 +135,51 @@ void UIObject::SetName(Name name)
 
 Vec2i UIObject::GetPosition() const
 {
-    if (!m_entity.IsValid() || !m_parent || !m_parent->GetScene().IsValid()) {
-        // Invalid entity or parent
-        return Vec2i::Zero();
-    }
-
-    if (TransformComponent *transform_component = m_parent->GetScene()->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
-        const Vec3f &translation = transform_component->transform.GetTranslation();
-
-        return Vec2i {
-            MathUtil::Floor<float, int>(translation.x),
-            MathUtil::Floor<float, int>(translation.y)
-        };
-    }
-
-    return Vec2i::Zero();
+    return m_position;
 }
 
 void UIObject::SetPosition(Vec2i position)
+{
+    m_position = position;
+
+    UpdatePosition();
+}
+
+void UIObject::UpdatePosition()
 {
     if (!m_entity.IsValid() || !m_parent || !m_parent->GetScene().IsValid()) {
         // Invalid entity or parent
         return;
     }
 
+    Vec2f offset_position(m_position);
+
+    switch (m_alignment) {
+    case UI_OBJECT_ALIGNMENT_TOP_LEFT:
+        offset_position += Vec2f(float(m_size.x) * 0.5f, float(m_size.y) * 0.5f);
+
+        break;
+    case UI_OBJECT_ALIGNMENT_TOP_RIGHT:
+        offset_position -= Vec2f(float(m_size.x) * 0.5f, float(m_size.y) * 0.5f);
+
+        break;
+    case UI_OBJECT_ALIGNMENT_CENTER:
+        // No offset
+        break;
+    case UI_OBJECT_ALIGNMENT_BOTTOM_LEFT:
+        offset_position += Vec2f(float(m_size.x) * 0.5f, -float(m_size.y) * 0.5f);
+
+        break;
+    case UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT:
+        offset_position -= Vec2f(float(m_size.x) * 0.5f, -float(m_size.y) * 0.5f);
+
+        break;
+    }
+
     if (TransformComponent *transform_component = m_parent->GetScene()->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
         transform_component->transform.SetTranslation(Vec3f {
-            float(position.x),
-            float(position.y),
+            offset_position.x,
+            offset_position.y,
             0.0f
         });
     }
@@ -164,24 +187,17 @@ void UIObject::SetPosition(Vec2i position)
 
 Vec2i UIObject::GetSize() const
 {
-    if (!m_entity.IsValid() || !m_parent || !m_parent->GetScene().IsValid()) {
-        // Invalid entity or parent
-        return Vec2i::Zero();
-    }
-
-    if (TransformComponent *transform_component = m_parent->GetScene()->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
-        const Vec3f &scale = transform_component->transform.GetScale();
-
-        return Vec2i {
-            MathUtil::Floor<float, int>(scale.x),
-            MathUtil::Floor<float, int>(scale.y)
-        };
-    }
-
-    return Vec2i::Zero();
+    return m_size;
 }
 
 void UIObject::SetSize(Vec2i size)
+{
+    m_size = size;
+
+    UpdateSize();
+}
+
+void UIObject::UpdateSize()
 {
     if (!m_entity.IsValid() || !m_parent || !m_parent->GetScene().IsValid()) {
         // Invalid entity or parent
@@ -190,8 +206,8 @@ void UIObject::SetSize(Vec2i size)
 
     if (TransformComponent *transform_component = m_parent->GetScene()->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
         transform_component->transform.SetScale(Vec3f {
-            float(size.x),
-            float(size.y),
+            float(m_size.x),
+            float(m_size.y),
             1.0f
         });
     }

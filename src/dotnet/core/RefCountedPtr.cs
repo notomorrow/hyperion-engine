@@ -17,6 +17,38 @@ namespace Hyperion
         {
             this.ctrlBlock = ctrlBlock;
         }
+
+        public bool Valid
+        {
+            get
+            {
+                return ctrlBlock != IntPtr.Zero;
+            }
+        }
+
+        public IntPtr Address
+        {
+            get
+            {
+                return ctrlBlock;
+            }
+        }
+
+        public void IncRef()
+        {
+            RefCountedPtr_IncRef(this);
+        }
+
+        public void DecRef()
+        {
+            RefCountedPtr_DecRef(this);
+        }
+
+        [DllImport("libhyperion", EntryPoint = "RefCountedPtr_IncRef")]
+        private static extern void RefCountedPtr_IncRef(RefCountedPtr ptr);
+
+        [DllImport("libhyperion", EntryPoint = "RefCountedPtr_DecRef")]
+        private static extern void RefCountedPtr_DecRef(RefCountedPtr ptr);
     }
 
     [StructLayout(LayoutKind.Sequential, Size = 8)]
@@ -30,5 +62,37 @@ namespace Hyperion
         {
             this.ctrlBlock = ctrlBlock;
         }
+
+        public bool Valid
+        {
+            get
+            {
+                return ctrlBlock != IntPtr.Zero;
+            }
+        }
+
+        public IntPtr Address
+        {
+            get
+            {
+                return ctrlBlock;
+            }
+        }
+
+        public void IncRef()
+        {
+            WeakRefCountedPtr_IncRef(this);
+        }
+
+        public void DecRef()
+        {
+            WeakRefCountedPtr_DecRef(this);
+        }
+
+        [DllImport("libhyperion", EntryPoint = "WeakRefCountedPtr_IncRef")]
+        private static extern void WeakRefCountedPtr_IncRef(WeakRefCountedPtr ptr);
+
+        [DllImport("libhyperion", EntryPoint = "WeakRefCountedPtr_DecRef")]
+        private static extern void WeakRefCountedPtr_DecRef(WeakRefCountedPtr ptr);
     }
 }

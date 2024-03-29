@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
 #define HYPERION_V2_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
 
+#include <dotnet/runtime/scene/ManagedNode.hpp>
+
 #include <core/ID.hpp>
 
 #include <Types.hpp>

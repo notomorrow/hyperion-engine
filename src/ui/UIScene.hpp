@@ -65,6 +65,7 @@ public:
 
         NodeProxy node_proxy = m_scene->GetRoot().AddChild();
         node_proxy.SetEntity(ui_object->GetEntity());
+        node_proxy.LockTransform(); // Lock the transform so it can't be modified by the user except through the UIObject
 
         // Set it to ignore parent scale so size of the UI object is not affected by the parent
         node_proxy.Get()->SetFlags(node_proxy.Get()->GetFlags() | NODE_FLAG_IGNORE_PARENT_SCALE);
