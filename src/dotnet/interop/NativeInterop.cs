@@ -79,9 +79,20 @@ namespace Hyperion
                     continue;
                 }
 
+                // Get all custom attributes for the method
+                object[] attributes = methodInfo.GetCustomAttributes(false /* inherit */);
+
+                List<string> attributeNames = new List<string>();
+
+                foreach (object attribute in attributes)
+                {
+                    // Add full qualified name of the attribute
+                    attributeNames.Add(attribute.GetType().FullName);
+                }
+
                 // Add the objects being pointed to to the delegate cache so they don't get GC'd
                 Guid guid = Guid.NewGuid();
-                ManagedMethod managedMethod = managedClass.AddMethod(methodInfo.Name, guid);
+                managedClass.AddMethod(methodInfo.Name, guid, attributeNames.ToArray());
 
                 ManagedMethodCache.Instance.AddMethod(guid, methodInfo);
             }

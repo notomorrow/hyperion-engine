@@ -89,8 +89,6 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
         if (visibility_state_component.octant_id == OctantID::invalid) {
             // entity was not in the octree, try to insert it
             if (!bounding_box_component.world_aabb.IsValid()) {
-                DebugLog(LogType::Warn, "Entity %u has invalid bounding box, skipping octree insertion\n", entity_id.Value());
-
                 continue;
             }
 

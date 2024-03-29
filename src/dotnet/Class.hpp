@@ -22,11 +22,12 @@ class ClassHolder;
 
 extern "C" {
 
-    struct ManagedClass
-    {
-        hyperion::int32                 type_hash;
-        hyperion::dotnet::Class   *class_object;
-    };
+struct ManagedClass
+{
+    hyperion::int32         type_hash;
+    hyperion::dotnet::Class *class_object;
+};
+
 }
 
 namespace hyperion::dotnet {
@@ -69,12 +70,59 @@ public:
     void SetFreeObjectFunction(FreeObjectFunction free_object_fptr)
         { m_free_object_fptr = free_object_fptr; }
 
+    /*! \brief Check if a method exists by name.
+     *
+     *  \param method_name The name of the method to check.
+     *
+     *  \return True if the method exists, otherwise false.
+     */
     bool HasMethod(const String &method_name) const
         { return m_methods.Find(method_name) != m_methods.End(); }
 
+    /*! \brief Get a method by name.
+     *
+     *  \param method_name The name of the method to get.
+     *
+     *  \return A pointer to the method object if it exists, otherwise nullptr.
+     */
+    ManagedMethod *GetMethod(const String &method_name)
+    {
+        auto it = m_methods.Find(method_name);
+        if (it == m_methods.End()) {
+            return nullptr;
+        }
+
+        return &it->second;
+    }
+
+    /*! \brief Get a method by name.
+     *
+     *  \param method_name The name of the method to get.
+     *
+     *  \return A pointer to the method object if it exists, otherwise nullptr.
+     */
+    const ManagedMethod *GetMethod(const String &method_name) const
+    {
+        auto it = m_methods.Find(method_name);
+        if (it == m_methods.End()) {
+            return nullptr;
+        }
+
+        return &it->second;
+    }
+
+    /*! \brief Add a method to this class.
+     *
+     *  \param method_name The name of the method to add.
+     *  \param method_object The method object to add.
+     */
     void AddMethod(const String &method_name, ManagedMethod &&method_object)
         { m_methods[method_name] = std::move(method_object); }
 
+    /*! \brief Get all methods of this class.
+     *
+     *  \return A reference to the map of methods.
+     */
     const HashMap<String, ManagedMethod> &GetMethods() const
         { return m_methods; }
 

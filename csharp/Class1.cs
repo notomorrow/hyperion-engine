@@ -3,6 +3,28 @@ using System.Runtime.InteropServices;
 
 using Hyperion;
 
+public class TestUIScript : UIObject
+{
+    public override void Init(Entity entity)
+    {
+        base.Init(entity);
+
+        Logger.Log(LogType.Info, "Init UI script");
+    }
+
+    public override void Destroy()
+    {
+        Logger.Log(LogType.Info, "Destroy UI script");
+    }
+
+    public override bool OnClick()
+    {
+        Logger.Log(LogType.Info, "OnClick for custom UI component");
+
+        return true;
+    }
+}
+
 public class TestScript : Script
 {
     public override void Init(Entity entity)
@@ -41,10 +63,10 @@ public class TestScript : Script
         // Logger.Log(LogType.Info, "Destroy a script");
     }
 
-    public override void Update(float deltaTime)
-    {
-        // Logger.Log(LogType.Info, "Update a script");
-    }
+    // public override void Update(float deltaTime)
+    // {
+    //     Logger.Log(LogType.Info, "Update a script");
+    // }
 }
 
 public class TestGame : Game

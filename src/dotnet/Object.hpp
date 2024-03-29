@@ -35,13 +35,10 @@ public:
         { return m_class_ptr; }
 
     template <class ReturnType, class... Args>
-    ReturnType InvokeMethod(const String &method_name, Args &&... args)
+    ReturnType InvokeMethod(const ManagedMethod *method_ptr, Args &&... args)
     {
         static_assert(std::is_void_v<ReturnType> || std::is_trivial_v<ReturnType>, "Return type must be trivial to be used in interop");
         static_assert(std::is_void_v<ReturnType> || std::is_object_v<ReturnType>, "Return type must be either a value type or a pointer type to be used in interop (no references)");
-
-        const ManagedMethod *method_ptr = GetMethod(method_name);
-        AssertThrowMsg(method_ptr != nullptr, "Method %s not found", method_name.Data());
 
         if constexpr (sizeof...(args) != 0) {
             void *args_vptr[] = { &args... };
@@ -64,6 +61,16 @@ public:
                 return return_value_storage.Get();
             }
         }
+    }
+
+    template <class ReturnType, class... Args>
+    HYP_FORCE_INLINE
+    ReturnType InvokeMethod(const String &method_name, Args &&... args)
+    {
+        const ManagedMethod *method_ptr = GetMethod(method_name);
+        AssertThrowMsg(method_ptr != nullptr, "Method %s not found", method_name.Data());
+
+        return InvokeMethod<ReturnType>(method_ptr, std::forward<Args>(args)...);
     }
 
 private:
