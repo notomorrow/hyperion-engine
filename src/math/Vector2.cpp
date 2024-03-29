@@ -80,26 +80,6 @@ Vec2<float> Vec2<float>::Max(const Vec2<float> &a, const Vec2<float> &b)
     return Vec2<float>(MathUtil::Max(a.x, b.x), MathUtil::Max(a.y, b.y));
 }
 
-Vec2<float> Vec2<float>::Zero()
-{
-    return Vec2<float>(0, 0);
-}
-
-Vec2<float> Vec2<float>::One()
-{
-    return Vec2<float>(1, 1);
-}
-
-Vec2<float> Vec2<float>::UnitX()
-{
-    return Vec2<float>(1, 0);
-}
-
-Vec2<float> Vec2<float>::UnitY()
-{
-    return Vec2<float>(0, 1);
-}
-
 template<>
 int math::detail::Vec2<int>::Max() const
 {

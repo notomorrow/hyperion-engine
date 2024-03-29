@@ -265,8 +265,6 @@ public:
 
     void RenderNextFrame(Game *game);
 
-    EngineCallbacks callbacks;
-
     ShaderCompiler m_shader_compiler;
 
     RenderState render_state;

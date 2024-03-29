@@ -33,41 +33,6 @@ struct Material
 #define GET_MATERIAL_PARAM(mat, index) \
     unpackUnorm4x8(mat.packed_params[(index) / 4])[(index) % 4]
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-    #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-        layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
-        {
-            Material materials[];
-        };
-
-        #ifndef CURRENT_MATERIAL
-            #define CURRENT_MATERIAL (materials[object.material_index])
-        #endif
-    #else
-        layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer
-        {
-            Material material;
-        };
-
-        #ifndef CURRENT_MATERIAL
-            #define CURRENT_MATERIAL material
-        #endif
-    #endif
-
-    #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
-        layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
-        layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
-        #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-            layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-        #endif
-    #else
-        layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
-        #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
-            layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-        #endif
-    #endif
-#endif
-
 #define MATERIAL_TEXTURE_ALBEDO_map     0
 #define MATERIAL_TEXTURE_NORMAL_MAP     1
 #define MATERIAL_TEXTURE_AO_MAP         2

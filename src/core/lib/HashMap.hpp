@@ -656,6 +656,8 @@ auto HashMap<KeyType, ValueType>::Erase(Iterator iter) -> Iterator
     AssertThrow(iter.bucket_iter.index < iter.bucket_iter.bucket->elements.Size());
 #endif
 
+    --m_size;
+
     const typename detail::HashBucket<KeyType, ValueType>::ElementList::Iterator element_list_it {
         iter.bucket_iter.bucket->elements.Data() + iter.bucket_iter.index
     };
@@ -665,8 +667,6 @@ auto HashMap<KeyType, ValueType>::Erase(Iterator iter) -> Iterator
     if (erase_it == iter.bucket_iter.bucket->elements.End()) {
         return End();
     }
-
-    --m_size;
 
     const SizeType erase_index = std::distance(iter.bucket_iter.bucket->elements.Begin(), erase_it);
 
@@ -687,6 +687,8 @@ bool HashMap<KeyType, ValueType>::Erase(const KeyType &key)
     AssertThrow(it.bucket_iter.bucket != nullptr);
     AssertThrow(it.bucket_iter.index < it.bucket_iter.bucket->elements.Size());
 #endif
+    
+    --m_size;
 
     const typename detail::HashBucket<KeyType, ValueType>::ElementList::ConstIterator element_list_it {
         it.bucket_iter.bucket->elements.Data() + it.bucket_iter.index
@@ -697,8 +699,6 @@ bool HashMap<KeyType, ValueType>::Erase(const KeyType &key)
     if (erase_it == it.bucket_iter.bucket->elements.End()) {
         return false;
     }
-    
-    --m_size;
 
     return true;
 }

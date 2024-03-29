@@ -341,7 +341,6 @@ DEF_HANDLE(UIScene,                      8);
 DEF_HANDLE(ParticleSystem,               8);
 DEF_HANDLE(ComputePipeline,              16384);
 DEF_HANDLE(ParticleSpawner,              512);
-DEF_HANDLE(UIObject,                     8192);
 DEF_HANDLE_NS(physics, RigidBody,        8192);
 
 DEF_HANDLE(PostProcessingEffect,         512);

@@ -44,8 +44,9 @@ struct ComponentInitInfo<STUB_CLASS(Scene)>
 {
     enum Flags : ComponentFlags
     {
-        SCENE_FLAGS_NONE = 0x0,
-        SCENE_FLAGS_HAS_TLAS = 0x1
+        SCENE_FLAGS_NONE        = 0x0,
+        SCENE_FLAGS_HAS_TLAS    = 0x1,
+        SCENE_FLAGS_NON_WORLD   = 0x2
     };
 
     ThreadMask      thread_mask = THREAD_GAME;

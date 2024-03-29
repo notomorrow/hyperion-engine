@@ -61,22 +61,6 @@ struct EntityInstanceBatch
         | (uint((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)) \
         | (uint((obj).bucket == HYP_OBJECT_BUCKET_UI) * (OBJECT_MASK_UI)))
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer
-{
-    Object objects[];
-};
-
-#ifdef VERTEX_SHADER
-    layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 3) readonly buffer EntityInstanceBatchBuffer
-    {
-        EntityInstanceBatch entity_instance_batch;
-    };
-#endif
-
-#endif
-
 #ifdef VERTEX_SHADER
     #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
     #define object (objects[OBJECT_INDEX])

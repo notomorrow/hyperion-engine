@@ -146,10 +146,17 @@ struct alignas(alignof(T) * 2) Vec2
     Type Max() const;
     Type Min() const;
 
-    static Vec2 Zero();
-    static Vec2 One();
-    static Vec2 UnitX();
-    static Vec2 UnitY();
+    static Vec2 Zero()
+        { return Vec2(0, 0); }
+
+    static Vec2 One()
+        { return Vec2(1, 1); }
+
+    static Vec2 UnitX()
+        { return Vec2(1, 0); }
+
+    static Vec2 UnitY()
+        { return Vec2(0, 1); }
 
     template <class Ty>
     constexpr explicit operator Vec2<Ty>() const
@@ -329,10 +336,17 @@ public:
     static Vec2 Min(const Vec2 &a, const Vec2 &b);
     static Vec2 Max(const Vec2 &a, const Vec2 &b);
 
-    static Vec2 Zero();
-    static Vec2 One();
-    static Vec2 UnitX();
-    static Vec2 UnitY();
+    static Vec2 Zero()
+        { return Vec2(0.0f, 0.0f); }
+
+    static Vec2 One()
+        { return Vec2(1.0f, 1.0f); }
+
+    static Vec2 UnitX()
+        { return Vec2(1.0f, 0.0f); }
+
+    static Vec2 UnitY()
+        { return Vec2(0.0f, 1.0f); }
 
     HashCode GetHashCode() const
     {

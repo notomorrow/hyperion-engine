@@ -9,15 +9,6 @@
 #include "shared.inc"
 #include "packing.inc"
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-// layout : [opaque albedo, .. shared gbuffer textures .., translucent albedo] - so result count is NUM_GBUFFER_TEXTURES even with depth attachment excluded from the count.
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 1) uniform texture2D gbuffer_depth_texture;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 2) uniform texture2D gbuffer_mip_chain;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 3) uniform sampler sampler_nearest; // nearest
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_linear;       // mipmap linear
-#endif
-
 #define gbuffer_sampler sampler_linear
 #define gbuffer_depth_sampler sampler_nearest
 
@@ -39,19 +30,5 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler sampler_lin
 #define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
 #define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(6)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
-
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 5) uniform texture2D gbuffer_deferred_result;
-
-vec4 SampleGBuffer(texture2D tex, vec2 texcoord)
-{
-    return Texture2D(gbuffer_depth_sampler, tex, texcoord);
-}
-
-float SampleDepth(vec2 uv)
-{
-    return SampleGBuffer(gbuffer_depth_texture, uv).r;
-}
-#endif
 
 #endif

@@ -68,6 +68,7 @@ Node::Node(
 
 Node::Node(Node &&other) noexcept
     : m_type(other.m_type),
+      m_flags(other.m_flags),
       m_name(std::move(other.m_name)),
       m_parent_node(other.m_parent_node),
       m_local_transform(other.m_local_transform),
@@ -78,6 +79,7 @@ Node::Node(Node &&other) noexcept
       m_transform_locked(other.m_transform_locked)
 {
     other.m_type = Type::NODE;
+    other.m_flags = NODE_FLAG_NONE;
     other.m_parent_node = nullptr;
     other.m_local_transform = Transform::identity;
     other.m_world_transform = Transform::identity;
@@ -87,11 +89,6 @@ Node::Node(Node &&other) noexcept
     other.m_transform_locked = false;
 
     m_entity = std::move(other.m_entity);
-
-    // if (m_entity) {
-    //     m_entity->SetIsAttachedToNode(&other, false);
-    //     m_entity->SetIsAttachedToNode(this, true);
-    // }
 
     m_child_nodes = std::move(other.m_child_nodes);
     other.m_child_nodes = {};
@@ -116,6 +113,9 @@ Node &Node::operator=(Node &&other) noexcept
     m_type = other.m_type;
     other.m_type = Type::NODE;
 
+    m_flags = other.m_flags;
+    other.m_flags = NODE_FLAG_NONE;
+
     m_parent_node = other.m_parent_node;
     other.m_parent_node = nullptr;
 
@@ -138,11 +138,6 @@ Node &Node::operator=(Node &&other) noexcept
     other.m_scene = nullptr;
 
     m_entity = std::move(other.m_entity);
-
-    if (m_entity) {
-        // m_entity->SetIsAttachedToNode(&other, false);
-        // m_entity->SetIsAttachedToNode(this, true);
-    }
 
     m_name = std::move(other.m_name);
 
@@ -228,7 +223,10 @@ NodeProxy Node::AddChild(const NodeProxy &node)
         return NodeProxy::empty;
     }
 
-    AssertThrow(node.Get()->m_parent_node == nullptr);
+    AssertThrowMsg(
+        node.Get()->GetParent() == nullptr,
+        "Cannot attach a child node that already has a parent"
+    );
 
     m_child_nodes.PushBack(std::move(node));
 
@@ -255,7 +253,7 @@ bool Node::RemoveChild(NodeList::Iterator iter)
 
     if (auto &node = *iter) {
         AssertThrow(node.Get() != nullptr);
-        AssertThrow(node.Get()->m_parent_node == this);
+        AssertThrow(node.Get()->GetParent() == this);
 
         for (auto &nested : node.Get()->GetDescendents()) {
             OnNestedNodeRemoved(nested);
@@ -297,7 +295,7 @@ void Node::RemoveAllChildren()
     for (auto it = m_child_nodes.begin(); it != m_child_nodes.end();) {
         if (auto &node = *it) {
             AssertThrow(node.Get() != nullptr);
-            AssertThrow(node.Get()->m_parent_node == this);
+            AssertThrow(node.Get()->GetParent() == this);
 
             for (auto &nested : node.Get()->GetDescendents()) {
                 OnNestedNodeRemoved(nested);
@@ -516,8 +514,22 @@ void Node::UpdateWorldTransform()
 
     const Transform transform_before = m_world_transform;
 
-    if (m_parent_node != nullptr) {
+    if (m_parent_node != nullptr && !(m_flags & NODE_FLAG_IGNORE_PARENT_TRANSFORM)) {
         m_world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
+    } else if (m_parent_node != nullptr) {
+        m_world_transform = m_local_transform;
+        
+        if (!(m_flags & NODE_FLAG_IGNORE_PARENT_TRANSLATION)) {
+            m_world_transform.SetTranslation(m_parent_node->GetWorldTransform().GetTranslation() + m_local_transform.GetTranslation());
+        }
+
+        if (!(m_flags & NODE_FLAG_IGNORE_PARENT_ROTATION)) {
+            m_world_transform.SetRotation(m_parent_node->GetWorldTransform().GetRotation() * m_local_transform.GetRotation());
+        }
+
+        if (!(m_flags & NODE_FLAG_IGNORE_PARENT_SCALE)) {
+            m_world_transform.SetScale(m_parent_node->GetWorldTransform().GetScale() * m_local_transform.GetScale());
+        }
     } else {
         m_world_transform = m_local_transform;
     }

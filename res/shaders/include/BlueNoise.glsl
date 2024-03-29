@@ -1,16 +1,6 @@
 #ifndef BLUE_NOISE_GLSL
 #define BLUE_NOISE_GLSL
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 75) readonly buffer BlueNoiseBuffer {
-	ivec4 sobol_256spp_256d[256 * 256 / 4];
-	ivec4 scrambling_tile[128 * 128 * 8 / 4];
-	ivec4 ranking_tile[128 * 128 * 8 / 4];
-};
-
-#endif
-
 // https://eheitzresearch.wordpress.com/762-2/
 float SampleBlueNoise(int pixel_i, int pixel_j, int sample_index, int sample_dimension)
 {
