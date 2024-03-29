@@ -78,10 +78,8 @@ extern "C" {
         return ManagedClass { type_hash, class_object };
     }
 
-    void ManagedClass_AddMethod(ManagedClass managed_class, const char *method_name, ManagedGuid guid)
+    void ManagedClass_AddMethod(ManagedClass managed_class, const char *method_name, ManagedGuid guid, uint32 num_attributes, const char **attribute_names)
     {
-        DebugLog(LogType::Debug, "(C++) Adding method...\n");
-
         if (!managed_class.class_object || !method_name) {
             return;
         }
@@ -91,7 +89,26 @@ extern "C" {
         ManagedMethod method_object;
         method_object.guid = guid;
 
-        managed_class.class_object->AddMethod(method_name, std::move(method_object));
+        if (num_attributes != 0) {
+            method_object.attribute_names.Reserve(num_attributes);
+
+            for (uint32 i = 0; i < num_attributes; i++) {
+                method_object.attribute_names.PushBack(attribute_names[i]);
+            }
+        }
+
+        DebugLog(LogType::Debug, "Attributes: ");
+
+        for (const String &attribute_name : method_object.attribute_names) {
+            DebugLog(LogType::Debug, "%s ", attribute_name.Data());
+        }
+
+        DebugLog(LogType::Debug, "\n");
+
+        managed_class.class_object->AddMethod(
+            method_name,
+            std::move(method_object)
+        );
     }
 
     void ManagedClass_SetNewObjectFunction(ManagedClass managed_class, Class::NewObjectFunction new_object_fptr)

@@ -12,6 +12,10 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
+#include <scene/ecs/components/ScriptComponent.hpp>
+
+#include <dotnet/DotNetSystem.hpp>
+#include <dotnet/Class.hpp>
 
 #include <system/Application.hpp>
 
@@ -32,6 +36,52 @@ UIObject::UIObject(ID<Entity> entity, UIScene *parent)
     AssertThrowMsg(parent != nullptr, "Invalid UIScene parent pointer provided to UIObject!");
 
     AddToScene();
+
+    struct ScriptedDelegate
+    {
+        ID<Entity>  entity;
+        UIScene     *parent;
+        String      method_name;
+
+        ScriptedDelegate(UIObject *ui_object, const String &method_name)
+            : entity(ui_object->GetEntity()),
+              parent(ui_object->GetParent()),
+              method_name(method_name)
+        {
+        }
+
+        bool operator()(const UIMouseEventData &)
+        {
+            if (!entity.IsValid() || !parent) {
+                return false;
+            }
+
+            ScriptComponent *script_component = parent->GetScene()->GetEntityManager()->TryGetComponent<ScriptComponent>(entity);
+
+            if (!script_component || !script_component->object) {
+                return false;
+            }
+            
+            if (dotnet::Class *class_ptr = script_component->object->GetClass()) {
+                if (auto *method_ptr = class_ptr->GetMethod(method_name)) {
+                    // Stubbed method, do not call
+                    if (method_ptr->HasAttribute("Hyperion.ScriptMethodStub")) {
+                        return false;
+                    }
+
+                    return script_component->object->InvokeMethod<bool>(method_ptr);
+                }
+            }
+
+            return false;
+        }
+    };
+
+    OnMouseHover.Bind(ScriptedDelegate { this, "OnMouseHover" });
+    OnMouseDrag.Bind(ScriptedDelegate { this, "OnMouseDrag" });
+    OnMouseUp.Bind(ScriptedDelegate { this, "OnMouseUp" });
+    OnMouseDown.Bind(ScriptedDelegate { this, "OnMouseDown" });
+    OnClick.Bind(ScriptedDelegate { this, "OnClick" });
 }
 
 UIObject::~UIObject()

@@ -23,11 +23,11 @@ public:
     using InvokeMethodFunction = void *(*)(ManagedGuid, ManagedGuid, void **, void *);
 
     ClassHolder();
-    ClassHolder(const ClassHolder &)                    = delete;
-    ClassHolder &operator=(const ClassHolder &)         = delete;
-    ClassHolder(ClassHolder &&) noexcept                = delete;
-    ClassHolder &operator=(ClassHolder &&) noexcept     = delete;
-    ~ClassHolder()                                            = default;
+    ClassHolder(const ClassHolder &)                = delete;
+    ClassHolder &operator=(const ClassHolder &)     = delete;
+    ClassHolder(ClassHolder &&) noexcept            = delete;
+    ClassHolder &operator=(ClassHolder &&) noexcept = delete;
+    ~ClassHolder()                                  = default;
 
     Class *GetOrCreateClassObject(int32 type_hash, const char *type_name);
     Class *FindClassByName(const char *type_name);
@@ -39,10 +39,10 @@ public:
         { m_invoke_method_fptr = invoke_method_fptr; }
 
 private:
-    HashMap<int32, UniquePtr<Class>>  m_class_objects;
+    HashMap<int32, UniquePtr<Class>>    m_class_objects;
 
     // Function pointer to invoke a managed method
-    InvokeMethodFunction                    m_invoke_method_fptr;
+    InvokeMethodFunction                m_invoke_method_fptr;
 };
 
 class Assembly

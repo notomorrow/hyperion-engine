@@ -720,6 +720,13 @@ void SampleStreamer::InitGame()
     // });
 
     if (auto btn = GetUI().CreateUIObject<UIButton>(Vec2i { 25, 25 }, Vec2i { 250, 100 }, "My Button")) {
+        GetUI().GetScene()->GetEntityManager()->AddComponent(btn->GetEntity(), ScriptComponent {
+            {
+                .assembly_name = "csharp/bin/Debug/net8.0/csharp.dll",
+                .class_name = "TestUIScript"
+            }
+        });
+
         btn->OnMouseHover.Bind([](const UIMouseEventData &)
         {
             DebugLog(LogType::Debug, "Hover button\n");
@@ -1118,6 +1125,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
     }
 
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
+#if 0
         struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
         {
             Handle<Scene> scene;
@@ -1143,6 +1151,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 
         // PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
         m_scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(Name::Unique("LightmapRenderer"));
+#endif
 
         // shoot bullet on mouse button left
         if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {

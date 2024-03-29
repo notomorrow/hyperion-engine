@@ -39,7 +39,16 @@ namespace Hyperion
             this.entity = entity;
         }
 
-        public abstract void Destroy();
-        public abstract void Update(float deltaTime);
+        [Hyperion.ScriptMethodStub]
+        public virtual void Destroy()
+        {
+            // Do nothing
+        }
+
+        [Hyperion.ScriptMethodStub]
+        public virtual void Update(float deltaTime)
+        {
+            // Do nothing
+        }
     }
 }

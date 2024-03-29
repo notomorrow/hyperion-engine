@@ -76,8 +76,16 @@ void ScriptSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit 
         }
 
         if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
-            if (class_ptr->HasMethod("Update")) {
-                script_component.object->InvokeMethod<void, float>("Update", float(delta));
+
+            if (auto *update_method_ptr = class_ptr->GetMethod("Update")) {
+                if (update_method_ptr->HasAttribute("Hyperion.ScriptMethodStub")) {
+                    // Stubbed method, don't waste cycles calling it if it's not implemented
+                    continue;
+                }
+
+                DebugLog(LogType::Debug, "ScriptSystem::Process: Calling Update on entity %u\n", entity_id.Value());
+
+                script_component.object->InvokeMethod<void, float>(update_method_ptr, float(delta));
             }
         }
     }
