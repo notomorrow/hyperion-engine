@@ -36,13 +36,13 @@ static inline Scene *GetScene(UISceneType *ui_scene)
 
 enum UIObjectAlignment : uint32
 {
-    UI_OBJECT_ALIGNMENT_TOP_LEFT,
-    UI_OBJECT_ALIGNMENT_TOP_RIGHT,
+    UI_OBJECT_ALIGNMENT_TOP_LEFT        = 0,
+    UI_OBJECT_ALIGNMENT_TOP_RIGHT       = 1,
 
-    UI_OBJECT_ALIGNMENT_CENTER,
+    UI_OBJECT_ALIGNMENT_CENTER          = 2,
 
-    UI_OBJECT_ALIGNMENT_BOTTOM_LEFT,
-    UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT
+    UI_OBJECT_ALIGNMENT_BOTTOM_LEFT     = 3,
+    UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT    = 4
 };
 
 class UIObject : public EnableRefCountedPtrFromThis<UIObject>
@@ -54,6 +54,8 @@ public:
     UIObject(UIObject &&other) noexcept             = delete;
     UIObject &operator=(UIObject &&other) noexcept  = delete;
     virtual ~UIObject();
+
+    virtual void Init();
 
     ID<Entity> GetEntity() const
         { return m_entity; }
@@ -94,9 +96,6 @@ protected:
     Vec2i               m_size;
 
     UIObjectAlignment   m_alignment;
-
-private:
-    void AddToScene();
 };
 
 // UIObjectProxy<T>

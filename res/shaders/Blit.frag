@@ -22,5 +22,6 @@ void main()
 {
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
 
+    // out_color.rgb = pow(Texture2D(sampler_nearest, src_image, v_texcoord0).rgb, vec3(1.0/2.2));
     out_color.rgb = Texture2D(sampler_nearest, src_image, v_texcoord0).rgb;
 }

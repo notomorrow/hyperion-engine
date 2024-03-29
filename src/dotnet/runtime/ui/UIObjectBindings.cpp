@@ -13,6 +13,28 @@ using namespace hyperion::v2;
 
 extern "C" {
 
+uint64 UIObject_GetName(ManagedRefCountedPtr obj)
+{
+    RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
+
+    if (!ui_object) {
+        return 0;
+    }
+
+    return ui_object->GetName().GetID();
+}
+
+void UIObject_SetName(ManagedRefCountedPtr obj, uint64 name)
+{
+    RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
+
+    if (!ui_object) {
+        return;
+    }
+
+    ui_object->SetName(Name(name));
+}
+
 Vec2i UIObject_GetPosition(ManagedRefCountedPtr obj)
 {
     RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
@@ -55,6 +77,28 @@ void UIObject_SetSize(ManagedRefCountedPtr obj, Vec2i size)
     }
 
     ui_object->SetSize(size);
+}
+
+UIObjectAlignment UIObject_GetAlignment(ManagedRefCountedPtr obj)
+{
+    RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
+
+    if (!ui_object) {
+        return UI_OBJECT_ALIGNMENT_TOP_LEFT;
+    }
+
+    return ui_object->GetAlignment();
+}
+
+void UIObject_SetAlignment(ManagedRefCountedPtr obj, UIObjectAlignment alignment)
+{
+    RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
+
+    if (!ui_object) {
+        return;
+    }
+
+    ui_object->SetAlignment(alignment);
 }
 
 }

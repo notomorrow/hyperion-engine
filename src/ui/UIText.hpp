@@ -1,11 +1,12 @@
 #ifndef HYPERION_V2_UI_TEXT_H
 #define HYPERION_V2_UI_TEXT_H
 
+#include <ui/UIObject.hpp>
+#include <ui/UIScene.hpp>
+
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <core/Handle.hpp>
-
-#include <ui/UIScene.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/FullScreenPass.hpp>
@@ -45,7 +46,7 @@ public:
         const uint num_chars_per_row = NumCharsPerRow();
         const uint num_chars_per_col = NumCharsPerCol();
 
-        for (int ch = 16; ch < 255; ch++) {
+        for (int ch = 32; ch < 256; ch++) {
             m_char_texture_coords[ch] = Vec2i {
                 x_position,
                 y_position
@@ -142,13 +143,40 @@ public:
 private:
     Handle<Texture>         m_texture;
     Extent2D                m_char_size;
-    FixedArray<Vec2i, 255>  m_char_texture_coords;
+    FixedArray<Vec2i, 256>  m_char_texture_coords;
 };
 
-class UIText
+class UIText : public UIObject
 {
-public:
     static Handle<Mesh> BuildTextMesh(const FontMap &font_map, const String &text);
+
+public:
+    UIText(ID<Entity> entity, UIScene *ui_scene);
+    UIText(const UIText &other)                 = delete;
+    UIText &operator=(const UIText &other)      = delete;
+    UIText(UIText &&other) noexcept             = delete;
+    UIText &operator=(UIText &&other) noexcept  = delete;
+    virtual ~UIText() override                  = default;
+
+    virtual void Init() override;
+
+    const String &GetText() const
+        { return m_text; }
+
+    void SetText(const String &text);
+
+    const RC<FontMap> &GetFontMap() const
+        { return m_font_map; }
+
+    void SetFontMap(RC<FontMap> font_map);
+
+protected:
+    virtual Handle<Material> GetMaterial() const override;
+
+    void UpdateMesh(bool update_material = false);
+
+    String      m_text;
+    RC<FontMap> m_font_map;
 };
 
 } // namespace hyperion::v2

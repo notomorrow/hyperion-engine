@@ -8,7 +8,7 @@
 namespace hyperion::v2 {
 
 CompositePass::CompositePass()
-    : FullScreenPass(InternalFormat::RGBA16F)
+    : FullScreenPass(InternalFormat::RGBA8_SRGB)
 {
 
 }

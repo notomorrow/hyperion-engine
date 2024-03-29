@@ -366,7 +366,8 @@ public:
             if (std::any_of(
                 details.formats.begin(),
                 details.formats.end(),
-                [wanted_vk_format, &predicate](const VkSurfaceFormatKHR &surface_format) {
+                [wanted_vk_format, &predicate](const VkSurfaceFormatKHR &surface_format)
+                {
                     return surface_format.format == wanted_vk_format && predicate(surface_format);
                 }
             )) {
