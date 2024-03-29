@@ -37,8 +37,39 @@ UIObject::UIObject(ID<Entity> entity, UIScene *parent)
 {
     AssertThrowMsg(entity.IsValid(), "Invalid Entity provided to UIObject!");
     AssertThrowMsg(parent != nullptr, "Invalid UIScene parent pointer provided to UIObject!");
+}
 
-    AddToScene();
+UIObject::~UIObject()
+{
+}
+
+void UIObject::Init()
+{
+    AssertThrow(m_entity.IsValid());
+    AssertThrow(m_parent != nullptr);
+
+    const Handle<Scene> &scene = m_parent->GetScene();
+    AssertThrow(scene.IsValid());
+
+    Handle<Mesh> mesh = MeshBuilder::Quad();
+    InitObject(mesh);
+
+    scene->GetEntityManager()->AddComponent(m_entity, MeshComponent {
+        mesh,
+        GetMaterial()
+    });
+
+    scene->GetEntityManager()->AddComponent(m_entity, VisibilityStateComponent {
+        // VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE
+    });
+
+    scene->GetEntityManager()->AddComponent(m_entity, BoundingBoxComponent {
+        mesh->GetAABB()
+    });
+
+    scene->GetEntityManager()->AddComponent(m_entity, TransformComponent {
+        Transform { }
+    });
 
     UpdatePosition();
     UpdateSize();
@@ -88,39 +119,6 @@ UIObject::UIObject(ID<Entity> entity, UIScene *parent)
     OnMouseUp.Bind(ScriptedDelegate { this, "OnMouseUp" });
     OnMouseDown.Bind(ScriptedDelegate { this, "OnMouseDown" });
     OnClick.Bind(ScriptedDelegate { this, "OnClick" });
-}
-
-UIObject::~UIObject()
-{
-}
-
-void UIObject::AddToScene()
-{
-    AssertThrow(m_entity.IsValid());
-    AssertThrow(m_parent != nullptr);
-
-    const Handle<Scene> &scene = m_parent->GetScene();
-    AssertThrow(scene.IsValid());
-
-    Handle<Mesh> mesh = MeshBuilder::Quad();
-    InitObject(mesh);
-
-    scene->GetEntityManager()->AddComponent(m_entity, MeshComponent {
-        mesh,
-        GetMaterial()
-    });
-
-    scene->GetEntityManager()->AddComponent(m_entity, VisibilityStateComponent {
-        // VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE
-    });
-
-    scene->GetEntityManager()->AddComponent(m_entity, BoundingBoxComponent {
-        mesh->GetAABB()
-    });
-
-    scene->GetEntityManager()->AddComponent(m_entity, TransformComponent {
-        Transform { }
-    });
 }
 
 Name UIObject::GetName() const
@@ -213,6 +211,18 @@ void UIObject::UpdateSize()
     }
 }
 
+UIObjectAlignment UIObject::GetAlignment() const
+{
+    return m_alignment;
+}
+
+void UIObject::SetAlignment(UIObjectAlignment alignment)
+{
+    m_alignment = alignment;
+
+    UpdatePosition();
+}
+
 Handle<Material> UIObject::GetMaterial() const
 {
     return g_material_system->GetOrCreate(
@@ -224,6 +234,9 @@ Handle<Material> UIObject::GetMaterial() const
         },
         {
             { Material::MATERIAL_KEY_ALBEDO, Vec4f { 0.0f, 0.005f, 0.015f, 0.95f } }
+        },
+        {
+            { Material::MATERIAL_TEXTURE_ALBEDO_MAP, g_asset_manager->Load<Texture>("textures/dummy.jpg") }
         }
     );
 }

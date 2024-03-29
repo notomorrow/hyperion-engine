@@ -297,7 +297,7 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
             mesh_component.material->SetIsDepthWriteEnabled(true);
             mesh_component.material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.85f);
             mesh_component.material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-            mesh_component.material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 3.0f);
+            mesh_component.material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 1.0f);
 
             if (auto albedo_texture = g_asset_manager->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png")) {
                 albedo_texture->GetImage()->SetIsSRGB(true);

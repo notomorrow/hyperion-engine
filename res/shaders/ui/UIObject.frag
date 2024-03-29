@@ -60,30 +60,24 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
 void main()
 {
-    vec4 background = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 5.0);
+    vec4 background = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 4.0);
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
+    ui_color = (vec4(ui_color.rgb, 1.0) * ui_color.a) + (background * (1.0 - ui_color.a));
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
-        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD
-            || /* font map: */ albedo_texture.r < MATERIAL_ALPHA_DISCARD) {
-        //    discard;
+        if (albedo_texture.a < 0.05) {
+           discard;
         }
 
-        //ui_color = albedo_texture;
+        ui_color = albedo_texture;// * CURRENT_MATERIAL.albedo;
     }
 
-    vec4 result = vec4(
-        (ui_color.rgb * ui_color.a) + (background.rgb * (1.0 - ui_color.a)),
-        1.0
-    );
-
     uint mask = GET_OBJECT_BUCKET(object);
-    mask |= OBJECT_MASK_UI_BUTTON;
 
-    gbuffer_albedo = result;
+    gbuffer_albedo = ui_color;
     gbuffer_mask = UINT_TO_VEC4(mask);
 }

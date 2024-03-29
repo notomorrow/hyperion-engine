@@ -31,6 +31,7 @@ class InputManager;
 namespace hyperion::v2 {
 
 class UIButton;
+class FontMap;
 
 class UIScene : public BasicObject<STUB_CLASS(UIScene)>
 {
@@ -49,11 +50,16 @@ public:
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
+    const RC<FontMap> &GetDefaultFontMap() const
+        { return m_default_font_map; }
+
+    void SetDefaultFontMap(RC<FontMap> font_map)
+        { m_default_font_map = std::move(font_map); }
+
     template <class T>
     UIObjectProxy<T> CreateUIObject(
         Vec2i position,
-        Vec2i size,
-        const String &text
+        Vec2i size
     )
     {
         Threads::AssertOnThread(THREAD_GAME);
@@ -98,6 +104,8 @@ private:
 
         m_scene->GetEntityManager()->AddComponent(entity, UIComponent { ui_object });
 
+        ui_object->Init();
+
         return ui_object;
     }
 
@@ -106,6 +114,9 @@ private:
     Vec2i                       m_surface_size;
 
     Handle<Scene>               m_scene;
+
+    RC<FontMap>                 m_default_font_map;
+
     FlatMap<ID<Entity>, float>  m_mouse_held_times;
 };
 

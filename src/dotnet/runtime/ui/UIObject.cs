@@ -3,6 +3,15 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    public enum UIObjectAlignment : uint
+    {
+        TopLeft = 0,
+        TopRight = 1,
+        Center = 2,
+        BottomLeft = 3,
+        BottomRight = 4
+    }
+
     public class UIObject : IDisposable
     {
         private RefCountedPtr refCountedPtr = RefCountedPtr.Null;
@@ -38,6 +47,18 @@ namespace Hyperion
             }
         }
 
+        public Name Name
+        {
+            get
+            {
+                return UIObject_GetName(refCountedPtr);
+            }
+            set
+            {
+                UIObject_SetName(refCountedPtr, value);
+            }
+        }
+
         public Vec2i Position
         {
             get
@@ -62,16 +83,40 @@ namespace Hyperion
             }
         }
 
+        public UIObjectAlignment Alignment
+        {
+            get
+            {
+                return UIObject_GetAlignment(refCountedPtr);
+            }
+            set
+            {
+                UIObject_SetAlignment(refCountedPtr, value);
+            }
+        }
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_GetName")]
+        private static extern Name UIObject_GetName(RefCountedPtr rc);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_SetName")]
+        private static extern void UIObject_SetName(RefCountedPtr rc, Name name);
+
         [DllImport("libhyperion", EntryPoint = "UIObject_GetPosition")]
-        private static extern Vec2i UIObject_GetPosition(RefCountedPtr ctrlBlock);
+        private static extern Vec2i UIObject_GetPosition(RefCountedPtr rc);
 
         [DllImport("libhyperion", EntryPoint = "UIObject_SetPosition")]
-        private static extern void UIObject_SetPosition(RefCountedPtr ctrlBlock, Vec2i position);
+        private static extern void UIObject_SetPosition(RefCountedPtr rc, Vec2i position);
 
         [DllImport("libhyperion", EntryPoint = "UIObject_GetSize")]
-        private static extern Vec2i UIObject_GetSize(RefCountedPtr ctrlBlock);
+        private static extern Vec2i UIObject_GetSize(RefCountedPtr rc);
 
         [DllImport("libhyperion", EntryPoint = "UIObject_SetSize")]
-        private static extern void UIObject_SetSize(RefCountedPtr ctrlBlock, Vec2i size);
+        private static extern void UIObject_SetSize(RefCountedPtr rc, Vec2i size);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_GetAlignment")]
+        private static extern UIObjectAlignment UIObject_GetAlignment(RefCountedPtr rc);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_SetAlignment")]
+        private static extern void UIObject_SetAlignment(RefCountedPtr rc, UIObjectAlignment alignment);
     }
 }

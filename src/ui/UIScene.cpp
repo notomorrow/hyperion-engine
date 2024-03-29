@@ -1,5 +1,6 @@
 #include <ui/UIScene.hpp>
 #include <ui/UIButton.hpp>
+#include <ui/UIText.hpp>
 
 #include <util/MeshBuilder.hpp>
 
@@ -11,6 +12,8 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
+
+#include <rendering/Texture.hpp>
 
 #include <system/Application.hpp>
 
@@ -38,6 +41,17 @@ void UIScene::Init()
     }
 
     BasicObject::Init();
+
+    if (!m_default_font_map) {
+        Handle<Texture> font_map_texture = g_asset_manager->Load<Texture>("textures/fontmap.png");
+
+        if (font_map_texture.IsValid()) {
+            m_default_font_map = RC<FontMap>::Construct(
+                font_map_texture,
+                Extent2D { 128, 128 }
+            );
+        }
+    }
 
     m_scene = CreateObject<Scene>(
         CreateObject<Camera>(),

@@ -23,6 +23,7 @@ VkSurfaceFormatKHR Swapchain<Platform::VULKAN>::ChooseSurfaceFormat(Device<Platf
     this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
         this->support_details,
         std::array {
+            InternalFormat::RGBA8_SRGB,
             InternalFormat::BGRA8_SRGB
         },
         [this](const VkSurfaceFormatKHR &format)
@@ -47,9 +48,9 @@ VkSurfaceFormatKHR Swapchain<Platform::VULKAN>::ChooseSurfaceFormat(Device<Platf
     this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
         this->support_details,
         std::array{
-            InternalFormat::RGBA8,
+            InternalFormat::R11G11B10F,
             InternalFormat::RGBA16F,
-            InternalFormat::RGBA32F
+            InternalFormat::RGBA8
         },
         [this](const VkSurfaceFormatKHR &format)
         {

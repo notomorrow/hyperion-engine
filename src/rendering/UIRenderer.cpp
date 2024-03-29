@@ -117,7 +117,7 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
         RenderableAttributeSet(
             MeshAttributes { },
             MaterialAttributes {
-                .bucket = BUCKET_UI,
+                .bucket     = BUCKET_UI,
                 .cull_faces = FaceCullMode::NONE
             }
         )

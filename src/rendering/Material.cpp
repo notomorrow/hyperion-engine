@@ -516,6 +516,8 @@ Handle<Material> MaterialCache::GetOrCreate(
         };
     }
 
+    // @TODO: For textures hashcode, asset path should be used rather than texture ID
+
     HashCode hc;
     hc.Add(attributes.GetHashCode());
     hc.Add(parameters.GetHashCode());
