@@ -97,14 +97,6 @@ extern "C" {
             }
         }
 
-        DebugLog(LogType::Debug, "Attributes: ");
-
-        for (const String &attribute_name : method_object.attribute_names) {
-            DebugLog(LogType::Debug, "%s ", attribute_name.Data());
-        }
-
-        DebugLog(LogType::Debug, "\n");
-
         managed_class.class_object->AddMethod(
             method_name,
             std::move(method_object)

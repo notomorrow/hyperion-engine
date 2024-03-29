@@ -34,6 +34,17 @@ static inline Scene *GetScene(UISceneType *ui_scene)
 
 // UIObject
 
+enum UIObjectAlignment : uint32
+{
+    UI_OBJECT_ALIGNMENT_TOP_LEFT,
+    UI_OBJECT_ALIGNMENT_TOP_RIGHT,
+
+    UI_OBJECT_ALIGNMENT_CENTER,
+
+    UI_OBJECT_ALIGNMENT_BOTTOM_LEFT,
+    UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT
+};
+
 class UIObject : public EnableRefCountedPtrFromThis<UIObject>
 {
 public:
@@ -59,6 +70,9 @@ public:
     Vec2i GetSize() const;
     void SetSize(Vec2i size);
 
+    UIObjectAlignment GetAlignment() const;
+    void SetAlignment(UIObjectAlignment alignment);
+
     Delegate<bool, const UIMouseEventData &>    OnMouseDown;
     Delegate<bool, const UIMouseEventData &>    OnMouseUp;
     Delegate<bool, const UIMouseEventData &>    OnMouseDrag;
@@ -68,10 +82,18 @@ public:
 protected:
     virtual Handle<Material> GetMaterial() const;
 
-    ID<Entity>  m_entity;
-    UIScene     *m_parent;
+    void UpdatePosition();
+    void UpdateSize();
 
-    Name        m_name;
+    ID<Entity>          m_entity;
+    UIScene             *m_parent;
+
+    Name                m_name;
+
+    Vec2i               m_position;
+    Vec2i               m_size;
+
+    UIObjectAlignment   m_alignment;
 
 private:
     void AddToScene();

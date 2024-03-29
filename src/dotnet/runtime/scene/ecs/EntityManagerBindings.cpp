@@ -7,6 +7,8 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
+#include <scene/ecs/components/UIComponent.hpp>
+#include <scene/ecs/components/NodeLinkComponent.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 
@@ -131,5 +133,35 @@ extern "C" {
     ComponentID ShadowMapComponent_AddComponent(EntityManager *manager, ManagedEntity entity, ShadowMapComponent *component)
     {
         return manager->AddComponent(entity, std::move(*component));
+    }
+
+    // UIComponent
+    uint32 UIComponent_GetNativeTypeID()
+    {
+        return TypeID::ForType<UIComponent>().Value();
+    }
+
+    ComponentID UIComponent_AddComponent(EntityManager *manager, ManagedEntity entity, UIComponent *component)
+    {
+        return manager->AddComponent(entity, std::move(*component));
+    }
+
+    // NodeLinkComponent
+    uint32 NodeLinkComponent_GetNativeTypeID()
+    {
+        return TypeID::ForType<NodeLinkComponent>().Value();
+    }
+
+    ComponentID NodeLinkComponent_AddComponent(EntityManager *manager, ManagedEntity entity, NodeLinkComponent *component)
+    {
+        return manager->AddComponent(entity, std::move(*component));
+    }
+
+    ManagedNode NodeLinkComponent_LockReference(void *ref_count_data)
+    {
+        Weak<Node> weak_ptr;
+        weak_ptr.SetRefCountData(static_cast<Weak<Node>::WeakRefCountedPtrBase::RefCountDataType *>(ref_count_data), false /* inc_ref */);
+
+        return CreateManagedNodeFromWeakPtr(weak_ptr);
     }
 }

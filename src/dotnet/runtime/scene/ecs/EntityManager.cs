@@ -57,6 +57,18 @@ namespace Hyperion
                 nativeTypeId = ShadowMapComponent_GetNativeTypeID(),
                 addComponent = (entityManagerPtr, entity, ptr) => ShadowMapComponent_AddComponent(entityManagerPtr, entity, ptr)
             });
+
+            RegisterComponent<UIComponent>(new ComponentDefinition
+            {
+                nativeTypeId = UIComponent_GetNativeTypeID(),
+                addComponent = (entityManagerPtr, entity, ptr) => UIComponent_AddComponent(entityManagerPtr, entity, ptr)
+            });
+
+            RegisterComponent<NodeLinkComponent>(new ComponentDefinition
+            {
+                nativeTypeId = NodeLinkComponent_GetNativeTypeID(),
+                addComponent = (entityManagerPtr, entity, ptr) => NodeLinkComponent_AddComponent(entityManagerPtr, entity, ptr)
+            });
         }
 
         public void RegisterComponent<T>(ComponentDefinition componentDefinition) where T : IComponent
@@ -175,5 +187,19 @@ namespace Hyperion
 
         [DllImport("libhyperion", EntryPoint = "ShadowMapComponent_AddComponent")]
         private static extern ComponentID ShadowMapComponent_AddComponent(IntPtr entityManagerPtr, Entity entity, IntPtr ptr);
+
+        // UIComponent
+        [DllImport("libhyperion", EntryPoint = "UIComponent_GetNativeTypeID")]
+        private static extern TypeID UIComponent_GetNativeTypeID();
+
+        [DllImport("libhyperion", EntryPoint = "UIComponent_AddComponent")]
+        private static extern ComponentID UIComponent_AddComponent(IntPtr entityManagerPtr, Entity entity, IntPtr ptr);
+
+        // NodeLinkComponent
+        [DllImport("libhyperion", EntryPoint = "NodeLinkComponent_GetNativeTypeID")]
+        private static extern TypeID NodeLinkComponent_GetNativeTypeID();
+
+        [DllImport("libhyperion", EntryPoint = "NodeLinkComponent_AddComponent")]
+        private static extern ComponentID NodeLinkComponent_AddComponent(IntPtr entityManagerPtr, Entity entity, IntPtr ptr);
     }
 }

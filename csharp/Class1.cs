@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 using Hyperion;
 
-public class TestUIScript : UIObject
+public class TestUIScript : UIEventHandler
 {
     public override void Init(Entity entity)
     {
@@ -20,6 +20,8 @@ public class TestUIScript : UIObject
     public override bool OnClick()
     {
         Logger.Log(LogType.Info, "OnClick for custom UI component");
+
+        UIObject.Position += new Vec2i(10, 10);
 
         return true;
     }

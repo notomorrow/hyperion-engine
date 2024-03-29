@@ -89,6 +89,9 @@ struct NodeProxyChildren
     ConstIterator cend() const { return End(); }
 };
 
+
+/*! \brief The NodeProxy class is a reference-counted wrapper around a Node pointer, allowing
+    for safe access to Node data and lessening the likelyhood of a missing Node asset causing a full game crash. */
 class NodeProxy : RC<Node>
 {
 protected:
@@ -97,8 +100,9 @@ protected:
 public:
     static const NodeProxy empty;
 
+    /*! \brief Construct an empty NodeProxy. */
     NodeProxy();
-    /*! \brief Takes ownership of the Node ptr */
+    /*! \brief Construct a NodeProxy from a Node pointer. Takes ownership of the Node, so ensure the Node pointer is not used elsewhere. */
     explicit NodeProxy(Node *ptr);
     explicit NodeProxy(const Base &other);
     NodeProxy(const NodeProxy &other);
@@ -107,16 +111,20 @@ public:
     NodeProxy &operator=(NodeProxy &&other) noexcept;
     ~NodeProxy();
 
+    /*! \brief Return the Node pointer held by the NodeProxy. */
+    [[nodiscard]]
     HYP_FORCE_INLINE
     Node *Get() const
         { return Base::Get(); }
 
     template <class T>
+    [[nodiscard]]
     HYP_FORCE_INLINE
     bool Is() const
         { return Base::Is<T>(); }
 
     template <class T>
+    [[nodiscard]]
     HYP_FORCE_INLINE
     T *Cast() const
     {
@@ -127,22 +135,49 @@ public:
         return nullptr;
     }
 
-    HYP_FORCE_INLINE bool Any() const { return Get() != nullptr; }
-    HYP_FORCE_INLINE bool Empty() const { return Get() == nullptr; }
+    /*! \brief Checks if the NodeProxy is not empty */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
+        { return Get() != nullptr; }
 
-    HYP_FORCE_INLINE bool IsValid() const { return Any(); }
+    /*! \brief Checks if the NodeProxy is empty */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
+        { return Get() == nullptr; }
 
-    /*! \brief Conversion operator to bool, to use in if-statements */
-    explicit operator bool() const { return Any(); }
+    /*! \brief Checks if the NodeProxy is in a valid state. (equivalent to Any()) */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsValid() const
+        { return Any(); }
 
-    bool operator!() const { return Empty(); }
+    /*! \brief Conversion operator to bool. Checks if the NodeProxy is not empty. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    explicit operator bool() const
+        { return Any(); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool operator!() const
+        { return Empty(); }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool operator==(const NodeProxy &other) const
         { return Get() == other.Get(); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool operator!=(const NodeProxy &other) const
         { return Get() != other.Get(); }
 
+    /*! \brief If the Node is present, returns a child Node at the given index.
+        If the index is out of bounds, returns an empty NodeProxy. If no Node is present, returns an empty NodeProxy. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     NodeProxy operator[](SizeType index)
         { return GetChild(index); }
 
@@ -160,7 +195,13 @@ public:
     /*! \brief If the Node exists, sets the Entity attached to the Node. */
     void SetEntity(ID<Entity> entity);
 
+    /*! \brief If the Node is present, returns the parent Node of the Node.
+        If no Node is present, returns nullptr. */
     Node *GetParent() const;
+
+    /*! \brief If the Node is present, returns a boolean indicating whether the \ref{node} is equal to the the held node or a parent of the held node.
+        If no Node is present, returns false. */
+    bool IsOrHasParent(const Node *node) const;
 
     /*! \brief If the NodeProxy is not empty, and index is not out of bounds,
         returns a new NodeProxy, holding a pointer to the child of the held Node at the given index.
@@ -168,8 +209,11 @@ public:
         If no Node is held, returns an empty NodeProxy. */
     NodeProxy GetChild(SizeType index);
 
-    NodeProxyChildren GetChildren() { return NodeProxyChildren { const_cast<const Node *>(Base::Get()) }; }
-    const NodeProxyChildren GetChildren() const { return NodeProxyChildren { Base::Get() }; }
+    NodeProxyChildren GetChildren()
+        { return NodeProxyChildren { const_cast<const Node *>(Base::Get()) }; }
+
+    const NodeProxyChildren GetChildren() const
+        { return NodeProxyChildren { Base::Get() }; }
 
     /*! \brief Search for a (potentially nested) node using the syntax `some/child/node`.
      * Each `/` indicates searching a level deeper, so first a child node with the tag "some"
@@ -194,83 +238,83 @@ public:
 
     /*! \brief If the Node is present and attached to a parent Node,
         detaches it from that Node.
-        @returns Whether or not the Node was removed from its parent. If no Node is present, returns false. */
+        \returns Whether or not the Node was removed from its parent. If no Node is present, returns false. */
     bool Remove();
 
-    /*! @returns The local-space translation, scale, rotation of this Node. */
+    /*! \returns The local-space translation, scale, rotation of this Node. */
     const Transform &GetLocalTransform() const;
 
     void SetLocalTransform(const Transform &transform);
 
-    /*! @returns The local-space translation of this Node. */
-    const Vector3 &GetLocalTranslation() const;
+    /*! \returns The local-space translation of this Node. */
+    const Vec3f &GetLocalTranslation() const;
 
     /*! \brief Set the local-space translation of this Node (not influenced by the parent Node) */
-    void SetLocalTranslation(const Vector3 &translation);
+    void SetLocalTranslation(const Vec3f &translation);
 
     /*! \brief Move the Node in local-space by adding the given vector to the current local-space translation.
-     * @param translation The vector to translate this Node by
+     * \param translation The vector to translate this Node by
      */
-    void Translate(const Vector3 &translation)
+    void Translate(const Vec3f &translation)
         { SetLocalTranslation(GetLocalTranslation() + translation); }
 
-    /*! @returns The local-space scale of this Node. */
-    const Vector3 &GetLocalScale() const;
+    /*! \returns The local-space scale of this Node. */
+    const Vec3f &GetLocalScale() const;
 
     /*! \brief Set the local-space scale of this Node (not influenced by the parent Node) */
-    void SetLocalScale(const Vector3 &scale);
+    void SetLocalScale(const Vec3f &scale);
 
     /*! \brief Scale the Node in local-space by multiplying the current local-space scale by the given scale vector.
-     * @param scale The vector to scale this Node by
+     * \param scale The vector to scale this Node by
      */
-    void Scale(const Vector3 &scale)
+    void Scale(const Vec3f &scale)
         { SetLocalScale(GetLocalScale() * scale); }
 
-    /*! @returns The local-space rotation of this Node. */
+    /*! \returns The local-space rotation of this Node. */
     const Quaternion &GetLocalRotation() const;
 
     /*! \brief Set the local-space rotation of this Node (not influenced by the parent Node) */
     void SetLocalRotation(const Quaternion &rotation);
 
     /*! \brief Rotate the Node by multiplying the current local-space rotation by the given quaternion.
-     * @param rotation The quaternion to rotate this Node by
+     * \param rotation The quaternion to rotate this Node by
      */
     void Rotate(const Quaternion &rotation)
         { SetLocalRotation(GetLocalRotation() * rotation); }
 
     /*! \brief Rotate the Node by multiplying the current local-space rotation by the given Euler angles.
-     * @param angles The angles to rotate this Node by
+     * \param angles The angles to rotate this Node by
      */
-    void Rotate(const Vector3 &angles)
+    void Rotate(const Vec3f &angles)
         { SetLocalRotation(GetLocalRotation() * Quaternion(angles)); }
 
-    /*! @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
+    /*! \returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
     const Transform &GetWorldTransform() const;
 
-    /*! @returns The world-space translation of this Node. */
-    const Vector3 &GetWorldTranslation() const;
+    /*! \returns The world-space translation of this Node. */
+    const Vec3f &GetWorldTranslation() const;
 
     /*! \brief Set the world-space translation of this Node by offsetting the local-space translation */
-    void SetWorldTranslation(const Vector3 &translation);
+    void SetWorldTranslation(const Vec3f &translation);
 
-    /*! @returns The local-space scale of this Node. */
-    const Vector3 &GetWorldScale() const;
+    /*! \returns The local-space scale of this Node. */
+    const Vec3f &GetWorldScale() const;
 
     /*! \brief Set the local-space scale of this Node by offsetting the local-space scale */
-    void SetWorldScale(const Vector3 &scale);
+    void SetWorldScale(const Vec3f &scale);
 
-    /*! @returns The world-space rotation of this Node. */
+    /*! \returns The world-space rotation of this Node. */
     const Quaternion &GetWorldRotation() const;
 
     /*! \brief Set the world-space rotation of this Node by offsetting the local-space rotation */
     void SetWorldRotation(const Quaternion &rotation);
 
-    /*! @returns The local-space (model) of the node's aabb. Only includes
+    /*! \returns The local-space (model) of the node's aabb. Only includes
      * the Entity's aabb.
      */
     const BoundingBox &GetLocalAABB() const;
 
-    /*! @returns The world-space aabb of the node. Includes the transforms of all
+    /*! \returns The world-space aabb of the node. Includes the transforms of all
      * parent nodes.
      */
     const BoundingBox &GetWorldAABB() const;
@@ -286,6 +330,8 @@ public:
 
     HashCode GetHashCode() const;
 };
+
+static_assert(sizeof(NodeProxy) == sizeof(RC<Node>), "NodeProxy should be the same size as RC<Node>, to allow for type punning");
 
 } // namespace hyperion::v2
 

@@ -3,36 +3,75 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public abstract class UIObject : Script
+    public class UIObject : IDisposable
     {
-        [Hyperion.ScriptMethodStub]
-        public virtual bool OnMouseDown()
+        private RefCountedPtr refCountedPtr = RefCountedPtr.Null;
+
+        public UIObject()
         {
-            return false;
+            this.refCountedPtr = RefCountedPtr.Null;
         }
 
-        [Hyperion.ScriptMethodStub]
-        public virtual bool OnMouseUp()
+        public UIObject(RefCountedPtr refCountedPtr)
         {
-            return false;
+            this.refCountedPtr = refCountedPtr;
+
+            if (this.refCountedPtr.Valid)
+            {
+                this.refCountedPtr.IncRef();
+            }
         }
 
-        [Hyperion.ScriptMethodStub]
-        public virtual bool OnMouseHover()
+        public void Dispose()
         {
-            return false;
+            if (this.refCountedPtr.Valid)
+            {
+                refCountedPtr.DecRef();
+            }
         }
 
-        [Hyperion.ScriptMethodStub]
-        public virtual bool OnMouseDrag()
+        public RefCountedPtr RefCountedPtr
         {
-            return false;
+            get
+            {
+                return refCountedPtr;
+            }
         }
 
-        [Hyperion.ScriptMethodStub]
-        public virtual bool OnClick()
+        public Vec2i Position
         {
-            return false;
+            get
+            {
+                return UIObject_GetPosition(refCountedPtr);
+            }
+            set
+            {
+                UIObject_SetPosition(refCountedPtr, value);
+            }
         }
+
+        public Vec2i Size
+        {
+            get
+            {
+                return UIObject_GetSize(refCountedPtr);
+            }
+            set
+            {
+                UIObject_SetSize(refCountedPtr, value);
+            }
+        }
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_GetPosition")]
+        private static extern Vec2i UIObject_GetPosition(RefCountedPtr ctrlBlock);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_SetPosition")]
+        private static extern void UIObject_SetPosition(RefCountedPtr ctrlBlock, Vec2i position);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_GetSize")]
+        private static extern Vec2i UIObject_GetSize(RefCountedPtr ctrlBlock);
+
+        [DllImport("libhyperion", EntryPoint = "UIObject_SetSize")]
+        private static extern void UIObject_SetSize(RefCountedPtr ctrlBlock, Vec2i size);
     }
 }

@@ -23,7 +23,7 @@ class EnableRefCountedPtrFromThis;
 
 namespace detail {
 
-template <class CountType = uint>
+template <class CountType = std::atomic<uint>>
 struct RefCountData
 {
     void        *value;
@@ -59,7 +59,7 @@ struct RefCountData
 
         // Setup weak ptr for EnableRefCountedPtrFromThis
         if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>) {
-            static_cast<T *>(value)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
+            // static_cast<T *>(value)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
 
             dtor = [](void *ptr)
             {
@@ -123,7 +123,7 @@ class WeakRefCountedPtrBase;
 template <class T, class CountType>
 class WeakRefCountedPtr;
 
-template <class CountType = uint>
+template <class CountType = std::atomic<uint>>
 class RefCountedPtrBase
 {
     friend class WeakRefCountedPtrBase<CountType>;
@@ -334,7 +334,7 @@ protected:
 
 /*! \brief A simple ref counted pointer class.
     Not atomic by default, but using AtomicRefCountedPtr allows it to be. */
-template <class T, class CountType = uint>
+template <class T, class CountType = std::atomic<uint>>
 class RefCountedPtr : public RefCountedPtrBase<CountType>
 {
     friend class WeakRefCountedPtr<std::remove_const_t<T>, CountType>;
@@ -674,13 +674,12 @@ public:
 
 // weak ref counters
 
-template <class CountType = uint>
+template <class CountType = std::atomic<uint>>
 class WeakRefCountedPtrBase
 {
-protected:
+public:
     using RefCountDataType = RefCountData<CountType>;
 
-public:
     WeakRefCountedPtrBase()
         : m_ref(nullptr)
     {
@@ -785,6 +784,17 @@ public:
     HYP_FORCE_INLINE
     void Reset()
         { DropRefCount(); }
+        
+    /*! \brief Releases the reference to the currently held value, if any, and returns it.
+        * The caller is responsible for handling the reference count of the returned value.
+    */
+    RefCountDataType *Release()
+    {
+        RefCountDataType *ref = m_ref;
+        m_ref = nullptr;
+
+        return ref;
+    }
 
     template <class T>
     HYP_FORCE_INLINE
@@ -873,7 +883,7 @@ protected:
     RefCountDataType *m_ref;
 };
 
-template <class T, class CountType = uint>
+template <class T, class CountType = std::atomic<uint>>
 class WeakRefCountedPtr : public WeakRefCountedPtrBase<CountType>
 {
 protected:

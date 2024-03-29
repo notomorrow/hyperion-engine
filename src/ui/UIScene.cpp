@@ -49,7 +49,7 @@ void UIScene::Init()
     );
 
     m_scene->GetCamera()->SetCameraController(RC<OrthoCameraController>::Construct(
-        0.0f, float(m_surface_size.x),
+        0.0f, -float(m_surface_size.x),
         0.0f, float(m_surface_size.y),
         -1.0f, 1.0f
     ));
@@ -72,9 +72,7 @@ bool UIScene::TestRay(const Vec2f &position, RayHit &out_first_hit)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    Vec4f world_position = m_scene->GetCamera()->TransformScreenToWorld(position);
-    world_position.x = -world_position.x;
-
+    const Vec4f world_position = m_scene->GetCamera()->TransformScreenToWorld(position);
     const Vec3f direction { world_position.x / world_position.w, world_position.y / world_position.w, 0.0f };
 
     Ray ray;

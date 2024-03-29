@@ -3,6 +3,8 @@
 
 namespace hyperion::v2 {
 
+// NodeProxyChildren
+
 uint NodeProxyChildren::Size() const
 {
     return node ? uint(node->GetChildren().Size()) : 0;
@@ -52,6 +54,8 @@ const NodeProxy *NodeProxyChildren::ConstIterator::operator->() const
     return &node->GetChildren()[index];
 }
 
+// NodeProxy
+
 const NodeProxy NodeProxy::empty = NodeProxy();
 
 NodeProxy::NodeProxy()
@@ -60,9 +64,8 @@ NodeProxy::NodeProxy()
 }
 
 NodeProxy::NodeProxy(Node *ptr)
-    : Base()
+    : Base(ptr)
 {
-    Base::Reset(ptr);
 }
 
 NodeProxy::NodeProxy(const Base &other)
@@ -133,6 +136,15 @@ Node *NodeProxy::GetParent() const
     return nullptr;
 }
 
+bool NodeProxy::IsOrHasParent(const Node *node) const
+{
+    if (auto *this_node = Get()) {
+        return this_node->IsOrHasParent(node);
+    }
+
+    return false;
+}
+
 NodeProxy NodeProxy::GetChild(SizeType index)
 {
     if (Get() && index < Get()->GetChildren().Size()) {
@@ -166,7 +178,7 @@ NodeProxy NodeProxy::AddChild(const NodeProxy &node)
         return node;
     }
 
-    AssertThrow(node.Get() != Get());
+    AssertThrowMsg(!Get()->IsOrHasParent(node.Get()), "Circular node structure detected");
 
     return Get()->AddChild(node);
 }
@@ -196,20 +208,20 @@ void NodeProxy::SetLocalTransform(const Transform &transform)
     }
 }
 
-const Vector3 &NodeProxy::GetLocalTranslation() const
+const Vec3f &NodeProxy::GetLocalTranslation() const
     { return GetLocalTransform().GetTranslation(); }
 
-void NodeProxy::SetLocalTranslation(const Vector3 &translation)
+void NodeProxy::SetLocalTranslation(const Vec3f &translation)
 {
     if (Get()) {
         Get()->SetLocalTranslation(translation);
     }
 }
 
-const Vector3 &NodeProxy::GetLocalScale() const
+const Vec3f &NodeProxy::GetLocalScale() const
     { return GetLocalTransform().GetScale(); }
 
-void NodeProxy::SetLocalScale(const Vector3 &scale)
+void NodeProxy::SetLocalScale(const Vec3f &scale)
 {
     if (Get()) {
         Get()->SetLocalScale(scale);
@@ -235,20 +247,20 @@ const Transform &NodeProxy::GetWorldTransform() const
     return Transform::identity;
 }
 
-const Vector3 &NodeProxy::GetWorldTranslation() const
+const Vec3f &NodeProxy::GetWorldTranslation() const
     { return GetWorldTransform().GetTranslation(); }
 
-void NodeProxy::SetWorldTranslation(const Vector3 &translation)
+void NodeProxy::SetWorldTranslation(const Vec3f &translation)
 {
     if (Get()) {
         Get()->SetWorldTranslation(translation);
     }
 }
 
-const Vector3 &NodeProxy::GetWorldScale() const
+const Vec3f &NodeProxy::GetWorldScale() const
     { return GetWorldTransform().GetScale(); }
 
-void NodeProxy::SetWorldScale(const Vector3 &scale)
+void NodeProxy::SetWorldScale(const Vec3f &scale)
 {
     if (Get()) {
         Get()->SetWorldScale(scale);

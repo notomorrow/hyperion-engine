@@ -1,3 +1,6 @@
+#ifndef HYPERION_V2_RUNTIME_DOTNET_ASSET_MAP_BINDINGS_HPP
+#define HYPERION_V2_RUNTIME_DOTNET_ASSET_MAP_BINDINGS_HPP
+
 #include <asset/AssetBatch.hpp>
 
 #include <Engine.hpp>
@@ -12,3 +15,5 @@ extern "C" {
         AssetMap *map;
     };
 }
+
+#endif
