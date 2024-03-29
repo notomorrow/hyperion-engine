@@ -107,8 +107,25 @@ public:
     NodeProxy &operator=(NodeProxy &&other) noexcept;
     ~NodeProxy();
 
-    HYP_FORCE_INLINE Node *Get() { return Base::Get(); }
-    HYP_FORCE_INLINE const Node *Get() const { return Base::Get(); }
+    HYP_FORCE_INLINE
+    Node *Get() const
+        { return Base::Get(); }
+
+    template <class T>
+    HYP_FORCE_INLINE
+    bool Is() const
+        { return Base::Is<T>(); }
+
+    template <class T>
+    HYP_FORCE_INLINE
+    T *Cast() const
+    {
+        if (Base::Is<T>()) {
+            return static_cast<T *>(Base::Get());
+        }
+
+        return nullptr;
+    }
 
     HYP_FORCE_INLINE bool Any() const { return Get() != nullptr; }
     HYP_FORCE_INLINE bool Empty() const { return Get() == nullptr; }

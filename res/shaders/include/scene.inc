@@ -95,29 +95,4 @@ vec3 CalculateLightDirection(Light light, in vec3 world_position)
     return L;
 }
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneShaderData
-{
-    Scene scene;
-};
-
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightShaderData
-{
-    Light light;
-};
-
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 4, row_major) uniform CameraShaderData
-{
-    Camera camera;
-};
-
-layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform texture2D shadow_maps[];
-
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) readonly buffer ShadowShaderData
-{
-    ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
-};
-
-#endif
-
 #endif

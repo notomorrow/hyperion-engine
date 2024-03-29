@@ -222,7 +222,7 @@ public:
         { return m_ref ? m_ref->type_id : TypeID::ForType<void>(); }
 
     /*! \brief Creates a new RefCountedPtr of T from the existing RefCountedPtr.
-     * If the types are not exact, or T is not equal to void (in the case of a void pointer),
+     * If the types are not exact AND T is not equal to void,
      * no conversion is performed and an empty RefCountedPtr is returned.
      */
     template <class T>
@@ -362,9 +362,13 @@ public:
 
     /*! \brief Takes ownership of ptr. Do not delete the pointer passed to this,
         as it will be automatically deleted when this object's ref count reaches zero. */
-    explicit RefCountedPtr(T *ptr)
+    template <class Ty>
+    explicit RefCountedPtr(Ty *ptr)
         : Base()
     {
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
+
         Reset(ptr);
     }
     
@@ -497,13 +501,17 @@ public:
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
         if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
         automatically. */
-    void Reset(T *ptr)
+    template <class Ty>
+    void Reset(Ty *ptr)
     {
+        using TyN = NormalizedType<Ty>;
+        static_assert(std::is_convertible_v<std::add_pointer_t<TyN>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
+
         Base::DropRefCount();
 
         if (ptr) {
             Base::m_ref = new typename Base::RefCountDataType;
-            Base::m_ref->template TakeOwnership<T>(ptr);
+            Base::m_ref->template TakeOwnership<TyN>(ptr);
             Base::m_ref->strong_count = 1u;
             Base::m_ref->weak_count = 0u;
         }
@@ -512,6 +520,17 @@ public:
     /*! \brief Drops the reference to the currently held value, if any.  */
     void Reset()
         { Base::Reset(); }
+
+    /**
+     * \brief Returns a boolean indicating whether the type of this RefCountedPtr is the same as the given type, or if the given type is convertible to the type of this RefCountedPtr.
+     */
+    template <class Ty>
+    [[nodiscard]] bool Is() const
+    {
+        return Base::GetTypeID() == TypeID::ForType<Ty>()
+            || std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
+            || std::is_same_v<Ty, void>;
+    }
 };
 
 // void pointer specialization -- just uses base class, but with Set() and Reset()
@@ -627,17 +646,29 @@ public:
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
         if any. Note, do not delete the ptr after passing it to Reset(), as it will be deleted
         automatically. */
-    template <class T>
-    void Reset(T *ptr)
+    template <class Ty>
+    void Reset(Ty *ptr)
     {
+        using TyN = NormalizedType<Ty>;
+
         Base::DropRefCount();
 
         if (ptr) {
             Base::m_ref = new typename Base::RefCountDataType;
-            Base::m_ref->template TakeOwnership<T>(ptr);
+            Base::m_ref->template TakeOwnership<TyN>(ptr);
             Base::m_ref->strong_count = 1u;
             Base::m_ref->weak_count = 0u;
         }
+    }
+
+    /**
+     * \brief Returns a boolean indicating whether the type of this RefCountedPtr is the same as the given type, or if the given type is convertible to the type of this RefCountedPtr.
+     */
+    template <class Ty>
+    [[nodiscard]] bool Is() const
+    {
+        return Base::GetTypeID() == TypeID::ForType<Ty>()
+            || std::is_same_v<Ty, void>;
     }
 };
 
@@ -987,7 +1018,7 @@ protected:
     RC<const T, CountType> RefCountedPtrFromThis() const
         { return Base::weak.Lock().template CastUnsafe<T>(); }
 
-    Weak<T, CountType> WeakFromThis()
+    Weak<T, CountType> WeakRefCountedPtrFromThis()
         { return Base::weak.template CastUnsafe<T>(); }
 };
 

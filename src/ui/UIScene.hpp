@@ -1,8 +1,11 @@
-#ifndef HYPERION_V2_UI_SCENE_H
-#define HYPERION_V2_UI_SCENE_H
+#ifndef HYPERION_V2_UI_SCENE_HPP
+#define HYPERION_V2_UI_SCENE_HPP
+
+#include <ui/UIObject.hpp>
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
+#include <core/lib/Delegate.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>
@@ -27,64 +30,7 @@ class InputManager;
 
 namespace hyperion::v2 {
 
-class UIScene;
-
-// Helper function to get the scene from a UI scene
-template <class UISceneType>
-static inline Scene *GetScene(UISceneType *ui_scene)
-{
-    AssertThrow(ui_scene != nullptr);
-
-    return ui_scene->GetScene().Get();
-}
-
-class UIObject : public BasicObject<STUB_CLASS(UIObject)>
-{
-public:
-    UIObject(UIComponentType ui_component_type, UIScene *ui_scene);
-    UIObject(const UIObject &other)                 = delete;
-    UIObject &operator=(const UIObject &other)      = delete;
-    UIObject(UIObject &&other) noexcept             = delete;
-    UIObject &operator=(UIObject &&other) noexcept  = delete;
-    ~UIObject();
-
-    void Init();
-
-    UIComponentType GetComponentType() const
-        { return m_component_type; }
-
-    Name GetName() const;
-    void SetName(Name name);
-
-    const Vector2 &GetPosition() const;
-    void SetPosition(const Vector2 &position);
-
-    const Vector2 &GetSize() const;
-    void SetSize(const Vector2 &size);
-
-    const String &GetText() const;
-    void SetText(const String &text);
-
-    template <UIComponentEvent EventType>
-    void AddEventListener(
-        Proc<bool, const UIComponentEventData &> &&handler
-    )
-    {
-        Threads::AssertOnThread(THREAD_GAME);
-
-        GetScene(m_ui_scene)->GetEntityManager()->AddComponent(
-            m_entity,
-            UIEventHandlerComponent<EventType> {
-                std::move(handler)
-            }
-        );
-    }
-
-protected:
-    UIComponentType m_component_type;
-    ID<Entity>      m_entity;
-    UIScene         *m_ui_scene;
-};
+class UIButton;
 
 class UIScene : public BasicObject<STUB_CLASS(UIScene)>
 {
@@ -94,19 +40,37 @@ public:
     UIScene &operator=(const UIScene &other) = delete;
     ~UIScene();
 
+    Vec2i GetSurfaceSize() const
+        { return m_surface_size; }
+
     Handle<Scene> &GetScene()
         { return m_scene; }
 
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
-    NodeProxy CreateButton(
-        const Vector2 &position,
-        const Vector2 &size,
+    template <class T>
+    UIObjectProxy<T> CreateUIObject(
+        Vec2i position,
+        Vec2i size,
         const String &text
-    );
+    )
+    {
+        Threads::AssertOnThread(THREAD_GAME);
+        AssertReady();
 
-    bool Remove(ID<UIObject> id);
+        RC<UIObject> ui_object = CreateUIObjectInternal<T>();
+        ui_object->SetPosition(position);
+        ui_object->SetSize(size);
+
+        NodeProxy node_proxy = m_scene->GetRoot().AddChild();
+        node_proxy.SetEntity(ui_object->GetEntity());
+
+        // Set it to ignore parent scale so size of the UI object is not affected by the parent
+        node_proxy.Get()->SetFlags(node_proxy.Get()->GetFlags() | NODE_FLAG_IGNORE_PARENT_SCALE);
+
+        return UIObjectProxy<T>(std::move(node_proxy));
+    }
 
     bool OnInputEvent(
         InputManager *input_manager,
@@ -120,9 +84,28 @@ public:
     void Update(GameCounter::TickUnit delta);
 
 private:
+    template <class T>
+    RC<UIObject> CreateUIObjectInternal()
+    {
+        static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
+
+        AssertReady();
+
+        const ID<Entity> entity = m_scene->GetEntityManager()->AddEntity();
+
+        RC<UIObject> ui_object(new T(entity, this));
+
+        m_scene->GetEntityManager()->AddComponent(entity, UIComponent { ui_object });
+
+        return ui_object;
+    }
+
+    bool Remove(ID<Entity> entity);
+
+    Vec2i                       m_surface_size;
+
     Handle<Scene>               m_scene;
     FlatMap<ID<Entity>, float>  m_mouse_held_times;
-    Array<Handle<UIObject>>     m_ui_objects;
 };
 
 } // namespace hyperion::v2

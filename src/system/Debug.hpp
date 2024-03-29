@@ -113,6 +113,51 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 #define AssertExitMsg(cond, msg, ...)               AssertOrElseMsg(LogType::Fatal, cond, exit(1), msg __VA_OPT__(,) __VA_ARGS__)
 #endif
 
+#ifdef HYP_DEBUG_MODE
+
+template <class T>
+struct EnsureValidPointerWrapper
+{
+    T *ptr;
+
+    EnsureValidPointerWrapper(T *ptr)
+        : ptr(ptr)
+    {
+    }
+
+    HYP_FORCE_INLINE
+    operator T*() const
+    {
+        AssertThrowMsg(ptr != nullptr, "EnsureValidPointer check failed");
+
+        return ptr;
+    }
+
+    HYP_FORCE_INLINE
+    T *operator->() const
+    {
+        AssertThrowMsg(ptr != nullptr, "EnsureValidPointer check failed");
+
+        return ptr;
+    }
+
+    HYP_FORCE_INLINE
+    T &operator*() const
+    {
+        AssertThrowMsg(ptr != nullptr, "EnsureValidPointer check failed");
+
+        return *ptr;
+    }
+};
+
+#define EnsureValidPointer(ptr) (EnsureValidPointerWrapper { ptr })
+
+#else
+
+#define EnsureValidPointer(ptr) ptr
+
+#endif
+
 /* Deprecated */
 #define unexpected_value_msg(value, msg) AssertExitMsg(0, "%s", #value ": " #msg)
 

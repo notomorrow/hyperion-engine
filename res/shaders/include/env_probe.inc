@@ -60,32 +60,6 @@ struct SH9
 
 #define SH_GRID_BUFFER_SIZE HYP_MAX_BOUND_AMBIENT_PROBES * 9
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-    #ifndef HYP_DEFERRED_NO_ENV_GRID
-        layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 2) uniform EnvGridBuffer
-        {
-            EnvGrid env_grid;
-        };
-
-        layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 61) buffer SHGridBuffer {
-            vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE];
-        };
-    #endif
-
-    layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 25) uniform textureCube env_probe_textures[HYP_MAX_BOUND_REFLECTION_PROBES];
-    layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 26, row_major) readonly buffer EnvProbesBuffer
-    {
-        EnvProbe env_probes[HYP_MAX_ENV_PROBES];
-    };
-    layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 27) uniform textureCube point_shadow_maps[HYP_MAX_BOUND_POINT_SHADOW_MAPS];
-
-    // Used for point light shadows
-    layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 3, row_major) readonly buffer EnvProbeBuffer
-    {
-        EnvProbe current_env_probe;
-    };
-#endif
-
 #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
 #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))

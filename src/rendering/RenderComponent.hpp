@@ -21,27 +21,6 @@ class RenderEnvironment;
 
 using renderer::Frame;
 
-enum RenderComponentName : uint
-{
-    RENDER_COMPONENT_INVALID = uint(-1),
-
-    RENDER_COMPONENT_VCT = 0,
-    RENDER_COMPONENT_SHADOWS,
-    RENDER_COMPONENT_CUBEMAP,
-    RENDER_COMPONENT_SVO,
-    RENDER_COMPONENT_UI,
-    RENDER_COMPONENT_ENV_GRID,
-    RENDER_COMPONENT_POINT_SHADOW,
-
-    RENDER_COMPONENT_SLOT6,
-    RENDER_COMPONENT_SLOT7,
-    RENDER_COMPONENT_SLOT8,
-    RENDER_COMPONENT_SLOT9,
-    RENDER_COMPONENT_SLOT10,
-
-    RENDER_COMPONENT_MAX
-};
-
 class RenderComponentBase
 {
 public:
@@ -91,7 +70,7 @@ public:
 protected:
     Name                m_name;
     const uint          m_render_frame_slicing; // amount of frames to wait between render calls
-    uint                m_render_frame_slicing_counter; // amount of frames to wait between render calls
+    uint                m_render_frame_slicing_counter;
     Index               m_index;
     RenderEnvironment   *m_parent;
 };

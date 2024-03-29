@@ -188,7 +188,12 @@ public:
 
     ~Proc() = default;
 
+    HYP_FORCE_INLINE
     explicit operator bool() const
+        { return functor.HasValue(); }
+
+    HYP_FORCE_INLINE
+    bool IsValid() const
         { return functor.HasValue(); }
 
     FunctorDataType functor;

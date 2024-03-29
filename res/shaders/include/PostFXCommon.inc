@@ -6,17 +6,6 @@
 
 #define HYP_MAX_EFFECTS_PER_SLOT 4
 
-#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 8) uniform texture2D effects_pre_stack[HYP_MAX_EFFECTS_PER_SLOT];
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 9) uniform texture2D effects_post_stack[HYP_MAX_EFFECTS_PER_SLOT];
-
-layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 10) uniform PostProcessingData {
-    uvec2 effect_counts;
-    uvec2 last_enabled_indices;
-    uvec2 masks;
-} post_processing;
-#endif
-
 #define HYP_STAGE_PRE  0
 #define HYP_STAGE_POST 1
 

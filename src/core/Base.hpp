@@ -61,9 +61,7 @@ struct ComponentInitInfo
 class BasicObjectBase { };
 
 template <class Type>
-class BasicObject
-    : public BasicObjectBase,
-      public CallbackTrackable<EngineCallbacks>
+class BasicObject : public BasicObjectBase
 {
     using InnerType = typename Type::InnerType;
 
@@ -88,8 +86,7 @@ public:
     }
 
     BasicObject(Name name, const InitInfo &init_info)
-        : CallbackTrackable(),
-          m_name(name),
+        : m_name(name),
           m_init_info(init_info),
           m_id(empty_id),
           m_init_called(false),
@@ -101,8 +98,7 @@ public:
     BasicObject &operator=(const BasicObject &other) = delete;
 
     BasicObject(BasicObject &&other) noexcept
-        : CallbackTrackable(), // TODO: Get rid of callback trackable then we wont have to do a move for that.
-          m_name(std::move(other.m_name)),
+        : m_name(std::move(other.m_name)),
           m_init_info(std::move(other.m_init_info)),
           m_id(other.m_id),
           m_init_called { other.m_init_called.load() },
@@ -153,9 +149,6 @@ public:
     static inline auto Construct(Args &&... args) -> UniquePtr<InnerType>
         { return Type::Construct(std::forward<Args>(args)...); }
 
-    /*! \brief Just a function to store that Init() has been called from a derived class
-     * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.
-     */
     void Init()
     {
         m_init_called.store(true);

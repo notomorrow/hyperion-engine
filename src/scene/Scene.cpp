@@ -101,7 +101,7 @@ Scene::Scene(
     m_root_node_proxy(new Node("root", ID<Entity>::invalid, Transform { }, this)),
     m_environment(new RenderEnvironment(this)),
     m_world(nullptr),
-    m_is_non_world_scene(false),
+    m_is_non_world_scene(info.flags & InitInfo::SCENE_FLAGS_NON_WORLD),
     m_is_audio_listener(false),
     m_entity_manager(new EntityManager(info.thread_mask, this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),

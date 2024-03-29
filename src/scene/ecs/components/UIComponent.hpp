@@ -4,10 +4,15 @@
 #include <core/lib/Proc.hpp>
 #include <core/lib/Optional.hpp>
 #include <core/lib/String.hpp>
+#include <core/lib/RefCountedPtr.hpp>
+#include <core/lib/Variant.hpp>
+
 #include <core/Name.hpp>
 #include <math/Vector2.hpp>
 
 namespace hyperion::v2 {
+
+class UIObject;
 
 enum UIComponentType
 {
@@ -20,10 +25,10 @@ enum UIComponentType
 
 struct UIComponentBounds
 {
-    Vector2 position;
-    Vector2 size;
+    Vec2i   position;
+    Vec2i   size;
 
-    bool ContainsPoint(const Vector2 &point) const
+    bool ContainsPoint(Vec2i point) const
     {
         return point.x >= position.x && point.x <= position.x + size.x &&
                point.y >= position.y && point.y <= position.y + size.y;
@@ -44,15 +49,19 @@ enum UIComponentEvent
 struct UIComponentEventData
 {
     UIComponentEvent    event = UI_COMPONENT_EVENT_NONE;
-    Vector2             mouse_position;
+    Vec2f               mouse_position;
+};
+
+struct UIMouseEventData
+{
+    Vec2f   position;
+    int     button = 0;
+    bool    is_down = false;
 };
 
 struct UIComponent
 {
-    UIComponentType     type = UI_COMPONENT_TYPE_NONE;
-    Name                name;
-    UIComponentBounds   bounds;
-    Optional<String>    text;
+    RC<UIObject>    ui_object;
 };
 
 template <UIComponentEvent>

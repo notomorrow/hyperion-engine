@@ -40,6 +40,7 @@
 #include <Game.hpp>
 
 #include <ui/UIText.hpp>
+#include <ui/UIButton.hpp>
 
 #include <asset/serialization/fbom/FBOM.hpp>
 
@@ -718,7 +719,18 @@ void SampleStreamer::InitGame()
     //     }
     // });
 
-    auto btn = GetUI().CreateButton(Vec2f { 0.0f, 0.0f }, Vec2f { 100.0f, 50.0f }, "My Button");
+    if (auto btn = GetUI().CreateUIObject<UIButton>(Vec2i { 25, 25 }, Vec2i { 250, 100 }, "My Button")) {
+        btn->OnMouseHover.Bind([](const UIMouseEventData &)
+        {
+            DebugLog(LogType::Debug, "Hover button\n");
+
+            return true;
+        });
+
+        auto new_btn = GetUI().CreateUIObject<UIButton>(Vec2i { 0, 0 }, Vec2i { 100, 50 }, "My Button 2");
+        new_btn.GetNode().Get()->Remove();
+        btn.GetNode().Get()->AddChild(new_btn.GetNode());
+    }
 
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(HYP_NAME(UIRenderer0), GetUI().GetScene());
 

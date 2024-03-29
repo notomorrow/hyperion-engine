@@ -22,6 +22,21 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 #define HYP_INSTANCING
 #include "../include/object.inc"
 
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+{
+    Object objects[HYP_MAX_ENTITIES];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) readonly buffer EntityInstanceBatchesBuffer
+{
+    EntityInstanceBatch entity_instance_batch;
+};
+
 void main()
 {
     vec4 position = object.model_matrix * vec4(a_position, 1.0);

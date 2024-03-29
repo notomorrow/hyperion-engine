@@ -22,6 +22,17 @@ namespace hyperion::v2 {
 class Engine;
 class Scene;
 
+using NodeFlags = uint32;
+
+enum NodeFlagBits : NodeFlags
+{
+    NODE_FLAG_NONE                      = 0x0,
+    NODE_FLAG_IGNORE_PARENT_TRANSLATION = 0x1,
+    NODE_FLAG_IGNORE_PARENT_SCALE       = 0x2,
+    NODE_FLAG_IGNORE_PARENT_ROTATION    = 0x4,
+    NODE_FLAG_IGNORE_PARENT_TRANSFORM   = NODE_FLAG_IGNORE_PARENT_TRANSLATION | NODE_FLAG_IGNORE_PARENT_SCALE | NODE_FLAG_IGNORE_PARENT_ROTATION,
+};
+
 class Node
 {
     friend class Scene;
@@ -35,11 +46,6 @@ public:
     {
         NODE,
         BONE
-    };
-
-    enum Flags : uint32
-    {
-        NODE_FLAGS_NONE = 0
     };
 
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
@@ -77,6 +83,9 @@ public:
     /*! @returns The type of the node. By default, it will just be NODE. */
     Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
+
+    NodeFlags GetFlags() const { return m_flags; }
+    void SetFlags(NodeFlags flags) { m_flags = flags; }
 
     Node *GetParent() const { return m_parent_node; }
 
@@ -358,6 +367,7 @@ protected:
     void OnNestedNodeRemoved(const NodeProxy &node);
 
     Type                m_type = Type::NODE;
+    NodeFlags           m_flags = NODE_FLAG_NONE;
     String              m_name;
     Node                *m_parent_node;
     NodeList            m_child_nodes;
