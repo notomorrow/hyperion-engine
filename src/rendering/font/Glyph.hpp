@@ -9,6 +9,14 @@
 
 namespace hyperion::v2 {
 
+struct GlyphImageData
+{
+    Extent2D   dimensions;
+    ByteBuffer byte_buffer;
+
+    Handle<Texture> CreateTexture() const;
+};
+
 class Glyph
 {
 public:
@@ -24,7 +32,6 @@ public:
 
         uint8   _reserved0;  /* 10 */
     } HYP_PACK_END;
-
 
     struct Metrics
     {
@@ -44,13 +51,15 @@ public:
 
     Extent2D GetMax();
     Extent2D GetMin();
-    const Handle<Texture> &GetTexture() const;
+
+    const GlyphImageData &GetImageData() const
+        { return m_glyph_image_data; }
 
 private:
     RC<Face>                    m_face;
 
     FontEngine::Glyph           m_glyph;
-    Handle<Texture>             m_texture;
+    GlyphImageData              m_glyph_image_data;
     Metrics                     m_metrics { 0 };
 };
 

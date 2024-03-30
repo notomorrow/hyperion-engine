@@ -393,6 +393,10 @@ public:
 
     Bitmap &operator=(const Bitmap &other)
     {
+        if (this == &other) {
+            return *this;
+        }
+
         m_width = other.m_width;
         m_height = other.m_height;
         m_pixels = other.m_pixels;
@@ -409,6 +413,10 @@ public:
 
     Bitmap &operator=(Bitmap &&other) noexcept
     {
+        if (this == &other) {
+            return *this;
+        }
+
         m_width = other.m_width;
         m_height = other.m_height;
         m_pixels = std::move(other.m_pixels);
@@ -432,9 +440,9 @@ public:
     HYP_FORCE_INLINE
     SizeType GetByteSize() const
     {
-        return static_cast<SizeType>(m_width)
-            * static_cast<SizeType>(m_height)
-            * static_cast<SizeType>(NumComponents)
+        return SizeType(m_width)
+            * SizeType(m_height)
+            * SizeType(PixelType::num_components)
             * sizeof(PixelComponentType);
     }
 
@@ -461,7 +469,12 @@ public:
     [[nodiscard]]
     HYP_FORCE_INLINE
     const PixelType &GetPixel(uint x, uint y) const
-        { return const_cast<const Bitmap *>(this)->GetPixel(x, y); }
+    {
+        const uint index = ((x + m_width) % m_width)
+            + (((m_height - y) + m_height) % m_height) * m_width;
+
+        return m_pixels[index];
+    }
 
     HYP_FORCE_INLINE
     void SetPixel(uint x, uint y, PixelType pixel)
@@ -470,6 +483,21 @@ public:
             + (((m_height - y) + m_height) % m_height) * m_width;
 
         m_pixels[index] = pixel;
+    }
+
+    void SetPixels(const ByteBuffer &byte_buffer)
+    {
+        AssertThrowMsg(byte_buffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%u != %u)", byte_buffer.Size(), GetByteSize());
+
+        const uint num_components = PixelType::num_components;
+
+        m_pixels.Resize(byte_buffer.Size() / num_components);
+
+        for (SizeType i = 0, j = 0; i < byte_buffer.Size() && j < m_pixels.Size(); i += num_components, j++) {
+            for (uint k = 0; k < num_components; k++) {
+                m_pixels[j].SetComponent(k, byte_buffer.GetInternalArray()[i + k]);
+            }
+        }
     }
 
     ByteBuffer ToByteBuffer() const
@@ -550,7 +578,7 @@ public:
 
     ByteBuffer GenerateColorRamp() const
     {
-        const int bits_per_pixel = NumComponents * 8;
+        const int bits_per_pixel = PixelType::num_components * 8;
         const SizeType size = (bits_per_pixel * bits_per_pixel) - 1;
 
         ByteBuffer buffer(size * 4);
@@ -563,32 +591,6 @@ public:
         }
 
         return buffer;
-    }
-
-    void SetPixels(uint stride, ubyte *buffer, SizeType pixel_count)
-    {
-        static_assert(std::is_same_v<PixelComponentType, ubyte>, "Pixel component type must be `ubyte` for this function!\n");
-
-        AssertThrowMsg((m_pixels.Size() >= (pixel_count)), "Pixel buffer size not large enough or component mismatch");
-        AssertThrowMsg((pixel_count % stride) == 0, "Pixel buffer size is not divisible by bitmap stride!\n");
-
-        const SizeType rows = pixel_count / stride;
-
-        for (SizeType row = 0; row < rows; row++) {
-            for (SizeType column = 0; column < stride * 3; column += NumComponents) {
-                const SizeType index = row * stride + column;
-
-                int p_index = 0;
-
-                for (p_index = 0; p_index < NumComponents; p_index++) {
-                    m_pixels[index].components[p_index] = buffer[index + p_index];
-                }
-
-                for (; p_index < 4 - NumComponents; p_index++) {
-                    m_pixels[index].components[p_index] = 0;
-                }
-            }
-        }
     }
 
     // https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling

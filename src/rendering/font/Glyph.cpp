@@ -17,6 +17,29 @@
 
 namespace hyperion::v2 {
 
+// GlyphImageData
+
+Handle<Texture> GlyphImageData::CreateTexture() const
+{
+    AssertThrow(byte_buffer.Size() == dimensions.Size());
+
+    UniquePtr<StreamedData> streamed_texture_data(new MemoryStreamedData(byte_buffer));
+
+    Handle<Texture> texture = CreateObject<Texture>(Texture2D(
+        dimensions,
+        InternalFormat::R8,
+        FilterMode::TEXTURE_FILTER_LINEAR,
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        std::move(streamed_texture_data)
+    ));
+
+    InitObject(texture);
+
+    return texture;
+}
+
+// Glyph
+
 Glyph::Glyph(RC<Face> face, Face::GlyphIndex index, bool render = false)
     : m_face(std::move(face))
 {
@@ -60,27 +83,13 @@ void Glyph::Render()
 
 
 #ifdef HYP_FREETYPE
-    ByteBuffer byte_buffer(sizeof(ft_bitmap->width * ft_bitmap->rows), ft_bitmap->buffer);
-    UniquePtr<StreamedData> streamed_texture_data(new MemoryStreamedData(std::move(byte_buffer)));
+    ByteBuffer byte_buffer(ft_bitmap->width * ft_bitmap->rows, ft_bitmap->buffer);
 
-    m_texture = CreateObject<Texture>(Texture2D(
-        Extent2D { ft_bitmap->width, ft_bitmap->rows },
-        InternalFormat::R8,
-        FilterMode::TEXTURE_FILTER_LINEAR,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-        std::move(streamed_texture_data)
-    ));
-#else
-    m_texture = CreateObject<Texture>(Texture2D(
-        Extent2D { 0, 0 },
-        InternalFormat::R8,
-        FilterMode::TEXTURE_FILTER_LINEAR,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-        nullptr
-    ));
+    m_glyph_image_data = GlyphImageData {
+        { ft_bitmap->width, ft_bitmap->rows },
+        std::move(byte_buffer)
+    };
 #endif
-
-    InitObject(m_texture);
 }
 
 Extent2D Glyph::GetMax()
@@ -106,11 +115,5 @@ Extent2D Glyph::GetMin()
     return { 0, 0 };
 #endif
 }
-
-const Handle<Texture> &Glyph::GetTexture() const
-{
-    return m_texture;
-}
-
 
 } // namespace::v2
