@@ -64,6 +64,7 @@ find_package(SDL2 REQUIRED)
 find_package(OpenAL)
 find_package(Vulkan)
 find_package(Bullet)
+find_package(Freetype)
 
 if (NOT DEFINED RENDERING_BACKEND)
     if (EXISTS "${CMAKE_SOURCE_DIR}/submodules/webgpu/CMakeLists.txt")
@@ -91,6 +92,8 @@ else()
 endif()
 
 if(${OpenAL_FOUND})
+    message(STATUS "OpenAL found")
+
     add_definitions(-DHYP_OPENAL=1)
 endif()
 
@@ -118,6 +121,18 @@ file(GLOB_RECURSE CSHARP_INTEROP_SOURCES "src/dotnet/interop/**.cs")
 
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(FREETYPE_FOUND)
+    message(STATUS "Freetype found")
+
+    add_definitions(-DHYP_FREETYPE=1)
+
+    include_directories(${FREETYPE_INCLUDE_DIRS})
+    set(COMMON_LIBRARIES
+        ${COMMON_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+    )
+endif()
 
 if(Bullet_FOUND)
     message(STATUS "Bullet found")

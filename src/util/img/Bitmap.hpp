@@ -2,13 +2,17 @@
 #define HYPERION_V2_BITMAP_HPP
 
 #include <asset/ByteWriter.hpp>
+
 #include <core/Containers.hpp>
 #include <core/lib/String.hpp>
+
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
 #include <math/MathUtil.hpp>
+
 #include <util/ByteUtil.hpp>
 #include <util/img/WriteBitmap.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion::v2 {
@@ -414,12 +418,18 @@ public:
 
     ~Bitmap() = default;
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     uint GetWidth() const
         { return m_width; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     uint GetHeight() const
         { return m_height; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     SizeType GetByteSize() const
     {
         return static_cast<SizeType>(m_width)
@@ -428,12 +438,18 @@ public:
             * sizeof(PixelComponentType);
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     PixelType &GetPixelAtIndex(uint index)
         { return m_pixels[index]; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const PixelType &GetPixelAtIndex(uint index) const
         { return m_pixels[index]; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     PixelType &GetPixel(uint x, uint y)
     {
         const uint index = ((x + m_width) % m_width)
@@ -442,9 +458,12 @@ public:
         return m_pixels[index];
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const PixelType &GetPixel(uint x, uint y) const
         { return const_cast<const Bitmap *>(this)->GetPixel(x, y); }
 
+    HYP_FORCE_INLINE
     void SetPixel(uint x, uint y, PixelType pixel)
     {
         const uint index = ((x + m_width) % m_width)
@@ -529,6 +548,49 @@ public:
         }
     }
 
+    ByteBuffer GenerateColorRamp() const
+    {
+        const int bits_per_pixel = NumComponents * 8;
+        const SizeType size = (bits_per_pixel * bits_per_pixel) - 1;
+
+        ByteBuffer buffer(size * 4);
+
+        for (SizeType i = 0; i < size; i++) {
+            buffer.GetInternalArray().Set(i * 3, 255-i);
+            buffer.GetInternalArray().Set(i * 3 + 1, 255-i);
+            buffer.GetInternalArray().Set(i * 3 + 2, 255-i);
+            buffer.GetInternalArray().Set(i * 3 + 3, 0);
+        }
+
+        return buffer;
+    }
+
+    void SetPixels(uint stride, ubyte *buffer, SizeType pixel_count)
+    {
+        static_assert(std::is_same_v<PixelComponentType, ubyte>, "Pixel component type must be `ubyte` for this function!\n");
+
+        AssertThrowMsg((m_pixels.Size() >= (pixel_count)), "Pixel buffer size not large enough or component mismatch");
+        AssertThrowMsg((pixel_count % stride) == 0, "Pixel buffer size is not divisible by bitmap stride!\n");
+
+        const SizeType rows = pixel_count / stride;
+
+        for (SizeType row = 0; row < rows; row++) {
+            for (SizeType column = 0; column < stride * 3; column += NumComponents) {
+                const SizeType index = row * stride + column;
+
+                int p_index = 0;
+
+                for (p_index = 0; p_index < NumComponents; p_index++) {
+                    m_pixels[index].components[p_index] = buffer[index + p_index];
+                }
+
+                for (; p_index < 4 - NumComponents; p_index++) {
+                    m_pixels[index].components[p_index] = 0;
+                }
+            }
+        }
+    }
+
     // https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
     void FillTriangle(
         Vec2i t0,
@@ -549,7 +611,7 @@ public:
             std::swap(t1, t2);
         }
 
-        int total_height = t2.y-t0.y;
+        int total_height = t2.y - t0.y;
 
         if (total_height == 0) {
             return;
