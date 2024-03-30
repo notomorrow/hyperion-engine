@@ -12,6 +12,7 @@
 #include <asset/texture_loaders/TextureLoader.hpp>
 #include <asset/audio_loaders/WAVAudioLoader.hpp>
 #include <asset/data_loaders/JSONLoader.hpp>
+#include <asset/font_loaders/FontLoader.hpp>
 
 namespace hyperion::v2 {
 
@@ -45,6 +46,10 @@ void AssetManager::RegisterDefaultLoaders()
     Register<FBXModelLoader, Node>("fbx");
     // Register<PLYModelLoader, PLYModel>("ply");
     Register<JSONLoader, JSONValue>("json");
+    // freetype font loader
+    Register<FontLoader, Face>(
+        "ttf", "otf", "ttc", "dfont"
+    );
 }
 
 AssetLoaderBase *AssetManager::GetLoader(const FilePath &path)

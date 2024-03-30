@@ -8,8 +8,10 @@
 
 #include <core/lib/ByteBuffer.hpp>
 #include <core/lib/DynArray.hpp>
+#include <core/lib/Optional.hpp>
 
 #include <util/img/Bitmap.hpp>
+#include <util/fs/FsUtil.hpp>
 
 #include <Engine.hpp>
 
@@ -24,128 +26,16 @@ public:
 
     static constexpr uint data_lines_offset = 2;
 
-    using SymbolList = containers::detail::DynArray<Face::WChar, sizeof(Face::WChar)>;
-    using GlyphMetricsBuffer = containers::detail::DynArray<Glyph::Metrics, sizeof(Glyph::Metrics)>;
+    using SymbolList = Array<Face::WChar>;
+    using GlyphMetricsBuffer = Array<Glyph::Metrics>;
 
-    explicit FontAtlas(RC<Face> face)
-        : m_face(std::move(face))
-    {
-        // Each cell will be the same size at the largest symbol
-        m_cell_dimensions = FindMaxDimensions(m_face);
-        // Data lines to store information about the symbol (overhang, width, height, etc)
-        m_cell_dimensions[1] += data_lines_offset;
+    FontAtlas(RC<Face> face);
 
-        m_atlas_dimensions = { m_cell_dimensions.width * symbol_columns, m_cell_dimensions.height * symbol_rows };
-        
-        m_atlas = CreateObject<Texture>(
-            Texture2D(
-                m_atlas_dimensions,
-                /* Grayscale 8-bit texture */
-                InternalFormat::R8,
-                FilterMode::TEXTURE_FILTER_LINEAR,
-                WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-                nullptr
-            )
-        );
-        
-        InitObject(m_atlas);
-    }
+    SymbolList GetDefaultSymbolList() const;
 
-    SymbolList GetDefaultSymbolList() const
-    {
-        // highest symbol in the ascii table
-        const uint end = uint('~' + 1);
-        // first renderable symbol
-        const uint start = uint('!');
+    void Render(Optional<SymbolList> symbol_list = { });
 
-        SymbolList symbol_list;
-        symbol_list.Reserve(end - start);
-
-        for (uint ch = start; ch < end; ch++) {
-            symbol_list.PushBack(ch);
-        }
-
-        return symbol_list;
-    }
-
-    void Render(SymbolList symbol_list = { })
-    {
-        Threads::AssertOnThread(THREAD_RENDER);
-
-        if (symbol_list.Empty()) {
-            symbol_list = GetDefaultSymbolList();
-        }
-
-        if ((symbol_list.Size() / symbol_columns) > symbol_rows) {
-            DebugLog(LogType::Warn, "Symbol list size is greater than the allocated font atlas!\n");
-        }
-
-        m_glyph_metrics.Reserve(symbol_list.Size());
-
-        uint image_index = 0;
-        for (const auto &symbol : symbol_list) {
-            Glyph glyph(m_face, m_face->GetGlyphIndex(symbol), true);
-            // Render the glyph into a temporary texture
-            glyph.Render();
-
-            const uint x_index = image_index % symbol_columns;
-            const uint y_index = image_index / symbol_columns;
-
-            if (y_index > symbol_rows)
-                break;
-
-            const Vec2i position {
-                int(x_index * m_cell_dimensions.width),
-
-                /* Our cell is offset by data_lines_offset to allow our extra metadata
-                 * to be written to the top of each cell. */
-                int(y_index * m_cell_dimensions.height + data_lines_offset)
-            };
-
-            Glyph::Metrics metrics = glyph.GetMetrics();
-
-            metrics.image_position = Vec2i {
-                int(x_index * m_cell_dimensions.width),
-                int(y_index * m_cell_dimensions.height),
-            };
-            m_glyph_metrics.PushBack(metrics);
-
-            image_index++;
-
-            // Render our character texture => atlas
-            RenderCharacter(position, m_cell_dimensions, glyph);
-        }
-
-        // This is the final size of the fontmap, resize to fit to reduce unneeded memory.
-        m_glyph_metrics.Refit();
-    }
-
-    void RenderCharacter(Vec2i location, Extent2D dimensions, Glyph &glyph);
-
-    Extent2D FindMaxDimensions(const RC<Face> &face, SymbolList symbol_list = { }) const
-    {
-        Extent2D highest_dimensions = { 0, 0 };
-
-        if (symbol_list.Empty()) {
-            symbol_list = GetDefaultSymbolList();
-        }
-
-        for (const auto &symbol : symbol_list) {
-            // Create the glyph but only load in the metadata
-            Glyph glyph(face, face->GetGlyphIndex(symbol), false);
-            // Get the size of each glyph
-            Extent2D size = glyph.GetMax();
-
-            if (size.width > highest_dimensions.width) {
-                highest_dimensions.width = size.width;
-            }
-
-            if (size.height > highest_dimensions.height) {
-                highest_dimensions.height = size.height;
-            }
-        }
-        return highest_dimensions;
-    }
+    Extent2D FindMaxDimensions(const RC<Face> &face, SymbolList symbol_list = { }) const;
 
     [[nodiscard]] GlyphMetricsBuffer GetGlyphMetrics() const
         { return m_glyph_metrics; }
@@ -159,8 +49,11 @@ public:
     [[nodiscard]] Extent2D GetCellDimensions() const
         { return m_cell_dimensions; }
 
-    renderer::Result WriteToBuffer(const RC<ByteBuffer> &buffer);
+    void WriteToBuffer(ByteBuffer &buffer) const;
+
 private:
+    void RenderCharacter(Vec2i location, Extent2D dimensions, Glyph &glyph) const;
+
     Handle<Texture>     m_atlas;
     RC<Face>            m_face;
     Extent2D            m_cell_dimensions;
@@ -171,27 +64,40 @@ private:
 class FontRenderer
 {
 public:
-    void RenderAtlas(FontAtlas &atlas)
+    FontRenderer(FontAtlas &atlas)
+        : m_atlas(atlas)
     {
         m_dimensions = atlas.GetDimensions();
-        m_bytes = RC<ByteBuffer>::Construct(m_dimensions.width * m_dimensions.height);
-        atlas.Render();
-        atlas.WriteToBuffer(m_bytes);
+        m_bytes.SetSize(m_dimensions.width * m_dimensions.height);
     }
 
-    void WriteTexture(FontAtlas &atlas, const String &filename)
+    void Render()
     {
-        // Create our bitmap
-        Bitmap<1> bitmap(m_dimensions.width, m_dimensions.height);
-        // // Grayscale, so we generate a colour table; ramp from 0 to 255
-        // auto color_table = bitmap.GenerateColorRamp();
-        // bitmap.SetColorTable(color_table);
-
-        // ByteBuffer bytes(m_dimensions.width * m_dimensions.height);
-        // WriteGlyphMetrics(bytes, atlas);
-        bitmap.SetPixels(m_dimensions.width, m_bytes->Data(), m_dimensions.width * m_dimensions.height);
-        bitmap.Write(filename);
+        m_atlas.Render();
+        m_atlas.WriteToBuffer(m_bytes);
     }
+
+    Bitmap<1> GenerateBitmap() const
+    {
+        Bitmap<1> bitmap(m_dimensions.width, m_dimensions.height);
+        bitmap.SetPixels(m_bytes);
+        bitmap.FlipVertical();
+        return bitmap;
+    }
+
+    // void WriteTexture(const FilePath &path)
+    // {
+    //     // Create our bitmap
+    //     Bitmap<1> bitmap(m_dimensions.width, m_dimensions.height);
+    //     // // Grayscale, so we generate a colour table; ramp from 0 to 255
+    //     // auto color_table = bitmap.GenerateColorRamp();
+    //     // bitmap.SetColorTable(color_table);
+
+    //     // ByteBuffer bytes(m_dimensions.width * m_dimensions.height);
+    //     // WriteGlyphMetrics(bytes, atlas);
+    //     bitmap.SetPixels(m_dimensions.width, m_bytes.Data(), m_dimensions.width * m_dimensions.height);
+    //     bitmap.Write(path);
+    // }
 private:
 
     void WriteGlyphMetrics(ByteBuffer &pixels, FontAtlas &atlas)
@@ -199,7 +105,7 @@ private:
         const Extent2D cell_dimensions = atlas.GetCellDimensions();
         const FontAtlas::GlyphMetricsBuffer metrics = atlas.GetGlyphMetrics();
 
-        ubyte *dest_buffer = m_bytes->GetInternalArray().Data();
+        ubyte *dest_buffer = m_bytes.GetInternalArray().Data();
 
         for (auto &metric : metrics) {
             SizeType buffer_offset = metric.image_position.y * atlas.GetDimensions().width + metric.image_position.x;
@@ -229,11 +135,12 @@ private:
 
             //DebugLog(LogType::RenDebug, "Font char metrics: (w:%d,h:%d), (%d,%d), %d\n", metric.width, metric.height, metric.bearing_x, metric.bearing_y, metric.advance);
         }
-
     }
 
-    Extent2D m_dimensions;
-    RC<ByteBuffer> m_bytes;
+    FontAtlas   m_atlas;
+
+    Extent2D    m_dimensions;
+    ByteBuffer  m_bytes;
 };
 
 
