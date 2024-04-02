@@ -78,6 +78,6 @@ void main()
 
     uint mask = GET_OBJECT_BUCKET(object);
 
-    gbuffer_albedo = ui_color;
+    gbuffer_albedo = vec4(v_texcoord0, 0.0, 1.0);//ui_color;
     gbuffer_mask = UINT_TO_VEC4(mask);
 }
