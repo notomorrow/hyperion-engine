@@ -69,11 +69,19 @@ void main()
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
+#ifdef TEXT
+        if (albedo_texture.r < 0.05) {
+           discard;
+        }
+
+        ui_color = albedo_texture.rrrr;
+#else
         if (albedo_texture.a < 0.05) {
            discard;
         }
 
-        ui_color = albedo_texture;// * CURRENT_MATERIAL.albedo;
+        ui_color = albedo_texture;
+#endif
     }
 
     uint mask = GET_OBJECT_BUCKET(object);
