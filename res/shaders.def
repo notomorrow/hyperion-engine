@@ -148,7 +148,7 @@ permute = OUTPUT(RGBA8 RGBA16F RGBA32F), CONE_TRACING
 comp = ssr/ssr_sample.comp
 
 [UIObject]
-permute = TEXT
+permute = TYPE(TEXT BUTTON)
 frag = ui/UIObject.frag
 vert = ui/UIObject.vert
 
