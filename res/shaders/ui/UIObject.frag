@@ -17,6 +17,7 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "../include/gbuffer.inc"
 #include "../include/material.inc"
 #include "../include/object.inc"
+#include "../include/UIObject.glsl"
 
 HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
 {
@@ -57,9 +58,11 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 // #endif
 // #endif
 
-
 void main()
 {
+    UIObjectProperties properties;
+    GetUIObjectProperties(object, properties);
+
     vec4 background = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 4.0);
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
@@ -85,8 +88,11 @@ void main()
     }
     
 #ifdef TYPE_BUTTON
-    float gradient = 1.0 - clamp(v_texcoord0.y * 2.0, 0.0, 1.0);
-    ui_color = mix(vec4(UINT_TO_VEC4(0x0B148C).abg, 1.0), vec4(UINT_TO_VEC4(0x0E1BBA).abg, 1.0), gradient);
+    // float gradient = 1.0 - clamp(v_texcoord0.y * 2.0, 0.0, 1.0);
+    ui_color = vec4(0.08, 0.085, 0.10, 1.0);
+    ui_color = mix(ui_color, vec4(0.184, 0.192, 0.208, 1.0), bvec4(bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_HOVER)));
+#elif defined(TYPE_PANEL)
+    ui_color = vec4(0.0, 0.0, 0.0, 0.95);
 #endif
 
     uint mask = GET_OBJECT_BUCKET(object);

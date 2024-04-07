@@ -8,26 +8,26 @@
 
 struct Object
 {
-    mat4 model_matrix;
-    mat4 previous_model_matrix;
+    mat4    model_matrix;
+    mat4    previous_model_matrix;
     
-    vec4 _pad0;
-    vec4 _pad1;
-    vec4 world_aabb_max;
-    vec4 world_aabb_min;
+    vec4    _pad0;
+    vec4    _pad1;
+    vec4    world_aabb_max;
+    vec4    world_aabb_min;
 
-    uint entity_index;
-    uint _unused;
-    uint material_index;
-    uint skeleton_index;
+    uint    entity_index;
+    uint    _unused;
+    uint    material_index;
+    uint    skeleton_index;
 
-    uint bucket;
-    uint flags;
-    uint _pad3;
-    uint _pad4;
+    uint    bucket;
+    uint    flags;
+    uint    _pad3;
+    uint    _pad4;
 
-    vec4 _pad5;
-    vec4 _pad6;
+    uvec4   user_data;
+    vec4    _pad6;
 };
 
 #define MAX_ENTITIES_PER_INSTANCE_BATCH 60
