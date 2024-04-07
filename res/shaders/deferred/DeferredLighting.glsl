@@ -231,7 +231,7 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
 
     // return UINT_TO_VEC4(base_probe_index).rgb;
 
-    return 0.5 * HYP_FMATH_PI * total_irradiance / max(total_weight, 0.0001);
+    return total_irradiance / max(total_weight, 0.0001);
 }
 
 #endif
