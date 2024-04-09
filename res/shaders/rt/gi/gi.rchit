@@ -196,18 +196,6 @@ void main()
         material_color *= albedo_texture;
     }
 
-    float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
-
-    if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord * material.uv_scale * vec2(1.0, -1.0)).r;
-        
-        metalness = metalness_sample;
-    }
-
-    const float ambient = 0.005;
-
-    vec3 indirect_lighting = material_color.rgb * (1.0 - metalness) * vec3(ambient);  
-
     vec3 direct_lighting = vec3(0.0);
 
     for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
@@ -229,7 +217,6 @@ void main()
 
         local_light *= light.position_intensity.w * attenuation;
 
-        
         if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
             local_light *= GetShadowStandard(probe_system.shadow_map_index, position.xyz, vec2(0.0), NdotL);
         }
@@ -237,7 +224,7 @@ void main()
         direct_lighting += local_light;
     }
 
-    payload.color = vec4(indirect_lighting + (material_color.rgb * direct_lighting * HYP_FMATH_ONE_OVER_PI), material_color.a);
+    payload.color = vec4((material_color.rgb * direct_lighting * HYP_FMATH_ONE_OVER_PI), material_color.a);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
