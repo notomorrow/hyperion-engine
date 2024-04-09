@@ -196,14 +196,14 @@ void main()
     float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
+        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord * material.uv_scale * vec2(1.0, -1.0)).r;
         
         metalness = metalness_sample;
     }
 
-    const float ambient = 0.025;
+    const float ambient = 0.1;
 
-    vec4 indirect_lighting = material_color * (1.0 - metalness) * vec4(ambient);
+    vec4 indirect_lighting = material_color * vec4(vec3(1.0 - metalness) * vec3(ambient), 1.0);
 
     vec4 direct_lighting = vec4(0.0);
 
@@ -228,7 +228,7 @@ void main()
             local_light *= GetShadowStandard(light.shadow_map_index, position.xyz);
         }
 
-        direct_lighting += material_color * HYP_FMATH_ONE_OVER_PI * local_light;
+        direct_lighting += material_color * vec4(local_light.rgb * HYP_FMATH_ONE_OVER_PI, 1.0);
     }
     
     payload.color = indirect_lighting + direct_lighting;

@@ -134,12 +134,12 @@ void main()
 
     irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
 
-#ifdef SSR_ENABLED
-    CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
-#endif
-
 #ifdef RT_REFLECTIONS_ENABLED
     CalculateRaytracingReflection(deferred_params, texcoord, ibl);
+#endif
+
+#ifdef SSR_ENABLED
+    CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
 #endif
 
 #ifdef RT_GI_ENABLED

@@ -199,10 +199,15 @@ void main()
     area_light_specular *= diffuse_color * t2.x + (vec4(1.0) - diffuse_color) * t2.y;
     area_light_radiance = area_light_specular + area_light_diffuse;
 
-    const float NdotL = 0.0;//dot(N, L);
-    const float LdotH = 0.0;//dot(L, H);
-    const float NdotH = 0.0;//dot(N, H);
-    const float HdotV = 0.0;//dot(H, V);
+    const float NdotL = 0.0;
+    const float LdotH = 0.0;
+    const float NdotH = 0.0;
+    const float HdotV = 0.0;
+#else
+    const float NdotL = 0.0;
+    const float LdotH = 0.0;
+    const float NdotH = 0.0;
+    const float HdotV = 0.0;
 #endif
 
     vec4 light_rays = vec4(0.0);

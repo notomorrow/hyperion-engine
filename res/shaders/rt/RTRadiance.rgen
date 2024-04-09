@@ -67,6 +67,7 @@ void main()
     const ivec2 resolution = imageSize(image);
     
     const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
+
     const ivec2 storage_coord = ivec2(
         pixel_index % resolution.x,
         pixel_index / resolution.x
@@ -140,7 +141,9 @@ void main()
         color += hit.payload.color;
     }
 
-    color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
+    color.a = 1.0; // test
+
+    //color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
 
     imageStore(image, storage_coord, color);
 }

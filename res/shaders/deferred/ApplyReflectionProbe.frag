@@ -28,6 +28,13 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
     Scene scene;
 };
 
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+{
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
 HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
@@ -47,6 +54,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer 
 };
 
 #include "./DeferredLighting.glsl"
+#include "../include/BlueNoise.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -55,7 +63,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 8
+#define SAMPLE_COUNT 1 // multiple samples having issues
 
 void main()
 {
@@ -90,7 +98,16 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
+    /*vec2 blue_noise_sample = vec2(
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 0),
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
+    );
+
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));*/
+
     for (int i = 0; i < SAMPLE_COUNT; i++) {
+
         vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
         vec3 H = ImportanceSampleGGX(rnd, N, roughness);
@@ -100,8 +117,8 @@ void main()
 
         vec4 sample_ibl = vec4(0.0);
         ApplyReflectionProbe(current_env_probe, P, dir, lod, sample_ibl);
-        ibl += sample_ibl * (1.0 / float(SAMPLE_COUNT));
+        ibl += sample_ibl;
     }
 
-    color_output = ibl;
+    color_output = ibl * (1.0 / float(SAMPLE_COUNT));
 }

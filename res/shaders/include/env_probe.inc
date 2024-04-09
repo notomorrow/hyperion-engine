@@ -109,7 +109,7 @@ vec4 EnvProbeSample(
 )
 {
     vec4 color = textureLod(samplerCube(tex, samp), coord, lod);
-    // color.rgb = pow(color.rgb, vec3(2.2));
+    //color.rgb = pow(color.rgb, vec3(2.2));
     return color;
 }
 

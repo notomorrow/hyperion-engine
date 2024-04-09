@@ -191,7 +191,7 @@ void main()
     material_color = material.albedo;
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
+        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord * material.uv_scale * vec2(1.0, -1.0));
         
         material_color *= albedo_texture;
     }
@@ -199,7 +199,7 @@ void main()
     float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
+        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, texcoord * material.uv_scale * vec2(1.0, -1.0)).r;
         
         metalness = metalness_sample;
     }
@@ -212,6 +212,11 @@ void main()
 
     for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
+
+        // Only support point and directional lights for DDGI.
+        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL && light.type != HYP_LIGHT_TYPE_POINT) {
+            continue;
+        }
 
         const vec3 L = CalculateLightDirection(light, position);
         const float NdotL = max(dot(normal, L), 0.00001);
@@ -232,7 +237,7 @@ void main()
         direct_lighting += local_light;
     }
 
-    payload.color = indirect_lighting + (material_color.rgb * direct_lighting);
+    payload.color = vec4(indirect_lighting + (material_color.rgb * direct_lighting * HYP_FMATH_ONE_OVER_PI), material_color.a);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
