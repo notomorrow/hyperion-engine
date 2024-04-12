@@ -58,22 +58,34 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 // #endif
 // #endif
 
+float RoundedRectangle(vec2 pos, vec2 size, float radius)
+{
+    return 1.0 - clamp((length(max(abs(pos) - size + radius, 0.0)) - radius), 0.0, 1.0);
+}
+
 void main()
 {
     UIObjectProperties properties;
     GetUIObjectProperties(object, properties);
 
     vec4 background = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 4.0);
+    background += Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 5.0);
+    background += Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 6.0);
+    background += Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, v_screen_space_position.xy, 7.0);
+    background *= 0.25;
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
-    ui_color = (vec4(ui_color.rgb, 1.0) * ui_color.a) + (background * (1.0 - ui_color.a));
+    // allow some of the actual ui background to show through
+    // vec4 background_blended = mix(background, vec4(ui_color.rgb, 0.0), 0.3);
+    // ui_color = (vec4(ui_color.rgb, 1.0) * ui_color.a) + (background * (1.0 - ui_color.a));
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
 #ifdef TYPE_TEXT
-        ui_color = albedo_texture.rrrr;
+        vec4 text_color = albedo_texture.rrrr;
+        ui_color.a *= text_color.a;
 #else
         // if (albedo_texture.a < 0.05) {
         //    discard;
@@ -83,12 +95,25 @@ void main()
 #endif
     }
     
-#ifdef TYPE_BUTTON
-    // float gradient = 1.0 - clamp(v_texcoord0.y * 2.0, 0.0, 1.0);
-    ui_color = vec4(0.08, 0.085, 0.10, 1.0);
-    ui_color = mix(ui_color, vec4(0.184, 0.192, 0.208, 1.0), bvec4(bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_HOVER)));
-#elif defined(TYPE_PANEL)
-    ui_color = vec4(0.0, 0.0, 0.0, 0.95);
+#if defined(TYPE_BUTTON) || defined(TYPE_TAB)
+    ui_color = mix(ui_color, clamp(ui_color * 1.33, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_HOVER)));
+#endif
+
+#if defined(TYPE_BUTTON) || defined(TYPE_PANEL) || defined(TYPE_TAB)
+    if (properties.border_radius > 0.0) {
+        // rounded corners
+        vec2 size = vec2(properties.size);
+        vec2 position = v_texcoord0 * size;
+
+        float roundedness = RoundedRectangle((size * 0.5) - position, size * 0.5, properties.border_radius);
+
+#ifdef TYPE_TAB
+        // tabs only round on top
+        roundedness = mix(roundedness, 1.0, step(0.5, v_texcoord0.y));
+#endif
+
+        ui_color.a *= roundedness;
+    }
 #endif
 
     uint mask = GET_OBJECT_BUCKET(object);
