@@ -96,7 +96,8 @@ void main()
     }
     
 #if defined(TYPE_BUTTON) || defined(TYPE_TAB)
-    ui_color = mix(ui_color, clamp(ui_color * 1.33, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_HOVER)));
+    ui_color = mix(ui_color, clamp(ui_color * 1.33, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_HOVER) && !bool(properties.focus_state & (UI_OBJECT_FOCUS_STATE_PRESSED | UI_OBJECT_FOCUS_STATE_TOGGLED))));
+    ui_color = mix(ui_color, clamp(ui_color * 1.5, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & (UI_OBJECT_FOCUS_STATE_PRESSED | UI_OBJECT_FOCUS_STATE_TOGGLED))));
 #endif
 
 #if defined(TYPE_BUTTON) || defined(TYPE_PANEL) || defined(TYPE_TAB)
@@ -106,11 +107,16 @@ void main()
         vec2 position = v_texcoord0 * size;
 
         float roundedness = RoundedRectangle((size * 0.5) - position, size * 0.5, properties.border_radius);
+        
+        bool top = bool(properties.border_flags & UI_OBJECT_BORDER_TOP);
+        bool left = bool(properties.border_flags & UI_OBJECT_BORDER_LEFT);
+        bool bottom = bool(properties.border_flags & UI_OBJECT_BORDER_BOTTOM);
+        bool right = bool(properties.border_flags & UI_OBJECT_BORDER_RIGHT);
 
-#ifdef TYPE_TAB
-        // tabs only round on top
-        roundedness = mix(roundedness, 1.0, step(0.5, v_texcoord0.y));
-#endif
+        roundedness = top ? roundedness : mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.y));
+        roundedness = left ? roundedness : mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.x));
+        roundedness = bottom ? roundedness : mix(roundedness, 1.0, step(0.5, v_texcoord0.y));
+        roundedness = right ? roundedness : mix(roundedness, 1.0, step(0.5, v_texcoord0.x));
 
         ui_color.a *= roundedness;
     }
