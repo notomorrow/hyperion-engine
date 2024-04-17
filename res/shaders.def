@@ -47,7 +47,7 @@ vert = PostEffect.vert
 frag = GenerateMipmaps.frag
 
 [Composite]
-permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, OUTPUT_SRGB, PATHTRACER
+permute = DEBUG(SSR HBAO HBIL REFLECTIONS IRRADIANCE), TEMPORAL_AA, PATHTRACER
 frag = Composite.frag
 vert = PostEffect.vert
 
