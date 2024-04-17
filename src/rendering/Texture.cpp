@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 using renderer::Frame;
@@ -215,13 +215,13 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
                     dst_image->Blit(
                         command_buffer,
                         src_image.Get(),
-                        renderer::Rect {
+                        Rect<uint32> {
                             .x0 = 0,
                             .y0 = 0,
                             .x1 = src_image->GetExtent().width,
                             .y1 = src_image->GetExtent().height
                         },
-                        renderer::Rect {
+                        Rect<uint32> {
                             .x0 = 0,
                             .y0 = 0,
                             .x1 = dst_image->GetExtent().width,
@@ -525,4 +525,4 @@ Vec4f Texture::Sample(Vec2f uv) const
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

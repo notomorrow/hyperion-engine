@@ -9,7 +9,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 PointLightShadowRenderer::PointLightShadowRenderer(
     Name name,
@@ -120,4 +120,4 @@ void PointLightShadowRenderer::OnComponentIndexChanged(RenderComponentBase::Inde
     AssertThrowMsg(false, "Not implemented");
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

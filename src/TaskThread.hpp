@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_TASK_THREAD_H
-#define HYPERION_V2_TASK_THREAD_H
+#ifndef HYPERION_TASK_THREAD_HPP
+#define HYPERION_TASK_THREAD_HPP
 
 #include <core/Thread.hpp>
 #include <core/Scheduler.hpp>

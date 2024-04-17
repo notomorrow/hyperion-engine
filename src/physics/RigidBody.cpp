@@ -3,7 +3,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 RigidBody::~RigidBody()
 {
@@ -43,4 +43,4 @@ void RigidBody::ApplyForce(const Vector3 &force)
     g_engine->GetWorld()->GetPhysicsWorld().GetAdapter().ApplyForceToBody(this, force);
 }
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics

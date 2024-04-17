@@ -2,7 +2,7 @@
 
 #include <scene/camera/FollowCamera.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 FollowCameraController::FollowCameraController(const Vector3 &target, const Vector3 &offset)
     : PerspectiveCameraController(),
@@ -100,4 +100,4 @@ void FollowCameraController::RespondToCommand(const CameraCommand &command, Game
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

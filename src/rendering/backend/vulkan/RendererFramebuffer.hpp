@@ -55,4 +55,4 @@ private:
 } // namespace renderer
 } // namespace hyperion
 
-#endif // RENDERER_FBO_H
+#endif // RENDERER_FBO_HPP

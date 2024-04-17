@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DEFERRED_HPP
-#define HYPERION_V2_DEFERRED_HPP
+#ifndef HYPERION_DEFERRED_HPP
+#define HYPERION_DEFERRED_HPP
 
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/PostFX.hpp>
@@ -21,7 +21,7 @@
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -222,6 +222,6 @@ private:
     CullData                                            m_cull_data;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

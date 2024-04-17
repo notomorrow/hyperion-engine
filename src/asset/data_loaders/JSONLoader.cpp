@@ -8,7 +8,7 @@
 #include <string>
 
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 LoadedAsset JSONLoader::LoadAsset(LoaderState &state) const
 {
@@ -35,4 +35,4 @@ LoadedAsset JSONLoader::LoadAsset(LoaderState &state) const
     };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

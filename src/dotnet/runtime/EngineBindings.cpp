@@ -5,7 +5,7 @@
 #include <Engine.hpp>
 #include <Types.hpp>
 
-using namespace hyperion::v2;
+using namespace hyperion;
 
 extern "C" {
 HYP_EXPORT Engine *Engine_GetInstance()

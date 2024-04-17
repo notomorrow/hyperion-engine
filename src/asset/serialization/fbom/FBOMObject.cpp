@@ -2,7 +2,7 @@
 
 #include <asset/serialization/fbom/FBOMObject.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 FBOMObject::FBOMObject()
     : m_object_type(FBOMUnset()),
@@ -201,4 +201,4 @@ String FBOMObject::ToString() const
     return String(ss.str().data());
 }
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom

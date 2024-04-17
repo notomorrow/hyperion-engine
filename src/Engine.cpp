@@ -20,7 +20,7 @@
 
 #include <audio/AudioManager.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Attachment;
 using renderer::ImageView;
@@ -783,4 +783,4 @@ DescriptorSet2Ref GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
     return DescriptorSet2Ref { };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

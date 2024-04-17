@@ -5,7 +5,7 @@
 #include <rtc/datachannel.hpp>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void RTCDataChannel::Send(const String &str)
 {
@@ -28,4 +28,4 @@ void LibDataChannelRTCDataChannel::Send(const ByteBuffer &byte_buffer)
 
 #endif
 
-} // namespace hyperion::v2
+} // namespace hyperion

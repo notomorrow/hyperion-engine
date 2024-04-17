@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_DATA_HPP
-#define HYPERION_V2_FBOM_DATA_HPP
+#ifndef HYPERION_FBOM_DATA_HPP
+#define HYPERION_FBOM_DATA_HPP
 
 #include <core/Name.hpp>
 #include <core/lib/String.hpp>
@@ -27,7 +27,7 @@
 
 #define FBOM_RETURN_OK return FBOMResult(FBOMResult::FBOM_OK)
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 struct FBOMData
 {
@@ -316,7 +316,7 @@ private:
     FBOMType type;
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #undef FBOM_RETURN_OK
 #undef FBOM_ASSERT

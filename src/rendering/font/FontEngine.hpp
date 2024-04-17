@@ -9,7 +9,7 @@ struct FT_LibraryRec_;
 struct FT_FaceRec_;
 struct FT_GlyphSlotRec_;
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class FontFace;
 
@@ -33,7 +33,7 @@ private:
     Backend m_backend;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 
 #endif //HYP_FONT_FONTENGINE_HPP

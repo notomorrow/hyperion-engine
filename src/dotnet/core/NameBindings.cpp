@@ -9,7 +9,6 @@
 #include <type_traits>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 static_assert(sizeof(Name) == 8, "Name size mismatch, ensure C# implementation matches C++");

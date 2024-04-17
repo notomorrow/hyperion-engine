@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ASSET_CACHE_HPP
-#define HYPERION_V2_ASSET_CACHE_HPP
+#ifndef HYPERION_ASSET_CACHE_HPP
+#define HYPERION_ASSET_CACHE_HPP
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
@@ -16,7 +16,7 @@
 
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class AssetCachePoolBase
 {
@@ -107,6 +107,6 @@ private:
     mutable std::mutex                      m_mutex;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -8,7 +8,6 @@
 #include <type_traits>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 using TaskDelegate = std::add_pointer_t<void()>;

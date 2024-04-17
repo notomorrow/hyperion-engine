@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_TAB_VIEW_HPP
-#define HYPERION_V2_UI_TAB_VIEW_HPP
+#ifndef HYPERION_UI_TAB_VIEW_HPP
+#define HYPERION_UI_TAB_VIEW_HPP
 
 #include <ui/UIPanel.hpp>
 
 #include <core/lib/DynArray.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class UIText;
 
@@ -117,6 +117,6 @@ private:
 
 #pragma endregion UITabView
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

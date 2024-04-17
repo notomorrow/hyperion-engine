@@ -7,7 +7,7 @@
 #include <Engine.hpp>
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::RTUpdateStateFlags;
 
@@ -206,4 +206,4 @@ const Handle<Scene> &World::GetDetachedScene(ThreadMask thread_mask)
     return it->second;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

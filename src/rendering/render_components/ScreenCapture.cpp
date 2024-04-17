@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void ScreenCaptureRenderComponent::Init()
 {
@@ -60,4 +60,4 @@ void ScreenCaptureRenderComponent::OnRender(Frame *frame)
     m_buffer->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

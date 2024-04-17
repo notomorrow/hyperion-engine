@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_LIB_THREAD_SAFE_CONTAINER_HPP
-#define HYPERION_V2_LIB_THREAD_SAFE_CONTAINER_HPP
+#ifndef HYPERION_LIB_THREAD_SAFE_CONTAINER_HPP
+#define HYPERION_LIB_THREAD_SAFE_CONTAINER_HPP
 
 #include <core/Core.hpp>
 #include <core/Handle.hpp>
@@ -16,8 +16,6 @@
 #include <atomic>
 
 namespace hyperion {
-
-using namespace v2;
 
 template <class T>
 class ThreadSafeContainer

@@ -10,7 +10,7 @@
 #include <Engine.hpp>
 #include <Types.hpp>
 
-using namespace hyperion::v2;
+using namespace hyperion;
 
 extern "C" {
 HYP_EXPORT void World_AddScene(World *world, ManagedHandle scene_handle)

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ENGINE_H
-#define HYPERION_V2_ENGINE_H
+#ifndef HYPERION_ENGINE_HPP
+#define HYPERION_ENGINE_HPP
 
 #include <Config.hpp>
 
@@ -44,7 +44,7 @@
 
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Instance;
 using renderer::Device;
@@ -354,7 +354,7 @@ private:
     bool                                                    m_is_render_loop_active { false };
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif
 

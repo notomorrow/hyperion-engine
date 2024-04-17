@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_TEXTURE_HPP
-#define HYPERION_V2_TEXTURE_HPP
+#ifndef HYPERION_TEXTURE_HPP
+#define HYPERION_TEXTURE_HPP
 
 #include <core/Base.hpp>
 #include <core/Handle.hpp>
@@ -25,7 +25,7 @@
 #include <memory>
 #include <map>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Image;
 using renderer::TextureImage;
@@ -337,6 +337,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

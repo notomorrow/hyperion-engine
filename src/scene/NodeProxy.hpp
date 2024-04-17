@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_NODE_PROXY_HPP
-#define HYPERION_V2_NODE_PROXY_HPP
+#ifndef HYPERION_NODE_PROXY_HPP
+#define HYPERION_NODE_PROXY_HPP
 
 #include <core/Containers.hpp>
 #include <core/ID.hpp>
@@ -9,7 +9,7 @@
 #include <math/Ray.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Scene;
@@ -369,6 +369,6 @@ public:
 
 static_assert(sizeof(NodeProxy) == sizeof(RC<Node>), "NodeProxy should be the same size as RC<Node>, to allow for type punning");
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

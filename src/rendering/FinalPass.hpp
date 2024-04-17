@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_FINAL_PASS_HPP
-#define HYPERION_V2_FINAL_PASS_HPP
+#ifndef HYPERION_FINAL_PASS_HPP
+#define HYPERION_FINAL_PASS_HPP
 
 #include <Config.hpp>
 
@@ -17,7 +17,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class ShaderManagerSystem;
 
@@ -59,6 +59,6 @@ private:
     CompositePass           m_composite_pass;
     ImageRef                m_last_frame_image;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

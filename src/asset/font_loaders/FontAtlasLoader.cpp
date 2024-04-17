@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using namespace json;
 
@@ -104,4 +104,4 @@ LoadedAsset FontAtlasLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, font_atlas.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
@@ -110,4 +110,4 @@ void ReflectionProbeRenderer::OnComponentIndexChanged(RenderComponentBase::Index
     AssertThrowMsg(false, "Not implemented");
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

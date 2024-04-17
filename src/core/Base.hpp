@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_COMPONENTS_BASE_H
-#define HYPERION_V2_COMPONENTS_BASE_H
+#ifndef HYPERION_COMPONENTS_BASE_HPP
+#define HYPERION_COMPONENTS_BASE_HPP
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
@@ -23,7 +23,7 @@
 #include <type_traits>
 
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Instance;
 using renderer::Device;
@@ -48,7 +48,7 @@ struct ClassName
     using Sequence = IntegerSequenceFromString<X>;
 };
 
-#define STUB_CLASS(name) ::hyperion::v2::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>
+#define STUB_CLASS(name) ::hyperion::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>
 
 using ComponentFlags = uint;
 
@@ -195,7 +195,7 @@ protected:
     InitInfo m_init_info;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // !HYPERION_V2_COMPONENTS_BASE_H
+#endif // !HYPERION_COMPONENTS_BASE_HPP
 

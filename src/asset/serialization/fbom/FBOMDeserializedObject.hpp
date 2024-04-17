@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_DESERIALIZED_OBJECT_HPP
-#define HYPERION_V2_FBOM_DESERIALIZED_OBJECT_HPP
+#ifndef HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
+#define HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
 
 #include <core/lib/Any.hpp>
 #include <core/lib/String.hpp>
@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <map>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 class FBOMDeserializedObject
 {
@@ -111,6 +111,6 @@ public:
     // }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

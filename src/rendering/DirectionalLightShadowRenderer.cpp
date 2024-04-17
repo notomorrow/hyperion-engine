@@ -8,7 +8,7 @@
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Image;
 using renderer::StorageImage2D;
@@ -649,4 +649,4 @@ void DirectionalLightShadowRenderer::OnComponentIndexChanged(RenderComponentBase
     AssertThrowMsg(false, "Not implemented");
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

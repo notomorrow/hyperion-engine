@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef STRING_UTIL_H
-#define STRING_UTIL_H
+#ifndef STRING_UTIL_HPP
+#define STRING_UTIL_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>

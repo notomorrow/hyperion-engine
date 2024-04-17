@@ -3,7 +3,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> DeferredSystem::gbuffer_resources = {
     GBufferResource { GBufferFormat(TEXTURE_FORMAT_DEFAULT_COLOR) }, // color
@@ -292,4 +292,4 @@ void DeferredSystem::RenderGroupHolder::Destroy()
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

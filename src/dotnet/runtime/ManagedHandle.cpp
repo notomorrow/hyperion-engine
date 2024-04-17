@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void ManagedHandle::IncRef(uint32 type_id)
 {
@@ -26,10 +26,9 @@ void ManagedHandle::DecRef(uint32 type_id)
     id = IDBase().Value();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT void ManagedHandle_IncRef(uint32 type_id, ManagedHandle handle)

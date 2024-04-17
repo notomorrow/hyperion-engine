@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_STRING_VIEW_HPP
-#define HYPERION_V2_LIB_STRING_VIEW_HPP
+#ifndef HYPERION_LIB_STRING_VIEW_HPP
+#define HYPERION_LIB_STRING_VIEW_HPP
 
 #include <core/lib/Memory.hpp>
 #include <core/lib/String.hpp>
@@ -14,7 +14,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class StringView
 {
@@ -124,6 +124,6 @@ private:
     SizeType    m_length;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_SYSTEM_HPP
-#define HYPERION_V2_ECS_SYSTEM_HPP
+#ifndef HYPERION_ECS_SYSTEM_HPP
+#define HYPERION_ECS_SYSTEM_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/TypeID.hpp>
@@ -12,7 +12,7 @@
 
 #include <tuple>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class EntityManager;
 
@@ -158,6 +158,6 @@ public:
     virtual void Process(EntityManager &entity_manager, GameCounter::TickUnit delta) override = 0;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

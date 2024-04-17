@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_CLIENT_HPP
-#define HYPERION_V2_RTC_CLIENT_HPP
+#ifndef HYPERION_RTC_CLIENT_HPP
+#define HYPERION_RTC_CLIENT_HPP
 
 #include <core/Containers.hpp>
 #include <core/lib/String.hpp>
@@ -18,7 +18,7 @@ class DataChannel;
 
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCServer;
 class RTCStream;
@@ -164,6 +164,6 @@ using LibDataChannelRTCClient = NullRTCClient;
 
 #endif // HYP_LIBDATACHANNEL
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

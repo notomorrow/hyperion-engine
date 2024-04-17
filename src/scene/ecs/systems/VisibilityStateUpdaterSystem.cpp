@@ -7,7 +7,7 @@
 #include <scene/Octree.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void VisibilityStateUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -143,4 +143,4 @@ void VisibilityStateUpdaterSystem::Process(EntityManager &entity_manager, GameCo
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

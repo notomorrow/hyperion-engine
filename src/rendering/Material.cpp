@@ -8,7 +8,7 @@
 #include <Engine.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::Result;
@@ -801,4 +801,4 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
     m_pending_addition_flag.Set(false, MemoryOrder::RELAXED);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_INSTANCE_HPP
-#define HYPERION_V2_RTC_INSTANCE_HPP
+#ifndef HYPERION_RTC_INSTANCE_HPP
+#define HYPERION_RTC_INSTANCE_HPP
 
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCServer.hpp>
@@ -11,7 +11,7 @@
 #include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/UniquePtr.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class HYP_API RTCInstance
 {
@@ -33,6 +33,6 @@ private:
     RC<RTCServer> m_server;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -3,7 +3,7 @@
 #include <asset/audio_loaders/WAVAudioLoader.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using WAVAudio = WAVAudioLoader::WAVAudio;
 
@@ -69,4 +69,4 @@ LoadedAsset WAVAudioLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, audio_source.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

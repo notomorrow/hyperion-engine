@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using OgreXMLSkeleton = OgreXMLSkeletonLoader::OgreXMLSkeleton;
 
@@ -265,4 +265,4 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, skeleton_handle.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

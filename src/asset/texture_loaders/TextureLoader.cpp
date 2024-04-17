@@ -7,7 +7,7 @@
 #include <util/StringUtil.hpp>
 #include <util/img/stb_image.h>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using TextureData = TextureLoader::TextureData;
 
@@ -97,4 +97,4 @@ LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, texture.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

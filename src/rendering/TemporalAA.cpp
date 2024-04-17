@@ -9,7 +9,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ShaderVec2;
 using renderer::ShaderMat4;
@@ -197,4 +197,4 @@ void TemporalAA::Render(Frame *frame)
         ->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

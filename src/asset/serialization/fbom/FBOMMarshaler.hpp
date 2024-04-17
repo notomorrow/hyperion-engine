@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_MARSHALER_HPP
-#define HYPERION_V2_FBOM_MARSHALER_HPP
+#ifndef HYPERION_FBOM_MARSHALER_HPP
+#define HYPERION_FBOM_MARSHALER_HPP
 
 #include <core/Core.hpp>
 #include <core/lib/UniquePtr.hpp>
@@ -13,7 +13,7 @@
 
 #include <Constants.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 class FBOMObject;
 
@@ -76,6 +76,6 @@ class FBOMMarshaler : public FBOMObjectMarshalerBase<T>
     static_assert(resolution_failure<T>, "No marshal class defined");
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

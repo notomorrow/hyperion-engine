@@ -27,7 +27,7 @@
 
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::g_static_descriptor_table_decl;
 
@@ -1947,4 +1947,4 @@ bool ShaderCompiler::GetCompiledShader(
     return true;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

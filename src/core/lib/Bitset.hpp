@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_BITSET_HPP
-#define HYPERION_V2_LIB_BITSET_HPP
+#ifndef HYPERION_LIB_BITSET_HPP
+#define HYPERION_LIB_BITSET_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <math/MathUtil.hpp>

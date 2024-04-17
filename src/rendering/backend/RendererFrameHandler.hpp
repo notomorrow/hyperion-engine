@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BACKEND_RENDERER_FRAME_HANDLER_H
-#define HYPERION_V2_BACKEND_RENDERER_FRAME_HANDLER_H
+#ifndef HYPERION_BACKEND_RENDERER_FRAME_HANDLER_HPP
+#define HYPERION_BACKEND_RENDERER_FRAME_HANDLER_HPP
 
 #include <core/lib/FixedArray.hpp>
 #include <rendering/backend/RendererResult.hpp>

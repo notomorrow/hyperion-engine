@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ASSETS_H
-#define HYPERION_V2_ASSETS_H
+#ifndef HYPERION_ASSETS_HPP
+#define HYPERION_ASSETS_HPP
 
 #include <asset/AssetBatch.hpp>
 #include <asset/AssetLoader.hpp>
@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <asset/BufferedByteReader.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class AssetCache;
 
@@ -230,6 +230,6 @@ private:
     TypeMap<ProcessAssetFunctorFactory> m_functor_factories;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

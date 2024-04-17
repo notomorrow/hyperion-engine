@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SCREENSPACE_REFLECTION_RENDERER_H
-#define HYPERION_V2_SCREENSPACE_REFLECTION_RENDERER_H
+#ifndef HYPERION_SCREENSPACE_REFLECTION_RENDERER_HPP
+#define HYPERION_SCREENSPACE_REFLECTION_RENDERER_HPP
 
 #include <Constants.hpp>
 
@@ -19,7 +19,7 @@
 
 #include <memory>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -82,6 +82,6 @@ private:
     bool                            m_is_rendered;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

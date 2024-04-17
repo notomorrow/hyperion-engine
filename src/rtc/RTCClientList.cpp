@@ -2,7 +2,7 @@
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCClient.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void RTCClientList::Add(const String &id, RC<RTCClient> client)
 {
@@ -40,4 +40,4 @@ bool RTCClientList::Has(const String &id) const
     return it != m_clients.End();
 }
 
-}  // namespace hyperion::v2
+}  // namespace hyperion

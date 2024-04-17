@@ -6,7 +6,7 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void LightVisibilityUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -151,4 +151,4 @@ void LightVisibilityUpdaterSystem::Process(EntityManager &entity_manager, GameCo
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ENVIRONMENT_H
-#define HYPERION_V2_ENVIRONMENT_H
+#ifndef HYPERION_ENVIRONMENT_HPP
+#define HYPERION_ENVIRONMENT_HPP
 
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
@@ -24,7 +24,7 @@
 
 #include <vector>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Scene;
@@ -242,6 +242,6 @@ private:
     uint32                                          m_frame_counter;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

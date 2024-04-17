@@ -21,7 +21,7 @@
 
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 FBOM::FBOM()
 {
@@ -44,4 +44,4 @@ FBOM::FBOM()
 
 FBOM::~FBOM() = default;
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom

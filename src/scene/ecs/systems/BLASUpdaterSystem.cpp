@@ -4,7 +4,7 @@
 #include <scene/ecs/EntityManager.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void BLASUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -86,4 +86,4 @@ void BLASUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::Tick
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

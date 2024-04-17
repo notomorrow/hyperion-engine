@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_TEMPORAL_AA_HPP
-#define HYPERION_V2_TEMPORAL_AA_HPP
+#ifndef HYPERION_TEMPORAL_AA_HPP
+#define HYPERION_TEMPORAL_AA_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
@@ -15,7 +15,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::StorageImage;
 using renderer::Image;
@@ -63,6 +63,6 @@ private:
     ComputePipelineRef  m_compute_taa;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_RUNTIME_DOTNET_MANAGED_HANDLE_HPP
-#define HYPERION_V2_RUNTIME_DOTNET_MANAGED_HANDLE_HPP
+#ifndef HYPERION_RUNTIME_DOTNET_MANAGED_HANDLE_HPP
+#define HYPERION_RUNTIME_DOTNET_MANAGED_HANDLE_HPP
 
 #include <core/lib/TypeID.hpp>
 #include <core/Handle.hpp>
@@ -9,7 +9,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 extern "C" struct ManagedHandle
 {
@@ -53,6 +53,6 @@ static inline Handle<T> CreateHandleFromManagedHandle(ManagedHandle handle)
     return Handle<T>(ID<T> { handle.id });
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

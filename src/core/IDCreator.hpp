@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_ID_CREATOR_HPP
-#define HYPERION_V2_CORE_ID_CREATOR_HPP
+#ifndef HYPERION_CORE_ID_CREATOR_HPP
+#define HYPERION_CORE_ID_CREATOR_HPP
 
 #include <core/lib/Queue.hpp>
 #include <core/lib/TypeMap.hpp>
@@ -12,7 +12,7 @@
 #include <mutex>
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 template <auto ... Args>
 struct IDCreator
@@ -41,6 +41,6 @@ struct IDCreator
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

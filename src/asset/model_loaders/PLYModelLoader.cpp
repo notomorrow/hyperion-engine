@@ -12,7 +12,7 @@
 #include <algorithm>
 
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 constexpr bool create_obj_indices = true;
 constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
@@ -212,4 +212,4 @@ LoadedAsset PLYModelLoader::BuildModel(LoaderState &state, PLYModel &model)
     return { { LoaderResult::Status::OK }, ply_model_ptr.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

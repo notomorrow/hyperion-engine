@@ -10,7 +10,7 @@
 
 #include <cstring>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Node::Node(
     const String &name,
@@ -733,4 +733,4 @@ NodeProxy Node::FindChildByName(const String &name) const
     return NodeProxy::empty;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

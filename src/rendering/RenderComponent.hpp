@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RENDER_COMPONENT_H
-#define HYPERION_V2_RENDER_COMPONENT_H
+#ifndef HYPERION_RENDER_COMPONENT_HPP
+#define HYPERION_RENDER_COMPONENT_HPP
 
 #include <core/Base.hpp>
 #include <scene/Entity.hpp>
@@ -16,7 +16,7 @@
 #include <atomic>
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RenderEnvironment;
 
@@ -150,6 +150,6 @@ protected:
         m_component_is_game_init;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

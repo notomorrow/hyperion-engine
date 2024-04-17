@@ -7,7 +7,7 @@
 
 #include <asset/ByteWriter.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_DEBUG_MODE, "DebugMode" },
@@ -195,4 +195,4 @@ void Configuration::SetToDefaultConfiguration()
     m_variables[CONFIG_DEBUG_ENV_GRID_PROBES] = Option(false, true);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

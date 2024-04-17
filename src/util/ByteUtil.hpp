@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_BYTE_UTIL_H
-#define HYPERION_BYTE_UTIL_H
+#ifndef HYPERION_BYTE_UTIL_HPP
+#define HYPERION_BYTE_UTIL_HPP
 
 #include <math/MathUtil.hpp>
 #include <math/Vector4.hpp>

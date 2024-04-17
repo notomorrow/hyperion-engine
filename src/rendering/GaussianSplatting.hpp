@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_GAUSSIAN_SPLATTING_HPP
-#define HYPERION_V2_GAUSSIAN_SPLATTING_HPP
+#ifndef HYPERION_GAUSSIAN_SPLATTING_HPP
+#define HYPERION_GAUSSIAN_SPLATTING_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
@@ -30,7 +30,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::Frame;
@@ -152,6 +152,6 @@ private:
     Handle<GaussianSplattingInstance>                   m_gaussian_splatting_instance;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

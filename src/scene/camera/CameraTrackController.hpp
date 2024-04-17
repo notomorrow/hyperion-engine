@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_CAMERA_TRACK_CONTROLLER_HPP
-#define HYPERION_V2_CAMERA_TRACK_CONTROLLER_HPP
+#ifndef HYPERION_CAMERA_TRACK_CONTROLLER_HPP
+#define HYPERION_CAMERA_TRACK_CONTROLLER_HPP
 
 #include <core/lib/RefCountedPtr.hpp>
 #include <scene/camera/PerspectiveCamera.hpp>
 #include <scene/camera/CameraTrack.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 class CameraTrackController : public PerspectiveCameraController
 {
 public:
@@ -30,6 +30,6 @@ protected:
 private:
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BONE_HPP
-#define HYPERION_V2_BONE_HPP
+#ifndef HYPERION_BONE_HPP
+#define HYPERION_BONE_HPP
 
 #include <scene/Node.hpp>
 #include <scene/animation/Keyframe.hpp>
@@ -10,7 +10,7 @@
 
 #include <math/Transform.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Skeleton;
 
@@ -62,6 +62,6 @@ private:
     Keyframe    m_keyframe;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

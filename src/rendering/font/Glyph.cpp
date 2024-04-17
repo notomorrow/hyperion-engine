@@ -18,7 +18,7 @@
 
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region GlyphImageData
 
@@ -173,4 +173,4 @@ Extent2D Glyph::GetMin()
 
 #pragma endregion Glyph
 
-} // namespace::v2
+} // namespace

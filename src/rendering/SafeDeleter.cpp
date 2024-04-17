@@ -4,7 +4,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 
 struct RENDER_COMMAND(RemoveTextureFromBindlessStorage) : renderer::RenderCommand
@@ -114,4 +114,4 @@ void SafeDeleter::EnqueueTextureBindlessStorageRemoval(ID<Texture> id)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

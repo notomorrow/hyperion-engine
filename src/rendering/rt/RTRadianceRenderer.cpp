@@ -5,7 +5,7 @@
 #include <rendering/backend/RendererResult.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ResourceState;
 using renderer::Result;
@@ -331,4 +331,4 @@ void RTRadianceRenderer::CreateTemporalBlending()
     m_temporal_blending->Create();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_MESH_COMPONENT_HPP
-#define HYPERION_V2_ECS_MESH_COMPONENT_HPP
+#ifndef HYPERION_ECS_MESH_COMPONENT_HPP
+#define HYPERION_ECS_MESH_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <core/lib/UserData.hpp>
@@ -12,7 +12,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/EntityDrawData.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using MeshComponentFlags = uint32;
 
@@ -40,6 +40,6 @@ struct MeshComponent
 
 static_assert(sizeof(MeshComponent) == 96, "MeshComponent size must match C# struct size");
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

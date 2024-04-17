@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void PhysicsSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -62,4 +62,4 @@ void PhysicsSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

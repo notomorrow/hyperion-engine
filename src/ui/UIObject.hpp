@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_OBJECT_HPP
-#define HYPERION_V2_UI_OBJECT_HPP
+#ifndef HYPERION_UI_OBJECT_HPP
+#define HYPERION_UI_OBJECT_HPP
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
@@ -16,7 +16,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class UIStage;
 
@@ -349,6 +349,6 @@ private:
     NodeProxy           m_node_proxy;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

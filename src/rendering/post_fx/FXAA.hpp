@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FXAA_H
-#define HYPERION_V2_FXAA_H
+#ifndef HYPERION_FXAA_HPP
+#define HYPERION_FXAA_HPP
 
 #include <rendering/PostFX.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class HYP_API FXAAEffect : public PostProcessingEffect
 {
@@ -24,6 +24,6 @@ protected:
     virtual Handle<Shader> CreateShader() override;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_DDGI_HPP
-#define HYPERION_V2_DDGI_HPP
+#ifndef HYPERION_DDGI_HPP
+#define HYPERION_DDGI_HPP
 
 #include <core/Containers.hpp>
 
@@ -18,7 +18,7 @@
 
 #include <random>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::RaytracingPipeline;
 using renderer::StorageImage;
@@ -178,6 +178,6 @@ private:
     uint32                                      m_time;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

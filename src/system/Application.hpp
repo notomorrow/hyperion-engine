@@ -389,4 +389,4 @@ public:
 
 } // namespace hyperion
 
-#endif //HYPERION_SDL_SYSTEM_H
+#endif //HYPERION_SDL_SYSTEM_HPP

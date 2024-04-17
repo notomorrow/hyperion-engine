@@ -5,7 +5,7 @@
 
 #include <math/MathUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Keyframe AnimationTrack::GetKeyframe(float time) const
 {
@@ -81,4 +81,4 @@ void Animation::ApplyBlended(float time, float blend)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

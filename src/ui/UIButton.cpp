@@ -3,7 +3,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 UIButton::UIButton(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy)
     : UIObject(entity, parent, std::move(node_proxy))
@@ -33,4 +33,4 @@ Handle<Material> UIButton::GetMaterial() const
     );
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

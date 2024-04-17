@@ -5,7 +5,7 @@
 
 #include <util/ByteUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Light;
 
@@ -298,4 +298,4 @@ BoundingSphere Light::GetBoundingSphere() const
     return BoundingSphere(m_position, m_radius);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

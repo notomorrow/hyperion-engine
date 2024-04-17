@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_POINT_LIGHT_SHADOW_RENDERER_HPP
-#define HYPERION_V2_POINT_LIGHT_SHADOW_RENDERER_HPP
+#ifndef HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
+#define HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
 
 #include <core/Base.hpp>
 #include <rendering/RenderGroup.hpp>
@@ -14,7 +14,7 @@
 #include <scene/camera/Camera.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -50,6 +50,6 @@ private:
 };
 
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

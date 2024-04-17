@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_BINDLESS_H
-#define HYPERION_V2_BINDLESS_H
+#ifndef HYPERION_BINDLESS_HPP
+#define HYPERION_BINDLESS_HPP
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
@@ -8,7 +8,7 @@
 #include <core/lib/Mutex.hpp>
 #include <Constants.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Texture;
@@ -35,6 +35,6 @@ private:
     HashMap<ID<Texture>, ImageViewWeakRef>  m_resources;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

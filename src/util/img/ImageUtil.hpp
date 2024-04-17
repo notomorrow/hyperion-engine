@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_IMAGE_UTIL_H
-#define HYPERION_IMAGE_UTIL_H
+#ifndef HYPERION_IMAGE_UTIL_HPP
+#define HYPERION_IMAGE_UTIL_HPP
 
 #include <math/MathUtil.hpp>
 #include <Types.hpp>

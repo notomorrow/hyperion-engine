@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ENTITY_DRAW_DATA_HPP
-#define HYPERION_V2_ENTITY_DRAW_DATA_HPP
+#ifndef HYPERION_ENTITY_DRAW_DATA_HPP
+#define HYPERION_ENTITY_DRAW_DATA_HPP
 
 #include <core/ID.hpp>
 #include <core/lib/UserData.hpp>
@@ -9,7 +9,7 @@
 #include <math/BoundingBox.hpp>
 #include <math/Matrix4.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 class Mesh;
@@ -29,6 +29,6 @@ struct EntityDrawData
     UserData<sizeof(Vec4u), alignof(Vec4u)> user_data;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

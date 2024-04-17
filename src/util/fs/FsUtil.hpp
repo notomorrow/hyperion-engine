@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FS_UTIL_H
-#define HYPERION_V2_FS_UTIL_H
+#ifndef HYPERION_FS_UTIL_HPP
+#define HYPERION_FS_UTIL_HPP
 
 #include <core/Containers.hpp>
 #include <core/Defines.hpp>

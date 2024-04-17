@@ -26,7 +26,7 @@
 #include <zlib.h>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 constexpr char header_string[] = "Kaydara FBX Binary  ";
 constexpr uint8 header_bytes[] = { 0x1A, 0x00 };
@@ -1548,4 +1548,4 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

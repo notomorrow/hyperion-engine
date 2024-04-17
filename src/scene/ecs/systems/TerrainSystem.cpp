@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 static const float base_height = 2.0f;
 static const float mountain_height = 35.0f;
@@ -734,4 +734,4 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

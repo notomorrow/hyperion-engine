@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_CLIENT_LIST_HPP
-#define HYPERION_V2_RTC_CLIENT_LIST_HPP
+#ifndef HYPERION_RTC_CLIENT_LIST_HPP
+#define HYPERION_RTC_CLIENT_LIST_HPP
 
 #include <core/lib/String.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -9,7 +9,7 @@
 
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCClient;
 
@@ -43,6 +43,6 @@ private:
 };
 
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

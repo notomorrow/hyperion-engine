@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_IMMEDIATE_MODE_HPP
-#define HYPERION_V2_IMMEDIATE_MODE_HPP
+#ifndef HYPERION_IMMEDIATE_MODE_HPP
+#define HYPERION_IMMEDIATE_MODE_HPP
 
 #include <Constants.hpp>
 
@@ -30,7 +30,7 @@
 #include <mutex>
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class DebugDrawer;
@@ -122,6 +122,6 @@ private:
     std::mutex                                          m_draw_commands_mutex;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

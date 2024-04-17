@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_RESULT_HPP
-#define HYPERION_V2_FBOM_RESULT_HPP
+#ifndef HYPERION_FBOM_RESULT_HPP
+#define HYPERION_FBOM_RESULT_HPP
 
 #include <string>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 struct FBOMResult
 {
@@ -32,6 +32,6 @@ struct FBOMResult
     operator int() const { return int(value); }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

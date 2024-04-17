@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_RUNTIME_DOTNET_MANAGED_NODE_HPP
-#define HYPERION_V2_RUNTIME_DOTNET_MANAGED_NODE_HPP
+#ifndef HYPERION_RUNTIME_DOTNET_MANAGED_NODE_HPP
+#define HYPERION_RUNTIME_DOTNET_MANAGED_NODE_HPP
 
 #include <core/lib/TypeID.hpp>
 #include <core/Handle.hpp>
@@ -12,7 +12,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 extern "C" struct ManagedNode
 {
@@ -58,6 +58,6 @@ static inline NodeProxy CreateNodeProxyFromManagedNode(ManagedNode managed_node)
     return NodeProxy(std::move(rc));
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

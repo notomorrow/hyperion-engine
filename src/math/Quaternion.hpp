@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef QUATERNION_H
-#define QUATERNION_H
+#ifndef QUATERNION_HPP
+#define QUATERNION_HPP
 
 #include <math/MathUtil.hpp>
 #include <math/Vector3.hpp>

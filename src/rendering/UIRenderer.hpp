@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_RENDERER_H
-#define HYPERION_V2_UI_RENDERER_H
+#ifndef HYPERION_UI_RENDERER_HPP
+#define HYPERION_UI_RENDERER_HPP
 
 #include <core/Base.hpp>
 #include <core/lib/UniquePtr.hpp>
@@ -15,7 +15,7 @@
 #include <scene/camera/Camera.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -50,6 +50,6 @@ private:
     RenderList                      m_render_list;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

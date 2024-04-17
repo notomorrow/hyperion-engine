@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef RENDERER_RESULT_H
-#define RENDERER_RESULT_H
+#ifndef RENDERER_RESULT_HPP
+#define RENDERER_RESULT_HPP
 
 #include <system/Debug.hpp>
 

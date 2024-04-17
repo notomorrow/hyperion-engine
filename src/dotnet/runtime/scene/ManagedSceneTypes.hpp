@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
-#define HYPERION_V2_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
+#ifndef HYPERION_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
+#define HYPERION_RUNTIME_DOTNET_MANAGED_SCENE_TYPES_HPP
 
 #include <dotnet/runtime/scene/ManagedNode.hpp>
 
@@ -11,7 +11,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 extern "C" {
     struct ManagedEntity
@@ -33,6 +33,6 @@ extern "C" {
     static_assert(sizeof(ManagedEntity) == 4, "ManagedEntity must be 4 bytes to be used in C#");
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

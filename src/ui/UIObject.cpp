@@ -29,7 +29,7 @@
 #include <Threads.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum UIObjectFlags : uint32
 {
@@ -838,4 +838,4 @@ void UIObject::ForEachChildUIObject(Lambda &&lambda)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

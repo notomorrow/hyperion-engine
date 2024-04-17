@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SHADER_DATA_STATE_HPP
-#define HYPERION_V2_SHADER_DATA_STATE_HPP
+#ifndef HYPERION_SHADER_DATA_STATE_HPP
+#define HYPERION_SHADER_DATA_STATE_HPP
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct ShaderDataState
 {
@@ -51,6 +51,6 @@ private:
     uint32 state;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

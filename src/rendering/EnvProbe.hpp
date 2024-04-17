@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ENV_PROBE_HPP
-#define HYPERION_V2_ENV_PROBE_HPP
+#ifndef HYPERION_ENV_PROBE_HPP
+#define HYPERION_ENV_PROBE_HPP
 
 #include <HashCode.hpp>
 #include <core/Base.hpp>
@@ -19,7 +19,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererImage.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct RenderCommand_UpdateEnvProbeDrawProxy;
 struct RenderCommand_CreateCubemapBuffers;
@@ -292,6 +292,6 @@ private:
     HashCode                                            m_octant_hash_code;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // !HYPERION_V2_ENV_PROBE_HPP
+#endif // !HYPERION_ENV_PROBE_HPP

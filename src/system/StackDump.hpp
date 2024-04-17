@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_STACK_DUMP_H
-#define HYPERION_STACK_DUMP_H
+#ifndef HYPERION_STACK_DUMP_HPP
+#define HYPERION_STACK_DUMP_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>
@@ -31,4 +31,4 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_STACK_DUMP_H
+#endif // HYPERION_STACK_DUMP_HPP

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_TASK_HPP
-#define HYPERION_V2_TASK_HPP
+#ifndef HYPERION_TASK_HPP
+#define HYPERION_TASK_HPP
 
 #include <core/lib/Proc.hpp>
 #include <core/Util.hpp>

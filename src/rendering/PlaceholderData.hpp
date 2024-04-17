@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DUMMY_DATA_H
-#define HYPERION_V2_DUMMY_DATA_H
+#ifndef HYPERION_DUMMY_DATA_HPP
+#define HYPERION_DUMMY_DATA_HPP
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/TypeMap.hpp>
@@ -18,7 +18,7 @@
 
 #include <memory>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::TextureImage2D;
 using renderer::TextureImage3D;
@@ -122,6 +122,6 @@ private:
     FlatMap<GPUBufferType, FlatMap<SizeType, GPUBufferRef>> m_buffers;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

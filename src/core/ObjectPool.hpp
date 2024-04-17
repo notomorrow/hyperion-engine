@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_OBJECT_POOL_HPP
-#define HYPERION_V2_CORE_OBJECT_POOL_HPP
+#ifndef HYPERION_CORE_OBJECT_POOL_HPP
+#define HYPERION_CORE_OBJECT_POOL_HPP
 
 #include <core/Containers.hpp>
 #include <core/IDCreator.hpp>
@@ -18,7 +18,7 @@
 #include <atomic>
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -306,6 +306,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

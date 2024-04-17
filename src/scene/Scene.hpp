@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SCENE_H
-#define HYPERION_V2_SCENE_H
+#ifndef HYPERION_SCENE_HPP
+#define HYPERION_SCENE_HPP
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>
@@ -26,7 +26,7 @@
 #include <GameCounter.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RenderEnvironment;
 class World;
@@ -215,6 +215,6 @@ private:
     mutable ShaderDataState         m_shader_data_state;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

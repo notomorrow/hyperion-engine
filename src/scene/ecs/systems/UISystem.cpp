@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void UISystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -23,4 +23,4 @@ void UISystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delt
     // do nothing
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

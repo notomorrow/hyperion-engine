@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENTITY_CONTAINER_HPP
-#define HYPERION_V2_ECS_ENTITY_CONTAINER_HPP
+#ifndef HYPERION_ECS_ENTITY_CONTAINER_HPP
+#define HYPERION_ECS_ENTITY_CONTAINER_HPP
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/TypeMap.hpp>
@@ -9,7 +9,7 @@
 #include <core/Handle.hpp>
 #include <scene/ecs/ComponentContainer.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 
@@ -99,6 +99,6 @@ private:
     FlatMap<ID<Entity>, EntityData> m_entities;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

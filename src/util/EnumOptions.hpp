@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef ENUM_OPTIONS_H
-#define ENUM_OPTIONS_H
+#ifndef ENUM_OPTIONS_HPP
+#define ENUM_OPTIONS_HPP
 
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/DynArray.hpp>

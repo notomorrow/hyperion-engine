@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FIRST_PERSON_CAMERA_H
-#define HYPERION_V2_FIRST_PERSON_CAMERA_H
+#ifndef HYPERION_FIRST_PERSON_CAMERA_HPP
+#define HYPERION_FIRST_PERSON_CAMERA_HPP
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
 #include <math/Vector2.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum FirstPersonCameraControllerMode
 {
@@ -49,6 +49,6 @@ private:
             m_desired_mag,
             m_prev_mag;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void ManagedNode::Dispose()
 {
@@ -41,10 +41,10 @@ const Node *ManagedNode::GetNode() const
     return static_cast<const Node *>(ref->value);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 extern "C" {
-HYP_EXPORT void ManagedNode_Dispose(hyperion::v2::ManagedNode managed_node)
+HYP_EXPORT void ManagedNode_Dispose(hyperion::ManagedNode managed_node)
 {
     managed_node.Dispose();
 }

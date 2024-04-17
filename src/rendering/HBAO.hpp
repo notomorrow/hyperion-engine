@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_HBAO_HPP
-#define HYPERION_V2_HBAO_HPP
+#ifndef HYPERION_HBAO_HPP
+#define HYPERION_HBAO_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
@@ -10,7 +10,7 @@
 
 #include <array>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::StorageImage;
 using renderer::ImageView;
@@ -47,6 +47,6 @@ private:
     UniquePtr<TemporalBlending> m_temporal_blending;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_PHYSICS_BULLET_ADAPTER_HPP
-#define HYPERION_V2_PHYSICS_BULLET_ADAPTER_HPP
+#ifndef HYPERION_PHYSICS_BULLET_ADAPTER_HPP
+#define HYPERION_PHYSICS_BULLET_ADAPTER_HPP
 
 #include <physics/Adapter.hpp>
 
@@ -11,7 +11,7 @@ class btCollisionDispatcher;
 class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 class HYP_API BulletPhysicsAdapter : public PhysicsAdapter<BulletPhysicsAdapter>
 {
@@ -39,6 +39,6 @@ private:
     btDiscreteDynamicsWorld *m_dynamics_world;
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #endif

@@ -33,7 +33,7 @@
 // #define HYP_VISIBILITY_CHECK_DEBUG
 // #define HYP_DISABLE_VISIBILITY_CHECK
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -508,4 +508,4 @@ bool Scene::CreateTLAS()
     return true;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

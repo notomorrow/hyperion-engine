@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_NAME_HPP
-#define HYPERION_V2_CORE_NAME_HPP
+#ifndef HYPERION_CORE_NAME_HPP
+#define HYPERION_CORE_NAME_HPP
 
 #include <core/lib/HashMap.hpp>
 #include <core/lib/String.hpp>

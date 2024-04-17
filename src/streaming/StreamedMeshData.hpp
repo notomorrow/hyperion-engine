@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_STREAMED_MESH_DATA_HPP
-#define HYPERION_V2_STREAMED_MESH_DATA_HPP
+#ifndef HYPERION_STREAMED_MESH_DATA_HPP
+#define HYPERION_STREAMED_MESH_DATA_HPP
 
 #include <streaming/StreamedData.hpp>
 
@@ -11,7 +11,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct MeshData
 {
@@ -50,6 +50,6 @@ private:
     mutable bool        m_mesh_data_loaded;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

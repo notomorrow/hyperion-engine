@@ -6,7 +6,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT void TypeID_FromString(const char *type_name, TypeID *out_type_id)

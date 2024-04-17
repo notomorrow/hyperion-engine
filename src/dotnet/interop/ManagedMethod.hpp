@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_DOTNET_INTEROP_MANAGED_METHOD_HPP
-#define HYPERION_V2_DOTNET_INTEROP_MANAGED_METHOD_HPP
+#ifndef HYPERION_DOTNET_INTEROP_MANAGED_METHOD_HPP
+#define HYPERION_DOTNET_INTEROP_MANAGED_METHOD_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/String.hpp>

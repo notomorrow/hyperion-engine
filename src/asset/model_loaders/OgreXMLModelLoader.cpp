@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using OgreXMLModel = OgreXMLModelLoader::OgreXMLModel;
 using BoneAssignment = OgreXMLModelLoader::OgreXMLModel::BoneAssignment;
@@ -297,4 +297,4 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, top.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

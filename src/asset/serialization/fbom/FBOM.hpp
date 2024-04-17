@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_HPP
-#define HYPERION_V2_FBOM_HPP
+#ifndef HYPERION_FBOM_HPP
+#define HYPERION_FBOM_HPP
 
 #include <core/lib/Optional.hpp>
 #include <core/lib/TypeMap.hpp>
@@ -43,8 +43,6 @@
 #include <asset/serialization/fbom/FBOMMarshaler.hpp>
 
 namespace hyperion {
-
-namespace v2 {
 namespace fbom {
 
 struct FBOMObjectType;
@@ -550,7 +548,6 @@ private:
 };
 
 } // namespace fbom
-} // namespace v2
 } // namespace hyperion
 
 #endif

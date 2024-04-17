@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <core/Handle.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #define DEF_HANDLE(T, sz) \
     UniquePtr<ObjectContainerBase> *g_container_ptr_##T = AllotContainer< T >(); \
@@ -22,4 +22,4 @@ namespace hyperion::v2 {
 #undef DEF_HANDLE
 #undef DEF_HANDLE_NS
 
-} // namespace hyperion::v2
+} // namespace hyperion

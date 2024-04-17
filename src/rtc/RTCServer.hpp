@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_SERVER_HPP
-#define HYPERION_V2_RTC_SERVER_HPP
+#ifndef HYPERION_RTC_SERVER_HPP
+#define HYPERION_RTC_SERVER_HPP
 
 #include <core/Containers.hpp>
 #include <core/lib/ByteBuffer.hpp>
@@ -12,7 +12,7 @@ namespace rtc {
 class WebSocket;
 } // namespace rtc
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCClient;
 class RTCServerThread;
@@ -145,6 +145,6 @@ using LibDataChannelRTCServer = NullRTCServer;
 
 #endif // HYP_LIBDATACHANNEL
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

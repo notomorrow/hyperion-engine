@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIGHTMAP_UV_BUILDER_HPP
-#define HYPERION_V2_LIGHTMAP_UV_BUILDER_HPP
+#ifndef HYPERION_LIGHTMAP_UV_BUILDER_HPP
+#define HYPERION_LIGHTMAP_UV_BUILDER_HPP
 
 #include <core/lib/String.hpp>
 #include <core/lib/HashMap.hpp>
@@ -16,7 +16,7 @@
 
 #include <util/img/Bitmap.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct LightmapEntity
 {
@@ -113,6 +113,6 @@ private:
     Array<LightmapMeshData> m_mesh_data;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region UIGridColumn
 
@@ -277,4 +277,4 @@ void UIGrid::UpdateLayout()
 
 #pragma region UIGrid
 
-} // namespace hyperion::v2
+} // namespace hyperion

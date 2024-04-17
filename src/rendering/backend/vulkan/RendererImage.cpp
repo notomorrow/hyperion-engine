@@ -509,13 +509,13 @@ Result Image<Platform::VULKAN>::Blit(
     return Blit(
         command_buffer,
         src,
-        Rect {
+        Rect<uint32>{
             .x0 = 0,
             .y0 = 0,
             .x1 = src->GetExtent().width,
             .y1 = src->GetExtent().height
         },
-        Rect {
+        Rect <uint32>{
             .x0 = 0,
             .y0 = 0,
             .x1 = m_extent.width,
@@ -527,8 +527,8 @@ Result Image<Platform::VULKAN>::Blit(
 Result Image<Platform::VULKAN>::Blit(
     CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
-    Rect src_rect,
-    Rect dst_rect
+    Rect<uint32> src_rect,
+    Rect<uint32> dst_rect
 )
 {
     const uint num_faces = MathUtil::Min(NumFaces(), src_image->NumFaces());
@@ -599,8 +599,8 @@ Result Image<Platform::VULKAN>::Blit(
 Result Image<Platform::VULKAN>::Blit(
     CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
-    Rect src_rect,
-    Rect dst_rect,
+    Rect<uint32> src_rect,
+    Rect<uint32> dst_rect,
     uint src_mip,
     uint dst_mip
 )

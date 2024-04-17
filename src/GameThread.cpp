@@ -9,7 +9,7 @@
 
 #define HYP_GAME_THREAD_LOCKED 1
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 static constexpr float game_thread_target_ticks_per_second = 60.0f;
 
@@ -70,4 +70,4 @@ void GameThread::operator()(Game *game)
     m_is_running.Set(false, MemoryOrder::RELAXED);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

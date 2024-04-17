@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ANIMATION_COMPONENT_HPP
-#define HYPERION_V2_ECS_ANIMATION_COMPONENT_HPP
+#ifndef HYPERION_ECS_ANIMATION_COMPONENT_HPP
+#define HYPERION_ECS_ANIMATION_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <scene/animation/Skeleton.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum AnimationPlaybackStatus
 {
@@ -35,6 +35,6 @@ struct AnimationComponent
     AnimationPlaybackState  playback_state;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

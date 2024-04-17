@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_THREADS_H
-#define HYPERION_V2_THREADS_H
+#ifndef HYPERION_THREADS_HPP
+#define HYPERION_THREADS_HPP
 
 #include <core/lib/FlatMap.hpp>
 #include <core/Thread.hpp>

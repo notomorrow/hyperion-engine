@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SHADER_H
-#define HYPERION_V2_SHADER_H
+#ifndef HYPERION_SHADER_HPP
+#define HYPERION_SHADER_HPP
 
 #include <core/Base.hpp>
 #include <core/Name.hpp>
@@ -22,7 +22,7 @@
 #include <utility>
 #include <string>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ShaderProgram;
 using renderer::ShaderObject;
@@ -92,7 +92,7 @@ private:
     Mutex                                           m_mutex;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // !HYPERION_V2_SHADER_H
+#endif // !HYPERION_SHADER_HPP
 

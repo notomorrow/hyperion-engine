@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_LOADABLE_HPP
-#define HYPERION_V2_FBOM_LOADABLE_HPP
+#ifndef HYPERION_FBOM_LOADABLE_HPP
+#define HYPERION_FBOM_LOADABLE_HPP
 
 #include <asset/serialization/fbom/FBOMType.hpp>
 
 #include <memory>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 class FBOMLoadable
 {
@@ -27,6 +27,6 @@ protected:
 
 using FBOMDeserialized = std::shared_ptr<FBOMLoadable>;
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

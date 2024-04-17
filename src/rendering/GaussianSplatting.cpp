@@ -19,7 +19,7 @@
 
 //#define HYP_GAUSSIAN_SPLATTING_CPU_SORT
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Pipeline;
@@ -822,4 +822,4 @@ void GaussianSplatting::Render(Frame *frame)
     m_command_buffers[frame_index]->SubmitSecondary(frame->GetCommandBuffer());
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

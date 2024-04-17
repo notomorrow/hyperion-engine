@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 PlaceholderData::PlaceholderData()
     : m_image_2d_1x1_r8(MakeRenderObject<Image>(TextureImage2D(
           Extent2D(1, 1),
@@ -134,4 +134,4 @@ void PlaceholderData::Destroy()
     m_buffers.Clear();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

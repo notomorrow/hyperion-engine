@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_RT_RADIANCE_RENDERER_HPP
-#define HYPERION_V2_RT_RADIANCE_RENDERER_HPP
+#ifndef HYPERION_RT_RADIANCE_RENDERER_HPP
+#define HYPERION_RT_RADIANCE_RENDERER_HPP
 
 #include <Constants.hpp>
 
@@ -19,7 +19,7 @@
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -98,6 +98,6 @@ private:
     Matrix4                                             m_previous_view_matrix;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -5,7 +5,7 @@
 #include <TaskSystem.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 // #define HYP_ENTITY_MANAGER_SYSTEMS_EXECUTION_PROFILE
 #define HYP_ENTITY_MANAGER_SYSTEMS_EXECUTION_PARALLEL
@@ -357,4 +357,4 @@ void SystemExecutionGroup::Process(EntityManager &entity_manager, GameCounter::T
 #endif
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

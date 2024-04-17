@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_LIGHT_H
-#define HYPERION_V2_LIGHT_H
+#ifndef HYPERION_LIGHT_HPP
+#define HYPERION_LIGHT_HPP
 
 #include <core/Base.hpp>
 #include <core/lib/Bitset.hpp>
@@ -14,7 +14,7 @@
 
 #include <bitset>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Camera;
@@ -444,6 +444,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

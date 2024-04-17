@@ -8,9 +8,8 @@
 #include <Engine.hpp>
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
-using renderer::Rect;
 using renderer::ShaderVec2;
 
 #pragma region Render commands
@@ -274,4 +273,4 @@ void TemporalBlending::Render(Frame *frame)
         : 0;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

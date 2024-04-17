@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_DOTNET_INTEROP_MANAGED_GUID_HPP
-#define HYPERION_V2_DOTNET_INTEROP_MANAGED_GUID_HPP
+#ifndef HYPERION_DOTNET_INTEROP_MANAGED_GUID_HPP
+#define HYPERION_DOTNET_INTEROP_MANAGED_GUID_HPP
 
 #include <Engine.hpp>
 #include <Types.hpp>

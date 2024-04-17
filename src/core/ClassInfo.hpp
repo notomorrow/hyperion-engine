@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_CLASS_INFO_HPP
-#define HYPERION_V2_CORE_CLASS_INFO_HPP
+#ifndef HYPERION_CORE_CLASS_INFO_HPP
+#define HYPERION_CORE_CLASS_INFO_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/TypeMap.hpp>

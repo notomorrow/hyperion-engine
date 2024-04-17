@@ -12,7 +12,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 struct UICharMesh
 {
     RC<StreamedMeshData>    mesh_data;
@@ -296,4 +296,4 @@ void UIText::UpdateSize()
     UpdateMaterial();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

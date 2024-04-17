@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DATA_STORE_HPP
-#define HYPERION_V2_DATA_STORE_HPP
+#ifndef HYPERION_DATA_STORE_HPP
+#define HYPERION_DATA_STORE_HPP
 
 #include <util/fs/FsUtil.hpp>
 #include <core/lib/String.hpp>
 #include <core/lib/ByteBuffer.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using DataStoreFlags = uint32;
 
@@ -68,6 +68,6 @@ static inline DataStore<Prefix, Flags> &GetDataStore()
 }
 
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

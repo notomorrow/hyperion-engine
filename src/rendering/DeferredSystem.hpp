@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DEFERRED_SYSTEM_HPP
-#define HYPERION_V2_DEFERRED_SYSTEM_HPP
+#ifndef HYPERION_DEFERRED_SYSTEM_HPP
+#define HYPERION_DEFERRED_SYSTEM_HPP
 
 #include <Constants.hpp>
 
@@ -16,7 +16,7 @@
 #include <mutex>
 #include <array>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -124,6 +124,6 @@ private:
     FixedArray<RenderGroupHolder, Bucket::BUCKET_MAX> m_buckets;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

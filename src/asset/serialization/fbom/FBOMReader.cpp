@@ -2,7 +2,7 @@
 
 #include <asset/serialization/fbom/FBOM.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 FBOMReader::FBOMReader(const FBOMConfig &config)
     : m_config(config),
@@ -461,4 +461,4 @@ FBOMResult FBOMReader::Handle(BufferedReader *reader, FBOMCommand command, FBOMO
     return FBOMResult::FBOM_OK;
 }
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom

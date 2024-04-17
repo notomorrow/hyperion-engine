@@ -3,7 +3,7 @@
 #include <scene/NodeProxy.hpp>
 #include <scene/Node.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region NodeProxyChildren
 
@@ -358,4 +358,4 @@ HashCode NodeProxy::GetHashCode() const
 
 #pragma endregion NodeProxy
 
-} // namespace hyperion::v2
+} // namespace hyperion

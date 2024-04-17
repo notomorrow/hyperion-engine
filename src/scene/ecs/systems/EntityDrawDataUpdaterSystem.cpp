@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region Render commands
 
@@ -115,4 +115,4 @@ void EntityDrawDataUpdaterSystem::Process(EntityManager &entity_manager, GameCou
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

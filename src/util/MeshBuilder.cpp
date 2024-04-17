@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const Array<Vertex> MeshBuilder::quad_vertices = {
     Vertex {{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}},
@@ -363,4 +363,4 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
     return mesh;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

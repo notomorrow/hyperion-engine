@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_POST_FX_H
-#define HYPERION_V2_POST_FX_H
+#ifndef HYPERION_POST_FX_HPP
+#define HYPERION_POST_FX_HPP
 
 #include <rendering/Framebuffer.hpp>
 #include <rendering/Shader.hpp>
@@ -23,7 +23,7 @@
 #include <memory>
 #include <utility>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::CommandBuffer;
@@ -214,6 +214,6 @@ private:
     GPUBufferRef m_uniform_buffer;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // HYPERION_V2_POST_FX_H
+#endif // HYPERION_POST_FX_HPP

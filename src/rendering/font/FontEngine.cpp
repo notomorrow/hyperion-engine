@@ -12,7 +12,7 @@
 
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 FontEngine &FontEngine::GetInstance()
 {
@@ -48,7 +48,7 @@ FontEngine::Backend FontEngine::GetFontBackend()
     return m_backend;
 }
 
-hyperion::v2::FontFace FontEngine::LoadFont(const FilePath &path)
+hyperion::FontFace FontEngine::LoadFont(const FilePath &path)
 {
     if (m_backend == nullptr) {
         DebugLog(LogType::Error, "Font backend system not initialized!\n");
@@ -57,4 +57,4 @@ hyperion::v2::FontFace FontEngine::LoadFont(const FilePath &path)
     return { GetFontBackend(), path };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

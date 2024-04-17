@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RENDER_BUCKET_H
-#define HYPERION_V2_RENDER_BUCKET_H
+#ifndef HYPERION_RENDER_BUCKET_HPP
+#define HYPERION_RENDER_BUCKET_HPP
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum Bucket : uint32
 {
@@ -58,6 +58,6 @@ static bool BucketIsRenderable(Bucket bucket)
         || bucket == BUCKET_SKYBOX;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ENTITY_DRAW_COLLECTION_HPP
-#define HYPERION_V2_ENTITY_DRAW_COLLECTION_HPP
+#ifndef HYPERION_ENTITY_DRAW_COLLECTION_HPP
+#define HYPERION_ENTITY_DRAW_COLLECTION_HPP
 
 #include <core/lib/ArrayMap.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -26,7 +26,7 @@ class Frame;
 using Frame = platform::Frame<Platform::CURRENT>;
 } // namespace hyperion::renderer
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Scene;
 class Camera;
@@ -242,6 +242,6 @@ private:
     FlatMap<RenderableAttributeSet, Handle<RenderGroup>>    m_render_groups;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_MESH_H
-#define HYPERION_V2_MESH_H
+#ifndef HYPERION_MESH_HPP
+#define HYPERION_MESH_HPP
 
 #include <core/Base.hpp>
 #include <core/lib/Pair.hpp>
@@ -20,7 +20,7 @@
 
 #include <cstdint>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::Device;
@@ -155,6 +155,6 @@ private:
     mutable BoundingBox     m_aabb;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif //HYPERION_MESH_H
+#endif //HYPERION_MESH_HPP

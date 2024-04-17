@@ -11,7 +11,7 @@
 #include <rtc/rtppacketizationconfig.hpp>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void RTCStream::Start()
 {
@@ -63,4 +63,4 @@ LibDataChannelRTCStream::LibDataChannelRTCStream(RTCStreamType stream_type, Uniq
 
 #endif
 
-}  // namespace hyperion::v2
+}  // namespace hyperion

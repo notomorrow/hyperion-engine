@@ -5,9 +5,8 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
-using renderer::Rect;
 using renderer::StagingBuffer;
 
 #pragma region Render commands
@@ -231,13 +230,13 @@ void FontAtlas::RenderCharacter(Handle<Texture> &atlas, Vec2i location, Extent2D
 
             const Extent2D extent(glyph_texture->GetExtent());
 
-            Rect src_rect {
+            Rect<uint32> src_rect {
                 0, 0,
                 extent.width,
                 extent.height
             };
 
-            Rect dest_rect {
+            Rect<uint32> dest_rect {
                 uint32(location.x),
                 uint32(location.y),
                 uint32(location.x + extent.width),
@@ -456,5 +455,5 @@ json::JSONValue FontAtlas::GenerateMetadataJSON(const String &bitmap_filepath) c
 
 #pragma endregion
 
-}; // namespace hyperion::v2
+}; // namespace hyperion
 

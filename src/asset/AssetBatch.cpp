@@ -5,7 +5,7 @@
 #include <Threads.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 // AssetBatch
 
@@ -121,4 +121,4 @@ UniquePtr<ProcessAssetFunctorBase> AssetManager::CreateProcessAssetFunctor(TypeI
     return it->second(key, path, callbacks_ptr);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

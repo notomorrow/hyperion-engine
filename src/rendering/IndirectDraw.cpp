@@ -6,7 +6,7 @@
 #include <math/MathUtil.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ShaderVec2;
 using renderer::ShaderVec3;
@@ -487,4 +487,4 @@ void IndirectRenderer::RebuildDescriptors(Frame *frame)
     descriptor_set->Update(g_engine->GetGPUDevice());
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

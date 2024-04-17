@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ENV_GRID_HPP
-#define HYPERION_V2_ENV_GRID_HPP
+#ifndef HYPERION_ENV_GRID_HPP
+#define HYPERION_ENV_GRID_HPP
 
 #include <core/Base.hpp>
 #include <core/lib/AtomicVar.hpp>
@@ -14,7 +14,7 @@
 #include <core/Containers.hpp>
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 
@@ -222,6 +222,6 @@ private:
     Queue<uint>                 m_next_render_indices;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // !HYPERION_V2_ENV_PROBE_HPP
+#endif // !HYPERION_ENV_PROBE_HPP

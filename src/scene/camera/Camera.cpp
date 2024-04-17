@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -392,4 +392,4 @@ void Camera::UpdateMatrices()
     UpdateViewProjectionMatrix();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

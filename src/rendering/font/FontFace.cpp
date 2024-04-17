@@ -10,7 +10,7 @@
 
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 FontFace::FontFace(FontEngine::Backend backend, const FilePath &path)
     : m_face(nullptr)
@@ -84,4 +84,4 @@ FontEngine::Font FontFace::GetFace()
     return m_face;
 }
 
-} // namespace hyperion::v2::font
+} // namespace hyperion::font

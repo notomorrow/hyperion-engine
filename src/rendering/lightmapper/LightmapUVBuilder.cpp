@@ -6,7 +6,7 @@
 #include <xatlas.h>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 // LightmapUVMap
 
@@ -279,4 +279,4 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
 #endif
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

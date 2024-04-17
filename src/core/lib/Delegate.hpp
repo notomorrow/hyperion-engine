@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_DELEGATE_HPP
-#define HYPERION_V2_LIB_DELEGATE_HPP
+#ifndef HYPERION_LIB_DELEGATE_HPP
+#define HYPERION_LIB_DELEGATE_HPP
 
 #include <core/lib/Proc.hpp>
 #include <core/lib/DynArray.hpp>
@@ -15,8 +15,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-using v2::IDCreator;
 
 class DelegateHandler;
 

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_CONTAINERS_H
-#define HYPERION_V2_CORE_CONTAINERS_H
+#ifndef HYPERION_CORE_CONTAINERS_HPP
+#define HYPERION_CORE_CONTAINERS_HPP
 
 #include <core/lib/HashMap.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -35,7 +35,7 @@
 #include <tuple>
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -453,6 +453,6 @@ private:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

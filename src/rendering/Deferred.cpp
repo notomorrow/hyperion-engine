@@ -10,10 +10,9 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Image;
-using renderer::Rect;
 using renderer::Result;
 using renderer::GPUBufferType;
 
@@ -1371,8 +1370,8 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
     mipmapped_result->Blit(
         primary,
         src_image,
-        Rect { 0, 0, src_image->GetExtent().width, src_image->GetExtent().height },
-        Rect { 0, 0, mipmapped_result->GetExtent().width, mipmapped_result->GetExtent().height }
+        Rect<uint32> { 0, 0, src_image->GetExtent().width, src_image->GetExtent().height },
+        Rect<uint32> { 0, 0, mipmapped_result->GetExtent().width, mipmapped_result->GetExtent().height }
     );
 
     HYPERION_ASSERT_RESULT(mipmapped_result->GenerateMipmaps(
@@ -1465,4 +1464,4 @@ void DeferredRenderer::RenderTranslucentObjects(Frame *frame)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

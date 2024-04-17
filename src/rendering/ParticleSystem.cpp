@@ -16,7 +16,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Pipeline;
@@ -550,4 +550,4 @@ void ParticleSystem::Render(Frame *frame)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

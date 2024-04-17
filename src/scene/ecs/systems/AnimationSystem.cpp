@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void AnimationSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)
 {
@@ -45,4 +45,4 @@ void AnimationSystem::Process(EntityManager &entity_manager, GameCounter::TickUn
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

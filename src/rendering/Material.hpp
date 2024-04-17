@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_MATERIAL_H
-#define HYPERION_V2_MATERIAL_H
+#ifndef HYPERION_MATERIAL_HPP
+#define HYPERION_MATERIAL_HPP
 
 #include <rendering/Texture.hpp>
 #include <rendering/Buffers.hpp>
@@ -30,7 +30,7 @@ class DescriptorSet;
 } // namespace renderer
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class HYP_API Material
     : public BasicObject<STUB_CLASS(Material)>
@@ -620,6 +620,6 @@ private:
     AtomicVar<uint>                                                                 m_descriptor_sets_to_update_flag;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

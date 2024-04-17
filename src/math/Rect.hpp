@@ -1,26 +1,27 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RECT_H
-#define HYPERION_RECT_H
+#ifndef HYPERION_RECT_HPP
+#define HYPERION_RECT_HPP
 
 #include <math/Vector2.hpp>
 #include <math/Vector4.hpp>
 
 namespace hyperion {
 
-struct Rect {
+template <class T>
+struct alignas(8) Rect
+{
+    static_assert(sizeof(T) == 4, "Rect<T> only supports 32-bit types.");
+
     union {
-        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
-            float left,
-                  right,
-                  top,
-                  bottom;
+        struct {
+            T x0, y0, x1, y1;
         };
     };
 
-    Vector4 ToVector4() const
-    {
-        return { left, right, top, bottom };
-    }
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    explicit operator Vec4<T>() const
+        { return { x0, y0, x1, y1 }; }
 };
 
 } // namespace hyperion

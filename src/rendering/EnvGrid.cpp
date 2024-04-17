@@ -6,7 +6,7 @@
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Image;
 using renderer::StorageImage;
@@ -1325,4 +1325,4 @@ void EnvGrid::VoxelizeProbe(
     // m_probe_data_texture->GetImage()->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

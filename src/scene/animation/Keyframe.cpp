@@ -2,7 +2,7 @@
 
 #include <scene/animation/Keyframe.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Keyframe::Keyframe()
     : m_time(0.0f)
@@ -29,4 +29,4 @@ Keyframe Keyframe::Blend(const Keyframe &to, float blend) const
 }
 
 
-} // namespace hyperion::v2
+} // namespace hyperion

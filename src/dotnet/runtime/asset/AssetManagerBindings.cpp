@@ -3,7 +3,6 @@
 #include <asset/Assets.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT const char *AssetManager_GetBasePath(AssetManager *manager)

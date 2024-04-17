@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_BUTTON_HPP
-#define HYPERION_V2_UI_BUTTON_HPP
+#ifndef HYPERION_UI_BUTTON_HPP
+#define HYPERION_UI_BUTTON_HPP
 
 #include <ui/UIObject.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class UIStage;
 
@@ -24,6 +24,6 @@ protected:
     virtual Handle<Material> GetMaterial() const override;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif
