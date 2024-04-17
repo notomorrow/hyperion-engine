@@ -28,6 +28,12 @@ const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 
     #define ADJUST_COLOR_GAMMA_OUT(col) \
         (vec4(pow(col.rgb, vec3(1.0 / 2.2)), col.a))
+#elif defined(TEMPORAL_BLENDING_REVERSE_TONEMAP)
+    #define ADJUST_COLOR_GAMMA_IN(col) \
+        (vec4(ReverseTonemapReinhardSimple(col.rgb), col.a))
+
+    #define ADJUST_COLOR_GAMMA_OUT(col) \
+        (vec4(ReverseTonemapReinhardSimple(col.rgb), col.a))
 #else
     #define ADJUST_COLOR_GAMMA_IN(col) \
         (col)

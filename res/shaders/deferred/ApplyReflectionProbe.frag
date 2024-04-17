@@ -63,7 +63,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 1 // multiple samples having issues
+#define SAMPLE_COUNT 8 // multiple samples having issues
 
 void main()
 {
@@ -106,19 +106,26 @@ void main()
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
     vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));*/
 
+#if SAMPLE_COUNT > 1
     for (int i = 0; i < SAMPLE_COUNT; i++) {
-
-        vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
+        const vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
         vec3 H = ImportanceSampleGGX(rnd, N, roughness);
         H = tangent * H.x + bitangent * H.y + N * H.z;
 
-        vec3 dir = normalize(2.0 * dot(V, H) * H - V);
+        const vec3 dir = normalize(2.0 * dot(V, H) * H - V);
+#else
+        const vec3 dir = R;
+#endif
 
         vec4 sample_ibl = vec4(0.0);
         ApplyReflectionProbe(current_env_probe, P, dir, lod, sample_ibl);
         ibl += sample_ibl;
+#if SAMPLE_COUNT > 1
     }
+#endif
 
     color_output = ibl * (1.0 / float(SAMPLE_COUNT));
+
+    // color_output.rgb = TonemapReinhardSimple(color_output.rgb);
 }
