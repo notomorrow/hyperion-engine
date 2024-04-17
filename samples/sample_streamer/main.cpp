@@ -40,12 +40,6 @@ void HandleSignal(int signum)
 
 int main(int argc, char **argv)
 {
-
-
-        static const auto test_function_name = TypeName<Name>().Data();
-        DebugLog(LogType::Debug, "test_function_name = %s\n", test_function_name);
-
-
     signal(SIGINT, HandleSignal);
     
     // handle fatal crashes
