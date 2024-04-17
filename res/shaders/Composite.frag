@@ -74,15 +74,15 @@ void main()
 #endif
     out_color.a = 1.0;
 
-    // blend in UI.
-    vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
+    // // blend in UI.
+    // vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
 
-    out_color = vec4(
-        (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
-        1.0
-    );
+    // out_color = vec4(
+    //     (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
+    //     1.0
+    // );
 
-    out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
+    // out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
 
     // Draw env_grid_probe_data buffer to screen.
     // out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb, 1.0);
