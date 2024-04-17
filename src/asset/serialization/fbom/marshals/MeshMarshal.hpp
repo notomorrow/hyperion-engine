@@ -35,7 +35,7 @@ public:
 
             out.SetProperty(
                 "vertices",
-                FBOMArray(FBOMStruct(sizeof(Vertex)), mesh_data.vertices.Size()),
+                FBOMSequence(FBOMStruct(sizeof(Vertex)), mesh_data.vertices.Size()),
                 mesh_data.vertices.Data()
             );
 
@@ -47,7 +47,7 @@ public:
         
             out.SetProperty(
                 "indices",
-                FBOMArray(FBOMUnsignedInt(), mesh_data.indices.Size()),
+                FBOMSequence(FBOMUnsignedInt(), mesh_data.indices.Size()),
                 mesh_data.indices.Data()
             );
         } else {
@@ -59,7 +59,7 @@ public:
 
             out.SetProperty(
                 "vertices",
-                FBOMArray(FBOMStruct(sizeof(Vertex)), 0),
+                FBOMSequence(FBOMStruct(sizeof(Vertex)), 0),
                 nullptr
             );
 
@@ -71,7 +71,7 @@ public:
         
             out.SetProperty(
                 "indices",
-                FBOMArray(FBOMUnsignedInt(), 0),
+                FBOMSequence(FBOMUnsignedInt(), 0),
                 nullptr
             );
         }
@@ -96,12 +96,12 @@ public:
         Array<Vertex> vertices;
 
         if (const auto &vertices_property = in.GetProperty("vertices")) {
-            const auto num_vertices = vertices_property.NumArrayElements(FBOMStruct(sizeof(Vertex)));
+            const auto num_vertices = vertices_property.NumElements(FBOMStruct(sizeof(Vertex)));
 
             if (num_vertices != 0) {
                 vertices.Resize(num_vertices);
 
-                if (auto err = vertices_property.ReadArrayElements(FBOMStruct(sizeof(Vertex)), num_vertices, vertices.Data())) {
+                if (auto err = vertices_property.ReadElements(FBOMStruct(sizeof(Vertex)), num_vertices, vertices.Data())) {
                     return err;
                 }
             }
@@ -110,12 +110,12 @@ public:
         Array<Mesh::Index> indices;
 
         if (const auto &indices_property = in.GetProperty("indices")) {
-            const auto num_indices = indices_property.NumArrayElements(FBOMUnsignedInt());
+            const auto num_indices = indices_property.NumElements(FBOMUnsignedInt());
 
             if (num_indices != 0) {
                 indices.Resize(num_indices);
 
-                if (auto err = indices_property.ReadArrayElements(FBOMUnsignedInt(), num_indices, indices.Data())) {
+                if (auto err = indices_property.ReadElements(FBOMUnsignedInt(), num_indices, indices.Data())) {
                     return err;
                 }
             }

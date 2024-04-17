@@ -6,7 +6,9 @@
 #include <core/Name.hpp>
 #include <core/containers/String.hpp>
 #include <core/Util.hpp>
+
 #include <asset/serialization/fbom/FBOMType.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion::fbom {
@@ -21,51 +23,74 @@ struct FBOMBool         : FBOMType { FBOMBool() : FBOMType("bool", 1) { } };
 struct FBOMByte         : FBOMType { FBOMByte() : FBOMType("byte", 1) { } };
 struct FBOMStruct       : FBOMType { FBOMStruct(SizeType sz) : FBOMType("struct", sz) { } };
 
-struct FBOMArray : FBOMType
+struct FBOMSequence : FBOMType
 {
-    FBOMArray() : FBOMType("array", -1) {}
+    FBOMSequence() : FBOMType("seq", -1) {}
 
-    FBOMArray(const FBOMType &held_type, SizeType count)
-        : FBOMType("array", held_type.size * count)
+    FBOMSequence(const FBOMType &held_type, SizeType count)
+        : FBOMType("seq", held_type.size * count)
     {
-        AssertThrowMsg(!held_type.IsUnbouned(), "Cannot create array of unbounded type");
+        AssertThrowMsg(!held_type.IsUnbouned(), "Cannot create sequence of unbounded type");
     }
 };
 
 struct FBOMByteBuffer : FBOMType
 {
-    FBOMByteBuffer() : FBOMType("bytebuffer", 0) {}
-    FBOMByteBuffer(SizeType count) : FBOMType("bytebuffer", count) {}
+    FBOMByteBuffer()
+        : FBOMType("buf", 0)
+    {
+    }
+
+    FBOMByteBuffer(SizeType count)
+        : FBOMType("buf", count)
+    {
+    }
 };
 
-struct FBOMVec2f : FBOMArray { FBOMVec2f() : FBOMArray(FBOMFloat(), 2) {} };
-struct FBOMVec3f : FBOMArray { FBOMVec3f() : FBOMArray(FBOMFloat(), 3) {} };
-struct FBOMVec4f : FBOMArray { FBOMVec4f() : FBOMArray(FBOMFloat(), 4) {} };
-struct FBOMVec2i : FBOMArray { FBOMVec2i() : FBOMArray(FBOMInt(), 2) {} };
-struct FBOMVec3i : FBOMArray { FBOMVec3i() : FBOMArray(FBOMInt(), 3) {} };
-struct FBOMVec4i : FBOMArray { FBOMVec4i() : FBOMArray(FBOMInt(), 4) {} };
-struct FBOMVec2ui : FBOMArray { FBOMVec2ui() : FBOMArray(FBOMUnsignedInt(), 2) {} };
-struct FBOMVec3ui : FBOMArray { FBOMVec3ui() : FBOMArray(FBOMUnsignedInt(), 3) {} };
-struct FBOMVec4ui : FBOMArray { FBOMVec4ui() : FBOMArray(FBOMUnsignedInt(), 4) {} };
+struct FBOMVec2f : FBOMSequence { FBOMVec2f() : FBOMSequence(FBOMFloat(), 2) {} };
+struct FBOMVec3f : FBOMSequence { FBOMVec3f() : FBOMSequence(FBOMFloat(), 3) {} };
+struct FBOMVec4f : FBOMSequence { FBOMVec4f() : FBOMSequence(FBOMFloat(), 4) {} };
+struct FBOMVec2i : FBOMSequence { FBOMVec2i() : FBOMSequence(FBOMInt(), 2) {} };
+struct FBOMVec3i : FBOMSequence { FBOMVec3i() : FBOMSequence(FBOMInt(), 3) {} };
+struct FBOMVec4i : FBOMSequence { FBOMVec4i() : FBOMSequence(FBOMInt(), 4) {} };
+struct FBOMVec2ui : FBOMSequence { FBOMVec2ui() : FBOMSequence(FBOMUnsignedInt(), 2) {} };
+struct FBOMVec3ui : FBOMSequence { FBOMVec3ui() : FBOMSequence(FBOMUnsignedInt(), 3) {} };
+struct FBOMVec4ui : FBOMSequence { FBOMVec4ui() : FBOMSequence(FBOMUnsignedInt(), 4) {} };
 
-struct FBOMMat3 : FBOMArray { FBOMMat3() : FBOMArray(FBOMFloat(), 9) {} };
-struct FBOMMat4 : FBOMArray { FBOMMat4() : FBOMArray(FBOMFloat(), 16) {} };
+struct FBOMMat3 : FBOMSequence { FBOMMat3() : FBOMSequence(FBOMFloat(), 9) {} };
+struct FBOMMat4 : FBOMSequence { FBOMMat4() : FBOMSequence(FBOMFloat(), 16) {} };
 
 struct FBOMQuaternion : FBOMVec4f { FBOMQuaternion() : FBOMVec4f() {} };
 
 struct FBOMString : FBOMType
 {
-    FBOMString() : FBOMString(0) {}
-    FBOMString(SizeType length) : FBOMType("string", length) {}
+    FBOMString()
+        : FBOMString(0)
+    {
+    }
+
+    FBOMString(SizeType length)
+        : FBOMType("string", length)
+    {
+    }
 };
 
 struct FBOMName : FBOMUnsignedLong { };
 
-struct FBOMBaseObjectType : FBOMType { FBOMBaseObjectType() : FBOMType("object", 0) {} };
+struct FBOMBaseObjectType : FBOMType
+{
+    FBOMBaseObjectType()
+        : FBOMType("object", 0)
+    {
+    }
+};
 
 struct FBOMObjectType : FBOMType
 {
-    explicit FBOMObjectType(void) : FBOMObjectType("UNSET") {}
+    explicit FBOMObjectType(void)
+        : FBOMObjectType("UNSET")
+    {
+    }
 
     FBOMObjectType(const String &name)
         : FBOMObjectType(name, FBOMBaseObjectType())

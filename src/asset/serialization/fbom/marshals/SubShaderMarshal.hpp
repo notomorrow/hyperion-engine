@@ -21,7 +21,7 @@ public:
 
         out.SetProperty(
             "bytes",
-            FBOMArray(FBOMByte(), in_object.spirv.bytes.Size()),
+            FBOMSequence(FBOMByte(), in_object.spirv.bytes.Size()),
             in_object.spirv.bytes.Data()
         );
 
@@ -37,7 +37,7 @@ public:
         }
 
         if (const auto &bytes_property = in.GetProperty("bytes")) {
-            const auto num_bytes = bytes_property.NumArrayElements(FBOMByte());
+            const auto num_bytes = bytes_property.NumElements(FBOMByte());
 
             if (num_bytes != 0) {
                 if (auto err = bytes_property.ReadBytes(num_bytes, sub_shader->spirv.bytes)) {

@@ -88,9 +88,9 @@ public:
         
         {
             Vector3 translation, direction, up_vector;
-            in.GetProperty("translation").ReadArrayElements(FBOMFloat(), 3, &translation);
-            in.GetProperty("direction").ReadArrayElements(FBOMFloat(), 3, &direction);
-            in.GetProperty("up").ReadArrayElements(FBOMFloat(), 3, &up_vector);
+            in.GetProperty("translation").ReadElements(FBOMFloat(), 3, &translation);
+            in.GetProperty("direction").ReadElements(FBOMFloat(), 3, &direction);
+            in.GetProperty("up").ReadElements(FBOMFloat(), 3, &up_vector);
 
             (*camera_handle)->SetTranslation(translation);
             (*camera_handle)->SetDirection(direction);
@@ -104,7 +104,7 @@ public:
         { // frustum
             Vector4 planes[6];
 
-            in.GetProperty("frustum").ReadArrayElements(FBOMVec4f(), 6, &planes[0]);
+            in.GetProperty("frustum").ReadElements(FBOMVec4f(), 6, &planes[0]);
 
             for (uint i = 0; i < std::size(planes); i++) {
                 (*camera_handle)->GetFrustum().GetPlane(i) = planes[i];

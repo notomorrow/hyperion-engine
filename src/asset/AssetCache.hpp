@@ -7,14 +7,14 @@
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 
+#include <core/threading/Mutex.hpp>
+
 #include <scene/Node.hpp>
 
 #include <asset/Loader.hpp>
 
 #include <system/Debug.hpp>
 #include <Constants.hpp>
-
-#include <mutex>
 
 namespace hyperion {
 
@@ -41,14 +41,14 @@ public:
 
     virtual bool Has(const String &key) const override
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         return m_handles.Find(key) != m_handles.End();
     }
 
     RefType Get(const String &key) const
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         const auto it = m_handles.Find(key);
 
@@ -61,21 +61,21 @@ public:
 
     void Set(const String &key, const RefType &value)
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         m_handles.Set(key, value);
     }
 
     void Set(const String &key, RefType &&value)
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         m_handles.Set(key, std::move(value));
     }
 
 private:
     HashMap<String, RefType>    m_handles;
-    mutable std::mutex          m_mutex;
+    mutable Mutex               m_mutex;
 };
 
 class AssetCache
@@ -91,7 +91,7 @@ public:
     template <class T>
     AssetCachePool<T> *GetPool()
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         auto it = m_pools.Find<T>();
 
@@ -104,7 +104,7 @@ public:
 
 private:
     TypeMap<UniquePtr<AssetCachePoolBase>>  m_pools;
-    mutable std::mutex                      m_mutex;
+    mutable Mutex                           m_mutex;
 };
 
 } // namespace hyperion

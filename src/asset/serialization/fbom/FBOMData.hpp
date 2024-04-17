@@ -93,7 +93,7 @@ struct FBOMData
     template <SizeType Sz> \
     static FBOMData FromArray(const FixedArray<c_type, Sz> &items) \
     { \
-        FBOMArray type(FBOM##type_name(), items.Size()); \
+        FBOMSequence type(FBOM##type_name(), items.Size()); \
         FBOMData data(type); \
         data.SetBytes(sizeof(c_type) * items.Size(), items.Data()); \
         return data; \
@@ -101,14 +101,14 @@ struct FBOMData
     template <SizeType Sz> \
     static FBOMData FromArray(const c_type (&items)[Sz]) \
     { \
-        FBOMArray type(FBOM##type_name(), Sz); \
+        FBOMSequence type(FBOM##type_name(), Sz); \
         FBOMData data(type); \
         data.SetBytes(sizeof(c_type) * Sz, items); \
         return data; \
     } \
     static FBOMData FromArray(const Array<c_type> &items) \
     { \
-        FBOMArray type(FBOM##type_name(), items.Size()); \
+        FBOMSequence type(FBOM##type_name(), items.Size()); \
         AssertThrowMsg(sizeof(c_type) * items.Size() == type.size, "sizeof(" #c_type ") * %llu must be equal to %llu", items.Size(), type.size); \
         FBOMData data(type); \
         data.SetBytes(sizeof(c_type) * items.Size(), items.Data()); \
@@ -205,25 +205,25 @@ struct FBOMData
         return ReadStruct(sizeof(T), out);
     }
 
-    bool IsArray() const
-        { return type.IsOrExtends(FBOMArray()); }
+    bool IsSequence() const
+        { return type.IsOrExtends(FBOMSequence()); }
 
     // does NOT check that the types are exact, just that the size is a match
-    bool IsArrayMatching(const FBOMType &held_type, SizeType num_items) const
-        { return type.IsOrExtends(FBOMArray(held_type, num_items)); }
+    bool IsSequenceMatching(const FBOMType &held_type, SizeType num_items) const
+        { return type.IsOrExtends(FBOMSequence(held_type, num_items)); }
 
     // does the array size equal byte_size bytes?
-    bool IsArrayOfByteSize(SizeType byte_size) const
-        { return type.IsOrExtends(FBOMArray(FBOMByte(), byte_size)); }
+    bool IsSequenceOfByteSize(SizeType byte_size) const
+        { return type.IsOrExtends(FBOMSequence(FBOMByte(), byte_size)); }
 
-    /*! \brief If type is an array, return the number of elements,
-        assuming the array contains the given type. Note, array could
+    /*! \brief If type is an sequence, return the number of elements,
+        assuming the sequence contains the given type. Note, sequence could
         contain another type, and still a result will be returned.
         
-        If type is /not/ an array, return zero. */
-    SizeType NumArrayElements(const FBOMType &held_type) const
+        If type is /not/ an sequence, return zero. */
+    SizeType NumElements(const FBOMType &held_type) const
     {
-        if (!IsArray()) {
+        if (!IsSequence()) {
             return 0;
         }
 
@@ -246,17 +246,11 @@ struct FBOMData
     }
 
     // count is number of ELEMENTS
-    FBOMResult ReadArrayElements(const FBOMType &held_type, SizeType num_items, void *out) const
+    FBOMResult ReadElements(const FBOMType &held_type, SizeType num_items, void *out) const
     {
         AssertThrow(out != nullptr);
 
-        FBOM_ASSERT(IsArray(), "Object is not an array or not array of requested size");
-
-        // assert that the number of items fits evenly.
-        // FBOM_ASSERT(type.size % held_type.size == 0, "Array does not evenly store held_type -- byte size mismatch");
-
-        // assert that we are not reading over bounds (although ReadBytes accounts for this)
-        // FBOM_ASSERT(held_type.size * num_items <= type.size, std::string("Attempt to read over array bounds (") + std::to_string(held_type.size * num_items) + " > " + std::to_string(type.size) + ")");
+        FBOM_ASSERT(IsSequence(), "Object is not an sequence");
 
         ReadBytes(held_type.size * num_items, out);
 

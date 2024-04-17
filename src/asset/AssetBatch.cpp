@@ -7,7 +7,7 @@
 
 namespace hyperion {
 
-// AssetBatch
+#pragma region AssetBatch
 
 void AssetBatch::LoadAsync(uint num_batches)
 {
@@ -111,7 +111,9 @@ void AssetBatch::Add(const String &key, const String &path)
     procs.PushBack(std::move(functor_ptr));
 }
 
-// AssetManager
+#pragma endregion AssetBatch
+
+#pragma region AssetManager
 
 UniquePtr<ProcessAssetFunctorBase> AssetManager::CreateProcessAssetFunctor(TypeID loader_type_id, const String &key, const String &path, AssetBatchCallbacks *callbacks_ptr)
 {
@@ -120,5 +122,7 @@ UniquePtr<ProcessAssetFunctorBase> AssetManager::CreateProcessAssetFunctor(TypeI
 
     return it->second(key, path, callbacks_ptr);
 }
+
+#pragma endregion AssetManager
 
 } // namespace hyperion
