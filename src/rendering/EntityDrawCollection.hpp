@@ -2,18 +2,21 @@
 #ifndef HYPERION_ENTITY_DRAW_COLLECTION_HPP
 #define HYPERION_ENTITY_DRAW_COLLECTION_HPP
 
-#include <core/lib/ArrayMap.hpp>
-#include <core/lib/FlatMap.hpp>
+#include <core/containers/ArrayMap.hpp>
+#include <core/containers/FlatMap.hpp>
 #include <core/ID.hpp>
+#include <core/Defines.hpp>
+
 #include <math/Transform.hpp>
+
 #include <rendering/DrawProxy.hpp>
 #include <rendering/EntityDrawData.hpp>
 #include <rendering/backend/Platform.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/CullData.hpp>
-#include <core/Defines.hpp>
-#include <Threads.hpp>
+
+#include <core/threading/Threads.hpp>
 #include <Types.hpp>
 
 namespace hyperion::renderer {
@@ -83,8 +86,8 @@ public:
     HashCode CalculateCombinedAttributesHashCode() const;
 
 private:
-    FixedArray<FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX>, THREAD_TYPE_MAX>    m_lists;
-    FixedArray<ArrayMap<RenderableAttributeSet, RenderResourceManager>, PASS_TYPE_MAX>                      m_render_side_resources;
+    FixedArray<FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX>, ThreadType::THREAD_TYPE_MAX>    m_lists;
+    FixedArray<ArrayMap<RenderableAttributeSet, RenderResourceManager>, PASS_TYPE_MAX>                                  m_render_side_resources;
 };
 
 struct PushConstantData

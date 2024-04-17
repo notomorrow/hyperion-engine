@@ -33,7 +33,7 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 // LightmapPathTracer
 
@@ -114,7 +114,7 @@ void LightmapPathTracer::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RTRadianceDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RTRadianceDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());

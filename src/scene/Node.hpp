@@ -4,9 +4,9 @@
 
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/Delegate.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/NodeProxy.hpp>

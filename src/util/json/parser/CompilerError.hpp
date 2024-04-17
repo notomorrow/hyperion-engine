@@ -4,8 +4,8 @@
 #define HYP_JSON_COMPILER_ERROR_HPP
 
 #include <util/json/parser/SourceLocation.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/HashMap.hpp>
 
 #include <string>
 #include <sstream>

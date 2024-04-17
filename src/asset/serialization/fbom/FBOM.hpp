@@ -3,15 +3,15 @@
 #ifndef HYPERION_FBOM_HPP
 #define HYPERION_FBOM_HPP
 
-#include <core/lib/Optional.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/HashMap.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/Any.hpp>
-#include <core/lib/Variant.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/UniqueID.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/Any.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/utilities/UniqueID.hpp>
 #include <core/ClassInfo.hpp>
 #include <math/MathUtil.hpp>
 #include <Constants.hpp>

@@ -503,7 +503,7 @@ void GaussianSplattingInstance::CreateRenderGroup()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GaussianSplattingDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GaussianSplattingDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(SplatIndicesBuffer), m_splat_indices_buffer);
@@ -555,7 +555,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = update_splats_descriptor_table->GetDescriptorSet(HYP_NAME(UpdateSplatsDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = update_splats_descriptor_table->GetDescriptorSet(HYP_NAME(UpdateSplatsDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(SplatIndicesBuffer), m_splat_indices_buffer);
@@ -593,7 +593,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     );
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = update_splat_distances_descriptor_table->GetDescriptorSet(HYP_NAME(UpdateDistancesDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = update_splat_distances_descriptor_table->GetDescriptorSet(HYP_NAME(UpdateDistancesDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(SplatIndicesBuffer), m_splat_indices_buffer);
@@ -633,7 +633,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         );
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &descriptor_set = sort_splats_descriptor_table->GetDescriptorSet(HYP_NAME(SortSplatsDescriptorSet), frame_index);
+            const DescriptorSetRef &descriptor_set = sort_splats_descriptor_table->GetDescriptorSet(HYP_NAME(SortSplatsDescriptorSet), frame_index);
             AssertThrow(descriptor_set != nullptr);
 
             descriptor_set->SetElement(HYP_NAME(SplatIndicesBuffer), m_splat_indices_buffer);
@@ -739,7 +739,7 @@ void GaussianSplatting::CreateCommandBuffers()
 
 void GaussianSplatting::UpdateSplats(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (!m_gaussian_splatting_instance) {

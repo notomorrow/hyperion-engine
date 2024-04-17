@@ -53,7 +53,7 @@ public:
 
     float At(int i, int j) const;
     float &At(int i, int j);
-#pragma endregion
+#pragma endregion deprecated
 
     constexpr Vector3 &operator[](uint row) { return rows[row]; }
     constexpr const Vector3 &operator[](uint row) const { return rows[row]; }

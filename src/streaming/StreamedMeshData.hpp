@@ -6,8 +6,8 @@
 
 #include <math/Vertex.hpp>
 
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/containers/Array.hpp>
 
 #include <Types.hpp>
 

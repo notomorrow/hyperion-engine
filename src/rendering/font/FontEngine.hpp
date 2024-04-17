@@ -3,7 +3,7 @@
 #ifndef HYP_FONT_FONTENGINE_HPP
 #define HYP_FONT_FONTENGINE_HPP
 
-#include <util/fs/FsUtil.hpp>
+#include <core/filesystem/FilePath.hpp>
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;

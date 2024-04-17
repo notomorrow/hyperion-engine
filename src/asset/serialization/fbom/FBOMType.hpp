@@ -3,8 +3,8 @@
 #ifndef HYPERION_FBOM_TYPE_HPP
 #define HYPERION_FBOM_TYPE_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/UniqueID.hpp>
+#include <core/containers/String.hpp>
+#include <core/utilities/UniqueID.hpp>
 #include <HashCode.hpp>
 #include <Types.hpp>
 

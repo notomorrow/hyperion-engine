@@ -12,7 +12,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/Containers.hpp>
 

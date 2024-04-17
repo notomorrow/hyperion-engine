@@ -38,7 +38,7 @@ struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 FullScreenPass::FullScreenPass(InternalFormat image_format, Extent2D extent)
     : FullScreenPass(Handle<Shader>(), image_format, extent)
@@ -207,7 +207,7 @@ void FullScreenPass::Destroy()
 
 void FullScreenPass::Record(uint frame_index)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
@@ -247,7 +247,7 @@ void FullScreenPass::Record(uint frame_index)
 
 void FullScreenPass::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const auto frame_index = frame->GetFrameIndex();
 
@@ -261,7 +261,7 @@ void FullScreenPass::Render(Frame *frame)
 
 void FullScreenPass::Begin(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const uint frame_index = frame->GetFrameIndex();
 
@@ -274,7 +274,7 @@ void FullScreenPass::Begin(Frame *frame)
 
 void FullScreenPass::End(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const uint frame_index = frame->GetFrameIndex();
 

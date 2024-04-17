@@ -4,10 +4,10 @@
 #define HYPERION_RENDERER_BACKEND_VULKAN_SHADER_HPP
 
 
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererDevice.hpp>

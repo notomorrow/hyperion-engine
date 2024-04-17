@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef UTIL_HPP
-#define UTIL_HPP
 
-#include <core/lib/ValueStorage.hpp>
+#ifndef HYPERION_UTIL_HPP
+#define HYPERION_UTIL_HPP
 
+#include <core/utilities/ValueStorage.hpp>
+#include <core/containers/StaticString.hpp>
 #include <core/Defines.hpp>
+
 #include <system/Debug.hpp>
 #include <Types.hpp>
-
-#include <core/lib/StaticString.hpp>
 
 namespace hyperion {
 
@@ -19,8 +19,8 @@ namespace detail {
 template <auto Str>
 constexpr auto StripNamespace()
 {
-    constexpr auto left_arrow_index = Str.template FindFirst< IntegerSequenceFromString< StaticString("<") > >();
-    constexpr auto right_arrow_index = Str.template FindLast< IntegerSequenceFromString< StaticString(">") > >();
+    constexpr auto left_arrow_index = Str.template FindFirst< containers::detail::IntegerSequenceFromString< StaticString("<") > >();
+    constexpr auto right_arrow_index = Str.template FindLast< containers::detail::IntegerSequenceFromString< StaticString(">") > >();
 
     if constexpr (left_arrow_index != -1 && right_arrow_index != -1) {
         constexpr auto before_left_arrow = StripNamespace< Str.template Substr<0, left_arrow_index>() >();
@@ -28,7 +28,7 @@ constexpr auto StripNamespace()
         // constexpr auto after_right_arrow = Str.template Substr<right_arrow_index + 1, Str.Size() - 1>();
         return ((before_left_arrow.template Concat< StaticString("<")>()).template Concat< inner_left_arrow >()).template Concat<StaticString(">")>();
     } else {
-        constexpr auto last_index = Str.template FindLast<IntegerSequenceFromString<StaticString("::")>>();
+        constexpr auto last_index = Str.template FindLast<containers::detail::IntegerSequenceFromString<StaticString("::")>>();
 
         if constexpr (last_index == -1) {
             return Str;

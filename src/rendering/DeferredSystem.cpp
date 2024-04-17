@@ -159,7 +159,7 @@ void DeferredSystem::RenderGroupHolder::AddRenderGroup(Handle<RenderGroup> &rend
 
     //InitObject(render_group);
 
-    std::lock_guard guard(renderer_instances_mutex);
+    Mutex::Guard guard(renderer_instances_mutex);
 
     renderer_instances_pending_addition.PushBack(render_group);
     renderer_instances_changed.Set(true, MemoryOrder::RELEASE);
@@ -174,7 +174,7 @@ void DeferredSystem::RenderGroupHolder::AddRenderGroup(Handle<RenderGroup> &rend
 
 void DeferredSystem::RenderGroupHolder::AddPendingRenderGroups()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!renderer_instances_changed.Get(MemoryOrder::ACQUIRE)) {
         return;
@@ -182,7 +182,7 @@ void DeferredSystem::RenderGroupHolder::AddPendingRenderGroups()
 
     DebugLog(LogType::Debug, "Adding %llu pending RenderGroups\n", renderer_instances_pending_addition.Size());
 
-    std::lock_guard guard(renderer_instances_mutex);
+    Mutex::Guard guard(renderer_instances_mutex);
     DebugLog(LogType::Debug, "Adding pending RenderGroups, locked mutex.\n");
 
     for (auto it = renderer_instances_pending_addition.Begin(); it != renderer_instances_pending_addition.End(); ++it) {
@@ -281,9 +281,9 @@ void DeferredSystem::RenderGroupHolder::Destroy()
 {
     renderer_instances.Clear();
 
-    renderer_instances_mutex.lock();
+    renderer_instances_mutex.Lock();
     renderer_instances_pending_addition.Clear();
-    renderer_instances_mutex.unlock();
+    renderer_instances_mutex.Unlock();
 
     framebuffer.Reset();
 

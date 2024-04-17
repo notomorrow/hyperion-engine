@@ -4,8 +4,8 @@
 #define HYPERION_FBOM_DATA_HPP
 
 #include <core/Name.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <math/MathUtil.hpp>
@@ -48,7 +48,7 @@ struct FBOMData
     const FBOMType &GetType() const { return type; }
     SizeType TotalSize() const { return bytes.Size(); }
 
-    /*! @returns The number of bytes read */
+    /*! \returns The number of bytes read */
     SizeType ReadBytes(SizeType n, void *out) const;
     ByteBuffer ReadBytes() const;
     ByteBuffer ReadBytes(SizeType n) const;

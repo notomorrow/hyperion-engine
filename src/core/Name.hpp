@@ -1,10 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_CORE_NAME_HPP
 #define HYPERION_CORE_NAME_HPP
 
-#include <core/lib/HashMap.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/threading/Mutex.hpp>
 
 #include <core/NameInternal.hpp>
 
@@ -61,9 +62,7 @@ struct NameRegistration
     HYP_API static NameRegistration FromDynamicString(const ANSIString &str);
 };
 
-/**
- * \brief Creates a Name from a static string. The string must be a compile-time constant.
- */
+/*! \brief Creates a Name from a static string. The string must be a compile-time constant. */
 template <class HashedName>
 static inline Name CreateNameFromStaticString_WithLock(HashedName &&hashed_name)
 {
@@ -72,10 +71,8 @@ static inline Name CreateNameFromStaticString_WithLock(HashedName &&hashed_name)
     return Name(name_registration.id);
 }
 
-/**
- * \brief Creates a Name from a static string. The string must be a compile-time constant.
- * Use in contexts where thread-safety is not an issue such as static initialization.
- */
+/*! \brief Creates a Name from a static string. The string must be a compile-time constant.
+ * Use in contexts where thread-safety is not an issue such as static initialization. */
 template <class HashedName>
 static inline Name CreateNameFromStaticString_NoLock(HashedName &&hashed_name)
 {
@@ -85,9 +82,7 @@ static inline Name CreateNameFromStaticString_NoLock(HashedName &&hashed_name)
 }
 
 
-/**
- * \brief Creates a Name from a dynamic string.
- */
+/*! \brief Creates a Name from a dynamic string. */
 extern HYP_API Name CreateNameFromDynamicString(const ANSIString &str);
 
 #if defined(HYP_COMPILE_TIME_NAME_HASHING) && HYP_COMPILE_TIME_NAME_HASHING

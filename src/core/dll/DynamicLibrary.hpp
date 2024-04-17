@@ -3,8 +3,8 @@
 #ifndef HYPERION_CORE_DLL_DYNAMIC_LIBRARY_HPP
 #define HYPERION_CORE_DLL_DYNAMIC_LIBRARY_HPP
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/String.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/String.hpp>
 
 namespace hyperion {
 

@@ -5,7 +5,7 @@
 #include <rendering/RenderEnvironment.hpp>
 
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 
@@ -99,7 +99,7 @@ void World::PerformSceneUpdates()
 
 void World::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertReady();
 
@@ -121,14 +121,14 @@ void World::Update(GameCounter::TickUnit delta)
 
 void World::PreRender(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertReady();
 }
 
 void World::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertReady();
 
@@ -177,9 +177,9 @@ void World::RemoveScene(ID<Scene> id)
 
 const Handle<Scene> &World::GetDetachedScene()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-    return GetDetachedScene(THREAD_GAME);
+    return GetDetachedScene(ThreadName::THREAD_GAME);
 }
 
 const Handle<Scene> &World::GetDetachedScene(ThreadMask thread_mask)
@@ -190,7 +190,7 @@ const Handle<Scene> &World::GetDetachedScene(ThreadMask thread_mask)
 
     if (it == m_detached_scenes.End()) {
         auto scene = CreateObject<Scene>(
-            Handle<Camera> {},
+            Handle<Camera>::empty,
             Scene::InitInfo {
                 .thread_mask = thread_mask
             }

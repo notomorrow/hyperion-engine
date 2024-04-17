@@ -2,12 +2,12 @@
 #ifndef HYPERION_ARG_PARSE_HPP
 #define HYPERION_ARG_PARSE_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Pair.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/Variant.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/utilities/Variant.hpp>
 
 #include <core/Defines.hpp>
 

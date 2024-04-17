@@ -5,7 +5,7 @@
 
 #include <core/Handle.hpp>
 #include <core/Name.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <scene/camera/Camera.hpp>
 

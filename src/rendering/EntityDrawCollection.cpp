@@ -1,5 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 #include <core/Util.hpp>
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/backend/RendererFrame.hpp>
@@ -8,7 +8,7 @@
 #include <scene/camera/Camera.hpp>
 
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 
@@ -42,13 +42,13 @@ struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList()
 {
     const ThreadType thread_type = Threads::GetThreadType();
 
-    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
     return m_lists[uint(thread_type)];
 }
@@ -57,28 +57,28 @@ const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityLi
 {
     const ThreadType thread_type = Threads::GetThreadType();
 
-    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
     return m_lists[uint(thread_type)];
 }
 
 FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type)
 {
-    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
     return m_lists[uint(thread_type)];
 }
 
 const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>, PASS_TYPE_MAX> &EntityDrawCollection::GetEntityList(ThreadType thread_type) const
 {
-    AssertThrowMsg(thread_type != THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
 
     return m_lists[uint(thread_type)];
 }
 
 void EntityDrawCollection::Insert(const RenderableAttributeSet &attributes, EntityDrawData entity_draw_data)
 {
-    GetEntityList(THREAD_TYPE_GAME)[BucketToPassType(attributes.GetMaterialAttributes().bucket)][attributes].entity_draw_datas.PushBack(std::move(entity_draw_data));
+    GetEntityList(ThreadType::THREAD_TYPE_GAME)[BucketToPassType(attributes.GetMaterialAttributes().bucket)][attributes].entity_draw_datas.PushBack(std::move(entity_draw_data));
 }
 
 void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entity_list)
@@ -225,7 +225,7 @@ void RenderList::ClearEntities()
 
 void RenderList::UpdateRenderGroups()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
     AssertThrow(m_draw_collection != nullptr);
 
     using IteratorType = ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
@@ -233,7 +233,7 @@ void RenderList::UpdateRenderGroups()
     Array<IteratorType> iterators;
     Array<Pair<RenderableAttributeSet, Handle<RenderGroup>>> added_render_groups;
 
-    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(THREAD_TYPE_GAME)) {
+    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(ThreadType::THREAD_TYPE_GAME)) {
         for (auto &it : collection_per_pass_type) {
             // temp check
             AssertThrow(it.first.GetMaterialAttributes().shader_definition.IsValid());
@@ -287,7 +287,11 @@ void RenderList::UpdateRenderGroups()
     };
 
     if constexpr (do_parallel_collection) {
-        TaskSystem::GetInstance().ParallelForEach(THREAD_POOL_RENDER_COLLECT, iterators, UpdateRenderGroupForAttributeSet);
+        TaskSystem::GetInstance().ParallelForEach(
+            TaskThreadPoolName::THREAD_POOL_RENDER_COLLECT,
+            iterators,
+            UpdateRenderGroupForAttributeSet
+        );
     } else {
         for (uint index = 0; index < iterators.Size(); index++) {
             UpdateRenderGroupForAttributeSet(iterators[index], index, 0 /* unused */);
@@ -316,7 +320,7 @@ void RenderList::PushEntityToRender(
     const RenderableAttributeSet *override_attributes
 )
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(mesh.IsValid());
     AssertThrow(entity_id.IsValid());
@@ -379,13 +383,13 @@ void RenderList::CollectDrawCalls(
     const CullData *cull_data
 )
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     using IteratorType = ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::Iterator;
 
     Array<IteratorType> iterators;
 
-    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(THREAD_TYPE_RENDER)) {
+    for (auto &collection_per_pass_type : m_draw_collection->GetEntityList(ThreadType::THREAD_TYPE_RENDER)) {
         for (auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
 
@@ -400,16 +404,20 @@ void RenderList::CollectDrawCalls(
     }
 
     if constexpr (do_parallel_collection) {
-        TaskSystem::GetInstance().ParallelForEach(THREAD_POOL_RENDER, iterators, [](IteratorType it, uint, uint)
-        {
-            EntityDrawCollection::EntityList &entity_list = it->second;
-            Handle<RenderGroup> &render_group = entity_list.render_group;
+        TaskSystem::GetInstance().ParallelForEach(
+            TaskThreadPoolName::THREAD_POOL_RENDER,
+            iterators,
+            [](IteratorType it, uint, uint)
+            {
+                EntityDrawCollection::EntityList &entity_list = it->second;
+                Handle<RenderGroup> &render_group = entity_list.render_group;
 
-            AssertThrow(render_group.IsValid());
+                AssertThrow(render_group.IsValid());
 
-            render_group->SetEntityDrawDatas(entity_list.entity_draw_datas);
-            render_group->CollectDrawCalls();
-        });
+                render_group->SetEntityDrawDatas(entity_list.entity_draw_datas);
+                render_group->CollectDrawCalls();
+            }
+        );
     } else {
         for (IteratorType it : iterators) {
             EntityDrawCollection::EntityList &entity_list = it->second;
@@ -482,7 +490,7 @@ void RenderList::ExecuteDrawCalls(
     PushConstantData push_constant
 ) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
     AssertThrow(m_draw_collection != nullptr);
 
@@ -497,7 +505,7 @@ void RenderList::ExecuteDrawCalls(
 
     g_engine->GetRenderState().BindCamera(camera.Get());
 
-    for (const auto &collection_per_pass_type : m_draw_collection->GetEntityList(THREAD_TYPE_RENDER)) {
+    for (const auto &collection_per_pass_type : m_draw_collection->GetEntityList(ThreadType::THREAD_TYPE_RENDER)) {
         for (const auto &it : collection_per_pass_type) {
             const RenderableAttributeSet &attributes = it.first;
             const EntityDrawCollection::EntityList &entity_list = it.second;
@@ -585,7 +593,7 @@ void RenderList::ExecuteDrawCallsInLayers(
     PushConstantData push_constant
 ) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
     AssertThrow(m_draw_collection != nullptr);
     AssertThrowMsg(camera.IsValid(), "Cannot render with invalid Camera");
@@ -602,7 +610,7 @@ void RenderList::ExecuteDrawCallsInLayers(
     using IteratorType = ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityList>::ConstIterator;
     Array<IteratorType> iterators;
 
-    for (const auto &collection_per_pass_type : m_draw_collection->GetEntityList(THREAD_TYPE_RENDER)) {
+    for (const auto &collection_per_pass_type : m_draw_collection->GetEntityList(ThreadType::THREAD_TYPE_RENDER)) {
         for (const auto &it : collection_per_pass_type) {
             iterators.PushBack(&it);
         }
@@ -656,7 +664,7 @@ void RenderList::ExecuteDrawCallsInLayers(
 void RenderList::Reset()
 {
     AssertThrow(m_draw_collection != nullptr);
-    // Threads::AssertOnThread(THREAD_GAME);
+    // Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     // perform full clear
     *m_draw_collection = { };

@@ -4,9 +4,9 @@
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/Pair.hpp>
-#include <core/lib/AtomicVar.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/threading/AtomicVar.hpp>
+#include <core/threading/Mutex.hpp>
 #include <core/ID.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
@@ -73,9 +73,7 @@ public:
         SafeReleaseHandleImpl<Shader>(std::move(resource), RENDERABLE_DELETION_SHADERS);
     }
 
-    /**
-     * \brief Enqueue deletion of an object (buffer or image)
-    */
+    /*! \brief Enqueue deletion of an object (buffer or image) */
     template <class T>
     void SafeRelease(UniquePtr<T> &&resource)
     {

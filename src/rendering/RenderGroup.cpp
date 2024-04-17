@@ -1,13 +1,16 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include <rendering/RenderGroup.hpp>
-#include <scene/Entity.hpp>
-#include <Engine.hpp>
-#include <Constants.hpp>
 
-#include <core/lib/util/ForEach.hpp>
+#include <rendering/RenderGroup.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
+
+#include <scene/Entity.hpp>
+
+#include <core/util/ForEach.hpp>
+
+#include <Engine.hpp>
+#include <Constants.hpp>
 
 namespace hyperion {
 
@@ -108,7 +111,9 @@ struct RENDER_COMMAND(CreateIndirectRenderer) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
+
+#pragma region RenderGroup
 
 RenderGroup::RenderGroup(
     Handle<Shader> shader,
@@ -247,7 +252,7 @@ void RenderGroup::Init()
 
 void RenderGroup::CollectDrawCalls()
 {
-    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
     AssertReady();
 
@@ -300,7 +305,7 @@ void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_dat
         return;
     }
 
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertThrow(cull_data != nullptr);
 
@@ -367,7 +372,7 @@ RenderAll(
     const uint frame_index = frame->GetFrameIndex();
 
     const uint num_batches = use_parallel_rendering
-        ? MathUtil::Min(uint(TaskSystem::GetInstance().GetPool(THREAD_POOL_RENDER).threads.Size()), num_async_rendering_command_buffers)
+        ? MathUtil::Min(uint(TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER).threads.Size()), num_async_rendering_command_buffers)
         : 1u;
     
     GetDividedDrawCalls(
@@ -381,23 +386,23 @@ RenderAll(
     FixedArray<uint, num_async_rendering_command_buffers> command_buffers_recorded_states { };
 
     const uint global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(HYP_NAME(Global));
-    const DescriptorSet2Ref &global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index);
+    const DescriptorSetRef &global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Global), frame_index);
 
     const uint scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(HYP_NAME(Scene));
-    const DescriptorSet2Ref &scene_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index);
+    const DescriptorSetRef &scene_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Scene), frame_index);
     
     const uint material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(HYP_NAME(Material));
-    const DescriptorSet2Ref &material_descriptor_set = use_bindless_textures
+    const DescriptorSetRef &material_descriptor_set = use_bindless_textures
         ? pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Material), frame_index)
-        : DescriptorSet2Ref::unset;
+        : DescriptorSetRef::unset;
     
     const uint entity_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(HYP_NAME(Object));
-    const DescriptorSet2Ref &entity_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index);
+    const DescriptorSetRef &entity_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(Object), frame_index);
 
     // AtomicVar<uint32> num_rendered_objects { 0u };
 
 #if defined(HYP_FEATURES_PARALLEL_RENDERING) && HYP_FEATURES_PARALLEL_RENDERING
-    ParallelForEach(divided_draw_calls, num_batches, THREAD_POOL_RENDER,
+    ParallelForEach(divided_draw_calls, num_batches, TaskThreadPoolName::THREAD_POOL_RENDER,
 #else
     ForEachInBatches(divided_draw_calls, num_batches,
 #endif
@@ -515,7 +520,7 @@ RenderAll(
 
 void RenderGroup::PerformRendering(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (m_draw_state.draw_calls.Empty()) {
@@ -535,7 +540,7 @@ void RenderGroup::PerformRendering(Frame *frame)
 
 void RenderGroup::PerformRenderingIndirect(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (m_draw_state.draw_calls.Empty()) {
@@ -561,14 +566,16 @@ void RenderGroup::Render(Frame *frame)
 }
 
 
-void RenderGroup::SetEntityDrawDatas(Array<EntityDrawData> entity_draw_datas)
+void RenderGroup::SetEntityDrawDatas(const Array<EntityDrawData> &entity_draw_datas)
 {
-    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
-    m_entity_draw_datas = std::move(entity_draw_datas);
+    m_entity_draw_datas = entity_draw_datas;
 }
 
-// Proxied methods
+#pragma endregion RenderGroup
+
+#pragma region RendererProxy
 
 const CommandBufferRef &RendererProxy::GetCommandBuffer(uint frame_index) const
 {
@@ -582,7 +589,7 @@ const GraphicsPipelineRef &RendererProxy::GetGraphicsPipeline() const
 
 void RendererProxy::Bind(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     CommandBuffer *command_buffer = m_render_group->m_command_buffers[frame->GetFrameIndex()].Front().Get();
     AssertThrow(command_buffer != nullptr);
@@ -608,5 +615,7 @@ void RendererProxy::Submit(Frame *frame)
     command_buffer->End(g_engine->GetGPUDevice());
     command_buffer->SubmitSecondary(frame->GetCommandBuffer());
 }
+
+#pragma endregion RendererProxy
 
 } // namespace hyperion

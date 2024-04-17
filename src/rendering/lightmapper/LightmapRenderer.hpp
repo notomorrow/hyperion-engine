@@ -4,9 +4,9 @@
 #define HYPERION_LIGHTMAP_RENDERER_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/Queue.hpp>
-#include <core/lib/Mutex.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
 
 #include <math/Triangle.hpp>
 #include <math/Ray.hpp>

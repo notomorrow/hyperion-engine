@@ -11,7 +11,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
-#include <core/lib/Queue.hpp>
+#include <core/containers/Queue.hpp>
 #include <core/ID.hpp>
 
 #include <math/MathUtil.hpp>

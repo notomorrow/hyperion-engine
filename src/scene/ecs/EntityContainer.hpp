@@ -3,8 +3,8 @@
 #ifndef HYPERION_ECS_ENTITY_CONTAINER_HPP
 #define HYPERION_ECS_ENTITY_CONTAINER_HPP
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/TypeMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/TypeMap.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 #include <scene/ecs/ComponentContainer.hpp>

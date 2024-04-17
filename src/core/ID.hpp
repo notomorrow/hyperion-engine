@@ -2,8 +2,8 @@
 #ifndef HYPERION_CORE_ID_HPP
 #define HYPERION_CORE_ID_HPP
 
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/TypeID.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/utilities/TypeID.hpp>
 #include <core/Defines.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>

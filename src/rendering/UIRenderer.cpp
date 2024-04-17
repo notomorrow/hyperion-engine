@@ -69,7 +69,7 @@ struct RENDER_COMMAND(UnsetUITextureFromGlobalDescriptorSet) : renderer::RenderC
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 UIRenderer::UIRenderer(Name name, Handle<Scene> scene)
     : RenderComponent(name),

@@ -3,7 +3,6 @@
 #include <util/ArgParse.hpp>
 
 #include <HyperionEngine.hpp>
-#include <core/lib/AtomicVar.hpp>
 
 using namespace hyperion;
 

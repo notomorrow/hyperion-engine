@@ -3,7 +3,7 @@
 #ifndef HYPERION_BACKEND_RENDERER_FRAME_HANDLER_HPP
 #define HYPERION_BACKEND_RENDERER_FRAME_HANDLER_HPP
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>

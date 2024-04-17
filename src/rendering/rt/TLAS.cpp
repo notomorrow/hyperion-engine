@@ -129,7 +129,7 @@ void TLAS::UpdateRender(
     RTUpdateStateFlags &out_update_state_flags
 )
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     out_update_state_flags = renderer::RT_UPDATE_STATE_FLAGS_NONE;

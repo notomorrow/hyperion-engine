@@ -3,8 +3,8 @@
 #ifndef HYPERION_ECS_ENTITY_SET_BASE_HPP
 #define HYPERION_ECS_ENTITY_SET_BASE_HPP
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/Array.hpp>
 #include <core/IDCreator.hpp>
 #include <core/ID.hpp>
 #include <scene/ecs/EntityContainer.hpp>

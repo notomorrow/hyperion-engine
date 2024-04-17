@@ -120,7 +120,7 @@ public:
 
     void Init();
 
-    void SetEntityDrawDatas(Array<EntityDrawData> entity_draw_datas);
+    void SetEntityDrawDatas(const Array<EntityDrawData> &entity_draw_datas);
 
     // render non-indirect (collects draw calls, then renders)
     void Render(Frame *frame);

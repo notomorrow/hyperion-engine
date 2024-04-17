@@ -15,7 +15,7 @@
 #include <rendering/Material.hpp>
 
 #include <util/fs/FsUtil.hpp>
-#include <core/lib/Memory.hpp>
+#include <core/memory/Memory.hpp>
 
 #include <Engine.hpp>
 

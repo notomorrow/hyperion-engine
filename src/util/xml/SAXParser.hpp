@@ -4,9 +4,9 @@
 #define SAXPARSER_HPP
 
 #include <asset/BufferedByteReader.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/Pair.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/utilities/Pair.hpp>
 #include <util/fs/FsUtil.hpp>
 
 #include <fstream>

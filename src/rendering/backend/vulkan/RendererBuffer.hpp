@@ -199,7 +199,7 @@ public:
 
     Result CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const;
 
-    /* \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
+    /*! \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
     uint64_t GetBufferDeviceAddress(Device<Platform::VULKAN> *device) const;
 
     HYP_API Result Create(

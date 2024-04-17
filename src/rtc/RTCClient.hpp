@@ -3,9 +3,9 @@
 #define HYPERION_RTC_CLIENT_HPP
 
 #include <core/Containers.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/utilities/Optional.hpp>
 #include <core/Name.hpp>
 
 #ifdef HYP_LIBDATACHANNEL

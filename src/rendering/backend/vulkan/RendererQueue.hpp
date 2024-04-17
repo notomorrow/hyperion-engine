@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_QUEUE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_QUEUE_HPP
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <Types.hpp>
 
 namespace hyperion {

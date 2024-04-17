@@ -7,7 +7,7 @@
 #include <asset/serialization/fbom/marshals/SubShaderMarshal.hpp>
 
 #include <rendering/Shader.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <Engine.hpp>
 

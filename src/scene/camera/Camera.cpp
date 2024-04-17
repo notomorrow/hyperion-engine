@@ -11,7 +11,7 @@ using renderer::Result;
 
 class Camera;
 
-#pragma region Render Commands
+#pragma region Render commands
 
 struct RENDER_COMMAND(UpdateCameraDrawProxy) : renderer::RenderCommand
 {
@@ -44,7 +44,7 @@ struct RENDER_COMMAND(UpdateCameraDrawProxy) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 static Matrix4 BuildJitterMatrix(const Camera &camera, uint frame_counter)
 {

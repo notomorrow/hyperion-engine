@@ -9,9 +9,9 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/Buffers.hpp>
 
-#include <core/lib/TypeMap.hpp>
-#include <core/ThreadSafeContainer.hpp>
-#include <Threads.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/containers/ThreadSafeContainer.hpp>
+#include <core/threading/Threads.hpp>
 #include <Types.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
@@ -192,7 +192,7 @@ private:
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         auto &effects = m_effects[uint(stage)];
 

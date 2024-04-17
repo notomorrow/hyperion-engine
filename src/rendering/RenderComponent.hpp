@@ -10,7 +10,7 @@
 #include <rendering/backend/RendererFrame.hpp>
 #include <GameCounter.hpp>
 #include <Constants.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 #include <Types.hpp>
 
 #include <atomic>
@@ -27,7 +27,7 @@ class RenderComponentBase
 public:
     using Index = uint;
 
-    /*! @param render_frame_slicing Number of frames to wait between render calls */
+    /*! \param render_frame_slicing Number of frames to wait between render calls */
     RenderComponentBase(Name name, uint render_frame_slicing = 0)
         : m_name(name),
           m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
@@ -121,7 +121,7 @@ public:
 
     virtual void ComponentUpdate(GameCounter::TickUnit delta) override final
     {
-        Threads::AssertOnThread(THREAD_GAME);
+        Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
         if (!m_component_is_game_init) {
             static_cast<Derived *>(this)->InitGame();
@@ -134,7 +134,7 @@ public:
 
     virtual void ComponentRender(Frame *frame) override final
     {
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (m_render_frame_slicing == 0 || m_render_frame_slicing_counter++ % m_render_frame_slicing == 0) {
             static_cast<Derived *>(this)->OnRender(frame);

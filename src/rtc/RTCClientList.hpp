@@ -2,10 +2,10 @@
 #ifndef HYPERION_RTC_CLIENT_LIST_HPP
 #define HYPERION_RTC_CLIENT_LIST_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <mutex>
 

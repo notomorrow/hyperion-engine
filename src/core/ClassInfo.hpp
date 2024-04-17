@@ -2,9 +2,9 @@
 #ifndef HYPERION_CORE_CLASS_INFO_HPP
 #define HYPERION_CORE_CLASS_INFO_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <type_traits>
 #include <mutex>

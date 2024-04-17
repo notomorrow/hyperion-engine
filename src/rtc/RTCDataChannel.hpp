@@ -2,8 +2,8 @@
 #ifndef HYPERION_RTC_DATA_CHANNEL_HPP
 #define HYPERION_RTC_DATA_CHANNEL_HPP
 
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/containers/String.hpp>
 
 #ifdef HYP_LIBDATACHANNEL
 

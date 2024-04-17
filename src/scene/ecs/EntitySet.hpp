@@ -3,10 +3,10 @@
 #ifndef HYPERION_ECS_ENTITY_SET_HPP
 #define HYPERION_ECS_ENTITY_SET_HPP
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/Array.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <core/IDCreator.hpp>
 #include <core/Handle.hpp>
 #include <scene/Entity.hpp>

@@ -11,7 +11,7 @@ namespace hyperion {
 
 using renderer::Result;
 
-#pragma region Render commmands
+#pragma region Render commands
 
 struct RENDER_COMMAND(UpdateSkeletonRenderData) : renderer::RenderCommand
 {
@@ -35,7 +35,7 @@ struct RENDER_COMMAND(UpdateSkeletonRenderData) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 Skeleton::Skeleton()
     : BasicObject(),

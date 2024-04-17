@@ -4,7 +4,7 @@
 #define HYPERION_FBOM_BASE_TYPES_HPP
 
 #include <core/Name.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 #include <core/Util.hpp>
 #include <asset/serialization/fbom/FBOMType.hpp>
 #include <Types.hpp>

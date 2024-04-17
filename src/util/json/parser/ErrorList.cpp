@@ -3,7 +3,7 @@
 #include <util/json/parser/ErrorList.hpp>
 #include <util/Termcolor.hpp>
 #include <util/StringUtil.hpp>
-#include <core/lib/FlatSet.hpp>
+#include <core/containers/FlatSet.hpp>
 
 #include <fstream>
 

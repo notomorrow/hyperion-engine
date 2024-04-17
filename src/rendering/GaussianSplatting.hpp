@@ -4,8 +4,8 @@
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
-#include <core/ThreadSafeContainer.hpp>
-#include <Threads.hpp>
+#include <core/containers/ThreadSafeContainer.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <math/Vector3.hpp>
 #include <math/BoundingBox.hpp>
@@ -24,7 +24,7 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <atomic>

@@ -5,7 +5,7 @@
 
 #include <GameCounter.hpp>
 
-#include <core/lib/Queue.hpp>
+#include <core/containers/Queue.hpp>
 
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>

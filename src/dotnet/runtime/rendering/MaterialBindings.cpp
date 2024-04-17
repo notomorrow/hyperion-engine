@@ -4,8 +4,8 @@
 
 #include <rendering/Material.hpp>
 
-#include <core/lib/TypeID.hpp>
-#include <core/lib/Memory.hpp>
+#include <core/utilities/TypeID.hpp>
+#include <core/memory/Memory.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>

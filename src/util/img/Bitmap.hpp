@@ -6,7 +6,7 @@
 #include <asset/ByteWriter.hpp>
 
 #include <core/Containers.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>

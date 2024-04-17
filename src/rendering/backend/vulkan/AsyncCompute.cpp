@@ -6,7 +6,7 @@
 #include <rendering/backend/RendererFence.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 namespace hyperion::renderer {
 

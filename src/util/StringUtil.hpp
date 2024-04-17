@@ -2,8 +2,8 @@
 #ifndef STRING_UTIL_HPP
 #define STRING_UTIL_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 
 #include <string>
 #include <vector>

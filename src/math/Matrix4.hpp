@@ -87,7 +87,7 @@ public:
 
     constexpr float At(int i, int j) const { return rows[i][j]; }
     constexpr float &At(int i, int j) { return rows[i][j]; }
-#pragma endregion
+#pragma endregion deprecated
 
     HYP_FORCE_INLINE
     constexpr Vec4f &operator[](uint row) { return rows[row]; }

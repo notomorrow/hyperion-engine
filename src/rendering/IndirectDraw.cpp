@@ -200,7 +200,9 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
+
+#pragma region IndirectDrawState
 
 IndirectDrawState::IndirectDrawState()
     : m_num_draw_commands(0),
@@ -345,6 +347,10 @@ void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
     m_dirty_bits &= ~(1u << frame_index);
 }
 
+#pragma endregion IndirectDrawState
+
+#pragma region IndirectRenderer
+
 IndirectRenderer::IndirectRenderer()
     : m_cached_cull_data_updated_bits(0x0)
 {
@@ -364,7 +370,7 @@ void IndirectRenderer::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(ObjectInstancesBuffer), m_indirect_draw_state.GetInstanceBuffer(frame_index));
@@ -392,7 +398,7 @@ void IndirectRenderer::Destroy()
 
 void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &cull_data)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
@@ -478,7 +484,7 @@ void IndirectRenderer::RebuildDescriptors(Frame *frame)
 
     const DescriptorTableRef &descriptor_table = m_object_visibility->GetDescriptorTable();
 
-    const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
+    const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
     AssertThrow(descriptor_set != nullptr);
 
     descriptor_set->SetElement(HYP_NAME(ObjectInstancesBuffer), m_indirect_draw_state.GetInstanceBuffer(frame_index));
@@ -486,5 +492,7 @@ void IndirectRenderer::RebuildDescriptors(Frame *frame)
 
     descriptor_set->Update(g_engine->GetGPUDevice());
 }
+
+#pragma endregion IndirectRenderer
 
 } // namespace hyperion

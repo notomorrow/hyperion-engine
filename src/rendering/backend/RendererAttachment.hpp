@@ -4,7 +4,7 @@
 #define HYPERION_BACKEND_RENDERER_ATTACHMENT_HPP
 
 #include <core/Defines.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/Platform.hpp>

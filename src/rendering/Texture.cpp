@@ -256,7 +256,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 
 class TextureMipmapRenderer
@@ -295,7 +295,7 @@ public:
             ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
             PUSH_RENDER_COMMAND(CreateMipImageView, m_image, mip_image_view, mip_level);
 
-            const DescriptorSet2Ref &generate_mipmaps_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapsDescriptorSet), 0);
+            const DescriptorSetRef &generate_mipmaps_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapsDescriptorSet), 0);
             AssertThrow(generate_mipmaps_descriptor_set != nullptr);
             generate_mipmaps_descriptor_set->SetElement(HYP_NAME(InputTexture), mip_level == 0 ? m_image_view : m_mip_image_views[mip_level - 1]);
             DeferCreate(descriptor_table, g_engine->GetGPUDevice());
@@ -332,7 +332,7 @@ public:
 
     void Render()
     {
-        if (Threads::IsOnThread(THREAD_RENDER)) {
+        if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
             EXEC_RENDER_COMMAND_INLINE(
                 RenderTextureMipmapLevels,
                 m_image,

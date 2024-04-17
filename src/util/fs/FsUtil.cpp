@@ -22,6 +22,7 @@
 #endif
 
 namespace hyperion {
+namespace filesystem {
 
 std::mutex FileSystem::mtx = std::mutex();
 Array<FilePath> FileSystem::filepaths = { };
@@ -117,4 +118,5 @@ std::string FileSystem::RelativePath(const std::string &path, const std::string 
     return std::filesystem::proximate(path, base).string();
 }
 
+} // namespace filesystem
 } // namespace hyperion

@@ -3,12 +3,13 @@
 #ifndef HYPERION_FBOM_OBJECT_HPP
 #define HYPERION_FBOM_OBJECT_HPP
 
-#include <core/lib/Any.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/UniqueID.hpp>
+#include <core/memory/Any.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/utilities/UniqueID.hpp>
+#include <core/memory/ByteBuffer.hpp>
 
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
@@ -19,9 +20,6 @@
 #include <Types.hpp>
 #include <Constants.hpp>
 
-#include <vector>
-#include <string>
-#include <map>
 #include <type_traits>
 
 namespace hyperion::fbom {

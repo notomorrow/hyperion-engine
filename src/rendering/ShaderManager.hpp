@@ -4,8 +4,8 @@
 
 #include <rendering/Shader.hpp>
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/String.hpp>
 
 namespace hyperion {
 

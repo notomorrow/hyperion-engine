@@ -6,7 +6,7 @@
 #include <math/Vector3.hpp>
 #include <math/Extent.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 namespace hyperion {
 

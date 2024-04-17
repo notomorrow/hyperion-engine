@@ -2,8 +2,8 @@
 #ifndef HYPERION_STACK_DUMP_HPP
 #define HYPERION_STACK_DUMP_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {

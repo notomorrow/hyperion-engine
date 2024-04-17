@@ -15,8 +15,8 @@
 #include <core/Base.hpp>
 #include <core/Name.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/Queue.hpp>
-#include <core/lib/Pair.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/utilities/Pair.hpp>
 
 #include <math/MathUtil.hpp>
 #include <Constants.hpp>
@@ -115,11 +115,11 @@ public:
         return AddRenderComponent(RC<T>::Construct(name, std::forward<Args>(args)...));
     }
 
-    /*! CALL FROM RENDER THREAD ONLY */
+    /*! \note CALL FROM RENDER THREAD ONLY */
     template <class T>
     T *GetRenderComponent(Name name = Name::Invalid())
     {
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (!m_render_components.Contains<T>()) {
             return nullptr;
@@ -140,14 +140,14 @@ public:
         }
     }
 
-    /*! CALL FROM RENDER THREAD ONLY */
+    /*! \note CALL FROM RENDER THREAD ONLY */
     template <class T>
     bool HasRenderComponent() const
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
 
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (!m_render_components.Contains<T>()) {
             return false;
@@ -158,14 +158,14 @@ public:
         return items.Any();
     }
 
-    /*! CALL FROM RENDER THREAD ONLY */
+    /*! \note CALL FROM RENDER THREAD ONLY */
     template <class T>
     bool HasRenderComponent(Name name) const
     {
         static_assert(std::is_base_of_v<RenderComponentBase, T>,
             "Component should be a derived class of RenderComponentBase");
 
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (!m_render_components.Contains<T>()) {
             return false;

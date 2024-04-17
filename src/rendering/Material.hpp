@@ -7,28 +7,18 @@
 #include <rendering/Shader.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <rendering/RenderableAttributes.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/HashMap.hpp>
-#include <core/lib/Mutex.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
+
 #include <Types.hpp>
 
 #include <util/EnumOptions.hpp>
 #include <HashCode.hpp>
-
-#include <array>
-#include <mutex>
-
-namespace hyperion {
-namespace renderer {
-
-class DescriptorSet;
-
-} // namespace renderer
-} // namespace hyperion
 
 namespace hyperion {
 
@@ -549,8 +539,8 @@ public:
     );
 
 private:
-    FlatMap<HashCode::ValueType, WeakHandle<Material>> m_map;
-    std::mutex m_mutex;
+    FlatMap<HashCode::ValueType, WeakHandle<Material>>  m_map;
+    Mutex                                               m_mutex;
 };
 
 class HYP_API MaterialDescriptorSetManager
@@ -571,7 +561,7 @@ public:
         \param frame_index The frame index to get the descriptor set for
         \returns The descriptor set for the given material and frame index or nullptr if not found
      */
-    const DescriptorSet2Ref &GetDescriptorSet(ID<Material> material, uint frame_index) const;
+    const DescriptorSetRef &GetDescriptorSet(ID<Material> material, uint frame_index) const;
 
     /*! \brief Add a material to the manager. This will create a descriptor set for
         the material and add it to the manager. Usable from any thread.
@@ -608,9 +598,9 @@ public:
 private:
     void CreateInvalidMaterialDescriptorSet();
 
-    FlatMap<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>      m_material_descriptor_sets;
+    FlatMap<ID<Material>, FixedArray<DescriptorSetRef, max_frames_in_flight>>      m_material_descriptor_sets;
 
-    Array<Pair<ID<Material>, FixedArray<DescriptorSet2Ref, max_frames_in_flight>>>  m_pending_addition;
+    Array<Pair<ID<Material>, FixedArray<DescriptorSetRef, max_frames_in_flight>>>  m_pending_addition;
     Array<ID<Material>>                                                             m_pending_removal;
     Mutex                                                                           m_pending_mutex;
     AtomicVar<bool>                                                                 m_pending_addition_flag;

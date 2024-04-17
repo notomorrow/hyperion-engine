@@ -149,7 +149,7 @@ void RenderEnvironment::Init()
 
 void RenderEnvironment::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertReady();
 
@@ -166,7 +166,7 @@ void RenderEnvironment::Update(GameCounter::TickUnit delta)
 
 void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
@@ -182,7 +182,7 @@ void RenderEnvironment::ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags)
 
 void RenderEnvironment::RenderRTRadiance(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
     
     if (m_has_rt_radiance) {
@@ -192,7 +192,7 @@ void RenderEnvironment::RenderRTRadiance(Frame *frame)
 
 void RenderEnvironment::RenderDDGIProbes(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
@@ -213,7 +213,7 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
 
 void RenderEnvironment::RenderComponents(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;

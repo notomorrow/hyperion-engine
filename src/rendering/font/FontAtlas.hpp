@@ -8,9 +8,9 @@
 #include <rendering/Texture.hpp>
 #include <rendering/Framebuffer.hpp>
 
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <util/json/JSON.hpp>
 

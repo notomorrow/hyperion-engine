@@ -144,7 +144,7 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 EnvGrid::EnvGrid(Name name, EnvGridOptions options)
     : RenderComponent(name),
@@ -163,7 +163,7 @@ EnvGrid::~EnvGrid()
 
 void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
 {
-    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
 
     m_aabb = aabb;
 
@@ -359,7 +359,7 @@ void EnvGrid::Init()
 // called from game thread
 void EnvGrid::InitGame()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 }
 
 void EnvGrid::OnRemoved()
@@ -390,7 +390,7 @@ void EnvGrid::OnRemoved()
 
 void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_camera.IsValid());
 
@@ -422,7 +422,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 
 void EnvGrid::OnRender(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     const uint num_ambient_probes = m_env_probe_collection.num_probes;
 
     const BoundingBox grid_aabb = m_aabb;
@@ -613,7 +613,7 @@ void EnvGrid::CreateVoxelGridData()
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        DescriptorSet2Ref descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(VoxelizeProbeDescriptorSet), frame_index);
+        DescriptorSetRef descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(VoxelizeProbeDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(InColorImage), m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
@@ -681,7 +681,7 @@ void EnvGrid::CreateVoxelGridData()
             DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(generate_voxel_grid_mipmaps_descriptor_table_decl);
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                const DescriptorSet2Ref &mip_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapDescriptorSet), frame_index);
+                const DescriptorSetRef &mip_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapDescriptorSet), frame_index);
                 AssertThrow(mip_descriptor_set != nullptr);
 
                 if (mip_level == 0) {
@@ -742,7 +742,7 @@ void EnvGrid::CreateSHData()
         m_compute_sh_descriptor_tables[i] = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &compute_sh_descriptor_set = m_compute_sh_descriptor_tables[i]->GetDescriptorSet(HYP_NAME(ComputeSHDescriptorSet), frame_index);
+            const DescriptorSetRef &compute_sh_descriptor_set = m_compute_sh_descriptor_tables[i]->GetDescriptorSet(HYP_NAME(ComputeSHDescriptorSet), frame_index);
             AssertThrow(compute_sh_descriptor_set != nullptr);
 
             compute_sh_descriptor_set->SetElement(HYP_NAME(InCubemap), g_engine->GetPlaceholderData()->GetImageViewCube1x1R8());

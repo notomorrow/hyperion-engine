@@ -2,9 +2,9 @@
 #ifndef HYPERION_RTC_TRACK_HPP
 #define HYPERION_RTC_TRACK_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/memory/UniquePtr.hpp>
 
 #ifdef HYP_LIBDATACHANNEL
 

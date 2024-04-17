@@ -2,15 +2,16 @@
 #ifndef HYPERION_RTC_STREAM_HPP
 #define HYPERION_RTC_STREAM_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/memory/UniquePtr.hpp>
 
 namespace hyperion {
+namespace threading {
 class TaskThread;
-} // namespace hyperion
+} // namespace threading
 
-namespace hyperion {
+using threading::TaskThread;
 
 class RTCStreamEncoder;
 class RTCTrack;

@@ -3,8 +3,8 @@
 #ifndef HYPERION_LIGHTMAP_UV_BUILDER_HPP
 #define HYPERION_LIGHTMAP_UV_BUILDER_HPP
 
-#include <core/lib/String.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/HashMap.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>

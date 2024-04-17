@@ -28,7 +28,7 @@ struct RENDER_COMMAND(RenderFontAtlas) : renderer::RenderCommand
     Extent2D location;
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 #pragma region FontAtlasTextureSet
 
@@ -73,7 +73,7 @@ Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint pixel_size) const
     return Handle<Texture> { };
 }
 
-#pragma endregion
+#pragma endregion FontAtlasTextureSet
 
 #pragma region FontAtlas
 
@@ -190,7 +190,7 @@ void FontAtlas::Render()
         RenderGlyphs(i, false);
     }
 
-    if (!Threads::IsOnThread(THREAD_RENDER)) {
+    if (!Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
         // Sync render commands if not on render thread (render commands are executed inline if on render thread)
         HYP_SYNC_RENDER();
     }
@@ -263,7 +263,7 @@ void FontAtlas::RenderCharacter(Handle<Texture> &atlas, Vec2i location, Extent2D
         }
     };
 
-    if (Threads::IsOnThread(THREAD_RENDER)) {
+    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
         EXEC_RENDER_COMMAND_INLINE(FontAtlas_RenderCharacter, atlas, glyph_texture, location, dimensions);
     } else {
         PUSH_RENDER_COMMAND(FontAtlas_RenderCharacter, atlas, glyph_texture, location, dimensions);
@@ -386,7 +386,7 @@ void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
         }
     };
 
-    if (Threads::IsOnThread(THREAD_RENDER)) {
+    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
         EXEC_RENDER_COMMAND_INLINE(FontAtlas_WriteToBuffer, atlas, buffer, buffer_size);
     } else {
         PUSH_RENDER_COMMAND(FontAtlas_WriteToBuffer, atlas, buffer, buffer_size);
@@ -453,7 +453,7 @@ json::JSONValue FontAtlas::GenerateMetadataJSON(const String &bitmap_filepath) c
     return value;
 }
 
-#pragma endregion
+#pragma endregion FontAtlas
 
 }; // namespace hyperion
 

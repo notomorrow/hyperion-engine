@@ -4,10 +4,10 @@
 #define HYPERION_SKELETON_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <rendering/Buffers.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 #include <scene/animation/Animation.hpp>
 #include <scene/NodeProxy.hpp>
 #include <GameCounter.hpp>

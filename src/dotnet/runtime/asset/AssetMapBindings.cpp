@@ -8,7 +8,7 @@
 #include <scene/animation/Skeleton.hpp>
 #include <audio/AudioSource.hpp>
 
-#include <core/lib/TypeMap.hpp>
+#include <core/containers/TypeMap.hpp>
 
 extern "C" {
 HYP_EXPORT void AssetMap_Destroy(ManagedAssetMap managed_map)

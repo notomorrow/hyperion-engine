@@ -3,8 +3,8 @@
 #ifndef HYPERION_DOTNET_INTEROP_MANAGED_METHOD_HPP
 #define HYPERION_DOTNET_INTEROP_MANAGED_METHOD_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 
 #include <dotnet/interop/ManagedGuid.hpp>
 

@@ -2,7 +2,7 @@
 #include <system/Application.hpp>
 #include <system/Debug.hpp>
 
-#include <core/lib/Memory.hpp>
+#include <core/memory/Memory.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>

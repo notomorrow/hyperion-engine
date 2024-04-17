@@ -172,7 +172,7 @@ TerrainMeshBuilder::TerrainMeshBuilder(const TerrainPatchInfo &patch_info)
 
 void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator)
 {
-    Threads::AssertOnThread(THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_TASK);
 
     DebugLog(
         LogType::Debug,
@@ -204,7 +204,7 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
 
 Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
 {
-    Threads::AssertOnThread(THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_TASK);
 
     Array<Vertex> vertices = BuildVertices();
     Array<Mesh::Index> indices = BuildIndices();
@@ -527,7 +527,7 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                         patch_info.coord.x,
                         patch_info.coord.y
                     );
-                }, THREAD_POOL_GENERIC);
+                }, TaskThreadPoolName::THREAD_POOL_GENERIC);
 
                 state->patch_generation_tasks.Insert(patch_info.coord, generation_task_ref);
 

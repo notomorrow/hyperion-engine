@@ -5,7 +5,7 @@
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3
 
-#include <core/lib/FlatMap.hpp>
+#include <core/containers/FlatMap.hpp>
 #include <math/Vector2.hpp>
 
 #include <system/Application.hpp>

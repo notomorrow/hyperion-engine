@@ -2,9 +2,9 @@
 #ifndef ENUM_OPTIONS_HPP
 #define ENUM_OPTIONS_HPP
 
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Pair.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Pair.hpp>
 #include <HashCode.hpp>
 #include <math/MathUtil.hpp>
 

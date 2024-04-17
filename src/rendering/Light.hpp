@@ -3,7 +3,7 @@
 #define HYPERION_LIGHT_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/Bitset.hpp>
+#include <core/containers/Bitset.hpp>
 #include <rendering/ShaderDataState.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/Material.hpp>

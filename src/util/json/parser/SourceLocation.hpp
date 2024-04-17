@@ -3,7 +3,7 @@
 #ifndef HYP_JSON_SOURCE_LOCATION_HPP
 #define HYP_JSON_SOURCE_LOCATION_HPP
 
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 #include <HashCode.hpp>
 
 namespace hyperion::json {

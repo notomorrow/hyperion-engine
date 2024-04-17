@@ -3,7 +3,7 @@
 #ifndef HYPERION_RUNTIME_DOTNET_MANAGED_NODE_HPP
 #define HYPERION_RUNTIME_DOTNET_MANAGED_NODE_HPP
 
-#include <core/lib/TypeID.hpp>
+#include <core/utilities/TypeID.hpp>
 #include <core/Handle.hpp>
 #include <core/ID.hpp>
 

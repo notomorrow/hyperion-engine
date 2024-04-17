@@ -116,7 +116,7 @@ struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 Pair<Array<Vertex>, Array<uint32>>
 Mesh::CalculateIndices(const Array<Vertex> &vertices)
@@ -342,7 +342,7 @@ void Mesh::SetStreamedMeshData(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_
 
 void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     m_streamed_mesh_data = std::move(streamed_mesh_data);
 

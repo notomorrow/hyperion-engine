@@ -7,7 +7,7 @@
 #include <math/Matrix4.hpp>
 #include <math/BoundingBox.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <Types.hpp>
 
 namespace hyperion {

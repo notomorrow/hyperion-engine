@@ -4,9 +4,9 @@
 
 #include <HashCode.hpp>
 #include <core/Base.hpp>
-#include <core/lib/Bitset.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/containers/Bitset.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/threading/AtomicVar.hpp>
 #include <math/BoundingBox.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/DrawProxy.hpp>

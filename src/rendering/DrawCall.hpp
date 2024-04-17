@@ -6,15 +6,17 @@
 #include <Constants.hpp>
 #include <core/ID.hpp>
 #include <core/Util.hpp>
+#include <core/Defines.hpp>
+
 #include <rendering/Buffers.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/EntityDrawData.hpp>
+#include <rendering/ShaderGlobals.hpp>
+
 #include <system/StackDump.hpp>
 #include <system/Debug.hpp>
-#include <core/Defines.hpp>
-#include <Types.hpp>
 
-#include <rendering/ShaderGlobals.hpp>
+#include <Types.hpp>
 
 namespace hyperion {
 

@@ -3,7 +3,7 @@
 #ifndef HYPERION_ECS_NODE_LINK_COMPONENT_HPP
 #define HYPERION_ECS_NODE_LINK_COMPONENT_HPP
 
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <HashCode.hpp>
 

@@ -8,10 +8,10 @@
 #include <rendering/CullData.hpp>
 // #include <rendering/DrawCall.hpp>
 
-#include <core/lib/Queue.hpp>
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/Array.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/ID.hpp>
 
 #include <math/BoundingSphere.hpp>

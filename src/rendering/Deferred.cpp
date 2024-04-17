@@ -94,7 +94,7 @@ struct RENDER_COMMAND(CreateBlueNoiseBuffer) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 static ShaderProperties GetDeferredShaderProperties()
 {
@@ -118,6 +118,8 @@ static ShaderProperties GetDeferredShaderProperties()
 
     return properties;
 }
+
+#pragma region Deferred pass
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
     : FullScreenPass(InternalFormat::RGBA16F),
@@ -213,7 +215,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index);
+            const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index);
             AssertThrow(descriptor_set != nullptr);
             
             descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer());
@@ -242,10 +244,6 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
             m_render_group = render_group;
         }
     }
-}
-
-void DeferredPass::CreateDescriptors()
-{
 }
 
 void DeferredPass::Create()
@@ -398,7 +396,9 @@ void DeferredPass::Render(Frame *frame)
     FullScreenPass::Render(frame);
 }
 
-// ===== Env Grid Pass Begin =====
+#pragma endregion Deferred pass
+
+#pragma region Env grid pass
 
 EnvGridPass::EnvGridPass(EnvGridPassMode mode)
     : FullScreenPass(
@@ -491,7 +491,7 @@ void EnvGridPass::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(InTexture), m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
@@ -609,9 +609,9 @@ void EnvGridPass::Render(Frame *frame)
     }
 }
 
-// ===== Env Grid Pass End =====
+#pragma endregion Env grid pass
 
-// ===== Reflection Probe Pass Begin =====
+#pragma region Reflection probe pass
 
 ReflectionProbePass::ReflectionProbePass()
     : FullScreenPass(InternalFormat::RGBA16F),
@@ -740,7 +740,7 @@ void ReflectionProbePass::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(InTexture), m_previous_texture->GetImageView());//m_temporal_blending->GetImageOutput((frame_index + (max_frames_in_flight - 1)) % max_frames_in_flight).image_view);//m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
@@ -935,7 +935,9 @@ void ReflectionProbePass::Render(Frame *frame)
     }
 }
 
-// ===== Reflection Probe Pass End =====
+#pragma endregion Reflection probe pass
+
+#pragma region Deferred renderer
 
 DeferredRenderer::DeferredRenderer()
     : m_indirect_pass(true),
@@ -949,7 +951,7 @@ DeferredRenderer::~DeferredRenderer() = default;
 
 void DeferredRenderer::Create()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     m_env_grid_radiance_pass.Create();
     m_env_grid_irradiance_pass.Create();
@@ -982,9 +984,6 @@ void DeferredRenderer::Create()
 
     m_hbao.Reset(new HBAO(g_engine->GetGPUInstance()->GetSwapchain()->extent / 2));
     m_hbao->Create();
-
-    m_indirect_pass.CreateDescriptors(); // no-op
-    m_direct_pass.CreateDescriptors();
 
     CreateBlueNoiseBuffer();
 
@@ -1073,7 +1072,7 @@ void DeferredRenderer::CreateCombinePass()
 
 void DeferredRenderer::Destroy()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     //! TODO: remove all descriptors
 
@@ -1106,7 +1105,7 @@ void DeferredRenderer::Destroy()
 
 void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     CommandBuffer *primary = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
@@ -1463,5 +1462,7 @@ void DeferredRenderer::RenderTranslucentObjects(Frame *frame)
         );
     }
 }
+
+#pragma endregion Deferred pass
 
 } // namespace hyperion

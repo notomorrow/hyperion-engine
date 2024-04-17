@@ -42,7 +42,7 @@ void DebugDrawer::Create()
     AssertThrow(descriptor_table != nullptr);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index);
+        const DescriptorSetRef &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index);
         AssertThrow(debug_drawer_descriptor_set != nullptr);
 
         debug_drawer_descriptor_set->SetElement(HYP_NAME(ImmediateDrawsBuffer), g_engine->GetRenderData()->immediate_draws.GetBuffer());
@@ -85,7 +85,7 @@ void DebugDrawer::Destroy()
 
 void DebugDrawer::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (m_num_draw_commands_pending_addition.load(std::memory_order_relaxed) != 0) {
         UpdateDrawCommands();

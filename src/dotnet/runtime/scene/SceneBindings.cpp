@@ -6,7 +6,7 @@
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
 
-#include <core/lib/TypeID.hpp>
+#include <core/utilities/TypeID.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>

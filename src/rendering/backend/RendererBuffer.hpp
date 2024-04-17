@@ -246,7 +246,7 @@ public:
         StagingBuffer *CreateStagingBuffer(SizeType size);
 
     public:
-        /* \brief Acquire a staging buffer from the pool of at least \ref required_size bytes,
+        /*! \brief Acquire a staging buffer from the pool of at least \ref{required_size} bytes,
          * creating one if it does not exist yet. */
         StagingBuffer *Acquire(SizeType required_size);
     };
@@ -256,16 +256,15 @@ public:
     static constexpr time_t hold_time = 1000;
     static constexpr uint gc_threshold = 5; /* run every 5 Use() calls */
 
-    /* \brief Use the staging buffer pool. GC will not run until after the given function
+    /*! \brief Use the staging buffer pool. GC will not run until after the given function
      * is called, and the staging buffers created will not be able to be reused.
      * This will allow the staging buffer(s) acquired by this to be used in sequence
-     * in a single time command buffer
-     */
+     * in a single time command buffer */
     Result Use(Device *device, UseFunction &&fn);
 
     Result GC(Device *device);
 
-    /* \brief Destroy all remaining staging buffers in the pool */
+    /*! \brief Destroy all remaining staging buffers in the pool */
     Result Destroy(Device *device);
 
 private:

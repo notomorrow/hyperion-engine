@@ -7,7 +7,7 @@
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/Delegate.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>
@@ -67,7 +67,7 @@ public:
         bool attach_to_root = false
     )
     {
-        Threads::AssertOnThread(THREAD_GAME);
+        Threads::AssertOnThread(ThreadName::THREAD_GAME);
         AssertReady();
 
         NodeProxy node_proxy(new Node(name.LookupString()));

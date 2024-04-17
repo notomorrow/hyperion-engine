@@ -4,10 +4,10 @@
 
 #include <Constants.hpp>
 #include <core/Core.hpp>
-#include <core/lib/StaticString.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/HeapArray.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/containers/StaticString.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/HeapArray.hpp>
+#include <core/containers/HashMap.hpp>
 #include <HashCode.hpp>
 
 #include <mutex>
@@ -86,7 +86,7 @@ struct Name
 template <auto StaticStringType>
 struct HashedName
 {
-    using Sequence = IntegerSequenceFromString<StaticStringType>;
+    using Sequence = containers::detail::IntegerSequenceFromString<StaticStringType>;
 
     static constexpr HashCode hash_code = HashCode::GetHashCode(Sequence::Data());
     static constexpr const char *data   = Sequence::Data();

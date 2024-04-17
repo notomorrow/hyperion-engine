@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include <math/Extent.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 namespace hyperion {
 

@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
 #define HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
 

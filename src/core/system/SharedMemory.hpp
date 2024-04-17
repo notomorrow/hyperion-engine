@@ -3,7 +3,7 @@
 #ifndef HYPERION_CORE_SYSTEM_SHARED_MEMORY_HPP
 #define HYPERION_CORE_SYSTEM_SHARED_MEMORY_HPP
 
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 
 #include <core/Defines.hpp>
 

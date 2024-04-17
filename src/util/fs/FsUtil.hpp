@@ -14,8 +14,11 @@
 
 namespace hyperion {
 
-class FilePath;
 class BufferedReader;
+
+namespace filesystem {
+
+class FilePath;
 
 class FileSystem
 {
@@ -58,6 +61,9 @@ public:
         return StringUtil::Join(args_array, HYP_FILESYSTEM_SEPARATOR);
     }
 };
+} // namespace filesystem
+
+using filesystem::FileSystem;
 
 } // namespace hyperion
 

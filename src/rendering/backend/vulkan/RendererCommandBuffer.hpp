@@ -10,7 +10,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/Platform.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <vulkan/vulkan.h>
 

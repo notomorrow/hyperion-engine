@@ -6,14 +6,15 @@
 #include <rendering/backend/RendererResult.hpp>
 
 #include <system/Debug.hpp>
+
+#include <core/threading/AtomicVar.hpp>
+#include <core/threading/Threads.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/AtomicVar.hpp>
 #include <core/Util.hpp>
-#include <Threads.hpp>
+
 #include <Types.hpp>
 
 #include <type_traits>
-#include <atomic>
 #include <mutex>
 #include <condition_variable>
 
@@ -24,17 +25,13 @@ using renderer::Result;
 
 #define RENDER_COMMAND(name) RenderCommand_##name
 
-/**
- * \brief Pushes a render command to the render command queue. This is a wrapper around RenderCommands::Push.
- */
+/*! \brief Pushes a render command to the render command queue. This is a wrapper around RenderCommands::Push. */
 #define PUSH_RENDER_COMMAND(name, ...) ::hyperion::renderer::RenderCommands::Push< RENDER_COMMAND(name) >(__VA_ARGS__)
 
-/**
- * \brief Executes a render command line. This must be called from the render thread. Avoid if possible.
- */
+/*! \brief Executes a render command line. This must be called from the render thread. Avoid if possible. */
 #define EXEC_RENDER_COMMAND_INLINE(name, ...) \
     do { \
-        ::hyperion::Threads::AssertOnThread(::hyperion::THREAD_RENDER); \
+        ::hyperion::Threads::AssertOnThread(::hyperion::ThreadName::THREAD_RENDER); \
         RENDER_COMMAND(name)(__VA_ARGS__)(); \
     } while (0)
 

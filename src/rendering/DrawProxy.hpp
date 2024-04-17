@@ -3,18 +3,17 @@
 #define HYPERION_DRAW_PROXY_HPP
 
 #include <core/Base.hpp>
+#include <core/ID.hpp>
+
 #include <rendering/RenderBucket.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RendererFrame.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <math/Vector4.hpp>
 #include <math/Color.hpp>
 #include <math/Frustum.hpp>
-
-#include <core/ID.hpp>
-
-#include <rendering/backend/RendererBuffer.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererFrame.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -27,7 +26,6 @@ namespace hyperion {
 using renderer::IndirectDrawCommand;
 using renderer::Frame;
 using renderer::Result;
-;
 using renderer::ShaderVec2;
 using renderer::ShaderVec4;
 using renderer::ShaderValue;

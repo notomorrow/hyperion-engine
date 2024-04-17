@@ -4,7 +4,7 @@
 #define HYP_JSON_TOKEN_HPP
 
 #include <util/json/parser/SourceLocation.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 
 #include <string>
 

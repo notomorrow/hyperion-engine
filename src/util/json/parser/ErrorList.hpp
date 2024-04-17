@@ -3,7 +3,7 @@
 #ifndef HYP_JSON_ERROR_LIST_HPP
 #define HYP_JSON_ERROR_LIST_HPP
 
-#include <core/lib/FlatSet.hpp>
+#include <core/containers/FlatSet.hpp>
 
 #include <util/json/parser/CompilerError.hpp>
 #include <util/UTF8.hpp>

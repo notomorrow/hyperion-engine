@@ -4,8 +4,8 @@
 
 #include <math/Vector3.hpp>
 #include <math/Transform.hpp>
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/Memory.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/memory/Memory.hpp>
 #include <HashCode.hpp>
 #include <Types.hpp>
 

@@ -6,7 +6,7 @@
 #include <scene/Node.hpp>
 #include <scene/animation/Keyframe.hpp>
 
-#include <core/lib/String.hpp>
+#include <core/containers/String.hpp>
 
 #include <math/Transform.hpp>
 

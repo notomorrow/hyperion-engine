@@ -8,11 +8,11 @@
 
 #include <core/Defines.hpp>
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/filesystem/FilePath.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/filesystem/FilePath.hpp>
 
 #include <fstream>
 #include <type_traits>
@@ -301,7 +301,7 @@ public:
         });
     }
 
-    /*! @returns The total number of bytes read */
+    /*! \returns The total number of bytes read */
     template <class Lambda = std::add_pointer_t<void(void *, const Byte *, SizeType)>>
     SizeType Read(void *ptr, SizeType count, Lambda &&func)
     {

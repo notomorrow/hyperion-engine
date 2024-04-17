@@ -3,16 +3,16 @@
 #define HYPERION_ENV_GRID_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/threading/AtomicVar.hpp>
 
 #include <rendering/EntityDrawCollection.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Buffers.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/Containers.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 

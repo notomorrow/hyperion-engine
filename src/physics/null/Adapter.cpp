@@ -3,7 +3,7 @@
 #include <physics/null/Adapter.hpp>
 #include <physics/PhysicsWorld.hpp>
 #include <physics/RigidBody.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <math/Vector3.hpp>
 #include <math/Quaternion.hpp>
 

@@ -5,7 +5,7 @@
 
 #include <rendering/backend/Platform.hpp>
 
-#include <core/lib/ByteBuffer.hpp>
+#include <core/memory/ByteBuffer.hpp>
 #include <HashCode.hpp>
 
 #include <core/Defines.hpp>

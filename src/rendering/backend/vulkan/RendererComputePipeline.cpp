@@ -134,7 +134,7 @@ Result ComputePipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devic
         used_layouts.Size()
     );
 
-    for (const DescriptorSet2Ref<Platform::VULKAN> &descriptor_set : m_descriptor_table->GetSets()[0]) {
+    for (const DescriptorSetRef<Platform::VULKAN> &descriptor_set : m_descriptor_table->GetSets()[0]) {
         DebugLog(
             LogType::Debug,
             "\tDescriptor set layout: %s\n",

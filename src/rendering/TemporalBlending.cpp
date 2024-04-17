@@ -6,7 +6,7 @@
 #include <util/fs/FsUtil.hpp>
 
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 
@@ -35,7 +35,7 @@ struct RENDER_COMMAND(CreateTemporalBlendingImageOutputs) : renderer::RenderComm
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 TemporalBlending::TemporalBlending(
     const Extent2D &extent,

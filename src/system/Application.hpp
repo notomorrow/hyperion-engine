@@ -10,7 +10,7 @@
 #include <SDL2/SDL.h>
 
 #include <core/Containers.hpp>
-#include <core/lib/Delegate.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <util/fs/FsUtil.hpp>
 #include <core/Defines.hpp>

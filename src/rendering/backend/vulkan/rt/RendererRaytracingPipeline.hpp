@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
 
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 #include <Types.hpp>
 

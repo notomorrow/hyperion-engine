@@ -5,7 +5,7 @@
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <core/ID.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/threading/Mutex.hpp>
 #include <Constants.hpp>
 
 namespace hyperion {

@@ -6,7 +6,7 @@
 #include <util/json/JSON.hpp>
 #include <core/Defines.hpp>
 
-#include <core/lib/util/ForEach.hpp>
+#include <core/util/ForEach.hpp>
 
 #include <asset/ByteWriter.hpp>
 #include <asset/BufferedByteReader.hpp>
@@ -431,7 +431,7 @@ static ByteBuffer CompileToSPIRV(
 
 #endif
 
-#pragma endregion
+#pragma endregion SPRIV Compilation
 
 struct LoadedSourceFile
 {
@@ -1533,7 +1533,7 @@ bool ShaderCompiler::CompileBundle(
         });
     }
 
-    if (Threads::IsOnThread(THREAD_TASK)) {
+    if (Threads::IsOnThread(ThreadName::THREAD_TASK)) {
         // run on this thread if we are already in a task thread
         task_batch.ExecuteBlocking();
     } else {
